@@ -185,7 +185,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -250,7 +250,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -315,7 +315,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -384,7 +384,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -467,7 +467,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -550,7 +550,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         **kwargs: Any,
     ) -> Self:
@@ -630,7 +630,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         **kwargs: Any,
     ) -> Self:
@@ -710,7 +710,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -779,7 +779,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         equal_nan: bool | None = True,
         **kwargs: Any,
     ) -> Self:
@@ -835,7 +835,7 @@ class NamedArrayAggregations:
 
         >>> na.nunique()
         <xarray.NamedArray ()> Size: 8B
-        array(5)
+        array(4)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -861,7 +861,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         **kwargs: Any,
     ) -> Self:
         """
@@ -935,7 +935,7 @@ class NamedArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         **kwargs: Any,
     ) -> Self:
         """

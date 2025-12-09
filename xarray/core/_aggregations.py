@@ -282,7 +282,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -376,7 +376,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -470,7 +470,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -568,7 +568,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -683,7 +683,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -798,7 +798,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -910,7 +910,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -1022,7 +1022,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -1120,7 +1120,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         equal_nan: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -1200,7 +1200,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  ()
             Data variables:
-                foo      int64 8B 5
+                foo      int64 8B 4
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -1234,7 +1234,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -1339,7 +1339,7 @@ class DataTreeAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -1676,7 +1676,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -1763,7 +1763,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -1850,7 +1850,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -1941,7 +1941,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2048,7 +2048,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2155,7 +2155,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2259,7 +2259,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2363,7 +2363,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -2454,7 +2454,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         equal_nan: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2528,7 +2528,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 8B
         Dimensions:  ()
         Data variables:
-            da       int64 8B 5
+            da       int64 8B 4
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -2560,7 +2560,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -2658,7 +2658,7 @@ class DatasetAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -2970,7 +2970,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -3049,7 +3049,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -3128,7 +3128,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -3211,7 +3211,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3308,7 +3308,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3405,7 +3405,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3499,7 +3499,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3593,7 +3593,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -3676,7 +3676,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         equal_nan: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3745,7 +3745,7 @@ class DataArrayAggregations:
 
         >>> da.nunique()
         <xarray.DataArray ()> Size: 8B
-        array(5)
+        array(4)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -3772,7 +3772,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -3866,7 +3866,7 @@ class DataArrayAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
@@ -4271,7 +4271,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -4385,7 +4385,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -4499,7 +4499,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -4615,7 +4615,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -4750,7 +4750,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -4885,7 +4885,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5017,7 +5017,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5149,7 +5149,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -5250,7 +5250,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         equal_nan: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5332,7 +5332,7 @@ class DatasetGroupByAggregations:
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 24B 2 1 2
+            da       (labels) int64 24B 1 1 2
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -5368,7 +5368,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -5472,7 +5472,7 @@ class DatasetGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -5887,7 +5887,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -6001,7 +6001,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -6115,7 +6115,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -6231,7 +6231,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -6366,7 +6366,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -6501,7 +6501,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -6633,7 +6633,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -6765,7 +6765,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -6866,7 +6866,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         equal_nan: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -6948,7 +6948,7 @@ class DatasetResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) int64 24B 1 3 2
+            da       (time) int64 24B 1 3 1
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -6984,7 +6984,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -7088,7 +7088,7 @@ class DatasetResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
@@ -7482,7 +7482,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -7587,7 +7587,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -7692,7 +7692,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -7799,7 +7799,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -7923,7 +7923,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -8047,7 +8047,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -8168,7 +8168,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -8289,7 +8289,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -8382,7 +8382,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         equal_nan: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -8457,7 +8457,7 @@ class DataArrayGroupByAggregations:
 
         >>> da.groupby("labels").nunique()
         <xarray.DataArray (labels: 3)> Size: 24B
-        array([2, 1, 2])
+        array([1, 1, 2])
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
 
@@ -8490,7 +8490,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -8590,7 +8590,7 @@ class DataArrayGroupByAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -8980,7 +8980,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -9085,7 +9085,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -9190,7 +9190,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -9297,7 +9297,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -9421,7 +9421,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -9545,7 +9545,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -9666,7 +9666,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -9787,7 +9787,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -9880,7 +9880,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         equal_nan: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -9955,7 +9955,7 @@ class DataArrayResampleAggregations:
 
         >>> da.resample(time="3ME").nunique()
         <xarray.DataArray (time: 3)> Size: 24B
-        array([1, 3, 2])
+        array([1, 3, 1])
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
 
@@ -9988,7 +9988,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
@@ -10088,7 +10088,7 @@ class DataArrayResampleAggregations:
         self,
         dim: Dims = None,
         *,
-        skipna: bool | None = None,
+        skipna: bool | None = True,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:

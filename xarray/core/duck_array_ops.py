@@ -191,9 +191,7 @@ def isnull(data):
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
     # at this point, array should have dtype=object
-    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(
-        data
-    ):  # noqa: TID251
+    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):
         return pandas_isnull(data)
     else:
         # Not reachable yet, but intended for use with other duck array
@@ -410,7 +408,7 @@ def _permute_dims(data, axes):
         raise NotImplementedError(f"Unknown transpose method for namespace {xp}")
 
 
-def nunique(data, axis=None, skipna=True, equal_nan=True, **kwargs):
+def nunique(data, axis=None, skipna=None, equal_nan=True, **kwargs):
     """
     Count the number of unique values in this array along the given dimensions
     """
