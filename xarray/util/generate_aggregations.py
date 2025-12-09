@@ -295,7 +295,7 @@ class Method:
         see_also_methods=(),
         min_flox_version=None,
         additional_notes="",
-        flox_aggregation_type: Literal["reduce", "scan"] = "reduce",
+        aggregation_type: Literal["reduce", "scan"] = "reduce",
     ):
         self.name = name
         self.extra_kwargs = extra_kwargs
@@ -304,7 +304,7 @@ class Method:
         self.see_also_methods = see_also_methods
         self.min_flox_version = min_flox_version
         self.additional_notes = additional_notes
-        self.flox_aggregation_type = flox_aggregation_type
+        self.aggregation_type = aggregation_type
         if bool_reduce:
             self.array_method = f"array_{name}"
             self.np_example_array = (
@@ -468,14 +468,21 @@ class GroupByAggregationGenerator(AggregationGenerator):
         else:
             extra_kwargs = ""
 
+        if method.aggregation_type == "scan":
+            # Scans retain dimensions.
+            out_finalized = "out.assign_coords(self._original_obj.coords)"
+        else:
+            out_finalized = "out"
+
         if method_is_not_flox_supported:
             return f"""\
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.{method.array_method},
             dim=dim,{extra_kwargs}
             keep_attrs=keep_attrs,
             **kwargs,
-        )"""
+        )
+        return {out_finalized}"""
 
         min_version_check = f"""
             and module_available("flox", minversion="{method.min_flox_version}")"""
@@ -489,7 +496,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
             + f"""
             and contains_only_chunked_or_numpy(self._obj)
         ):
-            return self._flox_{method.flox_aggregation_type}(
+            return self._flox_{method.aggregation_type}(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}
                 # fill_value=fill_value,
@@ -497,12 +504,13 @@ class GroupByAggregationGenerator(AggregationGenerator):
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.{method.array_method},
                 dim=dim,{extra_kwargs}
                 keep_attrs=keep_attrs,
                 **kwargs,
-            )"""
+            )
+            return {out_finalized}"""
         )
 
 
@@ -551,7 +559,7 @@ AGGREGATION_METHODS = (
         see_also_methods=("cumulative",),
         additional_notes=_CUM_NOTES,
         min_flox_version="0.10.5",
-        flox_aggregation_type="scan",
+        aggregation_type="scan",
     ),
     Method(
         "cumprod",
@@ -559,6 +567,7 @@ AGGREGATION_METHODS = (
         numeric_only=True,
         see_also_methods=("cumulative",),
         additional_notes=_CUM_NOTES,
+        aggregation_type="scan",
     ),
 )
 
