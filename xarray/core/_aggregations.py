@@ -360,6 +360,11 @@ class DataTreeAggregations:
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> dt.max(skipna=False)
+        <xarray.DataTree>
+        Group: /
+            Dimensions:  ()
+            Data variables:
+                foo      float64 8B nan
         """
         out = self.reduce(
             duck_array_ops.max,
@@ -780,6 +785,8 @@ class DataTreeAggregations:
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> dt.sum(skipna=True, min_count=2)
+        <xarray.DataTree>
+        Group: /
             Dimensions:  ()
             Data variables:
                 foo      float64 8B 8.0
