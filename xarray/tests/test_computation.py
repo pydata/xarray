@@ -2245,6 +2245,11 @@ def test_where_attrs() -> None:
     expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
     assert_identical(expected, actual)
 
+    # x and y as a scalar, takes no attrs
+    actual = xr.where(cond, 1, 0, keep_attrs=False)
+    expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
+    assert_identical(expected, actual)
+
     # cond and y as a scalar, takes attrs from x
     actual = xr.where(True, x, y, keep_attrs=True)
     expected = xr.DataArray([1, 1], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
