@@ -9490,8 +9490,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 5., 5., 2., 2.])
         Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -9499,8 +9499,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  5.,  5.,  2., nan])
         Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
         """
         if (
             flox_available
@@ -9606,8 +9606,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 6., 0., 2., 2.])
         Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -9615,8 +9615,8 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  6.,  0.,  2., nan])
         Coordinates:
+          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
         """
         out = self.reduce(
             duck_array_ops.cumprod,
