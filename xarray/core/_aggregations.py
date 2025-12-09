@@ -3678,6 +3678,17 @@ class DatasetGroupByAggregations:
     ) -> Dataset:
         raise NotImplementedError()
 
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
@@ -6481,6 +6492,7 @@ class DatasetResampleAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -6727,6 +6739,17 @@ class DataArrayGroupByAggregations:
     def _flox_reduce(
         self,
         dim: Dims,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
@@ -8872,7 +8895,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -8880,6 +8903,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
