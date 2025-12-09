@@ -3753,6 +3753,17 @@ class DatasetGroupByAggregations:
     ) -> Dataset:
         raise NotImplementedError()
 
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
