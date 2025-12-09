@@ -656,8 +656,12 @@ def where(cond, x, y, keep_attrs=None):
         values to choose from where `cond` is True
     y : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is False
-    keep_attrs : bool or str or callable, optional
-        How to treat attrs. If True, keep the attrs of `x`.
+    keep_attrs : bool or {"drop", "identical", "no_conflicts", "drop_conflicts", "override"} or callable, optional
+        - 'drop' or False (default): empty attrs on returned xarray object.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have the same name must also have the same value.
+        - 'drop_conflicts': attrs from all objects are combined, any that have the same name but different values are dropped.
+        - 'override' or True: skip comparing and copy attrs from `x` to the result.
 
     Returns
     -------
@@ -672,18 +676,39 @@ def where(cond, x, y, keep_attrs=None):
     ...     dims=["lat"],
     ...     coords={"lat": np.arange(10)},
     ...     name="sst",
+    ...     attrs={"standard_name": "sea_surface_temperature"},
     ... )
     >>> x
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
       * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
 
     >>> xr.where(x < 0.5, x, x * 100)
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
       * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
+
+    If `x` is a scalar then by default there are no attrs on the result
+    >>> xr.where(x < 0.5, 1, 0)
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
+    array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+    Coordinates:
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+
+    Preserve the attrs on `cond` by using `keep_attrs="drop_conflicts"`
+    >>> xr.where(x < 0.5, 1, 0, keep_attrs="drop_conflicts")
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
+    array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+    Coordinates:
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
 
     >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
