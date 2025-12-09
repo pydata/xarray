@@ -108,6 +108,17 @@ class {obj}{cls}Aggregations:
         dim: Dims,
         **kwargs: Any,
     ) -> {obj}:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> {obj}:
         raise NotImplementedError()"""
 
 RESAMPLE_PREAMBLE = """
@@ -529,11 +540,12 @@ class GenericAggregationGenerator(AggregationGenerator):
             "\n" + 12 * " " + "keep_attrs=keep_attrs," if has_keep_attrs else ""
         )
         return f"""\
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.{method.array_method},
             dim=dim,{extra_kwargs}{keep_attrs}
             **kwargs,
-        )"""
+        )
+        return out"""
 
 
 AGGREGATION_METHODS = (
