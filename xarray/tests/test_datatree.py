@@ -1116,14 +1116,14 @@ class TestDatasetView:
         expected = dt.mean(keep_attrs=True)
         xr.testing.assert_identical(result, expected)
 
-        # per default DatasetView.map does not keep attrs
+        # DatasetView.map keeps attrs by default
         def func(ds):
-            # x.mean() removes the attrs of the data_vars
+            # ds.map and x.mean() both keep attrs by default
             return ds.map(lambda x: x.mean())
 
         result = xr.map_over_datasets(func, dt)
         expected = dt.mean()
-        xr.testing.assert_identical(result, expected.mean())
+        xr.testing.assert_identical(result, expected)
 
 
 class TestAccess:
@@ -2219,13 +2219,17 @@ class TestIndexing:
 
         with pytest.raises(
             KeyError,
-            match="Raised whilst mapping function over node with path 'second'",
+            match=re.escape(
+                "Raised whilst mapping function over node(s) with path 'second'"
+            ),
         ):
             tree.sel(x=1)
 
         with pytest.raises(
             IndexError,
-            match="Raised whilst mapping function over node with path 'first'",
+            match=re.escape(
+                "Raised whilst mapping function over node(s) with path 'first'"
+            ),
         ):
             tree.isel(x=4)
 

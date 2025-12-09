@@ -167,6 +167,7 @@ if TYPE_CHECKING:
         T_Chunks,
         T_DatasetPadConstantValues,
         T_Xarray,
+        ZarrStoreLike,
     )
     from xarray.groupers import Grouper, Resampler
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -1505,13 +1506,18 @@ class Dataset(
     # https://github.com/python/mypy/issues/4266
     __hash__ = None  # type: ignore[assignment]
 
-    def _all_compat(self, other: Self, compat_str: str) -> bool:
+    def _all_compat(
+        self, other: Self, compat: str | Callable[[Variable, Variable], bool]
+    ) -> bool:
         """Helper function for equals and identical"""
 
-        # some stores (e.g., scipy) do not seem to preserve order, so don't
-        # require matching order for equality
-        def compat(x: Variable, y: Variable) -> bool:
-            return getattr(x, compat_str)(y)
+        if not callable(compat):
+            compat_str = compat
+
+            # some stores (e.g., scipy) do not seem to preserve order, so don't
+            # require matching order for equality
+            def compat(x: Variable, y: Variable) -> bool:
+                return getattr(x, compat_str)(y)
 
         return self._coord_names == other._coord_names and utils.dict_equiv(
             self._variables, other._variables, compat=compat
@@ -2120,7 +2126,7 @@ class Dataset(
     @overload
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike[str] | None = None,
+        store: ZarrStoreLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
         synchronizer=None,
@@ -2144,7 +2150,7 @@ class Dataset(
     @overload
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike[str] | None = None,
+        store: ZarrStoreLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
         synchronizer=None,
@@ -2166,7 +2172,7 @@ class Dataset(
 
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike[str] | None = None,
+        store: ZarrStoreLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
         synchronizer=None,
@@ -2203,7 +2209,7 @@ class Dataset(
 
         Parameters
         ----------
-        store : MutableMapping, str or path-like, optional
+        store : zarr.storage.StoreLike, optional
             Store or path to directory in local or remote file system.
         chunk_store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system only for Zarr
@@ -5427,7 +5433,7 @@ class Dataset(
             if name not in index_vars:
                 if dim in var.dims:
                     if isinstance(fill_value, Mapping):
-                        fill_value_ = fill_value[name]
+                        fill_value_ = fill_value.get(name, xrdtypes.NA)
                     else:
                         fill_value_ = fill_value
 
@@ -6064,6 +6070,8 @@ class Dataset(
         Data variables:
             A        (x, y) int64 32B 0 2 3 5
         """
+        from xarray.core.dataarray import DataArray
+
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
@@ -6075,7 +6083,11 @@ class Dataset(
             # is a large numpy array
             if utils.is_scalar(labels_for_dim):
                 labels_for_dim = [labels_for_dim]
-            labels_for_dim = np.asarray(labels_for_dim)
+            # Most conversion to arrays is better handled in the indexer, however
+            # DataArrays are a special case where the underlying libraries don't provide
+            # a good conversition.
+            if isinstance(labels_for_dim, DataArray):
+                labels_for_dim = np.asarray(labels_for_dim)
             try:
                 index = self.get_index(dim)
             except KeyError as err:
@@ -6780,8 +6792,8 @@ class Dataset(
             Dimension(s) over which to apply `func`. By default `func` is
             applied over all dimensions.
         keep_attrs : bool or None, optional
-            If True, the dataset's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If True (default), the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
         keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
@@ -6839,7 +6851,7 @@ class Dataset(
         dims = parse_dims_as_set(dim, set(self._dims.keys()))
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         variables: dict[Hashable, Variable] = {}
         for name, var in self._variables.items():
@@ -6929,11 +6941,18 @@ class Dataset(
             foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 16B 1.0 2.0
         """
+        from xarray.core.dataarray import DataArray
+
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         variables = {
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
+        }
+        # Convert non-DataArray values to DataArrays
+        variables = {
+            k: v if isinstance(v, DataArray) else DataArray(v)
+            for k, v in variables.items()
         }
         coord_vars, indexes = merge_coordinates_without_align(
             [v.coords for v in variables.values()]
@@ -6943,11 +6962,14 @@ class Dataset(
         if keep_attrs:
             for k, v in variables.items():
                 v._copy_attrs_from(self.data_vars[k])
-
             for k, v in coords.items():
-                if k not in self.coords:
-                    continue
-                v._copy_attrs_from(self.coords[k])
+                if k in self.coords:
+                    v._copy_attrs_from(self.coords[k])
+        else:
+            for v in variables.values():
+                v.attrs = {}
+            for v in coords.values():
+                v.attrs = {}
 
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, coords=coords, attrs=attrs)
@@ -7678,9 +7700,14 @@ class Dataset(
             self, other = align(self, other, join=align_type, copy=False)
         g = f if not reflexive else lambda x, y: f(y, x)
         ds = self._calculate_binary_op(g, other, join=align_type)
-        keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs = _get_keep_attrs(default=True)
         if keep_attrs:
-            ds.attrs = self.attrs
+            # Combine attributes from both operands, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
+            self_attrs = self.attrs
+            other_attrs = getattr(other, "attrs", {})
+            ds.attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
         return ds
 
     def _inplace_binary_op(self, other, f) -> Self:
@@ -8274,7 +8301,7 @@ class Dataset(
         coord_names = {k for k in self.coords if k in variables}
         indexes = {k: v for k, v in self._indexes.items() if k in variables}
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         attrs = self.attrs if keep_attrs else None
         new = self._replace_with_new_dims(
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes
@@ -8336,7 +8363,7 @@ class Dataset(
 
         coord_names = set(self.coords)
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         attrs = self.attrs if keep_attrs else None
         return self._replace(variables, coord_names, attrs=attrs)
 
@@ -10448,7 +10475,7 @@ class Dataset(
         for var in self.variables:
             # variables don't have a `._replace` method, so we copy and then remove
             # attrs. If we added a `._replace` method, we could use that instead.
-            if var not in self.indexes:
+            if var not in self.xindexes:
                 self[var] = self[var].copy()
                 self[var].attrs = {}
 

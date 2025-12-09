@@ -972,7 +972,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
-            data = copy.copy(self.data)
+            data = copy.copy(self._data)
         if attrs is _default:
             attrs = copy.copy(self._attrs)
         if encoding is _default:
@@ -1228,7 +1228,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if fill_with_shape:
             return [
                 pad_option.get(d, (n, n))
-                for d, n in zip(self.dims, self.data.shape, strict=True)
+                for d, n in zip(self.dims, self.shape, strict=True)
             ]
         return [pad_option.get(d, (0, 0)) for d in self.dims]
 
@@ -1304,7 +1304,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         # workaround for bug in Dask's default value of stat_length https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
-            stat_length = [(n, n) for n in self.data.shape]  # type: ignore[assignment]
+            stat_length = [(n, n) for n in self.shape]  # type: ignore[assignment]
 
         pad_width_by_index = self._pad_options_dim_to_index(pad_width)
 
@@ -1469,7 +1469,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if self.dims == expanded_dims:
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
-            expanded_data = self.data
+            expanded_data = self._data
         elif shape is None or all(
             s == 1 for s, e in zip(shape, dim, strict=True) if e not in self_dims
         ):
@@ -1477,6 +1477,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # This is typically easier for duck arrays to implement
             # than the full "broadcast_to" semantics
             indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
+            # TODO: switch this to ._data once we teach ExplicitlyIndexed arrays to handle indexers with None.
             expanded_data = self.data[indexer]
         else:  # elif shape is not None:
             dims_map = dict(zip(dim, shape, strict=True))
@@ -1741,8 +1742,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             the reduction is calculated over the flattened array (by calling
             `func(x)` without an axis argument).
         keep_attrs : bool, optional
-            If True, the variable's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If True (default), the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
         keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
@@ -1757,7 +1758,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             removed.
         """
         keep_attrs_ = (
-            _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
+            _get_keep_attrs(default=True) if keep_attrs is None else keep_attrs
         )
 
         # Note that the call order for Variable.mean is
@@ -2009,7 +2010,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             _quantile_func = duck_array_ops.quantile
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         scalar = utils.is_scalar(q)
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
@@ -2280,6 +2281,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 )
 
         variable = self
+        pad_widths = {}
         for d, window in windows.items():
             # trim or pad the object
             size = variable.shape[self._get_axis_num(d)]
@@ -2300,16 +2302,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 pad = window * n - size
                 if pad < 0:
                     pad += window
-                if side[d] == "left":
-                    pad_width = {d: (0, pad)}
-                else:
-                    pad_width = {d: (pad, 0)}
-                variable = variable.pad(pad_width, mode="constant")
+                elif pad == 0:
+                    continue
+                pad_widths[d] = (0, pad) if side[d] == "left" else (pad, 0)
             else:
                 raise TypeError(
                     f"{boundary[d]} is invalid for boundary. Valid option is 'exact', "
                     "'trim' and 'pad'"
                 )
+        if pad_widths:
+            variable = variable.pad(pad_widths, mode="constant")
 
         shape = []
         axes = []
@@ -2350,7 +2352,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.isnull,
@@ -2384,7 +2386,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.notnull,
@@ -2435,8 +2437,17 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
         else:
             self_data, other_data, dims = _broadcast_compat_data(self, other)
-        keep_attrs = _get_keep_attrs(default=False)
-        attrs = self._attrs if keep_attrs else None
+        keep_attrs = _get_keep_attrs(default=True)
+        if keep_attrs:
+            # Combine attributes from both operands, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
+            # Access attrs property to normalize None to {} due to property side effect
+            self_attrs = self.attrs
+            other_attrs = getattr(other, "attrs", {})
+            attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
+        else:
+            attrs = None
         with np.errstate(all="ignore"):
             new_data = (
                 f(self_data, other_data) if not reflexive else f(other_data, self_data)
@@ -2526,7 +2537,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         }
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         if keep_attrs:
             for v in result.values():
                 v.attrs = self.attrs

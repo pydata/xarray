@@ -1203,14 +1203,6 @@ class DataWithCoords(AttrAccessMixin):
                [-20, -21, -22, -23, -24]])
         Dimensions without coordinates: x, y
 
-        >>> a.where(a.x + a.y < 4, drop=True)
-        <xarray.DataArray (x: 4, y: 4)> Size: 128B
-        array([[ 0.,  1.,  2.,  3.],
-               [ 5.,  6.,  7., nan],
-               [10., 11., nan, nan],
-               [15., nan, nan, nan]])
-        Dimensions without coordinates: x, y
-
         See Also
         --------
         numpy.where : corresponding numpy function
@@ -1314,7 +1306,7 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.isnull,
@@ -1357,7 +1349,7 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.notnull,

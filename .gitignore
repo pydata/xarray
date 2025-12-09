@@ -91,3 +91,7 @@ doc/videos-gallery.txt
 uv.lock
 mypy_report/
 xarray-docs/
+
+# pixi environments
+.pixi
+pixi.lock
