@@ -194,10 +194,10 @@ _SKIPNA_DOCSTRING = """skipna : bool or None, optional
     have a sentinel missing value (int) or ``skipna=True`` has not been
     implemented (object, datetime64 or timedelta64)."""
 
-_EQUALNA_DOCSTRING = """equalna : bool or None, default: True
-    If ``skipna == False``, ``equalna`` determines whether null values
-    are counted as distinct values or not. Set ``equalna = True`` for
-    consistency with ``pandas.DataFrame.nunique``, or ``equalna = False``
+_EQUAL_NAN_DOCSTRING = """equal_nan : bool or None, default: True
+    If ``skipna == False``, ``equal_nan`` determines whether null values
+    are counted as distinct values or not. Set ``equal_nan = True`` for
+    consistency with ``pandas.DataFrame.nunique``, or ``equal_nan = False``
     for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_."""
 
 _MINCOUNT_DOCSTRING = """min_count : int or None, optional
@@ -232,12 +232,8 @@ _FLOX_RESAMPLE_NOTES = _FLOX_NOTES_TEMPLATE.format(kind="resampling")
 _CUM_NOTES = """Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
 and better supported. ``cumsum`` and ``cumprod`` may be deprecated
 in the future."""
-_NUNIQUE_NOTES = """Note that identifying unique values on very large
-arrays is slow and memory intensive when there are many unique values.
-For such arrays, consider lowering the precision, e.g. rounding floats
-then converting them to integers, before searching for unique values.
-For dask arrays, performance is improved when chunksizes are largest on
-the dimension(s) being reduced."""
+_NUNIQUE_NOTES = """For dask arrays, there must be a single chunk in each dimension
+nunique is being applied over."""
 
 
 class ExtraKwarg(NamedTuple):
@@ -258,15 +254,15 @@ skipna = ExtraKwarg(
         "        >>> {calculation}(skipna=False)"
     ),
 )
-equalna = ExtraKwarg(
-    docs=_EQUALNA_DOCSTRING,
-    kwarg="equalna: bool | None = True,",
-    call="equalna=equalna,",
+equal_nan = ExtraKwarg(
+    docs=_EQUAL_NAN_DOCSTRING,
+    kwarg="equal_nan: bool | None = True,",
+    call="equal_nan=equal_nan,",
     example=(
         "\n        \n"
-        "        Use ``equalna`` to control whether NaNs are counted as distinct values.\n"
+        "        Use ``equal_nan`` to control whether NaNs are counted as distinct values.\n"
         "        \n"
-        "        >>> {calculation}(skipna=False, equalna=False)"
+        "        >>> {calculation}(skipna=False, equal_nan=False)"
     ),
 )
 min_count = ExtraKwarg(
@@ -566,7 +562,7 @@ AGGREGATION_METHODS = (
     ),
     Method(
         "nunique",
-        extra_kwargs=(skipna, equalna),
+        extra_kwargs=(skipna, equal_nan),
         see_also_modules=("pandas.DataFrame",),
         additional_notes=_NUNIQUE_NOTES,
     ),
