@@ -3443,6 +3443,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -3666,6 +3667,17 @@ class DatasetGroupByAggregations:
     ) -> Dataset:
         raise NotImplementedError()
 
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
@@ -3754,13 +3766,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -3850,13 +3863,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -3946,13 +3960,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -4059,7 +4074,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -4067,6 +4082,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -4173,7 +4189,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -4181,6 +4197,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -4287,7 +4304,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -4295,6 +4312,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -4421,7 +4439,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -4430,6 +4448,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -4556,7 +4575,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -4565,6 +4584,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -4688,7 +4708,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -4697,6 +4717,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -4820,7 +4841,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -4829,6 +4850,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -4922,7 +4944,7 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 24B nan 2.0 1.5
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -4930,6 +4952,7 @@ class DatasetGroupByAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -5040,6 +5063,7 @@ class DatasetGroupByAggregations:
                 func="cumsum",
                 dim=dim,
                 skipna=skipna,
+                numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
                 **kwargs,
@@ -5049,6 +5073,7 @@ class DatasetGroupByAggregations:
                 duck_array_ops.cumsum,
                 dim=dim,
                 skipna=skipna,
+                numeric_only=True,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
@@ -5149,29 +5174,15 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 nan
         """
-        if (
-            flox_available
-            and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.10.5")
-            and contains_only_chunked_or_numpy(self._obj)
-        ):
-            return self._flox_scan(
-                func="cumprod",
-                dim=dim,
-                skipna=skipna,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-        else:
-            out = self.reduce(
-                duck_array_ops.cumprod,
-                dim=dim,
-                skipna=skipna,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-            return out.assign_coords(self.coords)
+        out = self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+        return out.assign_coords(self._original_obj.coords)
 
 
 class DatasetResampleAggregations:
@@ -5284,13 +5295,14 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -5380,13 +5392,14 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -5476,13 +5489,14 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -5589,7 +5603,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -5597,6 +5611,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -5703,7 +5718,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -5711,6 +5726,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -5817,7 +5833,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -5825,6 +5841,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -5951,7 +5968,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -5960,6 +5977,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -6086,7 +6104,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -6095,6 +6113,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -6218,7 +6237,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -6227,6 +6246,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -6350,7 +6370,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -6359,6 +6379,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -6452,7 +6473,7 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 24B 1.0 2.0 nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -6566,6 +6587,7 @@ class DatasetResampleAggregations:
                 func="cumsum",
                 dim=dim,
                 skipna=skipna,
+                numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
                 **kwargs,
@@ -6575,10 +6597,11 @@ class DatasetResampleAggregations:
                 duck_array_ops.cumsum,
                 dim=dim,
                 skipna=skipna,
+                numeric_only=True,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            return out.assign_coords(self.coords)
+            return out.assign_coords(self._original_obj.coords)
 
     def cumprod(
         self,
@@ -6675,29 +6698,15 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 nan
         """
-        if (
-            flox_available
-            and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.10.5")
-            and contains_only_chunked_or_numpy(self._obj)
-        ):
-            return self._flox_scan(
-                func="cumprod",
-                dim=dim,
-                skipna=skipna,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-        else:
-            out = self.reduce(
-                duck_array_ops.cumprod,
-                dim=dim,
-                skipna=skipna,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-            return out.assign_coords(self.coords)
+        out = self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+        return out.assign_coords(self._original_obj.coords)
 
 
 class DataArrayGroupByAggregations:
@@ -6718,6 +6727,17 @@ class DataArrayGroupByAggregations:
     def _flox_reduce(
         self,
         dim: Dims,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
@@ -6815,12 +6835,13 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -6904,12 +6925,13 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -6993,12 +7015,13 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -7097,13 +7120,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -7202,13 +7226,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -7307,13 +7332,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -7430,7 +7456,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -7438,6 +7464,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -7554,7 +7581,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -7562,6 +7589,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -7675,7 +7703,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -7683,6 +7711,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -7796,7 +7825,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -7804,6 +7833,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -7890,13 +7920,14 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -8012,7 +8043,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            return out.assign_coords(self.coords)
+            return out.assign_coords(self._original_obj.coords)
 
     def cumprod(
         self,
@@ -8106,29 +8137,14 @@ class DataArrayGroupByAggregations:
           * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        if (
-            flox_available
-            and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.10.5")
-            and contains_only_chunked_or_numpy(self._obj)
-        ):
-            return self._flox_scan(
-                func="cumprod",
-                dim=dim,
-                skipna=skipna,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-        else:
-            out = self.reduce(
-                duck_array_ops.cumprod,
-                dim=dim,
-                skipna=skipna,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-            return out.assign_coords(self.coords)
+        out = self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+        return out.assign_coords(self._original_obj.coords)
 
 
 class DataArrayResampleAggregations:
@@ -8235,12 +8251,13 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -8324,12 +8341,13 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -8413,12 +8431,13 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -8517,13 +8536,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -8622,13 +8642,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -8727,13 +8748,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -8974,7 +8996,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -8982,6 +9004,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -9095,7 +9118,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -9103,6 +9126,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -9216,7 +9240,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -9224,6 +9248,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -9310,13 +9335,14 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -9432,7 +9458,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            return out.assign_coords(self.coords)
+            return out.assign_coords(self._original_obj.coords)
 
     def cumprod(
         self,
@@ -9526,26 +9552,11 @@ class DataArrayResampleAggregations:
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Dimensions without coordinates: time
         """
-        if (
-            flox_available
-            and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.10.5")
-            and contains_only_chunked_or_numpy(self._obj)
-        ):
-            return self._flox_scan(
-                func="cumprod",
-                dim=dim,
-                skipna=skipna,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-        else:
-            out = self.reduce(
-                duck_array_ops.cumprod,
-                dim=dim,
-                skipna=skipna,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-            return out.assign_coords(self.coords)
+        out = self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+        return out.assign_coords(self._original_obj.coords)
