@@ -746,26 +746,20 @@ def where(cond, x, y, keep_attrs=None):
     # be consistent with the `where` method of `DataArray` and `Dataset`
     # rebuild the attrs from x at each level of the output, which could be
     # Dataset, DataArray, or Variable, and also handle coords
-    def _override_or_drop_attrs(obj):
-        if keep_attrs in (True, "override"):
-            return getattr(obj, "attrs", {})
-        if keep_attrs in (False, "drop"):
-            return {}
-
-    if keep_attrs in (True, False, "drop", "override") and hasattr(result, "attrs"):
+    if keep_attrs in (True, "override") and hasattr(result, "attrs"):
         if isinstance(y, Dataset) and not isinstance(x, Dataset):
             # handle special case where x gets promoted to Dataset
             result.attrs = {}
             if getattr(x, "name", None) in result.data_vars:
-                result[x.name].attrs = _override_or_drop_attrs(x)
+                result[x.name].attrs = getattr(x, "attrs", {})
         else:
             # otherwise, fill in global attrs and variable attrs (if they exist)
-            result.attrs = _override_or_drop_attrs(x)
+            result.attrs = getattr(x, "attrs", {})
             for v in getattr(result, "data_vars", []):
-                result[v].attrs = _override_or_drop_attrs(getattr(x, v, None))
+                result[v].attrs = getattr(getattr(x, v, None), "attrs", {})
         for c in getattr(result, "coords", []):
             # always fill coord attrs of x
-            result[c].attrs = _override_or_drop_attrs(getattr(x, c, None))
+            result[c].attrs = getattr(getattr(x, c, None), "attrs", {})
 
     return result
 
