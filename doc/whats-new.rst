@@ -26,10 +26,15 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
+  only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Better description of ``keep_attrs`` option on ``xarray.where`` docstring (:issue:`10982` :pull:`10997`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
