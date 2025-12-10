@@ -2618,9 +2618,7 @@ def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
             "time": xr.date_range("01-01-2001", freq="ME", periods=6, use_cftime=False),
         },
     )
-    # TODO: Remove drop_vars when GH6528 is fixed
-    # when Dataset.cumsum propagates indexes, and the group variable?
-    assert_identical(expected.drop_vars(["time"]), actual)
+    assert_identical(expected, actual)
 
     actual = getattr(ds.foo.resample(time="3ME"), method)(dim="time")
     expected.coords["time"] = ds.time
