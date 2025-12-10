@@ -4,8 +4,10 @@ For internal xarray development use only.
 
 Usage:
     python xarray/util/generate_aggregations.py
-    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py --accept || true
-    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py
+    pytest --doctest-modules xarray/core/_aggregations.py --accept
+    pytest --doctest-modules xarray/core/_aggregations.py
+    pytest --doctest-modules xarray/namedarray/_aggregations.py --accept
+    pytest --doctest-modules xarray/namedarray/_aggregations.py
 
 This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
 The second run of pytest is deliberate, since the first will return an error
@@ -481,7 +483,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
 
         if method.aggregation_type == "scan":
             # Scans retain dimensions.
-            out_finalized = "out.assign_coords(self._original_obj.coords)"
+            out_finalized = "out.assign_coords(self._obj.coords)"
         else:
             out_finalized = "out"
 
