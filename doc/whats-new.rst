@@ -26,13 +26,25 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
+  only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Better description of ``keep_attrs`` option on ``xarray.where`` docstring (:issue:`10982` :pull:`10997`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+
+Performance
+~~~~~~~~~~~
+
+- Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
+  By `Sam Levang <https://github.com/slevang>`_.
 
 
 .. _whats-new.2025.12.0:
