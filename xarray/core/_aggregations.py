@@ -5105,6 +5105,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
             return out.assign_coords(self._original_obj.coords)
+            return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -5213,7 +5214,7 @@ class DatasetGroupByAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out.assign_coords(self._original_obj.coords)
+        return out.assign_coords(self._obj.coords)
 
 
 class DatasetResampleAggregations:
@@ -5246,7 +5247,7 @@ class DatasetResampleAggregations:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> Dataset:
         raise NotImplementedError()
 
     def count(
@@ -6648,7 +6649,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            return out.assign_coords(self._original_obj.coords)
+            return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -6757,7 +6758,7 @@ class DatasetResampleAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out.assign_coords(self._original_obj.coords)
+        return out.assign_coords(self._obj.coords)
 
 
 class DataArrayGroupByAggregations:
@@ -8083,7 +8084,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            return out.assign_coords(self._original_obj.coords)
+            return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -8184,7 +8185,7 @@ class DataArrayGroupByAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out.assign_coords(self._original_obj.coords)
+        return out.assign_coords(self._obj.coords)
 
 
 class DataArrayResampleAggregations:
@@ -9510,7 +9511,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            return out.assign_coords(self._original_obj.coords)
+            return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -9611,4 +9612,4 @@ class DataArrayResampleAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out.assign_coords(self._original_obj.coords)
+        return out.assign_coords(self._obj.coords)
