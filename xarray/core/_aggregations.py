@@ -5104,7 +5104,6 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            return out.assign_coords(self._original_obj.coords)
             return out.assign_coords(self._obj.coords)
 
     def cumprod(
