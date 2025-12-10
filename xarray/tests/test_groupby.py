@@ -2622,7 +2622,7 @@ def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
 
     actual = getattr(ds.foo.resample(time="3ME"), method)(dim="time")
     expected.coords["time"] = ds.time
-    assert_identical(expected.drop_vars(["time"]).foo, actual)
+    assert_identical(expected.foo, actual)
 
 
 def test_groupby_binary_op_regression() -> None:
