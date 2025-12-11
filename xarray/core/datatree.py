@@ -1040,24 +1040,15 @@ class DataTree(
         else:
             raise KeyError(key)
 
-    @overload
-    def update(self, other: Dataset) -> None: ...
-
-    @overload
-    def update(self, other: Mapping[Hashable, DataArray | Variable]) -> None: ...
-
-    @overload
-    def update(self, other: Mapping[str, DataTree | DataArray | Variable]) -> None: ...
-
-    def _get_target_node(self, node_path: NodePath) -> DataTree:
-        """Helper function to get node or create if missing."""
+    def _get_target_object(self, node_path: NodePath | str) -> DataTree | DataArray:
+        """Helper function to get object, or create empty node if missing."""
         try:
-            target_node = self._get_item(node_path)
+            target_object = self._get_item(node_path)
         except KeyError:
-            # create new nodes along the path
+            # create new empty node, and all nodes along the path
             self._set_item(node_path, DataTree(), new_nodes_along_path=True)
-            target_node = self._get_item(node_path)
-        return target_node
+            target_object = self._get_item(node_path)
+        return target_object
 
     def _update_local_node(
         self,
@@ -1101,11 +1092,24 @@ class DataTree(
 
         self._replace_node(data, children=merged_children)
 
+    @overload
+    def update(self, other: Dataset) -> None: ...
+
+    @overload
+    def update(
+        self, other: Mapping[Hashable, Dataset | DataArray | Variable]
+    ) -> None: ...
+
+    @overload
+    def update(
+        self, other: Mapping[str, DataTree | Dataset | DataArray | Variable]
+    ) -> None: ...
+
     def update(
         self,
         other: (
             Dataset
-            | Mapping[Hashable, DataArray | Dataset | Variable]
+            | Mapping[Hashable, Dataset | DataArray | Variable]
             | Mapping[str, DataTree | Dataset | DataArray | Variable]
         ),
     ) -> None:
@@ -1121,21 +1125,21 @@ class DataTree(
             return
 
         # Otherwise divide other into groups with unique target nodes
-        items_by_node = {}
+        items_by_node: dict[NodePath, dict[str, DataTree | DataArray | Variable]] = {}
         for k, v in other.items():
             node_path, object_name = NodePath(k)._get_components()
             if isinstance(v, Dataset):
                 # If v is a dataset, node_path/object_name should be a node
-                target_node = self._get_target_node(f"{node_path}/{object_name}")
+                target_node = self._get_target_object(f"{node_path}/{object_name}")
                 # Update the node immediately
                 target_node._update_local_node(v)
             else:
-                # Otherwise add to target nodes items to update later as a group
+                # Otherwise add to target node's items to update later as a group
                 items_by_node.setdefault(node_path, {}).update({object_name: v})
 
         # Update each target node, creating if necessary
         for node_path, node_other in items_by_node.items():
-            target_node = self._get_target_node(node_path)
+            target_node = self._get_target_object(node_path)
             target_node._update_local_node(node_other)
 
     def assign(

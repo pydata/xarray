@@ -42,7 +42,7 @@ class NodePath(PurePosixPath):
         """Convert into an absolute path."""
         return type(self)("/", *self.parts)
 
-    def _get_components(self) -> None:
+    def _get_components(self) -> tuple[NodePath, str]:
         """
         Check the NodePath has a non-empty name, which is required for object
         assignment, e.g. tree['/path/to/node/object_name'] = value.

@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset
+from xarray import DataArray, Dataset, Variable
 from xarray.core.coordinates import DataTreeCoordinates
 from xarray.core.datatree import DataTree
 from xarray.core.treenode import NotFoundInTreeError
@@ -345,36 +345,24 @@ class TestUpdate:
 
     def test_update_with_paths(self) -> None:
         """Test that update() handles paths consistently with __setitem__."""
-        ds = Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [4, 5, 6])})
-        dt1 = DataTree()
-        # Add a DataArray x to node child
-        new_content = {"child/x": xr.DataArray(data=[10, 20], dims=("z",))}
-        # Add a variable y to node child
-        new_content.update({"child/y": xr.Variable(data=2, dims=())})
-        # Create a new node z with data ds and parent step_child
-        new_content.update({"step_child/z": ds})
+        dt1 = xr.DataTree(xr.Dataset(coords={"x": [0, 1, 2]}))
+        new_content: dict[str, DataTree | Dataset | DataArray | Variable] = {}
+        # Add a DataArray q to child node p
+        new_content = {"p/q": xr.DataArray(data=[10, 20, 30], dims=("x",))}
+        # Add a Variable r to child node p
+        new_content.update({"p/r": xr.Variable(data=2, dims=())})
+        # Create new nodes s, t, and assign a Dataset to t
+        ds = xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [4, 5, 6])})
+        new_content.update({"s/t": ds})
         dt1.update(new_content)
 
-        dt2 = DataTree()
+        dt2 = DataTree(xr.Dataset(coords={"x": [0, 1, 2]}))
         for path, obj in new_content.items():
-            # Add the new content with __setitem__
+            # Add the new content with __setitem__ one item at a time
             dt2[path] = obj
 
         # Both should produce the same result
         assert_equal(dt1, dt2)
-
-        # Test with multiple path assignments
-        dt3 = DataTree()
-        dt3.update(
-            {
-                "a/x": xr.Variable(data=1, dims=()),
-                "a/y": xr.Variable(data=2, dims=()),
-                "b/z": xr.Variable(data=3, dims=()),
-            }
-        )
-        assert "x" in dt3["/a"].data_vars
-        assert "y" in dt3["/a"].data_vars
-        assert "z" in dt3["/b"].data_vars
 
     def test_update_new_named_dataarray(self) -> None:
         da = xr.DataArray(name="temp", data=[0, 50])
