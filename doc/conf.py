@@ -179,6 +179,8 @@ autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
 mermaid_version = "11.6.0"
 
 # sphinx-llm config
+# Some jupyter-execute cells are not thread-safe, so we need to build sequentially.
+# See https://github.com/pydata/xarray/pull/11003#issuecomment-3641648868
 llms_txt_build_parallel = False
 
 # Add any paths that contain templates here, relative to this directory.
