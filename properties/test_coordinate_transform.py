@@ -24,10 +24,10 @@ class IdentityTransform(CoordinateTransform):
     """Identity transform that returns dimension positions as coordinate labels."""
 
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
-        return {name: dim_positions[name] for name in self.coord_names}
+        return dim_positions
 
     def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
-        return {dim: coord_labels[dim] for dim in self.dims}
+        return coord_labels
 
     def equals(
         self, other: CoordinateTransform, exclude: frozenset[Hashable] | None = None
@@ -46,7 +46,7 @@ def create_transform_da(sizes: dict[str, int]) -> xr.DataArray:
     # Create dataset with transform index for each dimension
     ds = xr.Dataset({DATA_VAR_NAME: (dims, data)})
     for dim, size in sizes.items():
-        transform = IdentityTransform([dim], {dim: size}, dtype=np.dtype(np.int64))
+        transform = IdentityTransform((dim,), {dim: size}, dtype=np.dtype(np.int64))
         index = CoordinateTransformIndex(transform)
         ds = ds.assign_coords(xr.Coordinates.from_xindex(index))
 
