@@ -85,6 +85,11 @@ def test_basic_indexing(data, sizes):
     transform_result = transform_da.isel(idxr)
     assert_identical(pandas_result, transform_result)
 
+    # not supported today
+    # pandas_result = pandas_da.sel(idxr)
+    # transform_result = transform_da.sel(idxr)
+    # assert_identical(pandas_result, transform_result)
+
 
 @given(
     st.data(),
