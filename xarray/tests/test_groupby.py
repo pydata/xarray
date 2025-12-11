@@ -3849,6 +3849,7 @@ def test_groupby_bins_mean_time_series():
     assert "measurement" in ds_agged.data_vars
     assert ds_agged.time.dtype == np.dtype("datetime64[ns]")
 
+
 def test_groupby_multi_map():
     # https://github.com/pydata/xarray/issues/11004
     d = xr.DataArray(
@@ -3860,7 +3861,7 @@ def test_groupby_multi_map():
         dims=["ny", "nx"],
     )
 
-    d.groupby(('lon', 'lat')).map(lambda x: x)
+    d.groupby(("lon", "lat")).map(lambda x: x)
 
 
 # TODO: Possible property tests to add to this module
