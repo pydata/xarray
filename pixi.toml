@@ -231,7 +231,6 @@ sphinx-autosummary-accessors = "*"
 sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-inline-tabs = "*"
-sphinx-llm = "*"
 sphinx = ">=6,<8"
 sphinxcontrib-mermaid = "*"
 sphinxcontrib-srclinks = "*"
@@ -241,6 +240,7 @@ sphinxext-rediraffe = "*"
 
 [feature.doc.pypi-dependencies]
 cfgrib = "*" # pypi dep because of https://github.com/prefix-dev/pixi/issues/3032#issuecomment-3302638043
+sphinx-llm = ">=0.2.1"
 
 [feature.doc.tasks]
 doc = { cmd = "make html", cwd = "doc" }

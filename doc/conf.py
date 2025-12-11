@@ -178,6 +178,9 @@ autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
 # mermaid config
 mermaid_version = "11.6.0"
 
+# sphinx-llm config
+llms_txt_build_parallel = False
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 
