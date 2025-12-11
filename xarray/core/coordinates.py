@@ -1053,7 +1053,7 @@ class DataTreeCoordinates(Coordinates):
         # target_node = self._data._get_target_node(node_path)
         # target_node.coords[coord_name] = value
 
-        # # # Check if key contains a forward slash (path-like access)
+        # Check if key contains a forward slash (path-like access)
         if isinstance(key, str) and "/" in key:
             # Parse key as NodePath to enforce correct structure
             node_path, coord_name = NodePath(key)._get_components()

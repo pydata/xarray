@@ -210,7 +210,7 @@ class TreeNode:
             for name, child in children.items():
                 handle_child(name, child)
             self._post_attach_children(children)
-            # Check that all the children were created in the right place
+            # Check the children were created in the right place (probably redundant)
             for path in children.keys():
                 self._get_item(path)
         except Exception:
