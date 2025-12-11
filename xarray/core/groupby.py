@@ -178,7 +178,7 @@ def _inverse_permutation_indices(positions, N: int | None = None) -> np.ndarray 
         positions = [np.arange(sl.start, sl.stop, sl.step) for sl in positions]
 
     newpositions = nputils.inverse_permutation(
-        np.concatenate(tuple(p for p in positions if p)), N
+        np.concatenate(tuple(p for p in positions if len(p) > 0)), N
     )
     return newpositions[newpositions != -1]
 
