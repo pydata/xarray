@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import functools
-from typing import Any
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, TypeVar, cast
 
 import numpy as np
-import pandas as pd
+from pandas.api.extensions import ExtensionDtype
 
 from xarray.compat import array_api_compat, npcompat
 from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import utils
+
+if TYPE_CHECKING:
+    from typing import Any
+
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject("<NA>")
@@ -47,8 +52,10 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
     (np.bytes_, np.str_),  # numpy promotes to unicode
 )
 
+T_dtype = TypeVar("T_dtype", np.dtype, ExtensionDtype)
 
-def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
+
+def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters
@@ -63,7 +70,13 @@ def maybe_promote(dtype: np.dtype) -> tuple[np.dtype, Any]:
     # N.B. these casting rules should match pandas
     dtype_: np.typing.DTypeLike
     fill_value: Any
-    if HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
+    if utils.is_allowed_extension_array_dtype(dtype):
+        return dtype, cast(ExtensionDtype, dtype).na_value  # type: ignore[redundant-cast]
+    if not isinstance(dtype, np.dtype):
+        raise TypeError(
+            f"dtype {dtype} must be one of an extension array dtype or numpy dtype"
+        )
+    elif HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object
@@ -213,7 +226,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
 
     if isinstance(dtype, np.dtype):
         return npcompat.isdtype(dtype, kind)
-    elif pd.api.types.is_extension_array_dtype(dtype):  # noqa: TID251
+    elif utils.is_allowed_extension_array_dtype(dtype):
         # we never want to match pandas extension array dtypes
         return False
     else:
@@ -222,23 +235,67 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
         return xp.isdtype(dtype, kind)
 
 
-def preprocess_types(t):
-    if isinstance(t, str | bytes):
-        return type(t)
-    elif isinstance(dtype := getattr(t, "dtype", t), np.dtype) and (
-        np.issubdtype(dtype, np.str_) or np.issubdtype(dtype, np.bytes_)
-    ):
+def maybe_promote_to_variable_width(
+    array_or_dtype: np.typing.ArrayLike
+    | np.typing.DTypeLike
+    | ExtensionDtype
+    | str
+    | bytes,
+    *,
+    should_return_str_or_bytes: bool = False,
+) -> np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype:
+    if isinstance(array_or_dtype, str | bytes):
+        if should_return_str_or_bytes:
+            return array_or_dtype
+        return type(array_or_dtype)
+    elif isinstance(
+        dtype := getattr(array_or_dtype, "dtype", array_or_dtype), np.dtype
+    ) and (np.issubdtype(dtype, np.str_) or np.issubdtype(dtype, np.bytes_)):
         # drop the length from numpy's fixed-width string dtypes, it is better to
         # recalculate
         # TODO(keewis): remove once the minimum version of `numpy.result_type` does this
         # for us
         return dtype.type
     else:
-        return t
+        return array_or_dtype
+
+
+def should_promote_to_object(
+    arrays_and_dtypes: Iterable[
+        np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype
+    ],
+    xp,
+) -> bool:
+    """
+    Test whether the given arrays_and_dtypes, when evaluated individually, match the
+    type promotion rules found in PROMOTE_TO_OBJECT.
+    """
+    np_result_types = set()
+    for arr_or_dtype in arrays_and_dtypes:
+        try:
+            result_type = array_api_compat.result_type(
+                maybe_promote_to_variable_width(arr_or_dtype), xp=xp
+            )
+            if isinstance(result_type, np.dtype):
+                np_result_types.add(result_type)
+        except TypeError:
+            # passing individual objects to xp.result_type (i.e., what `array_api_compat.result_type` calls) means NEP-18 implementations won't have
+            # a chance to intercept special values (such as NA) that numpy core cannot handle.
+            # Thus they are considered as types that don't need promotion i.e., the `arr_or_dtype` that rose the `TypeError` will not contribute to `np_result_types`.
+            pass
+
+    if np_result_types:
+        for left, right in PROMOTE_TO_OBJECT:
+            if any(np.issubdtype(t, left) for t in np_result_types) and any(
+                np.issubdtype(t, right) for t in np_result_types
+            ):
+                return True
+
+    return False
 
 
 def result_type(
-    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | None,
+    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype,
     xp=None,
 ) -> np.dtype:
     """Like np.result_type, but with type promotion rules matching pandas.
@@ -263,19 +320,13 @@ def result_type(
     if xp is None:
         xp = get_array_namespace(arrays_and_dtypes)
 
-    types = {
-        array_api_compat.result_type(preprocess_types(t), xp=xp)
-        for t in arrays_and_dtypes
-    }
-    if any(isinstance(t, np.dtype) for t in types):
-        # only check if there's numpy dtypes – the array API does not
-        # define the types we're checking for
-        for left, right in PROMOTE_TO_OBJECT:
-            if any(np.issubdtype(t, left) for t in types) and any(
-                np.issubdtype(t, right) for t in types
-            ):
-                return np.dtype(object)
-
-    return array_api_compat.result_type(
-        *map(preprocess_types, arrays_and_dtypes), xp=xp
+    if should_promote_to_object(arrays_and_dtypes, xp):
+        return np.dtype(object)
+    maybe_promote = functools.partial(
+        maybe_promote_to_variable_width,
+        # let extension arrays handle their own str/bytes
+        should_return_str_or_bytes=any(
+            map(utils.is_allowed_extension_array_dtype, arrays_and_dtypes)
+        ),
     )
+    return array_api_compat.result_type(*map(maybe_promote, arrays_and_dtypes), xp=xp)
