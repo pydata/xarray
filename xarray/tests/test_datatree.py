@@ -82,6 +82,12 @@ class TestTreeCreation:
         dt3 = xr.DataTree.from_dict({"/": ds, "child": ds})
         assert_identical(dt2, dt3)
 
+    def test_pathlike_children(self) -> None:
+        dt = xr.DataTree(children={"a/b/c": xr.DataTree(), "a/d": xr.DataTree()})
+        assert "c" in dt["a/b"].children
+        assert dt["a/b/c"].path == "/a/b/c"
+        assert "d" in dt["a"].children
+
 
 class TestFamilyTree:
     def test_dont_modify_children_inplace(self) -> None:
@@ -336,6 +342,39 @@ class TestUpdate:
         expected = DataTree.from_dict({"/": xr.Dataset({"foo": 0}), "a": None})
         assert_equal(dt, expected)
         assert dt.groups == ("/", "/a")
+
+    def test_update_with_paths(self) -> None:
+        """Test that update() handles paths consistently with __setitem__."""
+        ds = Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [4, 5, 6])})
+        dt1 = DataTree()
+        # Add a DataArray x to node child
+        new_content = {"child/x": xr.DataArray(data=[10, 20], dims=("z",))}
+        # Add a variable y to node child
+        new_content.update({"child/y": xr.Variable(data=2, dims=())})
+        # Create a new node z with data ds and parent step_child
+        new_content.update({"step_child/z": ds})
+        dt1.update(new_content)
+
+        dt2 = DataTree()
+        for path, obj in new_content.items():
+            # Add the new content with __setitem__
+            dt2[path] = obj
+
+        # Both should produce the same result
+        assert_equal(dt1, dt2)
+
+        # Test with multiple path assignments
+        dt3 = DataTree()
+        dt3.update(
+            {
+                "a/x": xr.Variable(data=1, dims=()),
+                "a/y": xr.Variable(data=2, dims=()),
+                "b/z": xr.Variable(data=3, dims=()),
+            }
+        )
+        assert "x" in dt3["/a"].data_vars
+        assert "y" in dt3["/a"].data_vars
+        assert "z" in dt3["/b"].data_vars
 
     def test_update_new_named_dataarray(self) -> None:
         da = xr.DataArray(name="temp", data=[0, 50])
@@ -721,6 +760,27 @@ class TestCoords:
         # DataTree constructor doesn't accept coords= but should still be able to handle DatasetCoordinates
         dt2 = DataTree(dataset=dt.coords)
         assert_identical(dt2.coords, dt.coords)
+
+    def test_setitem_coord_on_child_node(self) -> None:
+        """Test that coordinates can be assigned to child nodes using path-like syntax."""
+        tree = DataTree(Dataset(coords={"x": 0}), children={"child": DataTree()})
+
+        # Assign coordinate to child node using path
+        tree.coords["/child/y"] = 2
+
+        # Verify coordinate is on child node, not root
+        assert "y" in tree["/child"].coords
+        assert "y" not in tree.coords
+        assert_array_equal(tree["/child"].coords["y"], 2)
+
+        # Verify root still has its coordinate
+        assert "x" in tree.coords
+        assert_array_equal(tree.coords["x"], 0)
+
+        # Test relative path
+        tree.coords["child/z"] = 3
+        assert "z" in tree["/child"].coords
+        assert_array_equal(tree["/child"].coords["z"], 3)
 
     def test_inherited(self) -> None:
         ds = Dataset(

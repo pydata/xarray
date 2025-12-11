@@ -1045,6 +1045,23 @@ class DataTreeCoordinates(Coordinates):
             del self._data._node_coord_variables[name]
             del self._data._node_indexes[name]
 
+    def __setitem__(self, key: Hashable, value: Any) -> None:
+        """Set a coordinate, optionally at a path to a child node."""
+        from xarray.core.treenode import NodePath
+
+        # node_path, coord_name = NodePath(key)._get_components()
+        # target_node = self._data._get_target_node(node_path)
+        # target_node.coords[coord_name] = value
+
+        # # # Check if key contains a forward slash (path-like access)
+        if isinstance(key, str) and "/" in key:
+            # Parse key as NodePath to enforce correct structure
+            node_path, coord_name = NodePath(key)._get_components()
+            target_node = self._data._get_target_node(node_path)
+            target_node.coords[coord_name] = value
+        else:
+            super().__setitem__(key, value)
+
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
             del self._data[key]  # type: ignore[arg-type]  # see https://github.com/pydata/xarray/issues/8836

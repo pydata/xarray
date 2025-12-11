@@ -29,6 +29,9 @@ Bug Fixes
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- Fix ``DataTree`` bugs related to assigning nodes, variables and coordinates with
+path like names (:issue:`9485`, :issue:`9490`, :issue:`9978`).
+  By `Ewan Short <https://github.com/eshort0401>`_.
 
 Documentation
 ~~~~~~~~~~~~~

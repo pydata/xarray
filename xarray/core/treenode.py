@@ -42,6 +42,18 @@ class NodePath(PurePosixPath):
         """Convert into an absolute path."""
         return type(self)("/", *self.parts)
 
+    def _get_components(self) -> None:
+        """
+        Check the NodePath has a non-empty name, which is required for object
+        assignment, e.g. tree['/path/to/node/object_name'] = value.
+        """
+        if not self.name:
+            raise ValueError(
+                f"Invalid assignment path {self!r}. Assignment paths should have a "
+                "structure like 'path/to/node/object_name'."
+            )
+        return self.parent, self.name
+
 
 class TreeNode:
     """
@@ -172,12 +184,35 @@ class TreeNode:
 
         old_children = self.children
         del self.children
+
+        def handle_child(name, child):
+            """
+            Decide whether to call _set_item or _set_parent. If the child name is a
+            path, we call ._set_item to make sure any intermediate nodes are also
+            created. When name is a path there will be nested calls of children due to
+            the setter decorator, and the fact ._set_item assigns to the children
+            attribute.
+            """
+            if "/" in name:
+                # Path like node name. Create node at appropriate level of nesting.
+                self._set_item(
+                    path=name,
+                    item=child,
+                    new_nodes_along_path=True,
+                    allow_overwrite=True,
+                )
+            else:
+                # Simple name, just call _set_parent directly.
+                child._set_parent(new_parent=self, child_name=name)
+
         try:
             self._pre_attach_children(children)
             for name, child in children.items():
-                child._set_parent(new_parent=self, child_name=name)
+                handle_child(name, child)
             self._post_attach_children(children)
-            assert len(self.children) == len(children)
+            # Check that all the children were created in the right place
+            for path in children.keys():
+                self._get_item(path)
         except Exception:
             # if something goes wrong then revert to previous children
             self.children = old_children
@@ -206,7 +241,7 @@ class TreeNode:
             if not isinstance(child, TreeNode):
                 raise TypeError(
                     f"Cannot add object {name}. It is of type {type(child)}, "
-                    "but can only add children of type DataTree"
+                    "but can only add children of type TreeNode"
                 )
 
             childid = id(child)

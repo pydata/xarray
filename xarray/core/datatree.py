@@ -1049,7 +1049,17 @@ class DataTree(
     @overload
     def update(self, other: Mapping[str, DataTree | DataArray | Variable]) -> None: ...
 
-    def update(
+    def _get_target_node(self, node_path: NodePath) -> DataTree:
+        """Helper function to get node or create if missing."""
+        try:
+            target_node = self._get_item(node_path)
+        except KeyError:
+            # create new nodes along the path
+            self._set_item(node_path, DataTree(), new_nodes_along_path=True)
+            target_node = self._get_item(node_path)
+        return target_node
+
+    def _update_local_node(
         self,
         other: (
             Dataset
@@ -1058,9 +1068,8 @@ class DataTree(
         ),
     ) -> None:
         """
-        Update this node's children and / or variables.
-
-        Just like `dict.update` this is an in-place operation.
+        Helper to update the node's children and / or variables assuming there are no
+        path-like keys.
         """
         new_children: dict[str, DataTree] = {}
         new_variables: CoercibleMapping
@@ -1091,6 +1100,43 @@ class DataTree(
         merged_children = {**self.children, **new_children}
 
         self._replace_node(data, children=merged_children)
+
+    def update(
+        self,
+        other: (
+            Dataset
+            | Mapping[Hashable, DataArray | Dataset | Variable]
+            | Mapping[str, DataTree | Dataset | DataArray | Variable]
+        ),
+    ) -> None:
+        """
+        Update this node's children and / or variables allowing for path-like keys.
+
+        Just like `dict.update` this is an in-place operation.
+        """
+
+        # If other is a dataset assume we want to update just this node
+        if isinstance(other, Dataset):
+            self._update_local_node(other)
+            return
+
+        # Otherwise divide other into groups with unique target nodes
+        items_by_node = {}
+        for k, v in other.items():
+            node_path, object_name = NodePath(k)._get_components()
+            if isinstance(v, Dataset):
+                # If v is a dataset, node_path/object_name should be a node
+                target_node = self._get_target_node(f"{node_path}/{object_name}")
+                # Update the node immediately
+                target_node._update_local_node(v)
+            else:
+                # Otherwise add to target nodes items to update later as a group
+                items_by_node.setdefault(node_path, {}).update({object_name: v})
+
+        # Update each target node, creating if necessary
+        for node_path, node_other in items_by_node.items():
+            target_node = self._get_target_node(node_path)
+            target_node._update_local_node(node_other)
 
     def assign(
         self, items: Mapping[Any, Any] | None = None, **items_kwargs: Any
