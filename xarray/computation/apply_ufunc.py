@@ -246,6 +246,8 @@ def build_output_coords_and_indexes(
         (unpacked_coords,) = coords_list
         merged_vars = dict(unpacked_coords.variables)
         merged_indexes = dict(unpacked_coords.xindexes)
+        if combine_attrs == "drop":
+            merged_vars = {k: var._replace(attrs={}) for k, var in merged_vars.items()}
     else:
         merged_vars, merged_indexes = merge_coordinates_without_align(
             coords_list, exclude_dims=exclude_dims, combine_attrs=combine_attrs

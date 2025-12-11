@@ -208,6 +208,15 @@ def test_engines_not_installed() -> None:
         plugins.guess_engine("foo.nc")
 
 
+@pytest.mark.parametrize("engine", common.BACKEND_ENTRYPOINTS.keys())
+def test_get_backend_fastpath_skips_list_engines(engine: str) -> None:
+    """Test that built-in engines skip list_engines (fastpath)."""
+    plugins.list_engines.cache_clear()
+    initial_misses = plugins.list_engines.cache_info().misses
+    plugins.get_backend(engine)
+    assert plugins.list_engines.cache_info().misses == initial_misses
+
+
 def test_lazy_import() -> None:
     """Test that some modules are imported in a lazy manner.
 

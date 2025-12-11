@@ -63,6 +63,7 @@ extensions = [
     "sphinx_design",
     "sphinx_inline_tabs",
     "sphinx_remove_toctrees",
+    "sphinx_llm.txt",
 ]
 
 
@@ -176,6 +177,11 @@ autodoc_type_aliases = napoleon_type_aliases  # Keep both in sync
 
 # mermaid config
 mermaid_version = "11.6.0"
+
+# sphinx-llm config
+# Some jupyter-execute cells are not thread-safe, so we need to build sequentially.
+# See https://github.com/pydata/xarray/pull/11003#issuecomment-3641648868
+llms_txt_build_parallel = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
