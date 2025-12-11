@@ -1,5 +1,7 @@
 """Property tests comparing CoordinateTransformIndex to PandasIndex."""
 
+import functools
+import operator
 from collections.abc import Hashable
 from typing import Any
 
@@ -45,11 +47,18 @@ def create_transform_da(sizes: dict[str, int]) -> xr.DataArray:
 
     # Create dataset with transform index for each dimension
     ds = xr.Dataset({DATA_VAR_NAME: (dims, data)})
-    for dim, size in sizes.items():
-        transform = IdentityTransform((dim,), {dim: size}, dtype=np.dtype(np.int64))
-        index = CoordinateTransformIndex(transform)
-        ds = ds.assign_coords(xr.Coordinates.from_xindex(index))
-
+    coords = functools.reduce(
+        operator.or_,
+        [
+            xr.Coordinates.from_xindex(
+                CoordinateTransformIndex(
+                    IdentityTransform((dim,), {dim: size}, dtype=np.dtype(np.int64))
+                )
+            )
+            for dim, size in sizes.items()
+        ],
+    )
+    ds = ds.assign_coords(coords)
     return ds[DATA_VAR_NAME]
 
 
