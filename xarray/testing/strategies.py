@@ -565,7 +565,7 @@ def basic_indexers(
 
     Returns
     -------
-    dict[Hashable, int | slice]
+    sizes : mapping of hashable to int or slice
         Indexers as a dict with keys randomly selected from ``sizes.keys()``.
 
     See Also
@@ -612,7 +612,7 @@ def outer_array_indexers(
 
     Returns
     -------
-    dict[Hashable, np.ndarray]
+    sizes : mapping of hashable to np.ndarray
         Indexers as a dict with keys randomly selected from ``sizes.keys()``.
         Values are 1D numpy arrays of integer indices for each dimension.
 
@@ -675,7 +675,7 @@ def vectorized_indexers(
 
     Returns
     -------
-    dict[Hashable, xr.DataArray]
+    sizes : mapping of hashable to DataArray or Variable
         Indexers as a dict with keys randomly selected from sizes.keys().
         Values are DataArrays of integer indices that are all broadcastable
         to a common shape.
