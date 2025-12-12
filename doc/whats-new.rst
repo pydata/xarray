@@ -18,6 +18,9 @@ New Features
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- Remove special mapping of ``"auto"`` to ``{}`` in ``open_zarr``. This matches the behavior of ``open_dataset(..., engine="zarr")``
+  and means that by default the chunks might be a multiple of the the on-disk chunks. (:issue:`11002` :pull:`11010`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Deprecations
 ~~~~~~~~~~~~
