@@ -330,7 +330,7 @@ We can save a Dataset to disk using the
     :hide-code:
 
     # Ensure the file is located in a unique temporary directory
-    # so that it doesn't conflict with parallel builds of the 
+    # so that it doesn't conflict with parallel builds of the
     # documentation.
 
     import tempfile
@@ -816,14 +816,6 @@ same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
     h5_filename = "saved_on_disk.h5"
 
 .. jupyter-execute::
-    :hide-code:
-
-    # Ensure the file is located in a unique temporary directory
-    # so that it doesn't conflict with parallel builds of the 
-    # documentation.
-    h5_filename = os.path.join(tempdir.name, h5_filename)
-
-.. jupyter-execute::
 
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
@@ -885,9 +877,17 @@ To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
 To write to a local directory, we pass a path to a directory:
 
 .. jupyter-execute::
+
+    zarr_filename = "example.zarr"
+
+.. jupyter-execute::
     :hide-code:
 
-    ! rm -rf path/to/directory.zarr
+    import os.path
+    import tempfile
+
+    tempdir = tempfile.TemporaryDirectory()
+    zarr_filename = os.path.join(tempdir.name, zarr_filename)
 
 .. jupyter-execute::
     :stderr:
@@ -900,7 +900,7 @@ To write to a local directory, we pass a path to a directory:
             "z": ("x", list("abcd")),
         },
     )
-    ds.to_zarr("path/to/directory.zarr", zarr_format=2, consolidated=False)
+    ds.to_zarr(zarr_filename, zarr_format=2, consolidated=False)
 
 (The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
 there.) If the directory does not exist, it will be created. If a zarr
@@ -928,7 +928,7 @@ To read back a zarr dataset that has been created this way, we use the
 
 .. jupyter-execute::
 
-    ds_zarr = xr.open_zarr("path/to/directory.zarr", consolidated=False)
+    ds_zarr = xr.open_zarr(zarr_filename, consolidated=False)
     ds_zarr
 
 Cloud Storage Buckets
@@ -1032,7 +1032,7 @@ to Zarr:
 .. jupyter-execute::
     :hide-code:
 
-    ! rm -rf path/to/directory.zarr
+    tempdir.cleanup()
 
 .. jupyter-execute::
 
@@ -1042,9 +1042,8 @@ to Zarr:
     # shape and chunks are used
     dummies = dask.array.zeros(30, chunks=10)
     ds = xr.Dataset({"foo": ("x", dummies)}, coords={"x": np.arange(30)})
-    path = "path/to/directory.zarr"
     # Now we write the metadata without computing any array values
-    ds.to_zarr(path, compute=False, consolidated=False)
+    ds.to_zarr(zarr_filename, compute=False, consolidated=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
 can be filled out by subsequent calls to ``to_zarr``.
@@ -1059,9 +1058,9 @@ where the data should be written (in index space, not label space), e.g.,
     # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))}, coords={"x": np.arange(30)})
     # Any of the following region specifications are valid
-    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto", consolidated=False)
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"}, consolidated=False)
-    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)}, consolidated=False)
+    ds.isel(x=slice(0, 10)).to_zarr(zarr_filename, region="auto", consolidated=False)
+    ds.isel(x=slice(10, 20)).to_zarr(zarr_filename, region={"x": "auto"}, consolidated=False)
+    ds.isel(x=slice(20, 30)).to_zarr(zarr_filename, region={"x": slice(20, 30)}, consolidated=False)
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
 chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
@@ -1134,7 +1133,7 @@ order, e.g., for time-stepping a simulation:
 .. jupyter-execute::
     :hide-code:
 
-    ! rm -rf path/to/directory.zarr
+    tempdir.cleanup()
 
 .. jupyter-execute::
 
@@ -1146,7 +1145,7 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-01", periods=2),
         },
     )
-    ds1.to_zarr("path/to/directory.zarr", consolidated=False)
+    ds1.to_zarr(zarr_filename, consolidated=False)
 
 .. jupyter-execute::
 
@@ -1158,7 +1157,7 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-03", periods=2),
         },
     )
-    ds2.to_zarr("path/to/directory.zarr", append_dim="t", consolidated=False)
+    ds2.to_zarr(zarr_filename, append_dim="t", consolidated=False)
 
 .. _io.zarr.writing_chunks:
 
@@ -1208,8 +1207,8 @@ split them into chunks:
 
 .. jupyter-execute::
 
-    ds.to_zarr("path/to/directory.zarr", consolidated=False, mode="w")
-    !tree -I zarr.json path/to/directory.zarr
+    ds.to_zarr(zarr_filename, consolidated=False, mode="w")
+    !tree -I zarr.json $zarr_filename
 
 
 This may cause unwanted overhead on some systems, such as when reading from a cloud
@@ -1219,12 +1218,12 @@ shape of each coordinate array in the ``encoding`` argument:
 .. jupyter-execute::
 
     ds.to_zarr(
-        "path/to/directory.zarr",
+        zarr_filename,
         encoding={"xc": {"chunks": ds.xc.shape}, "yc": {"chunks": ds.yc.shape}},
         consolidated=False,
         mode="w",
     )
-    !tree -I zarr.json path/to/directory.zarr
+    !tree -I zarr.json $zarr_filename
 
 
 The number of chunks on Tair matches our dask chunks, while there is now only a single
@@ -1682,10 +1681,7 @@ GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened usin
 .. jupyter-execute::
     :hide-code:
 
-    import shutil
-
-    shutil.rmtree("foo.zarr")
-    shutil.rmtree("path/to/directory.zarr")
+    tempdir.cleanup()
 
 GRIB format via cfgrib
 ----------------------
