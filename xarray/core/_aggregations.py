@@ -1231,7 +1231,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out
+        return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -1337,7 +1337,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out
+        return out.assign_coords(self._obj.coords)
 
 
 class DatasetAggregations:
@@ -2453,7 +2453,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out
+        return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -2552,7 +2552,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out
+        return out.assign_coords(self._obj.coords)
 
 
 class DataArrayAggregations:
@@ -2929,7 +2929,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out
+        return out.assign_coords(self._obj.coords)
 
     def mean(
         self,
@@ -3009,7 +3009,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        return out
+        return out.assign_coords(self._obj.coords)
 
     def prod(
         self,
