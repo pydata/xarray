@@ -2566,7 +2566,6 @@ class TestDatasetResample:
             ),
         ),
         ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, False),
-        #
         pytest.param(
             "cumprod",
             [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
