@@ -1564,7 +1564,6 @@ def open_zarr(
                 chunked_array_type
             )  # attempt to import that parallel backend
 
-            chunks = {}
         except (ValueError, ImportError):
             chunks = None
 
