@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import glob
 import gzip
 import itertools
+import json
 import math
 import os.path
 import pickle
@@ -3022,7 +3024,7 @@ class ZarrBase(CFEncodedBase):
             del attrs[self.DIMENSION_KEY]
             zarr_group["var2"].attrs.put(attrs)
 
-            with pytest.raises(KeyError):
+            with pytest.warns(UserWarning, match="Failed to read dimension names"):
                 with xr.decode_cf(store):
                     pass
 
@@ -4370,6 +4372,88 @@ class TestZarrDirectoryStore(ZarrBase):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zarr") as tmp:
             yield tmp
+
+    # Helper functions for stripping dimension metadata from zarr stores
+    def _strip_zarr_3(self, ds_path, stripped_ds_path):
+        """Create a copy of a zarr 3 with dimension_names metadata removed."""
+        shutil.copytree(ds_path, stripped_ds_path, dirs_exist_ok=True)
+        # Get all the zarr.json metadata files.
+        metadata_files = glob.glob(f"{stripped_ds_path}/**/zarr.json", recursive=True)
+        # Iterate through and remove all "dimension_names" entries
+        for file in metadata_files:
+            with open(file) as f:
+                metadata = json.load(f)
+            metadata.pop("dimension_names", None)
+            con_metadata = metadata.get("consolidated_metadata", None)
+            if con_metadata:
+                for k in con_metadata["metadata"].keys():
+                    con_metadata["metadata"][k].pop("dimension_names", None)
+
+            with open(file, "w") as f:
+                json.dump(metadata, f, indent=2)
+
+    def _strip_zarr_2(self, ds_path, stripped_ds_path):
+        """Create a copy of a zarr 2 with _ARRAY_DIMENSIONS metadata removed."""
+        # Get all the .zattrs files. Note .zattrs are optional in zarr 2, but xarray uses
+        # them to store dimension name metadata.
+        # https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html#attributes
+        shutil.copytree(ds_path, stripped_ds_path, dirs_exist_ok=True)
+        zattrs_files = glob.glob(f"{stripped_ds_path}/**/.zattrs", recursive=True)
+        # Iterate through and remove all "_ARRAY_DIMENSIONS" entries
+        for file in zattrs_files:
+            with open(file) as f:
+                metadata = json.load(f)
+            metadata.pop("_ARRAY_DIMENSIONS", None)
+            with open(file, "w") as f:
+                json.dump(metadata, f, indent=2)
+        zmetadata_file = Path(stripped_ds_path) / ".zmetadata"
+        if zmetadata_file.exists():
+            with open(zmetadata_file) as f:
+                metadata = json.load(f)
+            for k in metadata["metadata"].keys():
+                metadata["metadata"][k].pop("_ARRAY_DIMENSIONS", None)
+            with open(zmetadata_file, "w") as f:
+                json.dump(metadata, f, indent=2)
+
+    @pytest.mark.parametrize("consolidated", [True, False])
+    def test_default_dims(self, consolidated):
+        zarr_format = zarr.config.get("default_zarr_format")
+        print(zarr_format)
+        # Create example data that can be read without dimension name metadata
+        da_a = xr.DataArray(np.arange(3 * 18).reshape(3, 18), dims=["label", "z"])
+        da_b = xr.DataArray(np.arange(3), dims="label")
+        ds_1 = xr.Dataset({"a": da_a, "b": da_b})
+
+        # Specify what we expect to get when dimension name metadata is missing
+        expected = ds_1.rename_dims({"label": "dim_0", "z": "dim_1"})
+
+        def get_stripped_ds(ds, consolidated, zarr_format):
+            with self.create_zarr_target() as ds_target:
+                kwargs = {"consolidated": consolidated, "zarr_format": zarr_format}
+                ds.to_zarr(ds_target, **kwargs)
+                with self.create_zarr_target() as stripped_ds_target:
+                    if zarr_format == 3:
+                        self._strip_zarr_3(ds_target, stripped_ds_target)
+                    else:
+                        self._strip_zarr_2(ds_target, stripped_ds_target)
+                    with pytest.warns(UserWarning, match="dimension names"):
+                        return xr.open_zarr(stripped_ds_target, **kwargs).compute()
+
+        stripped_ds_1 = get_stripped_ds(ds_1, consolidated, zarr_format)
+        assert_equal(stripped_ds_1, expected)
+
+        # Create example data that cannot be read without dimension name metadata
+        da_c = xr.DataArray(np.arange(18), dims="z")
+        ds_2 = xr.Dataset({"a": da_a, "c": da_c})
+
+        with pytest.raises(ValueError, match="conflicting sizes for dimension"):
+            get_stripped_ds(ds_2, consolidated, zarr_format)
+
+        # Failure to open_zarr on ds_2 reflects the failure to create an xarray Dataset without
+        # proper labeling of dimensions; variables must have consistent dimensions reading
+        # shape from left to right.
+        with pytest.raises(AlignmentError, match="cannot reindex or align along"):
+            xr.Dataset({"a": xr.DataArray(da_a.values), "c": xr.DataArray(da_c.values)})
 
 
 @requires_zarr
@@ -7587,13 +7671,13 @@ def test_zarr_create_default_indexes(tmp_path, create_default_indexes) -> None:
 
 @requires_zarr
 @pytest.mark.usefixtures("default_zarr_format")
-def test_raises_key_error_on_invalid_zarr_store(tmp_path):
+def test_user_warning_on_invalid_zarr_store(tmp_path):
     root = zarr.open_group(tmp_path / "tmp.zarr")
     if Version(zarr.__version__) < Version("3.0.0"):
         root.create_dataset("bar", shape=(3, 5), dtype=np.float32)
     else:
         root.create_array("bar", shape=(3, 5), dtype=np.float32)
-    with pytest.raises(KeyError, match=r"xarray to determine variable dimensions"):
+    with pytest.warns(UserWarning, match=r"dimension names"):
         xr.open_zarr(tmp_path / "tmp.zarr", consolidated=False)
 
 

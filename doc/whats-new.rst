@@ -29,6 +29,8 @@ Bug Fixes
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- Improve the robustness of ``open_zarr`` by attempting to load datasets with default dimension names if dimension name metadata is missing (:issue:`8749`).
+  By `Ewan Short <https://github.com/eshort0401>`_.
 
 Documentation
 ~~~~~~~~~~~~~

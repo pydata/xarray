@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import struct
+import warnings
 from collections.abc import Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
@@ -355,39 +356,21 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
-    # Zarr V3 explicitly stores the dimension names in the metadata
-    try:
-        # if this exists, we are looking at a Zarr V3 array
-        # convert None to empty tuple
-        dimensions = zarr_obj.metadata.dimension_names or ()
-    except AttributeError:
-        # continue to old code path
-        pass
-    else:
-        attributes = dict(zarr_obj.attrs)
-        if len(zarr_obj.shape) != len(dimensions):
-            raise KeyError(
-                "Zarr object is missing the `dimension_names` metadata which is "
-                "required for xarray to determine variable dimensions."
-            )
-        return dimensions, attributes
+    def get_default_dims(zarr_obj):
+        # Helper function to create default dimension names in cases where these don't
+        # exist in the metadata. Note the dimension_names parameter is optional in
+        # zarr version 3
+        # https://zarr-specs.readthedocs.io/en/latest/v3/core/index.html#dimension-names
+        # Dimension name metadata is also optional in zarr version 2
+        # https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html#attributes
 
-    # Zarr arrays do not have dimensions. To get around this problem, we add
-    # an attribute that specifies the dimension. We have to hide this attribute
-    # when we send the attributes to the user.
-    # zarr_obj can be either a zarr group or zarr array
-    try:
-        # Xarray-Zarr
-        dimensions = zarr_obj.attrs[dimension_key]
-    except KeyError as e:
-        if not try_nczarr:
-            raise KeyError(
-                f"Zarr object is missing the attribute `{dimension_key}`, which is "
-                "required for xarray to determine variable dimensions."
-            ) from e
+        return tuple(f"dim_{n}" for n in range(len(zarr_obj.shape)))
 
-        # NCZarr defines dimensions through metadata in .zarray
+    def get_nczarr_dims(zarr_obj):
+        # Helper function to extract dimension names from NCZarr metadata in .zarray
+        # https://docs.unidata.ucar.edu/netcdf/NUG/nczarr_head.html
         zarray_path = os.path.join(zarr_obj.path, ".zarray")
+        # Check available zarr module version (not zarr version of zarr_obj) version
         if _zarr_v3():
             import asyncio
 
@@ -400,11 +383,69 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
             dimensions = [
                 os.path.basename(dim) for dim in zarray["_NCZARR_ARRAY"]["dimrefs"]
             ]
-        except KeyError as e:
-            raise KeyError(
-                f"Zarr object is missing the attribute `{dimension_key}` and the NCZarr metadata, "
-                "which are required for xarray to determine variable dimensions."
-            ) from e
+        except KeyError:
+            dimensions = get_default_dims(zarr_obj)
+        return dimensions
+
+    # Zarr V3 specifies an optional dimension_names array metadata parameter, so
+    # check if this exists
+    try:
+        # If dimension_names exists, we are looking at a Zarr V3 array
+        # Convert None to empty tuple
+        dimensions = zarr_obj.metadata.dimension_names or ()
+    except AttributeError:
+        # Continue to old code path
+        pass
+    else:
+        # Check number of dimensions in metadata match shape of array.
+        # If not, use defaults
+        attributes = dict(zarr_obj.attrs)
+        if len(zarr_obj.shape) != len(dimensions):
+            if not dimensions:
+                message = "Missing metadata dimension names."
+            else:
+                message = (
+                    f"Metadata dimension names {dimensions} inconsistent with array "
+                    f"shape {zarr_obj.shape}."
+                )
+            message += " Attempting with defaults."
+            warnings.warn(message, UserWarning, stacklevel=2)
+            dimensions = get_default_dims(zarr_obj)
+        return dimensions, attributes
+
+    # Zarr 2 arrays do not necessarily have dimension names.
+    # https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html#attributes
+    # To get around this problem, we add an attribute that specifies the
+    # dimension. We have to hide this attribute when we send the
+    # attributes to the user. Note zarr_obj can be either a zarr group
+    # or zarr array
+
+    # First try to read dimension names using old xarray-zarr convention.
+    # dimension_key typically _ARRAY_DIMENSIONS
+    try:
+        # Xarray-Zarr
+        dimensions = zarr_obj.attrs[dimension_key]
+    except KeyError:
+        warnings.warn(
+            "Failed to read dimension names from xarray zarr metadata.",
+            UserWarning,
+            stacklevel=2,
+        )
+        if not try_nczarr:
+            # Skip straight to using default dimensions
+            dimensions = get_default_dims(zarr_obj)
+        else:
+            # Try to read dimension names using NCZarr convention
+            try:
+                dimensions = get_nczarr_dims(zarr_obj)
+            except Exception:
+                # Fallback to default dimension names
+                warnings.warn(
+                    "Failed to read dimension names from netcdf zarr metadata.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                dimensions = get_default_dims(zarr_obj)
 
     nc_attrs = [attr for attr in zarr_obj.attrs if attr.lower().startswith("_nc")]
     attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key] + nc_attrs)
@@ -1424,8 +1465,10 @@ def open_zarr(
     """Load and decode a dataset from a Zarr store.
 
     The `store` object should be a valid store for a Zarr group. `store`
-    variables must contain dimension metadata encoded in the
-    `_ARRAY_DIMENSIONS` attribute or must have NCZarr format.
+    variables should contain dimension metadata encoded in the
+    `_ARRAY_DIMENSIONS` attribute for zarr 2, the `dimension_names` attribute for zarr
+    3, or the `dim_refs` parameter for NCZarr. If dimension name metadata is missing,
+    `open_zarr` will attempt to build the dataset using default dimension names.
 
     Parameters
     ----------
