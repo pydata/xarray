@@ -70,7 +70,7 @@ jobs:
           path: |
             pixi.lock
           key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
-      - uses: prefix-dev/setup-pixi@v0.9.0
+      - uses: prefix-dev/setup-pixi@v0.9.3
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
