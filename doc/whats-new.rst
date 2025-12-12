@@ -14,6 +14,10 @@ v2025.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added ``drop_existing`` parameter to :py:meth:`Dataset.set_xindex` and
+  :py:meth:`DataArray.set_xindex` to allow replacing existing indexes without
+  needing to call :py:meth:`drop_indexes` first (:pull:`XXXX`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

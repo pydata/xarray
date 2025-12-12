@@ -2866,6 +2866,7 @@ class DataArray(
         self,
         coord_names: str | Sequence[Hashable],
         index_cls: type[Index] | None = None,
+        drop_existing: bool = False,
         **options,
     ) -> Self:
         """Set a new, Xarray-compatible index from one or more existing
@@ -2879,6 +2880,9 @@ class DataArray(
         index_cls : subclass of :class:`~xarray.indexes.Index`
             The type of index to create. By default, try setting
             a pandas (multi-)index from the supplied coordinates.
+        drop_existing : bool
+            Whether to drop indexes on any existing coord_names if one
+            is present.
         **options
             Options passed to the index constructor.
 
@@ -2888,7 +2892,9 @@ class DataArray(
             Another dataarray, with this dataarray's data and with a new index.
 
         """
-        ds = self._to_temp_dataset().set_xindex(coord_names, index_cls, **options)
+        ds = self._to_temp_dataset().set_xindex(
+            coord_names, index_cls, drop_existing, **options
+        )
         return self._from_temp_dataset(ds)
 
     def reorder_levels(

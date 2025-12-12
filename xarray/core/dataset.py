@@ -4956,6 +4956,7 @@ class Dataset(
         self,
         coord_names: str | Sequence[Hashable],
         index_cls: type[Index] | None = None,
+        drop_existing: bool = False,
         **options,
     ) -> Self:
         """Set a new, Xarray-compatible index from one or more existing
@@ -4970,6 +4971,9 @@ class Dataset(
             The type of index to create. By default, try setting
             a ``PandasIndex`` if ``len(coord_names) == 1``,
             otherwise a ``PandasMultiIndex``.
+        drop_existing : bool
+            Whether to drop indexes on any existing coord_names if one
+            is present
         **options
             Options passed to the index constructor.
 
@@ -5010,9 +5014,12 @@ class Dataset(
         indexed_coords = set(coord_names) & set(self._indexes)
 
         if indexed_coords:
-            raise ValueError(
-                f"those coordinates already have an index: {indexed_coords}"
-            )
+            if drop_existing:
+                self.drop_indexes(indexed_coords)
+            else:
+                raise ValueError(
+                    f"those coordinates already have an index: {indexed_coords}"
+                )
 
         coord_vars = {name: self._variables[name] for name in coord_names}
 
