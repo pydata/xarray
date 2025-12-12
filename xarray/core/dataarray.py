@@ -3954,7 +3954,10 @@ class DataArray(
         return pandas_object
 
     def to_dataframe(
-        self, name: Hashable | None = None, dim_order: Sequence[Hashable] | None = None
+        self,
+        name: Hashable | None = None,
+        dim_order: Sequence[Hashable] | None = None,
+        create_index: bool = True,
     ) -> pd.DataFrame:
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
@@ -3979,6 +3982,11 @@ class DataArray(
 
             If provided, must include all dimensions of this DataArray. By default,
             dimensions are sorted according to the DataArray dimensions order.
+        create_index : bool, default: True
+            If True (default), create a MultiIndex from the Cartesian product
+            of this DataArray's indices. If False, use a RangeIndex instead.
+            This can be useful to avoid the potentially expensive MultiIndex
+            creation.
 
         Returns
         -------
@@ -4013,7 +4021,7 @@ class DataArray(
         else:
             ordered_dims = ds._normalize_dim_order(dim_order=dim_order)
 
-        df = ds._to_dataframe(ordered_dims)
+        df = ds._to_dataframe(ordered_dims, create_index=create_index)
         df.columns = [name if c == unique_name else c for c in df.columns]
         return df
 
