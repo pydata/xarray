@@ -541,13 +541,20 @@ class GenericAggregationGenerator(AggregationGenerator):
         keep_attrs = (
             "\n" + 12 * " " + "keep_attrs=keep_attrs," if has_keep_attrs else ""
         )
+
+        if method.aggregation_type == "scan":
+            # Scans retain dimensions.
+            out_finalized = "out.assign_coords(self._obj.coords)"
+        else:
+            out_finalized = "out"
+
         return f"""\
         out = self.reduce(
             duck_array_ops.{method.array_method},
             dim=dim,{extra_kwargs}{keep_attrs}
             **kwargs,
         )
-        return out"""
+        return {out_finalized}"""
 
 
 AGGREGATION_METHODS = (
