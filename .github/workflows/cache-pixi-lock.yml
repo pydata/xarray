@@ -17,7 +17,7 @@ jobs:
     outputs:
       cache-id: ${{ steps.restore.outputs.cache-primary-key }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
@@ -30,7 +30,7 @@ jobs:
           path: |
             pixi.lock
           key: ${{ steps.date.outputs.date }}_${{ inputs.pixi-version }}_${{hashFiles('pixi.toml')}}
-      - uses: prefix-dev/setup-pixi@v0.9.0
+      - uses: prefix-dev/setup-pixi@v0.9.3
         if: ${{ !steps.restore.outputs.cache-hit }}
         with:
           pixi-version: ${{ inputs.pixi-version }}
@@ -46,7 +46,7 @@ jobs:
             pixi.lock
           key: ${{ steps.restore.outputs.cache-primary-key }}
       - name: Upload pixi.lock
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: pixi-lock
           path: pixi.lock
