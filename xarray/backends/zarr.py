@@ -1727,23 +1727,46 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
         )
 
-        # Now use zarr's sync wrapper for concurrent Dataset/index creation
-        from zarr.core.sync import sync as zarr_sync
+        # Use async path for zarr v3 (concurrent loading), sync path for zarr v2
+        if _zarr_v3():
+            from zarr.core.sync import sync as zarr_sync
 
-        return zarr_sync(
-            self._open_datatree_from_stores_async(
-                stores=stores,
-                parent=parent,
-                group=group,
-                mask_and_scale=mask_and_scale,
-                decode_times=decode_times,
-                concat_characters=concat_characters,
-                decode_coords=decode_coords,
-                drop_variables=drop_variables,
-                use_cftime=use_cftime,
-                decode_timedelta=decode_timedelta,
+            return zarr_sync(
+                self._open_datatree_from_stores_async(
+                    stores=stores,
+                    parent=parent,
+                    group=group,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
             )
-        )
+        else:
+            # Fallback for zarr v2: sequential loading
+            groups_dict = {}
+            for path_group, store in stores.items():
+                store_entrypoint = StoreBackendEntrypoint()
+                with close_on_error(store):
+                    group_ds = store_entrypoint.open_dataset(
+                        store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
+                if group:
+                    group_name = str(NodePath(path_group).relative_to(parent))
+                else:
+                    group_name = str(NodePath(path_group))
+                groups_dict[group_name] = group_ds
+            return datatree_from_dict_with_io_cleanup(groups_dict)
 
     async def _open_datatree_from_stores_async(
         self,
