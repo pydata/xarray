@@ -467,7 +467,7 @@ The current default time unit of xarray is ``'ns'``. When setting keyword argume
     :hide-code:
 
     # Ensure the file is located in a unique temporary directory
-    # so that it doesn't conflict with parallel builds of the 
+    # so that it doesn't conflict with parallel builds of the
     # documentation.
 
     import tempfile
