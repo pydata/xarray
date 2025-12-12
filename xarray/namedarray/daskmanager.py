@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -52,7 +53,30 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         previous_chunks: _NormalizedChunks | None = None,
     ) -> Any:
         """Called by open_dataset"""
-        from dask.array.core import normalize_chunks
+        from dask.array.core import auto_chunks, normalize_chunks
+
+        if (
+            limit is None
+            and previous_chunks
+            and (
+                chunks == "auto"
+                or (
+                    isinstance(chunks, dict)
+                    and any(v == "auto" for v in chunks.values())
+                )
+            )
+        ):
+            largest_previous_chunksize = dtype.itemsize * math.prod(
+                max(c) if isinstance(c, tuple) else c for c in previous_chunks.values()
+            )
+            limit = max(largest_previous_chunksize, self.get_auto_chunk_size())
+            chunks = auto_chunks(
+                chunks,
+                shape=shape,
+                limit=limit,
+                dtype=dtype,
+                previous_chunks=previous_chunks,
+            )
 
         return normalize_chunks(
             chunks,
