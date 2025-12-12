@@ -1708,24 +1708,99 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_format=None,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
-        groups_dict = self.open_groups_as_dict(
-            filename_or_obj=filename_or_obj,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-            group=group,
+
+        if group:
+            parent = str(NodePath("/") / NodePath(group))
+        else:
+            parent = str(NodePath("/"))
+
+        stores = ZarrStore.open_store(
+            filename_or_obj,
+            group=parent,
             mode=mode,
             synchronizer=synchronizer,
             consolidated=consolidated,
+            consolidate_on_close=False,
             chunk_store=chunk_store,
             storage_options=storage_options,
             zarr_version=zarr_version,
             zarr_format=zarr_format,
         )
+
+        # Now use zarr's sync wrapper for concurrent Dataset/index creation
+        from zarr.core.sync import sync as zarr_sync
+
+        return zarr_sync(
+            self._open_datatree_from_stores_async(
+                stores=stores,
+                parent=parent,
+                group=group,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        )
+
+    async def _open_datatree_from_stores_async(
+        self,
+        stores: dict,
+        parent: str,
+        group: str | None,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+    ) -> DataTree:
+        """Async helper to open datasets from pre-opened stores and create indexes.
+
+        This method takes already-opened stores (avoiding nested zarr_sync() calls)
+        and runs the Dataset opening and index creation concurrently.
+        """
+        from xarray.backends.api import _maybe_create_default_indexes_async
+
+        # Limit concurrency to avoid deadlocks with some store implementations
+        # (e.g., Icechunk can deadlock when too many threads access it simultaneously)
+        max_concurrent = 10
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def open_one(path_group: str, store) -> tuple[str, Dataset]:
+            async with semaphore:
+                store_entrypoint = StoreBackendEntrypoint()
+
+                def _load_sync():
+                    with close_on_error(store):
+                        return store_entrypoint.open_dataset(
+                            store,
+                            mask_and_scale=mask_and_scale,
+                            decode_times=decode_times,
+                            concat_characters=concat_characters,
+                            decode_coords=decode_coords,
+                            drop_variables=drop_variables,
+                            use_cftime=use_cftime,
+                            decode_timedelta=decode_timedelta,
+                        )
+
+                ds = await asyncio.to_thread(_load_sync)
+                # Create indexes in parallel (within this group)
+                ds = await _maybe_create_default_indexes_async(ds)
+                if group:
+                    group_name = str(NodePath(path_group).relative_to(parent))
+                else:
+                    group_name = str(NodePath(path_group))
+                return group_name, ds
+
+        # Open all datasets and create indexes concurrently (with limited concurrency)
+        tasks = [open_one(path_group, store) for path_group, store in stores.items()]
+        results = await asyncio.gather(*tasks)
+        groups_dict = dict(results)
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
@@ -1865,6 +1940,55 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         tasks = [open_one(path_group, store) for path_group, store in stores.items()]
         results = await asyncio.gather(*tasks)
         return dict(results)
+
+    async def open_datatree_async(
+        self,
+        filename_or_obj: T_PathFileOrDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | None = None,
+        mode="r",
+        synchronizer=None,
+        consolidated=None,
+        chunk_store=None,
+        storage_options=None,
+        zarr_version=None,
+        zarr_format=None,
+    ) -> DataTree:
+        """Asynchronously open a DataTree with concurrent group and index loading.
+
+        This method opens groups concurrently and creates default indexes in parallel,
+        which can significantly reduce latency when opening DataTrees from
+        high-latency storage backends like cloud object stores.
+        """
+        # Open all groups concurrently
+        groups_dict = await self.open_groups_as_dict_async(
+            filename_or_obj=filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
+            zarr_version=zarr_version,
+            zarr_format=zarr_format,
+        )
+
+        # Index creation is handled by api.py's _maybe_create_default_indexes()
+        return datatree_from_dict_with_io_cleanup(groups_dict)
 
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
