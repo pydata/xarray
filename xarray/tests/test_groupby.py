@@ -2551,13 +2551,50 @@ class TestDatasetResample:
         assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize("use_dask", [True, False])
-@pytest.mark.parametrize("use_flox", [True, False])
 @pytest.mark.parametrize(
-    "method, expected_array",
+    "method, expected_array, use_flox, use_dask",
     [
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0]),
-        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0]),
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True),
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, False),
+        pytest.param(
+            "cumsum",
+            [7.0, 9.0, 0.0, 1.0, 2.0, 2.0],
+            False,
+            True,
+            marks=pytest.mark.xfail(
+                reason="Lazy groupby is not supported without flox"
+            ),
+        ),
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, False),
+        #
+        pytest.param(
+            "cumprod",
+            [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+            True,
+            True,
+            marks=pytest.mark.xfail(
+                reason="TODO: Groupby with cumprod is currently not supported with flox"
+            ),
+        ),
+        pytest.param(
+            "cumprod",
+            [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+            True,
+            False,
+            marks=pytest.mark.skip(
+                reason="TODO: Groupby with cumprod is currently not supported with flox"
+            ),
+        ),
+        pytest.param(
+            "cumprod",
+            [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+            False,
+            True,
+            marks=pytest.mark.xfail(
+                reason="Lazy groupby is not supported without flox"
+            ),
+        ),
+        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, False),
     ],
 )
 def test_groupby_scans(
@@ -2568,12 +2605,6 @@ def test_groupby_scans(
 ) -> None:
     if use_dask and not has_dask:
         pytest.skip("requires dask")
-
-    if use_dask and not use_flox:
-        pytest.skip("Lazy groupby is not supported without flox")
-
-    if use_flox and method == "cumprod":
-        pytest.skip("TODO: Groupby with cumprod is currently not supported with flox")
 
     # Test Dataset groupby:
     ds = xr.Dataset(
