@@ -2551,50 +2551,63 @@ class TestDatasetResample:
         assert_identical(expected, actual)
 
 
-def test_groupby_cumsum() -> None:
+@pytest.mark.parametrize("use_dask", [True, False])
+@pytest.mark.parametrize("use_flox", [True, False])
+@pytest.mark.parametrize(
+    "method, expected_array",
+    [
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0]),
+        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0]),
+    ],
+)
+def test_groupby_scans(
+    method: Literal["cumsum", "cumprod"],
+    expected_array: list[float],
+    use_flox: bool,
+    use_dask: bool,
+) -> None:
+    if use_dask and not has_dask:
+        pytest.skip("requires dask")
+
+    if use_dask and not use_flox:
+        pytest.skip("Lazy groupby is not supported without flox")
+
+    if use_flox and method == "cumprod":
+        pytest.skip("TODO: Groupby with cumprod is currently not supported with flox")
+
+    # Test Dataset groupby:
     ds = xr.Dataset(
-        {"foo": (("x",), [7, 3, 1, 1, 1, 1, 1])},
-        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
+        {"foo": (("x",), [7, 2, 0, 1, 2, np.nan])},
+        coords={"x": [0, 1, 2, 3, 4, 5], "group_idx": ("x", [0, 0, 1, 1, 2, 2])},
     )
-    actual = ds.groupby("group_id").cumsum(dim="x")
+    with xr.set_options(use_flox=use_flox):
+        if use_dask:
+            ds = ds.chunk()
+            grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
+            actual = getattr(ds.groupby(group_idx=grouper), method)(dim="x")
+        else:
+            actual = getattr(ds.groupby("group_idx"), method)(dim="x")
+
     expected = xr.Dataset(
         {
-            "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
+            "foo": (("x",), expected_array),
         },
         coords={
-            "x": [0, 1, 2, 3, 4, 5, 6],
-            "group_id": ds.group_id,
+            "x": ds.x,
+            "group_idx": ds.group_idx,
         },
     )
-    assert_identical(expected, actual)
+    assert_identical(expected, actual.compute())
 
-    actual = ds.foo.groupby("group_id").cumsum(dim="x")
-    expected.coords["group_id"] = ds.group_id
-    expected.coords["x"] = np.arange(7)
-    assert_identical(expected.foo, actual)
-
-
-def test_groupby_cumprod() -> None:
-    ds = xr.Dataset(
-        {"foo": (("x",), [7, 3, 0, 1, 1, 2, 1])},
-        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
-    )
-    actual = ds.groupby("group_id").cumprod(dim="x")
-    expected = xr.Dataset(
-        {
-            "foo": (("x",), [7, 21, 0, 0, 1, 2, 2]),
-        },
-        coords={
-            "x": [0, 1, 2, 3, 4, 5, 6],
-            "group_id": ds.group_id,
-        },
-    )
-    assert_identical(expected, actual)
-
-    actual = ds.foo.groupby("group_id").cumprod(dim="x")
-    expected.coords["group_id"] = ds.group_id
-    expected.coords["x"] = np.arange(7)
-    assert_identical(expected.foo, actual)
+    # Test DataArray groupby:
+    with xr.set_options(use_flox=use_flox):
+        if use_dask:
+            ds = ds.chunk()
+            grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
+            actual = getattr(ds.foo.groupby(group_idx=grouper), method)(dim="x")
+        else:
+            actual = getattr(ds.foo.groupby("group_idx"), method)(dim="x")
+    assert_identical(expected.foo.compute(), actual.compute())
 
 
 @pytest.mark.parametrize(
