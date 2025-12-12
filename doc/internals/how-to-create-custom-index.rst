@@ -224,6 +224,7 @@ custom index to a Dataset or DataArray, e.g., using the ``RasterIndex`` above:
         dims=("y", "x"),
     )
 
+    # Build a RasterIndex from the 'x' and 'y' coordinates
     # Xarray creates default indexes for the 'x' and 'y' coordinates
     # Use drop_existing=True to replace them with a custom index
     da_raster = da.set_xindex(["x", "y"], RasterIndex, drop_existing=True)
