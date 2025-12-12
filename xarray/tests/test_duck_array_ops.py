@@ -24,6 +24,7 @@ from xarray.core.duck_array_ops import (
     least_squares,
     mean,
     np_timedelta64_to_float,
+    nunique,
     pd_timedelta_to_float,
     push,
     py_timedelta_to_float,
@@ -165,6 +166,47 @@ class TestOps:
 
         assert 1 == count(np.datetime64("2000-01-01"))
 
+    @pytest.mark.parametrize("equal_nan", [True, False])
+    @pytest.mark.parametrize("mixed_type", [True, False])
+    @pytest.mark.parametrize("string_array", [True, False])
+    @pytest.mark.parametrize("skipna", [True, False])
+    @pytest.mark.parametrize("axis", [2, None, (1, 2)])
+    def test_nunique(self, axis, skipna, equal_nan, string_array, mixed_type):
+        expected_results = {
+            (True, True, 2): np.array([[1, 2, 3], [3, 2, 1]]),
+            (True, True, None): np.array(12),
+            (True, True, (1, 2)): np.array([6, 6]),
+            (True, False, 2): np.array([[2, 3, 4], [4, 3, 2]]),
+            (True, False, None): np.array(13),
+            (True, False, (1, 2)): np.array([7, 7]),
+            (False, True, 2): np.array([[1, 2, 3], [3, 2, 1]]),
+            (False, True, None): np.array(12),
+            (False, True, (1, 2)): np.array([6, 6]),
+            (False, False, 2): np.array([[4, 4, 4], [4, 4, 4]]),
+            (False, False, None): np.array(24),
+            (False, False, (1, 2)): np.array([12, 12]),
+        }
+        x = self.x.copy()
+        if string_array:
+            # Convert to str
+            x = x.astype(str)
+            # Convert to object and put nans back in
+            x = x.astype(object)
+            x[x == "nan"] = np.nan
+        if mixed_type:
+            x = x.astype(object)
+            x[(x == 10.0) | (x == "10.0")] = True
+            x[(x == 2.0) | (x == "2.0")] = np.sum
+        kwargs = {"axis": axis, "skipna": skipna, "equal_nan": equal_nan}
+        kwargs.update({"allow_rechunk": True})
+        # Object arrays currently only supported for np.ndarray
+        if (mixed_type or string_array) and not isinstance(x, np.ndarray):
+            with pytest.raises(NotImplementedError):
+                nunique(x, **kwargs)
+            return
+        result = nunique(x, **kwargs)
+        assert_array_equal(result, expected_results[(equal_nan, skipna, axis)])
+
     def test_where_type_promotion(self):
         result = where(np.array([True, False]), np.array([1, 2]), np.array(["a", "b"]))
         assert_array_equal(result, np.array([1, "b"], dtype=object))
@@ -262,6 +304,19 @@ class TestDaskOps(TestOps):
             ],
             chunks=(2, 1, 2),
         )
+
+    def test_nunique_dask_lazy(self):
+        with raise_if_dask_computes():
+            nunique(self.x, axis=0)
+
+    def test_nunique_bad_chunks(self):
+        axis = [1, 2]
+        expected_array = np.array([6, 6])
+        with pytest.raises(ValueError, match="nunique requires a single chunk along"):
+            nunique(self.x, axis=axis)
+
+        result = nunique(self.x, axis=axis, skipna=True, allow_rechunk=True)
+        assert_array_equal(result, expected_array)
 
 
 def test_cumsum_1d():

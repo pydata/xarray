@@ -1,5 +1,4 @@
 """Mixin classes with reduction operations."""
-
 # This file was generated using xarray.util.generate_aggregations. Do not edit manually.
 
 from __future__ import annotations
@@ -352,6 +351,10 @@ class NamedArrayAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
@@ -426,7 +429,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -509,7 +512,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -589,7 +592,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -669,7 +672,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -745,7 +748,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -769,6 +772,88 @@ class NamedArrayAggregations:
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
+            **kwargs,
+        )
+
+    def nunique(
+        self,
+        dim: Dims = None,
+        *,
+        skipna: bool | None = None,
+        equal_nan: bool | None = True,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Reduce this NamedArray's data by applying ``nunique`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str, Iterable of Hashable, "..." or None, default: None
+            Name of dimension[s] along which to apply ``nunique``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If "..." or None, will reduce over all dimensions.
+        skipna : bool or None, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or ``skipna=True`` has not been
+            implemented (object, datetime64 or timedelta64).
+        equal_nan : bool or None, default: True
+            If ``skipna == False``, ``equal_nan`` determines whether null values
+            are counted as distinct values or not. Set ``equal_nan = True`` for
+            consistency with ``pandas.DataFrame.nunique``, or ``equal_nan = False``
+            for consistency with the `Python array API <https://data-apis.org/array-api/latest/API_specification/generated/array_api.unique_counts.html>`_.
+        **kwargs : Any
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``nunique`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
+
+        Returns
+        -------
+        reduced : NamedArray
+            New NamedArray with ``nunique`` applied to its data and the
+            indicated dimension(s) removed
+
+        See Also
+        --------
+        pandas.DataFrame.nunique
+        Dataset.nunique
+        DataArray.nunique
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        For dask arrays, there must be a single chunk in each dimension
+        nunique is being applied over.
+
+        Examples
+        --------
+        >>> from xarray.namedarray.core import NamedArray
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
+        >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
+
+        >>> na.nunique()
+        <xarray.NamedArray ()> Size: 8B
+        array(5)
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> na.nunique(skipna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(5)
+
+        Use ``equal_nan`` to control whether NaNs are counted as distinct values.
+
+        >>> na.nunique(skipna=False, equal_nan=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(5)
+        """
+        return self.reduce(
+            duck_array_ops.nunique,
+            dim=dim,
+            skipna=skipna,
+            equal_nan=equal_nan,
             **kwargs,
         )
 
@@ -815,7 +900,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -889,7 +974,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated

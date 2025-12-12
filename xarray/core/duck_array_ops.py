@@ -191,7 +191,9 @@ def isnull(data):
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
     # at this point, array should have dtype=object
-    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):  # noqa: TID251
+    elif (
+        isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data)  # noqa: TID251
+    ):
         return pandas_isnull(data)
     else:
         # Not reachable yet, but intended for use with other duck array
@@ -289,9 +291,11 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
     elif xp is None:
         xp = get_array_namespace(scalars_or_arrays)
     scalars_or_arrays = [
-        PandasExtensionArray(s_or_a)
-        if isinstance(s_or_a, pd.api.extensions.ExtensionArray)
-        else s_or_a
+        (
+            PandasExtensionArray(s_or_a)
+            if isinstance(s_or_a, pd.api.extensions.ExtensionArray)
+            else s_or_a
+        )
         for s_or_a in scalars_or_arrays
     ]
     # Pass arrays directly instead of dtypes to result_type so scalars
@@ -382,6 +386,94 @@ def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes"""
     xp = get_array_namespace(data)
     return xp.sum(xp.logical_not(isnull(data)), axis=axis)
+
+
+def _factorize(data):
+    """Helper function for nunique to factorize mixed type arrays to float."""
+    if not isinstance(data, np.ndarray):
+        message = "nunique with object dtype only implemented for np.ndarray."
+        raise NotImplementedError(message)
+    data = pd.factorize(data.reshape(-1))[0].reshape(data.shape)
+    data = data.astype(float)
+    data[data == -1] = np.nan
+    return data
+
+
+def _permute_dims(data, axes):
+    """Helper function to get a suitable permute dims function."""
+    xp = get_array_namespace(data)
+    if hasattr(xp, "permute_dims"):
+        return xp.permute_dims(data, axes)
+    elif hasattr(xp, "transpose"):
+        return xp.transpose(data, axes)
+    else:
+        raise NotImplementedError(f"Unknown transpose method for namespace {xp}")
+
+
+def nunique(data, axis=None, skipna=None, equal_nan=True, **kwargs):
+    """
+    Count the number of unique values in this array along the given dimensions
+    """
+
+    xp = get_array_namespace(data)
+
+    if axis is None:
+        axis = list(range(data.ndim))
+    elif isinstance(axis, (int, tuple)):
+        axis = [axis] if isinstance(axis, int) else list(axis)
+    if axis == []:
+        # Return unchanged so downstream aggregation functions work as expected.
+        return data
+    # Normalize negative axes
+    axis = [ax % data.ndim for ax in axis]
+    shape = data.shape
+    if is_duck_dask_array(data):
+        # Store the original chunksizes along axis before reshaping array
+        axis_chunksizes = [s for i, s in enumerate(data.chunksize) if i in axis]
+
+    # If mixed type array, convert to float first
+    if is_duck_array(data) and data.dtype == np.object_:
+        data = _factorize(data)
+
+    # Move axes to be aggregated to the end and stack.
+    # Note dask arrays will get rechunked in the natural way.
+    new_order = [i for i in range(len(shape)) if i not in axis] + axis
+    new_shape = [s for i, s in enumerate(shape) if i not in axis] + [-1]
+    data = xp.reshape(_permute_dims(data, new_order), new_shape)
+
+    def nunique_chunk(data):
+        """Compute nunique for a single chunk."""
+        sorted_data = xp.sort(data, axis=-1)
+        unique_counts = xp.not_equal(sorted_data[..., :-1], sorted_data[..., 1:])
+        unique_counts = xp.sum(unique_counts, axis=-1) + 1
+
+        # Subtract off na values as required
+        if skipna or (not skipna and equal_nan):
+            na_counts = isnull(data).astype(int)
+            na_counts = xp.sum(na_counts, axis=-1)
+            if not skipna and equal_nan:
+                na_counts = xp.clip(na_counts - 1, 0, None)
+            unique_counts = unique_counts - na_counts
+
+        return unique_counts
+
+    if is_duck_dask_array(data):
+        # Use map_blocks to preserve lazy evaluation
+        import dask.array as da
+
+        allow_rechunk = kwargs.get("allow_rechunk", False)
+        if len(data.chunks[-1]) != 1 and not allow_rechunk:
+            message = f"""nunique requires a single chunk along aggregated dimension(s),
+            but input array has shape {shape!s} with chunksize(s) {axis_chunksizes!s}
+            along dimension(s) {axis!s}. To fix, either rechunk your array manually,
+            or pass ``allow_rechunk=True``, but be aware this may significantly increase
+            memory usage."""
+            raise ValueError(message)
+
+        kwargs = {"output_dtypes": [int], "allow_rechunk": True, "vectorize": True}
+        return da.apply_gufunc(nunique_chunk, "(i)->()", data, **kwargs)
+    else:
+        return nunique_chunk(data)
 
 
 def sum_where(data, axis=None, dtype=None, where=None):
