@@ -324,6 +324,23 @@ We can save a Dataset to disk using the
 
 .. jupyter-execute::
 
+    nc_filename = "saved_on_disk.nc"
+
+.. jupyter-execute::
+    :hide-code:
+
+    # Ensure the file is located in a unique temporary directory
+    # so that it doesn't conflict with parallel builds of the 
+    # documentation.
+
+    import tempfile
+    import os.path
+
+    tempdir = tempfile.TemporaryDirectory()
+    nc_filename = os.path.join(tempdir.name, nc_filename)
+
+.. jupyter-execute::
+
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
         coords={
@@ -333,7 +350,7 @@ We can save a Dataset to disk using the
         },
     )
 
-    ds.to_netcdf("saved_on_disk.nc")
+    ds.to_netcdf(nc_filename)
 
 By default, the file is saved as netCDF4 (assuming netCDF4-Python is
 installed). You can control the format and engine used to write the file with
@@ -352,7 +369,7 @@ We can load netCDF files to create a new Dataset using
 
 .. jupyter-execute::
 
-    ds_disk = xr.open_dataset("saved_on_disk.nc")
+    ds_disk = xr.open_dataset(nc_filename)
     ds_disk
 
 .. jupyter-execute::
@@ -409,7 +426,7 @@ netCDF file. However, it's often cleaner to use a ``with`` statement:
 .. jupyter-execute::
 
     # this automatically closes the dataset after use
-    with xr.open_dataset("saved_on_disk.nc") as ds:
+    with xr.open_dataset(nc_filename) as ds:
         print(ds.keys())
 
 Although xarray provides reasonable support for incremental reads of files on
@@ -796,6 +813,18 @@ same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
 
 .. jupyter-execute::
 
+    h5_filename = "saved_on_disk.h5"
+
+.. jupyter-execute::
+    :hide-code:
+
+    # Ensure the file is located in a unique temporary directory
+    # so that it doesn't conflict with parallel builds of the 
+    # documentation.
+    h5_filename = os.path.join(tempdir.name, h5_filename)
+
+.. jupyter-execute::
+
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
         coords={
@@ -805,7 +834,7 @@ same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
         },
     )
 
-    ds.to_netcdf("saved_on_disk.h5")
+    ds.to_netcdf(h5_filename)
 
 Groups
 ~~~~~~
@@ -1590,9 +1619,7 @@ To export just the dataset schema without the data itself, use the
     # `ds` to close the file.
     del ds
 
-    for f in ["saved_on_disk.nc", "saved_on_disk.h5"]:
-        if os.path.exists(f):
-            os.remove(f)
+    tempdir.cleanup()
 
 This can be useful for generating indices of dataset contents to expose to
 search indices or other automated data discovery tools.

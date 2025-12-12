@@ -258,17 +258,32 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 .. jupyter-execute::
 
-    da.to_netcdf("example-no-leap.nc")
-    reopened = xr.open_dataset("example-no-leap.nc")
+    filename = "example-no-leap.nc"
+
+.. jupyter-execute::
+    :hide-code:
+
+    # Ensure the file is located in a unique temporary directory
+    # so that it doesn't conflict with parallel builds of the 
+    # documentation.
+
+    import tempfile
+    import os.path
+
+    tempdir = tempfile.TemporaryDirectory()
+    filename = os.path.join(tempdir.name, filename)
+
+.. jupyter-execute::
+
+    da.to_netcdf(filename)
+    reopened = xr.open_dataset(filename)
     reopened
 
 .. jupyter-execute::
     :hide-code:
 
-    import os
-
     reopened.close()
-    os.remove("example-no-leap.nc")
+    tempdir.cleanup()
 
 - And resampling along the time dimension for data indexed by a :py:class:`~xarray.CFTimeIndex`:
 
