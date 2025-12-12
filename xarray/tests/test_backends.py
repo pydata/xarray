@@ -4417,8 +4417,7 @@ class TestZarrDirectoryStore(ZarrBase):
 
     @pytest.mark.parametrize("consolidated", [True, False])
     def test_default_dims(self, consolidated):
-        zarr_format = zarr.config.get("default_zarr_format")
-        print(zarr_format)
+        zarr_format = zarr.config.get("default_zarr_format") if has_zarr_v3 else 2
         # Create example data that can be read without dimension name metadata
         da_a = xr.DataArray(np.arange(3 * 18).reshape(3, 18), dims=["label", "z"])
         da_b = xr.DataArray(np.arange(3), dims="label")
