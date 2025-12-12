@@ -14,6 +14,9 @@ v2025.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added :py:meth:`~xarray.DataTree.subset` to index variables on all nodes of a datatree (:pull:`10400`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
