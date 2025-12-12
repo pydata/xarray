@@ -461,57 +461,92 @@ The current default time unit of xarray is ``'ns'``. When setting keyword argume
 
 .. jupyter-execute::
 
-    attrs = {"units": "hours since 2000-01-01"}
-    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
-    ds.to_netcdf("test-datetimes1.nc")
+    datetimes1_filename = "test-datetimes1.nc"
+
+.. jupyter-execute::
+    :hide-code:
+
+    # Ensure the file is located in a unique temporary directory
+    # so that it doesn't conflict with parallel builds of the
+    # documentation.
+
+    import tempfile
+    import os.path
+
+    tempdir = tempfile.TemporaryDirectory()
+    datetimes1_filename = os.path.join(tempdir.name, datetimes1_filename)
 
 .. jupyter-execute::
 
-    xr.open_dataset("test-datetimes1.nc")
+    attrs = {"units": "hours since 2000-01-01"}
+    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
+    ds.to_netcdf(datetimes1_filename)
+
+.. jupyter-execute::
+
+    xr.open_dataset(datetimes1_filename)
 
 .. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset("test-datetimes1.nc", decode_times=coder)
+    xr.open_dataset(datetimes1_filename, decode_times=coder)
 
 If a coarser unit is requested the datetimes are decoded into their native
 on-disk resolution, if possible.
 
 .. jupyter-execute::
 
-    attrs = {"units": "milliseconds since 2000-01-01"}
-    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
-    ds.to_netcdf("test-datetimes2.nc")
+    datetimes2_filename = "test-datetimes2.nc"
+
+.. jupyter-execute::
+    :hide-code:
+
+    datetimes2_filename = os.path.join(tempdir.name, datetimes2_filename)
 
 .. jupyter-execute::
 
-    xr.open_dataset("test-datetimes2.nc")
+    attrs = {"units": "milliseconds since 2000-01-01"}
+    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
+    ds.to_netcdf(datetimes2_filename)
+
+.. jupyter-execute::
+
+    xr.open_dataset(datetimes2_filename)
 
 .. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset("test-datetimes2.nc", decode_times=coder)
+    xr.open_dataset(datetimes2_filename, decode_times=coder)
 
 Similar logic applies for decoding timedelta values. The default resolution is
 ``"ns"``:
 
 .. jupyter-execute::
 
+    timedeltas1_filename = "test-timedeltas1.nc"
+
+.. jupyter-execute::
+    :hide-code:
+
+    timedeltas1_filename = os.path.join(tempdir.name, timedeltas1_filename)
+
+.. jupyter-execute::
+
     attrs = {"units": "hours"}
     ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
-    ds.to_netcdf("test-timedeltas1.nc")
+    ds.to_netcdf(timedeltas1_filename)
 
 .. jupyter-execute::
     :stderr:
 
-    xr.open_dataset("test-timedeltas1.nc")
+    xr.open_dataset(timedeltas1_filename)
 
 By default, timedeltas will be decoded to the same resolution as datetimes:
 
 .. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset("test-timedeltas1.nc", decode_times=coder, decode_timedelta=True)
+    xr.open_dataset(timedeltas1_filename, decode_times=coder, decode_timedelta=True)
 
 but if one would like to decode timedeltas to a different resolution, one can
 provide a coder specifically for timedeltas to ``decode_timedelta``:
@@ -520,7 +555,7 @@ provide a coder specifically for timedeltas to ``decode_timedelta``:
 
     timedelta_coder = xr.coders.CFTimedeltaCoder(time_unit="ms")
     xr.open_dataset(
-        "test-timedeltas1.nc", decode_times=coder, decode_timedelta=timedelta_coder
+        timedeltas1_filename, decode_times=coder, decode_timedelta=timedelta_coder
     )
 
 As with datetimes, if a coarser unit is requested the timedeltas are decoded
@@ -528,24 +563,33 @@ into their native on-disk resolution, if possible:
 
 .. jupyter-execute::
 
-    attrs = {"units": "milliseconds"}
-    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
-    ds.to_netcdf("test-timedeltas2.nc")
+    timedeltas2_filename = "test-timedeltas2.nc"
+
+.. jupyter-execute::
+    :hide-code:
+
+    timedeltas2_filename = os.path.join(tempdir.name, timedeltas2_filename)
 
 .. jupyter-execute::
 
-    xr.open_dataset("test-timedeltas2.nc", decode_timedelta=True)
+    attrs = {"units": "milliseconds"}
+    ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
+    ds.to_netcdf(timedeltas2_filename)
+
+.. jupyter-execute::
+
+    xr.open_dataset(timedeltas2_filename, decode_timedelta=True)
 
 .. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset("test-timedeltas2.nc", decode_times=coder, decode_timedelta=True)
+    xr.open_dataset(timedeltas2_filename, decode_times=coder, decode_timedelta=True)
 
 To opt-out of timedelta decoding (see issue `Undesired decoding to timedelta64 <https://github.com/pydata/xarray/issues/1621>`_) pass ``False`` to ``decode_timedelta``:
 
 .. jupyter-execute::
 
-    xr.open_dataset("test-timedeltas2.nc", decode_timedelta=False)
+    xr.open_dataset(timedeltas2_filename, decode_timedelta=False)
 
 .. note::
     Note that in the future the default value of ``decode_timedelta`` will be
@@ -557,13 +601,4 @@ To opt-out of timedelta decoding (see issue `Undesired decoding to timedelta64 <
     :hide-code:
 
     # Cleanup
-    import os
-
-    for f in [
-        "test-datetimes1.nc",
-        "test-datetimes2.nc",
-        "test-timedeltas1.nc",
-        "test-timedeltas2.nc",
-    ]:
-        if os.path.exists(f):
-            os.remove(f)
+    tempdir.cleanup()
