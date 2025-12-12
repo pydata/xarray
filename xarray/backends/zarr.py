@@ -1766,38 +1766,32 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         """
         from xarray.backends.api import _maybe_create_default_indexes_async
 
-        # Limit concurrency to avoid deadlocks with some store implementations
-        # (e.g., Icechunk can deadlock when too many threads access it simultaneously)
-        max_concurrent = 10
-        semaphore = asyncio.Semaphore(max_concurrent)
-
         async def open_one(path_group: str, store) -> tuple[str, Dataset]:
-            async with semaphore:
-                store_entrypoint = StoreBackendEntrypoint()
+            store_entrypoint = StoreBackendEntrypoint()
 
-                def _load_sync():
-                    with close_on_error(store):
-                        return store_entrypoint.open_dataset(
-                            store,
-                            mask_and_scale=mask_and_scale,
-                            decode_times=decode_times,
-                            concat_characters=concat_characters,
-                            decode_coords=decode_coords,
-                            drop_variables=drop_variables,
-                            use_cftime=use_cftime,
-                            decode_timedelta=decode_timedelta,
-                        )
+            def _load_sync():
+                with close_on_error(store):
+                    return store_entrypoint.open_dataset(
+                        store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
 
-                ds = await asyncio.to_thread(_load_sync)
-                # Create indexes in parallel (within this group)
-                ds = await _maybe_create_default_indexes_async(ds)
-                if group:
-                    group_name = str(NodePath(path_group).relative_to(parent))
-                else:
-                    group_name = str(NodePath(path_group))
-                return group_name, ds
+            ds = await asyncio.to_thread(_load_sync)
+            # Create indexes in parallel (within this group)
+            ds = await _maybe_create_default_indexes_async(ds)
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
+            return group_name, ds
 
-        # Open all datasets and create indexes concurrently (with limited concurrency)
+        # Open all datasets and create indexes concurrently
         tasks = [open_one(path_group, store) for path_group, store in stores.items()]
         results = await asyncio.gather(*tasks)
         groups_dict = dict(results)
