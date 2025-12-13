@@ -542,8 +542,8 @@ class GenericAggregationGenerator(AggregationGenerator):
             "\n" + 12 * " " + "keep_attrs=keep_attrs," if has_keep_attrs else ""
         )
 
-        if method.aggregation_type == "scan":
-            # Scans retain dimensions.
+        if method.aggregation_type == "scan" and self.datastructure.name == "Dataset":
+            # Scans retain dimensions, datasets drops them somehow:
             out_finalized = "out.assign_coords(self._obj.coords)"
         else:
             out_finalized = "out"
@@ -572,7 +572,7 @@ AGGREGATION_METHODS = (
     Method(
         "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
     ),
-    # Cumulatives:
+    # Scans:
     Method(
         "cumsum",
         extra_kwargs=(skipna,),
@@ -745,8 +745,11 @@ if __name__ == "__main__":
     from pathlib import Path
 
     p = Path(os.getcwd())
+
+    filepath = p.parent / "xarray" / "xarray" / "core" / "_aggregations.py"
+    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
     write_methods(
-        filepath=p.parent / "xarray" / "xarray" / "core" / "_aggregations.py",
+        filepath=filepath,
         generators=[
             DATATREE_GENERATOR,
             DATASET_GENERATOR,
@@ -758,9 +761,12 @@ if __name__ == "__main__":
         ],
         preamble=MODULE_PREAMBLE,
     )
+
+    # NamedArray:
+    filepath = p.parent / "xarray" / "xarray" / "namedarray" / "_aggregations.py"
+    # filepath = p.parent / "namedarray" / "_aggregations.py"  # Run from script location
     write_methods(
-        filepath=p.parent / "xarray" / "xarray" / "namedarray" / "_aggregations.py",
+        filepath=filepath,
         generators=[NAMED_ARRAY_GENERATOR],
         preamble=NAMED_ARRAY_MODULE_PREAMBLE,
     )
-    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
