@@ -29,6 +29,9 @@ Bug Fixes
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- Slightly amend `Xarray's Zarr Encoding Specification doc <https://docs.xarray.dev/en/latest/internals/zarr-encoding-spec.html>`_ for clarity, and provide a code comment in ``xarray.backends.zarr._get_zarr_dims_and_attrs`` referencing the doc (:issue:`8749`).
+  By `Ewan Short <https://github.com/eshort0401>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
