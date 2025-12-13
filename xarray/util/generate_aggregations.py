@@ -4,8 +4,10 @@ For internal xarray development use only.
 
 Usage:
     python xarray/util/generate_aggregations.py
-    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py --accept || true
-    pytest --doctest-modules xarray/{core,namedarray}/_aggregations.py
+    pytest --doctest-modules xarray/core/_aggregations.py --accept
+    pytest --doctest-modules xarray/core/_aggregations.py
+    pytest --doctest-modules xarray/namedarray/_aggregations.py --accept
+    pytest --doctest-modules xarray/namedarray/_aggregations.py
 
 This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
 The second run of pytest is deliberate, since the first will return an error
@@ -15,7 +17,7 @@ while replacing the doctests.
 
 import textwrap
 from dataclasses import dataclass, field
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
@@ -108,6 +110,17 @@ class {obj}{cls}Aggregations:
         dim: Dims,
         **kwargs: Any,
     ) -> {obj}:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> {obj}:
         raise NotImplementedError()"""
 
 RESAMPLE_PREAMBLE = """
@@ -130,6 +143,17 @@ class {obj}{cls}Aggregations:
     def _flox_reduce(
         self,
         dim: Dims,
+        **kwargs: Any,
+    ) -> {obj}:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -284,6 +308,7 @@ class Method:
         see_also_methods=(),
         min_flox_version=None,
         additional_notes="",
+        aggregation_type: Literal["reduce", "scan"] = "reduce",
     ):
         self.name = name
         self.extra_kwargs = extra_kwargs
@@ -292,6 +317,7 @@ class Method:
         self.see_also_methods = see_also_methods
         self.min_flox_version = min_flox_version
         self.additional_notes = additional_notes
+        self.aggregation_type = aggregation_type
         if bool_reduce:
             self.array_method = f"array_{name}"
             self.np_example_array = (
@@ -444,7 +470,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
 
         # median isn't enabled yet, because it would break if a single group was present in multiple
         # chunks. The non-flox code path will just rechunk every group to a single chunk and execute the median
-        method_is_not_flox_supported = method.name in ("median", "cumsum", "cumprod")
+        method_is_not_flox_supported = method.name in ("median", "cumprod")
         if method_is_not_flox_supported:
             indent = 12
         else:
@@ -455,14 +481,21 @@ class GroupByAggregationGenerator(AggregationGenerator):
         else:
             extra_kwargs = ""
 
+        if method.aggregation_type == "scan":
+            # Scans retain dimensions.
+            out_finalized = "out.assign_coords(self._obj.coords)"
+        else:
+            out_finalized = "out"
+
         if method_is_not_flox_supported:
             return f"""\
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.{method.array_method},
             dim=dim,{extra_kwargs}
             keep_attrs=keep_attrs,
             **kwargs,
-        )"""
+        )
+        return {out_finalized}"""
 
         min_version_check = f"""
             and module_available("flox", minversion="{method.min_flox_version}")"""
@@ -476,7 +509,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
             + f"""
             and contains_only_chunked_or_numpy(self._obj)
         ):
-            return self._flox_reduce(
+            return self._flox_{method.aggregation_type}(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}
                 # fill_value=fill_value,
@@ -484,12 +517,13 @@ class GroupByAggregationGenerator(AggregationGenerator):
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.{method.array_method},
                 dim=dim,{extra_kwargs}
                 keep_attrs=keep_attrs,
                 **kwargs,
-            )"""
+            )
+            return {out_finalized}"""
         )
 
 
@@ -507,12 +541,20 @@ class GenericAggregationGenerator(AggregationGenerator):
         keep_attrs = (
             "\n" + 12 * " " + "keep_attrs=keep_attrs," if has_keep_attrs else ""
         )
+
+        if method.aggregation_type == "scan" and self.datastructure.name == "Dataset":
+            # Scans retain dimensions, datasets drops them somehow:
+            out_finalized = "out.assign_coords(self._obj.coords)"
+        else:
+            out_finalized = "out"
+
         return f"""\
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.{method.array_method},
             dim=dim,{extra_kwargs}{keep_attrs}
             **kwargs,
-        )"""
+        )
+        return {out_finalized}"""
 
 
 AGGREGATION_METHODS = (
@@ -530,13 +572,15 @@ AGGREGATION_METHODS = (
     Method(
         "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
     ),
-    # Cumulatives:
+    # Scans:
     Method(
         "cumsum",
         extra_kwargs=(skipna,),
         numeric_only=True,
         see_also_methods=("cumulative",),
         additional_notes=_CUM_NOTES,
+        min_flox_version="0.10.5",
+        aggregation_type="scan",
     ),
     Method(
         "cumprod",
@@ -544,6 +588,7 @@ AGGREGATION_METHODS = (
         numeric_only=True,
         see_also_methods=("cumulative",),
         additional_notes=_CUM_NOTES,
+        aggregation_type="scan",
     ),
 )
 
@@ -700,8 +745,11 @@ if __name__ == "__main__":
     from pathlib import Path
 
     p = Path(os.getcwd())
+
+    filepath = p.parent / "xarray" / "xarray" / "core" / "_aggregations.py"
+    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
     write_methods(
-        filepath=p.parent / "xarray" / "xarray" / "core" / "_aggregations.py",
+        filepath=filepath,
         generators=[
             DATATREE_GENERATOR,
             DATASET_GENERATOR,
@@ -713,9 +761,12 @@ if __name__ == "__main__":
         ],
         preamble=MODULE_PREAMBLE,
     )
+
+    # NamedArray:
+    filepath = p.parent / "xarray" / "xarray" / "namedarray" / "_aggregations.py"
+    # filepath = p.parent / "namedarray" / "_aggregations.py"  # Run from script location
     write_methods(
-        filepath=p.parent / "xarray" / "xarray" / "namedarray" / "_aggregations.py",
+        filepath=filepath,
         generators=[NAMED_ARRAY_GENERATOR],
         preamble=NAMED_ARRAY_MODULE_PREAMBLE,
     )
-    # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
