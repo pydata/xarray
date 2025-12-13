@@ -2556,22 +2556,14 @@ class TestDatasetResample:
     [
         ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True),
         ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, False),
-        pytest.param(
-            "cumsum",
-            [7.0, 9.0, 0.0, 1.0, 2.0, 2.0],
-            False,
-            True,
-            marks=pytest.mark.xfail(
-                reason="Lazy groupby is not supported without flox"
-            ),
-        ),
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, True),
         ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, False),
         pytest.param(
             "cumprod",
             [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
             True,
             True,
-            marks=pytest.mark.xfail(
+            marks=pytest.mark.skip(
                 reason="TODO: Groupby with cumprod is currently not supported with flox"
             ),
         ),
@@ -2584,15 +2576,7 @@ class TestDatasetResample:
                 reason="TODO: Groupby with cumprod is currently not supported with flox"
             ),
         ),
-        pytest.param(
-            "cumprod",
-            [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
-            False,
-            True,
-            marks=pytest.mark.xfail(
-                reason="Lazy groupby is not supported without flox"
-            ),
-        ),
+        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, True),
         ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, False),
     ],
 )
@@ -2601,6 +2585,7 @@ def test_groupby_scans(
     expected_array: list[float],
     use_flox: bool,
     use_dask: bool,
+    use_lazy_group_idx: bool = False,
 ) -> None:
     if use_dask and not has_dask:
         pytest.skip("requires dask")
@@ -2613,8 +2598,12 @@ def test_groupby_scans(
     with xr.set_options(use_flox=use_flox):
         if use_dask:
             ds = ds.chunk()
-            grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-            actual = getattr(ds.groupby(group_idx=grouper), method)(dim="x")
+            if use_lazy_group_idx:
+                grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
+                actual = getattr(ds.groupby(group_idx=grouper), method)(dim="x")
+            else:
+                grouper = ds.group_idx.compute()
+                actual = getattr(ds.groupby(grouper), method)(dim="x")
         else:
             actual = getattr(ds.groupby("group_idx"), method)(dim="x")
 
@@ -2633,8 +2622,12 @@ def test_groupby_scans(
     with xr.set_options(use_flox=use_flox):
         if use_dask:
             ds = ds.chunk()
-            grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-            actual = getattr(ds.foo.groupby(group_idx=grouper), method)(dim="x")
+            if use_lazy_group_idx:
+                grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
+                actual = getattr(ds.foo.groupby(group_idx=grouper), method)(dim="x")
+            else:
+                grouper = ds.group_idx.compute()
+                actual = getattr(ds.foo.groupby(grouper), method)(dim="x")
         else:
             actual = getattr(ds.foo.groupby("group_idx"), method)(dim="x")
     assert_identical(expected.foo.compute(), actual.compute())
@@ -2647,7 +2640,7 @@ def test_groupby_scans(
         ("cumprod", [1.0, 2.0, 6.0, 6.0, 2.0, 2.0]),
     ],
 )
-def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
+def test_resample_scans(method: str, expected_array: list[float]) -> None:
     ds = xr.Dataset(
         {"foo": ("time", [1, 2, 3, 1, 2, np.nan])},
         coords={
