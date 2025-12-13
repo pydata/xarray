@@ -25,7 +25,7 @@ the name of each array's dimensions. However, starting with Zarr v3, the
 NetCDF data model in Zarr.
 
 Dimension Encoding in Zarr Formats
------------------------------------------------
+-----------------------------------
 
 Xarray encodes/decodes array dimensions differently depending on the Zarr format version:
 
