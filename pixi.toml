@@ -111,7 +111,7 @@ scipy = "1.13.*"
 # - Update the min version lower-bound in the corresponding feature(s) where applicable
 # - Update this section to pin to the min version
 
-array-api-strict = "1.1.*" # dependency for testing the array api compat
+array-api-strict = "2.4.*" # dependency for testing the array api compat
 boto3 = "1.34.*"
 bottleneck = "1.4.*"
 cartopy = "0.23.*"
@@ -198,7 +198,7 @@ cartopy = "*"
 seaborn = "*"
 
 [feature.test.dependencies]
-array-api-strict = "<2.4"
+array-api-strict = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
