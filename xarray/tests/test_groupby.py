@@ -3860,7 +3860,7 @@ def test_groupby_multi_map():
         },
         dims=["ny", "nx"],
     )
-    xr.testing.assert_equal(d,d.groupby("lon").map(lambda x: x))
+    xr.testing.assert_equal(d, d.groupby("lon").map(lambda x: x))
     xr.testing.assert_equal(d, d.groupby(("lon", "lat")).map(lambda x: x))
 
 
