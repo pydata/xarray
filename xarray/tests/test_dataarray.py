@@ -2418,6 +2418,12 @@ class TestDataArray:
         assert "foo" in indexed.xindexes
         assert indexed.xindexes["foo"].opt == 1  # type: ignore[attr-defined]
 
+    def test_set_xindex_drop_existing(self) -> None:
+        # Basic test that drop_existing parameter is passed through to Dataset
+        da = DataArray([1, 2, 3, 4], coords={"x": ("x", [0, 1, 2, 3])}, dims="x")
+        result = da.set_xindex("x", PandasIndex, drop_existing=True)
+        assert "x" in result.xindexes
+
     def test_dataset_getitem(self) -> None:
         dv = self.ds["foo"]
         assert_identical(dv, self.dv)
