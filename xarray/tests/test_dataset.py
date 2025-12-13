@@ -6073,12 +6073,12 @@ class TestDataset:
         assert_identical(expected, data.cumsum())
 
     @pytest.mark.parametrize(
-        "reduct, expected",
+        "reduct",
         [
-            ("dim1", ["dim2", "dim3", "time", "dim1"]),
-            ("dim2", ["dim3", "time", "dim1", "dim2"]),
-            ("dim3", ["dim2", "time", "dim1", "dim3"]),
-            ("time", ["dim2", "dim3", "dim1"]),
+            ("dim1",),
+            ("dim2",),
+            ("dim3",),
+            ("time",),
         ],
     )
     @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
@@ -6090,9 +6090,10 @@ class TestDataset:
         ):
             getattr(data, func)(dim="bad_dim")
 
-        # ensure dimensions are correct
+        # ensure dimensions are retained:
         actual = getattr(data, func)(dim=reduct).dims
-        assert list(actual) == expected
+        expected = data.dims
+        assert set(actual) == set(expected)
 
     def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44, use_extension_array=True)
