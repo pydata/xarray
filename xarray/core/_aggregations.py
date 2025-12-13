@@ -1319,7 +1319,9 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 6.0 0.0 0.0 0.0
 
@@ -1329,7 +1331,9 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
+            Coordinates:
+              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 6.0 0.0 0.0 nan
         """
