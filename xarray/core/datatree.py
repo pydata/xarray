@@ -2187,14 +2187,20 @@ class DataTree(
         result = {}
         for path, node in self.subtree_with_keys:
             reduce_dims = [d for d in node._node_dims if d in dims]
-            node_result = node.dataset.reduce(
-                func,
-                reduce_dims,
-                keep_attrs=keep_attrs,
-                keepdims=keepdims,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
+
+            # Prefer Dataset.func(...) over Dataset.reduce(func, ...):
+            f = getattr(node.dataset, func.__name__, None)
+            if f:
+                node_result = f(reduce_dims, keep_attrs=keep_attrs, **kwargs)
+            else:
+                node_result = node.dataset.reduce(
+                    func,
+                    reduce_dims,
+                    keep_attrs=keep_attrs,
+                    keepdims=keepdims,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
