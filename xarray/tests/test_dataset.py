@@ -6082,7 +6082,7 @@ class TestDataset:
         ],
     )
     @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
-    def test_reduce_cumsum_test_dims(self, reduct, expected, func) -> None:
+    def test_reduce_cumsum_test_dims(self, reduct, func) -> None:
         data = create_test_data()
         with pytest.raises(
             ValueError,
