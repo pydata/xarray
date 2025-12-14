@@ -139,6 +139,19 @@ class TestNames:
         ):
             DataTree(xds)
 
+    def test_child_containing_slashes(self) -> None:
+        ds: Dataset = Dataset({"a": DataArray([1, 2, 3])})
+        message = (
+            "Node name 'x/y' contains the '/' character. "
+            "Nodes cannot have names containing '/' characters, as this would make "
+            "path-like access to nodes ambiguous."
+        )
+        with pytest.raises(ValueError, match=message):
+            dt: DataTree = DataTree(dataset=ds, children={"x/y": DataTree()})
+        with pytest.raises(ValueError, match=message):
+            dt: DataTree = DataTree(dataset=ds, children={"x/y": DataTree()})
+            dt.children = {"x/y": DataTree()}
+
 
 class TestPaths:
     def test_path_property(self) -> None:
