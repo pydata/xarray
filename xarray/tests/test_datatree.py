@@ -149,7 +149,7 @@ class TestNames:
         with pytest.raises(ValueError, match=message):
             dt: DataTree = DataTree(dataset=ds, children={"x/y": DataTree()})
         with pytest.raises(ValueError, match=message):
-            dt: DataTree = DataTree(dataset=ds, children={"x/y": DataTree()})
+            dt = DataTree(dataset=ds, children={"x/y": DataTree()})
             dt.children = {"x/y": DataTree()}
 
 
