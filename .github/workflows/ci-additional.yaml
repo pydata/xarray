@@ -59,7 +59,7 @@ jobs:
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: restore-pixi-lock
         with:
           enableCrossOsArchive: true
@@ -101,7 +101,7 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: restore-pixi-lock
         with:
           enableCrossOsArchive: true
@@ -127,7 +127,7 @@ jobs:
           pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@v5.5.2
         with:
           file: mypy_report/cobertura.xml
           flags: mypy
@@ -150,7 +150,7 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: restore-pixi-lock
         with:
           enableCrossOsArchive: true
@@ -176,7 +176,7 @@ jobs:
           pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@v5.5.2
         with:
           file: mypy_report/cobertura.xml
           flags: mypy-min
@@ -207,7 +207,7 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: restore-pixi-lock
         with:
           enableCrossOsArchive: true
@@ -233,7 +233,7 @@ jobs:
           pixi run -e ${{ matrix.pixi-env }} -- python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@v5.5.2
         with:
           file: pyright_report/cobertura.xml
           flags: pyright
@@ -265,13 +265,13 @@ jobs:
           python-version: "3.x"
 
       - name: All-deps minimum versions policy
-        uses: xarray-contrib/minimum-dependency-versions@e2ac8ff0a76e8603d8536ef5d64743a375961ce9 # v0.1.1
+        uses: xarray-contrib/minimum-dependency-versions@3db8e1c17328ee1e27dfe4db90d908644856eb61 # v1.0.0
         with:
           policy: ci/policy.yaml
           environment-paths: ci/requirements/min-all-deps.yml
 
       - name: Bare minimum versions policy
-        uses: xarray-contrib/minimum-dependency-versions@e2ac8ff0a76e8603d8536ef5d64743a375961ce9 # v0.1.1
+        uses: xarray-contrib/minimum-dependency-versions@3db8e1c17328ee1e27dfe4db90d908644856eb61 # v1.0.0
         with:
           policy: ci/policy.yaml
           environment-paths: ci/requirements/bare-minimum.yml

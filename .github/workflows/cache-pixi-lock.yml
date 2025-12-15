@@ -24,7 +24,7 @@ jobs:
       - name: Get current date
         id: date
         run: echo "date=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         id: restore
         with:
           path: |
@@ -38,7 +38,7 @@ jobs:
       - name: Run pixi lock
         if: ${{ !steps.restore.outputs.cache-hit }}
         run: pixi lock
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v5
         if: ${{ !steps.restore.outputs.cache-hit }}
         id: cache
         with:
@@ -46,7 +46,7 @@ jobs:
             pixi.lock
           key: ${{ steps.restore.outputs.cache-primary-key }}
       - name: Upload pixi.lock
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: pixi-lock
           path: pixi.lock
