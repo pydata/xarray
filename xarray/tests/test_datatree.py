@@ -762,6 +762,23 @@ class TestCoords:
         # expected = child.assign_coords({"c": 11})
         # assert_identical(expected, actual)
 
+    def test_forbid_access_other_node_coords(self) -> None:
+        ds = Dataset(coords={"x": 0})
+        tree = DataTree(ds, children={"child": DataTree()})
+        expected = DataTree(ds, children={"child": DataTree(Dataset(coords={"y": 2}))})
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "Given coordinate names contain the '/' character: ['/child/y']. "
+                "Accessing the coordinates of other nodes in the tree is not yet "
+                "supported here. Retrieve the other node first, then access its "
+                "coordinates."
+            ),
+        ):
+            tree.coords["/child/y"] = 2
+        tree["child"].coords["y"] = DataArray(2)
+        assert_equal(tree, expected)
+
 
 def test_delitem() -> None:
     ds = Dataset({"a": 0}, coords={"x": ("x", [1, 2]), "z": "a"})
