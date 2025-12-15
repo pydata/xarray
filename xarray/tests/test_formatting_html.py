@@ -328,6 +328,97 @@ class TestDataTreeTruncatesNodes:
             result = xarray_html_only_repr(tree)
         assert result.count("Too many items to display") == 0
 
+    def test_many_children_truncated(self) -> None:
+        # Create tree with 20 children at root level
+        tree_dict = {f"child_{i:02d}": xr.Dataset({"x": i}) for i in range(20)}
+        tree = xr.DataTree.from_dict(tree_dict)
+
+        # With max_children=5: show first 3, ellipsis, last 2
+        with xr.set_options(display_max_children=5, display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # First 3 children should appear
+        assert "/child_00" in result
+        assert "/child_01" in result
+        assert "/child_02" in result
+
+        # Middle children should NOT appear
+        assert "/child_03" not in result
+        assert "/child_10" not in result
+        assert "/child_17" not in result
+
+        # Last 2 children should appear
+        assert "/child_18" in result
+        assert "/child_19" in result
+
+        # Vertical ellipsis should appear
+        assert "⋮" in result
+
+    def test_few_children_not_truncated(self) -> None:
+        # Create tree with 5 children (at the limit)
+        tree_dict = {f"child_{i}": xr.Dataset({"x": i}) for i in range(5)}
+        tree = xr.DataTree.from_dict(tree_dict)
+
+        with xr.set_options(display_max_children=5, display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # All children should appear
+        for i in range(5):
+            assert f"/child_{i}" in result
+
+        # No ellipsis
+        assert "⋮" not in result
+
+    def test_nested_children_truncated(self) -> None:
+        # Create tree with nested children: root → 10 children → each with 2 grandchildren
+        tree_dict = {}
+        for i in range(10):
+            for j in range(2):
+                tree_dict[f"child_{i:02d}/grandchild_{j}"] = xr.Dataset({"x": i * j})
+        tree = xr.DataTree.from_dict(tree_dict)
+
+        with xr.set_options(display_max_children=5, display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # Root level: first 3 and last 2 of 10 children should appear
+        assert "/child_00" in result
+        assert "/child_01" in result
+        assert "/child_02" in result
+        assert "/child_05" not in result  # truncated
+        assert "/child_08" in result
+        assert "/child_09" in result
+
+        # Ellipsis should appear for truncated children
+        assert "⋮" in result
+
+    def test_node_item_count_displayed(self) -> None:
+        # Create tree with known item counts
+        tree = xr.DataTree.from_dict({
+            "node_a": xr.Dataset({"var1": 1, "var2": 2}),  # 2 vars
+            "node_b": xr.Dataset({"var1": 1}, attrs={"attr1": "x", "attr2": "y"}),  # 1 var + 2 attrs
+        })
+
+        with xr.set_options(display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # Item counts should appear in parentheses
+        assert "(2)" in result  # node_a: 2 variables
+        assert "(3)" in result  # node_b: 1 variable + 2 attrs
+
+    def test_collapsible_group_checkbox(self) -> None:
+        # Create simple tree with children
+        tree = xr.DataTree.from_dict({
+            "child_a": xr.Dataset({"x": 1}),
+            "child_b": xr.Dataset({"y": 2}),
+        })
+
+        with xr.set_options(display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # Group nodes should have checkbox inputs for collapsing
+        assert "<input" in result
+        assert "type='checkbox'" in result
+
 
 class TestDataTreeInheritance:
     def test_inherited_section_present(self) -> None:

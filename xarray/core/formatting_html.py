@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
+from math import ceil
 from typing import TYPE_CHECKING, Literal
 
 from xarray.core.formatting import (
@@ -188,17 +189,15 @@ def collapsible_section(
 
     has_items = n_items is not None and n_items
     n_items_span = "" if n_items is None else f" <span>({n_items})</span>"
-    enabled = "" if enabled and has_items else " disabled"
-    collapsed = "" if collapsed or not has_items else " checked"
-    tip = " title='Expand/collapse section'" if enabled else ""
-    span_grid = " xr-span-grid" if not inline_details else ""
+    enabled_attr = "" if enabled and has_items else " disabled"
+    collapsed_attr = "" if collapsed or not has_items else " checked"
+    tip = " title='Expand/collapse section'" if enabled_attr == "" else ""
 
     html = (
-        f"<input id='{data_id}' class='xr-section-summary-in' type='checkbox'{enabled}{collapsed} />"
-        f"<label for='{data_id}' class='xr-section-summary{span_grid}' {tip}>{header}{n_items_span}</label>"
+        f"<input id='{data_id}' class='xr-section-summary-in' type='checkbox'{enabled_attr}{collapsed_attr} />"
+        f"<label for='{data_id}' class='xr-section-summary'{tip}>{header}{n_items_span}</label>"
+        f"<div class='xr-section-inline-details'>{inline_details}</div>"
     )
-    if inline_details:
-        html += f"<div class='xr-section-inline-details'>{inline_details}</div>"
     if details:
         html += f"<div class='xr-section-details'>{details}</div>"
     return html
@@ -211,7 +210,6 @@ def _mapping_section(
     max_items_collapse,
     expand_option_name,
     enabled=True,
-    max_option_name: Literal["display_max_children"] | None = None,
     **kwargs,
 ) -> str:
     n_items = len(mapping)
@@ -220,15 +218,8 @@ def _mapping_section(
     )
     collapsed = not expanded
 
-    inline_details = ""
-    if max_option_name and max_option_name in OPTIONS:
-        max_items = int(OPTIONS[max_option_name])
-        if n_items > max_items:
-            inline_details = f"({max_items}/{n_items})"
-
     return collapsible_section(
         f"{name}:",
-        inline_details=inline_details,
         details=details_func(mapping, **kwargs),
         n_items=n_items,
         enabled=enabled,
@@ -534,13 +525,48 @@ def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
     return displays
 
 
+def _ellipsis_element() -> str:
+    """Create an ellipsis element for truncated children."""
+    return (
+        "<div class='xr-group-box'>"
+        "<div class='xr-group-box-vline' style='height: 100%'></div>"
+        "<div class='xr-group-box-contents'>"
+        "<span style='font-size: 1.4em; font-weight: 900; color: #666; letter-spacing: 0.15em;'>⋮</span>"
+        "</div>"
+        "</div>"
+    )
+
+
 def children_section(
     children: Mapping[str, DataTree], displays: dict[str, _DataTreeDisplay]
 ) -> str:
     child_elements = []
-    for i, child in enumerate(children.values()):
-        is_last = i == (len(children) - 1)
-        child_elements.append(datatree_child_repr(child, displays, end=is_last))
+    children_list = list(children.values())
+    nchildren = len(children_list)
+    max_children = int(OPTIONS["display_max_children"])
+
+    if nchildren <= max_children:
+        # Render all children
+        for i, child in enumerate(children_list):
+            is_last = i == nchildren - 1
+            child_elements.append(datatree_child_repr(child, displays, end=is_last))
+    else:
+        # Truncate: show first ceil(max/2), ellipsis, last floor(max/2)
+        first_n = ceil(max_children / 2)
+        last_n = max_children - first_n
+
+        for i in range(first_n):
+            child_elements.append(
+                datatree_child_repr(children_list[i], displays, end=False)
+            )
+
+        child_elements.append(_ellipsis_element())
+
+        for i in range(nchildren - last_n, nchildren):
+            is_last = i == nchildren - 1
+            child_elements.append(
+                datatree_child_repr(children_list[i], displays, end=is_last)
+            )
 
     children_html = "".join(child_elements)
     return f"<div class='xr-children'>{children_html}</div>"
