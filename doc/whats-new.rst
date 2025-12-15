@@ -38,7 +38,7 @@ Documentation
 - Better description of ``keep_attrs`` option on ``xarray.where`` docstring (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
 - Clarify ``DataTree.coords`` and ``DataTree.data_vars`` docstrings to indicate
-they currently refer to the coordinates and variables of that node only (:issue:`9485`).
+they refer to the coordinates and variables of that node only (:issue:`9485`).
   By `Ewan Short <https://github.com/eshort0401>`_.
 
 Internal Changes
