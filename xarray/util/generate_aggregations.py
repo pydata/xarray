@@ -71,6 +71,30 @@ class {obj}{cls}Aggregations:
     ) -> Self:
         raise NotImplementedError()"""
 
+DATASET_PREAMBLE = """
+
+class {obj}{cls}Aggregations:
+    __slots__ = ()
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> Self:
+        raise NotImplementedError()
+
+    def assign_coords(
+        self,
+        coords: Mapping | None = None,
+        **coords_kwargs: Any,
+    ) -> Self:
+        raise NotImplementedError()"""
+
 NAMED_ARRAY_AGGREGATIONS_PREAMBLE = """
 
 class {obj}{cls}Aggregations:
@@ -656,7 +680,7 @@ DATASET_GENERATOR = GenericAggregationGenerator(
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
-    definition_preamble=AGGREGATIONS_PREAMBLE,
+    definition_preamble=DATASET_PREAMBLE,
 )
 DATAARRAY_GENERATOR = GenericAggregationGenerator(
     cls="",
