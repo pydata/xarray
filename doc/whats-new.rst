@@ -14,6 +14,11 @@ v2025.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Improved :py:class:`DataTree` HTML representation: groups are now collapsible
+  with item counts shown in labels, large trees are automatically truncated
+  using ``display_max_children`` and ``display_max_html_elements`` options,
+  and the Indexes section is now displayed (matching the text repr) (:pull:`10816`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
