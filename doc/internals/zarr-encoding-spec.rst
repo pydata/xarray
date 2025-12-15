@@ -27,7 +27,7 @@ NetCDF data model in Zarr.
 Dimension Encoding in Zarr Formats
 -----------------------------------
 
-Xarray encodes/decodes array dimensions differently depending on the Zarr format version:
+Xarray encodes array dimensions differently depending on the Zarr format version:
 
 **Zarr V2 Format:**
 Xarray uses a special Zarr array attribute: ``_ARRAY_DIMENSIONS``. The value of this
@@ -60,10 +60,10 @@ Compatibility and Reading
 -------------------------
 
 Because of these encoding choices, Xarray cannot read arbitrary Zarr groups, but only
-Zarr groups with valid dimension metadata. Xarray supports:
+Zarr groups containing arrays with valid dimension metadata. Xarray supports:
 
-1. Zarr V3 groups with ``dimension_names`` metadata
-2. Zarr V2 groups with ``_ARRAY_DIMENSIONS`` attributes
+1. Zarr V3 arrays with ``dimension_names`` metadata
+2. Zarr V2 arrays with ``_ARRAY_DIMENSIONS`` attributes
 3. `NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ format (dimension names are defined in the ``dimrefs`` field in the custom ``.zarray`` file)
 
 Xarray checks each of these three conventions, in the order given above, when looking for dimension name metadata. Note that while Xarray can read NCZarr groups, it currently does not write NCZarr groups. After decoding the dimension information and assigning the variable dimensions, Xarray proceeds to [optionally] decode each variable using its standard CF decoding machinery used for NetCDF data.
