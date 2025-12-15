@@ -566,18 +566,17 @@ def children_section(
         first_n = ceil(max_children / 2)
         last_n = max_children - first_n
 
-        for i in range(first_n):
-            child_elements.append(
-                datatree_child_repr(children_list[i], displays, end=False)
-            )
+        child_elements.extend(
+            datatree_child_repr(children_list[i], displays, end=False)
+            for i in range(first_n)
+        )
 
         child_elements.append(_ellipsis_element())
 
-        for i in range(nchildren - last_n, nchildren):
-            is_last = i == nchildren - 1
-            child_elements.append(
-                datatree_child_repr(children_list[i], displays, end=is_last)
-            )
+        child_elements.extend(
+            datatree_child_repr(children_list[i], displays, end=(i == nchildren - 1))
+            for i in range(nchildren - last_n, nchildren)
+        )
 
     children_html = "".join(child_elements)
     return f"<div class='xr-children'>{children_html}</div>"
