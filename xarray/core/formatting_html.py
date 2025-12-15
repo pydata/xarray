@@ -8,7 +8,7 @@ from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
 from math import ceil
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from xarray.core.formatting import (
     filter_nondefault_indexes,

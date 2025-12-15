@@ -393,10 +393,14 @@ class TestDataTreeTruncatesNodes:
 
     def test_node_item_count_displayed(self) -> None:
         # Create tree with known item counts
-        tree = xr.DataTree.from_dict({
-            "node_a": xr.Dataset({"var1": 1, "var2": 2}),  # 2 vars
-            "node_b": xr.Dataset({"var1": 1}, attrs={"attr1": "x", "attr2": "y"}),  # 1 var + 2 attrs
-        })
+        tree = xr.DataTree.from_dict(
+            {
+                "node_a": xr.Dataset({"var1": 1, "var2": 2}),  # 2 vars
+                "node_b": xr.Dataset(
+                    {"var1": 1}, attrs={"attr1": "x", "attr2": "y"}
+                ),  # 1 var + 2 attrs
+            }
+        )
 
         with xr.set_options(display_max_html_elements=1000):
             result = xarray_html_only_repr(tree)
@@ -407,10 +411,12 @@ class TestDataTreeTruncatesNodes:
 
     def test_collapsible_group_checkbox(self) -> None:
         # Create simple tree with children
-        tree = xr.DataTree.from_dict({
-            "child_a": xr.Dataset({"x": 1}),
-            "child_b": xr.Dataset({"y": 2}),
-        })
+        tree = xr.DataTree.from_dict(
+            {
+                "child_a": xr.Dataset({"x": 1}),
+                "child_b": xr.Dataset({"y": 2}),
+            }
+        )
 
         with xr.set_options(display_max_html_elements=1000):
             result = xarray_html_only_repr(tree)
