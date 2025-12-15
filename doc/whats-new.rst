@@ -29,7 +29,7 @@ Bug Fixes
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
-- Forbid slashes in ``DataTree`` coordinate names (:issue:`#9485` :pull:`19845`).
+- Forbid slashes in ``DataTree`` coordinate names (:issue:`#9485` :pull:`11015`).
   By `Ewan Short <https://github.com/eshort0401>`_.
 
 Documentation
@@ -38,7 +38,7 @@ Documentation
 - Better description of ``keep_attrs`` option on ``xarray.where`` docstring (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
 - Clarify ``DataTree.coords`` and ``DataTree.data_vars`` docstrings to indicate
-they refer to the coordinates and variables of that node only (:issue:`9485` :pull:`19845`).
+they refer to the coordinates and variables of that node only (:issue:`9485` :pull:`11015`).
   By `Ewan Short <https://github.com/eshort0401>`_.
 
 Internal Changes
