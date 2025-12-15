@@ -1363,6 +1363,13 @@ class DatasetAggregations:
     ) -> Self:
         raise NotImplementedError()
 
+    def assign_coords(
+        self,
+        coords: Mapping | None = None,
+        **coords_kwargs: Any,
+    ) -> Self:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
