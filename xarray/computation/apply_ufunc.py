@@ -246,6 +246,8 @@ def build_output_coords_and_indexes(
         (unpacked_coords,) = coords_list
         merged_vars = dict(unpacked_coords.variables)
         merged_indexes = dict(unpacked_coords.xindexes)
+        if combine_attrs == "drop":
+            merged_vars = {k: var._replace(attrs={}) for k, var in merged_vars.items()}
     else:
         merged_vars, merged_indexes = merge_coordinates_without_align(
             coords_list, exclude_dims=exclude_dims, combine_attrs=combine_attrs
@@ -713,7 +715,7 @@ def apply_variable_ufunc(
     keep_attrs="override",
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
-    """Apply a ndarray level function over Variable and/or ndarray objects."""
+    """Apply an ndarray level function over Variable and/or ndarray objects."""
     from xarray.core.formatting import short_array_repr
     from xarray.core.variable import as_compatible_data
 
@@ -869,7 +871,7 @@ def apply_variable_ufunc(
 
 
 def apply_array_ufunc(func, *args, dask="forbidden"):
-    """Apply a ndarray level function over ndarray objects."""
+    """Apply an ndarray level function over ndarray objects."""
     if any(is_chunked_array(arg) for arg in args):
         if dask == "forbidden":
             raise ValueError(
@@ -1214,7 +1216,7 @@ def apply_ufunc(
         func = functools.partial(func, **kwargs)
 
     if keep_attrs is None:
-        keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs = _get_keep_attrs(default=True)
 
     if isinstance(keep_attrs, bool):
         keep_attrs = "override" if keep_attrs else "drop"

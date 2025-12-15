@@ -9,7 +9,7 @@ from hypothesis.errors import InvalidArgument
 
 import xarray as xr
 from xarray.core.types import T_DuckArray
-from xarray.core.utils import attempt_import
+from xarray.core.utils import attempt_import, module_available
 
 if TYPE_CHECKING:
     from xarray.core.types import _DTypeLikeNested, _ShapeLike
@@ -22,6 +22,8 @@ else:
 
 __all__ = [
     "attrs",
+    "cftime_datetimes",
+    "datetimes",
     "dimension_names",
     "dimension_sizes",
     "names",
@@ -82,6 +84,25 @@ def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
         | npst.timedelta64_dtypes(endianness="=", max_period="ns")
         | npst.unicode_string_dtypes(endianness="=")
     )
+
+
+def datetimes() -> st.SearchStrategy:
+    """
+    Generates datetime objects including both standard library datetimes and cftime datetimes.
+
+    Returns standard library datetime.datetime objects, and if cftime is available,
+    also includes cftime datetime objects from various calendars.
+
+    Requires the hypothesis package to be installed.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
+    """
+    strategy = st.datetimes()
+    if module_available("cftime"):
+        strategy = strategy | cftime_datetimes()
+    return strategy
 
 
 # TODO Generalize to all valid unicode characters once formatting bugs in xarray's reprs are fixed + docs can handle it.
@@ -477,36 +498,41 @@ def unique_subset_of(
     )
 
 
-class CFTimeStrategy(st.SearchStrategy):
-    def __init__(self, min_value, max_value):
-        super().__init__()
-        self.min_value = min_value
-        self.max_value = max_value
+@st.composite
+def cftime_datetimes(draw: st.DrawFn):
+    """
+    Generates cftime datetime objects across various calendars.
 
-    def do_draw(self, data):
+    This strategy generates cftime datetime objects from all available
+    cftime calendars with dates ranging from year -99999 to 99999.
+
+    Requires both the hypothesis and cftime packages to be installed.
+
+    Returns
+    -------
+    cftime_datetime_strategy
+        Strategy for generating cftime datetime objects.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
+    """
+    from xarray.tests import _all_cftime_date_types
+
+    date_types = _all_cftime_date_types()
+    calendars = list(date_types)
+
+    calendar = draw(st.sampled_from(calendars))
+    date_type = date_types[calendar]
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
+        daysinmonth = date_type(99999, 12, 1).daysinmonth
+        min_value = date_type(-99999, 1, 1)
+        max_value = date_type(99999, 12, daysinmonth, 23, 59, 59, 999999)
+
         unit_microsecond = datetime.timedelta(microseconds=1)
-        timespan_microseconds = (self.max_value - self.min_value) // unit_microsecond
-        result = data.draw_integer(0, timespan_microseconds)
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
-            return self.min_value + datetime.timedelta(microseconds=result)
+        timespan_microseconds = (max_value - min_value) // unit_microsecond
+        microseconds_offset = draw(st.integers(0, timespan_microseconds))
 
-
-class CFTimeStrategyISO8601(st.SearchStrategy):
-    def __init__(self):
-        from xarray.tests.test_coding_times import _all_cftime_date_types
-
-        super().__init__()
-        self.date_types = _all_cftime_date_types()
-        self.calendars = list(self.date_types)
-
-    def do_draw(self, data):
-        calendar = data.draw(st.sampled_from(self.calendars))
-        date_type = self.date_types[calendar]
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
-            daysinmonth = date_type(99999, 12, 1).daysinmonth
-            min_value = date_type(-99999, 1, 1)
-            max_value = date_type(99999, 12, daysinmonth, 23, 59, 59, 999999)
-            strategy = CFTimeStrategy(min_value, max_value)
-            return strategy.do_draw(data)
+        return min_value + datetime.timedelta(microseconds=microseconds_offset)

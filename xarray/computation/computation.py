@@ -656,8 +656,12 @@ def where(cond, x, y, keep_attrs=None):
         values to choose from where `cond` is True
     y : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is False
-    keep_attrs : bool or str or callable, optional
-        How to treat attrs. If True, keep the attrs of `x`.
+    keep_attrs : bool or {"drop", "identical", "no_conflicts", "drop_conflicts", "override"} or callable, optional
+        - 'override' or True (default): skip comparing and copy attrs from `x` to the result.
+        - 'drop' or False: empty attrs on returned xarray object.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have the same name must also have the same value.
+        - 'drop_conflicts': attrs from all objects are combined, any that have the same name but different values are dropped.
 
     Returns
     -------
@@ -672,18 +676,40 @@ def where(cond, x, y, keep_attrs=None):
     ...     dims=["lat"],
     ...     coords={"lat": np.arange(10)},
     ...     name="sst",
+    ...     attrs={"standard_name": "sea_surface_temperature"},
     ... )
     >>> x
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
       * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
 
     >>> xr.where(x < 0.5, x, x * 100)
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
       * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
+
+    If `x` is a scalar then by default there are no attrs on the result
+    >>> xr.where(x < 0.5, 1, 0)
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
+    array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+    Coordinates:
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+
+    If `x` is a scalar (and therefore has no attrs), preserve the
+    attrs on `cond` by using `keep_attrs="drop_conflicts"`
+    >>> xr.where(x < 0.5, 1, 0, keep_attrs="drop_conflicts")
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
+    array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+    Coordinates:
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
 
     >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
@@ -701,7 +727,7 @@ def where(cond, x, y, keep_attrs=None):
       * lon      (lon) int64 24B 10 11 12
 
     >>> xr.where(y.lat < 1, y, -1)
-    <xarray.DataArray (lat: 3, lon: 3)> Size: 72B
+    <xarray.DataArray 'lat' (lat: 3, lon: 3)> Size: 72B
     array([[ 0. ,  0.1,  0.2],
            [-1. , -1. , -1. ],
            [-1. , -1. , -1. ]])
@@ -726,7 +752,7 @@ def where(cond, x, y, keep_attrs=None):
     from xarray.core.dataset import Dataset
 
     if keep_attrs is None:
-        keep_attrs = _get_keep_attrs(default=False)
+        keep_attrs = _get_keep_attrs(default=True)
 
     # alignment for three arguments is complicated, so don't support it yet
     from xarray.computation.apply_ufunc import apply_ufunc
@@ -746,7 +772,7 @@ def where(cond, x, y, keep_attrs=None):
     # be consistent with the `where` method of `DataArray` and `Dataset`
     # rebuild the attrs from x at each level of the output, which could be
     # Dataset, DataArray, or Variable, and also handle coords
-    if keep_attrs is True and hasattr(result, "attrs"):
+    if keep_attrs in (True, "override") and hasattr(result, "attrs"):
         if isinstance(y, Dataset) and not isinstance(x, Dataset):
             # handle special case where x gets promoted to Dataset
             result.attrs = {}
@@ -930,7 +956,7 @@ def _calc_idxminmax(
         array = array.where(~allna, 0)
 
     # This will run argmin or argmax.
-    indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
+    index = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle chunked arrays (e.g. dask).
     coord = array[dim]._variable.to_base_variable()
@@ -943,13 +969,13 @@ def _calc_idxminmax(
     else:
         coord = coord.copy(data=to_like_array(array[dim].data, array.data))
 
-    res = indx._replace(coord[(indx.variable,)]).rename(dim)
+    res = index._replace(coord[(index.variable,)]).rename(dim)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
         # Put the NaN values back in after removing them
         res = res.where(~allna, fill_value)
 
     # Copy attributes from argmin/argmax, if any
-    res.attrs = indx.attrs
+    res.attrs = index.attrs
 
     return res

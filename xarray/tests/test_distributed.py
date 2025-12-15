@@ -98,7 +98,7 @@ def test_dask_distributed_netcdf_roundtrip(
 
     chunks = {"dim1": 4, "dim2": 3, "dim3": 6}
 
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"], loop=loop):
             original = create_test_data().chunk(chunks)
 
@@ -128,7 +128,7 @@ def test_dask_distributed_write_netcdf_with_dimensionless_variables(
     loop,  # noqa: F811
     tmp_netcdf_filename,
 ):
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"], loop=loop):
             original = xr.Dataset({"x": da.zeros(())})
             original.to_netcdf(tmp_netcdf_filename)
@@ -147,7 +147,7 @@ def test_open_mfdataset_can_open_files_with_cftime_index(parallel, tmp_path):
     da = xr.DataArray(data, coords={"time": T, "Lon": Lon}, name="test")
     file_path = tmp_path / "test.nc"
     da.to_netcdf(file_path)
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"]):
             with xr.open_mfdataset(file_path, parallel=parallel) as tf:
                 assert_identical(tf["test"], da)
@@ -168,7 +168,7 @@ def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
         da.isel(time=slice(i, i + 10)).to_netcdf(fname)
         fnames.append(fname)
 
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"]):
             with xr.open_mfdataset(
                 fnames, parallel=parallel, concat_dim="time", combine="nested"
@@ -216,7 +216,7 @@ def test_dask_distributed_read_netcdf_integration_test(
 
     chunks = {"dim1": 4, "dim2": 3, "dim3": 6}
 
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"], loop=loop):
             original = create_test_data()
             original.to_netcdf(tmp_netcdf_filename, engine=engine, format=nc_format)
@@ -246,7 +246,7 @@ def zarr(client):  # noqa: F811
     except AttributeError:
         yield zarr_lib
     finally:
-        # Zarr-Python 3 lazily allocates a IO thread, a thread pool executor, and
+        # Zarr-Python 3 lazily allocates an IO thread, a thread pool executor, and
         # an IO loop. Here we clean up these resources to avoid leaking threads
         # In normal operations, this is done as by an atexit handler when Zarr
         # is shutting down.

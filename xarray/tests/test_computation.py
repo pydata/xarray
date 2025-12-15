@@ -694,10 +694,7 @@ def test_broadcast_compat_data_2d() -> None:
 
 def test_keep_attrs() -> None:
     def add(a, b, keep_attrs):
-        if keep_attrs:
-            return apply_ufunc(operator.add, a, b, keep_attrs=keep_attrs)
-        else:
-            return apply_ufunc(operator.add, a, b)
+        return apply_ufunc(operator.add, a, b, keep_attrs=keep_attrs)
 
     a = xr.DataArray([0, 1], [("x", [0, 1])])
     a.attrs["attr"] = "da"
@@ -733,7 +730,7 @@ def test_keep_attrs() -> None:
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -802,7 +799,7 @@ def test_keep_attrs_strategies_variable(strategy, attrs, expected, error) -> Non
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -872,7 +869,7 @@ def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error) -> No
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -967,7 +964,7 @@ def test_keep_attrs_strategies_dataarray_variables(
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -1037,7 +1034,7 @@ def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error) -> None
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -1550,7 +1547,7 @@ def test_vectorize_exclude_dims_dask() -> None:
 
 
 def test_corr_only_dataarray() -> None:
-    with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
+    with pytest.raises(TypeError, match=r"Only xr.DataArray is supported"):
         xr.corr(xr.Dataset(), xr.Dataset())  # type: ignore[type-var]
 
 
@@ -2245,6 +2242,11 @@ def test_where_attrs() -> None:
 
     # x and y as a scalar, takes no attrs
     actual = xr.where(cond, 1, 0, keep_attrs=True)
+    expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
+    assert_identical(expected, actual)
+
+    # x and y as a scalar, takes no attrs
+    actual = xr.where(cond, 1, 0, keep_attrs=False)
     expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
     assert_identical(expected, actual)
 

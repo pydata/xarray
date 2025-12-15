@@ -32,6 +32,7 @@ from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
+    IndexableArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -73,11 +74,16 @@ def var():
     ],
 )
 def test_as_compatible_data_writeable(data):
-    pd.set_option("mode.copy_on_write", True)
+    # In pandas 3 the mode.copy_on_write option defaults to True, so the option
+    # setting logic can be removed once our minimum version of pandas is
+    # greater than or equal to 3.
+    if not has_pandas_3:
+        pd.set_option("mode.copy_on_write", True)
     # GH8843, ensure writeable arrays for data_vars even with
     # pandas copy-on-write mode
     assert as_compatible_data(data).flags.writeable
-    pd.reset_option("mode.copy_on_write")
+    if not has_pandas_3:
+        pd.reset_option("mode.copy_on_write")
 
 
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
@@ -224,7 +230,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             x, np.timedelta64(td), np.dtype("timedelta64[us]")
         )
 
-        x = self.cls(["x"], pd.to_timedelta([td]))
+        x = self.cls(["x"], pd.to_timedelta([td]).as_unit("ns"))
         self._assertIndexedLikeNDArray(x, np.timedelta64(td), "timedelta64[ns]")
 
     def test_index_0d_not_a_time(self):
@@ -278,7 +284,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
-    dt64_data = pd.date_range("1970-01-01", periods=3)
+    dt64_data = pd.date_range("1970-01-01", periods=3, unit="ns")
 
     @pytest.mark.parametrize(
         "values, unit",
@@ -310,7 +316,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             (td64_data.values.astype("timedelta64[m]"), "s"),
             (td64_data.values.astype("timedelta64[s]"), "s"),
             (td64_data.values.astype("timedelta64[ps]"), "ns"),
-            (td64_data.to_pytimedelta(), "ns"),
+            (td64_data.to_pytimedelta(), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion(self, values, unit):
@@ -372,7 +378,10 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # binary ops with all variables
         assert_array_equal(v + v, 2 * v)
         w = self.cls(["x"], y, {"foo": "bar"})
-        assert_identical(v + w, self.cls(["x"], x + y).to_base_variable())
+        # With drop_conflicts, v (no attrs) + w (has attrs) should keep w's attrs
+        # Note: IndexVariable ops return Variable, not IndexVariable
+        expected = self.cls(["x"], x + y, {"foo": "bar"}).to_base_variable()
+        assert_identical(v + w, expected)
         assert_array_equal((v * w).values, x * y)
 
         # something complicated
@@ -1083,7 +1092,7 @@ class TestVariable(VariableSubclassobjects):
         [
             (np.datetime64("2000-01-01"), "s"),
             (
-                pd.Timestamp("2000-01-01T00"),
+                pd.Timestamp("2000-01-01T00").as_unit("s"),
                 "s" if has_pandas_3 else "ns",
             ),
             (
@@ -1105,8 +1114,8 @@ class TestVariable(VariableSubclassobjects):
             (np.timedelta64(1, "m"), "s"),
             (np.timedelta64(1, "D"), "s"),
             (np.timedelta64(1001, "ps"), "ns"),
-            (pd.Timedelta("1 day"), "ns"),
-            (timedelta(days=1), "ns"),
+            (pd.Timedelta("1 day").as_unit("ns"), "ns"),
+            (timedelta(days=1), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion_scalar(self, values, unit):
@@ -1125,13 +1134,14 @@ class TestVariable(VariableSubclassobjects):
         assert v.values == "foo".encode("ascii")
 
     def test_0d_datetime(self):
-        v = Variable([], pd.Timestamp("2000-01-01"))
+        v = Variable([], pd.Timestamp("2000-01-01").as_unit("s"))
         expected_unit = "s" if has_pandas_3 else "ns"
         assert v.dtype == np.dtype(f"datetime64[{expected_unit}]")
         assert v.values == np.datetime64("2000-01-01", expected_unit)  # type: ignore[call-overload]
 
     @pytest.mark.parametrize(
-        "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
+        "values, unit",
+        [(pd.to_timedelta("1s").as_unit("ns"), "ns"), (np.timedelta64(1, "s"), "s")],
     )
     def test_0d_timedelta(self, values, unit):
         # todo: check, if this test is OK
@@ -1325,7 +1335,7 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x", "y"], data)
 
         def assert_indexer_type(key, object_type):
-            dims, index_tuple, new_order = v._broadcast_indexes(key)
+            _dims, index_tuple, _new_order = v._broadcast_indexes(key)
             assert isinstance(index_tuple, object_type)
 
         # should return BasicIndexer
@@ -1852,15 +1862,24 @@ class TestVariable(VariableSubclassobjects):
 
     def test_reduce(self):
         v = Variable(["x", "y"], self.d, {"ignored": "attributes"})
-        assert_identical(v.reduce(np.std, "x"), Variable(["y"], self.d.std(axis=0)))
+        # Reduce keeps attrs by default
+        expected = Variable(["y"], self.d.std(axis=0), {"ignored": "attributes"})
+        assert_identical(v.reduce(np.std, "x"), expected)
         assert_identical(v.reduce(np.std, axis=0), v.reduce(np.std, dim="x"))
         assert_identical(
-            v.reduce(np.std, ["y", "x"]), Variable([], self.d.std(axis=(0, 1)))
+            v.reduce(np.std, ["y", "x"]),
+            Variable([], self.d.std(axis=(0, 1)), {"ignored": "attributes"}),
         )
-        assert_identical(v.reduce(np.std), Variable([], self.d.std()))
+        assert_identical(
+            v.reduce(np.std), Variable([], self.d.std(), {"ignored": "attributes"})
+        )
+        # Chained reductions both keep attrs
+        expected_chained = Variable(
+            [], self.d.mean(axis=0).std(), {"ignored": "attributes"}
+        )
         assert_identical(
             v.reduce(np.mean, "x").reduce(np.std, "y"),
-            Variable([], self.d.mean(axis=0).std()),
+            expected_chained,
         )
         assert_allclose(v.mean("x"), v.reduce(np.mean, "x"))
 
@@ -2107,27 +2126,62 @@ class TestVariable(VariableSubclassobjects):
 
         v = Variable(["x", "y"], self.d, _attrs)
 
-        # Test dropped attrs
+        # Test default behavior (keeps attrs for reduction operations)
         vm = v.mean()
-        assert len(vm.attrs) == 0
-        assert vm.attrs == {}
+        assert len(vm.attrs) == len(_attrs)
+        assert vm.attrs == _attrs
 
-        # Test kept attrs
+        # Test explicitly keeping attrs
         vm = v.mean(keep_attrs=True)
         assert len(vm.attrs) == len(_attrs)
         assert vm.attrs == _attrs
+
+        # Test explicitly dropping attrs
+        vm = v.mean(keep_attrs=False)
+        assert len(vm.attrs) == 0
+        assert vm.attrs == {}
 
     def test_binary_ops_keep_attrs(self):
         _attrs = {"units": "test", "long_name": "testing"}
         a = Variable(["x", "y"], np.random.randn(3, 3), _attrs)
         b = Variable(["x", "y"], np.random.randn(3, 3), _attrs)
-        # Test dropped attrs
+        # Test kept attrs (now default)
         d = a - b  # just one operation
-        assert d.attrs == {}
-        # Test kept attrs
-        with set_options(keep_attrs=True):
-            d = a - b
         assert d.attrs == _attrs
+        # Test dropped attrs
+        with set_options(keep_attrs=False):
+            d = a - b
+        assert d.attrs == {}
+
+    def test_binary_ops_attrs_drop_conflicts(self):
+        # Test that binary operations combine attrs with drop_conflicts behavior
+        attrs_a = {"units": "meters", "long_name": "distance", "source": "sensor_a"}
+        attrs_b = {"units": "feet", "resolution": "high", "source": "sensor_b"}
+        a = Variable(["x"], [1, 2, 3], attrs_a)
+        b = Variable(["x"], [4, 5, 6], attrs_b)
+
+        # With keep_attrs=True (default), should combine attrs dropping conflicts
+        result = a + b
+        # "units" and "source" conflict, so they're dropped
+        # "long_name" only in a, "resolution" only in b, so they're kept
+        assert result.attrs == {"long_name": "distance", "resolution": "high"}
+
+        # Test with identical values for some attrs
+        attrs_c = {"units": "meters", "type": "data", "source": "sensor_c"}
+        c = Variable(["x"], [7, 8, 9], attrs_c)
+        result2 = a + c
+        # "units" has same value, so kept; "source" conflicts, so dropped
+        # "long_name" from a, "type" from c
+        assert result2.attrs == {
+            "units": "meters",
+            "long_name": "distance",
+            "type": "data",
+        }
+
+        # With keep_attrs=False, attrs should be empty
+        with set_options(keep_attrs=False):
+            result3 = a + b
+            assert result3.attrs == {}
 
     def test_count(self):
         expected = Variable([], 3)
@@ -3110,7 +3164,7 @@ class TestNumpyCoercion:
         (np.datetime64("2000-01-01", "s"), "s"),
         (np.array([np.datetime64("2000-01-01", "ns")]), "ns"),
         (np.array([np.datetime64("2000-01-01", "s")]), "s"),
-        (pd.date_range("2000", periods=1), "ns"),
+        (pd.date_range("2000", periods=1, unit="ns"), "ns"),
         (
             datetime(2000, 1, 1),
             "us" if has_pandas_3 else "ns",
@@ -3119,10 +3173,17 @@ class TestNumpyCoercion:
             np.array([datetime(2000, 1, 1)]),
             "us" if has_pandas_3 else "ns",
         ),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
+        (
+            pd.date_range(
+                "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+            ),
+            "ns",
+        ),
         (
             pd.Series(
-                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+                pd.date_range(
+                    "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+                )
             ),
             "ns",
         ),
@@ -3197,8 +3258,8 @@ def test_pandas_two_only_datetime_conversion_warnings(
         (np.array([np.timedelta64(10, "ns")]), "ns"),
         (np.array([np.timedelta64(10, "s")]), "s"),
         (pd.timedelta_range("1", periods=1), "ns"),
-        (timedelta(days=1), "ns"),
-        (np.array([timedelta(days=1)]), "ns"),
+        (timedelta(days=1), "us" if has_pandas_3 else "ns"),
+        (np.array([timedelta(days=1)]), "us" if has_pandas_3 else "ns"),
         (pd.timedelta_range("1", periods=1).astype("timedelta64[s]"), "s"),
     ],
     ids=lambda x: f"{x}",
@@ -3208,3 +3269,15 @@ def test_timedelta_conversion(values, unit) -> None:
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     var = Variable(dims, values)
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
+
+
+def test_explicitly_indexed_array_preserved() -> None:
+    """Test that methods using ._data preserve ExplicitlyIndexed arrays.
+
+    Regression test for methods that should use ._data instead of .data
+    to avoid loading lazy arrays into memory.
+    """
+    arr = IndexableArray(np.array([1, 2, 3]))
+    var = Variable(["x"], arr)
+    result = var.drop_encoding()
+    assert isinstance(result._data, indexing.ExplicitlyIndexed)

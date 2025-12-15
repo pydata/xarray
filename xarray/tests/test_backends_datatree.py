@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray import DataTree, load_datatree, open_datatree, open_groups
@@ -262,7 +263,7 @@ class NetCDFIOBase:
             assert roundtrip_dt["/set2/a"].encoding["complevel"] == comp["complevel"]
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
-            with pytest.raises(ValueError, match="unexpected encoding group.*"):
+            with pytest.raises(ValueError, match=r"unexpected encoding group.*"):
                 original_dt.to_netcdf(filepath, encoding=enc, engine=self.engine)
 
     def test_write_subgroup(self, tmpdir) -> None:
@@ -580,7 +581,8 @@ class TestPyDAPDatatreeIO:
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
 
     def test_open_datatree_unaligned_hierarchy(
-        self, url=unaligned_datatree_url
+        self,
+        url=unaligned_datatree_url,
     ) -> None:
         with pytest.raises(
             ValueError,
@@ -613,7 +615,7 @@ class TestPyDAPDatatreeIO:
         ) as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
 
-    def test_inherited_coords(self, url=simplegroup_datatree_url) -> None:
+    def test_inherited_coords(self, tmpdir, url=simplegroup_datatree_url) -> None:
         """Test that `open_datatree` inherits coordinates from root tree.
 
         This particular h5 file is a test file that inherits the time coordinate from the root
@@ -639,7 +641,19 @@ class TestPyDAPDatatreeIO:
             │       Temperature  (time, Z, Y, X) float32 ...
             |       Salinity     (time, Z, Y, X) float32 ...
         """
-        tree = open_datatree(url, engine=self.engine)
+        import pydap
+        from pydap.net import create_session
+
+        # Create a session with pre-set retry params in pydap backend, to cache urls
+        cache_name = tmpdir / "debug"
+        session = create_session(
+            use_cache=True, cache_kwargs={"cache_name": cache_name}
+        )
+        session.cache.clear()
+
+        _version_ = Version(pydap.__version__)
+
+        tree = open_datatree(url, engine=self.engine, session=session)
         assert set(tree.dims) == {"time", "Z", "nv"}
         assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
         assert tree["/SimpleGroup"].coords["Z"].dims == ("Z",)
@@ -649,6 +663,13 @@ class TestPyDAPDatatreeIO:
             assert set(tree["/SimpleGroup"].dims) == set(
                 list(expected.dims) + ["Z", "nv"]
             )
+
+        if _version_ > Version("3.5.5"):
+            # Total downloads are: 1 dmr, + 1 dap url for all dimensions for each group
+            assert len(session.cache.urls()) == 3
+        else:
+            # 1 dmr + 1 dap url per dimension (total there are 4 dimension arrays)
+            assert len(session.cache.urls()) == 5
 
     def test_open_groups_to_dict(self, url=all_aligned_child_nodes_url) -> None:
         aligned_dict_of_datasets = open_groups(url, engine=self.engine)
@@ -699,7 +720,7 @@ class TestZarrDatatreeIO:
             )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
-            with pytest.raises(ValueError, match="unexpected encoding group.*"):
+            with pytest.raises(ValueError, match=r"unexpected encoding group.*"):
                 original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
     @pytest.mark.xfail(reason="upstream zarr read-only changes have broken this test")
@@ -1089,3 +1110,27 @@ class TestZarrDatatreeIO:
         expected_child.name = None
         with open_datatree(filepath, group="child", engine="zarr") as roundtrip_child:
             assert_identical(expected_child, roundtrip_child)
+
+    @pytest.mark.xfail(
+        ON_WINDOWS,
+        reason="Permission errors from Zarr: https://github.com/pydata/xarray/pull/10793",
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
+    )
+    def test_zarr_engine_recognised(self, tmpdir, zarr_format) -> None:
+        """Test that xarray can guess the zarr backend when the engine is not specified"""
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2, 3]}),
+                "/child": xr.Dataset({"foo": ("x", [4, 5, 6])}),
+            }
+        )
+
+        filepath = str(tmpdir / "test.zarr")
+        original_dt.to_zarr(
+            filepath, write_inherited_coords=True, zarr_format=zarr_format
+        )
+
+        with open_datatree(filepath) as roundtrip_dt:
+            assert_identical(original_dt, roundtrip_dt)

@@ -1364,7 +1364,7 @@ class ZarrStore(AbstractWritableDataStore):
         non_matching_vars = [
             k for k, v in ds.variables.items() if not set(region).intersection(v.dims)
         ]
-        if non_matching_vars:
+        if region and non_matching_vars:
             raise ValueError(
                 f"when setting `region` explicitly in to_zarr(), all "
                 f"variables in the dataset to write must have at least "
@@ -1620,6 +1620,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     description = "Open zarr files (.zarr) using zarr in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
+    supports_groups = True
 
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
