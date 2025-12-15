@@ -72,6 +72,7 @@ def _maybe_chunk(
     inline_array: bool = False,
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
+    just_use_token=False,
 ) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
@@ -83,14 +84,16 @@ def _maybe_chunk(
             chunked_array_type
         )  # coerce string to ChunkManagerEntrypoint type
         if isinstance(chunked_array_type, DaskManager):
-            from dask.base import tokenize
+            if not just_use_token:
+                from dask.base import tokenize
 
-            # when rechunking by different amounts, make sure dask names change
-            # by providing chunks as an input to tokenize.
-            # subtle bugs result otherwise. see GH3350
-            # we use str() for speed, and use the name for the final array name on the next line
-            token2 = tokenize(token or var._data, str(chunks))
-            name2 = f"{name_prefix}{name}-{token2}"
+                # when rechunking by different amounts, make sure dask names change
+                # by providing chunks as an input to tokenize.
+                # subtle bugs result otherwise. see GH3350
+                # we use str() for speed, and use the name for the final array name on the next line
+                token = tokenize(token or var._data, str(chunks))
+
+            name2 = f"{name_prefix}{name}-{token}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
                 from_array_kwargs,
