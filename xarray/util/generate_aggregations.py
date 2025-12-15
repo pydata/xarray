@@ -35,6 +35,7 @@ from xarray.core.types import Dims, Self
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
+    from xarray.core.coordinates import DatasetCoordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -86,6 +87,10 @@ class {obj}{cls}Aggregations:
         keepdims: bool = False,
         **kwargs: Any,
     ) -> Self:
+        raise NotImplementedError()
+
+    @property
+    def coords(self) -> DatasetCoordinates:
         raise NotImplementedError()
 
     def assign_coords(
