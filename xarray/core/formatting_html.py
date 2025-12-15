@@ -415,6 +415,13 @@ def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]
     # Only show dimensions if also showing a variable or coordinates section.
     show_dims = node_coords or (root and inherited_coords) or ds.data_vars
 
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(ds.xindexes), not display_default_indexes
+    )
+
     sections = []
     if show_dims:
         sections.append(dim_section(ds))
@@ -424,6 +431,8 @@ def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]
         sections.append(inherited_coord_section(inherited_coords))
     if ds.data_vars:
         sections.append(datavar_section(ds.data_vars))
+    if xindexes:
+        sections.append(index_section(xindexes))
     if ds.attrs:
         sections.append(attr_section(ds.attrs))
 
@@ -435,6 +444,8 @@ def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]
         + int(root) * (int(bool(inherited_coords)) + len(inherited_coords))
         + int(bool(ds.data_vars))
         + len(ds.data_vars)
+        + int(bool(xindexes))
+        + len(xindexes)
         + int(bool(ds.attrs))
         + len(ds.attrs)
     )
