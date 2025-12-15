@@ -568,7 +568,7 @@ class GenericAggregationGenerator(AggregationGenerator):
 
         if method.aggregation_type == "scan" and self.datastructure.name == "Dataset":
             # Scans retain dimensions, datasets drops them somehow:
-            out_finalized = "out.assign_coords(self._obj.coords)"
+            out_finalized = "out.assign_coords(self.coords)"
         else:
             out_finalized = "out"
 
