@@ -233,7 +233,7 @@ class CombinedLock(Lock):
             lock.__exit__(*args)
 
     def locked(self):
-        return any(lock.locked for lock in self.locks)
+        return any(lock.locked() for lock in self.locks)
 
     def __repr__(self):
         return f"CombinedLock({list(self.locks)!r})"
