@@ -813,10 +813,6 @@ same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
 
 .. jupyter-execute::
 
-    h5_filename = "saved_on_disk.h5"
-
-.. jupyter-execute::
-
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
         coords={
@@ -826,7 +822,16 @@ same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
         },
     )
 
-    ds.to_netcdf(h5_filename)
+.. jupyter-execute::
+    :hide-code:
+
+    # Check if the file exists and if not, create it
+    if not os.path.exists("saved_on_disk.h5"):
+        ds.to_netcdf("saved_on_disk.h5")
+
+.. code:: python
+
+    ds.to_netcdf("saved_on_disk.h5")
 
 Groups
 ~~~~~~
