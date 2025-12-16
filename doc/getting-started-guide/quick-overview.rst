@@ -219,7 +219,7 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
     :hide-code:
 
     # Ensure the file is located in a unique temporary directory
-    # so that it doesn't conflict with parallel builds of the 
+    # so that it doesn't conflict with parallel builds of the
     # documentation.
 
     import tempfile

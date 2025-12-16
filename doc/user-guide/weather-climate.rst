@@ -264,7 +264,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
     :hide-code:
 
     # Ensure the file is located in a unique temporary directory
-    # so that it doesn't conflict with parallel builds of the 
+    # so that it doesn't conflict with parallel builds of the
     # documentation.
 
     import tempfile

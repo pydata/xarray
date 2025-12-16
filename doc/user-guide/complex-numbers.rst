@@ -15,7 +15,7 @@ Complex Numbers
    :hide-code:
 
    # Ensure the file is located in a unique temporary directory
-   # so that it doesn't conflict with parallel builds of the 
+   # so that it doesn't conflict with parallel builds of the
    # documentation.
 
    import tempfile
@@ -70,7 +70,7 @@ Writing complex data to NetCDF files (see :ref:`io.netcdf`) is supported via :py
 
    .. jupyter-execute::
       :hide-code:
-        
+
       complex_nums_h5_filename = os.path.join(tempdir.name, complex_nums_h5_filename)
 
    .. jupyter-execute::
@@ -93,7 +93,7 @@ Writing complex data to NetCDF files (see :ref:`io.netcdf`) is supported via :py
 
    .. jupyter-execute::
       :hide-code:
-        
+
       complex_nums_nc4_filename = os.path.join(tempdir.name, complex_nums_nc4_filename)
 
    .. jupyter-execute::
@@ -124,7 +124,7 @@ split the complex array into separate real and imaginary variables before saving
 
 .. jupyter-execute::
    :hide-code:
-      
+
    complex_manual_filename = os.path.join(tempdir.name, complex_manual_filename)
 
 .. jupyter-execute::
