@@ -112,15 +112,8 @@ def maybe_transpose_dims(a, b, check_dim_order: bool):
         return a, b
 
     if isinstance(a, DataTree):
-        # DataTree needs special handling - transpose both trees
-        # map_over_datasets applies a function over corresponding datasets
-        transposed_a = map_over_datasets(
-            lambda a_ds, b_ds: _maybe_transpose_dims(a_ds, b_ds)[0], a, b
-        )
-        transposed_b = map_over_datasets(
-            lambda a_ds, b_ds: _maybe_transpose_dims(a_ds, b_ds)[1], a, b
-        )
-        return transposed_a, transposed_b
+        # map_over_datasets supports tuple returns and unpacks them automatically
+        return map_over_datasets(_maybe_transpose_dims, a, b)
 
     return _maybe_transpose_dims(a, b)
 
