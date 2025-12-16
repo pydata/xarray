@@ -1086,9 +1086,16 @@ These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
 .. jupyter-execute::
+
+    zarr_filename = "foo.zarr"
+
+.. jupyter-execute::
     :hide-code:
 
-    ! rm -rf foo.zarr
+    import os.path
+    import tempfile
+    tempdir = tempfile.TemporaryDirectory()
+    zarr_filename = os.path.join(tempdir.name, zarr_filename)
 
 .. jupyter-execute::
 
@@ -1096,7 +1103,7 @@ For example:
     from zarr.codecs import BloscCodec
 
     compressor = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
-    ds.to_zarr("foo.zarr", consolidated=False, encoding={"foo": {"compressors": [compressor]}})
+    ds.to_zarr(zarr_filename, consolidated=False, encoding={"foo": {"compressors": [compressor]}})
 
 .. note::
 
