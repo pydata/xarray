@@ -38,6 +38,7 @@ from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,
     QuantileMethods,
+    T_DataArray,
     T_DataWithCoords,
     T_Xarray,
 )
