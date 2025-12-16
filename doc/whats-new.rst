@@ -6,22 +6,14 @@
 What's New
 ==========
 
-.. _whats-new.2025.11.1:
+.. _whats-new.v2025.12.1:
 
-v2025.11.1 (unreleased)
+v2025.12.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
-- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree`
-  when downloading dap4 (opendap) dimensions data (:issue:`10628`, :pull:`10629`). In addition ``checksums=True|False``
-  is added as optional argument to be passed to ``pydap`` backend.
-  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
-
-- :py:func:`combine_nested` now support :py:class:`DataTree` objects
-  (:pull:`10849`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -34,14 +26,76 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
+  only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Better description of ``keep_attrs`` option on ``xarray.where`` docstring (:issue:`10982` :pull:`10997`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+
+Performance
+~~~~~~~~~~~
+
+- Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
+  By `Sam Levang <https://github.com/slevang>`_.
+
+
+.. _whats-new.2025.12.0:
+
+v2025.12.0 (Dec 5, 2025)
+------------------------
+This release rolls back the default engine for HTTP urls, adds support for :py:class:`DataTree` objects in ``combine_nested`` and contains numerous bug fixes.
+
+Thanks to the 16 contributors to this release:
+Benoit Bovy, Christine P. Chai, Deepak Cherian, Dhruva Kumar Kaushal, Ian Hunt-Isaak, Ilan Gold, Illviljan, Julia Signell, Justus Magin, Lars Buntemeyer, Maximilian Roos, Miguel Jimenez, Nick Hodgskin, Richard Berg, Spencer Clark and Stephan Hoyer
+
+New Features
+~~~~~~~~~~~~
+
+- Improved ``pydap`` backend behavior and performance when using :py:func:`open_dataset`, :py:func:`open_datatree`
+  when downloading dap4 (opendap) dimensions data (:issue:`10628`, :pull:`10629`). In addition ``checksums=True|False``
+  is added as optional argument to be passed to ``pydap`` backend.
+  By `Miguel Jimenez-Urias <https://github.com/Mikejmnez>`_.
+- :py:func:`combine_nested` now supports :py:class:`DataTree` objects (:pull:`10849`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+Bug Fixes
+~~~~~~~~~
+
+- When assigning an indexed coordinate to a data variable or coordinate, coerce it from
+  ``IndexVariable`` to ``Variable`` (:issue:`9859`, :issue:`10829`, :pull:`10909`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+- The NetCDF4 backend will now claim to be able to read any URL except for one that contains
+  the substring zarr. This restores backward compatibility after
+  :pull:`10804` broke workflows that relied on ``xr.open_dataset("http://...")``
+  (:pull:`10931`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Always normalize slices when indexing ``LazilyIndexedArray`` instances (:issue:`10941`, :pull:`10948`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Avoid casting custom indexes in ``Dataset.drop_attrs`` (:pull:`10961`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Support decoding unsigned integers to ``np.timedelta64``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Properly handle internal type promotion and ``NA`` objects for extension arrays (:pull:`10423`).
+  By `Ilan Gold <https://github.com/ilan-gold>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Added section on the `limitations of cftime arithmetic <https://docs.xarray.dev/en/stable/user-guide/weather-climate.html#arithmetic-limitations-with-non-standard-calendars>`_ (:pull:`10653`).
+  By `Lars Buntemeyer <https://github.com/larsbuntemeyer>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Change the development workflow to use ``pixi`` (:issue:`10732`, :pull:`10888`).
+  By `Nick Nodgskin <https://github.com/VeckoTheGecko>`_.
 
 .. _whats-new.2025.11.0:
 

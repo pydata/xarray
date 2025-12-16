@@ -16,7 +16,7 @@ except ImportError:
 try:
     import pint
 
-    unit_registry = pint.UnitRegistry(force_ndarray_like=True)
+    unit_registry: pint.UnitRegistry = pint.UnitRegistry(force_ndarray_like=True)
 
     def quantity(x):
         return unit_registry.Quantity(x, "m")
