@@ -1,4 +1,5 @@
 """Test for issue #10851: Dataset Index not included in to_dataframe when name differs from dimension."""
+
 import numpy as np
 import pandas as pd
 
