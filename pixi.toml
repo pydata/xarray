@@ -143,6 +143,12 @@ sparse = "0.15.*"
 toolz = "0.12.*"
 zarr = "2.18.*"
 
+# TODO: Remove `platforms` restriction once pandas nightly has win-64 wheels again.
+# Without this, `pixi lock` fails because it can't solve the nightly feature for win-64,
+# which breaks RTD builds (RTD has no lock file cache, unlike GitHub Actions CI).
+[feature.nightly]
+platforms = ["linux-64", "osx-arm64"]
+
 [feature.nightly.dependencies]
 python = "*"
 
