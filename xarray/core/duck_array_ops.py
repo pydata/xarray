@@ -253,7 +253,7 @@ def astype(data, dtype, *, xp=None, **kwargs):
     if xp is None:
         xp = get_array_namespace(data)
 
-    if not hasattr(xp, "astype"):
+    if xp is np or not hasattr(xp, "astype"):
         return data.astype(dtype, **kwargs)
     return xp.astype(data, dtype, **kwargs)
 
@@ -271,7 +271,7 @@ def asarray(data, xp=np, dtype=None):
     if dtype is None or converted.dtype == dtype:
         return converted
 
-    if not hasattr(xp, "astype"):
+    if xp is np or not hasattr(xp, "astype"):
         return converted.astype(dtype)
     else:
         return xp.astype(converted, dtype)
