@@ -1,4 +1,5 @@
 """Test for issue #10875: Clear error message when reducing over non-existent dimension."""
+
 import numpy as np
 import pytest
 
@@ -19,7 +20,9 @@ class TestGroupbyDimensionError:
             ),
         )
 
-        with pytest.raises(ValueError, match=r"'longitude' not found in array dimensions"):
+        with pytest.raises(
+            ValueError, match=r"'longitude' not found in array dimensions"
+        ):
             ds.groupby("time").std(dim="longitude")
 
     def test_groupby_reduce_missing_dim_multiple(self):
@@ -59,8 +62,12 @@ class TestGroupbyDimensionError:
         except ValueError as e:
             groupby_error_msg = str(e)
 
-        assert standard_error_msg is not None, "Expected ValueError from ds.std(dim='longitude')"
-        assert groupby_error_msg is not None, "Expected ValueError from groupby.std(dim='longitude')"
+        assert standard_error_msg is not None, (
+            "Expected ValueError from ds.std(dim='longitude')"
+        )
+        assert groupby_error_msg is not None, (
+            "Expected ValueError from groupby.std(dim='longitude')"
+        )
         assert "longitude" in standard_error_msg
         assert "longitude" in groupby_error_msg
         assert "not found in array dimensions" in standard_error_msg
