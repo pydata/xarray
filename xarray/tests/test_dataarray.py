@@ -5018,6 +5018,45 @@ class TestDataArray:
 
         assert_allclose(fit.curvefit_coefficients, expected)
 
+    @pytest.mark.parametrize("skipna", [True, False])
+    @pytest.mark.parametrize("dim", ["c", None, ("b", "c")])
+    def test_nunique(self, skipna, dim):
+        x = np.array(
+            [
+                [
+                    [np.nan, np.nan, 2.0, np.nan],
+                    [np.nan, 5.0, 6.0, np.nan],
+                    [8.0, 9.0, 10.0, np.nan],
+                ],
+                [
+                    [np.nan, 13.0, 14.0, 15.0],
+                    [np.nan, 17.0, 18.0, np.nan],
+                    [np.nan, 21.0, np.nan, np.nan],
+                ],
+            ]
+        )
+        coords = {
+            "a": range(x.shape[0]),
+            "b": range(x.shape[1]),
+            "c": range(x.shape[2]),
+        }
+        da = DataArray(x, coords=coords)
+
+        coords_1 = {"a": range(x.shape[0]), "b": range(x.shape[1])}
+        coords_3 = {"a": range(x.shape[0])}
+
+        expected_results = {
+            (True, "c"): DataArray([[1, 2, 3], [3, 2, 1]], coords=coords_1),
+            (True, None): DataArray(12),
+            (True, ("b", "c")): DataArray([6, 6], coords=coords_3),
+            (False, "c"): DataArray([[2, 3, 4], [4, 3, 2]], coords=coords_1),
+            (False, None): DataArray(13),
+            (False, ("b", "c")): DataArray([7, 7], coords=coords_3),
+        }
+
+        result = da.nunique(dim=dim, skipna=skipna)
+        assert_identical(result, expected_results[(skipna, dim)])
+
 
 class TestReduce:
     @pytest.fixture(autouse=True)

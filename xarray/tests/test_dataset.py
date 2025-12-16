@@ -7581,6 +7581,67 @@ class TestDataset:
 # pytest tests — new tests should go here, rather than in the class.
 
 
+@pytest.mark.parametrize("skipna", [True, False])
+@pytest.mark.parametrize("dim", [("c", "dim_0", "dim_1"), None, ("a", "b")])
+def test_nunique(skipna, dim):
+    # Create test data
+    x = np.array(
+        [
+            [
+                [np.nan, np.nan, 2.0, np.nan],
+                [np.nan, 5.0, 6.0, np.nan],
+                [8.0, 9.0, 10.0, np.nan],
+            ],
+            [
+                [np.nan, 13.0, 14.0, 15.0],
+                [np.nan, 17.0, 18.0, np.nan],
+                [np.nan, 21.0, np.nan, np.nan],
+            ],
+        ]
+    )
+    coords = {"a": range(x.shape[0]), "b": range(x.shape[1]), "c": range(x.shape[2])}
+    da_1 = DataArray(x, coords=coords)
+    da_2 = DataArray(x)
+    ds = Dataset({"da_1": da_1, "da_2": da_2})
+
+    # Specify the coordinates and arrays we expect for each test case
+    coords_1 = {"a": range(x.shape[0]), "b": range(x.shape[1])}
+    coords_3 = {"c": range(x.shape[2])}
+    arr_1 = np.array([[1, 2, 3], [3, 2, 1]])
+    arr_3 = np.array([1, 5, 5, 1])
+    expected_results = {
+        (True, ("c", "dim_0", "dim_1")): (arr_1, coords_1, arr_3, ["dim_2"]),
+        (True, None): (12, None, 12, None),
+        (True, ("a", "b")): (arr_3, coords_3, x, None),
+        (False, ("c", "dim_0", "dim_1")): (arr_1 + 1, coords_1, arr_3 + 1, ["dim_2"]),
+        (False, None): (13, None, 13, None),
+        (False, ("a", "b")): (arr_3 + 1, coords_3, x, None),
+    }
+
+    # Get the expected result for the current parameters
+    expected_result = expected_results[(skipna, dim)]
+    expected_ds = Dataset(
+        {
+            "da_1": DataArray(expected_result[0], coords=expected_result[1]),
+            "da_2": DataArray(expected_result[2], dims=expected_result[3]),
+        }
+    )
+
+    # Get the actual result and compare
+    result = ds.nunique(dim=dim, skipna=skipna)
+    assert_identical(result, expected_ds)
+
+
+@pytest.mark.parametrize("skipna", [True, False])
+def test_nunique_pandas(skipna):
+    get_col = lambda: np.random.randint(0, 100, size=100)
+    get_da = lambda: xr.DataArray(get_col(), coords={"x": np.arange(100)})
+    ds = xr.Dataset({"a": get_da(), "b": get_da(), "c": get_da(), "d": get_da()})
+    xr_result = ds.nunique(skipna=skipna).to_array().values
+    pd_result = ds.to_dataframe().nunique(dropna=skipna).values
+    assert_array_equal(xr_result, pd_result)
+
+
 @pytest.mark.parametrize("parser", ["pandas", "python"])
 def test_eval(ds, parser) -> None:
     """Currently much more minimal testing that `query` above, and much of the setup
