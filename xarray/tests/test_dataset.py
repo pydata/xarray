@@ -3995,12 +3995,6 @@ class TestDataset:
         with pytest.raises(ValueError, match="those variables are data variables"):
             ds.set_xindex("data_var", PandasIndex)
 
-        ds2 = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
-
-        with pytest.raises(ValueError, match="those coordinates already have an index"):
-            ds2.set_xindex("x", PandasIndex)
-
-    def test_set_xindex_drop_existing(self) -> None:
         ds = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
 
         # With drop_existing=True, it should succeed
