@@ -244,7 +244,7 @@ jobs:
   min-version-policy:
     name: Minimum Version Policy
     runs-on: "ubuntu-latest"
-    needs: detect-ci-trigger
+    # needs: detect-ci-trigger
     # if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
