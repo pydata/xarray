@@ -3167,6 +3167,30 @@ class TestDataset:
         with pytest.raises(ValueError, match=r".*would corrupt the following index.*"):
             ds.drop_indexes("a")
 
+    def test_sel_on_unindexed_coordinate(self) -> None:
+        # Test that .sel() works on coordinates without an index by creating
+        # a PandasIndex on the fly
+        ds = Dataset(
+            {"data": (["x", "y"], np.arange(6).reshape(2, 3))},
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+        )
+        # Drop the index on y to create an unindexed coordinate
+        ds = ds.drop_indexes("y")
+        assert "y" not in ds.xindexes
+        assert "y" in ds.coords
+
+        # .sel() should still work by creating a PandasIndex on the fly
+        result = ds.sel(y=20)
+        expected = ds.isel(y=1)
+        assert_identical(result, expected)
+
+        # Also test with slice - compare data values directly since the result
+        # has no index on y (which triggers internal invariant checks)
+        result_slice = ds.sel(y=slice(10, 20))
+        expected_slice = ds.isel(y=slice(0, 2))
+        assert_array_equal(result_slice["data"].values, expected_slice["data"].values)
+        assert_array_equal(result_slice["y"].values, expected_slice["y"].values)
+
     def test_drop_dims(self) -> None:
         data = xr.Dataset(
             {

@@ -138,18 +138,22 @@ def group_indexers_by_index(
     options: Mapping[str, Any],
 ) -> list[tuple[Index, dict[Any, Any]]]:
     """Returns a list of unique indexes and their corresponding indexers."""
+    from xarray.core.indexes import PandasIndex
+
     unique_indexes = {}
     grouped_indexers: Mapping[int | None, dict] = defaultdict(dict)
 
     for key, label in indexers.items():
         index: Index = obj.xindexes.get(key, None)
+        if (key in obj.coords) and (index is None):
+            index = PandasIndex.from_variables(
+                {key: obj.coords[key].variable}, options={}
+            )
 
         if index is not None:
             index_id = id(index)
             unique_indexes[index_id] = index
             grouped_indexers[index_id][key] = label
-        elif key in obj.coords:
-            raise KeyError(f"no index found for coordinate {key!r}")
         elif key not in obj.dims:
             raise KeyError(
                 f"{key!r} is not a valid dimension or coordinate for "
