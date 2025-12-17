@@ -14,6 +14,10 @@ v2025.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:meth:`Dataset.set_xindex` and :py:meth:`DataArray.set_xindex`
+  automatically replace any existing index being set instead of erroring
+  or needing needing to call :py:meth:`drop_indexes` first (:pull:`11008`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

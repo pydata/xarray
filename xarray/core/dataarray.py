@@ -2869,7 +2869,7 @@ class DataArray(
         **options,
     ) -> Self:
         """Set a new, Xarray-compatible index from one or more existing
-        coordinate(s).
+        coordinate(s). Existing index(es) on the coord(s) will be replaced.
 
         Parameters
         ----------
