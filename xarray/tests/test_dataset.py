@@ -3190,6 +3190,11 @@ class TestDataset:
         expected = ds.isel(y=1)
         assert_identical(result, expected, check_default_indexes=False)
 
+        # check that our auto-created indexes are ephemeral
+        assert "y" not in ds.xindexes
+        assert "y_meta" not in ds.xindexes
+        assert "y" in ds.coords
+
         # Also test with slice - compare data values directly since the result
         # has no index on y (which triggers internal invariant checks)
         result_slice = ds.sel(y=slice(10, 20))
