@@ -79,6 +79,7 @@ seaborn = "*"
 [feature.extras.dependencies]
 # array
 sparse = "*"
+pint = "*"
 array-api-strict = "<2.4"
 
 # algorithms
@@ -88,9 +89,10 @@ toolz = "*"
 # tutorial
 pooch = "*"
 
-# other
+# calendar
 cftime = "*"
-pint = "*"
+
+# other
 iris = "*"
 
 [feature.extras.pypi-dependencies]
