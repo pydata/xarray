@@ -79,6 +79,7 @@ seaborn = "*"
 [feature.extras.dependencies]
 # array
 sparse = "*"
+array-api-strict = "<2.4"
 
 # algorithms
 scipy = "*"
@@ -204,7 +205,6 @@ cartopy = "*"
 seaborn = "*"
 
 [feature.test.dependencies]
-array-api-strict = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
