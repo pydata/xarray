@@ -30,6 +30,7 @@ from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
+    _default,
     attempt_import,
     close_on_error,
     emit_user_level_warning,
@@ -1400,7 +1401,7 @@ def open_zarr(
     store,
     group=None,
     synchronizer=None,
-    chunks="auto",
+    chunks=_default,
     decode_cf=True,
     mask_and_scale=True,
     decode_times=True,
@@ -1436,8 +1437,9 @@ def open_zarr(
         Array synchronizer provided to zarr
     group : str, optional
         Group path. (a.k.a. `path` in zarr terminology.)
-    chunks : int, dict, 'auto' or None, default: 'auto'
-        If provided, used to load the data into dask arrays.
+    chunks : int, dict, 'auto' or None, default: {} or None
+        Used to load the data into dask arrays. Default behavior is to use
+        ``chunks={}`` if dask is available, otherwise ``chunks=None``.
 
         - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
@@ -1558,12 +1560,13 @@ def open_zarr(
     if from_array_kwargs is None:
         from_array_kwargs = {}
 
-    if chunks == "auto":
+    if chunks is _default:
         try:
             guess_chunkmanager(
                 chunked_array_type
             )  # attempt to import that parallel backend
 
+            chunks = {}
         except (ValueError, ImportError):
             chunks = None
 

@@ -18,8 +18,10 @@ New Features
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
-- Remove special mapping of ``"auto"`` to ``{}`` in ``open_zarr``. This matches the behavior of ``open_dataset(..., engine="zarr")``
-  and means that by default the chunks might be a multiple of the the on-disk chunks. (:issue:`11002` :pull:`11010`).
+- Change the default value for ``chunk`` in ``open_zarr`` to ``_default`` and remove special mapping of ``"auto"``
+  to ``{}`` or ``None`` in ``open_zarr``. If ``chunks`` is not set, the default behavior is the same as before.
+  Explicitly setting ``chunks="auto"`` will match the behavior of ``chunks="auto"`` in
+  ``open_dataset(..., engine="zarr")`` (:issue:`11002` :pull:`11010`).
   By `Julia Signell <https://github.com/jsignell>`_.
 
 Deprecations

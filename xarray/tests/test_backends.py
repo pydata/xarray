@@ -3642,12 +3642,12 @@ class ZarrBase(CFEncodedBase):
         original = Dataset({"u": (("x",), np.zeros(10))}).chunk({"x": 2})
         with self.create_zarr_target() as store:
             original.to_zarr(store, **self.version_kwargs)
-            with xr.open_zarr(store, chunks={}, **self.version_kwargs) as native:
-                assert native.chunks == {"x": (2, 2, 2, 2, 2)}
-                with xr.open_zarr(store, **self.version_kwargs) as actual:
-                    assert_identical(actual, original)
-                    assert actual.chunks == {"x": (10,)}
-                    assert actual.chunks != native.chunks
+            with xr.open_zarr(store, **self.version_kwargs) as default:
+                assert default.chunks == {"x": (2, 2, 2, 2, 2)}
+                with xr.open_zarr(store, chunks="auto", **self.version_kwargs) as auto:
+                    assert_identical(auto, original)
+                    assert auto.chunks == {"x": (10,)}
+                    assert auto.chunks != default.chunks
 
     @requires_cftime
     def test_open_zarr_use_cftime(self) -> None:
