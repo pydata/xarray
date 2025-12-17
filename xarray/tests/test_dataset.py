@@ -3172,10 +3172,10 @@ class TestDataset:
         # a PandasIndex on the fly
         ds = Dataset(
             {"data": (["x", "y"], np.arange(6).reshape(2, 3))},
-            coords={"x": [0, 1], "y": [10, 20, 30], "y_meta": ["a", "b", "c"]},
+            coords={"x": [0, 1], "y": [10, 20, 30], "y_meta": ("y", ["a", "b", "c"])},
         )
         # Drop the index on y to create an unindexed dim coord
-        # also check that coord y_meta works despite not being on a data var
+        # also check that coord y_meta works despite not being a dim coord
         ds = ds.drop_indexes("y")
         assert "y" not in ds.xindexes
         assert "y_meta" not in ds.xindexes
@@ -3184,11 +3184,11 @@ class TestDataset:
         # .sel() should still work by creating a PandasIndex on the fly
         result = ds.sel(y=20)
         expected = ds.isel(y=1)
-        assert_identical(result, expected)
+        assert_identical(result, expected, check_default_indexes=False)
 
         result = ds.sel(y_meta="b")
         expected = ds.isel(y=1)
-        assert_identical(result, expected)
+        assert_identical(result, expected, check_default_indexes=False)
 
         # Also test with slice - compare data values directly since the result
         # has no index on y (which triggers internal invariant checks)
