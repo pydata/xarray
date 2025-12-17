@@ -146,6 +146,9 @@ def group_indexers_by_index(
     for key, label in indexers.items():
         index: Index = obj.xindexes.get(key, None)
         if (key in obj.coords) and (index is None):
+            # TODO: should we raise a more informative error
+            # here if the index creation fails? I.e. if a 2D coord
+            # or something else that PandasIndex cannot support.
             index = PandasIndex.from_variables(
                 {key: obj.coords[key].variable}, options={}
             )
