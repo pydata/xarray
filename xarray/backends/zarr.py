@@ -1437,7 +1437,7 @@ def open_zarr(
         Array synchronizer provided to zarr
     group : str, optional
         Group path. (a.k.a. `path` in zarr terminology.)
-    chunks : int, dict, 'auto' or None, default: {} or None
+    chunks : int, dict, "auto" or None, optional
         Used to load the data into dask arrays. Default behavior is to use
         ``chunks={}`` if dask is available, otherwise ``chunks=None``.
 
