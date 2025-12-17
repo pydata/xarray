@@ -138,6 +138,7 @@ def group_indexers_by_index(
     options: Mapping[str, Any],
 ) -> list[tuple[Index, dict[Any, Any]]]:
     """Returns a list of unique indexes and their corresponding indexers."""
+    # import here instead of at top to guard against circular imports
     from xarray.core.indexes import PandasIndex
 
     unique_indexes = {}
