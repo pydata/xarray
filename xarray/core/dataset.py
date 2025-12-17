@@ -4959,7 +4959,7 @@ class Dataset(
         **options,
     ) -> Self:
         """Set a new, Xarray-compatible index from one or more existing
-        coordinate(s).
+        coordinate(s). Existing index(es) on the coord(s) will be replaced.
 
         Parameters
         ----------
@@ -5004,15 +5004,6 @@ class Dataset(
                     f"those variables are data variables: {data_vars}, use `set_coords` first"
                 )
             raise ValueError("\n".join(msg))
-
-        # we could be more clever here (e.g., drop-in index replacement if index
-        # coordinates do not conflict), but let's not allow this for now
-        indexed_coords = set(coord_names) & set(self._indexes)
-
-        if indexed_coords:
-            raise ValueError(
-                f"those coordinates already have an index: {indexed_coords}"
-            )
 
         coord_vars = {name: self._variables[name] for name in coord_names}
 
