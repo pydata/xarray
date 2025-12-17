@@ -4001,20 +4001,17 @@ class TestDataset:
             ds2.set_xindex("x", PandasIndex)
 
     def test_set_xindex_drop_existing(self) -> None:
-        # Test that drop_existing=True allows replacing an existing index
-        # (the default drop_existing=False raising ValueError is tested in test_set_xindex)
         ds = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
 
         # With drop_existing=True, it should succeed
-        result = ds.set_xindex("x", PandasIndex, drop_existing=True)
+        result = ds.set_xindex("x", PandasIndex)
         assert "x" in result.xindexes
         assert isinstance(result.xindexes["x"], PandasIndex)
 
-        # Test that drop_existing=True replaces with a custom index
         class CustomIndex(PandasIndex):
             pass
 
-        result_custom = ds.set_xindex("x", CustomIndex, drop_existing=True)
+        result_custom = ds.set_xindex("x", CustomIndex)
         assert "x" in result_custom.xindexes
         assert isinstance(result_custom.xindexes["x"], CustomIndex)
 
