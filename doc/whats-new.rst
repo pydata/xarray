@@ -21,7 +21,7 @@ New Features
 - Calling :py:meth:`Dataset.sel` or :py:meth:`DataArray.sel` on a coordinate
   without an index will now automatically create a temporary
   :py:class:`~xarray.indexes.PandasIndex` to perform the selection
-  (:issue:`9703`, :pull:`XXXX`).
+  (:issue:`9703`, :pull:`11029`).
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 
