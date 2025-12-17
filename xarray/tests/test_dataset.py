@@ -3195,12 +3195,14 @@ class TestDataset:
         assert "y_meta" not in ds.xindexes
         assert "y" in ds.coords
 
-        # Also test with slice - compare data values directly since the result
-        # has no index on y (which triggers internal invariant checks)
         result_slice = ds.sel(y=slice(10, 20))
         expected_slice = ds.isel(y=slice(0, 2))
-        assert_array_equal(result_slice["data"].values, expected_slice["data"].values)
-        assert_array_equal(result_slice["y"].values, expected_slice["y"].values)
+        assert_identical(
+            result_slice["data"], expected_slice["data"], check_default_indexes=False
+        )
+        assert_identical(
+            result_slice["y"], expected_slice["y"], check_default_indexes=False
+        )
 
     def test_drop_dims(self) -> None:
         data = xr.Dataset(
