@@ -1190,11 +1190,14 @@ class TestDataArray:
         assert_equal(actual, expected)
 
     def test_sel_no_index(self) -> None:
-        array = DataArray(np.arange(10), dims="x")
+        array = DataArray(np.arange(10), dims="x").assign_coords(
+            {"x_meta": ("x", np.linspace(0.1, 1, 10))}
+        )
         assert_identical(array[0], array.sel(x=0))
         assert_identical(array[:5], array.sel(x=slice(5)))
         assert_identical(array[[0, -1]], array.sel(x=[0, -1]))
         assert_identical(array[array < 5], array.sel(x=(array < 5)))
+        assert_identical(array[1], array.sel(x_meta=0.2))
 
     def test_sel_method(self) -> None:
         data = DataArray(np.random.randn(3, 4), [("x", [0, 1, 2]), ("y", list("abcd"))])
