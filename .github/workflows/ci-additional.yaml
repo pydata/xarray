@@ -245,9 +245,7 @@ jobs:
     name: Minimum Version Policy
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
-    # min-version-policy doesn't work with Pixi yet https://github.com/pydata/xarray/pull/10888#discussion_r2504335457
-    if: false
-    # if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
@@ -268,10 +266,12 @@ jobs:
         uses: xarray-contrib/minimum-dependency-versions@3db8e1c17328ee1e27dfe4db90d908644856eb61 # v1.0.0
         with:
           policy: ci/policy.yaml
-          environment-paths: ci/requirements/min-all-deps.yml
+          environments: pixi:test-py311-min-versions
+          manifest-path: pixi.toml
 
       - name: Bare minimum versions policy
         uses: xarray-contrib/minimum-dependency-versions@3db8e1c17328ee1e27dfe4db90d908644856eb61 # v1.0.0
         with:
           policy: ci/policy.yaml
-          environment-paths: ci/requirements/bare-minimum.yml
+          environments: pixi:test-py311-bare-minimum
+          manifest-path: pixi.toml
