@@ -264,7 +264,20 @@ class TestAssertIdenticalXindexes:
 
     @pytest.fixture
     def dataset_with_extra_coord(self) -> xr.Dataset:
-        """Dataset with a coordinate that can be indexed."""
+        """Dataset with a coordinate that can be indexed.
+
+        Returns a Dataset with 'time' indexed and 'time_metadata' not indexed::
+
+            <xarray.Dataset>
+            Dimensions:        (time: 4)
+            Coordinates:
+              * time           (time) float64 0.1 0.2 0.3 0.4
+                time_metadata  (time) int64 10 15 20 25
+            Data variables:
+                data           (time) int64 0 1 2 3
+
+            xindexes: ['time']
+        """
         return xr.Dataset(
             {"data": ("time", [0, 1, 2, 3])},
             coords={
@@ -275,7 +288,20 @@ class TestAssertIdenticalXindexes:
 
     @pytest.fixture
     def dataset_2d(self) -> xr.Dataset:
-        """2D dataset for MultiIndex tests."""
+        """2D dataset for MultiIndex tests.
+
+        Returns a Dataset with both 'x' and 'y' indexed::
+
+            <xarray.Dataset>
+            Dimensions:  (x: 2, y: 2)
+            Coordinates:
+              * x        (x) int64 10 20
+              * y        (y) <U1 'a' 'b'
+            Data variables:
+                data     (x, y) int64 1 2 3 4
+
+            xindexes: ['x', 'y']
+        """
         return xr.Dataset(
             {"data": (("x", "y"), [[1, 2], [3, 4]])},
             coords={"x": [10, 20], "y": ["a", "b"]},
