@@ -409,7 +409,7 @@ class TestAssertIdenticalXindexes:
         # Different index name (same coord values) - should not be identical
         # This specifically tests the custom equals() is being called
         assert not ds1.identical(ds3)
-        with pytest.raises(AssertionError, match="Indexes with differing values"):
+        with pytest.raises(AssertionError, match="Differing indexes"):
             xr.testing.assert_identical(ds1, ds3)
 
     def test_identical_mixed_index_types(self) -> None:
