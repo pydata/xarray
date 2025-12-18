@@ -309,8 +309,6 @@ def test_range_index_equals_floating_point_tolerance() -> None:
     When slicing a RangeIndex, floating point errors can accumulate in the
     internal state (e.g., stop=0.30000000000000004 vs stop=0.3), but the
     indexes should still be considered equal if they represent the same values.
-
-    Regression test for https://github.com/pydata/xarray/issues/XXXXX
     """
     # Create an index directly
     index1 = RangeIndex.arange(0.0, 0.3, 0.1, dim="x")
