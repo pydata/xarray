@@ -1514,6 +1514,13 @@ class Dataset(
         if not callable(compat):
             compat_str = compat
 
+            # For identical, also compare indexes
+            if compat_str == "identical":
+                from xarray.core.indexes import indexes_identical
+
+                if not indexes_identical(self.xindexes, other.xindexes):
+                    return False
+
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching order for equality
             def compat(x: Variable, y: Variable) -> bool:
@@ -1741,10 +1748,6 @@ class Dataset(
         Dataset.equals
         """
         try:
-            from xarray.core.indexes import indexes_identical
-
-            if not indexes_identical(self.xindexes, other.xindexes):
-                return False
             return utils.dict_equiv(self.attrs, other.attrs) and self._all_compat(
                 other, "identical"
             )
