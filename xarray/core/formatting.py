@@ -973,7 +973,7 @@ def _compat_to_str(compat):
         return compat
 
 
-def diff_indexes_repr(a_indexes, b_indexes) -> str:
+def diff_indexes_repr(a_indexes, b_indexes, col_width: int = 20) -> str:
     """Generate diff representation for indexes."""
     a_keys = set(a_indexes.keys())
     b_keys = set(b_indexes.keys())
@@ -988,34 +988,41 @@ def diff_indexes_repr(a_indexes, b_indexes) -> str:
 
     # Check for indexes on the same coordinates but with different types or values
     common_keys = a_keys & b_keys
-    type_mismatches = []
-    value_mismatches = []
+    diff_items = []
 
     for key in sorted(common_keys):
         a_idx = a_indexes[key]
         b_idx = b_indexes[key]
 
-        if type(a_idx) is not type(b_idx):
-            type_mismatches.append(
-                f"    {key!r}: {type(a_idx).__name__} != {type(b_idx).__name__}"
-            )
-        else:
-            # Same type, check if values differ
+        # Check if indexes differ
+        indexes_equal = False
+        if type(a_idx) is type(b_idx):
             try:
-                if not a_idx.equals(b_idx):
-                    value_mismatches.append(key)
+                indexes_equal = a_idx.equals(b_idx)
             except NotImplementedError:
                 # Fall back to variable comparison
                 a_var = a_indexes.variables[key]
                 b_var = b_indexes.variables[key]
-                if not a_var.equals(b_var):
-                    value_mismatches.append(key)
+                indexes_equal = a_var.equals(b_var)
 
-    if type_mismatches:
-        summary.append("Index type mismatch:\n" + "\n".join(type_mismatches))
+        if not indexes_equal:
+            # Format the index values similar to variable diff
+            try:
+                a_repr = inline_index_repr(
+                    a_indexes.to_pandas_indexes()[key], max_width=70
+                )
+                b_repr = inline_index_repr(
+                    b_indexes.to_pandas_indexes()[key], max_width=70
+                )
+            except TypeError:
+                # Custom indexes may not support to_pandas_index()
+                a_repr = repr(a_idx)
+                b_repr = repr(b_idx)
+            diff_items.append(f"L   {key!s:<{col_width}} {a_repr}")
+            diff_items.append(f"R   {key!s:<{col_width}} {b_repr}")
 
-    if value_mismatches:
-        summary.append(f"Indexes with differing values: {value_mismatches}")
+    if diff_items:
+        summary.append("Differing indexes:\n" + "\n".join(diff_items))
 
     return "\n".join(summary)
 
