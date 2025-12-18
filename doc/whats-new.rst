@@ -18,6 +18,12 @@ New Features
   automatically replace any existing index being set instead of erroring
   or needing needing to call :py:meth:`drop_indexes` first (:pull:`11008`).
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Calling :py:meth:`Dataset.sel` or :py:meth:`DataArray.sel` on a 1-dimensional coordinate
+  without an index will now automatically create a temporary
+  :py:class:`~xarray.indexes.PandasIndex` to perform the selection
+  (:issue:`9703`, :pull:`11029`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
