@@ -42,6 +42,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:class:`~xarray.indexes.RangeIndex.equals` now uses floating point tolerance
+  (via ``np.isclose``) by default to handle accumulated floating point errors from
+  slicing operations. Use ``exact=True`` for exact comparison (:pull:`XXXX`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
