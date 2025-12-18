@@ -281,29 +281,21 @@ class TestAssertIdenticalXindexes:
             coords={"x": [10, 20], "y": ["a", "b"]},
         )
 
-    def test_assert_identical_xindex_difference(
+    def test_dataset_xindex_difference(
         self, dataset_with_extra_coord: xr.Dataset
     ) -> None:
-        """Test that assert_identical detects different xindexes."""
+        """Test that Dataset.identical() and assert_identical detect different xindexes."""
         ds = dataset_with_extra_coord
         ds_extra_index = ds.set_xindex("time_metadata")
 
         # equals should pass (indexes not compared)
+        assert ds.equals(ds_extra_index)
         xr.testing.assert_equal(ds, ds_extra_index)
 
         # identical should fail (indexes ARE compared)
+        assert not ds.identical(ds_extra_index)
         with pytest.raises(AssertionError, match="Indexes only on the right"):
             xr.testing.assert_identical(ds, ds_extra_index)
-
-    def test_dataset_identical_xindex_difference(
-        self, dataset_with_extra_coord: xr.Dataset
-    ) -> None:
-        """Test that Dataset.identical() detects different xindexes."""
-        ds = dataset_with_extra_coord
-        ds_extra_index = ds.set_xindex("time_metadata")
-
-        assert ds.equals(ds_extra_index)  # Should pass
-        assert not ds.identical(ds_extra_index)  # Should fail
 
     def test_assert_identical_same_xindexes(
         self, dataset_with_extra_coord: xr.Dataset
@@ -319,33 +311,22 @@ class TestAssertIdenticalXindexes:
         ds_extra2 = ds.set_xindex("time_metadata")
         xr.testing.assert_identical(ds_extra1, ds_extra2)
 
-    def test_dataarray_identical_xindex_difference(
+    def test_dataarray_xindex_difference(
         self, dataset_with_extra_coord: xr.Dataset
     ) -> None:
-        """Test that DataArray.identical() detects different xindexes."""
+        """Test that DataArray.identical() and assert_identical detect different xindexes."""
         ds = dataset_with_extra_coord
         ds_extra_index = ds.set_xindex("time_metadata")
 
         da = ds["data"]
         da_extra_index = ds_extra_index["data"]
 
-        assert da.equals(da_extra_index)  # Should pass
-        assert not da.identical(da_extra_index)  # Should fail
-
-    def test_assert_identical_dataarray_xindex_difference(
-        self, dataset_with_extra_coord: xr.Dataset
-    ) -> None:
-        """Test that assert_identical for DataArray detects different xindexes."""
-        ds = dataset_with_extra_coord
-        ds_extra_index = ds.set_xindex("time_metadata")
-
-        da = ds["data"]
-        da_extra_index = ds_extra_index["data"]
-
-        # equals should pass
+        # equals should pass (indexes not compared)
+        assert da.equals(da_extra_index)
         xr.testing.assert_equal(da, da_extra_index)
 
-        # identical should fail
+        # identical should fail (indexes ARE compared)
+        assert not da.identical(da_extra_index)
         with pytest.raises(AssertionError, match="Indexes only on the right"):
             xr.testing.assert_identical(da, da_extra_index)
 
