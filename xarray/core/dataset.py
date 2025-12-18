@@ -1672,8 +1672,8 @@ class Dataset(
             return False
 
     def identical(self, other: Self) -> bool:
-        """Like equals, but also checks all dataset attributes and the
-        attributes on all variables and coordinates.
+        """Like equals, but also checks all dataset attributes, the
+        attributes on all variables and coordinates, and indexes.
 
         Example
         -------
@@ -1741,6 +1741,10 @@ class Dataset(
         Dataset.equals
         """
         try:
+            from xarray.core.indexes import indexes_identical
+
+            if not indexes_identical(self.xindexes, other.xindexes):
+                return False
             return utils.dict_equiv(self.attrs, other.attrs) and self._all_compat(
                 other, "identical"
             )

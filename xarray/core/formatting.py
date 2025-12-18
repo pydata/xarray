@@ -973,6 +973,53 @@ def _compat_to_str(compat):
         return compat
 
 
+def diff_indexes_repr(a_indexes, b_indexes) -> str:
+    """Generate diff representation for indexes."""
+    a_keys = set(a_indexes.keys())
+    b_keys = set(b_indexes.keys())
+
+    summary = []
+
+    if only_a := a_keys - b_keys:
+        summary.append(f"Indexes only on the left object:  {sorted(only_a)}")
+
+    if only_b := b_keys - a_keys:
+        summary.append(f"Indexes only on the right object: {sorted(only_b)}")
+
+    # Check for indexes on the same coordinates but with different types or values
+    common_keys = a_keys & b_keys
+    type_mismatches = []
+    value_mismatches = []
+
+    for key in sorted(common_keys):
+        a_idx = a_indexes[key]
+        b_idx = b_indexes[key]
+
+        if type(a_idx) is not type(b_idx):
+            type_mismatches.append(
+                f"    {key!r}: {type(a_idx).__name__} != {type(b_idx).__name__}"
+            )
+        else:
+            # Same type, check if values differ
+            try:
+                if not a_idx.equals(b_idx):
+                    value_mismatches.append(key)
+            except NotImplementedError:
+                # Fall back to variable comparison
+                a_var = a_indexes.variables[key]
+                b_var = b_indexes.variables[key]
+                if not a_var.equals(b_var):
+                    value_mismatches.append(key)
+
+    if type_mismatches:
+        summary.append("Index type mismatch:\n" + "\n".join(type_mismatches))
+
+    if value_mismatches:
+        summary.append(f"Indexes with differing values: {value_mismatches}")
+
+    return "\n".join(summary)
+
+
 def diff_array_repr(a, b, compat):
     # used for DataArray, Variable and IndexVariable
     summary = [
@@ -1002,10 +1049,14 @@ def diff_array_repr(a, b, compat):
         ):
             summary.append(coords_diff)
 
-    if compat == "identical" and (
-        attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat)
-    ):
-        summary.append(attrs_diff)
+    if compat == "identical":
+        if hasattr(a, "xindexes") and (
+            indexes_diff := diff_indexes_repr(a.xindexes, b.xindexes)
+        ):
+            summary.append(indexes_diff)
+
+        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
+            summary.append(attrs_diff)
 
     return "\n".join(summary)
 
@@ -1043,10 +1094,12 @@ def diff_dataset_repr(a, b, compat):
     ):
         summary.append(data_diff)
 
-    if compat == "identical" and (
-        attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat)
-    ):
-        summary.append(attrs_diff)
+    if compat == "identical":
+        if indexes_diff := diff_indexes_repr(a.xindexes, b.xindexes):
+            summary.append(indexes_diff)
+
+        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
+            summary.append(attrs_diff)
 
     return "\n".join(summary)
 

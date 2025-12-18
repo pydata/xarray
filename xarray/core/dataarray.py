@@ -4796,8 +4796,8 @@ class DataArray(
             return False
 
     def identical(self, other: Self) -> bool:
-        """Like equals, but also checks the array name and attributes, and
-        attributes on all coordinates.
+        """Like equals, but also checks the array name, attributes,
+        attributes on all coordinates, and indexes.
 
         Parameters
         ----------
@@ -4849,6 +4849,10 @@ class DataArray(
         False
         """
         try:
+            from xarray.core.indexes import indexes_identical
+
+            if not indexes_identical(self.xindexes, other.xindexes):
+                return False
             return self.name == other.name and self._all_compat(other, "identical")
         except (TypeError, AttributeError):
             return False

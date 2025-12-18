@@ -28,6 +28,12 @@ New Features
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`Dataset.identical` and :py:meth:`DataArray.identical` now compare
+  indexes (xindexes). Two objects with identical data but different indexes
+  will no longer be considered identical. This also affects
+  :py:func:`testing.assert_identical` (:pull:`XXXX`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
