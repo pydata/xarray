@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
-from itertools import pairwise
 from typing import Literal, cast
 from unittest import mock
 
@@ -1812,13 +1811,7 @@ class TestDataArrayGroupBy:
         )
         actual = field.groupby_bins(by, bins=bins).count()
 
-        bincoord = np.array(
-            [
-                pd.Interval(left, right, closed="right")
-                for left, right in pairwise(bins)
-            ],
-            dtype=object,
-        )
+        bincoord = pd.IntervalIndex.from_breaks(bins, closed="right")
         expected = DataArray(
             np.array([6, np.nan, 3, 6]),
             dims="group_bins",
@@ -2995,13 +2988,7 @@ def test_multiple_groupers_mixed(use_flox: bool, shuffle: bool) -> None:
         coords={
             "x_bins": (
                 "x_bins",
-                np.array(
-                    [
-                        pd.Interval(5, 15, closed="right"),
-                        pd.Interval(15, 25, closed="right"),
-                    ],
-                    dtype=object,
-                ),
+                pd.IntervalIndex.from_breaks([5, 15, 25], closed="right"),
             ),
             "letters": ("letters", np.array(["a", "b"], dtype=object)),
         },
