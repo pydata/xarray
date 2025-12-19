@@ -1467,13 +1467,14 @@ class DataTree(
     @property
     def coords(self) -> DataTreeCoordinates:
         """Dictionary of xarray.DataArray objects corresponding to coordinate
-        variables
+        variables at this node.
         """
         return DataTreeCoordinates(self)
 
     @property
     def data_vars(self) -> DataVariables:
-        """Dictionary of DataArray objects corresponding to data variables"""
+        """Dictionary of DataArray objects corresponding to data variables at this
+        node."""
         return DataVariables(self.to_dataset())
 
     def isomorphic(self, other: DataTree) -> bool:

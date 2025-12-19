@@ -1019,6 +1019,11 @@ class DataTreeCoordinates(Coordinates):
     ) -> None:
         from xarray.core.datatree import check_alignment
 
+        # For now, ensure coordinate keys do not contain '/' character. See
+        # https://github.com/pydata/xarray/issues/9485
+        # https://github.com/pydata/xarray/pull/9492
+        _validate_coordinate_names(coords.keys())
+
         # create updated node (`.to_dataset` makes a copy so this doesn't modify in-place)
         node_ds = self._data.to_dataset(inherit=False)
         node_ds.coords._update_coords(coords, indexes)
@@ -1058,6 +1063,19 @@ class DataTreeCoordinates(Coordinates):
             for key in self._data._ipython_key_completions_()
             if key in self._data._coord_variables
         ]
+
+
+def _validate_coordinate_names(coordinates: Iterable[Hashable]) -> None:
+    offending_coordinate_names = [
+        name for name in coordinates if isinstance(name, str) and "/" in name
+    ]
+    if len(offending_coordinate_names) > 0:
+        raise ValueError(
+            "Given coordinate names contain the '/' character: "
+            f"{offending_coordinate_names}. Accessing the coordinates of other nodes "
+            "in the tree is not yet supported here. Retrieve the other node first, "
+            "then access its coordinates."
+        )
 
 
 class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
