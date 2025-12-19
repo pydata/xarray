@@ -79,7 +79,11 @@ class TreeNode:
         self._children = {}
 
         if children:
-            # shallow copy to avoid modifying arguments in-place (see GH issue #9196)
+            # shallow copy to avoid modifying arguments in-place (see GH issue #9196),
+            # first calling _check_children on the constructor input to ensure helpful
+            # error messages. Note _check_children will be called again on assignment
+            # to self.children via the setter function, but this is fine.
+            self._check_children(children)
             self.children = {name: child.copy() for name, child in children.items()}
 
     @property
@@ -195,7 +199,7 @@ class TreeNode:
 
     @staticmethod
     def _check_children(children: Mapping[str, TreeNode]) -> None:
-        """Check children for correct types and for any duplicates."""
+        """Check children for correct names, types and for any duplicates."""
         if not is_dict_like(children):
             raise TypeError(
                 "children must be a dict-like mapping from names to node objects"
@@ -203,10 +207,11 @@ class TreeNode:
 
         seen = set()
         for name, child in children.items():
+            _validate_name(name)
             if not isinstance(child, TreeNode):
                 raise TypeError(
                     f"Cannot add object {name}. It is of type {type(child)}, "
-                    "but can only add children of type DataTree"
+                    "but can only add children of type DataTree."
                 )
 
             childid = id(child)
@@ -666,9 +671,13 @@ AnyNamedNode = TypeVar("AnyNamedNode", bound="NamedNode")
 def _validate_name(name: str | None) -> None:
     if name is not None:
         if not isinstance(name, str):
-            raise TypeError("node name must be a string or None")
+            raise TypeError("Node name must be a string or None")
         if "/" in name:
-            raise ValueError("node names cannot contain forward slashes")
+            raise ValueError(
+                f"Node name '{name}' contains the '/' character. "
+                "Nodes cannot have names containing '/' characters, as this would make "
+                "path-like access to nodes ambiguous."
+            )
 
 
 class NamedNode(TreeNode):

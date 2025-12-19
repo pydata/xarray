@@ -223,7 +223,8 @@ def _check_for_slashes_in_names(variables: Iterable[Hashable]) -> None:
         raise ValueError(
             "Given variables have names containing the '/' character: "
             f"{offending_variable_names}. "
-            "Variables stored in DataTree objects cannot have names containing '/' characters, as this would make path-like access to variables ambiguous."
+            "Variables stored in DataTree objects cannot have names containing '/' "
+            "characters, as this would make path-like access to variables ambiguous."
         )
 
 
@@ -532,9 +533,9 @@ class DataTree(
         dataset : Dataset, optional
             Data to store directly at this node.
         children : Mapping[str, DataTree], optional
-            Any child nodes of this node.
+            Any child nodes of this node. Child names cannot contain the '/' character.
         name : str, optional
-            Name for this node of the tree.
+            Name for this node of the tree. Node name cannot contain the '/' character.
 
         Returns
         -------

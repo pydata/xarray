@@ -39,6 +39,8 @@ Bug Fixes
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- Forbid child names containing ``/`` in ``DataTree`` objects (:issue:`#9978` :issue:`#9490` :pull:`#11014`).
+  By `Ewan Short <https://github.com/eshort0401>`_.
 
 Documentation
 ~~~~~~~~~~~~~
