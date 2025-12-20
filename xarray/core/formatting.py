@@ -447,30 +447,30 @@ def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     dims = tuple(coords._data.dims)
-    
+
     def coord_sort_key(name, var):
         """Sort key for coordinate ordering.
-        
+
         Orders by:
         1. Primary: index of the first matching dimension in dataset dims, use first (0)
            if name in dims, else len(dims)
         2. Secondary: dimension coordinates (name == dim) come before non-dimension coordinates
-        
+
         This groups non-dimension coordinates right after their associated dimension
         coordinates.
         """
         # Dimension coordinates sort by their position in dims, use first (0)
         if name in dims:
             return (dims.index(name), 0)
-        
+
         # Non-dimension coordinates sort by their first dim, use second (1)
         for d in var.dims:
             if d in dims:
                 return (dims.index(d), 1)
-        
+
         # Second: coords with dims not in dataset dims go at end
         return (len(dims), 1)
-    
+
     dim_ordered_coords = sorted(
         coords.items(), key=lambda x: coord_sort_key(x[0], x[1])
     )
