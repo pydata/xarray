@@ -300,6 +300,11 @@ xarray-minimum-dependency-policy = "*"
 [feature.policy.dependencies]
 python = "3.13.*"
 
+[feature.policy.tasks]
+policy-bare-minimum = "minimum-versions validate --policy ci/policy.yaml --manifest-path pixi.toml pixi:test-py311-bare-minimum"
+policy-minimum-versions = "minimum-versions validate --policy ci/policy.yaml --manifest-path pixi.toml pixi:test-py311-min-versions"
+policy-bare-min-and-scipy = "minimum-versions validate --policy ci/policy.yaml --manifest-path pixi.toml pixi:test-py311-bare-min-and-scipy"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
