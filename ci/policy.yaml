@@ -24,5 +24,7 @@ policy:
     - pytest-xdist
     - pytest-hypothesis
     - hypothesis
+    - pytz
+    - pytest-reportlog
   # these packages don't fail the CI, but will be printed in the report
   ignored_violations: []
