@@ -80,7 +80,7 @@ seaborn = "*"
 # array
 sparse = "*"
 pint = "*"
-array-api-strict = "<2.4"
+array-api-strict = "*"
 
 # algorithms
 scipy = "*"
