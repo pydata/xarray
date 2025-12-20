@@ -294,6 +294,12 @@ cytoolz = "*"
 [feature.release.tasks]
 release-contributors = "python ci/release_contributors.py"
 
+[feature.policy.pypi-dependencies]
+xarray-minimum-dependency-policy = "*"
+
+[feature.policy.dependencies]
+python = "3.13.*"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -394,3 +400,4 @@ doc = { features = [
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 release = { features = ["release"], no-default-feature = true }
+policy = { features = ["policy"], no-default-feature = true }
