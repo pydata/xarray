@@ -109,11 +109,6 @@ pandas = "2.2.*"
 scipy = "1.13.*"
 
 [feature.min-versions.dependencies]
-# minimal versions for all dependencies
-# Note that when you update min-supported versions, you should:
-# - Update the min version lower-bound in the corresponding feature(s) where applicable
-# - Update this section to pin to the min version
-
 array-api-strict = "2.4.*" # dependency for testing the array api compat
 boto3 = "1.34.*"
 bottleneck = "1.4.*"
