@@ -28,6 +28,12 @@ New Features
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`Dataset.identical`,` :py:meth:`DataArray.identical`, and
+  :py:func:`testings.assert_identical` now compare indexes (xindexes).
+  Two objects with identical data but different indexes will no longer
+  be considered identical. This also affects (:issue:`11033` :pull:`11035`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
@@ -39,6 +45,10 @@ Bug Fixes
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- :py:meth:`~xarray.indexes.RangeIndex.equals` now uses floating point error tolerant
+  ``np.isclose`` by default to handle accumulated floating point errors from
+  slicing operations. Use ``exact=True`` for exact comparison (:pull:`11035`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 Documentation
 ~~~~~~~~~~~~~

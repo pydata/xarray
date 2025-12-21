@@ -315,6 +315,10 @@ class TestFormatting:
           * y        (y) int64 24B 1 2 3
         Coordinates only on the right object:
             label    (x) int64 16B 1 2
+        Indexes only on the left object:  ['y']
+        Differing indexes:
+        L   x                    Index(['a', 'b'], dtype='object', name='x')
+        R   x                    Index(['a', 'c'], dtype='object', name='x')
         Differing attributes:
         L   units: m
         R   units: kg
@@ -519,6 +523,10 @@ class TestFormatting:
         R   var1     (x) int64 16B 1 2
         Data variables only on the left object:
             var2     (x) int64 16B 3 4
+        Indexes only on the left object:  ['y']
+        Differing indexes:
+        L   x                    Index(['a', 'b'], dtype='object', name='x')
+        R   x                    Index(['a', 'c'], dtype='object', name='x')
         Differing attributes:
         L   title: mytitle
         R   title: newtitle
