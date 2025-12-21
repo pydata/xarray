@@ -369,9 +369,9 @@ class DataArray(
            [[22.60070734, 13.78914233, 14.17424919],
             [18.28478802, 16.15234857, 26.63418806]]])
     Coordinates:
-      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
         lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
         lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
+      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
         reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: x, y
     Attributes:
@@ -1054,8 +1054,8 @@ class DataArray(
                [20, 21, 22, 23, 24]])
         Coordinates:
             lon       (x) int64 40B 10 11 12 13 14
-            lat       (y) int64 40B 20 21 22 23 24
             Pressure  (x, y) int64 200B 50 51 52 53 54 55 56 57 ... 68 69 70 71 72 73 74
+            lat       (y) int64 40B 20 21 22 23 24
         Dimensions without coordinates: x, y
 
         Return Dataset with target coordinate as a data variable rather than a coordinate variable:
@@ -2807,8 +2807,8 @@ class DataArray(
                [1., 1., 1.]])
         Coordinates:
           * x        (x) int64 16B 0 1
-          * y        (y) int64 24B 0 1 2
             a        (x) int64 16B 3 4
+          * y        (y) int64 24B 0 1 2
         >>> arr.set_index(x="a")
         <xarray.DataArray (x: 2, y: 3)> Size: 48B
         array([[1., 1., 1.],
@@ -5940,8 +5940,8 @@ class DataArray(
                [nan, nan, nan, nan]])
         Coordinates:
           * x        (x) float64 32B nan 0.0 1.0 nan
-          * y        (y) int64 32B 10 20 30 40
             z        (x) float64 32B nan 100.0 200.0 nan
+          * y        (y) int64 32B 10 20 30 40
 
         Careful, ``constant_values`` are coerced to the data type of the array which may
         lead to a loss of precision:
@@ -5954,8 +5954,8 @@ class DataArray(
                [ 1,  1,  1,  1]])
         Coordinates:
           * x        (x) float64 32B nan 0.0 1.0 nan
-          * y        (y) int64 32B 10 20 30 40
             z        (x) float64 32B nan 100.0 200.0 nan
+          * y        (y) int64 32B 10 20 30 40
         """
         ds = self._to_temp_dataset().pad(
             pad_width=pad_width,
