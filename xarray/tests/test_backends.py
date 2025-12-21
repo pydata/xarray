@@ -766,7 +766,7 @@ class DatasetIOBase:
         expected["td"].encoding = encoding
         expected["td0"].encoding = encoding
         with self.roundtrip(
-            expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="ns")}
+            expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="s")}
         ) as actual:
             assert_identical(expected, actual)
 

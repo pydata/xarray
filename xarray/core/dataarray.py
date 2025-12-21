@@ -4677,6 +4677,13 @@ class DataArray(
     def _all_compat(self, other: Self, compat_str: str) -> bool:
         """Helper function for equals, broadcast_equals, and identical"""
 
+        # For identical, also compare indexes
+        if compat_str == "identical":
+            from xarray.core.indexes import indexes_identical
+
+            if not indexes_identical(self.xindexes, other.xindexes):
+                return False
+
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
 
@@ -4796,8 +4803,8 @@ class DataArray(
             return False
 
     def identical(self, other: Self) -> bool:
-        """Like equals, but also checks the array name and attributes, and
-        attributes on all coordinates.
+        """Like equals, but also checks the array name, attributes,
+        attributes on all coordinates, and indexes.
 
         Parameters
         ----------
