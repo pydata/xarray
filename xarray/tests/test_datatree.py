@@ -644,8 +644,8 @@ class TestCoords:
             """\
         Coordinates:
           * x        (x) int64 16B -1 -2
-            a        (x) int64 16B 4 5
           * y        (y) int64 24B 0 1 2
+            a        (x) int64 16B 4 5
             b        int64 8B -10"""
         )
         actual = repr(coords)
