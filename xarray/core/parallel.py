@@ -130,7 +130,7 @@ def infer_template(
             "Please supply the 'template' kwarg to map_blocks."
         ) from e
 
-    if not isinstance(template, Dataset | DataArray):
+    if not isinstance(template, (Dataset, DataArray)):
         raise TypeError(
             "Function must return an xarray DataArray or Dataset. Instead it returned "
             f"{type(template)}"
@@ -351,7 +351,7 @@ def map_blocks(
         result = func(*converted_args, **kwargs)
 
         merged_coordinates = merge(
-            [arg.coords for arg in args if isinstance(arg, Dataset | DataArray)],
+            [arg.coords for arg in args if isinstance(arg, (Dataset, DataArray))],
             join="exact",
             compat="override",
         ).coords
