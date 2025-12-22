@@ -49,6 +49,9 @@ Bug Fixes
   ``np.isclose`` by default to handle accumulated floating point errors from
   slicing operations. Use ``exact=True`` for exact comparison (:pull:`11035`).
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Ensure the :py:class:`~xarray.groupers.SeasonResampler` preserves the datetime
+  unit of the underlying time index when resampling (:issue:`11048`,
+  :pull:`11049`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~

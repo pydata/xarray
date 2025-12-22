@@ -14,6 +14,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from itertools import chain, pairwise
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -40,6 +41,7 @@ from xarray.core.types import (
     Bins,
     DatetimeLike,
     GroupIndices,
+    PDDatetimeUnitOptions,
     ResampleCompatible,
     Self,
     SideOptions,
@@ -59,6 +61,11 @@ __all__ = [
 ]
 
 RESAMPLE_DIM = "__resample_dim__"
+
+
+def _construct_timestamp_as_unit(unit: PDDatetimeUnitOptions, **kwargs) -> pd.Timestamp:
+    """Construct a pandas.Timestamp object with a specific resolution."""
+    return pd.Timestamp(**kwargs).as_unit(unit)
 
 
 @dataclass(init=False)
@@ -960,7 +967,8 @@ class SeasonResampler(Resampler):
             datetime_class = type(first_n_items(group.data, 1).item())
         else:
             index_class = pd.DatetimeIndex
-            datetime_class = datetime.datetime
+            unit, _ = np.datetime_data(group.dtype)
+            datetime_class = partial(_construct_timestamp_as_unit, unit)
 
         # these are the seasons that are present
         unique_coord = index_class(
