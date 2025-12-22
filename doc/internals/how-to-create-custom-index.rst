@@ -226,11 +226,9 @@ custom index to a Dataset or DataArray, e.g., using the ``RasterIndex`` above:
         dims=("y", "x"),
     )
 
-    # Xarray create default indexes for the 'x' and 'y' coordinates
-    # we first need to explicitly drop it
-    da = da.drop_indexes(["x", "y"])
-
     # Build a RasterIndex from the 'x' and 'y' coordinates
+    # Xarray creates default indexes for the 'x' and 'y' coordinates
+    # this will automatically drop those indexes
     da_raster = da.set_xindex(["x", "y"], RasterIndex)
 
     # RasterIndex now takes care of label-based selection

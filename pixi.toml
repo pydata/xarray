@@ -111,7 +111,7 @@ scipy = "1.13.*"
 # - Update the min version lower-bound in the corresponding feature(s) where applicable
 # - Update this section to pin to the min version
 
-array-api-strict = "1.1.*" # dependency for testing the array api compat
+array-api-strict = "2.4.*" # dependency for testing the array api compat
 boto3 = "1.34.*"
 bottleneck = "1.4.*"
 cartopy = "0.23.*"
@@ -142,6 +142,12 @@ seaborn = "0.13.*"
 sparse = "0.15.*"
 toolz = "0.12.*"
 zarr = "2.18.*"
+
+# TODO: Remove `platforms` restriction once pandas nightly has win-64 wheels again.
+# Without this, `pixi lock` fails because it can't solve the nightly feature for win-64,
+# which breaks RTD builds (RTD has no lock file cache, unlike GitHub Actions CI).
+[feature.nightly]
+platforms = ["linux-64", "osx-arm64"]
 
 [feature.nightly.dependencies]
 python = "*"
@@ -198,7 +204,7 @@ cartopy = "*"
 seaborn = "*"
 
 [feature.test.dependencies]
-array-api-strict = "<2.4"
+array-api-strict = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
@@ -231,7 +237,7 @@ sphinx-autosummary-accessors = "*"
 sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-inline-tabs = "*"
-sphinx-llms-txt = "*"
+sphinx-llm = ">=0.2.1"
 sphinx = ">=6,<8"
 sphinxcontrib-mermaid = "*"
 sphinxcontrib-srclinks = "*"
