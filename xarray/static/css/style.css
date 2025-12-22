@@ -153,8 +153,7 @@ body.vscode-dark {
 .xr-var-item > input:focus-visible + label,
 .xr-array-wrap > input:focus-visible + label,
 .xr-group-box-contents > input:focus-visible + label {
-  outline: 1px solid var(--xr-font-color2);
-  outline-offset: -1px;
+  outline: auto;
 }
 
 .xr-section-item > input:enabled + label:hover,
