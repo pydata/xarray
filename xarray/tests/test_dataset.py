@@ -294,8 +294,8 @@ class TestDataset:
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
               * dim3     (dim3) {data["dim3"].dtype} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-                numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
               * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
+                numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
