@@ -128,24 +128,38 @@ body.vscode-dark {
 }
 
 .xr-section-item > input,
-.xr-group-box-contents > input {
+.xr-group-box-contents > input,
+.xr-array-wrap > input {
   display: block;
   opacity: 0;
   height: 0;
   margin: 0;
 }
 
-.xr-section-item > input + label {
+.xr-section-item > input + label,
+.xr-var-item > input + label {
   color: var(--xr-disabled-color);
 }
 
 .xr-section-item > input:enabled + label,
+.xr-var-item > input:enabled + label,
+.xr-array-wrap > input:enabled + label,
 .xr-group-box-contents > input:enabled + label {
   cursor: pointer;
   color: var(--xr-font-color2);
 }
 
+.xr-section-item > input:focus-visible + label,
+.xr-var-item > input:focus-visible + label,
+.xr-array-wrap > input:focus-visible + label,
+.xr-group-box-contents > input:focus-visible + label {
+  outline: 1px solid var(--xr-font-color2);
+  outline-offset: -1px;
+}
+
 .xr-section-item > input:enabled + label:hover,
+.xr-var-item > input:enabled + label:hover,
+.xr-array-wrap > input:enabled + label:hover,
 .xr-group-box-contents > input:enabled + label:hover {
   color: var(--xr-font-color0);
 }
@@ -154,6 +168,7 @@ body.vscode-dark {
   grid-column: 1;
   color: var(--xr-font-color2);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .xr-section-summary > em {
@@ -274,6 +289,14 @@ body.vscode-dark {
 
 .xr-group-box-contents > input + label > span {
   display: none;
+}
+
+.xr-group-box-ellipsis {
+  font-size: 1.4em;
+  font-weight: 900;
+  color: var(--xr-font-color2);
+  letter-spacing: 0.15em;
+  cursor: default;
 }
 
 .xr-array-wrap {

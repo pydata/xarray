@@ -183,6 +183,7 @@ def collapsible_section(
     n_items=None,
     enabled=True,
     collapsed=False,
+    span_grid=False,
 ) -> str:
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
@@ -191,11 +192,11 @@ def collapsible_section(
     n_items_span = "" if n_items is None else f" <span>({n_items})</span>"
     enabled_attr = "" if enabled and has_items else " disabled"
     collapsed_attr = "" if collapsed or not has_items else " checked"
+    span_grid_attr = " xr-span-grid" if span_grid else ""
     tip = " title='Expand/collapse section'" if enabled_attr == "" else ""
-
     html = (
         f"<input id='{data_id}' class='xr-section-summary-in' type='checkbox'{enabled_attr}{collapsed_attr} />"
-        f"<label for='{data_id}' class='xr-section-summary'{tip}>{header}{n_items_span}</label>"
+        f"<label for='{data_id}' class='xr-section-summary{span_grid_attr}'{tip}>{header}{n_items_span}</label>"
         f"<div class='xr-section-inline-details'>{inline_details}</div>"
     )
     if details:
@@ -492,6 +493,7 @@ def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
         "<em>Too many items to display (display_max_html_elements exceeded)</em>",
         enabled=False,
         collapsed=True,
+        span_grid=True,
     )
 
     for node in tree.subtree:  # breadth-first
@@ -542,7 +544,7 @@ def _ellipsis_element() -> str:
         "<div class='xr-group-box'>"
         "<div class='xr-group-box-vline' style='height: 100%'></div>"
         "<div class='xr-group-box-contents'>"
-        "<span style='font-size: 1.4em; font-weight: 900; color: #666; letter-spacing: 0.15em;'>⋮</span>"
+        "<div class='xr-group-box-ellipsis'>⋮</div>"
         "</div>"
         "</div>"
     )
