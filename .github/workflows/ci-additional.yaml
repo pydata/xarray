@@ -265,13 +265,13 @@ jobs:
           python-version: "3.x"
 
       - name: All-deps minimum versions policy
-        uses: xarray-contrib/minimum-dependency-versions@3db8e1c17328ee1e27dfe4db90d908644856eb61 # v1.0.0
+        uses: xarray-contrib/minimum-dependency-versions@10c2aa0b74609aa542d5dd9c42223f5804f43470 # v2.0.0
         with:
           policy: ci/policy.yaml
           environment-paths: ci/requirements/min-all-deps.yml
 
       - name: Bare minimum versions policy
-        uses: xarray-contrib/minimum-dependency-versions@3db8e1c17328ee1e27dfe4db90d908644856eb61 # v1.0.0
+        uses: xarray-contrib/minimum-dependency-versions@10c2aa0b74609aa542d5dd9c42223f5804f43470 # v2.0.0
         with:
           policy: ci/policy.yaml
           environment-paths: ci/requirements/bare-minimum.yml
