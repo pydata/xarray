@@ -7002,7 +7002,7 @@ class TestIrisConversion:
         # to iris
         coord_dict: dict[Hashable, Any] = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
-        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
+        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3, unit="ns"))
         coord_dict["height"] = 10
         coord_dict["distance2"] = ("distance", [0, 1], {"foo": "bar"})
         coord_dict["time2"] = (("distance", "time"), [[0, 1, 2], [2, 3, 4]])
@@ -7073,7 +7073,7 @@ class TestIrisConversion:
 
         coord_dict: dict[Hashable, Any] = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
-        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
+        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3, unit="ns"))
         coord_dict["height"] = 10
         coord_dict["distance2"] = ("distance", [0, 1], {"foo": "bar"})
         coord_dict["time2"] = (("distance", "time"), [[0, 1, 2], [2, 3, 4]])
