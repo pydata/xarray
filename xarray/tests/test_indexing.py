@@ -299,10 +299,11 @@ class TestLazyArray:
             (-1, 3, 2),
             (slice(None), 4, slice(0, 4, 1)),
             (slice(1, -3), 7, slice(1, 4, 1)),
+            (slice(None, None, -1), 8, slice(7, None, -1)),
             (np.array([-1, 3, -2]), 5, np.array([4, 3, 3])),
         ),
     )
-    def normalize_indexer(self, indexer, size, expected):
+    def test_normalize_indexer(self, indexer, size, expected):
         actual = indexing.normalize_indexer(indexer, size)
 
         if isinstance(expected, np.ndarray):
