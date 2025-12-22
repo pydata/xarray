@@ -3607,12 +3607,13 @@ class TestSeasonGrouperAndResampler:
 
     def test_season_resampler_preserves_time_unit(
         self, time_unit: PDDatetimeUnitOptions
-    ):
+    ) -> None:
         time = date_range("2000", periods=12, freq="MS", unit=time_unit)
         da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
         resampler = SeasonResampler(["DJF", "MAM", "JJA", "SON"])
-        rs = da.resample(time=resampler).sum()
-        assert rs.time.dtype == time.dtype
+        result = da.resample(time=resampler).sum()
+        result_unit, _ = np.datetime_data(result.time.dtype)
+        assert result_unit == time_unit
 
 
 @pytest.mark.parametrize(

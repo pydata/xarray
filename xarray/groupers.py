@@ -12,7 +12,7 @@ import itertools
 import operator
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Hashable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 from itertools import chain, pairwise
@@ -39,6 +39,7 @@ from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
 from xarray.core.types import (
     Bins,
+    CFTimeDatetime,
     DatetimeLike,
     GroupIndices,
     PDDatetimeUnitOptions,
@@ -63,9 +64,14 @@ __all__ = [
 RESAMPLE_DIM = "__resample_dim__"
 
 
-def _construct_timestamp_as_unit(unit: PDDatetimeUnitOptions, **kwargs) -> pd.Timestamp:
-    """Construct a pandas.Timestamp object with a specific resolution."""
-    return pd.Timestamp(**kwargs).as_unit(unit)
+def _datetime64_via_timestamp(unit: PDDatetimeUnitOptions, **kwargs) -> np.datetime64:
+    """Construct a numpy.datetime64 object through the pandas.Timestamp
+    constructor with a specific resolution."""
+    # TODO: when pandas 3 is our minimum requirement we will no longer need to
+    # convert to np.datetime64 values prior to passing to the DatetimeIndex
+    # constructor. With pandas < 3 the DatetimeIndex constructor does not
+    # infer the resolution from the resolution of the Timestamp values.
+    return pd.Timestamp(**kwargs).as_unit(unit).to_numpy()
 
 
 @dataclass(init=False)
@@ -962,20 +968,28 @@ class SeasonResampler(Resampler):
         counts = agged["count"]
 
         index_class: type[CFTimeIndex | pd.DatetimeIndex]
+        datetime_class: CFTimeDatetime | Callable[..., np.datetime64]
         if _contains_cftime_datetimes(group.data):
             index_class = CFTimeIndex
             datetime_class = type(first_n_items(group.data, 1).item())
         else:
             index_class = pd.DatetimeIndex
             unit, _ = np.datetime_data(group.dtype)
-            datetime_class = partial(_construct_timestamp_as_unit, unit)
+            unit = cast(PDDatetimeUnitOptions, unit)
+            datetime_class = partial(_datetime64_via_timestamp, unit)
 
         # these are the seasons that are present
+
+        # TODO: when pandas 3 is our minimum requirement we will no longer need
+        # to cast the list to a NumPy array prior to passing to the index
+        # constructor.
         unique_coord = index_class(
-            [
-                datetime_class(year=year, month=season_tuples[season][0], day=1)
-                for year, season in first_items.index
-            ]
+            np.array(
+                [
+                    datetime_class(year=year, month=season_tuples[season][0], day=1)
+                    for year, season in first_items.index
+                ]
+            )
         )
 
         # This sorted call is a hack. It's hard to figure out how
@@ -983,15 +997,21 @@ class SeasonResampler(Resampler):
         # for example "DJF" as first entry or last entry
         # So we construct the largest possible index and slice it to the
         # range present in the data.
+
+        # TODO: when pandas 3 is our minimum requirement we will no longer need
+        # to cast the list to a NumPy array prior to passing to the index
+        # constructor.
         complete_index = index_class(
-            sorted(
-                [
-                    datetime_class(year=y, month=m, day=1)
-                    for y, m in itertools.product(
-                        range(year[0].item(), year[-1].item() + 1),
-                        [s[0] for s in season_inds],
-                    )
-                ]
+            np.array(
+                sorted(
+                    [
+                        datetime_class(year=y, month=m, day=1)
+                        for y, m in itertools.product(
+                            range(year[0].item(), year[-1].item() + 1),
+                            [s[0] for s in season_inds],
+                        )
+                    ]
+                )
             )
         )
 
