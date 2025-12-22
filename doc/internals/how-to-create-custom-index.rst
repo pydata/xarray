@@ -128,6 +128,43 @@ e.g., a kd-tree object may not be easily indexed. If ``Index.isel()`` is not
 implemented, the index in just dropped in the DataArray or Dataset resulting
 from the selection.
 
+Custom representation
+---------------------
+
+When a :py:class:`Dataset` or :py:class:`DataArray` is displayed, Xarray shows
+a summary of its indexes. By default, the base :py:class:`Index` class returns
+just the class name. You can customize this by implementing the
+:py:meth:`Index._repr_inline_` method, which should return a short, single-line
+string representation of the index.
+
+The ``_repr_inline_`` method receives a ``max_width`` argument (number of
+characters) that can be used to truncate the output if needed:
+
+.. code-block:: python
+
+    class MyIndex(Index):
+        def __init__(self, data):
+            self._data = data
+
+        def _repr_inline_(self, max_width: int) -> str:
+            # Return a concise representation
+            return f"MyIndex (size={len(self._data)})"
+
+Here are some examples from Xarray's built-in indexes:
+
+- ``RangeIndex`` returns: ``RangeIndex (start=0, stop=1, step=0.1)``
+- ``NDPointIndex`` returns: ``NDPointIndex (KDTree)``
+
+This representation appears in the indexes section when displaying a Dataset or
+DataArray:
+
+.. code-block:: none
+
+    <xarray.DataArray (x: 10)>
+    ...
+    Indexes:
+        x        MyIndex (size=10)
+
 Alignment
 ---------
 
@@ -197,6 +234,10 @@ regularly spaced 2-dimensional data) that internally relies on two
                     results.append(index.sel({k: labels[k]}))
 
             return merge_sel_results(results)
+
+        def _repr_inline_(self, max_width: int) -> str:
+            dims = [idx.dim for idx in self._xy_indexes.values()]
+            return f"RasterIndex (dims={dims})"
 
 
 This basic index only supports label-based selection. Providing a full-featured
