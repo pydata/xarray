@@ -321,13 +321,8 @@ def lazy_array_equiv(arr1, arr2):
     arr2 = asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-    if (
-        arr1.ndim == 0
-        and arr2.ndim == 0
-        and isinstance(arr1, np.ndarray)
-        and isinstance(arr2, np.ndarray)
-    ):
-        return bool(arr1 == arr2)
+    if arr1.ndim == 0 and arr2.ndim == 0:
+        return None
     if dask_available and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
         from dask.base import tokenize
 

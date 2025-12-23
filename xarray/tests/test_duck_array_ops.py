@@ -1093,14 +1093,14 @@ def test_push_dask(method, arr):
 
 from xarray.core.duck_array_ops import lazy_array_equiv
 
-
 def test_lazy_array_equiv_numpy_0d_arrays():
     a = np.array(1)
     b = np.array(1)
 
     result = lazy_array_equiv(a, b)
 
-    assert result is True
+    assert result is None
+
 
 
 def test_extension_array_equality(categorical1, int1):
