@@ -244,10 +244,8 @@ jobs:
   min-version-policy:
     name: Minimum Version Policy
     runs-on: "ubuntu-latest"
-    needs: detect-ci-trigger
-    # min-version-policy doesn't work with Pixi yet https://github.com/pydata/xarray/pull/10888#discussion_r2504335457
-    if: false
-    # if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    needs: [detect-ci-trigger, cache-pixi-lock]
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
@@ -260,18 +258,30 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
-      - uses: actions/setup-python@v6
+      - name: Restore cached pixi lockfile
+        uses: actions/cache/restore@v5
+        id: restore-pixi-lock
         with:
-          python-version: "3.x"
+          enableCrossOsArchive: true
+          path: |
+            pixi.lock
+          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
 
-      - name: All-deps minimum versions policy
-        uses: xarray-contrib/minimum-dependency-versions@10c2aa0b74609aa542d5dd9c42223f5804f43470 # v2.0.0
+      - uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          policy: ci/policy.yaml
-          environment-paths: ci/requirements/min-all-deps.yml
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          environments: "policy"
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: Bare minimum versions policy
-        uses: xarray-contrib/minimum-dependency-versions@10c2aa0b74609aa542d5dd9c42223f5804f43470 # v2.0.0
-        with:
-          policy: ci/policy.yaml
-          environment-paths: ci/requirements/bare-minimum.yml
+        run: |
+          pixi run policy-bare-minimum
+
+      - name: Bare minimum and scipy versions policy
+        run: |
+          pixi run policy-bare-min-and-scipy
+
+      - name: All-deps minimum versions policy
+        run: |
+          pixi run policy-min-versions
