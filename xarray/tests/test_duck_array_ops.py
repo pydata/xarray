@@ -1091,8 +1091,6 @@ def test_push_dask(method, arr):
             np.testing.assert_equal(actual, expected)
 
 
-import numpy as np
-
 from xarray.core.duck_array_ops import lazy_array_equiv
 
 
