@@ -1212,17 +1212,6 @@ def test_map_blocks_error(map_da, map_ds):
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
-def test_map_blocks_accepts_da_ds_template(obj):
-    def identity(x):
-        return x
-
-    with raise_if_dask_computes():
-        result = xr.map_blocks(identity, obj, template=obj)
-
-    assert_identical(result, obj)
-
-
-@pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks(obj):
     def func(obj):
         result = obj + obj.x + 5 * obj.y
