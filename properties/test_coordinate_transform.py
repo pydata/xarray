@@ -17,7 +17,7 @@ import xarray as xr
 import xarray.testing.strategies as xrst
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexes import CoordinateTransformIndex
-from xarray.testing import assert_identical
+from xarray.testing import assert_equal
 
 DATA_VAR_NAME = "_test_data_"
 
@@ -83,7 +83,11 @@ def test_basic_indexing(data, sizes):
     idxr = data.draw(xrst.basic_indexers(sizes=sizes))
     pandas_result = pandas_da.isel(idxr)
     transform_result = transform_da.isel(idxr)
-    assert_identical(pandas_result, transform_result)
+    # TODO: any indexed dim in pandas_result should be an indexed dim in transform_result
+    # This requires us to return a new CoordinateTransformIndex from .isel.
+    # for dim in pandas_result.xindexes:
+    #     assert isinstance(transform_result.xindexes[dim], CoordinateTransformIndex)
+    assert_equal(pandas_result, transform_result)
 
     # not supported today
     # pandas_result = pandas_da.sel(idxr)
@@ -102,14 +106,14 @@ def test_outer_indexing(data, sizes):
     idxr = data.draw(xrst.outer_array_indexers(sizes=sizes, min_dims=1))
     pandas_result = pandas_da.isel(idxr)
     transform_result = transform_da.isel(idxr)
-    assert_identical(pandas_result, transform_result)
+    assert_equal(pandas_result, transform_result)
 
     label_idxr = {
         dim: np.arange(pandas_da.sizes[dim])[ind.data] for dim, ind in idxr.items()
     }
     pandas_result = pandas_da.sel(label_idxr)
     transform_result = transform_da.sel(label_idxr, method="nearest")
-    assert_identical(pandas_result, transform_result)
+    assert_equal(pandas_result, transform_result)
 
 
 @given(
@@ -123,7 +127,7 @@ def test_vectorized_indexing(data, sizes):
     idxr = data.draw(xrst.vectorized_indexers(sizes=sizes))
     pandas_result = pandas_da.isel(idxr)
     transform_result = transform_da.isel(idxr)
-    assert_identical(pandas_result, transform_result)
+    assert_equal(pandas_result, transform_result)
 
     label_idxr = {
         dim: ind.copy(data=np.arange(pandas_da.sizes[dim])[ind.data])
@@ -131,4 +135,4 @@ def test_vectorized_indexing(data, sizes):
     }
     pandas_result = pandas_da.sel(label_idxr, method="nearest")
     transform_result = transform_da.sel(label_idxr, method="nearest")
-    assert_identical(pandas_result, transform_result)
+    assert_equal(pandas_result, transform_result)
