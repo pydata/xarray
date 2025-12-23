@@ -1089,6 +1089,18 @@ def test_push_dask(method, arr):
             with raise_if_dask_computes():
                 actual = push(da.from_array(arr, chunks=c), axis=0, n=n, method=method)
             np.testing.assert_equal(actual, expected)
+import numpy as np
+
+from xarray.core.duck_array_ops import lazy_array_equiv
+
+
+def test_lazy_array_equiv_numpy_0d_arrays():
+    a = np.array(1)
+    b = np.array(1)
+
+    result = lazy_array_equiv(a, b)
+
+    assert result is True
 
 
 def test_extension_array_equality(categorical1, int1):
