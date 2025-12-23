@@ -2193,7 +2193,7 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
         dim_positions = dict(zip(self._dims, positions, strict=False))
 
         result = self._transform.forward(dim_positions)
-        return np.asarray(result[self._coord_name]).squeeze()
+        return np.asarray(result[self._coord_name])
 
     def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
         raise TypeError(
@@ -2227,7 +2227,11 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
         self._check_and_raise_if_non_basic_indexer(indexer)
 
         # also works with basic indexing
-        return self._oindex_get(OuterIndexer(indexer.tuple))
+        res = self._oindex_get(OuterIndexer(indexer.tuple))
+        squeeze_axes = tuple(
+            ax for ax, idxr in enumerate(indexer.tuple) if isinstance(idxr, int)
+        )
+        return res.squeeze(squeeze_axes) if squeeze_axes else res
 
     def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         raise TypeError(
