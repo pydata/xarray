@@ -269,7 +269,8 @@ def normalize_slice(sl: slice, size: int) -> slice:
     >>> normalize_slice(slice(0, -1), 10)
     slice(0, 9, 1)
     """
-    return slice(*sl.indices(size))
+    start, stop, step = sl.indices(size)
+    return slice(start, stop if stop >= 0 else None, step)
 
 
 def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integer]]:
@@ -292,14 +293,14 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
     index it with another slice to return a new slice equivalent to applying
     the slices sequentially
     """
-    old_slice = normalize_slice(old_slice, size)
+    old_slice = slice(*old_slice.indices(size))
 
     size_after_old_slice = len(range(old_slice.start, old_slice.stop, old_slice.step))
     if size_after_old_slice == 0:
         # nothing left after applying first slice
         return slice(0)
 
-    applied_slice = normalize_slice(applied_slice, size_after_old_slice)
+    applied_slice = slice(*applied_slice.indices(size_after_old_slice))
 
     start = old_slice.start + applied_slice.start * old_slice.step
     if start < 0:
