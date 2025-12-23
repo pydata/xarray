@@ -1486,7 +1486,7 @@ class CFEncodedBase(DatasetIOBase):
                 pass
 
     def test_encoding_kwarg_dates(self) -> None:
-        ds = Dataset({"t": pd.date_range("2000-01-01", periods=3)})
+        ds = Dataset({"t": pd.date_range("2000-01-01", periods=3, unit="ns")})
         units = "days since 1900-01-01"
         kwargs = dict(encoding={"t": {"units": units}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
