@@ -156,8 +156,8 @@ Output of the method must not exceed this width.
 
 Here are some examples from Xarray's built-in indexes:
 
-- ``RangeIndex`` returns: ``RangeIndex (start=0, stop=1, step=0.1)``
-- ``NDPointIndex`` returns: ``NDPointIndex (KDTree)``
+- :py:class:`~xarray.indexes.RangeIndex` returns: ``RangeIndex (start=0, stop=1, step=0.1)``
+- :py:class:`~xarray.indexes.NDPointIndex` returns: ``NDPointIndex (KDTree)``
 
 This representation appears in the indexes section when displaying a Dataset or
 DataArray:
