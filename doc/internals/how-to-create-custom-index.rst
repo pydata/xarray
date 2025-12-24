@@ -140,6 +140,7 @@ string representation of the index.
 The ``_repr_inline_`` method receives a ``max_width`` argument (number of
 characters) that indicates the available space for the representation. If the
 representation exceeds this width, it should be truncated:
+Output of the method must not exceed this width.
 
 .. jupyter-execute::
 
@@ -151,7 +152,7 @@ representation exceeds this width, it should be truncated:
 
         def _repr_inline_(self, max_width: int) -> str:
             # Return a concise representation
-            return f"{self.__class__.__name__} (size={len(self._data)})"
+            return f"{type(self).__name__} (size={len(self._data)})"
 
 Here are some examples from Xarray's built-in indexes:
 
@@ -240,7 +241,7 @@ regularly spaced 2-dimensional data) that internally relies on two
 
         def _repr_inline_(self, max_width: int) -> str:
             dims = [idx.dim for idx in self._xy_indexes.values()]
-            return f"{self.__class__.__name__} (dims={dims})"
+            return f"{type(self).__name__} (dims={dims})"
 
 
 This basic index only supports label-based selection. Providing a full-featured
