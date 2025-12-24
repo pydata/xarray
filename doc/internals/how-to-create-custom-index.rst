@@ -140,10 +140,19 @@ string representation of the index.
 The ``_repr_inline_`` method receives a ``max_width`` argument (number of
 characters) that indicates the available space for the representation. The
 output of the method must not exceed this width.
-Output of the method must not exceed this width.
+
+Here are some examples from Xarray's built-in indexes:
+
+- :py:class:`~xarray.indexes.RangeIndex` returns: ``RangeIndex (start=0, stop=1, step=0.1)``
+- :py:class:`~xarray.indexes.NDPointIndex` returns: ``NDPointIndex (KDTree)``
+
+This representation appears in the indexes section when displaying a Dataset or
+DataArray:
 
 .. jupyter-execute::
 
+    import numpy as np
+    import xarray as xr
     from xarray import Index
 
     class MyIndex(Index):
@@ -154,20 +163,8 @@ Output of the method must not exceed this width.
             # Return a concise representation
             return f"{type(self).__name__} (size={len(self._data)})"
 
-Here are some examples from Xarray's built-in indexes:
-
-- :py:class:`~xarray.indexes.RangeIndex` returns: ``RangeIndex (start=0, stop=1, step=0.1)``
-- :py:class:`~xarray.indexes.NDPointIndex` returns: ``NDPointIndex (KDTree)``
-
-This representation appears in the indexes section when displaying a Dataset or
-DataArray:
-
-.. code-block:: none
-
-    <xarray.DataArray (x: 10)>
-    ...
-    Indexes:
-        x        MyIndex (size=10)
+    # Demonstrate how it looks in a DataArray
+    xr.DataArray(np.arange(10), dims="x").set_xindex("x", MyIndex)
 
 Alignment
 ---------
