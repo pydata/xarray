@@ -138,8 +138,8 @@ just the class name. You can customize this by implementing the
 string representation of the index.
 
 The ``_repr_inline_`` method receives a ``max_width`` argument (number of
-characters) that indicates the available space for the representation. If the
-representation exceeds this width, it should be truncated:
+characters) that indicates the available space for the representation. The
+output of the method must not exceed this width.
 Output of the method must not exceed this width.
 
 .. jupyter-execute::
