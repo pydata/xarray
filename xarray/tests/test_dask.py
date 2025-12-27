@@ -1004,6 +1004,33 @@ class TestToDaskDataFrame:
         # Verify values are correct (flattened)
         assert_array_equal(actual_computed["w"].values, w.reshape(-1))
 
+    def test_to_dask_dataframe_create_index_dataarray(self):
+        # Test create_index parameter for DataArray.to_dask_dataframe
+        arr_np = np.arange(3 * 4).reshape(3, 4)
+        arr = DataArray(
+            da.from_array(arr_np, chunks=(2, 2)),
+            [("B", [1, 2, 3]), ("A", list("cdef"))],
+            name="foo",
+        )
+
+        # With create_index=False, should use RangeIndex
+        actual = arr.to_dask_dataframe(create_index=False)
+        assert isinstance(actual, dd.DataFrame)
+        actual_computed = actual.compute()
+
+        assert isinstance(actual_computed.index, pd.RangeIndex)
+        assert "B" not in actual_computed.columns
+        assert "A" not in actual_computed.columns
+        assert "foo" in actual_computed.columns
+        assert_array_equal(actual_computed["foo"].values, arr_np.reshape(-1))
+
+        # Test incompatibility with set_index=True
+        with pytest.raises(
+            ValueError,
+            match="create_index=False is incompatible with set_index=True",
+        ):
+            arr.to_dask_dataframe(create_index=False, set_index=True)
+
 
 @pytest.mark.parametrize("method", ["load", "compute"])
 def test_dask_kwargs_variable(method):
