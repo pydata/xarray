@@ -3983,8 +3983,8 @@ class DataArray(
             If provided, must include all dimensions of this DataArray. By default,
             dimensions are sorted according to the DataArray dimensions order.
         create_index : bool, default: True
-            If True (default), create a MultiIndex from the Cartesian product
-            of this DataArray's indices. If False, use a RangeIndex instead.
+            If True (default), create a :py:class:`pandas.MultiIndex` from the Cartesian product
+            of this DataArray's indices. If False, use a :py:class:`pandas.RangeIndex` instead.
             This can be useful to avoid the potentially expensive MultiIndex
             creation.
 
@@ -7587,6 +7587,7 @@ class DataArray(
         self,
         dim_order: Sequence[Hashable] | None = None,
         set_index: bool = False,
+        create_index: bool = True,
     ) -> DaskDataFrame:
         """Convert this array into a dask.dataframe.DataFrame.
 
@@ -7602,6 +7603,13 @@ class DataArray(
             If set_index=True, the dask DataFrame is indexed by this dataset's
             coordinate. Since dask DataFrames do not support multi-indexes,
             set_index only works if the dataset only contains one dimension.
+        create_index : bool, default: True
+            If ``create_index=False``, the resulting DataFrame will use a
+            :py:class:`pandas.RangeIndex` instead of setting dimensions as index columns.
+            This can significantly improve performance when the default index is not needed.
+            ``create_index=False`` is incompatible with ``set_index=True``.
+
+            .. versionadded:: 2025.01.1
 
         Returns
         -------
@@ -7646,7 +7654,7 @@ class DataArray(
             )
         name = self.name
         ds = self._to_dataset_whole(name, shallow_copy=False)
-        return ds.to_dask_dataframe(dim_order, set_index)
+        return ds.to_dask_dataframe(dim_order, set_index, create_index)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

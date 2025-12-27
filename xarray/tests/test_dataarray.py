@@ -3746,6 +3746,60 @@ class TestDataArray:
         ):
             arr.to_dask_dataframe()
 
+    def test_to_dask_dataframe_create_index(self) -> None:
+        # Test create_index parameter for to_dask_dataframe
+        arr_np = np.arange(3 * 4).reshape(3, 4)
+        arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
+
+        # With create_index=False, should use RangeIndex
+        actual = arr.to_dask_dataframe(create_index=False)
+        actual_computed = actual.compute()
+
+        assert isinstance(actual_computed.index, pd.RangeIndex)
+        assert "B" not in actual_computed.columns
+        assert "A" not in actual_computed.columns
+        assert "foo" in actual_computed.columns
+        assert_array_equal(actual_computed["foo"].values, arr_np.reshape(-1))
+
+        # Test incompatibility with set_index=True
+        with pytest.raises(
+            ValueError,
+            match="create_index=False is incompatible with set_index=True",
+        ):
+            arr.to_dask_dataframe(create_index=False, set_index=True)
+        arr_np = np.arange(3 * 4).reshape(3, 4)
+        arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
+        expected_s = arr.to_series()
+        actual = arr.to_dask_dataframe()["foo"]
+
+        assert_array_equal(actual.values, np.asarray(expected_s.values))
+
+        actual = arr.to_dask_dataframe(dim_order=["A", "B"])["foo"]
+        assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
+
+        # regression test for coords with different dimensions
+
+        arr.coords["C"] = ("B", [-1, -2, -3])
+        expected_df = arr.to_series().to_frame()
+        expected_df["C"] = [-1] * 4 + [-2] * 4 + [-3] * 4
+        expected_df = expected_df[["C", "foo"]]
+        actual = arr.to_dask_dataframe()[["C", "foo"]]
+
+        assert_array_equal(expected_df.values, np.asarray(actual.values))
+        assert_array_equal(
+            expected_df.columns.values, np.asarray(actual.columns.values)
+        )
+
+        with pytest.raises(ValueError, match="does not match the set of dimensions"):
+            arr.to_dask_dataframe(dim_order=["B", "A", "C"])
+
+        arr.name = None
+        with pytest.raises(
+            ValueError,
+            match="Cannot convert an unnamed DataArray",
+        ):
+            arr.to_dask_dataframe()
+
     def test_to_pandas_name_matches_coordinate(self) -> None:
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")

@@ -941,6 +941,69 @@ class TestToDaskDataFrame:
         with pytest.raises(ValueError, match=r"does not match the set of dimensions"):
             ds.to_dask_dataframe(dim_order=["x"])
 
+    def test_to_dask_dataframe_create_index_false(self):
+        # Test that create_index=False uses RangeIndex instead of dimension columns
+        x = np.random.randn(10)
+        y = np.arange(10, dtype="uint8")
+        t = list("abcdefghij")
+
+        ds = Dataset(
+            {"a": ("t", da.from_array(x, chunks=4)), "b": ("t", y), "t": ("t", t)}
+        )
+
+        # With create_index=False, we should get a RangeIndex and no dimension columns
+        actual = ds.to_dask_dataframe(create_index=False)
+        assert isinstance(actual, dd.DataFrame)
+        actual_computed = actual.compute()
+
+        # Check that index is RangeIndex
+        assert isinstance(actual_computed.index, pd.RangeIndex)
+
+        # Check that dimension columns are not present
+        assert "t" not in actual_computed.columns
+
+        # Check that data columns are present
+        assert "a" in actual_computed.columns
+        assert "b" in actual_computed.columns
+
+        # Verify values are correct
+        assert_array_equal(actual_computed["a"].values, x)
+        assert_array_equal(actual_computed["b"].values, y)
+
+    def test_to_dask_dataframe_create_index_incompatible_with_set_index(self):
+        # Test that create_index=False and set_index=True raises an error
+        ds = Dataset({"a": ("t", da.from_array([1, 2, 3], chunks=2))})
+
+        with pytest.raises(
+            ValueError,
+            match="create_index=False is incompatible with set_index=True",
+        ):
+            ds.to_dask_dataframe(create_index=False, set_index=True)
+
+    def test_to_dask_dataframe_create_index_2D(self):
+        # Test create_index=False with 2D dataset
+        w = np.random.randn(2, 3)
+        ds = Dataset({"w": (("x", "y"), da.from_array(w, chunks=(1, 2)))})
+        ds["x"] = ("x", np.array([0, 1], np.int64))
+        ds["y"] = ("y", list("abc"))
+
+        actual = ds.to_dask_dataframe(create_index=False)
+        assert isinstance(actual, dd.DataFrame)
+        actual_computed = actual.compute()
+
+        # Check that index is RangeIndex
+        assert isinstance(actual_computed.index, pd.RangeIndex)
+
+        # Check that dimension columns are not present
+        assert "x" not in actual_computed.columns
+        assert "y" not in actual_computed.columns
+
+        # Check that data column is present
+        assert "w" in actual_computed.columns
+
+        # Verify values are correct (flattened)
+        assert_array_equal(actual_computed["w"].values, w.reshape(-1))
+
 
 @pytest.mark.parametrize("method", ["load", "compute"])
 def test_dask_kwargs_variable(method):

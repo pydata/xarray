@@ -7291,8 +7291,8 @@ class Dataset(
             If provided, must include all dimensions of this dataset. By
             default, dimensions are in the same order as in `Dataset.sizes`.
         create_index : bool, default: True
-            If True (default), create a MultiIndex from the Cartesian product
-            of this dataset's indices. If False, use a RangeIndex instead.
+            If True (default), create a :py:class:`pandas.MultiIndex` from the Cartesian product
+            of this dataset's indices. If False, use a :py:class:`pandas.RangeIndex` instead.
             This can be useful to avoid the potentially expensive MultiIndex
             creation.
 
@@ -7463,7 +7463,10 @@ class Dataset(
         return obj[dataframe.columns] if len(dataframe.columns) else obj
 
     def to_dask_dataframe(
-        self, dim_order: Sequence[Hashable] | None = None, set_index: bool = False
+        self,
+        dim_order: Sequence[Hashable] | None = None,
+        set_index: bool = False,
+        create_index: bool = True,
     ) -> DaskDataFrame:
         """
         Convert this dataset into a dask.dataframe.DataFrame.
@@ -7487,6 +7490,13 @@ class Dataset(
             If set_index=True, the dask DataFrame is indexed by this dataset's
             coordinate. Since dask DataFrames do not support multi-indexes,
             set_index only works if the dataset only contains one dimension.
+        create_index : bool, default: True
+            If ``create_index=False``, the resulting DataFrame will use a
+            :py:class:`pandas.RangeIndex` instead of setting dimensions as index columns.
+            This can significantly improve performance when the default index is not needed.
+            ``create_index=False`` is incompatible with ``set_index=True``.
+
+            .. versionadded:: 2025.01.1
 
         Returns
         -------
@@ -7496,11 +7506,20 @@ class Dataset(
         import dask.array as da
         import dask.dataframe as dd
 
+        if not create_index and set_index:
+            raise ValueError("create_index=False is incompatible with set_index=True")
+
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
-        columns = list(ordered_dims)
-        columns.extend(k for k in self.coords if k not in self.dims)
-        columns.extend(self.data_vars)
+        if create_index:
+            columns = list(ordered_dims)
+            columns.extend(k for k in self.coords if k not in self.dims)
+            columns.extend(self.data_vars)
+        else:
+            # When create_index=False, exclude dimensions from columns
+            columns = []
+            columns.extend(k for k in self.coords if k not in self.dims)
+            columns.extend(self.data_vars)
 
         ds_chunks = self.chunks
 
