@@ -242,7 +242,7 @@ class CachingFileManager(FileManager[T_File]):
                 file.close()
 
     def __del__(self) -> None:
-        # If we're the only CachingFileManger referencing a unclosed file,
+        # If we're the only CachingFileManger referencing an unclosed file,
         # remove it from the cache upon garbage collection.
         #
         # We keep track of our own reference count because we don't want to
