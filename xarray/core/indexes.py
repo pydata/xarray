@@ -1523,6 +1523,13 @@ class CoordinateTransformIndex(Index):
             missing_labels_str = ",".join([f"{name}" for name in missing_labels])
             raise ValueError(f"missing labels for coordinate(s): {missing_labels_str}.")
 
+        labels = {
+            name: Variable(dims=(name,), data=data)
+            if isinstance(data, np.ndarray)
+            else data
+            for (name, data) in labels.items()
+        }
+
         label0_obj = next(iter(labels.values()))
         dim_size0 = getattr(label0_obj, "sizes", {})
 
