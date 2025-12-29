@@ -138,18 +138,30 @@ def group_indexers_by_index(
     options: Mapping[str, Any],
 ) -> list[tuple[Index, dict[Any, Any]]]:
     """Returns a list of unique indexes and their corresponding indexers."""
+    # import here instead of at top to guard against circular imports
+    from xarray.core.indexes import PandasIndex
+
     unique_indexes = {}
     grouped_indexers: Mapping[int | None, dict] = defaultdict(dict)
 
     for key, label in indexers.items():
         index: Index = obj.xindexes.get(key, None)
+        if index is None and key in obj.coords:
+            coord = obj.coords[key]
+            if coord.ndim != 1:
+                raise ValueError(
+                    "Could not automatically create PandasIndex for "
+                    f"coord {key!r} with {coord.ndim} dimensions. Please explicitly "
+                    "set the index using `set_xindex`."
+                )
+            index = PandasIndex.from_variables(
+                {key: obj.coords[key].variable}, options={}
+            )
 
         if index is not None:
             index_id = id(index)
             unique_indexes[index_id] = index
             grouped_indexers[index_id][key] = label
-        elif key in obj.coords:
-            raise KeyError(f"no index found for coordinate {key!r}")
         elif key not in obj.dims:
             raise KeyError(
                 f"{key!r} is not a valid dimension or coordinate for "
@@ -2181,7 +2193,7 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
         dim_positions = dict(zip(self._dims, positions, strict=False))
 
         result = self._transform.forward(dim_positions)
-        return np.asarray(result[self._coord_name]).squeeze()
+        return np.asarray(result[self._coord_name])
 
     def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
         raise TypeError(
@@ -2215,7 +2227,11 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
         self._check_and_raise_if_non_basic_indexer(indexer)
 
         # also works with basic indexing
-        return self._oindex_get(OuterIndexer(indexer.tuple))
+        res = self._oindex_get(OuterIndexer(indexer.tuple))
+        squeeze_axes = tuple(
+            ax for ax, idxr in enumerate(indexer.tuple) if isinstance(idxr, int)
+        )
+        return res.squeeze(squeeze_axes) if squeeze_axes else res
 
     def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         raise TypeError(
