@@ -116,8 +116,6 @@ def test_assert_equal_transpose_datatree() -> None:
     xr.testing.assert_equal(a, b, check_dim_order=False)
 
     # Test with mixed dimension orders in datasets (the tricky case)
-    import numpy as np
-
     ds_mixed = xr.Dataset(
         {
             "foo": xr.DataArray(np.zeros([4, 5]), dims=("a", "b")),
@@ -265,8 +263,6 @@ def test_ensure_warnings_not_elevated(func) -> None:
 
 def test_assert_equal_dataset_check_dim_order():
     """Test for issue #10704 - check_dim_order=False with Datasets containing mixed dimension orders."""
-    import numpy as np
-
     # Dataset with variables having different dimension orders
     dataset_1 = xr.Dataset(
         {
@@ -318,8 +314,6 @@ def test_assert_equal_dataset_check_dim_order():
 
 def test_assert_equal_no_common_dims():
     """Test assert_equal when objects have no common dimensions."""
-    import numpy as np
-
     # DataArrays with completely different dimensions
     da1 = xr.DataArray(np.zeros([4, 5]), dims=("x", "y"))
     da2 = xr.DataArray(np.zeros([3, 2]), dims=("a", "b"))
@@ -349,8 +343,6 @@ def test_assert_equal_no_common_dims():
 
 def test_assert_equal_variable_transpose():
     """Test assert_equal with transposed Variable objects."""
-    import numpy as np
-
     # Variables with transposed dimensions
     var1 = xr.Variable(("x", "y"), np.zeros([4, 5]))
     var2 = xr.Variable(("y", "x"), np.zeros([5, 4]))
