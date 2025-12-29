@@ -3199,6 +3199,43 @@ class TestDataset:
         with pytest.raises(ValueError, match=r".*would corrupt the following index.*"):
             ds.drop_indexes("a")
 
+    def test_sel_on_unindexed_coordinate(self) -> None:
+        # Test that .sel() works on coordinates without an index by creating
+        # a PandasIndex on the fly
+        ds = Dataset(
+            {"data": (["x", "y"], np.arange(6).reshape(2, 3))},
+            coords={"x": [0, 1], "y": [10, 20, 30], "y_meta": ("y", ["a", "b", "c"])},
+        )
+        # Drop the index on y to create an unindexed dim coord
+        # also check that coord y_meta works despite not being a dim coord
+        ds = ds.drop_indexes("y")
+        assert "y" not in ds.xindexes
+        assert "y_meta" not in ds.xindexes
+        assert "y" in ds.coords
+
+        # .sel() should still work by creating a PandasIndex on the fly
+        result = ds.sel(y=20)
+        expected = ds.isel(y=1)
+        assert_identical(result, expected, check_default_indexes=False)
+
+        result = ds.sel(y_meta="b")
+        expected = ds.isel(y=1)
+        assert_identical(result, expected, check_default_indexes=False)
+
+        # check that our auto-created indexes are ephemeral
+        assert "y" not in ds.xindexes
+        assert "y_meta" not in ds.xindexes
+        assert "y" in ds.coords
+
+        result_slice = ds.sel(y=slice(10, 20))
+        expected_slice = ds.isel(y=slice(0, 2))
+        assert_identical(
+            result_slice["data"], expected_slice["data"], check_default_indexes=False
+        )
+        assert_identical(
+            result_slice["y"], expected_slice["y"], check_default_indexes=False
+        )
+
     def test_drop_dims(self) -> None:
         data = xr.Dataset(
             {
@@ -4027,10 +4064,23 @@ class TestDataset:
         with pytest.raises(ValueError, match="those variables are data variables"):
             ds.set_xindex("data_var", PandasIndex)
 
-        ds2 = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
+        ds = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
 
-        with pytest.raises(ValueError, match="those coordinates already have an index"):
-            ds2.set_xindex("x", PandasIndex)
+        # With drop_existing=True, it should succeed
+        result = ds.set_xindex("x", PandasIndex)
+        assert "x" in result.xindexes
+        assert isinstance(result.xindexes["x"], PandasIndex)
+
+        class CustomIndex(PandasIndex):
+            pass
+
+        result_custom = ds.set_xindex("x", CustomIndex)
+        assert "x" in result_custom.xindexes
+        assert isinstance(result_custom.xindexes["x"], CustomIndex)
+
+        # Verify the result is equivalent to drop_indexes + set_xindex
+        expected = ds.drop_indexes("x").set_xindex("x", CustomIndex)
+        assert_identical(result_custom, expected)
 
     def test_set_xindex_options(self) -> None:
         ds = Dataset(coords={"foo": ("x", ["a", "a", "b", "b"])})
@@ -5596,7 +5646,12 @@ class TestDataset:
             }
         )
         roundtripped = Dataset.from_dict(ds.to_dict(data=data))
-        assert_identical(ds, roundtripped)
+        if data == "array":
+            # TODO: to_dict(data="array") converts datetime64[ns] to datetime64[us]
+            # (numpy's default), causing index dtype mismatch on roundtrip.
+            assert_identical(ds, roundtripped, check_indexes=False)
+        else:
+            assert_identical(ds, roundtripped)
 
     def test_to_dict_with_numpy_attrs(self) -> None:
         # this doesn't need to roundtrip

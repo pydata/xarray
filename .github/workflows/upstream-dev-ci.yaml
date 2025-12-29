@@ -64,14 +64,14 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: restore-pixi-lock
         with:
           enableCrossOsArchive: true
           path: |
             pixi.lock
           key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
-      - uses: prefix-dev/setup-pixi@v0.9.0
+      - uses: prefix-dev/setup-pixi@v0.9.3
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
@@ -121,14 +121,14 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: restore-pixi-lock
         with:
           enableCrossOsArchive: true
           path: |
             pixi.lock
           key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
-      - uses: prefix-dev/setup-pixi@v0.9.0
+      - uses: prefix-dev/setup-pixi@v0.9.3
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
@@ -146,7 +146,7 @@ jobs:
         run: |
           pixi run -e ${{matrix.pixi-env}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@v5.5.2
         with:
           file: mypy_report/cobertura.xml
           flags: mypy

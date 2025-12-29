@@ -2869,7 +2869,7 @@ class DataArray(
         **options,
     ) -> Self:
         """Set a new, Xarray-compatible index from one or more existing
-        coordinate(s).
+        coordinate(s). Existing index(es) on the coord(s) will be replaced.
 
         Parameters
         ----------
@@ -4216,7 +4216,7 @@ class DataArray(
         Notes
         -----
         Only xarray.Dataset objects can be written to netCDF files, so
-        the xarray.DataArray is converted to a xarray.Dataset object
+        the xarray.DataArray is converted to an xarray.Dataset object
         containing a single variable. If the DataArray has no name, or if the
         name is the same as a coordinate name, then it is given the name
         ``"__xarray_dataarray_variable__"``.
@@ -4685,6 +4685,13 @@ class DataArray(
     def _all_compat(self, other: Self, compat_str: str) -> bool:
         """Helper function for equals, broadcast_equals, and identical"""
 
+        # For identical, also compare indexes
+        if compat_str == "identical":
+            from xarray.core.indexes import indexes_identical
+
+            if not indexes_identical(self.xindexes, other.xindexes):
+                return False
+
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
 
@@ -4804,8 +4811,8 @@ class DataArray(
             return False
 
     def identical(self, other: Self) -> bool:
-        """Like equals, but also checks the array name and attributes, and
-        attributes on all coordinates.
+        """Like equals, but also checks the array name, attributes,
+        attributes on all coordinates, and indexes.
 
         Parameters
         ----------
@@ -5171,6 +5178,11 @@ class DataArray(
         dot
         numpy.tensordot
 
+        Notes
+        -----
+        This method automatically aligns coordinates by their values (not their order).
+        See :ref:`math automatic alignment` and :py:func:`xarray.dot` for more details.
+
         Examples
         --------
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
@@ -5187,6 +5199,14 @@ class DataArray(
         >>> dot_result = da.dot(dm)
         >>> dot_result.dims
         ('x', 'y')
+
+        Coordinates are aligned by their values:
+
+        >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+        >>> y = xr.DataArray([2, 20], coords=[("foo", ["b", "a"])])
+        >>> x.dot(y)
+        <xarray.DataArray ()> Size: 8B
+        array(40)
 
         """
         if isinstance(other, Dataset):
