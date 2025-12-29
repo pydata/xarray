@@ -7604,10 +7604,11 @@ class DataArray(
             coordinate. Since dask DataFrames do not support multi-indexes,
             set_index only works if the dataset only contains one dimension.
         create_index : bool, default: True
-            If ``create_index=False``, the resulting DataFrame will use a
-            :py:class:`pandas.RangeIndex` instead of setting dimensions as index columns.
-            This can significantly improve performance when the default index is not needed.
-            ``create_index=False`` is incompatible with ``set_index=True``.
+            If ``create_index=True`` (default), dimension coordinates will be included
+            as columns in the resulting DataFrame. If ``create_index=False``, dimension
+            coordinates will be excluded, leaving only data variables and non-dimension
+            coordinates. This can improve performance and reduce memory usage when dimension
+            information is not needed. ``create_index=False`` is incompatible with ``set_index=True``.
 
             .. versionadded:: 2025.01.1
 

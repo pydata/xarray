@@ -942,7 +942,7 @@ class TestToDaskDataFrame:
             ds.to_dask_dataframe(dim_order=["x"])
 
     def test_to_dask_dataframe_create_index_false(self):
-        # Test that create_index=False uses RangeIndex instead of dimension columns
+        # Test that create_index=False excludes dimension columns
         x = np.random.randn(10)
         y = np.arange(10, dtype="uint8")
         t = list("abcdefghij")
@@ -951,7 +951,7 @@ class TestToDaskDataFrame:
             {"a": ("t", da.from_array(x, chunks=4)), "b": ("t", y), "t": ("t", t)}
         )
 
-        # With create_index=False, we should get a RangeIndex and no dimension columns
+        # With create_index=False, dimension columns should be excluded
         actual = ds.to_dask_dataframe(create_index=False)
         assert isinstance(actual, dd.DataFrame)
         actual_computed = actual.compute()
@@ -959,7 +959,7 @@ class TestToDaskDataFrame:
         # Check that index is RangeIndex
         assert isinstance(actual_computed.index, pd.RangeIndex)
 
-        # Check that dimension columns are not present
+        # Check that dimension columns are NOT present
         assert "t" not in actual_computed.columns
 
         # Check that data columns are present
