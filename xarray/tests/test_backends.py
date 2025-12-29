@@ -3637,6 +3637,18 @@ class ZarrBase(CFEncodedBase):
         ) as ds1:
             assert_equal(ds1, original)
 
+    @requires_dask
+    def test_chunk_auto_with_small_dask_chunks(self) -> None:
+        original = Dataset({"u": (("x",), np.zeros(10))}).chunk({"x": 2})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, **self.version_kwargs)
+            with xr.open_zarr(store, **self.version_kwargs) as default:
+                assert default.chunks == {"x": (2, 2, 2, 2, 2)}
+                with xr.open_zarr(store, chunks="auto", **self.version_kwargs) as auto:
+                    assert_identical(auto, original)
+                    assert auto.chunks == {"x": (10,)}
+                    assert auto.chunks != default.chunks
+
     @requires_cftime
     def test_open_zarr_use_cftime(self) -> None:
         ds = create_test_data()
