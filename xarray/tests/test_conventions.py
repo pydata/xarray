@@ -280,7 +280,7 @@ class TestDecodeCF:
         expected = Dataset(
             {"foo": ("t", [0, 0, 0], {"units": "bar"})},
             {
-                "t": pd.date_range("2000-01-01", periods=3),
+                "t": pd.date_range("2000-01-01", periods=3, unit="ns"),
                 "y": ("t", [5.0, 10.0, np.nan]),
             },
         )
@@ -422,7 +422,7 @@ class TestDecodeCF:
         )
         expected = Dataset(
             {
-                "t": pd.date_range("2000-01-01", periods=3),
+                "t": pd.date_range("2000-01-01", periods=3, unit="ns"),
                 "foo": (
                     ("t", "x"),
                     [[0, 0, 0], [1, 1, 1], [2, 2, 2]],
