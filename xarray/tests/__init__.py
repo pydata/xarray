@@ -31,6 +31,7 @@ from xarray.tests.arrays import (  # noqa: F401
     DuckArrayWrapper,
     FirstElementAccessibleArray,
     InaccessibleArray,
+    IndexableArray,
     UnexpectedDataAccess,
 )
 
@@ -331,9 +332,45 @@ def assert_equal(a, b, check_default_indexes=True):
     xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def assert_identical(a, b, check_default_indexes=True):
+def assert_identical(a, b, check_default_indexes=True, check_indexes=None):
+    """Assert that two xarray objects are identical.
+
+    This is a test-internal wrapper around xarray.testing.assert_identical
+    that also validates internal invariants.
+
+    Parameters
+    ----------
+    a, b : xarray objects
+        Objects to compare.
+    check_default_indexes : bool, default True
+        If True, validates that 1D dimension coordinates have default indexes
+        (internal invariant check). Set to False for objects that intentionally
+        lack default indexes.
+    check_indexes : bool, optional
+        If not specified (default), defaults to the value of check_default_indexes
+        for backwards compatibility.
+        If True (default), compare indexes as part of identity check.
+        If False, skip index comparison (only check data, attrs, names).
+    """
     __tracebackhide__ = True
-    xarray.testing.assert_identical(a, b)
+    # For backwards compatibility, check_default_indexes=False implies check_indexes=False
+    # unless check_indexes is explicitly specified
+    if check_indexes is None:
+        check_indexes = check_default_indexes
+    if check_indexes:
+        xarray.testing.assert_identical(a, b)
+    else:
+        # Drop all indexes before comparing to skip index comparison
+        from xarray import DataArray, Dataset
+
+        if isinstance(a, Dataset | DataArray):
+            a_no_idx = a.drop_indexes(list(a.xindexes))
+            b_no_idx = b.drop_indexes(list(b.xindexes))
+        else:
+            a_no_idx, b_no_idx = a, b
+
+        xarray.testing.assert_identical(a_no_idx, b_no_idx)
+
     xarray.testing._assert_internal_invariants(a, check_default_indexes)
     xarray.testing._assert_internal_invariants(b, check_default_indexes)
 

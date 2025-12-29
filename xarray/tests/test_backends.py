@@ -208,7 +208,7 @@ def _check_compression_codec_available(codec: str | None) -> bool:
 
             # Attempt to create a variable with the compression
             if codec and codec.startswith("blosc"):
-                nc.createVariable(  # type: ignore[call-overload]
+                nc.createVariable(  # type: ignore[call-overload, unused-ignore]
                     varname="test",
                     datatype="f4",
                     dimensions=("x",),
@@ -216,7 +216,7 @@ def _check_compression_codec_available(codec: str | None) -> bool:
                     blosc_shuffle=1,
                 )
             else:
-                nc.createVariable(  # type: ignore[call-overload]
+                nc.createVariable(  # type: ignore[call-overload, unused-ignore]
                     varname="test", datatype="f4", dimensions=("x",), compression=codec
                 )
 
@@ -766,7 +766,7 @@ class DatasetIOBase:
         expected["td"].encoding = encoding
         expected["td0"].encoding = encoding
         with self.roundtrip(
-            expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="ns")}
+            expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="s")}
         ) as actual:
             assert_identical(expected, actual)
 
@@ -1486,7 +1486,7 @@ class CFEncodedBase(DatasetIOBase):
                 pass
 
     def test_encoding_kwarg_dates(self) -> None:
-        ds = Dataset({"t": pd.date_range("2000-01-01", periods=3)})
+        ds = Dataset({"t": pd.date_range("2000-01-01", periods=3, unit="ns")})
         units = "days since 1900-01-01"
         kwargs = dict(encoding={"t": {"units": units}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:

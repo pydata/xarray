@@ -809,7 +809,7 @@ class PandasIndex(Index):
         indxr = indexers[self.dim]
         if isinstance(indxr, Variable):
             if indxr.dims != (self.dim,):
-                # can't preserve a index if result has new dimensions
+                # can't preserve an index if result has new dimensions
                 return None
             else:
                 indxr = indxr.data
@@ -1523,6 +1523,13 @@ class CoordinateTransformIndex(Index):
             missing_labels_str = ",".join([f"{name}" for name in missing_labels])
             raise ValueError(f"missing labels for coordinate(s): {missing_labels_str}.")
 
+        labels = {
+            name: Variable(dims=(name,), data=data)
+            if isinstance(data, np.ndarray)
+            else data
+            for (name, data) in labels.items()
+        }
+
         label0_obj = next(iter(labels.values()))
         dim_size0 = getattr(label0_obj, "sizes", {})
 
@@ -2013,6 +2020,60 @@ def indexes_equal(
         equal = variable.equals(other_variable)
 
     return cast(bool, equal)
+
+
+def indexes_identical(
+    a_indexes: Indexes[Index],
+    b_indexes: Indexes[Index],
+) -> bool:
+    """Check if two Indexes objects are identical.
+
+    Two Indexes objects are identical if they have the same set of
+    indexed coordinate names, each corresponding pair of indexes are
+    the same type, and are equal (using Index.equals()).
+
+    Unlike indexes_equal(), this function does NOT fall back to variable
+    comparison when index types differ - different index types means
+    not identical.
+
+    Parameters
+    ----------
+    a_indexes : Indexes
+        First Indexes object to compare.
+    b_indexes : Indexes
+        Second Indexes object to compare.
+
+    Returns
+    -------
+    bool
+        True if the two Indexes objects are identical.
+    """
+    # Must have same indexed coordinate names
+    if set(a_indexes.keys()) != set(b_indexes.keys()):
+        return False
+
+    # Compare each index pair
+    # Note: could optimize for PandasMultiIndex where multiple coord names
+    # share the same index object, but this is not performance critical
+    for coord_name in a_indexes.keys():
+        a_idx = a_indexes[coord_name]
+        b_idx = b_indexes[coord_name]
+
+        # For identical(), index types must match
+        if type(a_idx) is not type(b_idx):
+            return False
+
+        try:
+            if not a_idx.equals(b_idx):
+                return False
+        except NotImplementedError:
+            # Fall back to variable comparison when equals() not implemented
+            a_var = a_indexes.variables[coord_name]
+            b_var = b_indexes.variables[coord_name]
+            if not a_var.equals(b_var):
+                return False
+
+    return True
 
 
 def indexes_all_equal(

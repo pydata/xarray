@@ -71,6 +71,7 @@ from xarray.tests import (
     requires_dask,
     requires_numexpr,
     requires_pint,
+    requires_pyarrow,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -1908,28 +1909,50 @@ class TestDataset:
         actual = ds.reindex(cat=["foo"])["cat"].values
         assert (actual == np.array(["foo"])).all()
 
-    @pytest.mark.parametrize("fill_value", [np.nan, pd.NA])
-    def test_extensionarray_negative_reindex(self, fill_value) -> None:
-        cat = pd.Categorical(
-            ["foo", "bar", "baz"],
-            categories=["foo", "bar", "baz", "qux", "quux", "corge"],
-        )
+    @pytest.mark.parametrize("fill_value", [np.nan, pd.NA, None])
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(
+                pd.Categorical(
+                    ["foo", "bar", "baz"],
+                    categories=["foo", "bar", "baz", "qux"],
+                ),
+                id="categorical",
+            ),
+        ]
+        + (
+            [
+                pytest.param(
+                    pd.array([1, 1, None], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_extensionarray_negative_reindex(self, fill_value, extension_array) -> None:
         ds = xr.Dataset(
-            {"cat": ("index", cat)},
+            {"arr": ("index", extension_array)},
             coords={"index": ("index", np.arange(3))},
         )
+        kwargs = {}
+        if fill_value is not None:
+            kwargs["fill_value"] = fill_value
         reindexed_cat = cast(
             pd.api.extensions.ExtensionArray,
-            (
-                ds.reindex(index=[-1, 1, 1], fill_value=fill_value)["cat"]
-                .to_pandas()
-                .values
-            ),
+            (ds.reindex(index=[-1, 1, 1], **kwargs)["arr"].to_pandas().values),
         )
-        assert reindexed_cat.equals(pd.array([pd.NA, "bar", "bar"], dtype=cat.dtype))  # type: ignore[attr-defined]
+        assert reindexed_cat.equals(  # type: ignore[attr-defined]
+            pd.array(
+                [pd.NA, extension_array[1], extension_array[1]],
+                dtype=extension_array.dtype,
+            )
+        )
 
+    @requires_pyarrow
     def test_extension_array_reindex_same(self) -> None:
-        series = pd.Series([1, 2, pd.NA, 3], dtype=pd.Int32Dtype())
+        series = pd.Series([1, 2, pd.NA, 3], dtype="int32[pyarrow]")
         test = xr.Dataset({"test": series})
         res = test.reindex(dim_0=series.index)
         align(res, test, join="exact")
@@ -3144,6 +3167,43 @@ class TestDataset:
         with pytest.raises(ValueError, match=r".*would corrupt the following index.*"):
             ds.drop_indexes("a")
 
+    def test_sel_on_unindexed_coordinate(self) -> None:
+        # Test that .sel() works on coordinates without an index by creating
+        # a PandasIndex on the fly
+        ds = Dataset(
+            {"data": (["x", "y"], np.arange(6).reshape(2, 3))},
+            coords={"x": [0, 1], "y": [10, 20, 30], "y_meta": ("y", ["a", "b", "c"])},
+        )
+        # Drop the index on y to create an unindexed dim coord
+        # also check that coord y_meta works despite not being a dim coord
+        ds = ds.drop_indexes("y")
+        assert "y" not in ds.xindexes
+        assert "y_meta" not in ds.xindexes
+        assert "y" in ds.coords
+
+        # .sel() should still work by creating a PandasIndex on the fly
+        result = ds.sel(y=20)
+        expected = ds.isel(y=1)
+        assert_identical(result, expected, check_default_indexes=False)
+
+        result = ds.sel(y_meta="b")
+        expected = ds.isel(y=1)
+        assert_identical(result, expected, check_default_indexes=False)
+
+        # check that our auto-created indexes are ephemeral
+        assert "y" not in ds.xindexes
+        assert "y_meta" not in ds.xindexes
+        assert "y" in ds.coords
+
+        result_slice = ds.sel(y=slice(10, 20))
+        expected_slice = ds.isel(y=slice(0, 2))
+        assert_identical(
+            result_slice["data"], expected_slice["data"], check_default_indexes=False
+        )
+        assert_identical(
+            result_slice["y"], expected_slice["y"], check_default_indexes=False
+        )
+
     def test_drop_dims(self) -> None:
         data = xr.Dataset(
             {
@@ -3972,10 +4032,23 @@ class TestDataset:
         with pytest.raises(ValueError, match="those variables are data variables"):
             ds.set_xindex("data_var", PandasIndex)
 
-        ds2 = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
+        ds = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
 
-        with pytest.raises(ValueError, match="those coordinates already have an index"):
-            ds2.set_xindex("x", PandasIndex)
+        # With drop_existing=True, it should succeed
+        result = ds.set_xindex("x", PandasIndex)
+        assert "x" in result.xindexes
+        assert isinstance(result.xindexes["x"], PandasIndex)
+
+        class CustomIndex(PandasIndex):
+            pass
+
+        result_custom = ds.set_xindex("x", CustomIndex)
+        assert "x" in result_custom.xindexes
+        assert isinstance(result_custom.xindexes["x"], CustomIndex)
+
+        # Verify the result is equivalent to drop_indexes + set_xindex
+        expected = ds.drop_indexes("x").set_xindex("x", CustomIndex)
+        assert_identical(result_custom, expected)
 
     def test_set_xindex_options(self) -> None:
         ds = Dataset(coords={"foo": ("x", ["a", "a", "b", "b"])})
@@ -4311,9 +4384,11 @@ class TestDataset:
         # coordinate created from variables names should be of string dtype
         data = np.array(["a", "a", "a", "b"], dtype="<U1")
         expected_stacked_variable = DataArray(name="variable", data=data, dims="z")
+
+        # coerce from `IndexVariable` to `Variable` before comparing
         assert_identical(
-            stacked.coords["variable"].drop_vars(["z", "variable", "y"]),
-            expected_stacked_variable,
+            stacked["variable"].variable.to_base_variable(),
+            expected_stacked_variable.variable,
         )
 
     def test_to_stacked_array_transposed(self) -> None:
@@ -4779,6 +4854,18 @@ class TestDataset:
         with pytest.raises(ValueError, match=error_regex):
             actual[var_list] = data
 
+    def test_setitem_uses_base_variable_class_even_for_index_variables(self) -> None:
+        ds = Dataset(coords={"x": [1, 2, 3]})
+        ds["y"] = ds["x"]
+
+        # explicit check
+        assert isinstance(ds["x"].variable, IndexVariable)
+        assert not isinstance(ds["y"].variable, IndexVariable)
+
+        # test internal invariant checks when comparing the datasets
+        expected = Dataset(data_vars={"y": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]})
+        assert_identical(ds, expected)
+
     def test_assign(self) -> None:
         ds = Dataset()
         actual = ds.assign(x=[0, 1, 2], y=2)
@@ -4867,6 +4954,19 @@ class TestDataset:
         assert result_shallow["y"].attrs != {}
         assert list(result.data_vars) == list(ds.data_vars)
         assert list(result.coords) == list(ds.coords)
+
+    def test_drop_attrs_custom_index(self):
+        class CustomIndex(Index):
+            @classmethod
+            def from_variables(cls, variables, *, options=None):
+                return cls()
+
+        ds = xr.Dataset(coords={"y": ("x", [1, 2])}).set_xindex("y", CustomIndex)
+        # should not raise a TypeError
+        ds.drop_attrs()
+
+        # make sure the index didn't disappear
+        assert "y" in ds.xindexes
 
     def test_assign_multiindex_level(self) -> None:
         data = create_test_multiindex()
@@ -5514,7 +5614,12 @@ class TestDataset:
             }
         )
         roundtripped = Dataset.from_dict(ds.to_dict(data=data))
-        assert_identical(ds, roundtripped)
+        if data == "array":
+            # TODO: to_dict(data="array") converts datetime64[ns] to datetime64[us]
+            # (numpy's default), causing index dtype mismatch on roundtrip.
+            assert_identical(ds, roundtripped, check_indexes=False)
+        else:
+            assert_identical(ds, roundtripped)
 
     def test_to_dict_with_numpy_attrs(self) -> None:
         # this doesn't need to roundtrip
@@ -5644,6 +5749,55 @@ class TestDataset:
             ds.dropna("a", how="somehow")  # type: ignore[arg-type]
         with pytest.raises(TypeError, match=r"must specify how or thresh"):
             ds.dropna("a", how=None)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize(
+        "fill_value,extension_array",
+        [
+            pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="category"),
+        ]
+        + (
+            [
+                pytest.param(
+                    0,
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                    id="int64[pyarrow]",
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_fillna_extension_array(self, fill_value, extension_array) -> None:
+        srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
+        ds = srs.to_xarray()
+        filled = ds.fillna(fill_value)
+        assert filled["data"].dtype == extension_array.dtype
+        assert (
+            filled["data"].values
+            == np.array([fill_value, *srs["data"].values[1:]], dtype="object")
+        ).all()
+
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="category"),
+        ]
+        + (
+            [
+                pytest.param(
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_dropna_extension_array(self, extension_array) -> None:
+        srs = pd.DataFrame({"data": extension_array}, index=np.array([1, 2, 3]))
+        ds = srs.to_xarray()
+        dropped = ds.dropna("index")
+        assert dropped["data"].dtype == extension_array.dtype
+        assert (dropped["data"].values == srs["data"].values[1:]).all()
 
     def test_fillna(self) -> None:
         ds = Dataset({"a": ("x", [np.nan, 1, np.nan, 3])}, {"x": [0, 1, 2, 3]})
