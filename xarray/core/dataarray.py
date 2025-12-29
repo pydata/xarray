@@ -5170,6 +5170,11 @@ class DataArray(
         dot
         numpy.tensordot
 
+        Notes
+        -----
+        This method automatically aligns coordinates by their values (not their order).
+        See :ref:`math automatic alignment` and :py:func:`xarray.dot` for more details.
+
         Examples
         --------
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
@@ -5186,6 +5191,14 @@ class DataArray(
         >>> dot_result = da.dot(dm)
         >>> dot_result.dims
         ('x', 'y')
+
+        Coordinates are aligned by their values:
+
+        >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+        >>> y = xr.DataArray([2, 20], coords=[("foo", ["b", "a"])])
+        >>> x.dot(y)
+        <xarray.DataArray ()> Size: 8B
+        array(40)
 
         """
         if isinstance(other, Dataset):
