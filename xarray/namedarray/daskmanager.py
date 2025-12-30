@@ -43,7 +43,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def chunks(self, data: Any) -> _NormalizedChunks:
         return data.chunks  # type: ignore[no-any-return]
 
-    def meta_chunks(chunks, shape, target, typesize, encoded_chunks):
+    def meta_chunks(self, chunks, shape, target, typesize, encoded_chunks):
         """Determine meta chunks
 
         This takes in a chunks value that contains ``"auto"`` values in certain
