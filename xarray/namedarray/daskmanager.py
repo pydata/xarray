@@ -43,54 +43,62 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def chunks(self, data: Any) -> _NormalizedChunks:
         return data.chunks  # type: ignore[no-any-return]
 
-    def meta_chunks(self, chunks, shape, target, typesize, encoded_chunks):
+    def preserve_chunks(
+        self,
+        chunks: T_Chunks,
+        shape: tuple[int, ...],
+        target: int,
+        typesize: int,
+        previous_chunks: tuple[int],
+    ) -> tuple[int]:
         """Determine meta chunks
 
-        This takes in a chunks value that contains ``"auto"`` values in certain
+        This takes in a chunks value that contains ``"preserve"`` values in certain
         dimensions and replaces those values with concrete dimension sizes that try
         to get chunks to be of a certain size in bytes, provided by the ``limit=``
-        keyword. Any dimensions marked as ``"auto"`` will potentially be multiplied
-        to get close to the byte target, while never splitting ``encoded_chunks``.
+        keyword. Any dimensions marked as ``"preserve"`` will potentially be multiplied
+        to get close to the byte target, while never splitting ``previous_chunks``.
 
         Parameters
         ----------
-        chunks: tuple
+        chunks: tuple[int | str | tuple, ...]
             A tuple of either dimensions or tuples of explicit chunk dimensions
-            Some entries should be "auto". Any explicit dimensions must match or
-            be multiple of ``encoded_chunks``
+            Some entries should be "preserve". Any explicit dimensions must match or
+            be multiple of ``previous_chunks``
         shape: tuple[int]
-            The
+            The shape of the array
         target: int
             The target size of the chunk in bytes.
         typesize: int
             The size, in bytes, of each element of the chunk.
-        encoded_chunks: tuple[int]
+        previous_chunks: tuple[int]
+            Size of chunks being preserved. Expressed as a tuple of ints which matches
+            the way chunks are encoded in Zarr.
         """
         shape = np.array(shape)
+        previous_chunks = np.array(previous_chunks)
 
-        # "auto" stays as "auto"
-        # empty tuple means match encoded chunks
+        # "preserve" stays as "preserve"
+        # empty tuple means match previous chunks
         # -1 means whole dim is in one chunk
         desired_chunks = np.array(
             [
-                c or encoded_chunks[i] if c != -1 else shape[i]
+                c or previous_chunks[i] if c != -1 else shape[i]
                 for i, c in enumerate(chunks)
             ]
         )
 
-        auto_chunks = desired_chunks == "preserve"
-        chunks = np.where(auto_chunks, np.array(encoded_chunks), desired_chunks).astype(
-            int
-        )
+        preserve_chunks = desired_chunks == "preserve"
+        chunks = np.where(preserve_chunks, previous_chunks, desired_chunks).astype(int)
 
         while True:
-            # Repeatedly loop over the ``encoded_chunks``, multiplying them by 2.
+            # Repeatedly loop over the ``previous_chunks``, multiplying them by 2.
             # Stop when:
             # 1a. we are larger than the target chunk size OR
             # 1b. we are within 50% of the target chunk size OR
-            # 2. the size of the auto chunks matches the shape of the array
+            # 2. the chunk covers the entire array
 
-            num_chunks = shape / chunks * auto_chunks
+            num_chunks = shape / chunks * preserve_chunks
             idx = np.argmax(num_chunks)
             chunk_bytes = np.prod(chunks) * typesize
 
@@ -119,13 +127,13 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             raise ValueError('chunks cannot use a combination of "auto" and "preserve"')
 
         if previous_chunks and any(c == "preserve" for c in chunks):
-            chunks = self.meta_chunks(
+            chunks = self.preserve_chunks(
                 chunks,
                 shape=shape,
                 target=96 * 1024 * 1024,
                 typesize=dtype.itemsize,
-                encoded_chunks=previous_chunks,
-            )  # type: ignore[no-untyped-call]
+                previous_chunks=previous_chunks,
+            )
 
         return normalize_chunks(
             chunks,
