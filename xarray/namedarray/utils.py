@@ -222,7 +222,7 @@ def _get_chunk(  # type: ignore[no-untyped-def]
     preferred_chunk_shape = tuple(
         itertools.starmap(preferred_chunks.get, zip(dims, shape, strict=True))
     )
-    if isinstance(chunks, Number) or (chunks == "auto"):
+    if isinstance(chunks, (Number, str)):
         chunks = dict.fromkeys(dims, chunks)
     chunk_shape = tuple(
         chunks.get(dim, None) or preferred_chunk_sizes

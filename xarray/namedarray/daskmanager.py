@@ -49,9 +49,8 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         This takes in a chunks value that contains ``"auto"`` values in certain
         dimensions and replaces those values with concrete dimension sizes that try
         to get chunks to be of a certain size in bytes, provided by the ``limit=``
-        keyword.  If multiple dimensions are marked as ``"auto"`` then they will
-        all respond to get close to the byte target, while never splitting
-        ``encoded_chunks``.
+        keyword. Any dimensions marked as ``"auto"`` will potentially be multiplied
+        to get close to the byte target, while never splitting ``encoded_chunks``.
 
         Parameters
         ----------
@@ -79,7 +78,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             ]
         )
 
-        auto_chunks = desired_chunks == "auto"
+        auto_chunks = desired_chunks == "preserve"
         chunks = np.where(auto_chunks, np.array(encoded_chunks), desired_chunks).astype(
             int
         )
@@ -88,18 +87,20 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             # Repeatedly loop over the ``encoded_chunks``, multiplying them by 2.
             # Stop when:
             # 1a. we are larger than the target chunk size OR
-            # 1b. we are within 50% of the target chunk size
+            # 1b. we are within 50% of the target chunk size OR
+            # 2. the size of the auto chunks matches the shape of the array
 
-            idx = np.argmax(shape / chunks * auto_chunks)
+            num_chunks = shape / chunks * auto_chunks
+            idx = np.argmax(num_chunks)
             chunk_bytes = np.prod(chunks) * typesize
 
             if chunk_bytes > target or abs(chunk_bytes - target) / target < 0.5:
                 break
 
-            if np.prod(chunks) == 1:
-                break  # Element size larger than max_bytes
+            if (num_chunks <= 1).all():
+                break
 
-            chunks[idx] = chunks[idx] * 2
+            chunks[idx] = min(chunks[idx] * 2, shape[idx])
 
         return tuple(int(x) for x in chunks)
 
@@ -114,13 +115,17 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         """Called by open_dataset"""
         from dask.array.core import normalize_chunks
 
-        chunks = self.meta_chunks(
-            chunks,
-            shape=shape,
-            target=128 * 1024 * 1024,
-            typesize=dtype.itemsize,
-            encoded_chunks=previous_chunks,
-        )  # type: ignore[no-untyped-call]
+        if any(c == "preserve" for c in chunks) and any(c == "auto" for c in chunks):
+            raise ValueError('chunks cannot use a combination of "auto" and "preserve"')
+
+        if previous_chunks and any(c == "preserve" for c in chunks):
+            chunks = self.meta_chunks(
+                chunks,
+                shape=shape,
+                target=96 * 1024 * 1024,
+                typesize=dtype.itemsize,
+                encoded_chunks=previous_chunks,
+            )  # type: ignore[no-untyped-call]
 
         return normalize_chunks(
             chunks,
