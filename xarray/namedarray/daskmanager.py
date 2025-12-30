@@ -43,6 +43,66 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     def chunks(self, data: Any) -> _NormalizedChunks:
         return data.chunks  # type: ignore[no-any-return]
 
+    def meta_chunks(chunks, shape, target, typesize, encoded_chunks):
+        """Determine meta chunks
+
+        This takes in a chunks value that contains ``"auto"`` values in certain
+        dimensions and replaces those values with concrete dimension sizes that try
+        to get chunks to be of a certain size in bytes, provided by the ``limit=``
+        keyword.  If multiple dimensions are marked as ``"auto"`` then they will
+        all respond to get close to the byte target, while never splitting
+        ``encoded_chunks``.
+
+        Parameters
+        ----------
+        chunks: tuple
+            A tuple of either dimensions or tuples of explicit chunk dimensions
+            Some entries should be "auto". Any explicit dimensions must match or
+            be multiple of ``encoded_chunks``
+        shape: tuple[int]
+            The
+        target: int
+            The target size of the chunk in bytes.
+        typesize: int
+            The size, in bytes, of each element of the chunk.
+        encoded_chunks: tuple[int]
+        """
+        shape = np.array(shape)
+
+        # "auto" stays as "auto"
+        # empty tuple means match encoded chunks
+        # -1 means whole dim is in one chunk
+        desired_chunks = np.array(
+            [
+                c or encoded_chunks[i] if c != -1 else shape[i]
+                for i, c in enumerate(chunks)
+            ]
+        )
+
+        auto_chunks = desired_chunks == "auto"
+        chunks = np.where(auto_chunks, np.array(encoded_chunks), desired_chunks).astype(
+            int
+        )
+
+        while True:
+            # Repeatedly loop over the ``encoded_chunks``, multiplying them by 2.
+            # Stop when:
+            # 1a. we are larger than the target chunk size OR
+            # 1b. we are within 50% of the target chunk size
+
+            idx = np.argmax(shape / chunks * auto_chunks)
+            chunk_bytes = np.prod(chunks) * typesize
+
+            if chunk_bytes > target or abs(chunk_bytes - target) / target < 0.5:
+                break
+
+            if np.prod(chunks) == 1:
+                break  # Element size larger than max_bytes
+
+            chunks[idx] = chunks[idx] * 2
+
+        return tuple(int(x) for x in chunks)
+
     def normalize_chunks(
         self,
         chunks: T_Chunks | _NormalizedChunks,
@@ -53,6 +113,14 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
     ) -> Any:
         """Called by open_dataset"""
         from dask.array.core import normalize_chunks
+
+        chunks = self.meta_chunks(
+            chunks,
+            shape=shape,
+            target=128 * 1024 * 1024,
+            typesize=dtype.itemsize,
+            encoded_chunks=previous_chunks,
+        )  # type: ignore[no-untyped-call]
 
         return normalize_chunks(
             chunks,
