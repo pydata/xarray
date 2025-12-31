@@ -20,6 +20,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        T_ChunkDim,
         T_Chunks,
         _Chunks,
         _DType,
@@ -780,12 +781,12 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     @staticmethod
     def preserve_chunks(
-        chunks: T_Chunks,
+        chunks: tuple[T_ChunkDim, ...],
         shape: tuple[int, ...],
         target: int,
         typesize: int,
-        previous_chunks: tuple[int],
-    ) -> tuple[int]:
+        previous_chunks: tuple[int, ...] | _NormalizedChunks,
+    ) -> tuple[T_ChunkDim, ...]:
         """Determine meta chunks
 
         This takes in a chunks value that contains ``"preserve"`` values in certain
@@ -810,21 +811,28 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
             Size of chunks being preserved. Expressed as a tuple of ints which matches
             the way chunks are encoded in Zarr.
         """
-        shape = np.array(shape)
-        previous_chunks = np.array(previous_chunks)
+        # pop the first item off in case it's a tuple of tuples
+        preferred_chunks = np.array(
+            [c if isinstance(c, int) else c[0] for c in previous_chunks]
+        )
 
         # "preserve" stays as "preserve"
-        # empty tuple means match previous chunks
+        # None or empty tuple means match previous chunks
         # -1 means whole dim is in one chunk
         desired_chunks = np.array(
             [
-                c or previous_chunks[i] if c != -1 else shape[i]
+                c or preferred_chunks[i] if c != -1 else shape[i]
                 for i, c in enumerate(chunks)
             ]
         )
-
         preserve_chunks = desired_chunks == "preserve"
-        chunks = np.where(preserve_chunks, previous_chunks, desired_chunks).astype(int)
+
+        if not preserve_chunks.any():
+            return chunks
+
+        new_chunks = np.where(preserve_chunks, preferred_chunks, desired_chunks).astype(
+            int
+        )
 
         while True:
             # Repeatedly loop over the ``previous_chunks``, multiplying them by 2.
@@ -833,9 +841,9 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
             # 1b. we are within 50% of the target chunk size OR
             # 2. the chunk covers the entire array
 
-            num_chunks = shape / chunks * preserve_chunks
+            num_chunks = np.array(shape) / new_chunks * preserve_chunks
             idx = np.argmax(num_chunks)
-            chunk_bytes = np.prod(chunks) * typesize
+            chunk_bytes = np.prod(new_chunks) * typesize
 
             if chunk_bytes > target or abs(chunk_bytes - target) / target < 0.5:
                 break
@@ -843,6 +851,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
             if (num_chunks <= 1).all():
                 break
 
-            chunks[idx] = min(chunks[idx] * 2, shape[idx])
+            new_chunks[idx] = min(new_chunks[idx] * 2, shape[idx])
 
-        return tuple(int(x) for x in chunks)
+        return tuple(int(x) for x in new_chunks)
