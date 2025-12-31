@@ -236,6 +236,20 @@ def _get_chunk(  # type: ignore[no-untyped-def]
         limit = None
         dtype = data.dtype
 
+    if any(c == "preserve" for c in chunk_shape) and any(
+        c == "auto" for c in chunk_shape
+    ):
+        raise ValueError('chunks cannot use a combination of "auto" and "preserve"')
+
+    if shape and preferred_chunk_shape and any(c == "preserve" for c in chunk_shape):
+        chunk_shape = chunkmanager.preserve_chunks(
+            chunk_shape,
+            shape=shape,
+            target=chunkmanager.get_auto_chunk_size(),
+            typesize=getattr(dtype, "itemsize", 8),
+            previous_chunks=preferred_chunk_shape,
+        )
+
     chunk_shape = chunkmanager.normalize_chunks(
         chunk_shape,
         shape=shape,
