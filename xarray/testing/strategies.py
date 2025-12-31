@@ -31,6 +31,7 @@ __all__ = [
     "names",
     "outer_array_indexers",
     "pandas_index_dtypes",
+    "shape_and_chunks",
     "supported_dtypes",
     "unique_subset_of",
     "variables",
@@ -208,6 +209,73 @@ def dimension_sizes(
         min_size=min_dims,
         max_size=max_dims,
     )
+
+
+@st.composite
+def shape_and_chunks(
+    draw: st.DrawFn,
+    *,
+    min_dims: int = 1,
+    max_dims: int = 4,
+    min_size: int = 1,
+    max_size: int = 900,
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """
+    Generate a shape tuple and corresponding chunks tuple.
+
+    Each element in the chunks tuple is smaller than or equal to the
+    corresponding element in the shape tuple.
+
+    Requires the hypothesis package to be installed.
+
+    Parameters
+    ----------
+    min_dims : int, optional
+        Minimum number of dimensions. Default is 1.
+    max_dims : int, optional
+        Maximum number of dimensions. Default is 4.
+    min_size : int, optional
+        Minimum size for each dimension. Default is 1.
+    max_size : int, optional
+        Maximum size for each dimension. Default is 100.
+
+    Returns
+    -------
+    tuple[tuple[int, ...], tuple[int, ...]]
+        A tuple containing (shape, chunks) where:
+        - shape is a tuple of positive integers
+        - chunks is a tuple where each element is an integer <= corresponding shape element
+
+    Examples
+    --------
+    >>> shape_and_chunks().example()  # doctest: +SKIP
+    ((5, 3, 8), (2, 3, 4))
+    >>> shape_and_chunks().example()  # doctest: +SKIP
+    ((10, 7), (10, 3))
+    >>> shape_and_chunks(min_dims=2, max_dims=3).example()  # doctest: +SKIP
+    ((4, 6, 2), (2, 3, 1))
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
+    """
+    # Generate the shape tuple
+    ndim = draw(st.integers(min_value=min_dims, max_value=max_dims))
+    shape = draw(
+        st.tuples(
+            *[st.integers(min_value=min_size, max_value=max_size) for _ in range(ndim)]
+        )
+    )
+
+    # Generate chunks tuple with each element <= corresponding shape element
+    chunks_elements = []
+    for size in shape:
+        # Each chunk is an integer between 1 and the size of that dimension
+        chunk_element = draw(st.integers(min_value=1, max_value=size))
+        chunks_elements.append(chunk_element)
+
+    chunks = tuple(chunks_elements)
+    return shape, chunks
 
 
 _readable_strings = st.text(
