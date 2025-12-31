@@ -8,8 +8,12 @@ What's New
 
 .. _whats-new.v2025.12.1:
 
-v2025.12.1 (unreleased)
------------------------
+v2025.12.1 (Dec 31, 2025)
+-------------------------
+This release harmonizes ``chunks`` behavior between ``open_zarr`` and ``open_dataset``, improves xindex handling, and contains several bug fixes.
+
+Thanks to the 13 contributors to this release:
+Christine P. Chai, Davis Bennett, Deepak Cherian, Dhruva Kumar Kaushal, Florian Knappers, Ian Hunt-Isaak, Jacob Tomlinson, Julia Signell, Justus Magin, Sam Levang, Simon Høxbro Hansen and Spencer Clark
 
 New Features
 ~~~~~~~~~~~~
