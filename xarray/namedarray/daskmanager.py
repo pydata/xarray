@@ -55,18 +55,6 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         """Called by open_dataset"""
         from dask.array.core import normalize_chunks
 
-        if any(c == "preserve" for c in chunks) and any(c == "auto" for c in chunks):
-            raise ValueError('chunks cannot use a combination of "auto" and "preserve"')
-
-        if shape and previous_chunks and any(c == "preserve" for c in chunks):
-            chunks = self.preserve_chunks(
-                chunks,
-                shape=shape,
-                target=self.get_auto_chunk_size(),
-                typesize=getattr(dtype, "itemsize", 8),
-                previous_chunks=previous_chunks,
-            )
-
         return normalize_chunks(
             chunks,
             shape=shape,
