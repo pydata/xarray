@@ -266,15 +266,10 @@ def shape_and_chunks(
             *[st.integers(min_value=min_size, max_value=max_size) for _ in range(ndim)]
         )
     )
-
     # Generate chunks tuple with each element <= corresponding shape element
-    chunks_elements = []
-    for size in shape:
-        # Each chunk is an integer between 1 and the size of that dimension
-        chunk_element = draw(st.integers(min_value=1, max_value=size))
-        chunks_elements.append(chunk_element)
-
-    chunks = tuple(chunks_elements)
+    chunks = draw(
+        st.tuples(*[st.integers(min_value=1, max_value=size) for size in shape])
+    )
     return shape, chunks
 
 
