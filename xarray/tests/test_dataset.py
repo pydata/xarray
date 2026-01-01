@@ -7783,7 +7783,8 @@ def test_eval_functions() -> None:
 
     # pandas namespace should work
     result = ds.eval("pd.isna(a)")
-    np.testing.assert_array_equal(result, pd.isna(ds["a"]))
+    # pd.isna returns ndarray, not DataArray
+    np.testing.assert_array_equal(result, pd.isna(ds["a"].values))
 
     # xarray namespace should work
     result = ds.eval("xr.where(a > 1, a, 0)")
@@ -7915,7 +7916,7 @@ def test_eval_data_variable_priority() -> None:
 
     # np namespace should still provide access to actual functions
     result = ds.eval("np.abs(other - 10)")
-    expected = np.abs(ds["other"] - 10)
+    expected = abs(ds["other"] - 10)
     assert_equal(result, expected)
 
     # np.sum should work even when 'sum' is a data variable
