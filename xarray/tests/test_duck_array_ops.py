@@ -1150,6 +1150,7 @@ def test_extension_array_attr():
     assert (roundtripped == wrapped).all()
 
     interval_array = pd.arrays.IntervalArray.from_breaks([0, 1, 2, 3], closed="right")
-    wrapped = PandasExtensionArray(interval_array)
+    # pandas-stubs types PandasExtensionArray too narrowly; IntervalArray is valid
+    wrapped = PandasExtensionArray(interval_array)  # type: ignore[arg-type]
     assert_array_equal(wrapped.left, interval_array.left, strict=True)
     assert wrapped.closed == interval_array.closed

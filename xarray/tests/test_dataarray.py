@@ -3931,7 +3931,8 @@ class TestDataArray:
         y = np.random.randn(10, 3)
         y[2] = np.nan
         t = pd.Series(pd.date_range("20130101", periods=10))
-        t[2] = np.nan
+        # pandas-stubs doesn't allow np.nan for datetime Series, but it converts to NaT
+        t[2] = np.nan  # type: ignore[call-overload]
         lat = [77.7, 83.2, 76]
         da = DataArray(y, {"t": t, "lat": lat}, dims=["t", "lat"])
         roundtripped = DataArray.from_dict(da.to_dict())
