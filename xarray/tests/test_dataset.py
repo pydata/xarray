@@ -7738,22 +7738,22 @@ def test_eval_chained_comparisons() -> None:
     assert_identical(expect, actual)
 
 
-def test_eval_security() -> None:
-    """Test that eval blocks unsafe operations."""
+def test_eval_restricted_syntax() -> None:
+    """Test that eval blocks certain syntax to emulate pd.eval() behavior."""
     ds = Dataset({"a": ("x", [1, 2, 3])})
 
-    # Dunder/private attribute access should be blocked (sandbox escape vector)
+    # Private attribute access is not allowed (consistent with pd.eval)
     with pytest.raises(ValueError, match="Access to private attributes is not allowed"):
         ds.eval("a.__class__")
 
     with pytest.raises(ValueError, match="Access to private attributes is not allowed"):
         ds.eval("a._private")
 
-    # Lambda expressions should be blocked to reduce attack surface
+    # Lambda expressions are not allowed (pd.eval: "Only named functions are supported")
     with pytest.raises(ValueError, match="Lambda expressions are not allowed"):
         ds.eval("(lambda x: x + 1)(a)")
 
-    # Dangerous builtins should not be available
+    # These builtins are not in the namespace
     with pytest.raises(NameError):
         ds.eval("__import__('os')")
 
@@ -7792,7 +7792,7 @@ def test_eval_functions() -> None:
 
     assert_equal(result, xr.where(ds["a"] > 1, ds["a"], 0))
 
-    # Common builtins should work (we block __builtins__ for security)
+    # Common builtins should work
     result = ds.eval("abs(a - 2)")
     assert_equal(result, abs(ds["a"] - 2))
 

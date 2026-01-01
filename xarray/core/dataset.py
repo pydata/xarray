@@ -9536,7 +9536,7 @@ class Dataset(
 
     # Base namespace for eval expressions (modules added lazily in _eval_expression
     # to avoid circular imports for xarray).
-    # We add common builtins back since we block __builtins__ for security.
+    # We add common builtins back since we use an empty __builtins__ dict.
     # Note: builtins.map is used explicitly because 'map' in class scope refers
     # to the Dataset.map method defined earlier in this class body.
     _EVAL_NAMESPACE_BUILTINS: dict[str, Any] = {
@@ -9651,41 +9651,21 @@ class Dataset(
             return ast.fix_missing_locations(result)
 
     def _validate_eval_expression(self, tree: ast.AST) -> None:
-        """Validate that an AST doesn't contain unsafe patterns.
+        """Validate that an AST doesn't contain patterns we don't support.
 
-        This provides basic protection against common attack vectors but is NOT
-        designed to be a robust security boundary. Eval with untrusted user input
-        should always be treated with caution.
-
-        Security measures:
-        - Empty __builtins__ dict blocks __import__, open, exec, etc.
-        - Blocking private/dunder attributes prevents class hierarchy traversal
-          attacks (e.g., x.__class__.__bases__[0].__subclasses__())
-        - Limited namespace: data variables, coordinates, np/pd/xr modules, and
-          safe builtins:
-          - Numeric/aggregation: abs, min, max, round, len, sum, pow, any, all
-          - Type constructors: int, float, bool, str, list, tuple, dict, set, slice
-          - Iteration helpers: range, zip, enumerate, map, filter
-
-        Known limitations:
-        - Format strings (e.g., "{0.__class__}".format(x)) can access dunder
-          attributes at runtime, bypassing AST-level checks. This allows
-          information disclosure but not direct code execution.
-
-        We welcome contributions to improve the security model.
+        These restrictions emulate pd.eval() behavior for consistency.
         """
         for node in ast.walk(tree):
-            # Block lambda expressions to reduce attack surface
+            # Block lambda expressions (pd.eval: "Only named functions are supported")
             if isinstance(node, ast.Lambda):
                 raise ValueError(
                     "Lambda expressions are not allowed in eval(). "
                     "Use direct operations on data variables instead."
                 )
-            # Block private/dunder attributes to prevent class hierarchy traversal
+            # Block private/dunder attributes (consistent with pd.eval restrictions)
             if isinstance(node, ast.Attribute) and node.attr.startswith("_"):
                 raise ValueError(
-                    f"Access to private attributes is not allowed: '{node.attr}'. "
-                    f"For security, attributes starting with '_' are blocked."
+                    f"Access to private attributes is not allowed: '{node.attr}'"
                 )
 
     def _eval_expression(self, expr: str) -> DataArray:
@@ -9743,10 +9723,7 @@ class Dataset(
 
         Warning
         -------
-        This method evaluates Python expressions and should not be used with
-        untrusted input. While basic security measures are in place (empty
-        ``__builtins__``, blocked private attributes, limited namespace), they
-        are not designed to be a robust security sandbox.
+        Like ``pd.eval()``, this method should not be used with untrusted input.
 
         Examples
         --------
