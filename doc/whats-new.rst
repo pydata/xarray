@@ -28,6 +28,11 @@ New Features
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- Change the default value for ``chunk`` in ``open_zarr`` to ``_default`` and remove special mapping of ``"auto"``
+  to ``{}`` or ``None`` in ``open_zarr``. If ``chunks`` is not set, the default behavior is the same as before.
+  Explicitly setting ``chunks="auto"`` will match the behavior of ``chunks="auto"`` in
+  ``open_dataset(..., engine="zarr")`` (:issue:`11002` :pull:`11010`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 - :py:meth:`Dataset.identical`,` :py:meth:`DataArray.identical`, and
   :py:func:`testings.assert_identical` now compare indexes (xindexes).
   Two objects with identical data but different indexes will no longer
