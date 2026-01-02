@@ -573,7 +573,7 @@ def _interval_to_double_bound_points(
     xarray: Iterable[pd.Interval], yarray: Iterable
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Helper function to deal with a xarray consisting of pd.Intervals. Each
+    Helper function to deal with an xarray consisting of pd.Intervals. Each
     interval is replaced with both boundaries. I.e. the length of xarray
     doubles. yarray is modified so it matches the new shape of xarray.
     """
