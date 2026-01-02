@@ -6,22 +6,22 @@ Complex Numbers
 ===============
 
 .. jupyter-execute::
-   :hide-code:
+    :hide-code:
 
-   import numpy as np
-   import xarray as xr
+    import numpy as np
+    import xarray as xr
 
 .. jupyter-execute::
-   :hide-code:
+    :hide-code:
 
-   # Ensure the file is located in a unique temporary directory
-   # so that it doesn't conflict with parallel builds of the
-   # documentation.
+    # Ensure the file is located in a unique temporary directory
+    # so that it doesn't conflict with parallel builds of the
+    # documentation.
 
-   import tempfile
-   import os.path
+    import tempfile
+    import os.path
 
-   tempdir = tempfile.TemporaryDirectory()
+    tempdir = tempfile.TemporaryDirectory()
 
 Xarray leverages NumPy to seamlessly handle complex numbers in :py:class:`~xarray.DataArray` and :py:class:`~xarray.Dataset` objects.
 
@@ -66,12 +66,12 @@ Writing complex data to NetCDF files (see :ref:`io.netcdf`) is supported via :py
 
    .. jupyter-execute::
 
-      complex_nums_h5_filename = "complex_nums_h5.nc"
+       complex_nums_h5_filename = "complex_nums_h5.nc"
 
    .. jupyter-execute::
-      :hide-code:
+       :hide-code:
 
-      complex_nums_h5_filename = os.path.join(tempdir.name, complex_nums_h5_filename)
+       complex_nums_h5_filename = os.path.join(tempdir.name, complex_nums_h5_filename)
 
    .. jupyter-execute::
 
@@ -89,12 +89,12 @@ Writing complex data to NetCDF files (see :ref:`io.netcdf`) is supported via :py
 
    .. jupyter-execute::
 
-      complex_nums_nc4_filename = "complex_nums_nc4.nc"
+       complex_nums_nc4_filename = "complex_nums_nc4.nc"
 
    .. jupyter-execute::
-      :hide-code:
+       :hide-code:
 
-      complex_nums_nc4_filename = os.path.join(tempdir.name, complex_nums_nc4_filename)
+       complex_nums_nc4_filename = os.path.join(tempdir.name, complex_nums_nc4_filename)
 
    .. jupyter-execute::
 
@@ -120,12 +120,12 @@ split the complex array into separate real and imaginary variables before saving
 
 .. jupyter-execute::
 
-   complex_manual_filename = "complex_manual.nc"
+    complex_manual_filename = "complex_manual.nc"
 
 .. jupyter-execute::
-   :hide-code:
+    :hide-code:
 
-   complex_manual_filename = os.path.join(tempdir.name, complex_manual_filename)
+    complex_manual_filename = os.path.join(tempdir.name, complex_manual_filename)
 
 .. jupyter-execute::
 

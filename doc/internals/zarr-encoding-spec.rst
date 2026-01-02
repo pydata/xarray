@@ -198,6 +198,6 @@ when working with tools that expect a particular chunk key format.
     chunk key encoding based on the store's format and configuration.
 
 .. jupyter-execute::
-   :hide-code:
+    :hide-code:
 
-   tempdir.cleanup()
+    tempdir.cleanup()
