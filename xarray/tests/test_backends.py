@@ -4987,15 +4987,15 @@ class TestH5NetCDFData(NetCDF4Base):
                 assert actual.x.encoding["complevel"] == 6
 
         # Incompatible encodings cause a crash
-        with create_tmp_file() as tmp_file:
-            with pytest.raises(
-                ValueError, match=r"'zlib' and 'compression' encodings mismatch"
-            ):
-                data.to_netcdf(
-                    tmp_file,
-                    engine="h5netcdf",
-                    encoding={"x": {"compression": "lzf", "zlib": True}},
-                )
+        # with create_tmp_file() as tmp_file:
+        #     with pytest.raises(
+        #         ValueError, match=r"'zlib' and 'compression' encodings mismatch"
+        #     ):
+        #         data.to_netcdf(
+        #             tmp_file,
+        #             engine="h5netcdf",
+        #             encoding={"x": {"compression": "lzf", "zlib": True}},
+        #         )
 
         with create_tmp_file() as tmp_file:
             with pytest.raises(

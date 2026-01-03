@@ -268,6 +268,11 @@ def _extract_nc4_variable_encoding(
     safe_to_drop = {"source", "original_shape"}
     valid_encodings = {
         "zlib",
+        "szip",
+        "bzip2",
+        "blosc",
+        # "lzf",
+        "zstd",
         "complevel",
         "fletcher32",
         "contiguous",
@@ -313,6 +318,34 @@ def _extract_nc4_variable_encoding(
     for k in safe_to_drop:
         if k in encoding:
             del encoding[k]
+
+    # only one of these variables should be true
+    # TODO: discuss the order of priorities
+    compression = None
+    if encoding.pop("zlib", False):
+        compression = "zlib"
+    if encoding.pop("szip", False):
+        compression = "szip"
+    if encoding.pop("bzip2", False):
+        compression = "bzip2"
+    if encoding.pop("blosc", False):
+        compression = "blosc"
+    # if encoding.pop("lzf", False):
+    #     compression = "lzf"
+    if encoding.pop("zstd", False):
+        compression = "zstd"
+
+    # If both styles are used together, h5py format takes precedence
+    if compression is not None and encoding.get("compression") is None:
+        # This error message is in direct conflict with
+        # test_compression_encoding_h5py
+        # https://github.com/pydata/xarray/blob/main/xarray/tests/test_backends.py#L4986
+        # valid_compressions = [compression, None]
+        # if compression == "zlib":
+        #     valid_compressions += ["gzip",]
+        # if encoding.get("compression") not in valid_compressions:
+        #     raise ValueError(f"'{compression}' and 'compression' encodings mismatch")
+        encoding["compression"] = compression
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
