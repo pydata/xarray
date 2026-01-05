@@ -3497,7 +3497,8 @@ class TestDataset:
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         original = Dataset({}, midx_coords)
 
-        midx_renamed = midx.rename(["a", "c"])
+        # pandas-stubs expects Hashable for rename, but list of names works for MultiIndex
+        midx_renamed = midx.rename(["a", "c"])  # type: ignore[call-overload]
         midx_coords_renamed = Coordinates.from_pandas_multiindex(midx_renamed, "x")
         expected = Dataset({}, midx_coords_renamed)
 
@@ -5602,7 +5603,8 @@ class TestDataset:
         y = np.random.randn(10, 3)
         y[2] = np.nan
         t = pd.Series(pd.date_range("20130101", periods=10))
-        t[2] = np.nan
+        # pandas-stubs doesn't allow np.nan for datetime Series, but it converts to NaT
+        t[2] = np.nan  # type: ignore[call-overload]
 
         lat = [77.7, 83.2, 76]
         ds = Dataset(

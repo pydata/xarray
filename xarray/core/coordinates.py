@@ -169,7 +169,8 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
             for i, index in enumerate(indexes):
                 if isinstance(index, pd.MultiIndex):
-                    codes, levels = index.codes, index.levels
+                    codes: list[np.ndarray] = list(index.codes)
+                    levels = index.levels
                 else:
                     code, level = pd.factorize(index)
                     codes = [code]

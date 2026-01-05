@@ -255,7 +255,7 @@ mypy = "==1.18.1"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"
-pandas-stubs = "<=2.2.3.241126" # https://github.com/pydata/xarray/issues/10110
+pandas-stubs = "<=2.3.3.251219"
 types-colorama = "*"
 types-docutils = "*"
 types-psutil = "*"
