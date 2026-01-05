@@ -4613,20 +4613,17 @@ class Dataset(
         # or iterables.
         for k, v in dim.items():
             if hasattr(v, "__iter__"):
-                # If the value for the new dimension is an iterable, then
-                # save the coordinates to the variables dict, and set the
-                # value within the dim dict to the length of the iterable
-                # for later use.
-
                 if create_index_for_new_dim:
                     index = PandasIndex(v, k)
                     indexes[k] = index
                     name_and_new_1d_var = index.create_variables()
                 else:
                     name_and_new_1d_var = {k: Variable(data=v, dims=k)}
+
                 variables.update(name_and_new_1d_var)
                 coord_names.add(k)
                 dim[k] = variables[k].size
+
             elif isinstance(v, int):
                 pass  # Do nothing if the dimensions value is just an int
             else:

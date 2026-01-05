@@ -2309,7 +2309,15 @@ class TestDataArray:
             attrs={"key": "entry"},
         ).drop_vars("dim_0")
         assert_identical(other_way_expected, other_way)
+    def test_expand_dims_infers_string_dtype_for_new_dim_coords(self) -> None:
+        da = xr.DataArray(10).expand_dims({"band": ["b1", "b2", "b3"]})
+        assert da.coords["band"].dtype.kind == "U"
+    def test_expand_dims_string_coord_does_not_poison_concat(self) -> None:
+            da_string=xr.DataArray([1,2,3],dims=["x"],coords={"x":["a","b","c"]})
+            da_from_expand_dims=xr.DataArray(10).expand_dims({"x":["d","e","f"]})
 
+            result=xr.concat([da_string,da_from_expand_dims],dim="x")
+            assert result.coords["x"].dtype.kind=="U"
     def test_set_index(self) -> None:
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
