@@ -7402,8 +7402,8 @@ class Dataset(
                 "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
             )
 
-        arrays = []
-        extension_arrays = []
+        arrays: list[tuple[Hashable, np.ndarray]] = []
+        extension_arrays: list[tuple[Hashable, pd.Series]] = []
         for k, v in dataframe.items():
             if not is_allowed_extension_array(v) or isinstance(
                 v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES

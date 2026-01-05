@@ -7500,10 +7500,10 @@ def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> N
     )
     tdf.index.name = "scenario"
     tdf.columns.name = "year"
-    tdf = cast(pd.DataFrame, tdf.stack())
-    tdf.name = "tas"
+    tdf_series = tdf.stack()
+    tdf_series.name = "tas"  # type: ignore[union-attr]
 
-    txr = tdf.to_xarray()
+    txr = tdf_series.to_xarray()
 
     txr.to_netcdf(tmpdir.join("test.nc"))
 
