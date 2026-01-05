@@ -317,273 +317,291 @@ def test_eval_coordinate_priority() -> None:
     assert_equal(result, expected)
 
 
-class TestEvalErrorMessages:
-    """Test that eval() produces clear error messages for common mistakes."""
-
-    def test_undefined_variable(self) -> None:
-        """Test error message when referencing an undefined variable."""
-        ds = Dataset({"a": ("x", [1, 2, 3])})
-        with pytest.raises(NameError, match="undefined_var"):
-            ds.eval("undefined_var + a")
-
-    def test_syntax_error(self) -> None:
-        """Test error message for malformed expressions."""
-        ds = Dataset({"a": ("x", [1, 2, 3])})
-        with pytest.raises(ValueError, match="Invalid"):
-            ds.eval("a +")
-
-    def test_invalid_assignment(self) -> None:
-        """Test error message when assignment target is invalid."""
-        ds = Dataset({"a": ("x", [1, 2, 3])})
-        # "1 = a" should fail during parsing - can't assign to a literal
-        with pytest.raises(ValueError, match="Invalid"):
-            ds.eval("1 = a")
-
-    def test_dunder_access(self) -> None:
-        """Test error message when trying to access dunder attributes."""
-        ds = Dataset({"a": ("x", [1, 2, 3])})
-        with pytest.raises(ValueError, match="private attributes"):
-            ds.eval("a.__class__")
-
-    def test_missing_method(self) -> None:
-        """Test error message when calling a nonexistent method."""
-        ds = Dataset({"a": ("x", [1, 2, 3])})
-        # This should raise AttributeError from the DataArray
-        with pytest.raises(AttributeError, match="nonexistent_method"):
-            ds.eval("a.nonexistent_method()")
-
-    def test_type_error_in_expression(self) -> None:
-        """Test error message when types are incompatible."""
-        ds = Dataset({"a": ("x", [1, 2, 3])})
-        # Adding string to numeric array should raise TypeError or similar
-        with pytest.raises((TypeError, np.exceptions.DTypePromotionError)):
-            ds.eval("a + 'string'")
+# Error message tests
 
 
-class TestEvalEdgeCases:
-    """Test edge cases for eval()."""
-
-    def test_empty_expression(self) -> None:
-        """Test handling of empty expression string."""
-        ds = Dataset({"a": ("x", [1, 2, 3])})
-        with pytest.raises(ValueError):
-            ds.eval("")
-
-    def test_whitespace_only_expression(self) -> None:
-        """Test handling of whitespace-only expression."""
-        ds = Dataset({"a": ("x", [1, 2, 3])})
-        with pytest.raises(ValueError):
-            ds.eval("   ")
-
-    def test_just_variable_name(self) -> None:
-        """Test that just a variable name returns the variable."""
-        ds = Dataset({"a": ("x", [1, 2, 3])})
-        result = ds.eval("a")
-        expected = ds["a"]
-        assert_equal(result, expected)
-
-    def test_unicode_variable_names(self) -> None:
-        """Test that unicode variable names work in expressions."""
-        # Greek letters are valid Python identifiers
-        ds = Dataset({"α": ("x", [1.0, 2.0, 3.0]), "β": ("x", [4.0, 5.0, 6.0])})
-        result = ds.eval("α + β")
-        expected = ds["α"] + ds["β"]
-        assert_equal(result, expected)
-
-    def test_long_expression(self) -> None:
-        """Test that very long expressions work correctly."""
-        ds = Dataset({"a": ("x", [1.0, 2.0, 3.0])})
-        # Build a long expression: a + a + a + ... (50 times)
-        long_expr = " + ".join(["a"] * 50)
-        result = ds.eval(long_expr)
-        expected = ds["a"] * 50
-        assert_equal(result, expected)
+def test_eval_error_undefined_variable() -> None:
+    """Test error message when referencing an undefined variable."""
+    ds = Dataset({"a": ("x", [1, 2, 3])})
+    with pytest.raises(NameError, match="undefined_var"):
+        ds.eval("undefined_var + a")
 
 
-class TestEvalDask:
-    """Test Dataset.eval() with dask-backed arrays."""
+def test_eval_error_syntax() -> None:
+    """Test error message for malformed expressions."""
+    ds = Dataset({"a": ("x", [1, 2, 3])})
+    with pytest.raises(ValueError, match="Invalid"):
+        ds.eval("a +")
 
-    @requires_dask
-    def test_basic_arithmetic_preserves_dask(self) -> None:
-        """Test that basic arithmetic with dask arrays returns dask-backed result."""
-        from xarray.core.utils import is_duck_dask_array
 
-        ds = Dataset(
-            {"a": ("x", np.arange(10.0)), "b": ("x", np.linspace(0, 1, 10))}
-        ).chunk({"x": 5})
+def test_eval_error_invalid_assignment() -> None:
+    """Test error message when assignment target is invalid."""
+    ds = Dataset({"a": ("x", [1, 2, 3])})
+    # "1 = a" should fail during parsing - can't assign to a literal
+    with pytest.raises(ValueError, match="Invalid"):
+        ds.eval("1 = a")
 
-        with raise_if_dask_computes():
-            result = ds.eval("a + b")
 
-        assert isinstance(result, DataArray)
-        assert is_duck_dask_array(result.data)
+def test_eval_error_dunder_access() -> None:
+    """Test error message when trying to access dunder attributes."""
+    ds = Dataset({"a": ("x", [1, 2, 3])})
+    with pytest.raises(ValueError, match="private attributes"):
+        ds.eval("a.__class__")
 
-        # Verify correctness when computed
-        expected = ds["a"] + ds["b"]
-        assert_equal(result, expected)
 
-    @requires_dask
-    def test_assignment_preserves_dask(self) -> None:
-        """Test that assignments with dask arrays preserve lazy evaluation."""
-        from xarray.core.utils import is_duck_dask_array
+def test_eval_error_missing_method() -> None:
+    """Test error message when calling a nonexistent method."""
+    ds = Dataset({"a": ("x", [1, 2, 3])})
+    # This should raise AttributeError from the DataArray
+    with pytest.raises(AttributeError, match="nonexistent_method"):
+        ds.eval("a.nonexistent_method()")
 
-        ds = Dataset(
-            {"a": ("x", np.arange(10.0)), "b": ("x", np.linspace(0, 1, 10))}
-        ).chunk({"x": 5})
 
-        with raise_if_dask_computes():
-            result = ds.eval("z = a + b")
+def test_eval_error_type_mismatch() -> None:
+    """Test error message when types are incompatible."""
+    ds = Dataset({"a": ("x", [1, 2, 3])})
+    # Adding string to numeric array should raise TypeError or similar
+    with pytest.raises((TypeError, np.exceptions.DTypePromotionError)):
+        ds.eval("a + 'string'")
 
-        assert isinstance(result, Dataset)
-        assert "z" in result.data_vars
-        assert is_duck_dask_array(result["z"].data)
 
-        # Verify correctness when computed
-        expected = ds["a"] + ds["b"]
-        assert_equal(result["z"], expected)
+# Edge case tests
 
-    @requires_dask
-    def test_method_chaining_with_compute(self) -> None:
-        """Test that method chaining works with dask arrays."""
-        ds = Dataset({"a": (("x", "y"), np.arange(20.0).reshape(4, 5))}).chunk(
-            {"x": 2, "y": 5}
-        )
 
-        # Calling .mean() should still be lazy
-        result = ds.eval("a.mean(dim='x')")
-        # Calling .compute() should return numpy-backed result
-        computed = result.compute()
+def test_eval_empty_expression() -> None:
+    """Test handling of empty expression string."""
+    ds = Dataset({"a": ("x", [1, 2, 3])})
+    with pytest.raises(ValueError):
+        ds.eval("")
 
-        expected = ds["a"].mean(dim="x").compute()
-        assert_equal(computed, expected)
 
-    @requires_dask
-    def test_xr_where_preserves_dask(self) -> None:
-        """Test that xr.where() with dask arrays preserves lazy evaluation."""
-        from xarray.core.utils import is_duck_dask_array
+def test_eval_whitespace_only_expression() -> None:
+    """Test handling of whitespace-only expression."""
+    ds = Dataset({"a": ("x", [1, 2, 3])})
+    with pytest.raises(ValueError):
+        ds.eval("   ")
 
-        ds = Dataset({"a": ("x", np.arange(-5, 5, dtype=float))}).chunk({"x": 5})
 
-        with raise_if_dask_computes():
-            result = ds.eval("xr.where(a > 0, a, 0)")
+def test_eval_just_variable_name() -> None:
+    """Test that just a variable name returns the variable."""
+    ds = Dataset({"a": ("x", [1, 2, 3])})
+    result = ds.eval("a")
+    expected = ds["a"]
+    assert_equal(result, expected)
 
-        assert isinstance(result, DataArray)
-        assert is_duck_dask_array(result.data)
 
-        # Verify correctness when computed
-        expected = xr.where(ds["a"] > 0, ds["a"], 0)
-        assert_equal(result, expected)
+def test_eval_unicode_variable_names() -> None:
+    """Test that unicode variable names work in expressions."""
+    # Greek letters are valid Python identifiers
+    ds = Dataset({"α": ("x", [1.0, 2.0, 3.0]), "β": ("x", [4.0, 5.0, 6.0])})
+    result = ds.eval("α + β")
+    expected = ds["α"] + ds["β"]
+    assert_equal(result, expected)
 
-    @requires_dask
-    def test_complex_expression_preserves_dask(self) -> None:
-        """Test that complex expressions preserve dask backing."""
-        from xarray.core.utils import is_duck_dask_array
 
-        rng = np.random.default_rng(42)
-        ds = Dataset(
-            {
-                "x": (["time", "lat", "lon"], rng.random((3, 4, 5))),
-                "y": (["time", "lat", "lon"], rng.random((3, 4, 5))),
-            }
-        ).chunk({"time": 1, "lat": 2, "lon": 5})
+def test_eval_long_expression() -> None:
+    """Test that very long expressions work correctly."""
+    ds = Dataset({"a": ("x", [1.0, 2.0, 3.0])})
+    # Build a long expression: a + a + a + ... (50 times)
+    long_expr = " + ".join(["a"] * 50)
+    result = ds.eval(long_expr)
+    expected = ds["a"] * 50
+    assert_equal(result, expected)
 
-        with raise_if_dask_computes():
-            result = ds.eval("x * 2 + y ** 2")
 
-        assert is_duck_dask_array(result.data)
+# Dask tests
 
-        # Verify correctness when computed
-        expected = ds["x"] * 2 + ds["y"] ** 2
-        assert_equal(result, expected)
 
-    @requires_dask
-    def test_mixed_dask_and_numpy(self) -> None:
-        """Test expressions with mixed dask and numpy arrays."""
-        from xarray.core.utils import is_duck_dask_array
+@requires_dask
+def test_eval_dask_basic_arithmetic() -> None:
+    """Test that basic arithmetic with dask arrays returns dask-backed result."""
+    from xarray.core.utils import is_duck_dask_array
 
-        ds = Dataset(
-            {
-                "dask_var": ("x", np.arange(10.0)),
-                "numpy_var": ("x", np.linspace(0, 1, 10)),
-            }
-        )
-        # Only chunk one variable
-        ds["dask_var"] = ds["dask_var"].chunk({"x": 5})
+    ds = Dataset(
+        {"a": ("x", np.arange(10.0)), "b": ("x", np.linspace(0, 1, 10))}
+    ).chunk({"x": 5})
 
-        with raise_if_dask_computes():
-            result = ds.eval("dask_var + numpy_var")
+    with raise_if_dask_computes():
+        result = ds.eval("a + b")
 
-        # Result should be dask-backed when any input is dask
-        assert is_duck_dask_array(result.data)
+    assert isinstance(result, DataArray)
+    assert is_duck_dask_array(result.data)
 
-        # Verify correctness
-        expected = ds["dask_var"] + ds["numpy_var"]
-        assert_equal(result, expected)
+    # Verify correctness when computed
+    expected = ds["a"] + ds["b"]
+    assert_equal(result, expected)
 
-    @requires_dask
-    def test_np_functions_preserve_dask(self) -> None:
-        """Test that numpy functions via np namespace preserve dask."""
-        from xarray.core.utils import is_duck_dask_array
 
-        ds = Dataset({"a": ("x", np.arange(1.0, 11.0))}).chunk({"x": 5})
+@requires_dask
+def test_eval_dask_assignment() -> None:
+    """Test that assignments with dask arrays preserve lazy evaluation."""
+    from xarray.core.utils import is_duck_dask_array
 
-        with raise_if_dask_computes():
-            result = ds.eval("np.sqrt(a)")
+    ds = Dataset(
+        {"a": ("x", np.arange(10.0)), "b": ("x", np.linspace(0, 1, 10))}
+    ).chunk({"x": 5})
 
-        assert is_duck_dask_array(result.data)
+    with raise_if_dask_computes():
+        result = ds.eval("z = a + b")
 
-        # Verify correctness
-        expected = np.sqrt(ds["a"])
-        assert_equal(result, expected)
+    assert isinstance(result, Dataset)
+    assert "z" in result.data_vars
+    assert is_duck_dask_array(result["z"].data)
 
-    @requires_dask
-    def test_comparison_preserves_dask(self) -> None:
-        """Test that comparison operations preserve dask backing."""
-        from xarray.core.utils import is_duck_dask_array
+    # Verify correctness when computed
+    expected = ds["a"] + ds["b"]
+    assert_equal(result["z"], expected)
 
-        ds = Dataset(
-            {"a": ("x", np.arange(10.0)), "b": ("x", np.arange(10.0)[::-1])}
-        ).chunk({"x": 5})
 
-        with raise_if_dask_computes():
-            result = ds.eval("a > b")
+@requires_dask
+def test_eval_dask_method_chaining() -> None:
+    """Test that method chaining works with dask arrays."""
+    ds = Dataset({"a": (("x", "y"), np.arange(20.0).reshape(4, 5))}).chunk(
+        {"x": 2, "y": 5}
+    )
 
-        assert is_duck_dask_array(result.data)
+    # Calling .mean() should still be lazy
+    result = ds.eval("a.mean(dim='x')")
+    # Calling .compute() should return numpy-backed result
+    computed = result.compute()
 
-        # Verify correctness
-        expected = ds["a"] > ds["b"]
-        assert_equal(result, expected)
+    expected = ds["a"].mean(dim="x").compute()
+    assert_equal(computed, expected)
 
-    @requires_dask
-    def test_boolean_operators_preserve_dask(self) -> None:
-        """Test that bitwise boolean operators preserve dask."""
-        from xarray.core.utils import is_duck_dask_array
 
-        ds = Dataset(
-            {"a": ("x", np.arange(10.0)), "b": ("x", np.arange(10.0)[::-1])}
-        ).chunk({"x": 5})
+@requires_dask
+def test_eval_dask_xr_where() -> None:
+    """Test that xr.where() with dask arrays preserves lazy evaluation."""
+    from xarray.core.utils import is_duck_dask_array
 
-        with raise_if_dask_computes():
-            result = ds.eval("(a > 3) & (b < 7)")
+    ds = Dataset({"a": ("x", np.arange(-5, 5, dtype=float))}).chunk({"x": 5})
 
-        assert is_duck_dask_array(result.data)
+    with raise_if_dask_computes():
+        result = ds.eval("xr.where(a > 0, a, 0)")
 
-        # Verify correctness
-        expected = (ds["a"] > 3) & (ds["b"] < 7)
-        assert_equal(result, expected)
+    assert isinstance(result, DataArray)
+    assert is_duck_dask_array(result.data)
 
-    @requires_dask
-    def test_chained_comparisons_preserve_dask(self) -> None:
-        """Test that chained comparisons preserve dask backing."""
-        from xarray.core.utils import is_duck_dask_array
+    # Verify correctness when computed
+    expected = xr.where(ds["a"] > 0, ds["a"], 0)
+    assert_equal(result, expected)
 
-        ds = Dataset({"x": ("dim", np.arange(10.0))}).chunk({"dim": 5})
 
-        with raise_if_dask_computes():
-            result = ds.eval("2 < x < 7")
+@requires_dask
+def test_eval_dask_complex_expression() -> None:
+    """Test that complex expressions preserve dask backing."""
+    from xarray.core.utils import is_duck_dask_array
 
-        assert is_duck_dask_array(result.data)
+    rng = np.random.default_rng(42)
+    ds = Dataset(
+        {
+            "x": (["time", "lat", "lon"], rng.random((3, 4, 5))),
+            "y": (["time", "lat", "lon"], rng.random((3, 4, 5))),
+        }
+    ).chunk({"time": 1, "lat": 2, "lon": 5})
 
-        # Verify correctness
-        expected = (ds["x"] > 2) & (ds["x"] < 7)
-        assert_equal(result, expected)
+    with raise_if_dask_computes():
+        result = ds.eval("x * 2 + y ** 2")
+
+    assert is_duck_dask_array(result.data)
+
+    # Verify correctness when computed
+    expected = ds["x"] * 2 + ds["y"] ** 2
+    assert_equal(result, expected)
+
+
+@requires_dask
+def test_eval_dask_mixed_backends() -> None:
+    """Test expressions with mixed dask and numpy arrays."""
+    from xarray.core.utils import is_duck_dask_array
+
+    ds = Dataset(
+        {
+            "dask_var": ("x", np.arange(10.0)),
+            "numpy_var": ("x", np.linspace(0, 1, 10)),
+        }
+    )
+    # Only chunk one variable
+    ds["dask_var"] = ds["dask_var"].chunk({"x": 5})
+
+    with raise_if_dask_computes():
+        result = ds.eval("dask_var + numpy_var")
+
+    # Result should be dask-backed when any input is dask
+    assert is_duck_dask_array(result.data)
+
+    # Verify correctness
+    expected = ds["dask_var"] + ds["numpy_var"]
+    assert_equal(result, expected)
+
+
+@requires_dask
+def test_eval_dask_np_functions() -> None:
+    """Test that numpy functions via np namespace preserve dask."""
+    from xarray.core.utils import is_duck_dask_array
+
+    ds = Dataset({"a": ("x", np.arange(1.0, 11.0))}).chunk({"x": 5})
+
+    with raise_if_dask_computes():
+        result = ds.eval("np.sqrt(a)")
+
+    assert is_duck_dask_array(result.data)
+
+    # Verify correctness
+    expected = np.sqrt(ds["a"])
+    assert_equal(result, expected)
+
+
+@requires_dask
+def test_eval_dask_comparison() -> None:
+    """Test that comparison operations preserve dask backing."""
+    from xarray.core.utils import is_duck_dask_array
+
+    ds = Dataset(
+        {"a": ("x", np.arange(10.0)), "b": ("x", np.arange(10.0)[::-1])}
+    ).chunk({"x": 5})
+
+    with raise_if_dask_computes():
+        result = ds.eval("a > b")
+
+    assert is_duck_dask_array(result.data)
+
+    # Verify correctness
+    expected = ds["a"] > ds["b"]
+    assert_equal(result, expected)
+
+
+@requires_dask
+def test_eval_dask_boolean_operators() -> None:
+    """Test that bitwise boolean operators preserve dask."""
+    from xarray.core.utils import is_duck_dask_array
+
+    ds = Dataset(
+        {"a": ("x", np.arange(10.0)), "b": ("x", np.arange(10.0)[::-1])}
+    ).chunk({"x": 5})
+
+    with raise_if_dask_computes():
+        result = ds.eval("(a > 3) & (b < 7)")
+
+    assert is_duck_dask_array(result.data)
+
+    # Verify correctness
+    expected = (ds["a"] > 3) & (ds["b"] < 7)
+    assert_equal(result, expected)
+
+
+@requires_dask
+def test_eval_dask_chained_comparisons() -> None:
+    """Test that chained comparisons preserve dask backing."""
+    from xarray.core.utils import is_duck_dask_array
+
+    ds = Dataset({"x": ("dim", np.arange(10.0))}).chunk({"dim": 5})
+
+    with raise_if_dask_computes():
+        result = ds.eval("2 < x < 7")
+
+    assert is_duck_dask_array(result.data)
+
+    # Verify correctness
+    expected = (ds["x"] > 2) & (ds["x"] < 7)
+    assert_equal(result, expected)
