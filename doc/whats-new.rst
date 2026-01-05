@@ -14,9 +14,30 @@ v2025.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:meth:`Dataset.set_xindex` and :py:meth:`DataArray.set_xindex`
+  automatically replace any existing index being set instead of erroring
+  or needing needing to call :py:meth:`drop_indexes` first (:pull:`11008`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Calling :py:meth:`Dataset.sel` or :py:meth:`DataArray.sel` on a 1-dimensional coordinate
+  without an index will now automatically create a temporary
+  :py:class:`~xarray.indexes.PandasIndex` to perform the selection
+  (:issue:`9703`, :pull:`11029`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+
+- Change the default value for ``chunk`` in ``open_zarr`` to ``_default`` and remove special mapping of ``"auto"``
+  to ``{}`` or ``None`` in ``open_zarr``. If ``chunks`` is not set, the default behavior is the same as before.
+  Explicitly setting ``chunks="auto"`` will match the behavior of ``chunks="auto"`` in
+  ``open_dataset(..., engine="zarr")`` (:issue:`11002` :pull:`11010`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+- :py:meth:`Dataset.identical`,` :py:meth:`DataArray.identical`, and
+  :py:func:`testings.assert_identical` now compare indexes (xindexes).
+  Two objects with identical data but different indexes will no longer
+  be considered identical. This also affects (:issue:`11033` :pull:`11035`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 
 Deprecations
@@ -29,6 +50,13 @@ Bug Fixes
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- :py:meth:`~xarray.indexes.RangeIndex.equals` now uses floating point error tolerant
+  ``np.isclose`` by default to handle accumulated floating point errors from
+  slicing operations. Use ``exact=True`` for exact comparison (:pull:`11035`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Ensure the :py:class:`~xarray.groupers.SeasonResampler` preserves the datetime
+  unit of the underlying time index when resampling (:issue:`11048`,
+  :pull:`11049`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~

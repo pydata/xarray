@@ -63,7 +63,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
     """
     Initialize the Matplotlib figure and FacetGrid object.
 
-    The :class:`FacetGrid` is an object that links a xarray DataArray to
+    The :class:`FacetGrid` is an object that links an xarray DataArray to
     a Matplotlib figure with a particular structure.
 
     In particular, :class:`FacetGrid` is used to draw plots with multiple

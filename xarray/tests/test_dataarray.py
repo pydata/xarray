@@ -1190,11 +1190,14 @@ class TestDataArray:
         assert_equal(actual, expected)
 
     def test_sel_no_index(self) -> None:
-        array = DataArray(np.arange(10), dims="x")
+        array = DataArray(np.arange(10), dims="x").assign_coords(
+            {"x_meta": ("x", np.linspace(0.1, 1, 10))}
+        )
         assert_identical(array[0], array.sel(x=0))
         assert_identical(array[:5], array.sel(x=slice(5)))
         assert_identical(array[[0, -1]], array.sel(x=[0, -1]))
         assert_identical(array[array < 5], array.sel(x=(array < 5)))
+        assert_identical(array[1], array.sel(x_meta=0.2))
 
     def test_sel_method(self) -> None:
         data = DataArray(np.random.randn(3, 4), [("x", [0, 1, 2]), ("y", list("abcd"))])
@@ -2417,6 +2420,11 @@ class TestDataArray:
         indexed = da.set_xindex("foo", IndexWithOptions, opt=1)
         assert "foo" in indexed.xindexes
         assert indexed.xindexes["foo"].opt == 1  # type: ignore[attr-defined]
+
+    def test_set_xindex_drop_existing(self) -> None:
+        da = DataArray([1, 2, 3, 4], coords={"x": ("x", [0, 1, 2, 3])}, dims="x")
+        result = da.set_xindex("x", PandasIndex)
+        assert "x" in result.xindexes
 
     def test_dataset_getitem(self) -> None:
         dv = self.ds["foo"]
@@ -3923,7 +3931,8 @@ class TestDataArray:
         y = np.random.randn(10, 3)
         y[2] = np.nan
         t = pd.Series(pd.date_range("20130101", periods=10))
-        t[2] = np.nan
+        # pandas-stubs doesn't allow np.nan for datetime Series, but it converts to NaT
+        t[2] = np.nan  # type: ignore[call-overload]
         lat = [77.7, 83.2, 76]
         da = DataArray(y, {"t": t, "lat": lat}, dims=["t", "lat"])
         roundtripped = DataArray.from_dict(da.to_dict())
@@ -6994,7 +7003,7 @@ class TestIrisConversion:
         # to iris
         coord_dict: dict[Hashable, Any] = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
-        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
+        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3, unit="ns"))
         coord_dict["height"] = 10
         coord_dict["distance2"] = ("distance", [0, 1], {"foo": "bar"})
         coord_dict["time2"] = (("distance", "time"), [[0, 1, 2], [2, 3, 4]])
@@ -7065,7 +7074,7 @@ class TestIrisConversion:
 
         coord_dict: dict[Hashable, Any] = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
-        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
+        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3, unit="ns"))
         coord_dict["height"] = 10
         coord_dict["distance2"] = ("distance", [0, 1], {"foo": "bar"})
         coord_dict["time2"] = (("distance", "time"), [[0, 1, 2], [2, 3, 4]])

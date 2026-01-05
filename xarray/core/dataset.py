@@ -1514,6 +1514,13 @@ class Dataset(
         if not callable(compat):
             compat_str = compat
 
+            # For identical, also compare indexes
+            if compat_str == "identical":
+                from xarray.core.indexes import indexes_identical
+
+                if not indexes_identical(self.xindexes, other.xindexes):
+                    return False
+
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching order for equality
             def compat(x: Variable, y: Variable) -> bool:
@@ -1672,8 +1679,8 @@ class Dataset(
             return False
 
     def identical(self, other: Self) -> bool:
-        """Like equals, but also checks all dataset attributes and the
-        attributes on all variables and coordinates.
+        """Like equals, but also checks all dataset attributes, the
+        attributes on all variables and coordinates, and indexes.
 
         Example
         -------
@@ -4959,7 +4966,7 @@ class Dataset(
         **options,
     ) -> Self:
         """Set a new, Xarray-compatible index from one or more existing
-        coordinate(s).
+        coordinate(s). Existing index(es) on the coord(s) will be replaced.
 
         Parameters
         ----------
@@ -5004,15 +5011,6 @@ class Dataset(
                     f"those variables are data variables: {data_vars}, use `set_coords` first"
                 )
             raise ValueError("\n".join(msg))
-
-        # we could be more clever here (e.g., drop-in index replacement if index
-        # coordinates do not conflict), but let's not allow this for now
-        indexed_coords = set(coord_names) & set(self._indexes)
-
-        if indexed_coords:
-            raise ValueError(
-                f"those coordinates already have an index: {indexed_coords}"
-            )
 
         coord_vars = {name: self._variables[name] for name in coord_names}
 
@@ -7404,8 +7402,8 @@ class Dataset(
                 "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
             )
 
-        arrays = []
-        extension_arrays = []
+        arrays: list[tuple[Hashable, np.ndarray]] = []
+        extension_arrays: list[tuple[Hashable, pd.Series]] = []
         for k, v in dataframe.items():
             if not is_allowed_extension_array(v) or isinstance(
                 v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES

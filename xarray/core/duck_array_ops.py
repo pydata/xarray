@@ -253,8 +253,7 @@ def astype(data, dtype, *, xp=None, **kwargs):
     if xp is None:
         xp = get_array_namespace(data)
 
-    if xp == np:
-        # numpy currently doesn't have a astype:
+    if xp is np or not hasattr(xp, "astype"):
         return data.astype(dtype, **kwargs)
     return xp.astype(data, dtype, **kwargs)
 

@@ -766,7 +766,7 @@ class DatasetIOBase:
         expected["td"].encoding = encoding
         expected["td0"].encoding = encoding
         with self.roundtrip(
-            expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="ns")}
+            expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="s")}
         ) as actual:
             assert_identical(expected, actual)
 
@@ -1486,7 +1486,7 @@ class CFEncodedBase(DatasetIOBase):
                 pass
 
     def test_encoding_kwarg_dates(self) -> None:
-        ds = Dataset({"t": pd.date_range("2000-01-01", periods=3)})
+        ds = Dataset({"t": pd.date_range("2000-01-01", periods=3, unit="ns")})
         units = "days since 1900-01-01"
         kwargs = dict(encoding={"t": {"units": units}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
@@ -3636,6 +3636,18 @@ class ZarrBase(CFEncodedBase):
             original, save_kwargs={"encoding": {"a": {"chunks": [1]}}}
         ) as ds1:
             assert_equal(ds1, original)
+
+    @requires_dask
+    def test_chunk_auto_with_small_dask_chunks(self) -> None:
+        original = Dataset({"u": (("x",), np.zeros(10))}).chunk({"x": 2})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, **self.version_kwargs)
+            with xr.open_zarr(store, **self.version_kwargs) as default:
+                assert default.chunks == {"x": (2, 2, 2, 2, 2)}
+                with xr.open_zarr(store, chunks="auto", **self.version_kwargs) as auto:
+                    assert_identical(auto, original)
+                    assert auto.chunks == {"x": (10,)}
+                    assert auto.chunks != default.chunks
 
     @requires_cftime
     def test_open_zarr_use_cftime(self) -> None:
@@ -7488,10 +7500,10 @@ def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> N
     )
     tdf.index.name = "scenario"
     tdf.columns.name = "year"
-    tdf = cast(pd.DataFrame, tdf.stack())
-    tdf.name = "tas"
+    tdf_series = tdf.stack()
+    tdf_series.name = "tas"  # type: ignore[union-attr]
 
-    txr = tdf.to_xarray()
+    txr = tdf_series.to_xarray()
 
     txr.to_netcdf(tmpdir.join("test.nc"))
 

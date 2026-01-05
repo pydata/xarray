@@ -174,11 +174,12 @@ def _inverse_permutation_indices(positions, N: int | None = None) -> np.ndarray 
 
     if isinstance(positions[0], slice):
         positions = _consolidate_slices(positions)
-        if positions == slice(None):
+        if positions == [slice(None)] or positions == [slice(0, None)]:
             return None
         positions = [np.arange(sl.start, sl.stop, sl.step) for sl in positions]
-
-    newpositions = nputils.inverse_permutation(np.concatenate(positions), N)
+    newpositions = nputils.inverse_permutation(
+        np.concatenate(tuple(p for p in positions if len(p) > 0)), N
+    )
     return newpositions[newpositions != -1]
 
 
@@ -991,7 +992,7 @@ class GroupBy(Generic[T_Xarray]):
             if (has_missing_groups and index is not None) or (
                 len(self.groupers) > 1
                 and not isinstance(grouper.full_index, pd.RangeIndex)
-                and not index.index.equals(grouper.full_index)
+                and not (index is not None and index.index.equals(grouper.full_index))
             ):
                 indexers[grouper.name] = grouper.full_index
         if indexers:
