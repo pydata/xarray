@@ -676,7 +676,7 @@ class PandasIndex(Index):
                 if coord_dtype == object and index.dtype == object:
                     inferred = getattr(index, "inferred_type", None)
                     if inferred in ("string", "unicode"):
-                        coord_dtype=np.dtype(str)
+                        coord_dtype = np.dtype(str)
                     else:
                         data = index.to_numpy(dtype=object, copy=False)
                         if data.size and all(
