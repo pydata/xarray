@@ -628,8 +628,9 @@ def get_indexer_nd(index: pd.Index, labels, method=None, tolerance=None) -> np.n
     flat_labels = np.ravel(labels)
     if flat_labels.dtype == "float16":
         flat_labels = flat_labels.astype("float64")
-    # pandas-stubs expects Index for get_indexer, but ndarray works at runtime
-    flat_indexer = index.get_indexer(flat_labels, method=method, tolerance=tolerance)  # type: ignore[arg-type]
+    flat_indexer = index.get_indexer(
+        pd.Index(flat_labels), method=method, tolerance=tolerance
+    )
     indexer = flat_indexer.reshape(labels.shape)
     return indexer
 
