@@ -7500,7 +7500,7 @@ def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> N
     )
     tdf.index.name = "scenario"
     tdf.columns.name = "year"
-    tdf_series = cast(pd.Series, tdf.stack())
+    tdf_series = tdf.stack()
     tdf_series.name = "tas"
 
     txr = tdf_series.to_xarray()
