@@ -23,6 +23,10 @@ New Features
   :py:class:`~xarray.indexes.PandasIndex` to perform the selection
   (:issue:`9703`, :pull:`11029`).
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- The minimum supported version of ``h5netcdf`` is now 1.4. Version 1.4.0
+  brings improved alignment between h5netcdf and libnetcdf4 in the storage of
+  complex numbers (:pull:`11068`). By `Mark Harfouche
+  <https://github.com/hmaarrfk>`_.
 
 
 Breaking Changes
