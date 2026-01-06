@@ -266,41 +266,8 @@ class H5NetCDFStore(WritableCFDataStore):
         dimensions = var.dimensions
         data = indexing.LazilyIndexedArray(H5NetCDFArrayWrapper(name, self))
         attrs = _read_attributes(var)
-
-        # netCDF4 specific encoding
-        encoding = {
-            "chunksizes": var.chunks,
-            "fletcher32": var.fletcher32,
-            "shuffle": var.shuffle,
-        }
-        if var.chunks:
-            encoding["preferred_chunks"] = dict(
-                zip(var.dimensions, var.chunks, strict=True)
-            )
-        # Convert h5py-style compression options to NetCDF4-Python
-        # style, if possible
-        if var.compression == "gzip":
-            encoding["zlib"] = True
-            encoding["complevel"] = var.compression_opts
-        elif var.compression is not None:
-            encoding["compression"] = var.compression
-            encoding["compression_opts"] = var.compression_opts
-
-        # save source so __repr__ can detect if it's local or not
-        encoding["source"] = self._filename
-        encoding["original_shape"] = data.shape
-
-        vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-        if vlen_dtype is str:
-            encoding["dtype"] = str
-        elif vlen_dtype is not None:  # pragma: no cover
-            # xarray doesn't support writing arbitrary vlen dtypes yet.
-            pass
-        # just check if datatype is available and create dtype
-        # this check can be removed if h5netcdf >= 1.4.0 for any environment
-        elif (datatype := getattr(var, "datatype", None)) and isinstance(
-            datatype, h5netcdf.core.EnumType
-        ):
+        encoding: dict[str, Any] = {}
+        if (datatype := var.datatype) and isinstance(datatype, h5netcdf.core.EnumType):
             encoding["dtype"] = np.dtype(
                 data.dtype,
                 metadata={
@@ -309,7 +276,64 @@ class H5NetCDFStore(WritableCFDataStore):
                 },
             )
         else:
-            encoding["dtype"] = var.dtype
+            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
+            if vlen_dtype is str:
+                encoding["dtype"] = str
+            elif vlen_dtype is not None:  # pragma: no cover
+                # xarray doesn't support writing arbitrary vlen dtypes yet.
+                encoding["dtype"] = var.dtype
+            else:
+                encoding["dtype"] = var.dtype
+
+        if var.chunks:
+            encoding["contiguous"] = False
+            encoding["chunksizes"] = var.chunks
+            encoding["preferred_chunks"] = dict(
+                zip(var.dimensions, var.chunks, strict=True)
+            )
+        else:
+            encoding["contiguous"] = True
+            encoding["chunksizes"] = None
+
+        # filters only exists in an unreleased version of h5netcdf for now
+        if hasattr(var, "filters"):
+            filters = var.filters()
+            if filters is not None:
+                encoding.update(filters)
+        else:
+            # Continue with the old path before the filters() method existed
+            encoding |= {
+                "chunksizes": var.chunks,
+                "fletcher32": var.fletcher32,
+                "shuffle": var.shuffle,
+            }
+
+        # Special historical case for gzip.
+        if var.compression == "gzip":
+            encoding["zlib"] = True
+            encoding["complevel"] = var.compression_opts
+        # I'm pretty sure compression is always None if it is not gzip
+        # The filters() method returns more information
+        elif var.compression is not None:
+            encoding["compression"] = var.compression
+            encoding["compression_opts"] = var.compression_opts
+
+        # Also keep the "compression"??? does the netcdf4 backend do this?
+        # if encoding.get("zlib"):
+        #     encoding["compression"] = "zlib"
+        # if encoding.get("szip"):
+        #     encoding["compression"] = "szip"
+        # if encoding.get("bzip2"):
+        #     encoding["compression"] = "bzip2"
+        # if encoding.get("blosc"):
+        #     encoding["compression"] = "blosc"
+        # if encoding.get("lzf"):
+        #     encoding["compression"] = "lzf"
+        # if encoding.get("zstd"):
+        #     encoding["compression"] = "zstd"
+
+        encoding["source"] = self._filename
+        encoding["original_shape"] = data.shape
 
         return Variable(dimensions, data, attrs, encoding)
 
