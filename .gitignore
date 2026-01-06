@@ -1,100 +1,14 @@
+# Python
+__pycache__/
 *.py[cod]
-__pycache__
-.env
-.venv
 
-# example caches from Hypothesis
-.hypothesis/
+# Virtual environments
+.venv/
+venv/
 
-# temp files from docs build
-doc/*.nc
-doc/auto_gallery
-doc/rasm.zarr
+# Sphinx build output
+doc/_build/
 
-# C extensions
-*.so
-
-# Packages
-*.egg
-*.egg-info
-.eggs
-dist
-build
-eggs
-parts
-bin
-var
-sdist
-develop-eggs
-.installed.cfg
-lib
-lib64
-
-# Installer logs
-pip-log.txt
-
-# Unit test / coverage reports
-.coverage
-.coverage.*
-.tox
-nosetests.xml
-.cache
-.prettier_cache
-.dmypy.json
-.mypy_cache
-.ropeproject/
-.tags*
-.testmon*
-.tmontmp/
-.pytest_cache
-dask-worker-space/
-
-# asv environments
-asv_bench/.asv
-asv_bench/pkgs
-
-# Translations
-*.mo
-
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
-
-# IDEs
-.idea
-*.swp
+# OS files
 .DS_Store
-.vscode/
-
-# xarray specific
-doc/_build
-doc/generated/
-doc/api/generated/
-xarray/tests/data/*.grib.*.idx
-
-# Claude Code
-.claude/
-
-# Sync tools
-Icon*
-
-.ipynb_checkpoints
-doc/team-panel.txt
-doc/external-examples-gallery.txt
-doc/notebooks-examples-gallery.txt
-doc/videos-gallery.txt
-doc/*.zarr
-doc/*.nc
-doc/*.h5
-
-# Until we support this properly, excluding from gitignore. (adding it to
-# gitignore to make it _easier_ to work with `uv`, not as an indication that I
-# think we shouldn't...)
-uv.lock
-mypy_report/
-xarray-docs/
-
-# pixi environments
-.pixi
-pixi.lock
+Thumbs.db
