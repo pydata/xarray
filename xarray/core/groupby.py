@@ -79,12 +79,16 @@ def check_reduce_dims(reduce_dims, dimensions):
     if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
-        if any(dim not in dimensions for dim in reduce_dims):
-            raise ValueError(
-                f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
-                f"to reduce over all dimensions or one or more of {dimensions!r}. "
-                f"Alternatively, install the `flox` package. "
-            )
+        missing_dims = [dim for dim in reduce_dims if dim not in dimensions]
+        if missing_dims:
+            if len(missing_dims) == 1:
+                raise ValueError(
+                    f"{missing_dims[0]!r} not found in array dimensions {dimensions!r}"
+                )
+            else:
+                raise ValueError(
+                    f"dimensions {missing_dims!r} not found in array dimensions {dimensions!r}"
+                )
 
 
 def _codes_to_group_indices(codes: np.ndarray, N: int) -> GroupIndices:
@@ -1109,10 +1113,17 @@ class GroupBy(Generic[T_Xarray]):
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
         for grouper in self.groupers:
-            if any(
-                d not in grouper.codes.dims and d not in obj.dims for d in parsed_dim
-            ):
-                raise ValueError(f"cannot reduce over dimensions {dim}.")
+            all_dims = set(grouper.codes.dims) | set(obj.dims)
+            missing = [d for d in parsed_dim if d not in all_dims]
+            if missing:
+                if len(missing) == 1:
+                    raise ValueError(
+                        f"{missing[0]!r} not found in array dimensions {tuple(obj.dims)!r}"
+                    )
+                else:
+                    raise ValueError(
+                        f"dimensions {missing!r} not found in array dimensions {tuple(obj.dims)!r}"
+                    )
 
         has_missing_groups = (
             self.encoded.unique_coord.size != self.encoded.full_index.size
