@@ -6153,14 +6153,14 @@ class TestDataset:
             ),
         ],
     )
-    def test_scans(self, func: str, dim: str, expected_data_vars: dict) -> None:
+    def test_scans(self, method: str, dim: str, expected_data_vars: dict) -> None:
         coords = {"x": ("x", [0, 1]), "y": ("y", [2, 3])}
         ds = xr.Dataset(
             {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[np.nan, 3], [0, 4]])},
             coords=coords,
         )
         expected = xr.Dataset(expected_data_vars, coords=coords)
-        actual = ds.cumsum(dim)
+        actual = getattr(ds, method)(dim)
         assert_identical(expected, actual)
 
     def test_reduce_non_numeric(self) -> None:
