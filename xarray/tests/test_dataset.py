@@ -6153,7 +6153,7 @@ class TestDataset:
             ),
         ],
     )
-    def test_scans(self, func: str, dim: str, expected_array: dict) -> None:
+    def test_scans(self, func: str, dim: str, expected_data_vars: dict) -> None:
         coords = {"x": ("x", [0, 1]), "y": ("y", [2, 3])}
         ds = xr.Dataset(
             {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[np.nan, 3], [0, 4]])},
