@@ -2604,7 +2604,7 @@ def test_groupby_scans(
     with xr.set_options(use_flox=use_flox):
         if use_dask:
             ds = ds.chunk()
-            if use_lazy_group_idx:
+            if use_lazy_group_idx and has_flox:
                 # This path requires flox installed.
                 grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
                 actual = getattr(ds.groupby(group_idx=grouper), method)(dim="x")
@@ -2629,7 +2629,8 @@ def test_groupby_scans(
     with xr.set_options(use_flox=use_flox):
         if use_dask:
             ds = ds.chunk()
-            if use_lazy_group_idx:
+            if use_lazy_group_idx and has_flox:
+                # This path requires flox installed.
                 grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
                 actual = getattr(ds.foo.groupby(group_idx=grouper), method)(dim="x")
             else:
