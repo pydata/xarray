@@ -15,6 +15,7 @@ import xarray as xr
 from xarray import DataArray, Dataset, Variable, date_range
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import InterpOptions, PDDatetimeUnitOptions, ResampleCompatible
+from xarray.core.utils import module_available
 from xarray.groupers import (
     BinGrouper,
     EncodedGroups,
