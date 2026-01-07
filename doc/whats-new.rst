@@ -27,9 +27,6 @@ New Features
   brings improved alignment between h5netcdf and libnetcdf4 in the storage of
   complex numbers (:pull:`11068`). By `Mark Harfouche
   <https://github.com/hmaarrfk>`_.
-- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
-  as well. (:issue:`6528`, :pull:`10987`)
-  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -79,7 +76,9 @@ Performance
 
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
-
+- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
+  as well. (:issue:`6528`, :pull:`10987`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.2025.12.0:
 
