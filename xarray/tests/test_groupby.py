@@ -2545,17 +2545,29 @@ class TestDatasetResample:
 
 
 @pytest.mark.parametrize(
-    "method, expected_array, use_flox, use_dask",
+    "method, expected_array, use_flox, use_dask, use_lazy_group_idx",
     [
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True),
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, False),
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, True),
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, False),
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True, True),
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True, False),
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, False, False),
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, True, False),
+        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, False, False),
         pytest.param(
             "cumprod",
             [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
             True,
             True,
+            True,
+            marks=pytest.mark.skip(
+                reason="TODO: Groupby with cumprod is currently not supported with flox"
+            ),
+        ),
+        pytest.param(
+            "cumprod",
+            [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+            True,
+            True,
+            False,
             marks=pytest.mark.skip(
                 reason="TODO: Groupby with cumprod is currently not supported with flox"
             ),
@@ -2565,12 +2577,13 @@ class TestDatasetResample:
             [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
             True,
             False,
+            False,
             marks=pytest.mark.skip(
                 reason="TODO: Groupby with cumprod is currently not supported with flox"
             ),
         ),
-        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, True),
-        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, False),
+        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, True, False),
+        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, False, False),
     ],
 )
 def test_groupby_scans(
@@ -2578,7 +2591,7 @@ def test_groupby_scans(
     expected_array: list[float],
     use_flox: bool,
     use_dask: bool,
-    use_lazy_group_idx: bool = False,
+    use_lazy_group_idx: bool,
 ) -> None:
     if use_dask and not has_dask:
         pytest.skip("requires dask")
@@ -2592,6 +2605,7 @@ def test_groupby_scans(
         if use_dask:
             ds = ds.chunk()
             if use_lazy_group_idx:
+                # This path requires flox installed.
                 grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
                 actual = getattr(ds.groupby(group_idx=grouper), method)(dim="x")
             else:
