@@ -25,8 +25,9 @@ class TestAssignSlots:
 
     def test_auto_assignment_scatter(self):
         """Test automatic positional assignment for scatter plots."""
-        slots = assign_slots(["x", "y", "color"], "scatter")
-        assert slots == {"x": "x", "y": "y", "color": "color"}
+        # scatter doesn't auto-assign y (defaults to "value")
+        slots = assign_slots(["x", "color"], "scatter")
+        assert slots == {"x": "x", "color": "color"}
 
     def test_auto_assignment_box(self):
         """Test automatic positional assignment for box plots."""
@@ -263,10 +264,9 @@ class TestSlotOrders:
         )
 
     def test_scatter_slot_order(self):
-        """Test scatter plot slot order includes x, y, color, size."""
+        """Test scatter plot slot order (y defaults to 'value', not auto-assigned)."""
         assert SLOT_ORDERS["scatter"] == (
             "x",
-            "y",
             "color",
             "size",
             "facet_col",

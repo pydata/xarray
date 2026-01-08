@@ -294,7 +294,7 @@ def scatter(
     darray: DataArray,
     *,
     x: SlotValue = auto,
-    y: SlotValue = auto,
+    y: str = "value",
     color: SlotValue = auto,
     size: SlotValue = auto,
     facet_col: SlotValue = auto,
@@ -305,6 +305,9 @@ def scatter(
     """
     Create an interactive scatter plot from a DataArray using Plotly Express.
 
+    By default, y-axis shows the DataArray values. Set y to a dimension name
+    to plot dimension vs dimension instead.
+
     Parameters
     ----------
     darray : DataArray
@@ -312,9 +315,9 @@ def scatter(
     x : str, auto, or None
         Dimension for the x-axis. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
-    y : str, auto, or None
-        Dimension for the y-axis. Use `auto` for positional assignment,
-        a dimension name for explicit assignment, or `None` to skip.
+    y : str
+        What to plot on y-axis. Default "value" uses DataArray values.
+        Can also be a dimension name for dimension vs dimension plots.
     color : str, auto, or None
         Dimension for color grouping. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -344,7 +347,6 @@ def scatter(
         list(darray.dims),
         "scatter",
         x=x,
-        y=y,
         color=color,
         size=size,
         facet_col=facet_col,
@@ -355,17 +357,22 @@ def scatter(
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
 
+    # Determine y column - either "value" for DataArray values or a dimension name
+    y_col = value_col if y == "value" else y
+
     # Build labels for axes
     labels = px_kwargs.pop("labels", {})
-    if "x" in slots and slots["x"] not in labels:
+    if "x" in slots and str(slots["x"]) not in labels:
         labels[str(slots["x"])] = get_axis_label(darray, slots["x"])
-    if "y" in slots and slots["y"] not in labels:
-        labels[str(slots["y"])] = get_axis_label(darray, slots["y"])
+    if y == "value" and value_col not in labels:
+        labels[value_col] = get_value_label(darray)
+    elif y != "value" and y in darray.dims and y not in labels:
+        labels[y] = get_axis_label(darray, y)
 
     fig = px.scatter(
         df,
         x=slots.get("x"),
-        y=slots.get("y", value_col),
+        y=y_col,
         color=slots.get("color"),
         size=slots.get("size"),
         facet_col=slots.get("facet_col"),

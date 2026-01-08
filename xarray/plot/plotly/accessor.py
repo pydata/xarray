@@ -177,7 +177,7 @@ class DataArrayPlotlyAccessor:
         self,
         *,
         x: SlotValue = auto,
-        y: SlotValue = auto,
+        y: str = "value",
         color: SlotValue = auto,
         size: SlotValue = auto,
         facet_col: SlotValue = auto,
@@ -188,25 +188,26 @@ class DataArrayPlotlyAccessor:
         """
         Create an interactive scatter plot using Plotly Express.
 
-        Dimensions are assigned to plot slots by their order:
-        x → y → color → size → facet_col → facet_row → animation_frame
+        By default, y-axis shows the DataArray values. Dimensions are assigned
+        to other slots by their order: x → color → size → facet_col → facet_row → animation_frame
 
         Parameters
         ----------
         x : str, auto, or None
             Dimension for x-axis. Default: first dimension.
-        y : str, auto, or None
-            Dimension for y-axis. Default: second dimension.
+        y : str
+            What to plot on y-axis. Default "value" uses DataArray values.
+            Can be a dimension name for dimension vs dimension plots.
         color : str, auto, or None
-            Dimension for color grouping. Default: third dimension.
+            Dimension for color grouping. Default: second dimension.
         size : str, auto, or None
-            Dimension for marker size. Default: fourth dimension.
+            Dimension for marker size. Default: third dimension.
         facet_col : str, auto, or None
-            Dimension for subplot columns. Default: fifth dimension.
+            Dimension for subplot columns. Default: fourth dimension.
         facet_row : str, auto, or None
-            Dimension for subplot rows. Default: sixth dimension.
+            Dimension for subplot rows. Default: fifth dimension.
         animation_frame : str, auto, or None
-            Dimension for animation. Default: seventh dimension.
+            Dimension for animation. Default: sixth dimension.
         **px_kwargs
             Additional arguments passed to `plotly.express.scatter()`.
 
