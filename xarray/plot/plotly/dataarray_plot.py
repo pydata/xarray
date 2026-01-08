@@ -284,7 +284,172 @@ def area(
     return fig
 
 
-def heatmap(
+def scatter(
+    darray: DataArray,
+    *,
+    x: SlotValue = auto,
+    y: SlotValue = auto,
+    color: SlotValue = auto,
+    size: SlotValue = auto,
+    facet_col: SlotValue = auto,
+    facet_row: SlotValue = auto,
+    animation_frame: SlotValue = auto,
+    **px_kwargs: Any,
+) -> go.Figure:
+    """
+    Create an interactive scatter plot from a DataArray using Plotly Express.
+
+    Parameters
+    ----------
+    darray : DataArray
+        The xarray DataArray to plot.
+    x : str, auto, or None
+        Dimension for the x-axis. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    y : str, auto, or None
+        Dimension for the y-axis. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    color : str, auto, or None
+        Dimension for color grouping. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    size : str, auto, or None
+        Dimension for marker size. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    facet_col : str, auto, or None
+        Dimension for subplot columns. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    facet_row : str, auto, or None
+        Dimension for subplot rows. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    animation_frame : str, auto, or None
+        Dimension for animation frames. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    **px_kwargs
+        Additional keyword arguments passed to `plotly.express.scatter()`.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        The Plotly figure object.
+    """
+    px = attempt_import("plotly.express")
+
+    slots = assign_slots(
+        list(darray.dims),
+        "scatter",
+        x=x,
+        y=y,
+        color=color,
+        size=size,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        animation_frame=animation_frame,
+    )
+
+    df = dataarray_to_dataframe(darray)
+    value_col = darray.name if darray.name is not None else "value"
+
+    # Build labels for axes
+    labels = px_kwargs.pop("labels", {})
+    if "x" in slots and slots["x"] not in labels:
+        labels[str(slots["x"])] = get_axis_label(darray, slots["x"])
+    if "y" in slots and slots["y"] not in labels:
+        labels[str(slots["y"])] = get_axis_label(darray, slots["y"])
+
+    fig = px.scatter(
+        df,
+        x=slots.get("x"),
+        y=slots.get("y", value_col),
+        color=slots.get("color"),
+        size=slots.get("size"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
+        animation_frame=slots.get("animation_frame"),
+        labels=labels,
+        **px_kwargs,
+    )
+
+    return fig
+
+
+def box(
+    darray: DataArray,
+    *,
+    x: SlotValue = auto,
+    color: SlotValue = auto,
+    facet_col: SlotValue = auto,
+    facet_row: SlotValue = auto,
+    animation_frame: SlotValue = auto,
+    **px_kwargs: Any,
+) -> go.Figure:
+    """
+    Create an interactive box plot from a DataArray using Plotly Express.
+
+    Parameters
+    ----------
+    darray : DataArray
+        The xarray DataArray to plot.
+    x : str, auto, or None
+        Dimension for the x-axis categories. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    color : str, auto, or None
+        Dimension for color grouping. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    facet_col : str, auto, or None
+        Dimension for subplot columns. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    facet_row : str, auto, or None
+        Dimension for subplot rows. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    animation_frame : str, auto, or None
+        Dimension for animation frames. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    **px_kwargs
+        Additional keyword arguments passed to `plotly.express.box()`.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        The Plotly figure object.
+    """
+    px = attempt_import("plotly.express")
+
+    slots = assign_slots(
+        list(darray.dims),
+        "box",
+        x=x,
+        color=color,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        animation_frame=animation_frame,
+    )
+
+    df = dataarray_to_dataframe(darray)
+    value_col = darray.name if darray.name is not None else "value"
+
+    # Build labels for axes
+    labels = px_kwargs.pop("labels", {})
+    if "x" in slots and slots["x"] not in labels:
+        labels[str(slots["x"])] = get_axis_label(darray, slots["x"])
+    if value_col not in labels:
+        labels[value_col] = get_value_label(darray)
+
+    fig = px.box(
+        df,
+        x=slots.get("x"),
+        y=value_col,
+        color=slots.get("color"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
+        animation_frame=slots.get("animation_frame"),
+        labels=labels,
+        **px_kwargs,
+    )
+
+    return fig
+
+
+def imshow(
     darray: DataArray,
     *,
     x: SlotValue = auto,
@@ -295,7 +460,7 @@ def heatmap(
     **px_kwargs: Any,
 ) -> go.Figure:
     """
-    Create an interactive heatmap from a DataArray using Plotly Express.
+    Create an interactive heatmap/image from a DataArray using Plotly Express.
 
     Parameters
     ----------
@@ -331,13 +496,13 @@ def heatmap(
     ...     dims=["y", "x"],
     ...     name="temperature",
     ... )
-    >>> fig = da.pxplot.heatmap()  # y→y, x→x
+    >>> fig = da.plotly.imshow()  # y→y, x→x
     """
     px = attempt_import("plotly.express")
 
     slots = assign_slots(
         list(darray.dims),
-        "heatmap",
+        "imshow",
         x=x,
         y=y,
         facet_col=facet_col,
@@ -345,7 +510,6 @@ def heatmap(
         animation_frame=animation_frame,
     )
 
-    # For heatmap, we need x and y to use imshow properly
     x_dim = slots.get("x")
     y_dim = slots.get("y")
     facet_col_dim = slots.get("facet_col")
@@ -362,7 +526,7 @@ def heatmap(
     # Get color label
     color_label = get_value_label(darray)
 
-    # Handle faceting and animation for heatmap
+    # Handle faceting and animation
     if facet_col_dim or facet_row_dim or animation_dim:
         # Use density_heatmap with DataFrame for faceting
         df = dataarray_to_dataframe(darray)
@@ -370,10 +534,6 @@ def heatmap(
 
         if value_col not in labels:
             labels[value_col] = color_label
-
-        # px.density_heatmap doesn't support facets directly for pre-aggregated data
-        # Use imshow with make_subplots for complex cases
-        # For now, fall back to a simple implementation
 
         fig = px.density_heatmap(
             df,

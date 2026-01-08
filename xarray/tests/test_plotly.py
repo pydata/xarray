@@ -18,10 +18,20 @@ class TestAssignSlots:
         slots = assign_slots(["time", "city", "scenario"], "line")
         assert slots == {"x": "time", "color": "city", "facet_col": "scenario"}
 
-    def test_auto_assignment_heatmap(self):
-        """Test automatic positional assignment for heatmaps."""
-        slots = assign_slots(["lat", "lon"], "heatmap")
+    def test_auto_assignment_imshow(self):
+        """Test automatic positional assignment for imshow."""
+        slots = assign_slots(["lat", "lon"], "imshow")
         assert slots == {"x": "lat", "y": "lon"}
+
+    def test_auto_assignment_scatter(self):
+        """Test automatic positional assignment for scatter plots."""
+        slots = assign_slots(["x", "y", "color"], "scatter")
+        assert slots == {"x": "x", "y": "y", "color": "color"}
+
+    def test_auto_assignment_box(self):
+        """Test automatic positional assignment for box plots."""
+        slots = assign_slots(["category", "group"], "box")
+        assert slots == {"x": "category", "color": "group"}
 
     def test_explicit_assignment(self):
         """Test explicit dimension-to-slot assignment."""
@@ -112,7 +122,9 @@ class TestDataArrayPlotly:
         assert hasattr(self.da_2d.plotly, "line")
         assert hasattr(self.da_2d.plotly, "bar")
         assert hasattr(self.da_2d.plotly, "area")
-        assert hasattr(self.da_2d.plotly, "heatmap")
+        assert hasattr(self.da_2d.plotly, "scatter")
+        assert hasattr(self.da_2d.plotly, "box")
+        assert hasattr(self.da_2d.plotly, "imshow")
 
     def test_line_returns_figure(self):
         """Test that line() returns a Plotly Figure."""
@@ -158,9 +170,19 @@ class TestDataArrayPlotly:
         fig = self.da_2d.plotly.area()
         assert isinstance(fig, plotly.graph_objects.Figure)
 
-    def test_heatmap_returns_figure(self):
-        """Test that heatmap() returns a Plotly Figure."""
-        fig = self.da_2d.plotly.heatmap()
+    def test_scatter_returns_figure(self):
+        """Test that scatter() returns a Plotly Figure."""
+        fig = self.da_2d.plotly.scatter()
+        assert isinstance(fig, plotly.graph_objects.Figure)
+
+    def test_box_returns_figure(self):
+        """Test that box() returns a Plotly Figure."""
+        fig = self.da_2d.plotly.box()
+        assert isinstance(fig, plotly.graph_objects.Figure)
+
+    def test_imshow_returns_figure(self):
+        """Test that imshow() returns a Plotly Figure."""
+        fig = self.da_2d.plotly.imshow()
         assert isinstance(fig, plotly.graph_objects.Figure)
 
     def test_unnamed_dataarray(self):
@@ -205,7 +227,9 @@ class TestDatasetPlotly:
         assert hasattr(self.ds_single.plotly, "line")
         assert hasattr(self.ds_single.plotly, "bar")
         assert hasattr(self.ds_single.plotly, "area")
-        assert hasattr(self.ds_single.plotly, "heatmap")
+        assert hasattr(self.ds_single.plotly, "scatter")
+        assert hasattr(self.ds_single.plotly, "box")
+        assert hasattr(self.ds_single.plotly, "imshow")
 
     def test_line_single_var(self):
         """Test line plot with single variable Dataset."""
@@ -232,9 +256,19 @@ class TestDatasetPlotly:
         fig = self.ds_single.plotly.area()
         assert isinstance(fig, plotly.graph_objects.Figure)
 
-    def test_heatmap_returns_figure(self):
-        """Test that heatmap() returns a Plotly Figure."""
-        fig = self.ds_single.plotly.heatmap()
+    def test_scatter_returns_figure(self):
+        """Test that scatter() returns a Plotly Figure."""
+        fig = self.ds_single.plotly.scatter()
+        assert isinstance(fig, plotly.graph_objects.Figure)
+
+    def test_box_returns_figure(self):
+        """Test that box() returns a Plotly Figure."""
+        fig = self.ds_single.plotly.box()
+        assert isinstance(fig, plotly.graph_objects.Figure)
+
+    def test_imshow_returns_figure(self):
+        """Test that imshow() returns a Plotly Figure."""
+        fig = self.ds_single.plotly.imshow()
         assert isinstance(fig, plotly.graph_objects.Figure)
 
 
@@ -258,7 +292,10 @@ class TestLabelsAndMetadata:
             },
         )
         # Add coordinate attributes
-        self.da.coords["time"].attrs = {"long_name": "Time", "units": "days since 2020-01-01"}
+        self.da.coords["time"].attrs = {
+            "long_name": "Time",
+            "units": "days since 2020-01-01",
+        }
 
     def test_value_label_from_attrs(self):
         """Test that value labels are extracted from attributes."""
@@ -276,7 +313,9 @@ class TestSlotOrders:
         assert "line" in SLOT_ORDERS
         assert "bar" in SLOT_ORDERS
         assert "area" in SLOT_ORDERS
-        assert "heatmap" in SLOT_ORDERS
+        assert "scatter" in SLOT_ORDERS
+        assert "box" in SLOT_ORDERS
+        assert "imshow" in SLOT_ORDERS
 
     def test_line_slot_order(self):
         """Test line plot slot order."""
@@ -288,7 +327,29 @@ class TestSlotOrders:
             "animation_frame",
         )
 
-    def test_heatmap_slot_order(self):
-        """Test heatmap slot order includes x and y."""
-        assert "x" in SLOT_ORDERS["heatmap"]
-        assert "y" in SLOT_ORDERS["heatmap"]
+    def test_scatter_slot_order(self):
+        """Test scatter plot slot order includes x, y, color, size."""
+        assert SLOT_ORDERS["scatter"] == (
+            "x",
+            "y",
+            "color",
+            "size",
+            "facet_col",
+            "facet_row",
+            "animation_frame",
+        )
+
+    def test_box_slot_order(self):
+        """Test box plot slot order."""
+        assert SLOT_ORDERS["box"] == (
+            "x",
+            "color",
+            "facet_col",
+            "facet_row",
+            "animation_frame",
+        )
+
+    def test_imshow_slot_order(self):
+        """Test imshow slot order includes x and y."""
+        assert "x" in SLOT_ORDERS["imshow"]
+        assert "y" in SLOT_ORDERS["imshow"]

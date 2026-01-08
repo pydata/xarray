@@ -321,7 +321,197 @@ def area(
     return fig
 
 
-def heatmap(
+def scatter(
+    dataset: Dataset,
+    *,
+    x: SlotValue = auto,
+    y: SlotValue = auto,
+    color: SlotValue = auto,
+    size: SlotValue = auto,
+    facet_col: SlotValue = auto,
+    facet_row: SlotValue = auto,
+    animation_frame: SlotValue = auto,
+    **px_kwargs: Any,
+) -> go.Figure:
+    """
+    Create an interactive scatter plot from a Dataset using Plotly Express.
+
+    For Datasets with multiple data variables, 'variable' is treated as a
+    pseudo-dimension that can be assigned to color, facet_col, etc.
+
+    Parameters
+    ----------
+    dataset : Dataset
+        The xarray Dataset to plot.
+    x : str, auto, or None
+        Dimension for the x-axis. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    y : str, auto, or None
+        Dimension for the y-axis. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    color : str, auto, or None
+        Dimension for color grouping. Can be 'variable'. Use `auto` for
+        positional assignment, a dimension name for explicit assignment,
+        or `None` to skip.
+    size : str, auto, or None
+        Dimension for marker size. Can be 'variable'. Use `auto` for
+        positional assignment, a dimension name for explicit assignment,
+        or `None` to skip.
+    facet_col : str, auto, or None
+        Dimension for subplot columns. Can be 'variable'. Use `auto` for
+        positional assignment, a dimension name for explicit assignment,
+        or `None` to skip.
+    facet_row : str, auto, or None
+        Dimension for subplot rows. Can be 'variable'. Use `auto` for
+        positional assignment, a dimension name for explicit assignment,
+        or `None` to skip.
+    animation_frame : str, auto, or None
+        Dimension for animation frames. Can be 'variable'. Use `auto` for
+        positional assignment, a dimension name for explicit assignment,
+        or `None` to skip.
+    **px_kwargs
+        Additional keyword arguments passed to `plotly.express.scatter()`.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        The Plotly figure object.
+    """
+    px = attempt_import("plotly.express")
+
+    dims = get_dims_with_variable(dataset)
+
+    slots = assign_slots(
+        dims,
+        "scatter",
+        x=x,
+        y=y,
+        color=color,
+        size=size,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        animation_frame=animation_frame,
+    )
+
+    variable_in_use = "variable" in slots.values()
+
+    df = dataset_to_dataframe(
+        dataset,
+        variable_slot="variable" if variable_in_use else None,
+    )
+
+    y_col: str
+    if variable_in_use:
+        y_col = "value"
+    else:
+        var_names = list(dataset.data_vars)
+        y_col = str(var_names[0]) if var_names else "value"
+
+    fig = px.scatter(
+        df,
+        x=slots.get("x"),
+        y=slots.get("y", y_col),
+        color=slots.get("color"),
+        size=slots.get("size"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
+        animation_frame=slots.get("animation_frame"),
+        **px_kwargs,
+    )
+
+    return fig
+
+
+def box(
+    dataset: Dataset,
+    *,
+    x: SlotValue = auto,
+    color: SlotValue = auto,
+    facet_col: SlotValue = auto,
+    facet_row: SlotValue = auto,
+    animation_frame: SlotValue = auto,
+    **px_kwargs: Any,
+) -> go.Figure:
+    """
+    Create an interactive box plot from a Dataset using Plotly Express.
+
+    For Datasets with multiple data variables, 'variable' is treated as a
+    pseudo-dimension that can be assigned to color, facet_col, etc.
+
+    Parameters
+    ----------
+    dataset : Dataset
+        The xarray Dataset to plot.
+    x : str, auto, or None
+        Dimension for the x-axis categories. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    color : str, auto, or None
+        Dimension for color grouping. Can be 'variable'. Use `auto` for
+        positional assignment, a dimension name for explicit assignment,
+        or `None` to skip.
+    facet_col : str, auto, or None
+        Dimension for subplot columns. Can be 'variable'. Use `auto` for
+        positional assignment, a dimension name for explicit assignment,
+        or `None` to skip.
+    facet_row : str, auto, or None
+        Dimension for subplot rows. Can be 'variable'. Use `auto` for
+        positional assignment, a dimension name for explicit assignment,
+        or `None` to skip.
+    animation_frame : str, auto, or None
+        Dimension for animation frames. Can be 'variable'. Use `auto` for
+        positional assignment, a dimension name for explicit assignment,
+        or `None` to skip.
+    **px_kwargs
+        Additional keyword arguments passed to `plotly.express.box()`.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        The Plotly figure object.
+    """
+    px = attempt_import("plotly.express")
+
+    dims = get_dims_with_variable(dataset)
+
+    slots = assign_slots(
+        dims,
+        "box",
+        x=x,
+        color=color,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        animation_frame=animation_frame,
+    )
+
+    variable_in_use = "variable" in slots.values()
+
+    df = dataset_to_dataframe(
+        dataset,
+        variable_slot="variable" if variable_in_use else None,
+    )
+
+    y_col: str
+    if variable_in_use:
+        y_col = "value"
+    else:
+        var_names = list(dataset.data_vars)
+        y_col = str(var_names[0]) if var_names else "value"
+
+    fig = px.box(
+        df,
+        x=slots.get("x"),
+        y=y_col,
+        color=slots.get("color"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
+        animation_frame=slots.get("animation_frame"),
+        **px_kwargs,
+    )
+
+    return fig
+
+
+def imshow(
     dataset: Dataset,
     *,
     x: SlotValue = auto,
@@ -332,7 +522,7 @@ def heatmap(
     **px_kwargs: Any,
 ) -> go.Figure:
     """
-    Create an interactive heatmap from a Dataset using Plotly Express.
+    Create an interactive heatmap/image from a Dataset using Plotly Express.
 
     For Datasets with multiple data variables, 'variable' is treated as a
     pseudo-dimension that can be assigned to facet_col, facet_row, or
@@ -375,7 +565,7 @@ def heatmap(
     ...     "temperature": (["lat", "lon"], np.random.rand(10, 20)),
     ...     "pressure": (["lat", "lon"], np.random.rand(10, 20)),
     ... })
-    >>> fig = ds.pxplot.heatmap()  # lat→y, lon→x, variable→facet_col
+    >>> fig = ds.plotly.imshow()  # lat→y, lon→x, variable→facet_col
     """
     px = attempt_import("plotly.express")
 
@@ -383,7 +573,7 @@ def heatmap(
 
     slots = assign_slots(
         dims,
-        "heatmap",
+        "imshow",
         x=x,
         y=y,
         facet_col=facet_col,

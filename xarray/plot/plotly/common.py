@@ -35,7 +35,9 @@ SLOT_ORDERS: dict[str, tuple[str, ...]] = {
     "line": ("x", "color", "facet_col", "facet_row", "animation_frame"),
     "bar": ("x", "color", "facet_col", "facet_row", "animation_frame"),
     "area": ("x", "color", "facet_col", "facet_row", "animation_frame"),
-    "heatmap": ("x", "y", "facet_col", "facet_row", "animation_frame"),
+    "scatter": ("x", "y", "color", "size", "facet_col", "facet_row", "animation_frame"),
+    "imshow": ("x", "y", "facet_col", "facet_row", "animation_frame"),
+    "box": ("x", "color", "facet_col", "facet_row", "animation_frame"),
 }
 
 
