@@ -100,6 +100,7 @@ class DataArrayPlotlyAccessor:
         self,
         *,
         x: SlotValue = auto,
+        y: SlotValue | str = auto,
         color: SlotValue = auto,
         pattern_shape: SlotValue = auto,
         facet_col: SlotValue = auto,
@@ -111,12 +112,15 @@ class DataArrayPlotlyAccessor:
         Create an interactive bar chart using Plotly Express.
 
         Dimensions are assigned to plot slots by their order:
-        x → color → pattern_shape → facet_col → facet_row → animation_frame
+        y (value) → x → color → pattern_shape → facet_col → facet_row → animation_frame
 
         Parameters
         ----------
         x : str, auto, or None
             Dimension for x-axis. Default: first dimension.
+        y : str or auto
+            What to plot on y-axis. Default `auto` or "value" uses DataArray values.
+            Can be a dimension name for dimension vs dimension plots.
         color : str, auto, or None
             Dimension for color grouping. Default: second dimension.
         pattern_shape : str, auto, or None
@@ -137,6 +141,7 @@ class DataArrayPlotlyAccessor:
         return dataarray_plot.bar(
             self._da,
             x=x,
+            y=y,
             color=color,
             pattern_shape=pattern_shape,
             facet_col=facet_col,
@@ -149,6 +154,7 @@ class DataArrayPlotlyAccessor:
         self,
         *,
         x: SlotValue = auto,
+        y: SlotValue | str = auto,
         color: SlotValue = auto,
         pattern_shape: SlotValue = auto,
         facet_col: SlotValue = auto,
@@ -160,12 +166,15 @@ class DataArrayPlotlyAccessor:
         Create an interactive stacked area chart using Plotly Express.
 
         Dimensions are assigned to plot slots by their order:
-        x → color → pattern_shape → facet_col → facet_row → animation_frame
+        y (value) → x → color → pattern_shape → facet_col → facet_row → animation_frame
 
         Parameters
         ----------
         x : str, auto, or None
             Dimension for x-axis. Default: first dimension.
+        y : str or auto
+            What to plot on y-axis. Default `auto` or "value" uses DataArray values.
+            Can be a dimension name for dimension vs dimension plots.
         color : str, auto, or None
             Dimension for color/stacking. Default: second dimension.
         pattern_shape : str, auto, or None
@@ -186,6 +195,7 @@ class DataArrayPlotlyAccessor:
         return dataarray_plot.area(
             self._da,
             x=x,
+            y=y,
             color=color,
             pattern_shape=pattern_shape,
             facet_col=facet_col,
@@ -256,6 +266,7 @@ class DataArrayPlotlyAccessor:
         self,
         *,
         x: SlotValue = auto,
+        y: SlotValue | str = auto,
         color: SlotValue = auto,
         facet_col: SlotValue = auto,
         facet_row: SlotValue = auto,
@@ -266,12 +277,15 @@ class DataArrayPlotlyAccessor:
         Create an interactive box plot using Plotly Express.
 
         Dimensions are assigned to plot slots by their order:
-        x → color → facet_col → facet_row → animation_frame
+        y (value) → x → color → facet_col → facet_row → animation_frame
 
         Parameters
         ----------
         x : str, auto, or None
             Dimension for x-axis categories. Default: first dimension.
+        y : str or auto
+            What to plot on y-axis. Default `auto` or "value" uses DataArray values.
+            Can be a dimension name for dimension vs dimension plots.
         color : str, auto, or None
             Dimension for color grouping. Default: second dimension.
         facet_col : str, auto, or None
@@ -290,6 +304,7 @@ class DataArrayPlotlyAccessor:
         return dataarray_plot.box(
             self._da,
             x=x,
+            y=y,
             color=color,
             facet_col=facet_col,
             facet_row=facet_row,

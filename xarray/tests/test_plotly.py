@@ -15,30 +15,34 @@ class TestAssignSlots:
 
     def test_auto_assignment_line(self):
         """Test automatic positional assignment for line plots."""
+        # y defaults to "value", then dims fill x, color, etc.
         slots = assign_slots(["time", "city", "scenario"], "line")
-        assert slots == {"x": "time", "color": "city", "line_dash": "scenario"}
+        assert slots == {"y": "value", "x": "time", "color": "city", "line_dash": "scenario"}
 
     def test_auto_assignment_imshow(self):
         """Test automatic positional assignment for imshow."""
+        # imshow: y is a dimension (rows), not "value"
         slots = assign_slots(["lat", "lon"], "imshow")
-        assert slots == {"x": "lat", "y": "lon"}
+        assert slots == {"y": "lat", "x": "lon"}
 
     def test_auto_assignment_scatter(self):
         """Test automatic positional assignment for scatter plots."""
-        # scatter doesn't auto-assign y (defaults to "value")
-        slots = assign_slots(["x", "color"], "scatter")
-        assert slots == {"x": "x", "color": "color"}
+        # y defaults to "value", dims fill x, color, etc.
+        slots = assign_slots(["x_dim", "color_dim"], "scatter")
+        assert slots == {"y": "value", "x": "x_dim", "color": "color_dim"}
 
     def test_auto_assignment_box(self):
         """Test automatic positional assignment for box plots."""
+        # y defaults to "value", dims fill x, color, etc.
         slots = assign_slots(["category", "group"], "box")
-        assert slots == {"x": "category", "color": "group"}
+        assert slots == {"y": "value", "x": "category", "color": "group"}
 
     def test_explicit_assignment(self):
         """Test explicit dimension-to-slot assignment."""
         slots = assign_slots(
             ["time", "city", "scenario"], "line", x="city", color="time"
         )
+        assert slots["y"] == "value"
         assert slots["x"] == "city"
         assert slots["color"] == "time"
         # scenario goes to the next available slot (line_dash)
@@ -47,12 +51,12 @@ class TestAssignSlots:
     def test_skip_slot_with_none(self):
         """Test skipping a slot using None."""
         slots = assign_slots(["time", "city", "scenario"], "line", color=None)
-        assert slots == {"x": "time", "line_dash": "city", "symbol": "scenario"}
+        assert slots == {"y": "value", "x": "time", "line_dash": "city", "symbol": "scenario"}
         assert "color" not in slots
 
     def test_unassigned_dims_error(self):
         """Test that unassigned dimensions raise an error."""
-        # 8 dims but only 7 slots for line
+        # 8 dims but only 7 dimension slots for line (y defaults to value)
         dims = list("abcdefgh")
         with pytest.raises(ValueError, match="Unassigned dimension"):
             assign_slots(dims, "line")
@@ -72,7 +76,12 @@ class TestAssignSlots:
         slots = assign_slots(
             ["time", "city"], "line", x="city", color="time", facet_col=None
         )
-        assert slots == {"x": "city", "color": "time"}
+        assert slots == {"y": "value", "x": "city", "color": "time"}
+
+    def test_y_as_dimension(self):
+        """Test assigning a dimension to y instead of value."""
+        slots = assign_slots(["time", "lat"], "line", y="lat")
+        assert slots == {"y": "lat", "x": "time"}
 
 
 # Skip all plotting tests if plotly is not installed
@@ -257,8 +266,9 @@ class TestSlotOrders:
         assert "imshow" in SLOT_ORDERS
 
     def test_line_slot_order(self):
-        """Test line plot slot order."""
+        """Test line plot slot order (y first, defaults to 'value')."""
         assert SLOT_ORDERS["line"] == (
+            "y",
             "x",
             "color",
             "line_dash",
@@ -269,8 +279,9 @@ class TestSlotOrders:
         )
 
     def test_scatter_slot_order(self):
-        """Test scatter plot slot order (y defaults to 'value', not auto-assigned)."""
+        """Test scatter plot slot order (y first, defaults to 'value')."""
         assert SLOT_ORDERS["scatter"] == (
+            "y",
             "x",
             "color",
             "size",
@@ -281,8 +292,9 @@ class TestSlotOrders:
         )
 
     def test_box_slot_order(self):
-        """Test box plot slot order."""
+        """Test box plot slot order (y first, defaults to 'value')."""
         assert SLOT_ORDERS["box"] == (
+            "y",
             "x",
             "color",
             "facet_col",
@@ -291,6 +303,10 @@ class TestSlotOrders:
         )
 
     def test_imshow_slot_order(self):
-        """Test imshow slot order includes x and y."""
-        assert "x" in SLOT_ORDERS["imshow"]
-        assert "y" in SLOT_ORDERS["imshow"]
+        """Test imshow slot order (y and x are both dimensions)."""
+        assert SLOT_ORDERS["imshow"] == (
+            "y",
+            "x",
+            "facet_col",
+            "animation_frame",
+        )
