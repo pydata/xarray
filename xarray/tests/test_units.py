@@ -782,7 +782,7 @@ def test_combine_by_coords(variant, unit, error, dtype):
 
     if error is not None:
         with pytest.raises(error):
-            xr.combine_by_coords([ds, other])
+            xr.combine_by_coords([ds, other], coords="different", compat="no_conflicts")
 
         return
 
@@ -881,7 +881,7 @@ def test_combine_nested(variant, unit, error, dtype):
         },
     )
 
-    func = function(xr.combine_nested, concat_dim=["x", "y"])
+    func = function(xr.combine_nested, concat_dim=["x", "y"], join="outer")
     if error is not None:
         with pytest.raises(error):
             func([[ds1, ds2], [ds3, ds4]])
@@ -1113,9 +1113,10 @@ def test_merge_dataarray(variant, unit, error, dtype):
         dims=("y", "z"),
     )
 
+    func = function(xr.merge, compat="no_conflicts", join="outer")
     if error is not None:
         with pytest.raises(error):
-            xr.merge([arr1, arr2, arr3])
+            func([arr1, arr2, arr3])
 
         return
 
@@ -1131,13 +1132,13 @@ def test_merge_dataarray(variant, unit, error, dtype):
     convert_and_strip = lambda arr: strip_units(convert_units(arr, units))
 
     expected = attach_units(
-        xr.merge(
+        func(
             [convert_and_strip(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]
         ),
         units,
     )
 
-    actual = xr.merge([arr1, arr2, arr3])
+    actual = func([arr1, arr2, arr3])
 
     assert_units_equal(expected, actual)
     assert_allclose(expected, actual)
@@ -1214,7 +1215,7 @@ def test_merge_dataset(variant, unit, error, dtype):
         },
     )
 
-    func = function(xr.merge)
+    func = function(xr.merge, compat="no_conflicts", join="outer")
     if error is not None:
         with pytest.raises(error):
             func([ds1, ds2, ds3])
@@ -5624,13 +5625,15 @@ class TestDataset:
 
         if error is not None:
             with pytest.raises(error):
-                left.merge(right)
+                left.merge(right, compat="no_conflicts", join="outer")
 
             return
 
         converted = convert_units(right, units)
-        expected = attach_units(strip_units(left).merge(strip_units(converted)), units)
-        actual = left.merge(right)
+        expected = attach_units(
+            strip_units(left).merge(strip_units(converted), join="outer"), units
+        )
+        actual = left.merge(right, join="outer")
 
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
