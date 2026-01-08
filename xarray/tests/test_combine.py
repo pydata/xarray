@@ -1044,8 +1044,7 @@ class TestCombineDatasetsbyCoords:
         expected = data
         assert expected.broadcast_equals(actual)  # type: ignore[arg-type]
 
-        with set_options(use_new_combine_kwarg_defaults=True):
-            actual = combine_by_coords(objs)
+        actual = combine_by_coords(objs)
         assert_identical(actual, expected)
 
     def test_combine_leaving_bystander_dimensions(self):

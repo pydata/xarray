@@ -42,17 +42,15 @@ class TestMergeFunction:
         expected = data[["var1", "var2"]]
         assert_identical(actual, expected)
 
-    @pytest.mark.parametrize("use_new_combine_kwarg_defaults", [True, False])
-    def test_merge_datasets(self, use_new_combine_kwarg_defaults):
-        with set_options(use_new_combine_kwarg_defaults=use_new_combine_kwarg_defaults):
-            data = create_test_data(add_attrs=False, use_extension_array=True)
+    def test_merge_datasets(self):
+        data = create_test_data(add_attrs=False, use_extension_array=True)
 
-            actual = xr.merge([data[["var1"]], data[["var2"]]])
-            expected = data[["var1", "var2"]]
-            assert_identical(actual, expected)
+        actual = xr.merge([data[["var1"]], data[["var2"]]])
+        expected = data[["var1", "var2"]]
+        assert_identical(actual, expected)
 
-            actual = xr.merge([data, data])
-            assert_identical(actual, data)
+        actual = xr.merge([data, data])
+        assert_identical(actual, data)
 
     def test_merge_dataarray_unnamed(self):
         data = xr.DataArray([1, 2], dims="x")
