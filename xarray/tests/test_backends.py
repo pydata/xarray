@@ -5415,7 +5415,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     var_name = "v1"
 
     @contextlib.contextmanager
-    def setup_files_and_datasets(self, *, fuzz=0, new_combine_kwargs: bool = False):
+    def setup_files_and_datasets(self, *, fuzz=0):
         ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
 
         # to test join='exact'
@@ -5427,8 +5427,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
 
-                with set_options(use_new_combine_kwarg_defaults=new_combine_kwargs):
-                    yield [tmpfile1, tmpfile2], [ds1, ds2]
+                yield [tmpfile1, tmpfile2], [ds1, ds2]
 
     def gen_datasets_with_common_coord_and_time(self):
         # create coordinate data
@@ -5512,7 +5511,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         expected,
         expect_error,
     ):
-        with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
+        with self.setup_files_and_datasets() as (files, _):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -5547,7 +5546,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         """
         Case when an attribute differs across the multiple files
         """
-        with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
+        with self.setup_files_and_datasets() as (files, _):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -5563,10 +5562,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         """
         Case when an attribute of a member DataArray differs across the multiple files
         """
-        with self.setup_files_and_datasets(new_combine_kwargs=True) as (
-            files,
-            [_ds1, _ds2],
-        ):
+        with self.setup_files_and_datasets() as (files, _):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
                 ds = open_dataset(f).load()
@@ -5604,10 +5600,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     def test_open_mfdataset_exact_join_raises_error(
         self, combine, concat_dim, kwargs
     ) -> None:
-        with self.setup_files_and_datasets(fuzz=0.1, new_combine_kwargs=True) as (
-            files,
-            _,
-        ):
+        with self.setup_files_and_datasets(fuzz=0.1) as (files, _):
             if combine == "by_coords":
                 files.reverse()
 
@@ -5625,10 +5618,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     def test_open_mfdataset_defaults_with_exact_join_warns_as_well_as_raising(
         self,
     ) -> None:
-        with self.setup_files_and_datasets(fuzz=0.1, new_combine_kwargs=True) as (
-            files,
-            _,
-        ):
+        with self.setup_files_and_datasets(fuzz=0.1) as (files, _):
             files.reverse()
             with pytest.raises(
                 ValueError, match="cannot align objects with join='exact'"
@@ -5656,10 +5646,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     def test_common_coord_when_datavars_minimal(self) -> None:
         opt: Final = "minimal"
 
-        with self.setup_files_and_datasets(new_combine_kwargs=True) as (
-            files,
-            [ds1, ds2],
-        ):
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # open the files using data_vars option
             with open_mfdataset(
                 files, data_vars=opt, combine="nested", concat_dim="t"
@@ -5694,10 +5681,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     def test_open_mfdataset_warns_when_kwargs_set_to_different(
         self, combine, concat_dim, kwargs
     ) -> None:
-        with self.setup_files_and_datasets(new_combine_kwargs=True) as (
-            files,
-            [ds1, ds2],
-        ):
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             if combine == "by_coords":
                 files.reverse()
             with pytest.raises(

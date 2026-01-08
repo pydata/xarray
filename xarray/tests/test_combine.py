@@ -477,12 +477,6 @@ class TestNestedCombine:
         ds1 = Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = Dataset({"a": ("x", [2, 3]), "x": [1, 2]})
         expected = Dataset({"a": ("x", [1, 2, 3]), "x": [0, 1, 2]})
-        with pytest.warns(
-            FutureWarning,
-            match="will change from compat='no_conflicts' to compat='override'",
-        ):
-            actual = combine_nested([ds1, ds2], join="outer", concat_dim=None)
-        assert_identical(expected, actual)
         actual = combine_nested(
             [ds1, ds2], join="outer", compat="no_conflicts", concat_dim=None
         )
@@ -497,11 +491,6 @@ class TestNestedCombine:
         tmp2 = Dataset({"x": np.nan})
         actual = combine_nested([tmp1, tmp2], compat="no_conflicts", concat_dim=None)
         assert_identical(tmp1, actual)
-        with pytest.warns(
-            FutureWarning,
-            match="will change from compat='no_conflicts' to compat='override'",
-        ):
-            combine_nested([tmp1, tmp2], concat_dim=None)
         actual = combine_nested([tmp1, tmp2], compat="no_conflicts", concat_dim=[None])
         assert_identical(tmp1, actual)
 

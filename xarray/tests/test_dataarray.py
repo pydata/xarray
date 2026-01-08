@@ -1458,17 +1458,13 @@ class TestDataArray:
         expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y")
         assert_equal(actual, expected)
 
-    def test_concat_with_default_coords_warns(self) -> None:
+    def test_concat_with_default_coords(self) -> None:
         da = DataArray([0, 1], dims=["x"], coords={"x": [0, 1], "y": "a"})
         db = DataArray([2, 3], dims=["x"], coords={"x": [0, 1], "y": "b"})
 
-        with pytest.warns(FutureWarning):
-            original = xr.concat([da, db], dim="x")
-            assert original.y.size == 4
-        with set_options(use_new_combine_kwarg_defaults=True):
-            # default compat="override" will pick the first one
-            new = xr.concat([da, db], dim="x")
-            assert new.y.size == 1
+        # default compat="override" will pick the first one
+        new = xr.concat([da, db], dim="x")
+        assert new.y.size == 1
 
     def test_virtual_default_coords(self) -> None:
         array = DataArray(np.zeros((5,)), dims="x")

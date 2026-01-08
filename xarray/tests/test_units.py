@@ -745,9 +745,6 @@ def test_broadcast_dataset(dtype):
         "coords",
     ),
 )
-@pytest.mark.filterwarnings(
-    "ignore:.*the default value for coords will change:FutureWarning"
-)
 def test_combine_by_coords(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -824,12 +821,6 @@ def test_combine_by_coords(variant, unit, error, dtype):
         ),
         "coords",
     ),
-)
-@pytest.mark.filterwarnings(
-    "ignore:.*the default value for join will change:FutureWarning"
-)
-@pytest.mark.filterwarnings(
-    "ignore:.*the default value for compat will change:FutureWarning"
 )
 def test_combine_nested(variant, unit, error, dtype):
     original_unit = unit_registry.m
@@ -1071,12 +1062,6 @@ def test_concat_dataset(variant, unit, error, dtype):
         "coords",
     ),
 )
-@pytest.mark.filterwarnings(
-    "ignore:.*the default value for join will change:FutureWarning"
-)
-@pytest.mark.filterwarnings(
-    "ignore:.*the default value for compat will change:FutureWarning"
-)
 def test_merge_dataarray(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -1180,12 +1165,6 @@ def test_merge_dataarray(variant, unit, error, dtype):
         ),
         "coords",
     ),
-)
-@pytest.mark.filterwarnings(
-    "ignore:.*the default value for join will change:FutureWarning"
-)
-@pytest.mark.filterwarnings(
-    "ignore:.*the default value for compat will change:FutureWarning"
 )
 def test_merge_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
@@ -5606,12 +5585,6 @@ class TestDataset:
             ),
             "coords",
         ),
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:.*the default value for join will change:FutureWarning"
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:.*the default value for compat will change:FutureWarning"
     )
     def test_merge(self, variant, unit, error, dtype):
         left_variants = {
