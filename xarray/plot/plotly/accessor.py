@@ -196,6 +196,7 @@ class DataArrayPlotlyAccessor:
         self,
         *,
         x: SlotValue = auto,
+        y: SlotValue | str = "value",
         color: SlotValue = auto,
         size: SlotValue = auto,
         symbol: SlotValue = auto,
@@ -207,16 +208,20 @@ class DataArrayPlotlyAccessor:
         """
         Create an interactive scatter plot using Plotly Express.
 
-        The y-axis always shows the DataArray values. Dimensions are assigned
-        to other slots by their order:
-        x → color → size → symbol → facet_col → facet_row → animation_frame
+        By default, y-axis shows the DataArray values. Set y to a dimension
+        name to create dimension-vs-dimension plots (e.g., lat vs lon colored
+        by value).
 
         Parameters
         ----------
         x : str, auto, or None
             Dimension for x-axis. Default: first dimension.
-        color : str, auto, or None
+        y : str
+            What to plot on y-axis. Default "value" uses DataArray values.
+            Can be a dimension name for dimension vs dimension plots.
+        color : str, auto, None, or "value"
             Dimension for color grouping. Default: second dimension.
+            Use "value" to color by DataArray values (useful with y=dimension).
         size : str, auto, or None
             Dimension for marker size. Default: third dimension.
         symbol : str, auto, or None
@@ -237,6 +242,7 @@ class DataArrayPlotlyAccessor:
         return dataarray_plot.scatter(
             self._da,
             x=x,
+            y=y,
             color=color,
             size=size,
             symbol=symbol,

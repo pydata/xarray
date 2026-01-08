@@ -179,6 +179,18 @@ class TestDataArrayPlotly:
         fig = self.da_2d.plotly.scatter()
         assert isinstance(fig, plotly.graph_objects.Figure)
 
+    def test_scatter_dim_vs_dim(self):
+        """Test scatter plot with dimension vs dimension, colored by values."""
+        # Geographic-style plot: lat vs lon, colored by temperature
+        da = xr.DataArray(
+            np.random.rand(5, 10),
+            dims=["lat", "lon"],
+            coords={"lat": np.arange(5), "lon": np.arange(10)},
+            name="temperature",
+        )
+        fig = da.plotly.scatter(x="lon", y="lat", color="value")
+        assert isinstance(fig, plotly.graph_objects.Figure)
+
     def test_box_returns_figure(self):
         """Test that box() returns a Plotly Figure."""
         fig = self.da_2d.plotly.box()

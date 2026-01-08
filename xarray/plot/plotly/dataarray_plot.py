@@ -329,6 +329,7 @@ def scatter(
     darray: DataArray,
     *,
     x: SlotValue = auto,
+    y: SlotValue | str = "value",
     color: SlotValue = auto,
     size: SlotValue = auto,
     symbol: SlotValue = auto,
@@ -340,8 +341,8 @@ def scatter(
     """
     Create an interactive scatter plot from a DataArray using Plotly Express.
 
-    The y-axis always shows the DataArray values. Dimensions are assigned
-    to other slots: x → color → size → symbol → facet_col → facet_row → animation_frame
+    By default, y-axis shows the DataArray values. Set y to a dimension name
+    to create dimension-vs-dimension plots (e.g., lat vs lon colored by value).
 
     Parameters
     ----------
@@ -350,9 +351,13 @@ def scatter(
     x : str, auto, or None
         Dimension for the x-axis. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
-    color : str, auto, or None
+    y : str
+        What to plot on y-axis. Default "value" uses DataArray values.
+        Can be a dimension name for dimension vs dimension plots.
+    color : str, auto, None, or "value"
         Dimension for color grouping. Use `auto` for positional assignment,
-        a dimension name for explicit assignment, or `None` to skip.
+        a dimension name for explicit assignment, `None` to skip,
+        or "value" to color by DataArray values.
     size : str, auto, or None
         Dimension for marker size. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -375,11 +380,23 @@ def scatter(
     -------
     plotly.graph_objects.Figure
         The Plotly figure object.
+
+    Examples
+    --------
+    >>> # Default: x-axis is dimension, y-axis is values
+    >>> fig = da.plotly.scatter()
+
+    >>> # Dimension vs dimension, colored by values
+    >>> fig = da.plotly.scatter(x="lon", y="lat", color="value")
     """
     px = attempt_import("plotly.express")
 
+    # Handle y parameter: if it's a dimension, exclude it from slot assignment
+    y_is_dim = y != "value" and y in darray.dims
+    dims_for_slots = [d for d in darray.dims if not (y_is_dim and d == y)]
+
     slots = assign_slots(
-        list(darray.dims),
+        dims_for_slots,
         "scatter",
         x=x,
         color=color,
@@ -393,19 +410,31 @@ def scatter(
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
 
+    # Convert "value" references to actual column name
+    def slot_to_col(slot_value):
+        return value_col if slot_value == "value" else slot_value
+
+    y_col = value_col if y == "value" else y
+    x_col = slots.get("x")
+    color_col = slot_to_col(slots.get("color"))
+
     # Build labels for axes
     labels = px_kwargs.pop("labels", {})
-    x_col = slots.get("x")
     if x_col and str(x_col) not in labels:
         labels[str(x_col)] = get_axis_label(darray, x_col)
-    if value_col not in labels:
+    if y == "value" and value_col not in labels:
+        labels[value_col] = get_value_label(darray)
+    elif y_is_dim and str(y) not in labels:
+        labels[str(y)] = get_axis_label(darray, y)
+    # Add label for value column if used as color
+    if slots.get("color") == "value" and value_col not in labels:
         labels[value_col] = get_value_label(darray)
 
     fig = px.scatter(
         df,
         x=x_col,
-        y=value_col,
-        color=slots.get("color"),
+        y=y_col,
+        color=color_col,
         size=slots.get("size"),
         symbol=slots.get("symbol"),
         facet_col=slots.get("facet_col"),

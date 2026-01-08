@@ -112,16 +112,22 @@ def assign_slots(
             if slot in available_slots:
                 available_slots.remove(slot)
         elif not isinstance(value, _AUTO):
-            # Explicit dimension assignment
-            if value not in dims_list:
+            # Explicit assignment - can be a dimension name or "value" (DataArray values)
+            if value == "value":
+                # "value" means use the DataArray values for this slot
+                slots[slot] = "value"
+                if slot in available_slots:
+                    available_slots.remove(slot)
+            elif value not in dims_list:
                 raise ValueError(
                     f"Dimension {value!r} assigned to slot {slot!r} "
                     f"is not in the data dimensions: {dims_list}"
                 )
-            slots[slot] = value
-            used_dims.add(value)
-            if slot in available_slots:
-                available_slots.remove(slot)
+            else:
+                slots[slot] = value
+                used_dims.add(value)
+                if slot in available_slots:
+                    available_slots.remove(slot)
 
     # Pass 2: Fill remaining slots with remaining dims (by position)
     remaining_dims = [d for d in dims_list if d not in used_dims]
