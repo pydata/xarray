@@ -92,8 +92,16 @@ def line(
     """
     px = attempt_import("plotly.express")
 
+    # Determine y column - auto/"value" uses DataArray values, otherwise use dimension name
+    use_values = isinstance(y, _AUTO) or y == "value"
+
+    # If y is a dimension, exclude it from slot assignment
+    dims_for_slots = list(darray.dims)
+    if not use_values and y in dims_for_slots:
+        dims_for_slots.remove(y)
+
     slots = assign_slots(
-        list(darray.dims),
+        dims_for_slots,
         "line",
         x=x,
         color=color,
@@ -106,9 +114,6 @@ def line(
 
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
-
-    # Determine y column - auto/"value" uses DataArray values, otherwise use dimension name
-    use_values = isinstance(y, _AUTO) or y == "value"
     y_col = value_col if use_values else y
 
     # Build labels for axes
@@ -382,8 +387,16 @@ def scatter(
     """
     px = attempt_import("plotly.express")
 
+    # Determine y column - auto/"value" uses DataArray values, otherwise use dimension name
+    use_values = isinstance(y, _AUTO) or y == "value"
+
+    # If y is a dimension, exclude it from slot assignment
+    dims_for_slots = list(darray.dims)
+    if not use_values and y in dims_for_slots:
+        dims_for_slots.remove(y)
+
     slots = assign_slots(
-        list(darray.dims),
+        dims_for_slots,
         "scatter",
         x=x,
         color=color,
@@ -396,9 +409,6 @@ def scatter(
 
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
-
-    # Determine y column - auto/"value" uses DataArray values, otherwise use dimension name
-    use_values = isinstance(y, _AUTO) or y == "value"
     y_col = value_col if use_values else y
 
     # Build labels for axes
