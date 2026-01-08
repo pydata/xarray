@@ -27,6 +27,8 @@ def line(
     *,
     x: SlotValue = auto,
     color: SlotValue = auto,
+    line_dash: SlotValue = auto,
+    symbol: SlotValue = auto,
     facet_col: SlotValue = auto,
     facet_row: SlotValue = auto,
     animation_frame: SlotValue = auto,
@@ -44,6 +46,12 @@ def line(
         a dimension name for explicit assignment, or `None` to skip.
     color : str, auto, or None
         Dimension for color grouping. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    line_dash : str, auto, or None
+        Dimension for line dash style. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    symbol : str, auto, or None
+        Dimension for marker symbol. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
     facet_col : str, auto, or None
         Dimension for subplot columns. Use `auto` for positional assignment,
@@ -73,9 +81,9 @@ def line(
     ...     },
     ...     name="temperature",
     ... )
-    >>> fig = da.pxplot.line()  # time→x, city→color
-    >>> fig = da.pxplot.line(color=None)  # time→x, city→facet_col
-    >>> fig = da.pxplot.line(x="city", color="time")  # explicit assignment
+    >>> fig = da.plotly.line()  # time→x, city→color
+    >>> fig = da.plotly.line(color=None)  # time→x, city→line_dash
+    >>> fig = da.plotly.line(x="city", color="time")  # explicit assignment
     """
     px = attempt_import("plotly.express")
 
@@ -84,6 +92,8 @@ def line(
         "line",
         x=x,
         color=color,
+        line_dash=line_dash,
+        symbol=symbol,
         facet_col=facet_col,
         facet_row=facet_row,
         animation_frame=animation_frame,
@@ -104,6 +114,8 @@ def line(
         x=slots.get("x"),
         y=value_col,
         color=slots.get("color"),
+        line_dash=slots.get("line_dash"),
+        symbol=slots.get("symbol"),
         facet_col=slots.get("facet_col"),
         facet_row=slots.get("facet_row"),
         animation_frame=slots.get("animation_frame"),
@@ -119,6 +131,7 @@ def bar(
     *,
     x: SlotValue = auto,
     color: SlotValue = auto,
+    pattern_shape: SlotValue = auto,
     facet_col: SlotValue = auto,
     facet_row: SlotValue = auto,
     animation_frame: SlotValue = auto,
@@ -136,6 +149,9 @@ def bar(
         a dimension name for explicit assignment, or `None` to skip.
     color : str, auto, or None
         Dimension for color grouping. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
+    pattern_shape : str, auto, or None
+        Dimension for bar fill pattern. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
     facet_col : str, auto, or None
         Dimension for subplot columns. Use `auto` for positional assignment,
@@ -165,7 +181,7 @@ def bar(
     ...     },
     ...     name="temperature",
     ... )
-    >>> fig = da.pxplot.bar()  # city→x, scenario→color
+    >>> fig = da.plotly.bar()  # city→x, scenario→color
     """
     px = attempt_import("plotly.express")
 
@@ -174,6 +190,7 @@ def bar(
         "bar",
         x=x,
         color=color,
+        pattern_shape=pattern_shape,
         facet_col=facet_col,
         facet_row=facet_row,
         animation_frame=animation_frame,
@@ -194,6 +211,7 @@ def bar(
         x=slots.get("x"),
         y=value_col,
         color=slots.get("color"),
+        pattern_shape=slots.get("pattern_shape"),
         facet_col=slots.get("facet_col"),
         facet_row=slots.get("facet_row"),
         animation_frame=slots.get("animation_frame"),
@@ -209,6 +227,7 @@ def area(
     *,
     x: SlotValue = auto,
     color: SlotValue = auto,
+    pattern_shape: SlotValue = auto,
     facet_col: SlotValue = auto,
     facet_row: SlotValue = auto,
     animation_frame: SlotValue = auto,
@@ -227,6 +246,9 @@ def area(
     color : str, auto, or None
         Dimension for color/stacking grouping. Use `auto` for positional
         assignment, a dimension name for explicit assignment, or `None` to skip.
+    pattern_shape : str, auto, or None
+        Dimension for fill pattern. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
     facet_col : str, auto, or None
         Dimension for subplot columns. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -251,7 +273,7 @@ def area(
     ...     dims=["time", "category"],
     ...     name="sales",
     ... )
-    >>> fig = da.pxplot.area()  # time→x, category→color (stacked)
+    >>> fig = da.plotly.area()  # time→x, category→color (stacked)
     """
     px = attempt_import("plotly.express")
 
@@ -260,6 +282,7 @@ def area(
         "area",
         x=x,
         color=color,
+        pattern_shape=pattern_shape,
         facet_col=facet_col,
         facet_row=facet_row,
         animation_frame=animation_frame,
@@ -280,6 +303,7 @@ def area(
         x=slots.get("x"),
         y=value_col,
         color=slots.get("color"),
+        pattern_shape=slots.get("pattern_shape"),
         facet_col=slots.get("facet_col"),
         facet_row=slots.get("facet_row"),
         animation_frame=slots.get("animation_frame"),
@@ -297,6 +321,7 @@ def scatter(
     y: str = "value",
     color: SlotValue = auto,
     size: SlotValue = auto,
+    symbol: SlotValue = auto,
     facet_col: SlotValue = auto,
     facet_row: SlotValue = auto,
     animation_frame: SlotValue = auto,
@@ -324,6 +349,9 @@ def scatter(
     size : str, auto, or None
         Dimension for marker size. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
+    symbol : str, auto, or None
+        Dimension for marker symbol. Use `auto` for positional assignment,
+        a dimension name for explicit assignment, or `None` to skip.
     facet_col : str, auto, or None
         Dimension for subplot columns. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -349,6 +377,7 @@ def scatter(
         x=x,
         color=color,
         size=size,
+        symbol=symbol,
         facet_col=facet_col,
         facet_row=facet_row,
         animation_frame=animation_frame,
@@ -375,6 +404,7 @@ def scatter(
         y=y_col,
         color=slots.get("color"),
         size=slots.get("size"),
+        symbol=slots.get("symbol"),
         facet_col=slots.get("facet_col"),
         facet_row=slots.get("facet_row"),
         animation_frame=slots.get("animation_frame"),

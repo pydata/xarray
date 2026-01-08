@@ -30,11 +30,12 @@ auto = _AUTO()
 SlotValue = _AUTO | str | None
 
 # Slot orders per plot type (consistent with Plotly Express naming)
+# Faceting and animation are always last
 SLOT_ORDERS: dict[str, tuple[str, ...]] = {
-    "line": ("x", "color", "facet_col", "facet_row", "animation_frame"),
-    "bar": ("x", "color", "facet_col", "facet_row", "animation_frame"),
-    "area": ("x", "color", "facet_col", "facet_row", "animation_frame"),
-    "scatter": ("x", "color", "size", "facet_col", "facet_row", "animation_frame"),
+    "line": ("x", "color", "line_dash", "symbol", "facet_col", "facet_row", "animation_frame"),
+    "bar": ("x", "color", "pattern_shape", "facet_col", "facet_row", "animation_frame"),
+    "area": ("x", "color", "pattern_shape", "facet_col", "facet_row", "animation_frame"),
+    "scatter": ("x", "color", "size", "symbol", "facet_col", "facet_row", "animation_frame"),
     "imshow": ("x", "y", "facet_col", "animation_frame"),
     "box": ("x", "color", "facet_col", "facet_row", "animation_frame"),
 }

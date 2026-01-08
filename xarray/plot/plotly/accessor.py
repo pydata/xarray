@@ -43,6 +43,8 @@ class DataArrayPlotlyAccessor:
         *,
         x: SlotValue = auto,
         color: SlotValue = auto,
+        line_dash: SlotValue = auto,
+        symbol: SlotValue = auto,
         facet_col: SlotValue = auto,
         facet_row: SlotValue = auto,
         animation_frame: SlotValue = auto,
@@ -52,7 +54,7 @@ class DataArrayPlotlyAccessor:
         Create an interactive line plot using Plotly Express.
 
         Dimensions are assigned to plot slots by their order:
-        x → color → facet_col → facet_row → animation_frame
+        x → color → line_dash → symbol → facet_col → facet_row → animation_frame
 
         Parameters
         ----------
@@ -60,12 +62,16 @@ class DataArrayPlotlyAccessor:
             Dimension for x-axis. Default: first dimension.
         color : str, auto, or None
             Dimension for color grouping. Default: second dimension.
+        line_dash : str, auto, or None
+            Dimension for line dash style. Default: third dimension.
+        symbol : str, auto, or None
+            Dimension for marker symbol. Default: fourth dimension.
         facet_col : str, auto, or None
-            Dimension for subplot columns. Default: third dimension.
+            Dimension for subplot columns. Default: fifth dimension.
         facet_row : str, auto, or None
-            Dimension for subplot rows. Default: fourth dimension.
+            Dimension for subplot rows. Default: sixth dimension.
         animation_frame : str, auto, or None
-            Dimension for animation. Default: fifth dimension.
+            Dimension for animation. Default: seventh dimension.
         **px_kwargs
             Additional arguments passed to `plotly.express.line()`.
 
@@ -77,6 +83,8 @@ class DataArrayPlotlyAccessor:
             self._da,
             x=x,
             color=color,
+            line_dash=line_dash,
+            symbol=symbol,
             facet_col=facet_col,
             facet_row=facet_row,
             animation_frame=animation_frame,
@@ -88,6 +96,7 @@ class DataArrayPlotlyAccessor:
         *,
         x: SlotValue = auto,
         color: SlotValue = auto,
+        pattern_shape: SlotValue = auto,
         facet_col: SlotValue = auto,
         facet_row: SlotValue = auto,
         animation_frame: SlotValue = auto,
@@ -97,7 +106,7 @@ class DataArrayPlotlyAccessor:
         Create an interactive bar chart using Plotly Express.
 
         Dimensions are assigned to plot slots by their order:
-        x → color → facet_col → facet_row → animation_frame
+        x → color → pattern_shape → facet_col → facet_row → animation_frame
 
         Parameters
         ----------
@@ -105,12 +114,14 @@ class DataArrayPlotlyAccessor:
             Dimension for x-axis. Default: first dimension.
         color : str, auto, or None
             Dimension for color grouping. Default: second dimension.
+        pattern_shape : str, auto, or None
+            Dimension for bar fill pattern. Default: third dimension.
         facet_col : str, auto, or None
-            Dimension for subplot columns. Default: third dimension.
+            Dimension for subplot columns. Default: fourth dimension.
         facet_row : str, auto, or None
-            Dimension for subplot rows. Default: fourth dimension.
+            Dimension for subplot rows. Default: fifth dimension.
         animation_frame : str, auto, or None
-            Dimension for animation. Default: fifth dimension.
+            Dimension for animation. Default: sixth dimension.
         **px_kwargs
             Additional arguments passed to `plotly.express.bar()`.
 
@@ -122,6 +133,7 @@ class DataArrayPlotlyAccessor:
             self._da,
             x=x,
             color=color,
+            pattern_shape=pattern_shape,
             facet_col=facet_col,
             facet_row=facet_row,
             animation_frame=animation_frame,
@@ -133,6 +145,7 @@ class DataArrayPlotlyAccessor:
         *,
         x: SlotValue = auto,
         color: SlotValue = auto,
+        pattern_shape: SlotValue = auto,
         facet_col: SlotValue = auto,
         facet_row: SlotValue = auto,
         animation_frame: SlotValue = auto,
@@ -142,7 +155,7 @@ class DataArrayPlotlyAccessor:
         Create an interactive stacked area chart using Plotly Express.
 
         Dimensions are assigned to plot slots by their order:
-        x → color → facet_col → facet_row → animation_frame
+        x → color → pattern_shape → facet_col → facet_row → animation_frame
 
         Parameters
         ----------
@@ -150,12 +163,14 @@ class DataArrayPlotlyAccessor:
             Dimension for x-axis. Default: first dimension.
         color : str, auto, or None
             Dimension for color/stacking. Default: second dimension.
+        pattern_shape : str, auto, or None
+            Dimension for fill pattern. Default: third dimension.
         facet_col : str, auto, or None
-            Dimension for subplot columns. Default: third dimension.
+            Dimension for subplot columns. Default: fourth dimension.
         facet_row : str, auto, or None
-            Dimension for subplot rows. Default: fourth dimension.
+            Dimension for subplot rows. Default: fifth dimension.
         animation_frame : str, auto, or None
-            Dimension for animation. Default: fifth dimension.
+            Dimension for animation. Default: sixth dimension.
         **px_kwargs
             Additional arguments passed to `plotly.express.area()`.
 
@@ -167,6 +182,7 @@ class DataArrayPlotlyAccessor:
             self._da,
             x=x,
             color=color,
+            pattern_shape=pattern_shape,
             facet_col=facet_col,
             facet_row=facet_row,
             animation_frame=animation_frame,
@@ -180,6 +196,7 @@ class DataArrayPlotlyAccessor:
         y: str = "value",
         color: SlotValue = auto,
         size: SlotValue = auto,
+        symbol: SlotValue = auto,
         facet_col: SlotValue = auto,
         facet_row: SlotValue = auto,
         animation_frame: SlotValue = auto,
@@ -189,7 +206,7 @@ class DataArrayPlotlyAccessor:
         Create an interactive scatter plot using Plotly Express.
 
         By default, y-axis shows the DataArray values. Dimensions are assigned
-        to other slots by their order: x → color → size → facet_col → facet_row → animation_frame
+        to other slots by their order: x → color → size → symbol → facet_col → facet_row → animation_frame
 
         Parameters
         ----------
@@ -202,12 +219,14 @@ class DataArrayPlotlyAccessor:
             Dimension for color grouping. Default: second dimension.
         size : str, auto, or None
             Dimension for marker size. Default: third dimension.
+        symbol : str, auto, or None
+            Dimension for marker symbol. Default: fourth dimension.
         facet_col : str, auto, or None
-            Dimension for subplot columns. Default: fourth dimension.
+            Dimension for subplot columns. Default: fifth dimension.
         facet_row : str, auto, or None
-            Dimension for subplot rows. Default: fifth dimension.
+            Dimension for subplot rows. Default: sixth dimension.
         animation_frame : str, auto, or None
-            Dimension for animation. Default: sixth dimension.
+            Dimension for animation. Default: seventh dimension.
         **px_kwargs
             Additional arguments passed to `plotly.express.scatter()`.
 
@@ -221,6 +240,7 @@ class DataArrayPlotlyAccessor:
             y=y,
             color=color,
             size=size,
+            symbol=symbol,
             facet_col=facet_col,
             facet_row=facet_row,
             animation_frame=animation_frame,

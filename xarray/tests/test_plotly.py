@@ -16,7 +16,7 @@ class TestAssignSlots:
     def test_auto_assignment_line(self):
         """Test automatic positional assignment for line plots."""
         slots = assign_slots(["time", "city", "scenario"], "line")
-        assert slots == {"x": "time", "color": "city", "facet_col": "scenario"}
+        assert slots == {"x": "time", "color": "city", "line_dash": "scenario"}
 
     def test_auto_assignment_imshow(self):
         """Test automatic positional assignment for imshow."""
@@ -41,19 +41,19 @@ class TestAssignSlots:
         )
         assert slots["x"] == "city"
         assert slots["color"] == "time"
-        # scenario goes to the next available slot
-        assert slots["facet_col"] == "scenario"
+        # scenario goes to the next available slot (line_dash)
+        assert slots["line_dash"] == "scenario"
 
     def test_skip_slot_with_none(self):
         """Test skipping a slot using None."""
         slots = assign_slots(["time", "city", "scenario"], "line", color=None)
-        assert slots == {"x": "time", "facet_col": "city", "facet_row": "scenario"}
+        assert slots == {"x": "time", "line_dash": "city", "symbol": "scenario"}
         assert "color" not in slots
 
     def test_unassigned_dims_error(self):
         """Test that unassigned dimensions raise an error."""
-        # 6 dims but only 5 slots
-        dims = list("abcdef")
+        # 8 dims but only 7 slots for line
+        dims = list("abcdefgh")
         with pytest.raises(ValueError, match="Unassigned dimension"):
             assign_slots(dims, "line")
 
@@ -203,9 +203,12 @@ class TestDataArrayPlotly:
 
     def test_unassigned_dims_error(self):
         """Test that too many dimensions raises an error."""
-        da_6d = xr.DataArray(np.random.rand(2, 2, 2, 2, 2, 2), dims=list("abcdef"))
+        # 8 dims but line only has 7 slots
+        da_8d = xr.DataArray(
+            np.random.rand(2, 2, 2, 2, 2, 2, 2, 2), dims=list("abcdefgh")
+        )
         with pytest.raises(ValueError, match="Unassigned dimension"):
-            da_6d.plotly.line()
+            da_8d.plotly.line()
 
 
 class TestLabelsAndMetadata:
@@ -258,6 +261,8 @@ class TestSlotOrders:
         assert SLOT_ORDERS["line"] == (
             "x",
             "color",
+            "line_dash",
+            "symbol",
             "facet_col",
             "facet_row",
             "animation_frame",
@@ -269,6 +274,7 @@ class TestSlotOrders:
             "x",
             "color",
             "size",
+            "symbol",
             "facet_col",
             "facet_row",
             "animation_frame",
