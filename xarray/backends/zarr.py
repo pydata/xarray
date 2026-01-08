@@ -45,6 +45,13 @@ if TYPE_CHECKING:
     from xarray.core.datatree import DataTree
     from xarray.core.types import ZarrArray, ZarrGroup
 
+try:
+    from zarr import RectilinearChunks, RegularChunks  # noqa: F401
+
+    has_variable_chunk_support = True
+except ImportError:
+    has_variable_chunk_support = False
+
 
 def _get_mappers(*, storage_options, store, chunk_store):
     # expand str and path-like arguments
@@ -302,7 +309,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, zarr_format):
     # while dask chunks can be variable sized
     # https://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
-        if zarr_format == 3:
+        if zarr_format == 3 and has_variable_chunk_support:
             return tuple(var_chunks)
 
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
