@@ -485,7 +485,7 @@ Operations and Methods on Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To show how applying operations across a whole tree at once can be useful,
-let's first create a example scientific dataset.
+let's first create an example scientific dataset.
 
 .. jupyter-execute::
 

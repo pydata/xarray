@@ -280,7 +280,7 @@ class TestDecodeCF:
         expected = Dataset(
             {"foo": ("t", [0, 0, 0], {"units": "bar"})},
             {
-                "t": pd.date_range("2000-01-01", periods=3),
+                "t": pd.date_range("2000-01-01", periods=3, unit="ns"),
                 "y": ("t", [5.0, 10.0, np.nan]),
             },
         )
@@ -422,7 +422,7 @@ class TestDecodeCF:
         )
         expected = Dataset(
             {
-                "t": pd.date_range("2000-01-01", periods=3),
+                "t": pd.date_range("2000-01-01", periods=3, unit="ns"),
                 "foo": (
                     ("t", "x"),
                     [[0, 0, 0], [1, 1, 1], [2, 2, 2]],
@@ -658,8 +658,11 @@ def test_scalar_units() -> None:
 
 
 def test_decode_cf_error_includes_variable_name():
-    ds = Dataset({"invalid": ([], 1e36, {"units": "days since 2000-01-01"})})
-    with pytest.raises(ValueError, match="Failed to decode variable 'invalid'"):
+    ds = Dataset({"my_invalid_var": ([], 1e36, {"units": "days since 2000-01-01"})})
+    with pytest.raises(
+        ValueError,
+        match=r"unable to decode(?s:.*)my_invalid_var",
+    ):
         decode_cf(ds)
 
 

@@ -74,10 +74,8 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
-    has_h5netcdf_1_4_0_or_above,
     has_netCDF4,
     has_numpy_2,
-    has_pydap,
     has_scipy,
     has_zarr,
     has_zarr_v3,
@@ -90,7 +88,6 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
-    requires_h5netcdf_1_4_0_or_above,
     requires_h5netcdf_1_7_0_or_above,
     requires_h5netcdf_or_netCDF4,
     requires_h5netcdf_ros3,
@@ -209,7 +206,7 @@ def _check_compression_codec_available(codec: str | None) -> bool:
 
             # Attempt to create a variable with the compression
             if codec and codec.startswith("blosc"):
-                nc.createVariable(  # type: ignore[call-overload]
+                nc.createVariable(  # type: ignore[call-overload, unused-ignore]
                     varname="test",
                     datatype="f4",
                     dimensions=("x",),
@@ -217,7 +214,7 @@ def _check_compression_codec_available(codec: str | None) -> bool:
                     blosc_shuffle=1,
                 )
             else:
-                nc.createVariable(  # type: ignore[call-overload]
+                nc.createVariable(  # type: ignore[call-overload, unused-ignore]
                     varname="test", datatype="f4", dimensions=("x",), compression=codec
                 )
 
@@ -767,7 +764,7 @@ class DatasetIOBase:
         expected["td"].encoding = encoding
         expected["td0"].encoding = encoding
         with self.roundtrip(
-            expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="ns")}
+            expected, open_kwargs={"decode_timedelta": CFTimedeltaCoder(time_unit="s")}
         ) as actual:
             assert_identical(expected, actual)
 
@@ -1487,7 +1484,7 @@ class CFEncodedBase(DatasetIOBase):
                 pass
 
     def test_encoding_kwarg_dates(self) -> None:
-        ds = Dataset({"t": pd.date_range("2000-01-01", periods=3)})
+        ds = Dataset({"t": pd.date_range("2000-01-01", periods=3, unit="ns")})
         units = "days since 1900-01-01"
         kwargs = dict(encoding={"t": {"units": units}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
@@ -2125,20 +2122,14 @@ class NetCDF4Base(NetCDFBase):
                 )
                 v[:] = 1
             with open_dataset(tmp_file, engine="netcdf4") as original:
-                save_kwargs = {}
                 # We don't expect any errors.
                 # This is effectively a void context manager
                 expected_warnings = 0
                 if self.engine == "h5netcdf":
-                    if not has_h5netcdf_1_4_0_or_above:
-                        save_kwargs["invalid_netcdf"] = True
-                        expected_warnings = 1
-                        expected_msg = "You are writing invalid netcdf features to file"
-                    else:
-                        expected_warnings = 1
-                        expected_msg = "Creating variable with default fill_value 0 which IS defined in enum type"
+                    expected_warnings = 1
+                    expected_msg = "Creating variable with default fill_value 0 which IS defined in enum type"
 
-                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                with self.roundtrip(original) as actual:
                     assert len(recwarn) == expected_warnings
                     if expected_warnings:
                         assert issubclass(recwarn[0].category, UserWarning)
@@ -2148,14 +2139,6 @@ class NetCDF4Base(NetCDFBase):
                         actual.clouds.encoding["dtype"].metadata["enum"]
                         == cloud_type_dict
                     )
-                    if not (
-                        self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above
-                    ):
-                        # not implemented in h5netcdf yet
-                        assert (
-                            actual.clouds.encoding["dtype"].metadata["enum_name"]
-                            == "cloud_type"
-                        )
 
     @requires_netCDF4
     def test_encoding_enum__multiple_variable_with_enum(self):
@@ -2177,10 +2160,7 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=255,
                 )
             with open_dataset(tmp_file, engine="netcdf4") as original:
-                save_kwargs = {}
-                if self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above:
-                    save_kwargs["invalid_netcdf"] = True
-                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                with self.roundtrip(original) as actual:
                     assert_equal(original, actual)
                     assert (
                         actual.clouds.encoding["dtype"] == actual.tifa.encoding["dtype"]
@@ -2193,14 +2173,6 @@ class NetCDF4Base(NetCDFBase):
                         actual.clouds.encoding["dtype"].metadata["enum"]
                         == cloud_type_dict
                     )
-                    if not (
-                        self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above
-                    ):
-                        # not implemented in h5netcdf yet
-                        assert (
-                            actual.clouds.encoding["dtype"].metadata["enum_name"]
-                            == "cloud_type"
-                        )
 
     @requires_netCDF4
     def test_encoding_enum__error_multiple_variable_with_changing_enum(self):
@@ -2236,17 +2208,6 @@ class NetCDF4Base(NetCDFBase):
                     "u1",
                     metadata={"enum": modified_enum, "enum_name": "cloud_type"},
                 )
-                if not (self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above):
-                    # not implemented yet in h5netcdf
-                    with pytest.raises(
-                        ValueError,
-                        match=(
-                            r"Cannot save variable .*"
-                            r" because an enum `cloud_type` already exists in the Dataset .*"
-                        ),
-                    ):
-                        with self.roundtrip(original):
-                            pass
 
     @pytest.mark.parametrize("create_default_indexes", [True, False])
     def test_create_default_indexes(self, tmp_path, create_default_indexes) -> None:
@@ -3638,6 +3599,18 @@ class ZarrBase(CFEncodedBase):
         ) as ds1:
             assert_equal(ds1, original)
 
+    @requires_dask
+    def test_chunk_auto_with_small_dask_chunks(self) -> None:
+        original = Dataset({"u": (("x",), np.zeros(10))}).chunk({"x": 2})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, **self.version_kwargs)
+            with xr.open_zarr(store, **self.version_kwargs) as default:
+                assert default.chunks == {"x": (2, 2, 2, 2, 2)}
+                with xr.open_zarr(store, chunks="auto", **self.version_kwargs) as auto:
+                    assert_identical(auto, original)
+                    assert auto.chunks == {"x": (10,)}
+                    assert auto.chunks != default.chunks
+
     @requires_cftime
     def test_open_zarr_use_cftime(self) -> None:
         ds = create_test_data()
@@ -4916,31 +4889,6 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore.open(tmp_file, "w")
 
-    @pytest.mark.skipif(
-        has_h5netcdf_1_4_0_or_above, reason="only valid for h5netcdf < 1.4.0"
-    )
-    def test_complex(self) -> None:
-        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
-        save_kwargs = {"invalid_netcdf": True}
-        with pytest.warns(UserWarning, match="You are writing invalid netcdf features"):
-            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-                assert_equal(expected, actual)
-
-    @pytest.mark.skipif(
-        has_h5netcdf_1_4_0_or_above, reason="only valid for h5netcdf < 1.4.0"
-    )
-    @pytest.mark.parametrize("invalid_netcdf", [None, False])
-    def test_complex_error(self, invalid_netcdf) -> None:
-        import h5netcdf
-
-        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
-        save_kwargs = {"invalid_netcdf": invalid_netcdf}
-        with pytest.raises(
-            h5netcdf.CompatibilityError, match="are not a supported NetCDF feature"
-        ):
-            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-                assert_equal(expected, actual)
-
     def test_numpy_bool_(self) -> None:
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
         # when writing invalid_netcdf datasets in order to support a roundtrip
@@ -5094,7 +5042,6 @@ class TestH5NetCDFData(NetCDF4Base):
         with pytest.raises(ValueError, match=byte_attrs_dataset["h5netcdf_error"]):
             super().test_byte_attrs(byte_attrs_dataset)
 
-    @requires_h5netcdf_1_4_0_or_above
     def test_roundtrip_complex(self):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         with self.roundtrip(expected) as actual:
@@ -6560,6 +6507,46 @@ class TestPydapOnline(TestPydap):
         )
 
 
+@requires_pydap
+@network
+@pytest.mark.parametrize("protocol", ["dap2", "dap4"])
+def test_batchdap4_downloads(tmpdir, protocol) -> None:
+    """Test that in dap4, all dimensions are downloaded at once"""
+    import pydap
+    from pydap.net import create_session
+
+    _version_ = Version(pydap.__version__)
+    # Create a session with pre-set params in pydap backend, to cache urls
+    cache_name = tmpdir / "debug"
+    session = create_session(use_cache=True, cache_kwargs={"cache_name": cache_name})
+    session.cache.clear()
+    url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
+
+    ds = open_dataset(
+        url.replace("https", protocol),
+        session=session,
+        engine="pydap",
+        decode_times=False,
+    )
+
+    if protocol == "dap4":
+        if _version_ > Version("3.5.5"):
+            # total downloads are:
+            # 1 dmr + 1 dap (all dimensions at once)
+            assert len(session.cache.urls()) == 2
+            # now load the rest of the variables
+            ds.load()
+            # each non-dimension array is downloaded with an individual https requests
+            assert len(session.cache.urls()) == 2 + 4
+        else:
+            assert len(session.cache.urls()) == 4
+            ds.load()
+            assert len(session.cache.urls()) == 4 + 4
+    elif protocol == "dap2":
+        # das + dds + 3 dods urls for dimensions alone
+        assert len(session.cache.urls()) == 5
+
+
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self) -> None:
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})
@@ -7254,9 +7241,9 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
     _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
 
-    # Remote URLs without extensions are no longer claimed (stricter detection)
-    assert not entrypoint.guess_can_open("http://something/remote")
-    # Remote URLs with netCDF extensions are claimed
+    # Remote URLs without extensions return True (backward compatibility)
+    assert entrypoint.guess_can_open("http://something/remote")
+    # Remote URLs with netCDF extensions are also claimed
     assert entrypoint.guess_can_open("http://something/remote.nc")
     assert entrypoint.guess_can_open("something-local.nc")
     assert entrypoint.guess_can_open("something-local.nc4")
@@ -7400,15 +7387,22 @@ def test_remote_url_backend_auto_detection() -> None:
             f"URL {url!r} should select {expected_backend!r} but got {engine!r}"
         )
 
-    # DAP URLs without extensions - pydap wins if available, netcdf4 otherwise
-    # When pydap is not installed, netCDF4 should handle these DAP URLs
-    expected_dap_backend = "pydap" if has_pydap else "netcdf4"
+    # DAP URLs - netcdf4 should handle these (it comes first in backend order)
+    # Both netcdf4 and pydap can open DAP URLs, but netcdf4 has priority
+    expected_dap_backend = "netcdf4"
     dap_urls = [
+        # Explicit DAP protocol schemes
         "dap2://opendap.earthdata.nasa.gov/collections/dataset",
         "dap4://opendap.earthdata.nasa.gov/collections/dataset",
+        "dap://example.com/dataset",
         "DAP2://example.com/dataset",  # uppercase scheme
         "DAP4://example.com/dataset",  # uppercase scheme
+        # DAP path indicators
         "https://example.com/services/DAP2/dataset",  # uppercase in path
+        "http://test.opendap.org/opendap/data/nc/file.nc",  # /opendap/ path
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day",  # ERDDAP
+        "http://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/",  # THREDDS dodsC
+        "https://disc2.gesdisc.eosdis.nasa.gov/dods/TRMM_3B42",  # GrADS /dods/
     ]
 
     for url in dap_urls:
@@ -7417,20 +7411,16 @@ def test_remote_url_backend_auto_detection() -> None:
             f"URL {url!r} should select {expected_dap_backend!r} but got {engine!r}"
         )
 
-    # URLs that should raise ValueError (no backend can open them)
-    invalid_urls = [
-        "http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap",  # .dap suffix
-        "https://example.com/data.dap",  # .dap suffix
-        "http://opendap.example.com/data",  # no extension, no DAP indicators
-        "https://test.opendap.org/dataset",  # no extension, no DAP indicators
+    # URLs with .dap suffix are claimed by netcdf4 (backward compatibility fallback)
+    # Note: .dap suffix is intentionally NOT recognized as a DAP dataset URL
+    fallback_urls = [
+        ("http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap", "netcdf4"),
+        ("https://example.com/data.dap", "netcdf4"),
     ]
 
-    for url in invalid_urls:
-        with pytest.raises(
-            ValueError,
-            match=r"did not find a match in any of xarray's currently installed IO backends",
-        ):
-            guess_engine(url)
+    for url, expected_backend in fallback_urls:
+        engine = guess_engine(url)
+        assert engine == expected_backend
 
 
 @requires_netCDF4
@@ -7446,10 +7436,10 @@ def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> N
     )
     tdf.index.name = "scenario"
     tdf.columns.name = "year"
-    tdf = cast(pd.DataFrame, tdf.stack())
-    tdf.name = "tas"
+    tdf_series = tdf.stack()
+    tdf_series.name = "tas"  # type: ignore[union-attr]
 
-    txr = tdf.to_xarray()
+    txr = tdf_series.to_xarray()
 
     txr.to_netcdf(tmpdir.join("test.nc"))
 

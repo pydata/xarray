@@ -169,7 +169,8 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
             for i, index in enumerate(indexes):
                 if isinstance(index, pd.MultiIndex):
-                    codes, levels = index.codes, index.levels
+                    codes: list[np.ndarray] = list(index.codes)
+                    levels = index.levels
                 else:
                     code, level = pd.factorize(index)
                     codes = [code]
@@ -1265,7 +1266,7 @@ def create_coords_with_default_indexes(
             variables.update(idx_vars)
             all_variables.update(idx_vars)
         else:
-            variables[name] = variable
+            variables[name] = variable.to_base_variable()
 
     new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
 

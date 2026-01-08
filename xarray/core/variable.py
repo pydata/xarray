@@ -972,7 +972,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
-            data = copy.copy(self.data)
+            data = copy.copy(self._data)
         if attrs is _default:
             attrs = copy.copy(self._attrs)
         if encoding is _default:
@@ -1228,7 +1228,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if fill_with_shape:
             return [
                 pad_option.get(d, (n, n))
-                for d, n in zip(self.dims, self.data.shape, strict=True)
+                for d, n in zip(self.dims, self.shape, strict=True)
             ]
         return [pad_option.get(d, (0, 0)) for d in self.dims]
 
@@ -1304,7 +1304,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         # workaround for bug in Dask's default value of stat_length https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
-            stat_length = [(n, n) for n in self.data.shape]  # type: ignore[assignment]
+            stat_length = [(n, n) for n in self.shape]  # type: ignore[assignment]
 
         pad_width_by_index = self._pad_options_dim_to_index(pad_width)
 
@@ -1469,7 +1469,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if self.dims == expanded_dims:
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
-            expanded_data = self.data
+            expanded_data = self._data
         elif shape is None or all(
             s == 1 for s, e in zip(shape, dim, strict=True) if e not in self_dims
         ):
@@ -1477,6 +1477,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # This is typically easier for duck arrays to implement
             # than the full "broadcast_to" semantics
             indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
+            # TODO: switch this to ._data once we teach ExplicitlyIndexed arrays to handle indexers with None.
             expanded_data = self.data[indexer]
         else:  # elif shape is not None:
             dims_map = dict(zip(dim, shape, strict=True))
@@ -2280,6 +2281,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 )
 
         variable = self
+        pad_widths = {}
         for d, window in windows.items():
             # trim or pad the object
             size = variable.shape[self._get_axis_num(d)]
@@ -2300,16 +2302,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 pad = window * n - size
                 if pad < 0:
                     pad += window
-                if side[d] == "left":
-                    pad_width = {d: (0, pad)}
-                else:
-                    pad_width = {d: (pad, 0)}
-                variable = variable.pad(pad_width, mode="constant")
+                elif pad == 0:
+                    continue
+                pad_widths[d] = (0, pad) if side[d] == "left" else (pad, 0)
             else:
                 raise TypeError(
                     f"{boundary[d]} is invalid for boundary. Valid option is 'exact', "
                     "'trim' and 'pad'"
                 )
+        if pad_widths:
+            variable = variable.pad(pad_widths, mode="constant")
 
         shape = []
         axes = []

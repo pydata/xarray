@@ -948,12 +948,7 @@ class TestConcatDataset:
         ]
         actual = concat(objs, "x")
         expected = Dataset(
-            {
-                "x": [
-                    pd.Interval(-1, 0, closed="right"),
-                    pd.Interval(0, 1, closed="right"),
-                ]
-            }
+            {"x": pd.IntervalIndex.from_tuples([(-1, 0), (0, 1)], closed="right")}
         )
         assert_identical(actual, expected)
 

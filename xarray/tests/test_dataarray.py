@@ -49,6 +49,7 @@ from xarray.tests import (
     assert_no_warnings,
     has_dask,
     has_dask_ge_2025_1_0,
+    has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -57,6 +58,7 @@ from xarray.tests import (
     requires_iris,
     requires_numexpr,
     requires_pint,
+    requires_pyarrow,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -1188,11 +1190,14 @@ class TestDataArray:
         assert_equal(actual, expected)
 
     def test_sel_no_index(self) -> None:
-        array = DataArray(np.arange(10), dims="x")
+        array = DataArray(np.arange(10), dims="x").assign_coords(
+            {"x_meta": ("x", np.linspace(0.1, 1, 10))}
+        )
         assert_identical(array[0], array.sel(x=0))
         assert_identical(array[:5], array.sel(x=slice(5)))
         assert_identical(array[[0, -1]], array.sel(x=[0, -1]))
         assert_identical(array[array < 5], array.sel(x=(array < 5)))
+        assert_identical(array[1], array.sel(x_meta=0.2))
 
     def test_sel_method(self) -> None:
         data = DataArray(np.random.randn(3, 4), [("x", [0, 1, 2]), ("y", list("abcd"))])
@@ -1702,6 +1707,20 @@ class TestDataArray:
         assert_identical(actual, expected, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
+    def test_assign_coords_uses_base_variable_class(self) -> None:
+        a = DataArray([0, 1, 3], dims=["x"], coords={"x": [0, 1, 2]})
+        a = a.assign_coords(foo=a.x)
+
+        # explicit check
+        assert isinstance(a["x"].variable, IndexVariable)
+        assert not isinstance(a["foo"].variable, IndexVariable)
+
+        # test internal invariant checks when comparing the datasets
+        expected = DataArray(
+            [0, 1, 3], dims=["x"], coords={"x": [0, 1, 2], "foo": ("x", [0, 1, 2])}
+        )
+        assert_identical(a, expected)
+
     def test_coords_alignment(self) -> None:
         lhs = DataArray([1, 2, 3], [("x", [0, 1, 2])])
         rhs = DataArray([2, 3, 4], [("x", [1, 2, 3])])
@@ -1866,6 +1885,92 @@ class TestDataArray:
         assert y.dtype == np.float32, (
             "Dtype of reindexed DataArray should remain float32"
         )
+
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.Categorical(["a", "b", "c"]), id="categorical"),
+        ]
+        + (
+            [
+                pytest.param(
+                    pd.array([1, 2, 3], dtype="int64[pyarrow]"),
+                    id="int64[pyarrow]",
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_reindex_extension_array(self, extension_array) -> None:
+        srs = pd.Series(index=["e", "f", "g"], data=extension_array)
+        x = srs.to_xarray()
+        y = x.reindex(index=["f", "g", "z"])
+        assert_array_equal(x, extension_array)
+        pd.testing.assert_extension_array_equal(
+            y.data,
+            extension_array._from_sequence(
+                [extension_array[1], extension_array[2], pd.NA],
+                dtype=extension_array.dtype,
+            ),
+        )
+        assert x.dtype == y.dtype == extension_array.dtype
+
+    @pytest.mark.parametrize(
+        "fill_value,extension_array",
+        [
+            pytest.param("a", pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + (
+            [
+                pytest.param(
+                    0,
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+                    id="int64[pyarrow]",
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_fillna_extension_array(self, fill_value, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        filled = da.fillna(fill_value)
+        assert filled.dtype == srs.dtype
+        assert (filled.values == np.array([fill_value, *(srs.values[1:])])).all()
+
+    @requires_pyarrow
+    def test_fillna_extension_array_bad_val(self) -> None:
+        srs: pd.Series = pd.Series(
+            index=np.array([1, 2, 3]),
+            data=pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"),
+        )
+        da = srs.to_xarray()
+        with pytest.raises(ValueError):
+            da.fillna("a")
+
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.Categorical([pd.NA, "a", "b"]), id="categorical"),
+        ]
+        + (
+            [
+                pytest.param(
+                    pd.array([pd.NA, 1, 1], dtype="int64[pyarrow]"), id="int64[pyarrow]"
+                )
+            ]
+            if has_pyarrow
+            else []
+        ),
+    )
+    def test_dropna_extension_array(self, extension_array) -> None:
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        filled = da.dropna("index")
+        assert filled.dtype == srs.dtype
+        assert (filled.values == srs.values[1:]).all()
 
     def test_rename(self) -> None:
         da = xr.DataArray(
@@ -2315,6 +2420,11 @@ class TestDataArray:
         indexed = da.set_xindex("foo", IndexWithOptions, opt=1)
         assert "foo" in indexed.xindexes
         assert indexed.xindexes["foo"].opt == 1  # type: ignore[attr-defined]
+
+    def test_set_xindex_drop_existing(self) -> None:
+        da = DataArray([1, 2, 3, 4], coords={"x": ("x", [0, 1, 2, 3])}, dims="x")
+        result = da.set_xindex("x", PandasIndex)
+        assert "x" in result.xindexes
 
     def test_dataset_getitem(self) -> None:
         dv = self.ds["foo"]
@@ -3821,7 +3931,8 @@ class TestDataArray:
         y = np.random.randn(10, 3)
         y[2] = np.nan
         t = pd.Series(pd.date_range("20130101", periods=10))
-        t[2] = np.nan
+        # pandas-stubs doesn't allow np.nan for datetime Series, but it converts to NaT
+        t[2] = np.nan  # type: ignore[call-overload]
         lat = [77.7, 83.2, 76]
         da = DataArray(y, {"t": t, "lat": lat}, dims=["t", "lat"])
         roundtripped = DataArray.from_dict(da.to_dict())
@@ -6892,7 +7003,7 @@ class TestIrisConversion:
         # to iris
         coord_dict: dict[Hashable, Any] = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
-        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
+        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3, unit="ns"))
         coord_dict["height"] = 10
         coord_dict["distance2"] = ("distance", [0, 1], {"foo": "bar"})
         coord_dict["time2"] = (("distance", "time"), [[0, 1, 2], [2, 3, 4]])
@@ -6963,7 +7074,7 @@ class TestIrisConversion:
 
         coord_dict: dict[Hashable, Any] = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
-        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
+        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3, unit="ns"))
         coord_dict["height"] = 10
         coord_dict["distance2"] = ("distance", [0, 1], {"foo": "bar"})
         coord_dict["time2"] = (("distance", "time"), [[0, 1, 2], [2, 3, 4]])

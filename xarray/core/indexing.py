@@ -138,18 +138,30 @@ def group_indexers_by_index(
     options: Mapping[str, Any],
 ) -> list[tuple[Index, dict[Any, Any]]]:
     """Returns a list of unique indexes and their corresponding indexers."""
+    # import here instead of at top to guard against circular imports
+    from xarray.core.indexes import PandasIndex
+
     unique_indexes = {}
     grouped_indexers: Mapping[int | None, dict] = defaultdict(dict)
 
     for key, label in indexers.items():
         index: Index = obj.xindexes.get(key, None)
+        if index is None and key in obj.coords:
+            coord = obj.coords[key]
+            if coord.ndim != 1:
+                raise ValueError(
+                    "Could not automatically create PandasIndex for "
+                    f"coord {key!r} with {coord.ndim} dimensions. Please explicitly "
+                    "set the index using `set_xindex`."
+                )
+            index = PandasIndex.from_variables(
+                {key: obj.coords[key].variable}, options={}
+            )
 
         if index is not None:
             index_id = id(index)
             unique_indexes[index_id] = index
             grouped_indexers[index_id][key] = label
-        elif key in obj.coords:
-            raise KeyError(f"no index found for coordinate {key!r}")
         elif key not in obj.dims:
             raise KeyError(
                 f"{key!r} is not a valid dimension or coordinate for "
@@ -355,6 +367,17 @@ def slice_slice_by_array(
     return new_indexer
 
 
+def normalize_indexer(indexer, size):
+    if isinstance(indexer, slice):
+        return normalize_slice(indexer, size)
+    elif isinstance(indexer, np.ndarray):
+        return normalize_array(indexer, size)
+    else:
+        if indexer < 0:
+            return size + indexer
+        return indexer
+
+
 def _index_indexer_1d(
     old_indexer: OuterIndexerType,
     applied_indexer: OuterIndexerType,
@@ -365,7 +388,7 @@ def _index_indexer_1d(
         return old_indexer
     if is_full_slice(old_indexer):
         # shortcut for full slices
-        return applied_indexer
+        return normalize_indexer(applied_indexer, size)
 
     indexer: OuterIndexerType
     if isinstance(old_indexer, slice):
@@ -977,7 +1000,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
 
 def as_indexable(array):
     """
-    This function always returns a ExplicitlyIndexed subclass,
+    This function always returns an ExplicitlyIndexed subclass,
     so that the vectorized indexing is always possible with the returned
     object.
     """
@@ -1315,7 +1338,7 @@ def _decompose_outer_indexer(
     arrays that only support basic or outer indexing.
 
     As an example, let us consider to index a few elements from a backend array
-    with a orthogonal indexer ([0, 3, 1], [2, 3, 2]).
+    with an orthogonal indexer ([0, 3, 1], [2, 3, 2]).
     Even if the backend array only supports basic indexing, it is more
     efficient to load a subslice of the array than loading the entire array,
 
@@ -1640,7 +1663,7 @@ def posify_mask_indexer(indexer: ExplicitIndexer) -> ExplicitIndexer:
 
 
 def is_fancy_indexer(indexer: Any) -> bool:
-    """Return False if indexer is a int, slice, a 1-dimensional list, or a 0 or
+    """Return False if indexer is an int, slice, a 1-dimensional list, or a 0 or
     1-dimensional ndarray; in all other cases return True
     """
     if isinstance(indexer, int | slice) and not isinstance(indexer, bool):
@@ -2170,7 +2193,7 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
         dim_positions = dict(zip(self._dims, positions, strict=False))
 
         result = self._transform.forward(dim_positions)
-        return np.asarray(result[self._coord_name]).squeeze()
+        return np.asarray(result[self._coord_name])
 
     def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
         raise TypeError(
@@ -2204,7 +2227,11 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
         self._check_and_raise_if_non_basic_indexer(indexer)
 
         # also works with basic indexing
-        return self._oindex_get(OuterIndexer(indexer.tuple))
+        res = self._oindex_get(OuterIndexer(indexer.tuple))
+        squeeze_axes = tuple(
+            ax for ax, idxr in enumerate(indexer.tuple) if isinstance(idxr, int)
+        )
+        return res.squeeze(squeeze_axes) if squeeze_axes else res
 
     def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         raise TypeError(

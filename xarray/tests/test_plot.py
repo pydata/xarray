@@ -482,21 +482,20 @@ class TestPlot(PlotTestCase):
     def test_contourf_cmap_set_with_bad_under_over(self) -> None:
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
-        # make a copy here because we want a local cmap that we will modify.
-        cmap_expected = copy(mpl.colormaps["viridis"])
+        # make a copy using with_extremes because we want a local cmap:
+        cmap_expected = mpl.colormaps["viridis"].with_extremes(
+            bad="w", under="r", over="g"
+        )
 
-        cmap_expected.set_bad("w")
         # check we actually changed the set_bad color
         assert np.all(
             cmap_expected(np.ma.masked_invalid([np.nan]))[0]
             != mpl.colormaps["viridis"](np.ma.masked_invalid([np.nan]))[0]
         )
 
-        cmap_expected.set_under("r")
         # check we actually changed the set_under color
         assert cmap_expected(-np.inf) != mpl.colormaps["viridis"](-np.inf)
 
-        cmap_expected.set_over("g")
         # check we actually changed the set_over color
         assert cmap_expected(np.inf) != mpl.colormaps["viridis"](-np.inf)
 
@@ -529,7 +528,7 @@ class TestPlot(PlotTestCase):
             [-0.5, 0.5, 5.0, 9.5, 10.5], _infer_interval_breaks([0, 1, 9, 10])
         )
         assert_array_equal(
-            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),  # type: ignore[operator]
+            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),
             _infer_interval_breaks(pd.date_range("20000101", periods=3)),
         )
 
@@ -2898,7 +2897,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2["hue"] = pd.date_range("2000-1-1", periods=4)
         ds2.plot.scatter(x="A", y="B", hue="hue")
 
-        ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D")
+        ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D", unit="ns")  # type: ignore[call-arg,unused-ignore]
         ds2.plot.scatter(x="A", y="B", hue="hue")
 
     def test_facetgrid_hue_style(self) -> None:

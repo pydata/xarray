@@ -650,7 +650,7 @@ def open_dataarray(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
-    """Open an DataArray from a file or file-like object containing a single
+    """Open a DataArray from a file or file-like object containing a single
     data variable.
 
     This is designed to read netCDF files with only one data variable. If

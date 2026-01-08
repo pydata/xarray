@@ -49,7 +49,7 @@ class TreeNode:
 
     This class stores no data, it has only parents and children attributes, and various methods.
 
-    Stores child nodes in an dict, ensuring that equality checks between trees
+    Stores child nodes in a dict, ensuring that equality checks between trees
     and order of child nodes is preserved (since python 3.7).
 
     Nodes themselves are intrinsically unnamed (do not possess a ._name attribute), but if the node has a parent you can

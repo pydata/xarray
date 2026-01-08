@@ -109,14 +109,31 @@ class TestIndexers:
                 assert indexers == {"y": 0}
         assert len(grouped_indexers) == 3
 
-        with pytest.raises(KeyError, match=r"no index found for coordinate 'y2'"):
-            indexing.group_indexers_by_index(data, {"y2": 2.0}, {})
         with pytest.raises(
             KeyError, match=r"'w' is not a valid dimension or coordinate"
         ):
             indexing.group_indexers_by_index(data, {"w": "a"}, {})
         with pytest.raises(ValueError, match=r"cannot supply.*"):
             indexing.group_indexers_by_index(data, {"z": 1}, {"method": "nearest"})
+
+    def test_group_indexers_by_index_creates_index_for_unindexed_coord(self) -> None:
+        # Test that selecting on a coordinate without an index creates a PandasIndex on the fly
+        data = DataArray(
+            np.zeros((2, 3)), coords={"x": [0, 1], "y": [10, 20, 30]}, dims=("x", "y")
+        )
+        data.coords["y2"] = ("y", [2.0, 3.0, 4.0])
+
+        # y2 is a coordinate but has no index
+        assert "y2" in data.coords
+        assert "y2" not in data.xindexes
+
+        # group_indexers_by_index should create a PandasIndex on the fly
+        grouped_indexers = indexing.group_indexers_by_index(data, {"y2": 3.0}, {})
+
+        assert len(grouped_indexers) == 1
+        idx, indexers = grouped_indexers[0]
+        assert isinstance(idx, PandasIndex)
+        assert indexers == {"y2": 3.0}
 
     def test_map_index_queries(self) -> None:
         def create_sel_results(
@@ -275,6 +292,24 @@ class TestIndexers:
 
 
 class TestLazyArray:
+    @pytest.mark.parametrize(
+        ["indexer", "size", "expected"],
+        (
+            (4, 5, 4),
+            (-1, 3, 2),
+            (slice(None), 4, slice(0, 4, 1)),
+            (slice(1, -3), 7, slice(1, 4, 1)),
+            (np.array([-1, 3, -2]), 5, np.array([4, 3, 3])),
+        ),
+    )
+    def normalize_indexer(self, indexer, size, expected):
+        actual = indexing.normalize_indexer(indexer, size)
+
+        if isinstance(expected, np.ndarray):
+            np.testing.assert_equal(actual, expected)
+        else:
+            assert actual == expected
+
     def test_slice_slice(self) -> None:
         arr = ReturnItem()
         for size in [100, 99]:
@@ -320,6 +355,47 @@ class TestLazyArray:
         actual = indexing.slice_slice_by_array(old_slice, array, size)
         expected = np.arange(size)[old_slice][array]
         assert_array_equal(actual, expected)
+
+    @pytest.mark.parametrize(
+        ["old_indexer", "indexer", "size", "expected"],
+        (
+            pytest.param(
+                slice(None), slice(None, 3), 5, slice(0, 3, 1), id="full_slice-slice"
+            ),
+            pytest.param(
+                slice(None), np.arange(2, 4), 5, np.arange(2, 4), id="full_slice-array"
+            ),
+            pytest.param(slice(None), 3, 5, 3, id="full_slice-int"),
+            pytest.param(
+                slice(2, 12, 3), slice(1, 3), 16, slice(5, 11, 3), id="slice_step-slice"
+            ),
+            pytest.param(
+                slice(2, 12, 3),
+                np.array([1, 3]),
+                16,
+                np.array([5, 11]),
+                id="slice_step-array",
+            ),
+            pytest.param(
+                np.arange(5), slice(1, 3), 7, np.arange(1, 3), id="array-slice"
+            ),
+            pytest.param(
+                np.arange(0, 8, 2),
+                np.arange(1, 3),
+                9,
+                np.arange(2, 6, 2),
+                id="array-array",
+            ),
+            pytest.param(np.arange(3), 2, 5, 2, id="array-int"),
+        ),
+    )
+    def test_index_indexer_1d(self, old_indexer, indexer, size, expected):
+        actual = indexing._index_indexer_1d(old_indexer, indexer, size)
+
+        if isinstance(expected, np.ndarray):
+            np.testing.assert_equal(actual, expected)
+        else:
+            assert actual == expected
 
     def test_lazily_indexed_array(self) -> None:
         original = np.random.rand(10, 20, 30)

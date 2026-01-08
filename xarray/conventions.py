@@ -422,7 +422,8 @@ def decode_cf_variables(
                 decode_timedelta=_item_or_default(decode_timedelta, k, None),
             )
         except Exception as e:
-            raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
+            e.add_note(f"Raised while decoding variable {k!r} with value {v!r}")
+            raise
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
