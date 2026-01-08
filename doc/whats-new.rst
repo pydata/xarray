@@ -14,6 +14,14 @@ v2025.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added :py:attr:`DataArray.plotly` accessor for interactive plotting with
+  `Plotly Express <https://plotly.com/python/plotly-express/>`_. Provides
+  :py:meth:`~DataArray.plotly.line`, :py:meth:`~DataArray.plotly.bar`,
+  :py:meth:`~DataArray.plotly.area`, :py:meth:`~DataArray.plotly.scatter`,
+  :py:meth:`~DataArray.plotly.box`, and :py:meth:`~DataArray.plotly.imshow`
+  methods that automatically assign dimensions to plot slots. Returns Plotly
+  ``Figure`` objects that can be easily modified after creation.
+  By `Felix Barnsteiner <https://github.com/felixbarnsteiner>`_.
 - :py:meth:`Dataset.set_xindex` and :py:meth:`DataArray.set_xindex`
   automatically replace any existing index being set instead of erroring
   or needing needing to call :py:meth:`drop_indexes` first (:pull:`11008`).

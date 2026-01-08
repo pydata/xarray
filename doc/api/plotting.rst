@@ -38,6 +38,21 @@ DataArray
    DataArray.plot.surface
 
 
+Plotly (Interactive)
+--------------------
+
+.. autosummary::
+   :toctree: ../generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.plotly.line
+   DataArray.plotly.bar
+   DataArray.plotly.area
+   DataArray.plotly.scatter
+   DataArray.plotly.box
+   DataArray.plotly.imshow
+
+
 Faceting
 --------
 .. autosummary::
