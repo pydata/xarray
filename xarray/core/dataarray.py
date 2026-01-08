@@ -4941,7 +4941,7 @@ class DataArray(
         self.attrs = other.attrs
 
     plot = utils.UncachedAccessor(DataArrayPlotAccessor)
-    plotly = utils.UncachedAccessor(DataArrayPlotlyAccessor)
+    plotly: DataArrayPlotlyAccessor = utils.UncachedAccessor(DataArrayPlotlyAccessor)
 
     def _title_for_slice(self, truncate: int = 50) -> str:
         """
