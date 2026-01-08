@@ -51,7 +51,7 @@ viz = [
   "cartopy>=0.23",
   "matplotlib>=3.8",
   "nc-time-axis",
-  "plotly>=5.18",
+  "plotly>=5.0",
   "seaborn",
 ]
 types = [
@@ -160,6 +160,7 @@ module = [
   "numcodecs.*",
   "opt_einsum.*",
   "pint.*",
+  "plotly.*",
   "pooch.*",
   "pyarrow.*",
   "pydap.*",
