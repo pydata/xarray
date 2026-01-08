@@ -256,35 +256,31 @@ class DataArrayPlotlyAccessor:
         self,
         *,
         x: SlotValue = auto,
-        color: SlotValue = auto,
-        facet_col: SlotValue = auto,
-        facet_row: SlotValue = auto,
-        animation_frame: SlotValue = auto,
+        color: SlotValue = None,
+        facet_col: SlotValue = None,
+        facet_row: SlotValue = None,
+        animation_frame: SlotValue = None,
         **px_kwargs: Any,
     ) -> go.Figure:
         """
         Create an interactive box plot using Plotly Express.
 
-        The y-axis always shows the DataArray values. Dimensions are assigned
-        to other slots by their order:
-        x → color → facet_col → facet_row → animation_frame
-
-        Dimensions not assigned to any slot are aggregated into the box statistics.
-        Use `None` to skip slots and aggregate those dimensions.
+        The y-axis always shows the DataArray values. By default, only the
+        first dimension is assigned to x; all other dimensions are aggregated
+        into the box statistics.
 
         Parameters
         ----------
         x : str, auto, or None
             Dimension for x-axis categories. Default: first dimension.
-        color : str, auto, or None
-            Dimension for color grouping. Default: second dimension.
-            Use `None` to skip and aggregate this dimension.
-        facet_col : str, auto, or None
-            Dimension for subplot columns. Default: third dimension.
-        facet_row : str, auto, or None
-            Dimension for subplot rows. Default: fourth dimension.
-        animation_frame : str, auto, or None
-            Dimension for animation. Default: fifth dimension.
+        color : str or None
+            Dimension for color grouping. Default: None (aggregated).
+        facet_col : str or None
+            Dimension for subplot columns. Default: None (aggregated).
+        facet_row : str or None
+            Dimension for subplot rows. Default: None (aggregated).
+        animation_frame : str or None
+            Dimension for animation. Default: None (aggregated).
         **px_kwargs
             Additional arguments passed to `plotly.express.box()`.
 

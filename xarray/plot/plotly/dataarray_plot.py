@@ -451,20 +451,20 @@ def box(
     darray: DataArray,
     *,
     x: SlotValue = auto,
-    color: SlotValue = auto,
-    facet_col: SlotValue = auto,
-    facet_row: SlotValue = auto,
-    animation_frame: SlotValue = auto,
+    color: SlotValue = None,
+    facet_col: SlotValue = None,
+    facet_row: SlotValue = None,
+    animation_frame: SlotValue = None,
     **px_kwargs: Any,
 ) -> go.Figure:
     """
     Create an interactive box plot from a DataArray using Plotly Express.
 
-    The y-axis always shows the DataArray values. Dimensions are assigned
-    to other slots: x → color → facet_col → facet_row → animation_frame
+    The y-axis always shows the DataArray values. By default, only the first
+    dimension is assigned to x; all other dimensions are aggregated into the
+    box statistics.
 
-    Dimensions not assigned to any slot are aggregated into the box statistics.
-    Use `None` to skip slots and aggregate those dimensions.
+    Set slots explicitly to override (e.g., `color="city"` to group by city).
 
     Parameters
     ----------
