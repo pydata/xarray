@@ -316,14 +316,17 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, zarr_format):
             raise ValueError(
                 "Zarr v2 requires uniform chunk sizes except for final chunk. "
                 f"Variable named {name!r} has incompatible dask chunks: {var_chunks!r}. "
-                "Consider rechunking using `chunk()`."
+                "Consider rechunking using `chunk()`, or switching to the "
+                "zarr v3 format with zarr-python>=3.2."
             )
         if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
             raise ValueError(
-                "Final chunk of a Zarr v2 array must be the same size or smaller "
-                f"than the first. Variable named {name!r} has incompatible Dask chunks {var_chunks!r}."
-                "Consider either rechunking using `chunk()` or instead deleting "
-                "or modifying `encoding['chunks']`."
+                "Final chunk of a Zarr v2 array or a Zarr v3 array without the "
+                "rectilinear chunks extension must be the same size or smaller "
+                f"than the first. Variable named {name!r} has incompatible Dask "
+                f"chunks {var_chunks!r}. "
+                "Consider switching to Zarr v3 with the rectilinear chunks extension, "
+                "rechunking using `chunk()` or deleting or modifying `encoding['chunks']`."
             )
         # return the first chunk for each dimension
         return tuple(chunk[0] for chunk in var_chunks)
