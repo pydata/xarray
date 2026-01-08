@@ -311,14 +311,14 @@ class DataArrayPlotlyAccessor:
         Create an interactive heatmap image using Plotly Express.
 
         Dimensions are assigned to plot slots by their order:
-        x → y → facet_col → animation_frame
+        y (rows) → x (columns) → facet_col → animation_frame
 
         Parameters
         ----------
         x : str, auto, or None
-            Dimension for x-axis. Default: first dimension.
+            Dimension for x-axis (columns). Default: second dimension.
         y : str, auto, or None
-            Dimension for y-axis. Default: second dimension.
+            Dimension for y-axis (rows). Default: first dimension.
         facet_col : str, auto, or None
             Dimension for subplot columns. Default: third dimension.
         animation_frame : str, auto, or None

@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Hashable, Sequence
 
+    import pandas as pd
+
     from xarray.core.dataarray import DataArray
 
 
@@ -30,9 +32,8 @@ auto = _AUTO()
 SlotValue = _AUTO | str | None
 
 # Slot orders per plot type (consistent with Plotly Express naming)
-# Faceting and animation are always last
 # Note: For most plots, y-axis shows DataArray values (not a dimension slot).
-# For imshow, y IS a dimension (rows of the heatmap).
+# For imshow, both y and x are dimensions (rows and columns of the heatmap).
 SLOT_ORDERS: dict[str, tuple[str, ...]] = {
     "line": (
         "x",
@@ -89,8 +90,7 @@ def assign_slots(
     plot_type : str
         Type of plot (line, bar, area, scatter, box, imshow).
     allow_unassigned : bool, optional
-        If True, allow dimensions to remain unassigned (useful for aggregating
-        plots like box where extra dimensions are aggregated). Default False.
+        If True, allow dimensions to remain unassigned. Default False.
     **slot_kwargs : auto, str, or None
         Explicit slot assignments. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip the slot.
@@ -99,25 +99,6 @@ def assign_slots(
     -------
     dict
         Mapping of slot names to dimension names.
-
-    Raises
-    ------
-    ValueError
-        If there are unassigned dimensions after all slots are filled
-        (unless allow_unassigned=True).
-    ValueError
-        If an explicitly assigned dimension is not in the data.
-
-    Examples
-    --------
-    >>> assign_slots(["time", "city", "scenario"], "line")
-    {'x': 'time', 'color': 'city', 'line_dash': 'scenario'}
-
-    >>> assign_slots(["time", "city"], "line", color=None)
-    {'x': 'time', 'line_dash': 'city'}
-
-    >>> assign_slots(["time", "city"], "line", x="city", color="time")
-    {'x': 'city', 'color': 'time'}
     """
     if plot_type not in SLOT_ORDERS:
         raise ValueError(
@@ -143,10 +124,7 @@ def assign_slots(
         elif not isinstance(value, _AUTO):
             # Explicit assignment - can be a dimension name or "value" (DataArray values)
             if value == "value":
-                # "value" means use the DataArray values for this slot
                 slots[slot] = "value"
-                if slot in available_slots:
-                    available_slots.remove(slot)
             elif value not in dims_list:
                 raise ValueError(
                     f"Dimension {value!r} assigned to slot {slot!r} "
@@ -155,8 +133,8 @@ def assign_slots(
             else:
                 slots[slot] = value
                 used_dims.add(value)
-                if slot in available_slots:
-                    available_slots.remove(slot)
+            if slot in available_slots:
+                available_slots.remove(slot)
 
     # Pass 2: Fill remaining slots with remaining dims (by position)
     remaining_dims = [d for d in dims_list if d not in used_dims]
@@ -175,80 +153,79 @@ def assign_slots(
     return slots
 
 
-def dataarray_to_dataframe(darray: DataArray) -> Any:
-    """
-    Convert a DataArray to a pandas DataFrame suitable for Plotly Express.
+def _get_value_col(darray: DataArray) -> str:
+    """Get the column name for DataArray values."""
+    return str(darray.name) if darray.name is not None else "value"
 
-    Parameters
-    ----------
-    darray : DataArray
-        The xarray DataArray to convert.
 
-    Returns
-    -------
-    pandas.DataFrame
-        Long-form DataFrame with dimension coordinates as columns.
-    """
-    # Create a copy with a name if it doesn't have one
+def _to_dataframe(darray: DataArray) -> pd.DataFrame:
+    """Convert a DataArray to a long-form DataFrame for Plotly Express."""
     if darray.name is None:
         darray = darray.rename("value")
-
-    df = darray.to_dataframe().reset_index()
-    return df
+    return darray.to_dataframe().reset_index()
 
 
-def get_axis_label(darray: DataArray, dim: Hashable) -> str:
+def _get_label(darray: DataArray, name: Hashable) -> str:
     """
-    Get a label for an axis from DataArray attributes.
+    Get a human-readable label for a dimension or the value column.
 
-    Uses the coordinate's long_name or standard_name if available,
-    falls back to the dimension name.
-
-    Parameters
-    ----------
-    darray : DataArray
-        The xarray DataArray.
-    dim : Hashable
-        The dimension name.
-
-    Returns
-    -------
-    str
-        A human-readable label for the axis.
+    Uses long_name/standard_name and units from attributes if available.
     """
-    if dim in darray.coords:
-        coord = darray.coords[dim]
-        # Try long_name, then standard_name, then dimension name
+    # Check if it's asking for the value column label
+    value_col = _get_value_col(darray)
+    if str(name) == value_col or name == "value":
+        label = darray.attrs.get("long_name") or darray.attrs.get("standard_name")
+        if label:
+            units = darray.attrs.get("units")
+            return f"{label} [{units}]" if units else str(label)
+        return value_col
+
+    # It's a dimension/coordinate
+    if name in darray.coords:
+        coord = darray.coords[name]
         label = coord.attrs.get("long_name") or coord.attrs.get("standard_name")
         if label:
             units = coord.attrs.get("units")
-            if units:
-                return f"{label} [{units}]"
-            return str(label)
-    return str(dim)
+            return f"{label} [{units}]" if units else str(label)
+    return str(name)
 
 
-def get_value_label(darray: DataArray) -> str:
+def _build_labels(
+    darray: DataArray,
+    slots: dict[str, Hashable],
+    value_col: str,
+    include_value: bool = True,
+) -> dict[str, str]:
     """
-    Get a label for the data values from DataArray attributes.
-
-    Uses the DataArray's long_name or standard_name if available,
-    falls back to the DataArray name or 'value'.
+    Build a labels dict for Plotly Express from slot assignments.
 
     Parameters
     ----------
     darray : DataArray
-        The xarray DataArray.
+        The source DataArray.
+    slots : dict
+        Slot assignments from assign_slots().
+    value_col : str
+        The name of the value column in the DataFrame.
+    include_value : bool
+        Whether to include a label for the value column.
 
     Returns
     -------
-    str
-        A human-readable label for the values.
+    dict
+        Mapping of column names to human-readable labels.
     """
-    label = darray.attrs.get("long_name") or darray.attrs.get("standard_name")
-    if label:
-        units = darray.attrs.get("units")
-        if units:
-            return f"{label} [{units}]"
-        return str(label)
-    return str(darray.name) if darray.name is not None else "value"
+    labels: dict[str, str] = {}
+
+    # Add labels for assigned dimensions
+    for slot_value in slots.values():
+        if slot_value and slot_value != "value":
+            key = str(slot_value)
+            if key not in labels:
+                labels[key] = _get_label(darray, slot_value)
+
+    # Add label for value column
+    if include_value and value_col not in labels:
+        labels[value_col] = _get_label(darray, "value")
+
+    return labels
