@@ -269,12 +269,16 @@ class DataArrayPlotlyAccessor:
         to other slots by their order:
         x → color → facet_col → facet_row → animation_frame
 
+        Dimensions not assigned to any slot are aggregated into the box statistics.
+        Use `None` to skip slots and aggregate those dimensions.
+
         Parameters
         ----------
         x : str, auto, or None
             Dimension for x-axis categories. Default: first dimension.
         color : str, auto, or None
             Dimension for color grouping. Default: second dimension.
+            Use `None` to skip and aggregate this dimension.
         facet_col : str, auto, or None
             Dimension for subplot columns. Default: third dimension.
         facet_row : str, auto, or None

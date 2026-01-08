@@ -196,6 +196,12 @@ class TestDataArrayPlotly:
         fig = self.da_2d.plotly.box()
         assert isinstance(fig, plotly.graph_objects.Figure)
 
+    def test_box_with_aggregation(self):
+        """Test box plot with unassigned dimensions aggregated."""
+        # Box plot by city, aggregating over time (not coloring by time)
+        fig = self.da_2d.plotly.box(x="city", color=None)
+        assert isinstance(fig, plotly.graph_objects.Figure)
+
     def test_imshow_returns_figure(self):
         """Test that imshow() returns a Plotly Figure."""
         fig = self.da_2d.plotly.imshow()

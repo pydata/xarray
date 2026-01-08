@@ -463,6 +463,9 @@ def box(
     The y-axis always shows the DataArray values. Dimensions are assigned
     to other slots: x → color → facet_col → facet_row → animation_frame
 
+    Dimensions not assigned to any slot are aggregated into the box statistics.
+    Use `None` to skip slots and aggregate those dimensions.
+
     Parameters
     ----------
     darray : DataArray
@@ -489,12 +492,18 @@ def box(
     -------
     plotly.graph_objects.Figure
         The Plotly figure object.
+
+    Examples
+    --------
+    >>> # Box plot by latitude, aggregating over time
+    >>> fig = da.plotly.box(x="lat", color=None)
     """
     px = attempt_import("plotly.express")
 
     slots = assign_slots(
         list(darray.dims),
         "box",
+        allow_unassigned=True,  # Unassigned dims are aggregated in box stats
         x=x,
         color=color,
         facet_col=facet_col,

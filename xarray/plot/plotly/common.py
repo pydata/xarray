@@ -69,6 +69,8 @@ SLOT_ORDERS: dict[str, tuple[str, ...]] = {
 def assign_slots(
     dims: Sequence[Hashable],
     plot_type: str,
+    *,
+    allow_unassigned: bool = False,
     **slot_kwargs: SlotValue,
 ) -> dict[str, Hashable]:
     """
@@ -78,7 +80,7 @@ def assign_slots(
     - Explicit assignments lock a dimension to a slot
     - None skips a slot
     - Remaining dims fill remaining slots by position
-    - Error if dims left over after all slots filled
+    - Error if dims left over after all slots filled (unless allow_unassigned=True)
 
     Parameters
     ----------
@@ -86,6 +88,9 @@ def assign_slots(
         Dimension names.
     plot_type : str
         Type of plot (line, bar, area, scatter, box, imshow).
+    allow_unassigned : bool, optional
+        If True, allow dimensions to remain unassigned (useful for aggregating
+        plots like box where extra dimensions are aggregated). Default False.
     **slot_kwargs : auto, str, or None
         Explicit slot assignments. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip the slot.
@@ -98,7 +103,8 @@ def assign_slots(
     Raises
     ------
     ValueError
-        If there are unassigned dimensions after all slots are filled.
+        If there are unassigned dimensions after all slots are filled
+        (unless allow_unassigned=True).
     ValueError
         If an explicitly assigned dimension is not in the data.
 
@@ -160,7 +166,7 @@ def assign_slots(
 
     # Check for unassigned dimensions
     unassigned = [d for d in dims_list if d not in used_dims]
-    if unassigned:
+    if unassigned and not allow_unassigned:
         raise ValueError(
             f"Unassigned dimension(s): {unassigned}. "
             "Reduce with .sel(), .isel(), or .mean() before plotting."
