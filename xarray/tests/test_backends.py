@@ -5697,7 +5697,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 expectation: contextlib.AbstractContextManager = (
                     pytest.warns(
                         FutureWarning,
-                        match="will change from data_vars='all'",
+                        match="changed from data_vars='all'",
                     )
                     if "data_vars" not in kwargs
                     else contextlib.nullcontext()
@@ -5705,12 +5705,12 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
                 with pytest.warns(
                     FutureWarning,
-                    match="will change from compat='equals'",
+                    match="changed from compat='equals'",
                 ):
                     with expectation:
                         ds_expect = xr.concat([ds1, ds2], dim="t", **kwargs)
                 with pytest.warns(
-                    FutureWarning, match="will change from compat='no_conflicts'"
+                    FutureWarning, match="changed from compat='no_conflicts'"
                 ):
                     with expectation:
                         with open_mfdataset(

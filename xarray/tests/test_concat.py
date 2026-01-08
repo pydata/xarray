@@ -1498,7 +1498,7 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
                 FutureWarning,
-                match="will change from compat='equals' to compat='override'",
+                match="changed from compat='equals' to compat='override'",
             ):
                 actual = concat(
                     [ds1, ds2], dim="y", coords="different", data_vars="different"
@@ -1545,7 +1545,7 @@ class TestNewDefaults:
             expectation: AbstractContextManager = (
                 pytest.warns(
                     FutureWarning,
-                    match="will change from compat='equals' to compat='override'",
+                    match="changed from compat='equals' to compat='override'",
                 )
                 if coords == "different"
                 else nullcontext()
@@ -1570,7 +1570,7 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
                 FutureWarning,
-                match="will change from coords='different' to coords='minimal'",
+                match="changed from coords='different' to coords='minimal'",
             ):
                 old = concat(objs, "x")
                 assert_identical(old, expected)

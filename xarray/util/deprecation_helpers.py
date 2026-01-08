@@ -186,10 +186,10 @@ class CombineKwargDefault:
         return normalize_token((type(self), self._value))
 
     def warning_message(self, message: str, recommend_set_options: bool = True) -> str:
-        if recommend_set_options:
+        if not recommend_set_options:
             recommendation = (
                 " To opt in to new defaults and get rid of these warnings now "
-                "use `set_options(use_new_combine_kwarg_defaults=True) or "
+                "remove `set_options(use_new_combine_kwarg_defaults=False) or "
                 f"set {self._name} explicitly."
             )
         else:
@@ -198,8 +198,8 @@ class CombineKwargDefault:
             )
 
         return (
-            f"In a future version of xarray the default value for {self._name} will "
-            f"change from {self._name}={self._old!r} to {self._name}={self._new!r}. "
+            f"In xarray v2026.02.1 the default value for {self._name} "
+            f"changed from {self._name}={self._old!r} to {self._name}={self._new!r}. "
             + message
             + recommendation
         )
@@ -208,7 +208,7 @@ class CombineKwargDefault:
         return (
             f" Error might be related to new default (`{self._name}={self._new!r}`). "
             f"Previously the default was `{self._name}={self._old!r}`. "
-            f"The recommendation is to set {self._name!r} explicitly for this case."
+            f"The recommendation is to set {self._name} explicitly for this case."
         )
 
 

@@ -834,7 +834,7 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
                 FutureWarning,
-                match="will change from compat='no_conflicts' to compat='override'",
+                match="changed from compat='no_conflicts' to compat='override'",
             ):
                 old = ds1.merge(ds2)
 
@@ -853,11 +853,11 @@ class TestNewDefaults:
         )
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
-                FutureWarning, match="will change from join='outer' to join='exact'"
+                FutureWarning, match="changed from join='outer' to join='exact'"
             ):
                 assert expected.identical(ds1.merge(ds2))
             with pytest.warns(
-                FutureWarning, match="will change from join='outer' to join='exact'"
+                FutureWarning, match="changed from join='outer' to join='exact'"
             ):
                 assert expected.identical(ds2.merge(ds1))
 
