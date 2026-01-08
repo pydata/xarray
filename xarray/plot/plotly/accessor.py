@@ -42,6 +42,7 @@ class DataArrayPlotlyAccessor:
         self,
         *,
         x: SlotValue = auto,
+        y: SlotValue | str = auto,
         color: SlotValue = auto,
         line_dash: SlotValue = auto,
         symbol: SlotValue = auto,
@@ -60,6 +61,9 @@ class DataArrayPlotlyAccessor:
         ----------
         x : str, auto, or None
             Dimension for x-axis. Default: first dimension.
+        y : str or auto
+            What to plot on y-axis. Default `auto` or "value" uses DataArray values.
+            Can be a dimension name for dimension vs dimension plots.
         color : str, auto, or None
             Dimension for color grouping. Default: second dimension.
         line_dash : str, auto, or None
@@ -82,6 +86,7 @@ class DataArrayPlotlyAccessor:
         return dataarray_plot.line(
             self._da,
             x=x,
+            y=y,
             color=color,
             line_dash=line_dash,
             symbol=symbol,
@@ -193,7 +198,7 @@ class DataArrayPlotlyAccessor:
         self,
         *,
         x: SlotValue = auto,
-        y: str = "value",
+        y: SlotValue | str = auto,
         color: SlotValue = auto,
         size: SlotValue = auto,
         symbol: SlotValue = auto,
@@ -212,8 +217,8 @@ class DataArrayPlotlyAccessor:
         ----------
         x : str, auto, or None
             Dimension for x-axis. Default: first dimension.
-        y : str
-            What to plot on y-axis. Default "value" uses DataArray values.
+        y : str or auto
+            What to plot on y-axis. Default `auto` or "value" uses DataArray values.
             Can be a dimension name for dimension vs dimension plots.
         color : str, auto, or None
             Dimension for color grouping. Default: second dimension.

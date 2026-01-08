@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from xarray.core.utils import attempt_import
 from xarray.plot.plotly.common import (
     SlotValue,
+    _AUTO,
     assign_slots,
     auto,
     dataarray_to_dataframe,
@@ -26,6 +27,7 @@ def line(
     darray: DataArray,
     *,
     x: SlotValue = auto,
+    y: SlotValue | str = auto,
     color: SlotValue = auto,
     line_dash: SlotValue = auto,
     symbol: SlotValue = auto,
@@ -44,6 +46,9 @@ def line(
     x : str, auto, or None
         Dimension for the x-axis. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
+    y : str or auto
+        What to plot on y-axis. Default `auto` or "value" uses DataArray values.
+        Can also be a dimension name for dimension vs dimension plots.
     color : str, auto, or None
         Dimension for color grouping. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -81,8 +86,8 @@ def line(
     ...     },
     ...     name="temperature",
     ... )
-    >>> fig = da.plotly.line()  # time→x, city→color
-    >>> fig = da.plotly.line(color=None)  # time→x, city→line_dash
+    >>> fig = da.plotly.line()  # time→x, city→color, values→y
+    >>> fig = da.plotly.line(y="city")  # time→x, city→y (dimension vs dimension)
     >>> fig = da.plotly.line(x="city", color="time")  # explicit assignment
     """
     px = attempt_import("plotly.express")
@@ -102,17 +107,23 @@ def line(
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
 
+    # Determine y column - auto/"value" uses DataArray values, otherwise use dimension name
+    use_values = isinstance(y, _AUTO) or y == "value"
+    y_col = value_col if use_values else y
+
     # Build labels for axes
     labels = px_kwargs.pop("labels", {})
-    if "x" in slots and slots["x"] not in labels:
+    if "x" in slots and str(slots["x"]) not in labels:
         labels[str(slots["x"])] = get_axis_label(darray, slots["x"])
-    if value_col not in labels:
+    if use_values and value_col not in labels:
         labels[value_col] = get_value_label(darray)
+    elif not use_values and y in darray.dims and y not in labels:
+        labels[y] = get_axis_label(darray, y)
 
     fig = px.line(
         df,
         x=slots.get("x"),
-        y=value_col,
+        y=y_col,
         color=slots.get("color"),
         line_dash=slots.get("line_dash"),
         symbol=slots.get("symbol"),
@@ -318,7 +329,7 @@ def scatter(
     darray: DataArray,
     *,
     x: SlotValue = auto,
-    y: str = "value",
+    y: SlotValue | str = auto,
     color: SlotValue = auto,
     size: SlotValue = auto,
     symbol: SlotValue = auto,
@@ -340,8 +351,8 @@ def scatter(
     x : str, auto, or None
         Dimension for the x-axis. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
-    y : str
-        What to plot on y-axis. Default "value" uses DataArray values.
+    y : str or auto
+        What to plot on y-axis. Default `auto` or "value" uses DataArray values.
         Can also be a dimension name for dimension vs dimension plots.
     color : str, auto, or None
         Dimension for color grouping. Use `auto` for positional assignment,
@@ -386,16 +397,17 @@ def scatter(
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
 
-    # Determine y column - either "value" for DataArray values or a dimension name
-    y_col = value_col if y == "value" else y
+    # Determine y column - auto/"value" uses DataArray values, otherwise use dimension name
+    use_values = isinstance(y, _AUTO) or y == "value"
+    y_col = value_col if use_values else y
 
     # Build labels for axes
     labels = px_kwargs.pop("labels", {})
     if "x" in slots and str(slots["x"]) not in labels:
         labels[str(slots["x"])] = get_axis_label(darray, slots["x"])
-    if y == "value" and value_col not in labels:
+    if use_values and value_col not in labels:
         labels[value_col] = get_value_label(darray)
-    elif y != "value" and y in darray.dims and y not in labels:
+    elif not use_values and y in darray.dims and y not in labels:
         labels[y] = get_axis_label(darray, y)
 
     fig = px.scatter(
