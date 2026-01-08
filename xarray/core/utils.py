@@ -1370,6 +1370,7 @@ def attempt_import(module: str) -> ModuleType:
         zarr="for working with Zarr stores",
         cftime="for working with non-standard calendars",
         matplotlib="for plotting",
+        plotly="for interactive plotting with the .plotly accessor",
         hypothesis="for the `xarray.testing.strategies` submodule",
     )
     package_name = module.split(".", maxsplit=1)[0]  # e.g. "zarr" from "zarr.storage"

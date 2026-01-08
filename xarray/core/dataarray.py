@@ -73,6 +73,7 @@ from xarray.core.variable import (
     as_variable,
 )
 from xarray.plot.accessor import DataArrayPlotAccessor
+from xarray.plot.plotly.accessor import DataArrayPlotlyAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.structure import alignment
 from xarray.structure.alignment import (
@@ -4940,6 +4941,7 @@ class DataArray(
         self.attrs = other.attrs
 
     plot = utils.UncachedAccessor(DataArrayPlotAccessor)
+    plotly = utils.UncachedAccessor(DataArrayPlotlyAccessor)
 
     def _title_for_slice(self, truncate: int = 50) -> str:
         """
