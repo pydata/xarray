@@ -159,7 +159,7 @@ pyarrow = { version = "*", index = "https://pypi.anaconda.org/scientific-python-
 
 dask = { git = "https://github.com/dask/dask" }
 distributed = { git = "https://github.com/dask/distributed" }
-zarr = { git = "https://github.com/zarr-developers/zarr-python" }
+zarr = { git = "https://github.com/jhamman/zarr-python", branch = "feature/rectilinear-chunk-grid" }
 numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }
 cftime = { git = "https://github.com/Unidata/cftime" }
 # packaging = { git = "https://github.com/pypa/packaging"} #? Pixi warns if this is enabled
