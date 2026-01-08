@@ -31,25 +31,15 @@ SlotValue = _AUTO | str | None
 
 # Slot orders per plot type (consistent with Plotly Express naming)
 # Faceting and animation are always last
-# Note: "y" slot is first and defaults to "value" (DataArray values), can also be a dimension
+# Note: For most plots, y-axis shows DataArray values (not a dimension slot).
+# For imshow, y IS a dimension (rows of the heatmap).
 SLOT_ORDERS: dict[str, tuple[str, ...]] = {
-    "line": ("y", "x", "color", "line_dash", "symbol", "facet_col", "facet_row", "animation_frame"),
-    "bar": ("y", "x", "color", "pattern_shape", "facet_col", "facet_row", "animation_frame"),
-    "area": ("y", "x", "color", "pattern_shape", "facet_col", "facet_row", "animation_frame"),
-    "scatter": ("y", "x", "color", "size", "symbol", "facet_col", "facet_row", "animation_frame"),
+    "line": ("x", "color", "line_dash", "symbol", "facet_col", "facet_row", "animation_frame"),
+    "bar": ("x", "color", "pattern_shape", "facet_col", "facet_row", "animation_frame"),
+    "area": ("x", "color", "pattern_shape", "facet_col", "facet_row", "animation_frame"),
+    "scatter": ("x", "color", "size", "symbol", "facet_col", "facet_row", "animation_frame"),
     "imshow": ("y", "x", "facet_col", "animation_frame"),
-    "box": ("y", "x", "color", "facet_col", "facet_row", "animation_frame"),
-}
-
-# Slots that default to "value" (DataArray values) instead of auto-assigning a dimension
-# Note: imshow is excluded because y is a real dimension (rows) for heatmaps
-VALUE_DEFAULT_SLOTS: dict[str, set[str]] = {
-    "line": {"y"},
-    "bar": {"y"},
-    "area": {"y"},
-    "scatter": {"y"},
-    "box": {"y"},
-    # imshow: y is a dimension, not "value"
+    "box": ("x", "color", "facet_col", "facet_row", "animation_frame"),
 }
 
 
@@ -64,7 +54,6 @@ def assign_slots(
     Positional assignment: dimensions fill slots in order.
     - Explicit assignments lock a dimension to a slot
     - None skips a slot
-    - Slots in VALUE_DEFAULT_SLOTS (like "y") default to "value" instead of a dimension
     - Remaining dims fill remaining slots by position
     - Error if dims left over after all slots filled
 
@@ -77,12 +66,11 @@ def assign_slots(
     **slot_kwargs : auto, str, or None
         Explicit slot assignments. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip the slot.
-        For slots in VALUE_DEFAULT_SLOTS, `auto` assigns "value" (DataArray values).
 
     Returns
     -------
     dict
-        Mapping of slot names to dimension names (or "value" for y-axis).
+        Mapping of slot names to dimension names.
 
     Raises
     ------
@@ -94,16 +82,13 @@ def assign_slots(
     Examples
     --------
     >>> assign_slots(["time", "city", "scenario"], "line")
-    {'x': 'time', 'y': 'value', 'color': 'city', 'facet_col': 'scenario'}
-
-    >>> assign_slots(["time", "city"], "line", y="city")
-    {'x': 'time', 'y': 'city'}
+    {'x': 'time', 'color': 'city', 'line_dash': 'scenario'}
 
     >>> assign_slots(["time", "city"], "line", color=None)
-    {'x': 'time', 'y': 'value', 'facet_col': 'city'}
+    {'x': 'time', 'line_dash': 'city'}
 
     >>> assign_slots(["time", "city"], "line", x="city", color="time")
-    {'x': 'city', 'y': 'value', 'color': 'time'}
+    {'x': 'city', 'color': 'time'}
     """
     if plot_type not in SLOT_ORDERS:
         raise ValueError(
@@ -118,35 +103,8 @@ def assign_slots(
     used_dims: set[Hashable] = set()
     available_slots = list(slot_order)
 
-    # Get the value-default slots for this plot type (if any)
-    value_default_slots = VALUE_DEFAULT_SLOTS.get(plot_type, set())
-
-    # Pass 1: Process value-default slots (like "y") - these default to "value"
+    # Pass 1: Process explicit assignments (non-auto, non-None)
     for slot in slot_order:
-        if slot in value_default_slots:
-            value = slot_kwargs.get(slot, auto)
-            if value is None:
-                # Skip this slot
-                available_slots.remove(slot)
-            elif isinstance(value, _AUTO) or value == "value":
-                # Auto or "value" -> assign "value" (DataArray values)
-                slots[slot] = "value"
-                available_slots.remove(slot)
-            else:
-                # Explicit dimension assignment
-                if value not in dims_list:
-                    raise ValueError(
-                        f"Dimension {value!r} assigned to slot {slot!r} "
-                        f"is not in the data dimensions: {dims_list}"
-                    )
-                slots[slot] = value
-                used_dims.add(value)
-                available_slots.remove(slot)
-
-    # Pass 2: Process other explicit assignments (non-auto, non-None)
-    for slot in slot_order:
-        if slot in value_default_slots:
-            continue  # Already handled
         value = slot_kwargs.get(slot, auto)
 
         if value is None:
@@ -154,23 +112,18 @@ def assign_slots(
             if slot in available_slots:
                 available_slots.remove(slot)
         elif not isinstance(value, _AUTO):
-            # Explicit assignment - allow "value" as special assignment for any slot
-            if value == "value":
-                slots[slot] = "value"
-                if slot in available_slots:
-                    available_slots.remove(slot)
-            elif value not in dims_list:
+            # Explicit dimension assignment
+            if value not in dims_list:
                 raise ValueError(
                     f"Dimension {value!r} assigned to slot {slot!r} "
                     f"is not in the data dimensions: {dims_list}"
                 )
-            else:
-                slots[slot] = value
-                used_dims.add(value)
-                if slot in available_slots:
-                    available_slots.remove(slot)
+            slots[slot] = value
+            used_dims.add(value)
+            if slot in available_slots:
+                available_slots.remove(slot)
 
-    # Pass 3: Fill remaining slots with remaining dims (by position)
+    # Pass 2: Fill remaining slots with remaining dims (by position)
     remaining_dims = [d for d in dims_list if d not in used_dims]
     for slot, dim in zip(available_slots, remaining_dims, strict=False):
         slots[slot] = dim

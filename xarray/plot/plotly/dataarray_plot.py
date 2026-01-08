@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any
 from xarray.core.utils import attempt_import
 from xarray.plot.plotly.common import (
     SlotValue,
-    _AUTO,
     assign_slots,
     auto,
     dataarray_to_dataframe,
@@ -27,7 +26,6 @@ def line(
     darray: DataArray,
     *,
     x: SlotValue = auto,
-    y: SlotValue | str = auto,
     color: SlotValue = auto,
     line_dash: SlotValue = auto,
     symbol: SlotValue = auto,
@@ -39,6 +37,9 @@ def line(
     """
     Create an interactive line plot from a DataArray using Plotly Express.
 
+    The y-axis always shows the DataArray values. Dimensions are assigned
+    to other slots: x → color → line_dash → symbol → facet_col → facet_row → animation_frame
+
     Parameters
     ----------
     darray : DataArray
@@ -46,9 +47,6 @@ def line(
     x : str, auto, or None
         Dimension for the x-axis. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
-    y : str or auto
-        What to plot on y-axis. Default `auto` or "value" uses DataArray values.
-        Can also be a dimension name for dimension vs dimension plots.
     color : str, auto, or None
         Dimension for color grouping. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -87,7 +85,6 @@ def line(
     ...     name="temperature",
     ... )
     >>> fig = da.plotly.line()  # time→x, city→color, values→y
-    >>> fig = da.plotly.line(y="city")  # time→x, city→y (dimension vs dimension)
     >>> fig = da.plotly.line(x="city", color="time")  # explicit assignment
     """
     px = attempt_import("plotly.express")
@@ -96,7 +93,6 @@ def line(
         list(darray.dims),
         "line",
         x=x,
-        y=y,
         color=color,
         line_dash=line_dash,
         symbol=symbol,
@@ -108,31 +104,24 @@ def line(
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
 
-    # Convert "value" slot assignments to actual column name
-    def slot_to_col(slot_value):
-        return value_col if slot_value == "value" else slot_value
-
     # Build labels for axes
     labels = px_kwargs.pop("labels", {})
-    y_col = slot_to_col(slots.get("y", "value"))
-    x_col = slot_to_col(slots.get("x"))
-    if x_col and x_col != value_col and str(x_col) not in labels:
+    x_col = slots.get("x")
+    if x_col and str(x_col) not in labels:
         labels[str(x_col)] = get_axis_label(darray, x_col)
-    if y_col == value_col and value_col not in labels:
+    if value_col not in labels:
         labels[value_col] = get_value_label(darray)
-    elif y_col != value_col and y_col in darray.dims and str(y_col) not in labels:
-        labels[str(y_col)] = get_axis_label(darray, y_col)
 
     fig = px.line(
         df,
         x=x_col,
-        y=y_col,
-        color=slot_to_col(slots.get("color")),
-        line_dash=slot_to_col(slots.get("line_dash")),
-        symbol=slot_to_col(slots.get("symbol")),
-        facet_col=slot_to_col(slots.get("facet_col")),
-        facet_row=slot_to_col(slots.get("facet_row")),
-        animation_frame=slot_to_col(slots.get("animation_frame")),
+        y=value_col,
+        color=slots.get("color"),
+        line_dash=slots.get("line_dash"),
+        symbol=slots.get("symbol"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
+        animation_frame=slots.get("animation_frame"),
         labels=labels,
         **px_kwargs,
     )
@@ -144,7 +133,6 @@ def bar(
     darray: DataArray,
     *,
     x: SlotValue = auto,
-    y: SlotValue | str = auto,
     color: SlotValue = auto,
     pattern_shape: SlotValue = auto,
     facet_col: SlotValue = auto,
@@ -155,6 +143,9 @@ def bar(
     """
     Create an interactive bar chart from a DataArray using Plotly Express.
 
+    The y-axis always shows the DataArray values. Dimensions are assigned
+    to other slots: x → color → pattern_shape → facet_col → facet_row → animation_frame
+
     Parameters
     ----------
     darray : DataArray
@@ -162,9 +153,6 @@ def bar(
     x : str, auto, or None
         Dimension for the x-axis. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
-    y : str or auto
-        What to plot on y-axis. Default `auto` or "value" uses DataArray values.
-        Can also be a dimension name for dimension vs dimension plots.
     color : str, auto, or None
         Dimension for color grouping. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -207,7 +195,6 @@ def bar(
         list(darray.dims),
         "bar",
         x=x,
-        y=y,
         color=color,
         pattern_shape=pattern_shape,
         facet_col=facet_col,
@@ -218,26 +205,18 @@ def bar(
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
 
-    # Convert "value" slot assignments to actual column name
-    def slot_to_col(slot_value):
-        return value_col if slot_value == "value" else slot_value
-
-    y_col = slot_to_col(slots.get("y", "value"))
-    x_col = slot_to_col(slots.get("x"))
-
     # Build labels for axes
     labels = px_kwargs.pop("labels", {})
-    if x_col and x_col != value_col and str(x_col) not in labels:
+    x_col = slots.get("x")
+    if x_col and str(x_col) not in labels:
         labels[str(x_col)] = get_axis_label(darray, x_col)
-    if y_col == value_col and value_col not in labels:
+    if value_col not in labels:
         labels[value_col] = get_value_label(darray)
-    elif y_col != value_col and y_col in darray.dims and str(y_col) not in labels:
-        labels[str(y_col)] = get_axis_label(darray, y_col)
 
     fig = px.bar(
         df,
         x=x_col,
-        y=y_col,
+        y=value_col,
         color=slots.get("color"),
         pattern_shape=slots.get("pattern_shape"),
         facet_col=slots.get("facet_col"),
@@ -254,7 +233,6 @@ def area(
     darray: DataArray,
     *,
     x: SlotValue = auto,
-    y: SlotValue | str = auto,
     color: SlotValue = auto,
     pattern_shape: SlotValue = auto,
     facet_col: SlotValue = auto,
@@ -265,6 +243,9 @@ def area(
     """
     Create an interactive stacked area chart from a DataArray using Plotly Express.
 
+    The y-axis always shows the DataArray values. Dimensions are assigned
+    to other slots: x → color → pattern_shape → facet_col → facet_row → animation_frame
+
     Parameters
     ----------
     darray : DataArray
@@ -272,9 +253,6 @@ def area(
     x : str, auto, or None
         Dimension for the x-axis. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
-    y : str or auto
-        What to plot on y-axis. Default `auto` or "value" uses DataArray values.
-        Can also be a dimension name for dimension vs dimension plots.
     color : str, auto, or None
         Dimension for color/stacking grouping. Use `auto` for positional
         assignment, a dimension name for explicit assignment, or `None` to skip.
@@ -313,7 +291,6 @@ def area(
         list(darray.dims),
         "area",
         x=x,
-        y=y,
         color=color,
         pattern_shape=pattern_shape,
         facet_col=facet_col,
@@ -324,26 +301,18 @@ def area(
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
 
-    # Convert "value" slot assignments to actual column name
-    def slot_to_col(slot_value):
-        return value_col if slot_value == "value" else slot_value
-
-    y_col = slot_to_col(slots.get("y", "value"))
-    x_col = slot_to_col(slots.get("x"))
-
     # Build labels for axes
     labels = px_kwargs.pop("labels", {})
-    if x_col and x_col != value_col and str(x_col) not in labels:
+    x_col = slots.get("x")
+    if x_col and str(x_col) not in labels:
         labels[str(x_col)] = get_axis_label(darray, x_col)
-    if y_col == value_col and value_col not in labels:
+    if value_col not in labels:
         labels[value_col] = get_value_label(darray)
-    elif y_col != value_col and y_col in darray.dims and str(y_col) not in labels:
-        labels[str(y_col)] = get_axis_label(darray, y_col)
 
     fig = px.area(
         df,
         x=x_col,
-        y=y_col,
+        y=value_col,
         color=slots.get("color"),
         pattern_shape=slots.get("pattern_shape"),
         facet_col=slots.get("facet_col"),
@@ -360,7 +329,6 @@ def scatter(
     darray: DataArray,
     *,
     x: SlotValue = auto,
-    y: SlotValue | str = auto,
     color: SlotValue = auto,
     size: SlotValue = auto,
     symbol: SlotValue = auto,
@@ -372,8 +340,8 @@ def scatter(
     """
     Create an interactive scatter plot from a DataArray using Plotly Express.
 
-    By default, y-axis shows the DataArray values. Set y to a dimension name
-    to plot dimension vs dimension instead.
+    The y-axis always shows the DataArray values. Dimensions are assigned
+    to other slots: x → color → size → symbol → facet_col → facet_row → animation_frame
 
     Parameters
     ----------
@@ -382,9 +350,6 @@ def scatter(
     x : str, auto, or None
         Dimension for the x-axis. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
-    y : str or auto
-        What to plot on y-axis. Default `auto` or "value" uses DataArray values.
-        Can also be a dimension name for dimension vs dimension plots.
     color : str, auto, or None
         Dimension for color grouping. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -417,7 +382,6 @@ def scatter(
         list(darray.dims),
         "scatter",
         x=x,
-        y=y,
         color=color,
         size=size,
         symbol=symbol,
@@ -429,23 +393,18 @@ def scatter(
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
 
-    # y slot can be "value" (DataArray values) or a dimension name
-    y_slot = slots.get("y", "value")
-    y_col = value_col if y_slot == "value" else y_slot
-
     # Build labels for axes
     labels = px_kwargs.pop("labels", {})
-    if "x" in slots and str(slots["x"]) not in labels:
-        labels[str(slots["x"])] = get_axis_label(darray, slots["x"])
-    if y_slot == "value" and value_col not in labels:
+    x_col = slots.get("x")
+    if x_col and str(x_col) not in labels:
+        labels[str(x_col)] = get_axis_label(darray, x_col)
+    if value_col not in labels:
         labels[value_col] = get_value_label(darray)
-    elif y_slot != "value" and y_slot in darray.dims and str(y_slot) not in labels:
-        labels[str(y_slot)] = get_axis_label(darray, y_slot)
 
     fig = px.scatter(
         df,
-        x=slots.get("x"),
-        y=y_col,
+        x=x_col,
+        y=value_col,
         color=slots.get("color"),
         size=slots.get("size"),
         symbol=slots.get("symbol"),
@@ -463,7 +422,6 @@ def box(
     darray: DataArray,
     *,
     x: SlotValue = auto,
-    y: SlotValue | str = auto,
     color: SlotValue = auto,
     facet_col: SlotValue = auto,
     facet_row: SlotValue = auto,
@@ -473,6 +431,9 @@ def box(
     """
     Create an interactive box plot from a DataArray using Plotly Express.
 
+    The y-axis always shows the DataArray values. Dimensions are assigned
+    to other slots: x → color → facet_col → facet_row → animation_frame
+
     Parameters
     ----------
     darray : DataArray
@@ -480,9 +441,6 @@ def box(
     x : str, auto, or None
         Dimension for the x-axis categories. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
-    y : str or auto
-        What to plot on y-axis. Default `auto` or "value" uses DataArray values.
-        Can also be a dimension name for dimension vs dimension plots.
     color : str, auto, or None
         Dimension for color grouping. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -509,7 +467,6 @@ def box(
         list(darray.dims),
         "box",
         x=x,
-        y=y,
         color=color,
         facet_col=facet_col,
         facet_row=facet_row,
@@ -519,23 +476,18 @@ def box(
     df = dataarray_to_dataframe(darray)
     value_col = darray.name if darray.name is not None else "value"
 
-    # y slot can be "value" (DataArray values) or a dimension name
-    y_slot = slots.get("y", "value")
-    y_col = value_col if y_slot == "value" else y_slot
-
     # Build labels for axes
     labels = px_kwargs.pop("labels", {})
-    if "x" in slots and str(slots["x"]) not in labels:
-        labels[str(slots["x"])] = get_axis_label(darray, slots["x"])
-    if y_slot == "value" and value_col not in labels:
+    x_col = slots.get("x")
+    if x_col and str(x_col) not in labels:
+        labels[str(x_col)] = get_axis_label(darray, x_col)
+    if value_col not in labels:
         labels[value_col] = get_value_label(darray)
-    elif y_slot != "value" and y_slot in darray.dims and str(y_slot) not in labels:
-        labels[str(y_slot)] = get_axis_label(darray, y_slot)
 
     fig = px.box(
         df,
-        x=slots.get("x"),
-        y=y_col,
+        x=x_col,
+        y=value_col,
         color=slots.get("color"),
         facet_col=slots.get("facet_col"),
         facet_row=slots.get("facet_row"),
