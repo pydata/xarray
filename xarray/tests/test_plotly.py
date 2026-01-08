@@ -73,11 +73,6 @@ class TestAssignSlots:
         )
         assert slots == {"x": "city", "color": "time"}
 
-    def test_variable_pseudo_dimension(self):
-        """Test that 'variable' can be used as a dimension."""
-        slots = assign_slots(["time", "city", "variable"], "line")
-        assert slots == {"x": "time", "color": "city", "facet_col": "variable"}
-
 
 # Skip all plotting tests if plotly is not installed
 plotly = pytest.importorskip("plotly")
@@ -185,6 +180,21 @@ class TestDataArrayPlotly:
         fig = self.da_2d.plotly.imshow()
         assert isinstance(fig, plotly.graph_objects.Figure)
 
+    def test_imshow_transpose(self):
+        """Test that imshow correctly transposes based on x and y."""
+        da = xr.DataArray(
+            np.random.rand(10, 20),
+            dims=["lat", "lon"],
+            coords={"lat": np.arange(10), "lon": np.arange(20)},
+        )
+        # Default: lat→x, lon→y
+        fig = da.plotly.imshow()
+        assert isinstance(fig, plotly.graph_objects.Figure)
+
+        # Explicit: lon→x, lat→y
+        fig = da.plotly.imshow(x="lon", y="lat")
+        assert isinstance(fig, plotly.graph_objects.Figure)
+
     def test_unnamed_dataarray(self):
         """Test plotting unnamed DataArray."""
         fig = self.da_unnamed.plotly.line()
@@ -195,81 +205,6 @@ class TestDataArrayPlotly:
         da_6d = xr.DataArray(np.random.rand(2, 2, 2, 2, 2, 2), dims=list("abcdef"))
         with pytest.raises(ValueError, match="Unassigned dimension"):
             da_6d.plotly.line()
-
-
-class TestDatasetPlotly:
-    """Tests for Dataset.plotly accessor."""
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Set up test data."""
-        self.ds_single = xr.Dataset(
-            {"temperature": (["time", "city"], np.random.rand(10, 3))},
-            coords={
-                "time": pd.date_range("2020", periods=10),
-                "city": ["NYC", "LA", "Chicago"],
-            },
-        )
-        self.ds_multi = xr.Dataset(
-            {
-                "temperature": (["time", "city"], np.random.rand(10, 3)),
-                "humidity": (["time", "city"], np.random.rand(10, 3)),
-            },
-            coords={
-                "time": pd.date_range("2020", periods=10),
-                "city": ["NYC", "LA", "Chicago"],
-            },
-        )
-
-    def test_accessor_exists(self):
-        """Test that plotly accessor is available on Dataset."""
-        assert hasattr(self.ds_single, "plotly")
-        assert hasattr(self.ds_single.plotly, "line")
-        assert hasattr(self.ds_single.plotly, "bar")
-        assert hasattr(self.ds_single.plotly, "area")
-        assert hasattr(self.ds_single.plotly, "scatter")
-        assert hasattr(self.ds_single.plotly, "box")
-        assert hasattr(self.ds_single.plotly, "imshow")
-
-    def test_line_single_var(self):
-        """Test line plot with single variable Dataset."""
-        fig = self.ds_single.plotly.line()
-        assert isinstance(fig, plotly.graph_objects.Figure)
-
-    def test_line_multi_var(self):
-        """Test line plot with multi-variable Dataset."""
-        fig = self.ds_multi.plotly.line()
-        assert isinstance(fig, plotly.graph_objects.Figure)
-
-    def test_line_color_variable(self):
-        """Test using 'variable' as color dimension."""
-        fig = self.ds_multi.plotly.line(color="variable")
-        assert isinstance(fig, plotly.graph_objects.Figure)
-
-    def test_bar_returns_figure(self):
-        """Test that bar() returns a Plotly Figure."""
-        fig = self.ds_single.plotly.bar()
-        assert isinstance(fig, plotly.graph_objects.Figure)
-
-    def test_area_returns_figure(self):
-        """Test that area() returns a Plotly Figure."""
-        fig = self.ds_single.plotly.area()
-        assert isinstance(fig, plotly.graph_objects.Figure)
-
-    def test_scatter_returns_figure(self):
-        """Test that scatter() returns a Plotly Figure."""
-        fig = self.ds_single.plotly.scatter()
-        assert isinstance(fig, plotly.graph_objects.Figure)
-
-    def test_box_returns_figure(self):
-        """Test that box() returns a Plotly Figure."""
-        fig = self.ds_single.plotly.box()
-        assert isinstance(fig, plotly.graph_objects.Figure)
-
-    def test_imshow_returns_figure(self):
-        """Test that imshow() returns a Plotly Figure."""
-        fig = self.ds_single.plotly.imshow()
-        assert isinstance(fig, plotly.graph_objects.Figure)
 
 
 class TestLabelsAndMetadata:

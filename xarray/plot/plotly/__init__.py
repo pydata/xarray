@@ -2,10 +2,9 @@
 Plotly Express plotting for xarray.
 
 This module provides interactive plotting capabilities using Plotly Express.
-Use as an accessor on DataArray or Dataset:
+Use as an accessor on DataArray:
 
     >>> da.plotly.line()
-    >>> ds.plotly.bar()
 
 The accessor automatically assigns dimensions to plot slots (x, color,
 facet_col, facet_row, animation_frame) based on their order. Override
@@ -31,14 +30,10 @@ Examples
 >>> fig = da.plotly.line(color=None)  # time→x, city→facet_col, scenario→facet_row
 """
 
-from xarray.plot.plotly.accessor import (
-    DataArrayPlotlyAccessor,
-    DatasetPlotlyAccessor,
-)
+from xarray.plot.plotly.accessor import DataArrayPlotlyAccessor
 from xarray.plot.plotly.common import auto
 
 __all__ = [
     "DataArrayPlotlyAccessor",
-    "DatasetPlotlyAccessor",
     "auto",
 ]

@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from collections.abc import Hashable, Sequence
 
     from xarray.core.dataarray import DataArray
-    from xarray.core.dataset import Dataset
 
 
 class _AUTO:
@@ -36,7 +35,7 @@ SLOT_ORDERS: dict[str, tuple[str, ...]] = {
     "bar": ("x", "color", "facet_col", "facet_row", "animation_frame"),
     "area": ("x", "color", "facet_col", "facet_row", "animation_frame"),
     "scatter": ("x", "y", "color", "size", "facet_col", "facet_row", "animation_frame"),
-    "imshow": ("x", "y", "facet_col", "facet_row", "animation_frame"),
+    "imshow": ("x", "y", "facet_col", "animation_frame"),
     "box": ("x", "color", "facet_col", "facet_row", "animation_frame"),
 }
 
@@ -58,9 +57,9 @@ def assign_slots(
     Parameters
     ----------
     dims : Sequence of Hashable
-        Dimension names (including 'variable' pseudo-dim for multi-var Datasets).
+        Dimension names.
     plot_type : str
-        Type of plot (line, bar, area, heatmap).
+        Type of plot (line, bar, area, scatter, box, imshow).
     **slot_kwargs : auto, str, or None
         Explicit slot assignments. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip the slot.
@@ -138,29 +137,6 @@ def assign_slots(
     return slots
 
 
-def get_dims_with_variable(dataset: Dataset) -> list[Hashable]:
-    """
-    Get dimension names, adding 'variable' pseudo-dimension if multiple data vars.
-
-    For Datasets with multiple data variables, 'variable' is treated as a
-    pseudo-dimension that can be assigned to color, facet_col, etc.
-
-    Parameters
-    ----------
-    dataset : Dataset
-        The xarray Dataset.
-
-    Returns
-    -------
-    list of Hashable
-        Dimension names, with 'variable' appended if there are multiple data vars.
-    """
-    dims: list[Hashable] = list(dataset.dims)
-    if len(dataset.data_vars) > 1:
-        dims.append("variable")
-    return dims
-
-
 def dataarray_to_dataframe(darray: DataArray) -> Any:
     """
     Convert a DataArray to a pandas DataFrame suitable for Plotly Express.
@@ -180,49 +156,6 @@ def dataarray_to_dataframe(darray: DataArray) -> Any:
         darray = darray.rename("value")
 
     df = darray.to_dataframe().reset_index()
-    return df
-
-
-def dataset_to_dataframe(
-    dataset: Dataset,
-    variable_slot: str | None = None,
-) -> Any:
-    """
-    Convert a Dataset to a pandas DataFrame suitable for Plotly Express.
-
-    If 'variable' is assigned to a slot, the DataFrame is melted to long form
-    with a 'variable' column containing the data variable names.
-
-    Parameters
-    ----------
-    dataset : Dataset
-        The xarray Dataset to convert.
-    variable_slot : str or None
-        If 'variable' is assigned to a slot, this is the slot name.
-        If None, each data variable becomes a separate column.
-
-    Returns
-    -------
-    pandas.DataFrame
-        DataFrame with dimension coordinates as columns.
-    """
-    df = dataset.to_dataframe().reset_index()
-
-    # If 'variable' is used as a dimension, melt the dataframe
-    if variable_slot is not None:
-        # Get the coordinate columns (dimensions)
-        coord_cols = [col for col in df.columns if col in dataset.dims]
-        # Get the data variable columns
-        var_cols = [col for col in df.columns if col in dataset.data_vars]
-
-        if var_cols:
-            df = df.melt(
-                id_vars=coord_cols,
-                value_vars=var_cols,
-                var_name="variable",
-                value_name="value",
-            )
-
     return df
 
 

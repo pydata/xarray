@@ -67,7 +67,10 @@ def line(
     >>> da = xr.DataArray(
     ...     np.random.rand(10, 3),
     ...     dims=["time", "city"],
-    ...     coords={"time": pd.date_range("2020", periods=10), "city": ["NYC", "LA", "Chicago"]},
+    ...     coords={
+    ...         "time": pd.date_range("2020", periods=10),
+    ...         "city": ["NYC", "LA", "Chicago"],
+    ...     },
     ...     name="temperature",
     ... )
     >>> fig = da.pxplot.line()  # time→x, city→color
@@ -156,7 +159,10 @@ def bar(
     >>> da = xr.DataArray(
     ...     np.random.rand(3, 2),
     ...     dims=["city", "scenario"],
-    ...     coords={"city": ["NYC", "LA", "Chicago"], "scenario": ["baseline", "warming"]},
+    ...     coords={
+    ...         "city": ["NYC", "LA", "Chicago"],
+    ...         "scenario": ["baseline", "warming"],
+    ...     },
     ...     name="temperature",
     ... )
     >>> fig = da.pxplot.bar()  # city→x, scenario→color
@@ -455,17 +461,20 @@ def imshow(
     x: SlotValue = auto,
     y: SlotValue = auto,
     facet_col: SlotValue = auto,
-    facet_row: SlotValue = auto,
     animation_frame: SlotValue = auto,
     **px_kwargs: Any,
 ) -> go.Figure:
     """
     Create an interactive heatmap/image from a DataArray using Plotly Express.
 
+    The x and y parameters control which dimensions appear on each axis by
+    transposing the DataArray appropriately. Plotly Express handles coordinate
+    labels automatically from the xarray metadata.
+
     Parameters
     ----------
     darray : DataArray
-        The xarray DataArray to plot.
+        The xarray DataArray to plot (2D, or higher with faceting/animation).
     x : str, auto, or None
         Dimension for the x-axis. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
@@ -474,9 +483,6 @@ def imshow(
         a dimension name for explicit assignment, or `None` to skip.
     facet_col : str, auto, or None
         Dimension for subplot columns. Use `auto` for positional assignment,
-        a dimension name for explicit assignment, or `None` to skip.
-    facet_row : str, auto, or None
-        Dimension for subplot rows. Use `auto` for positional assignment,
         a dimension name for explicit assignment, or `None` to skip.
     animation_frame : str, auto, or None
         Dimension for animation frames. Use `auto` for positional assignment,
@@ -493,10 +499,12 @@ def imshow(
     --------
     >>> da = xr.DataArray(
     ...     np.random.rand(10, 20),
-    ...     dims=["y", "x"],
+    ...     dims=["lat", "lon"],
+    ...     coords={"lat": np.arange(10), "lon": np.arange(20)},
     ...     name="temperature",
     ... )
-    >>> fig = da.plotly.imshow()  # y→y, x→x
+    >>> fig = da.plotly.imshow()  # lat→x, lon→y (default order)
+    >>> fig = da.plotly.imshow(x="lon", y="lat")  # lon on x-axis, lat on y-axis
     """
     px = attempt_import("plotly.express")
 
@@ -506,71 +514,37 @@ def imshow(
         x=x,
         y=y,
         facet_col=facet_col,
-        facet_row=facet_row,
         animation_frame=animation_frame,
     )
 
     x_dim = slots.get("x")
     y_dim = slots.get("y")
     facet_col_dim = slots.get("facet_col")
-    facet_row_dim = slots.get("facet_row")
     animation_dim = slots.get("animation_frame")
 
-    # Build labels
-    labels = px_kwargs.pop("labels", {})
-    if x_dim and str(x_dim) not in labels:
-        labels[str(x_dim)] = get_axis_label(darray, x_dim)
-    if y_dim and str(y_dim) not in labels:
-        labels[str(y_dim)] = get_axis_label(darray, y_dim)
+    # Build the transpose order: y first (rows), x second (columns),
+    # then facet_col, animation_frame
+    transpose_order = []
+    if y_dim:
+        transpose_order.append(y_dim)
+    if x_dim:
+        transpose_order.append(x_dim)
+    if facet_col_dim:
+        transpose_order.append(facet_col_dim)
+    if animation_dim:
+        transpose_order.append(animation_dim)
 
-    # Get color label
-    color_label = get_value_label(darray)
-
-    # Handle faceting and animation
-    if facet_col_dim or facet_row_dim or animation_dim:
-        # Use density_heatmap with DataFrame for faceting
-        df = dataarray_to_dataframe(darray)
-        value_col = darray.name if darray.name is not None else "value"
-
-        if value_col not in labels:
-            labels[value_col] = color_label
-
-        fig = px.density_heatmap(
-            df,
-            x=x_dim,
-            y=y_dim,
-            z=value_col,
-            facet_col=facet_col_dim,
-            facet_row=facet_row_dim,
-            animation_frame=animation_dim,
-            labels=labels,
-            histfunc="avg",
-            **px_kwargs,
-        )
+    if transpose_order:
+        plot_data = darray.transpose(*transpose_order)
     else:
-        # Simple 2D case - use imshow directly on the array
-        # Transpose to get correct orientation (y on rows, x on columns)
-        if x_dim and y_dim:
-            plot_data = darray.transpose(y_dim, x_dim)
-        else:
-            plot_data = darray
+        plot_data = darray
 
-        # Get coordinate values for axis labels
-        x_coords = None
-        y_coords = None
-        if x_dim and x_dim in darray.coords:
-            x_coords = darray.coords[x_dim].values
-        if y_dim and y_dim in darray.coords:
-            y_coords = darray.coords[y_dim].values
-
-        fig = px.imshow(
-            plot_data.values,
-            x=x_coords,
-            y=y_coords,
-            labels={"x": labels.get(str(x_dim), str(x_dim)) if x_dim else "x",
-                    "y": labels.get(str(y_dim), str(y_dim)) if y_dim else "y",
-                    "color": color_label},
-            **px_kwargs,
-        )
+    # px.imshow accepts xarray DataArray directly and uses coordinates
+    fig = px.imshow(
+        plot_data,
+        facet_col=facet_col_dim,
+        animation_frame=animation_dim,
+        **px_kwargs,
+    )
 
     return fig

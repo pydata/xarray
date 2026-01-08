@@ -107,7 +107,6 @@ from xarray.core.variable import (
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import array_type, is_chunked_array, to_numpy
 from xarray.plot.accessor import DatasetPlotAccessor
-from xarray.plot.plotly.accessor import DatasetPlotlyAccessor
 from xarray.structure import alignment
 from xarray.structure.alignment import (
     _broadcast_helper,
@@ -8651,7 +8650,6 @@ class Dataset(
         return self.map(lambda x: x.imag, keep_attrs=True)
 
     plot = utils.UncachedAccessor(DatasetPlotAccessor)
-    plotly = utils.UncachedAccessor(DatasetPlotlyAccessor)
 
     def filter_by_attrs(self, **kwargs) -> Self:
         """Returns a ``Dataset`` with variables that match specific conditions.
