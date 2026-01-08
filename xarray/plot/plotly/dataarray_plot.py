@@ -48,9 +48,15 @@ def line(
     px = attempt_import("plotly.express")
 
     slots = assign_slots(
-        list(darray.dims), "line",
-        x=x, color=color, line_dash=line_dash, symbol=symbol,
-        facet_col=facet_col, facet_row=facet_row, animation_frame=animation_frame,
+        list(darray.dims),
+        "line",
+        x=x,
+        color=color,
+        line_dash=line_dash,
+        symbol=symbol,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        animation_frame=animation_frame,
     )
 
     df = _to_dataframe(darray)
@@ -58,11 +64,17 @@ def line(
     labels = {**_build_labels(darray, slots, value_col), **px_kwargs.pop("labels", {})}
 
     return px.line(
-        df, x=slots.get("x"), y=value_col,
-        color=slots.get("color"), line_dash=slots.get("line_dash"),
-        symbol=slots.get("symbol"), facet_col=slots.get("facet_col"),
-        facet_row=slots.get("facet_row"), animation_frame=slots.get("animation_frame"),
-        labels=labels, **px_kwargs,
+        df,
+        x=slots.get("x"),
+        y=value_col,
+        color=slots.get("color"),
+        line_dash=slots.get("line_dash"),
+        symbol=slots.get("symbol"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
+        animation_frame=slots.get("animation_frame"),
+        labels=labels,
+        **px_kwargs,
     )
 
 
@@ -86,9 +98,14 @@ def bar(
     px = attempt_import("plotly.express")
 
     slots = assign_slots(
-        list(darray.dims), "bar",
-        x=x, color=color, pattern_shape=pattern_shape,
-        facet_col=facet_col, facet_row=facet_row, animation_frame=animation_frame,
+        list(darray.dims),
+        "bar",
+        x=x,
+        color=color,
+        pattern_shape=pattern_shape,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        animation_frame=animation_frame,
     )
 
     df = _to_dataframe(darray)
@@ -96,11 +113,16 @@ def bar(
     labels = {**_build_labels(darray, slots, value_col), **px_kwargs.pop("labels", {})}
 
     return px.bar(
-        df, x=slots.get("x"), y=value_col,
-        color=slots.get("color"), pattern_shape=slots.get("pattern_shape"),
-        facet_col=slots.get("facet_col"), facet_row=slots.get("facet_row"),
+        df,
+        x=slots.get("x"),
+        y=value_col,
+        color=slots.get("color"),
+        pattern_shape=slots.get("pattern_shape"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
         animation_frame=slots.get("animation_frame"),
-        labels=labels, **px_kwargs,
+        labels=labels,
+        **px_kwargs,
     )
 
 
@@ -124,9 +146,14 @@ def area(
     px = attempt_import("plotly.express")
 
     slots = assign_slots(
-        list(darray.dims), "area",
-        x=x, color=color, pattern_shape=pattern_shape,
-        facet_col=facet_col, facet_row=facet_row, animation_frame=animation_frame,
+        list(darray.dims),
+        "area",
+        x=x,
+        color=color,
+        pattern_shape=pattern_shape,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        animation_frame=animation_frame,
     )
 
     df = _to_dataframe(darray)
@@ -134,11 +161,16 @@ def area(
     labels = {**_build_labels(darray, slots, value_col), **px_kwargs.pop("labels", {})}
 
     return px.area(
-        df, x=slots.get("x"), y=value_col,
-        color=slots.get("color"), pattern_shape=slots.get("pattern_shape"),
-        facet_col=slots.get("facet_col"), facet_row=slots.get("facet_row"),
+        df,
+        x=slots.get("x"),
+        y=value_col,
+        color=slots.get("color"),
+        pattern_shape=slots.get("pattern_shape"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
         animation_frame=slots.get("animation_frame"),
-        labels=labels, **px_kwargs,
+        labels=labels,
+        **px_kwargs,
     )
 
 
@@ -163,9 +195,14 @@ def box(
     px = attempt_import("plotly.express")
 
     slots = assign_slots(
-        list(darray.dims), "box", allow_unassigned=True,
-        x=x, color=color, facet_col=facet_col,
-        facet_row=facet_row, animation_frame=animation_frame,
+        list(darray.dims),
+        "box",
+        allow_unassigned=True,
+        x=x,
+        color=color,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        animation_frame=animation_frame,
     )
 
     df = _to_dataframe(darray)
@@ -173,10 +210,15 @@ def box(
     labels = {**_build_labels(darray, slots, value_col), **px_kwargs.pop("labels", {})}
 
     return px.box(
-        df, x=slots.get("x"), y=value_col,
-        color=slots.get("color"), facet_col=slots.get("facet_col"),
-        facet_row=slots.get("facet_row"), animation_frame=slots.get("animation_frame"),
-        labels=labels, **px_kwargs,
+        df,
+        x=slots.get("x"),
+        y=value_col,
+        color=slots.get("color"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
+        animation_frame=slots.get("animation_frame"),
+        labels=labels,
+        **px_kwargs,
     )
 
 
@@ -211,12 +253,20 @@ def scatter(
 
     # If y is a dimension, exclude it from slot assignment
     y_is_dim = y != "value" and y in darray.dims
-    dims_for_slots = [d for d in darray.dims if d != y] if y_is_dim else list(darray.dims)
+    dims_for_slots = (
+        [d for d in darray.dims if d != y] if y_is_dim else list(darray.dims)
+    )
 
     slots = assign_slots(
-        dims_for_slots, "scatter",
-        x=x, color=color, size=size, symbol=symbol,
-        facet_col=facet_col, facet_row=facet_row, animation_frame=animation_frame,
+        dims_for_slots,
+        "scatter",
+        x=x,
+        color=color,
+        size=size,
+        symbol=symbol,
+        facet_col=facet_col,
+        facet_row=facet_row,
+        animation_frame=animation_frame,
     )
 
     df = _to_dataframe(darray)
@@ -230,14 +280,21 @@ def scatter(
     labels = {**_build_labels(darray, slots, value_col), **px_kwargs.pop("labels", {})}
     if y_is_dim and str(y) not in labels:
         from xarray.plot.plotly.common import _get_label
+
         labels[str(y)] = _get_label(darray, y)
 
     return px.scatter(
-        df, x=slots.get("x"), y=y_col, color=color_col,
-        size=slots.get("size"), symbol=slots.get("symbol"),
-        facet_col=slots.get("facet_col"), facet_row=slots.get("facet_row"),
+        df,
+        x=slots.get("x"),
+        y=y_col,
+        color=color_col,
+        size=slots.get("size"),
+        symbol=slots.get("symbol"),
+        facet_col=slots.get("facet_col"),
+        facet_row=slots.get("facet_row"),
         animation_frame=slots.get("animation_frame"),
-        labels=labels, **px_kwargs,
+        labels=labels,
+        **px_kwargs,
     )
 
 
@@ -264,13 +321,18 @@ def imshow(
     px = attempt_import("plotly.express")
 
     slots = assign_slots(
-        list(darray.dims), "imshow",
-        y=y, x=x, facet_col=facet_col, animation_frame=animation_frame,
+        list(darray.dims),
+        "imshow",
+        y=y,
+        x=x,
+        facet_col=facet_col,
+        animation_frame=animation_frame,
     )
 
     # Transpose to: y (rows), x (cols), facet_col, animation_frame
     transpose_order = [
-        slots[k] for k in ("y", "x", "facet_col", "animation_frame")
+        slots[k]
+        for k in ("y", "x", "facet_col", "animation_frame")
         if slots.get(k) is not None
     ]
     plot_data = darray.transpose(*transpose_order) if transpose_order else darray
