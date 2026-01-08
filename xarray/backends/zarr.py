@@ -868,18 +868,12 @@ class ZarrStore(AbstractWritableDataStore):
         )
         attributes = dict(attributes)
 
-        if hasattr(zarr_array, "metadata"):
-            chunk_grid = zarr_array.metadata.chunk_grid
-            chunks = getattr(chunk_grid, "chunk_shapes", None)
-            # regular chunk grid
-            if chunks is None:
-                chunks = chunk_grid.chunk_shape
-        else:
-            chunks = zarr_array.chunks
+        chunks = tuple(zarr_array.chunks)
+        preferred_chunks = dict(zip(dimensions, chunks, strict=True))
 
         encoding = {
             "chunks": chunks,
-            "preferred_chunks": dict(zip(dimensions, chunks, strict=True)),
+            "preferred_chunks": preferred_chunks,
         }
 
         if _zarr_v3():
