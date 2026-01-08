@@ -231,7 +231,7 @@ def scatter(
     darray: DataArray,
     *,
     x: SlotValue = auto,
-    y: str = "value",
+    y: SlotValue | str = "value",
     color: SlotValue = auto,
     size: SlotValue = auto,
     symbol: SlotValue = auto,
