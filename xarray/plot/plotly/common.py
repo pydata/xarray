@@ -34,10 +34,33 @@ SlotValue = _AUTO | str | None
 # Note: For most plots, y-axis shows DataArray values (not a dimension slot).
 # For imshow, y IS a dimension (rows of the heatmap).
 SLOT_ORDERS: dict[str, tuple[str, ...]] = {
-    "line": ("x", "color", "line_dash", "symbol", "facet_col", "facet_row", "animation_frame"),
+    "line": (
+        "x",
+        "color",
+        "line_dash",
+        "symbol",
+        "facet_col",
+        "facet_row",
+        "animation_frame",
+    ),
     "bar": ("x", "color", "pattern_shape", "facet_col", "facet_row", "animation_frame"),
-    "area": ("x", "color", "pattern_shape", "facet_col", "facet_row", "animation_frame"),
-    "scatter": ("x", "color", "size", "symbol", "facet_col", "facet_row", "animation_frame"),
+    "area": (
+        "x",
+        "color",
+        "pattern_shape",
+        "facet_col",
+        "facet_row",
+        "animation_frame",
+    ),
+    "scatter": (
+        "x",
+        "color",
+        "size",
+        "symbol",
+        "facet_col",
+        "facet_row",
+        "animation_frame",
+    ),
     "imshow": ("y", "x", "facet_col", "animation_frame"),
     "box": ("x", "color", "facet_col", "facet_row", "animation_frame"),
 }
