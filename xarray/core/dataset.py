@@ -5659,7 +5659,7 @@ class Dataset(
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
         compat : {"identical", "equals", "broadcast_equals", \
-                  "no_conflicts", "override", "minimal"}, default: "no_conflicts"
+                  "no_conflicts", "override", "minimal"}, default: "override"
             String indicating how to compare variables of the same name for
             potential conflicts:
 
@@ -5671,18 +5671,18 @@ class Dataset(
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
-            - 'override': skip comparing and pick variable from first dataset
+            - 'override' (default): skip comparing and pick variable from first dataset
             - 'minimal': drop conflicting coordinates
 
         join : {"outer", "inner", "left", "right", "exact", "override"}, \
-               default: "outer"
+            default: "exact"
             Method for joining ``self`` and ``other`` along shared dimensions:
 
             - 'outer': use the union of the indexes
             - 'inner': use the intersection of the indexes
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
-            - 'exact': error instead of aligning non-equal indexes
+            - 'exact' (default): error instead of aligning non-equal indexes
             - 'override': use indexes from ``self`` that are the same size
               as those of ``other`` in that dimension
 

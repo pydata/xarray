@@ -885,7 +885,7 @@ def merge(
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", \
-              "override", "minimal"}, default: "no_conflicts"
+              "override", "minimal"}, default: "override"
         String indicating how to compare variables of the same name for
         potential conflicts:
 
@@ -897,18 +897,19 @@ def merge(
         - "no_conflicts": only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
-        - "override": skip comparing and pick variable from first dataset
+        - "override" (default): skip comparing and pick variable from first dataset
         - "minimal": drop conflicting coordinates
 
-    join : {"outer", "inner", "left", "right", "exact", "override"}, default: "outer"
+    join : {"outer", "inner", "left", "right", "exact", "override"}, \
+        default: "exact"
         String indicating how to combine differing indexes in objects.
 
         - "outer": use the union of object indexes
         - "inner": use the intersection of object indexes
         - "left": use indexes from the first object with each dimension
         - "right": use indexes from the last object with each dimension
-        - "exact": instead of aligning, raise `ValueError` when indexes to be
-          aligned are not equal
+        - "exact" (default): instead of aligning, raise `ValueError` when indexes
+          to be aligned are not equal
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.

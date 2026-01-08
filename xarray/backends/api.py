@@ -1437,7 +1437,7 @@ def open_mfdataset(
         Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is used to
         combine all the data. Default is to use ``xarray.combine_by_coords``.
     compat : {"identical", "equals", "broadcast_equals", \
-              "no_conflicts", "override"}, default: "no_conflicts"
+              "no_conflicts", "override"}, default: "override"
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
 
@@ -1449,7 +1449,7 @@ def open_mfdataset(
          * "no_conflicts": only values which are not null in both datasets
            must be equal. The returned dataset then contains the combination
            of all non-null values.
-         * "override": skip comparing and pick variable from first dataset
+         * "override" (default): skip comparing and pick variable from first dataset
 
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
@@ -1463,7 +1463,8 @@ def open_mfdataset(
         "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
-    data_vars : {"minimal", "different", "all"} or list of str, default: "all"
+    data_vars : {"minimal", "different", "all", None} or list of str, \
+        default: None
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
             appears are included.
@@ -1473,12 +1474,15 @@ def open_mfdataset(
             load the data payload of data variables into memory if they are not
             already loaded.
           * "all": All data variables will be concatenated.
+          * None (default): Means ``"all"`` if ``concat_dim`` is not present
+            in any of the ``objs``, and ``"minimal"`` if ``concat_dim`` is
+            present in any of ``objs``.
           * list of str: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
-    coords : {"minimal", "different", "all"} or list of str, optional
+    coords : {"minimal", "different", "all"} or list of str, default: "minimal"
         These coordinate variables will be concatenated together:
-         * "minimal": Only coordinates in which the dimension already appears
-           are included.
+         * "minimal" (default): Only coordinates in which the dimension already
+           appears are included.
          * "different": Coordinates which are not equal (ignoring attributes)
            across all datasets are also concatenated (as well as all for which
            dimension already appears). Beware: this option may load the data
@@ -1491,7 +1495,7 @@ def open_mfdataset(
     parallel : bool, default: False
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
-    join : {"outer", "inner", "left", "right", "exact", "override"}, default: "outer"
+    join : {"outer", "inner", "left", "right", "exact", "override"}, default: "exact"
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
 
@@ -1499,8 +1503,8 @@ def open_mfdataset(
         - "inner": use the intersection of object indexes
         - "left": use indexes from the first object with each dimension
         - "right": use indexes from the last object with each dimension
-        - "exact": instead of aligning, raise `ValueError` when indexes to be
-          aligned are not equal
+        - "exact" (default): instead of aligning, raise `ValueError` when
+          indexes to be aligned are not equal
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
