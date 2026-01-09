@@ -519,7 +519,8 @@ class DataTree(
     )
 
     # External accessor properties (for IDE support)
-    # These provide full autocompletion when packages are installed
+    # These provide full autocompletion when packages are installed.
+    # Raises AttributeError for uninstalled packages (so hasattr returns False).
 
     @property
     def hvplot(self) -> hvPlotAccessor:
@@ -532,9 +533,9 @@ class DataTree(
         --------
         hvplot : https://hvplot.holoviz.org/
         """
-        from xarray.accessors import ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATATREE_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("hvplot", self, ACCESSORS)
+        return _get_external_accessor("hvplot", self, DATATREE_ACCESSORS)
 
     @property
     def cf(self) -> CFAccessor:
@@ -547,9 +548,9 @@ class DataTree(
         --------
         cf_xarray : https://cf-xarray.readthedocs.io/
         """
-        from xarray.accessors import ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATATREE_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("cf", self, ACCESSORS)
+        return _get_external_accessor("cf", self, DATATREE_ACCESSORS)
 
     def __init__(
         self,

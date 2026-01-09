@@ -376,7 +376,8 @@ class Dataset(
     )
 
     # External accessor properties (for IDE support)
-    # These provide full autocompletion when packages are installed
+    # These provide full autocompletion when packages are installed.
+    # Raises AttributeError for uninstalled packages (so hasattr returns False).
 
     @property
     def hvplot(self) -> hvPlotAccessor:
@@ -389,9 +390,9 @@ class Dataset(
         --------
         hvplot : https://hvplot.holoviz.org/
         """
-        from xarray.accessors import ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATASET_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("hvplot", self, ACCESSORS)
+        return _get_external_accessor("hvplot", self, DATASET_ACCESSORS)
 
     @property
     def cf(self) -> CFAccessor:
@@ -404,9 +405,9 @@ class Dataset(
         --------
         cf_xarray : https://cf-xarray.readthedocs.io/
         """
-        from xarray.accessors import ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATASET_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("cf", self, ACCESSORS)
+        return _get_external_accessor("cf", self, DATASET_ACCESSORS)
 
     @property
     def pint(self) -> PintDatasetAccessor:
@@ -419,9 +420,9 @@ class Dataset(
         --------
         pint_xarray : https://pint-xarray.readthedocs.io/
         """
-        from xarray.accessors import DATASET_ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATASET_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("pint", self, DATASET_ACCESSORS)
+        return _get_external_accessor("pint", self, DATASET_ACCESSORS)
 
     @property
     def rio(self) -> RasterDataset:
@@ -434,9 +435,9 @@ class Dataset(
         --------
         rioxarray : https://corteva.github.io/rioxarray/
         """
-        from xarray.accessors import DATASET_ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATASET_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("rio", self, DATASET_ACCESSORS)
+        return _get_external_accessor("rio", self, DATASET_ACCESSORS)
 
     @property
     def plotly(self) -> DatasetPlotlyAccessor:
@@ -449,9 +450,9 @@ class Dataset(
         --------
         xarray_plotly : https://github.com/xarray-contrib/xarray-plotly
         """
-        from xarray.accessors import DATASET_ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATASET_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("plotly", self, DATASET_ACCESSORS)
+        return _get_external_accessor("plotly", self, DATASET_ACCESSORS)
 
     def __init__(
         self,

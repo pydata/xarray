@@ -419,7 +419,8 @@ class DataArray(
     dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
 
     # External accessor properties (for IDE support)
-    # These provide full autocompletion when packages are installed
+    # These provide full autocompletion when packages are installed.
+    # Raises AttributeError for uninstalled packages (so hasattr returns False).
 
     @property
     def hvplot(self) -> hvPlotAccessor:
@@ -432,9 +433,9 @@ class DataArray(
         --------
         hvplot : https://hvplot.holoviz.org/
         """
-        from xarray.accessors import ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("hvplot", self, ACCESSORS)
+        return _get_external_accessor("hvplot", self, DATAARRAY_ACCESSORS)
 
     @property
     def cf(self) -> CFAccessor:
@@ -447,9 +448,9 @@ class DataArray(
         --------
         cf_xarray : https://cf-xarray.readthedocs.io/
         """
-        from xarray.accessors import ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("cf", self, ACCESSORS)
+        return _get_external_accessor("cf", self, DATAARRAY_ACCESSORS)
 
     @property
     def pint(self) -> PintDataArrayAccessor:
@@ -462,9 +463,9 @@ class DataArray(
         --------
         pint_xarray : https://pint-xarray.readthedocs.io/
         """
-        from xarray.accessors import ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("pint", self, ACCESSORS)
+        return _get_external_accessor("pint", self, DATAARRAY_ACCESSORS)
 
     @property
     def rio(self) -> RasterArray:
@@ -477,9 +478,9 @@ class DataArray(
         --------
         rioxarray : https://corteva.github.io/rioxarray/
         """
-        from xarray.accessors import ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("rio", self, ACCESSORS)
+        return _get_external_accessor("rio", self, DATAARRAY_ACCESSORS)
 
     @property
     def plotly(self) -> DataArrayPlotlyAccessor:
@@ -492,9 +493,9 @@ class DataArray(
         --------
         xarray_plotly : https://github.com/xarray-contrib/xarray-plotly
         """
-        from xarray.accessors import ACCESSORS, _get_cached_accessor
+        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
 
-        return _get_cached_accessor("plotly", self, ACCESSORS)
+        return _get_external_accessor("plotly", self, DATAARRAY_ACCESSORS)
 
     def __init__(
         self,
