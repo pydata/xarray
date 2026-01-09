@@ -28,6 +28,13 @@ New Features
   complex numbers (:pull:`11068`). By `Mark Harfouche
   <https://github.com/hmaarrfk>`_.
 
+- :py:func:`combine_nested` now support :py:class:`DataTree` objects
+  (:pull:`10849`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- :py:func:`set_options` now supports an ``arithmetic_compat`` option which determines how non-index coordinates
+  of the same name are compared for potential conflicts when performing binary operations. The default for it is
+  ``arithmetic_compat='minimal'`` which matches the existing behaviour.
+  By `Matthew Willson <https://github.com/mjwillson>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

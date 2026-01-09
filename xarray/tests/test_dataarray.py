@@ -25,6 +25,7 @@ from xarray import (
     DataArray,
     Dataset,
     IndexVariable,
+    MergeError,
     Variable,
     align,
     broadcast,
@@ -2625,6 +2626,43 @@ class TestDataArray:
 
         actual = alt + orig
         assert_identical(expected, actual)
+
+    def test_math_with_arithmetic_compat_options(self) -> None:
+        # Setting up a clash of non-index coordinate 'foo':
+        a = xr.DataArray(
+            data=[0, 0, 0],
+            dims=["x"],
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [1.0, 2.0, np.nan]),
+            },
+        )
+        b = xr.DataArray(
+            data=[0, 0, 0],
+            dims=["x"],
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [np.nan, 2.0, 3.0]),
+            },
+        )
+
+        with xr.set_options(arithmetic_compat="minimal"):
+            assert_equal(a + b, a.drop_vars("foo"))
+
+        with xr.set_options(arithmetic_compat="override"):
+            assert_equal(a + b, a)
+            assert_equal(b + a, b)
+
+        with xr.set_options(arithmetic_compat="no_conflicts"):
+            expected = a.assign_coords(foo=(["x"], [1.0, 2.0, 3.0]))
+            assert_equal(a + b, expected)
+            assert_equal(b + a, expected)
+
+        with xr.set_options(arithmetic_compat="equals"):
+            with pytest.raises(MergeError):
+                a + b
+            with pytest.raises(MergeError):
+                b + a
 
     def test_index_math(self) -> None:
         orig = DataArray(range(3), dims="x", name="x")
