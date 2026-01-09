@@ -1,8 +1,8 @@
 """
 External accessor support for xarray.
 
-This module provides infrastructure for external accessor packages,
-enabling full IDE support (autocompletion, parameter hints, docstrings)
+This module provides mixin classes with typed properties for external accessor
+packages, enabling full IDE support (autocompletion, parameter hints, docstrings)
 for packages like hvplot, cf-xarray, pint-xarray, rioxarray, and xarray-plotly.
 
 Properties are defined statically for IDE support, but raise AttributeError
@@ -16,6 +16,13 @@ import importlib.util
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    # External accessor types (for IDE support)
+    from cf_xarray.accessor import CFAccessor
+    from hvplot.xarray import hvPlotAccessor
+    from pint_xarray import PintDataArrayAccessor, PintDatasetAccessor
+    from rioxarray import RasterArray, RasterDataset
+    from xarray_plotly import DataArrayPlotlyAccessor, DatasetPlotlyAccessor
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
@@ -133,3 +140,192 @@ def _get_external_accessor(
 
     cache[cache_key] = accessor
     return accessor
+
+
+class DataArrayExternalAccessorMixin:
+    """
+    Mixin class providing typed external accessor properties for DataArray.
+
+    These properties enable IDE support (autocompletion, parameter hints, docstrings)
+    for external accessor packages. For uninstalled packages, hasattr() returns False.
+    """
+
+    __slots__ = ()
+
+    @property
+    def hvplot(self) -> hvPlotAccessor:
+        """
+        hvPlot accessor for interactive plotting.
+
+        Requires: ``pip install hvplot``
+
+        See Also
+        --------
+        hvplot : https://hvplot.holoviz.org/
+        """
+        return _get_external_accessor("hvplot", self, DATAARRAY_ACCESSORS)  # type: ignore[arg-type]
+
+    @property
+    def cf(self) -> CFAccessor:
+        """
+        CF conventions accessor.
+
+        Requires: ``pip install cf-xarray``
+
+        See Also
+        --------
+        cf_xarray : https://cf-xarray.readthedocs.io/
+        """
+        return _get_external_accessor("cf", self, DATAARRAY_ACCESSORS)  # type: ignore[arg-type]
+
+    @property
+    def pint(self) -> PintDataArrayAccessor:
+        """
+        Pint unit accessor for unit-aware arrays.
+
+        Requires: ``pip install pint-xarray``
+
+        See Also
+        --------
+        pint_xarray : https://pint-xarray.readthedocs.io/
+        """
+        return _get_external_accessor("pint", self, DATAARRAY_ACCESSORS)  # type: ignore[arg-type]
+
+    @property
+    def rio(self) -> RasterArray:
+        """
+        Rasterio accessor for geospatial raster data.
+
+        Requires: ``pip install rioxarray``
+
+        See Also
+        --------
+        rioxarray : https://corteva.github.io/rioxarray/
+        """
+        return _get_external_accessor("rio", self, DATAARRAY_ACCESSORS)  # type: ignore[arg-type]
+
+    @property
+    def plotly(self) -> DataArrayPlotlyAccessor:
+        """
+        Plotly accessor for interactive Plotly visualizations.
+
+        Requires: ``pip install xarray-plotly``
+
+        See Also
+        --------
+        xarray_plotly : https://github.com/xarray-contrib/xarray-plotly
+        """
+        return _get_external_accessor("plotly", self, DATAARRAY_ACCESSORS)  # type: ignore[arg-type]
+
+
+class DatasetExternalAccessorMixin:
+    """
+    Mixin class providing typed external accessor properties for Dataset.
+
+    These properties enable IDE support (autocompletion, parameter hints, docstrings)
+    for external accessor packages. For uninstalled packages, hasattr() returns False.
+    """
+
+    __slots__ = ()
+
+    @property
+    def hvplot(self) -> hvPlotAccessor:
+        """
+        hvPlot accessor for interactive plotting.
+
+        Requires: ``pip install hvplot``
+
+        See Also
+        --------
+        hvplot : https://hvplot.holoviz.org/
+        """
+        return _get_external_accessor("hvplot", self, DATASET_ACCESSORS)  # type: ignore[arg-type]
+
+    @property
+    def cf(self) -> CFAccessor:
+        """
+        CF conventions accessor.
+
+        Requires: ``pip install cf-xarray``
+
+        See Also
+        --------
+        cf_xarray : https://cf-xarray.readthedocs.io/
+        """
+        return _get_external_accessor("cf", self, DATASET_ACCESSORS)  # type: ignore[arg-type]
+
+    @property
+    def pint(self) -> PintDatasetAccessor:
+        """
+        Pint unit accessor for unit-aware arrays.
+
+        Requires: ``pip install pint-xarray``
+
+        See Also
+        --------
+        pint_xarray : https://pint-xarray.readthedocs.io/
+        """
+        return _get_external_accessor("pint", self, DATASET_ACCESSORS)  # type: ignore[arg-type]
+
+    @property
+    def rio(self) -> RasterDataset:
+        """
+        Rasterio accessor for geospatial raster data.
+
+        Requires: ``pip install rioxarray``
+
+        See Also
+        --------
+        rioxarray : https://corteva.github.io/rioxarray/
+        """
+        return _get_external_accessor("rio", self, DATASET_ACCESSORS)  # type: ignore[arg-type]
+
+    @property
+    def plotly(self) -> DatasetPlotlyAccessor:
+        """
+        Plotly accessor for interactive Plotly visualizations.
+
+        Requires: ``pip install xarray-plotly``
+
+        See Also
+        --------
+        xarray_plotly : https://github.com/xarray-contrib/xarray-plotly
+        """
+        return _get_external_accessor("plotly", self, DATASET_ACCESSORS)  # type: ignore[arg-type]
+
+
+class DataTreeExternalAccessorMixin:
+    """
+    Mixin class providing typed external accessor properties for DataTree.
+
+    These properties enable IDE support (autocompletion, parameter hints, docstrings)
+    for external accessor packages. For uninstalled packages, hasattr() returns False.
+    """
+
+    __slots__ = ()
+
+    @property
+    def hvplot(self) -> hvPlotAccessor:
+        """
+        hvPlot accessor for interactive plotting.
+
+        Requires: ``pip install hvplot``
+
+        See Also
+        --------
+        hvplot : https://hvplot.holoviz.org/
+        """
+        return _get_external_accessor("hvplot", self, DATATREE_ACCESSORS)  # type: ignore[arg-type]
+
+    @property
+    def cf(self) -> CFAccessor:
+        """
+        CF conventions accessor.
+
+        Requires: ``pip install cf-xarray``
+
+        See Also
+        --------
+        cf_xarray : https://cf-xarray.readthedocs.io/
+        """
+        return _get_external_accessor("cf", self, DATATREE_ACCESSORS)  # type: ignore[arg-type]

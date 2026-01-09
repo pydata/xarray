@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, TypeVar, over
 import numpy as np
 import pandas as pd
 
+from xarray.accessors import DataArrayExternalAccessorMixin
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.computation import computation, ops
@@ -85,16 +86,10 @@ from xarray.structure.merge import PANDAS_TYPES, MergeError
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
-    # External accessor types (for IDE support)
-    from cf_xarray.accessor import CFAccessor
     from dask.dataframe import DataFrame as DaskDataFrame
     from dask.delayed import Delayed
-    from hvplot.xarray import hvPlotAccessor
     from iris.cube import Cube as iris_Cube
     from numpy.typing import ArrayLike
-    from pint_xarray import PintDataArrayAccessor
-    from rioxarray import RasterArray
-    from xarray_plotly import DataArrayPlotlyAccessor
 
     from xarray.backends import ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
@@ -265,6 +260,7 @@ class DataArray(
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
+    DataArrayExternalAccessorMixin,
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 
@@ -417,85 +413,6 @@ class DataArray(
     )
 
     dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
-
-    # External accessor properties (for IDE support)
-    # These provide full autocompletion when packages are installed.
-    # Raises AttributeError for uninstalled packages (so hasattr returns False).
-
-    @property
-    def hvplot(self) -> hvPlotAccessor:
-        """
-        hvPlot accessor for interactive plotting.
-
-        Requires: ``pip install hvplot``
-
-        See Also
-        --------
-        hvplot : https://hvplot.holoviz.org/
-        """
-        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
-
-        return _get_external_accessor("hvplot", self, DATAARRAY_ACCESSORS)
-
-    @property
-    def cf(self) -> CFAccessor:
-        """
-        CF conventions accessor.
-
-        Requires: ``pip install cf-xarray``
-
-        See Also
-        --------
-        cf_xarray : https://cf-xarray.readthedocs.io/
-        """
-        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
-
-        return _get_external_accessor("cf", self, DATAARRAY_ACCESSORS)
-
-    @property
-    def pint(self) -> PintDataArrayAccessor:
-        """
-        Pint unit accessor for unit-aware arrays.
-
-        Requires: ``pip install pint-xarray``
-
-        See Also
-        --------
-        pint_xarray : https://pint-xarray.readthedocs.io/
-        """
-        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
-
-        return _get_external_accessor("pint", self, DATAARRAY_ACCESSORS)
-
-    @property
-    def rio(self) -> RasterArray:
-        """
-        Rasterio accessor for geospatial raster data.
-
-        Requires: ``pip install rioxarray``
-
-        See Also
-        --------
-        rioxarray : https://corteva.github.io/rioxarray/
-        """
-        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
-
-        return _get_external_accessor("rio", self, DATAARRAY_ACCESSORS)
-
-    @property
-    def plotly(self) -> DataArrayPlotlyAccessor:
-        """
-        Plotly accessor for interactive Plotly visualizations.
-
-        Requires: ``pip install xarray-plotly``
-
-        See Also
-        --------
-        xarray_plotly : https://github.com/xarray-contrib/xarray-plotly
-        """
-        from xarray.accessors import DATAARRAY_ACCESSORS, _get_external_accessor
-
-        return _get_external_accessor("plotly", self, DATAARRAY_ACCESSORS)
 
     def __init__(
         self,

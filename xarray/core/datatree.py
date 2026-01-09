@@ -28,6 +28,7 @@ from typing import (
     overload,
 )
 
+from xarray.accessors import DataTreeExternalAccessorMixin
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
@@ -78,11 +79,7 @@ except ImportError:
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
-
-    # External accessor types (for IDE support)
-    from cf_xarray.accessor import CFAccessor
     from dask.delayed import Delayed
-    from hvplot.xarray import hvPlotAccessor
 
     from xarray.backends import ZarrStore
     from xarray.backends.writers import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
@@ -468,6 +465,7 @@ class DataTree(
     DataTreeAggregations,
     DataTreeOpsMixin,
     TreeAttrAccessMixin,
+    DataTreeExternalAccessorMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
     """
@@ -517,40 +515,6 @@ class DataTree(
         "_node_indexes",
         "_parent",
     )
-
-    # External accessor properties (for IDE support)
-    # These provide full autocompletion when packages are installed.
-    # Raises AttributeError for uninstalled packages (so hasattr returns False).
-
-    @property
-    def hvplot(self) -> hvPlotAccessor:
-        """
-        hvPlot accessor for interactive plotting.
-
-        Requires: ``pip install hvplot``
-
-        See Also
-        --------
-        hvplot : https://hvplot.holoviz.org/
-        """
-        from xarray.accessors import DATATREE_ACCESSORS, _get_external_accessor
-
-        return _get_external_accessor("hvplot", self, DATATREE_ACCESSORS)
-
-    @property
-    def cf(self) -> CFAccessor:
-        """
-        CF conventions accessor.
-
-        Requires: ``pip install cf-xarray``
-
-        See Also
-        --------
-        cf_xarray : https://cf-xarray.readthedocs.io/
-        """
-        from xarray.accessors import DATATREE_ACCESSORS, _get_external_accessor
-
-        return _get_external_accessor("cf", self, DATATREE_ACCESSORS)
 
     def __init__(
         self,
