@@ -93,7 +93,7 @@ OPTIONS: T_Options = {
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
-    "use_new_combine_kwarg_defaults": True,
+    "use_new_combine_kwarg_defaults": False,
     "use_numbagg": True,
     "use_opt_einsum": True,
 }
@@ -271,7 +271,7 @@ class set_options:
     use_flox : bool, default: True
         Whether to use ``numpy_groupies`` and `flox`` to
         accelerate groupby and resampling reductions.
-    use_new_combine_kwarg_defaults : bool, default True
+    use_new_combine_kwarg_defaults : bool, default False
         Whether to use new kwarg default values for combine functions:
         :py:func:`~xarray.concat`, :py:func:`~xarray.merge`,
         :py:func:`~xarray.open_mfdataset`. New values are:
