@@ -5,6 +5,12 @@ import pickle
 import pytest
 
 import xarray as xr
+from xarray.accessors import (
+    DATAARRAY_ACCESSORS,
+    DATASET_ACCESSORS,
+    DATATREE_ACCESSORS,
+    _is_package_available,
+)
 from xarray.core.extensions import register_datatree_accessor
 from xarray.tests import assert_identical
 
@@ -93,3 +99,74 @@ class TestAccessor:
 
         with pytest.raises(RuntimeError, match=r"error initializing"):
             _ = xr.Dataset().stupid_accessor
+
+
+class TestExternalAccessors:
+    """Tests for typed external accessor properties."""
+
+    def test_hasattr_false_for_uninstalled(self) -> None:
+        """hasattr returns False for accessors whose packages are not installed."""
+        da = xr.DataArray([1, 2, 3])
+        ds = xr.Dataset({"a": da})
+        dt = xr.DataTree(ds)
+
+        for name, (_, _, _, top_pkg) in DATAARRAY_ACCESSORS.items():
+            if not _is_package_available(top_pkg):
+                assert not hasattr(da, name), f"hasattr should be False for {name}"
+
+        for name, (_, _, _, top_pkg) in DATASET_ACCESSORS.items():
+            if not _is_package_available(top_pkg):
+                assert not hasattr(ds, name), f"hasattr should be False for {name}"
+
+        for name, (_, _, _, top_pkg) in DATATREE_ACCESSORS.items():
+            if not _is_package_available(top_pkg):
+                assert not hasattr(dt, name), f"hasattr should be False for {name}"
+
+    def test_hasattr_true_for_installed(self) -> None:
+        """hasattr returns True for accessors whose packages are installed."""
+        da = xr.DataArray([1, 2, 3])
+        ds = xr.Dataset({"a": da})
+
+        for name, (_, _, _, top_pkg) in DATAARRAY_ACCESSORS.items():
+            if _is_package_available(top_pkg):
+                assert hasattr(da, name), f"hasattr should be True for {name}"
+
+        for name, (_, _, _, top_pkg) in DATASET_ACCESSORS.items():
+            if _is_package_available(top_pkg):
+                assert hasattr(ds, name), f"hasattr should be True for {name}"
+
+    def test_attribute_error_for_uninstalled(self) -> None:
+        """Accessing uninstalled accessor raises AttributeError."""
+        da = xr.DataArray([1, 2, 3])
+
+        for name, (_, _, _, top_pkg) in DATAARRAY_ACCESSORS.items():
+            if not _is_package_available(top_pkg):
+                with pytest.raises(AttributeError):
+                    getattr(da, name)
+                break  # Only need to test one
+
+    def test_external_accessor_no_overwrite(self) -> None:
+        """Known external accessors don't overwrite typed properties."""
+        # The property should remain a property, not get replaced by _CachedAccessor
+        for name in DATAARRAY_ACCESSORS:
+            attr = getattr(xr.DataArray, name)
+            assert isinstance(attr, property), f"{name} should remain a property"
+
+        for name in DATASET_ACCESSORS:
+            attr = getattr(xr.Dataset, name)
+            assert isinstance(attr, property), f"{name} should remain a property"
+
+        for name in DATATREE_ACCESSORS:
+            attr = getattr(xr.DataTree, name)
+            assert isinstance(attr, property), f"{name} should remain a property"
+
+    def test_accessor_caching(self) -> None:
+        """Accessor instances are cached on the object."""
+        da = xr.DataArray([1, 2, 3])
+
+        for name, (_, _, _, top_pkg) in DATAARRAY_ACCESSORS.items():
+            if _is_package_available(top_pkg):
+                accessor1 = getattr(da, name)
+                accessor2 = getattr(da, name)
+                assert accessor1 is accessor2, f"{name} accessor should be cached"
+                break  # Only need to test one installed accessor

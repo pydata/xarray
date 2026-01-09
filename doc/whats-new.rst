@@ -27,6 +27,11 @@ New Features
   brings improved alignment between h5netcdf and libnetcdf4 in the storage of
   complex numbers (:pull:`11068`). By `Mark Harfouche
   <https://github.com/hmaarrfk>`_.
+- Added typed properties for external accessor packages (hvplot, cf-xarray,
+  pint-xarray, rioxarray, xarray-plotly), enabling full IDE support including
+  autocompletion, parameter hints, and docstrings. For uninstalled packages,
+  ``hasattr()`` returns ``False`` to keep the namespace clean (:pull:`xxxx`).
+  By `Your Name <https://github.com/yourname>`_.
 
 
 Breaking Changes
