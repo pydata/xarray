@@ -1189,3 +1189,87 @@ def test_interp_vectorized_shared_dims(chunk: bool) -> None:
         coords={"u": [45, 55], "t": [10, 12], "x": dx, "y": dy},
     )
     assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_dataset_interp_datetime_variable() -> None:
+    # GH#10900
+    ds = xr.Dataset(
+        data_vars={
+            "something": (["x", "y"], np.arange(25, dtype=float).reshape(5, 5)),
+            "time": (
+                ["x", "y"],
+                np.datetime64("2024-01-01")
+                + np.arange(25).reshape(5, 5) * np.timedelta64(1, "D"),
+            ),
+        },
+        coords={"x": np.arange(5), "y": np.arange(5)},
+    )
+
+    result = ds.interp(x=[0.5, 1.5], y=[0.5, 1.5])
+
+    assert "time" in result.data_vars
+    expected_time = np.datetime64("2024-01-01") + np.timedelta64(3, "D")
+    np.testing.assert_equal(result["time"].values[0, 0], expected_time)
+
+
+@requires_scipy
+def test_dataset_interp_timedelta_variable() -> None:
+    # GH#10900
+    ds = xr.Dataset(
+        data_vars={
+            "duration": (["x"], np.array([1, 2, 3, 4, 5], dtype="timedelta64[D]")),
+        },
+        coords={"x": np.arange(5)},
+    )
+
+    result = ds.interp(x=[0.5, 1.5, 2.5])
+
+    assert "duration" in result.data_vars
+    expected_seconds = np.array([1.5, 2.5, 3.5]) * 86400
+    actual_seconds = result["duration"].values.astype("timedelta64[s]").astype(float)
+    np.testing.assert_allclose(actual_seconds, expected_seconds, rtol=1e-10)
+
+
+@requires_scipy
+def test_dataset_interp_datetime_nat() -> None:
+    # GH#10900 - NaT propagates like NaN
+    time_data = np.array(
+        ["2024-01-01", "2024-01-02", "NaT", "2024-01-04", "2024-01-05"],
+        dtype="datetime64[D]",
+    )
+    ds = xr.Dataset(
+        data_vars={"time": (["x"], time_data)},
+        coords={"x": np.arange(5)},
+    )
+
+    result = ds.interp(x=[0.5, 1.5, 2.5, 3.5])
+
+    assert not np.isnat(result["time"].values[0])
+    assert np.isnat(result["time"].values[1])
+    assert np.isnat(result["time"].values[2])
+    assert not np.isnat(result["time"].values[3])
+
+
+@requires_scipy
+@requires_dask
+def test_dataset_interp_datetime_dask() -> None:
+    # GH#10900
+    ds = xr.Dataset(
+        data_vars={
+            "something": (["x", "y"], np.arange(25, dtype=float).reshape(5, 5)),
+            "time": (
+                ["x", "y"],
+                np.datetime64("2024-01-01")
+                + np.arange(25).reshape(5, 5) * np.timedelta64(1, "D"),
+            ),
+        },
+        coords={"x": np.arange(5), "y": np.arange(5)},
+    ).chunk({"x": 2, "y": 2})
+
+    result = ds.interp(x=[0.5, 1.5], y=[0.5, 1.5])
+
+    assert "time" in result.data_vars
+    computed = result.compute()
+    expected_time = np.datetime64("2024-01-01") + np.timedelta64(3, "D")
+    np.testing.assert_equal(computed["time"].values[0, 0], expected_time)
