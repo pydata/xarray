@@ -144,6 +144,9 @@ Bug Fixes
   By `David Bold <https://github.com/dschwoerer>`_.
 - Improve error message when scipy is missing for :py:class:`~xarray.indexes.NDPointIndex` (:pull:`11085`).
   By `Sakshee_D <https://github.com/Sakshee-D>`_.
+- Fix :py:meth:`Dataset.interp` silently dropping datetime64 and timedelta64
+  variables (:issue:`10900`, :pull:`11081`).
+  By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 
 Documentation
 ~~~~~~~~~~~~~
