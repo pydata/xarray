@@ -42,15 +42,17 @@ class TestMergeFunction:
         expected = data[["var1", "var2"]]
         assert_identical(actual, expected)
 
-    def test_merge_datasets(self):
-        data = create_test_data(add_attrs=False, use_extension_array=True)
+    @pytest.mark.parametrize("use_new_combine_kwarg_defaults", [True, False])
+    def test_merge_datasets(self, use_new_combine_kwarg_defaults):
+        with set_options(use_new_combine_kwarg_defaults=use_new_combine_kwarg_defaults):
+            data = create_test_data(add_attrs=False, use_extension_array=True)
 
-        actual = xr.merge([data[["var1"]], data[["var2"]]])
-        expected = data[["var1", "var2"]]
-        assert_identical(actual, expected)
+            actual = xr.merge([data[["var1"]], data[["var2"]]])
+            expected = data[["var1", "var2"]]
+            assert_identical(actual, expected)
 
-        actual = xr.merge([data, data])
-        assert_identical(actual, data)
+            actual = xr.merge([data, data])
+            assert_identical(actual, data)
 
     def test_merge_dataarray_unnamed(self):
         data = xr.DataArray([1, 2], dims="x")
@@ -199,7 +201,11 @@ class TestMergeFunction:
 
         if expect_exception:
             with pytest.raises(MergeError, match="combine_attrs"):
-                actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
+                with pytest.warns(
+                    FutureWarning,
+                    match="will change from compat='no_conflicts' to compat='override'",
+                ):
+                    actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
         else:
             actual = xr.merge(
                 [data1, data2], compat="no_conflicts", combine_attrs=combine_attrs
@@ -832,7 +838,7 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
                 FutureWarning,
-                match="changed from compat='no_conflicts' to compat='override'",
+                match="will change from compat='no_conflicts' to compat='override'",
             ):
                 old = ds1.merge(ds2)
 
@@ -851,11 +857,11 @@ class TestNewDefaults:
         )
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
-                FutureWarning, match="changed from join='outer' to join='exact'"
+                FutureWarning, match="will change from join='outer' to join='exact'"
             ):
                 assert expected.identical(ds1.merge(ds2))
             with pytest.warns(
-                FutureWarning, match="changed from join='outer' to join='exact'"
+                FutureWarning, match="will change from join='outer' to join='exact'"
             ):
                 assert expected.identical(ds2.merge(ds1))
 
@@ -942,7 +948,7 @@ class TestMergeDataTree:
                 "Raised whilst mapping function over node(s) with path 'a'"
             ),
         ):
-            xr.merge([tree1, tree2], compat="no_conflicts")
+            xr.merge([tree1, tree2], join="exact", compat="no_conflicts")
 
     def test_fill_value_errors(self) -> None:
         trees = [xr.DataTree(), xr.DataTree()]

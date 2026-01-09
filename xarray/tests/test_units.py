@@ -745,6 +745,9 @@ def test_broadcast_dataset(dtype):
         "coords",
     ),
 )
+@pytest.mark.filterwarnings(
+    "ignore:.*the default value for coords will change:FutureWarning"
+)
 def test_combine_by_coords(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
@@ -5586,6 +5589,9 @@ class TestDataset:
             ),
             "coords",
         ),
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:.*the default value for compat will change:FutureWarning"
     )
     def test_merge(self, variant, unit, error, dtype):
         left_variants = {

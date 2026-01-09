@@ -649,10 +649,15 @@ class TestConcatDataset:
         ds1 = Dataset({"foo": 1.5}, {"y": 1})
         ds2 = Dataset({"foo": 2.5}, {"y": 1})
 
-        with pytest.raises(
-            ValueError, match="data_vars='minimal' and coords='minimal'"
-        ):
-            concat([ds1, ds2], dim="new_dim", data_vars="minimal")
+        with set_options(use_new_combine_kwarg_defaults=False):
+            with pytest.raises(merge.MergeError, match="conflicting values"):
+                concat([ds1, ds2], dim="new_dim", data_vars="minimal")
+
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with pytest.raises(
+                ValueError, match="data_vars='minimal' and coords='minimal'"
+            ):
+                concat([ds1, ds2], dim="new_dim", data_vars="minimal")
 
     def test_concat_size0(self) -> None:
         data = create_test_data()
@@ -974,8 +979,12 @@ class TestConcatDataset:
             Dataset({"y": ("t", [1])}, {"x": 1, "t": [0]}),
             Dataset({"y": ("t", [2])}, {"x": 2, "t": [0]}),
         ]
-        with pytest.raises(ValueError):
-            concat(objs, "t", compat="equals")
+        with set_options(use_new_combine_kwarg_defaults=False):
+            with pytest.raises(ValueError):
+                concat(objs, "t", coords="minimal")
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with pytest.raises(ValueError):
+                concat(objs, "t", compat="equals")
 
     def test_concat_dim_is_variable(self) -> None:
         objs = [Dataset({"x": 0}), Dataset({"x": 1})]
@@ -1493,7 +1502,7 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
                 FutureWarning,
-                match="changed from compat='equals' to compat='override'",
+                match="will change from compat='equals' to compat='override'",
             ):
                 actual = concat(
                     [ds1, ds2], dim="y", coords="different", data_vars="different"
@@ -1540,7 +1549,7 @@ class TestNewDefaults:
             expectation: AbstractContextManager = (
                 pytest.warns(
                     FutureWarning,
-                    match="changed from compat='equals' to compat='override'",
+                    match="will change from compat='equals' to compat='override'",
                 )
                 if coords == "different"
                 else nullcontext()
@@ -1565,7 +1574,7 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
                 FutureWarning,
-                match="changed from coords='different' to coords='minimal'",
+                match="will change from coords='different' to coords='minimal'",
             ):
                 old = concat(objs, "x")
                 assert_identical(old, expected)
@@ -1653,10 +1662,22 @@ class TestConcatDataTree:
         dt1 = DataTree.from_dict(data={"/a": ("x", [1]), "/b": 3}, coords={"/x": [0]})
         dt2 = DataTree.from_dict(data={"/a": ("x", [2]), "/b": 3}, coords={"/x": [1]})
         expected = DataTree.from_dict(
-            data={"/a": ("x", [1, 2]), "/b": 3}, coords={"/x": [0, 1]}
+            data={"/a": ("x", [1, 2]), "/b": ("x", [3, 3])}, coords={"/x": [0, 1]}
         )
-        actual = concat([dt1, dt2], dim="x")
+        with pytest.warns(
+            FutureWarning, match="will change from data_vars='all' to data_vars=None"
+        ):
+            actual = concat([dt1, dt2], dim="x")
+
         assert actual.identical(expected)
+
+        with set_options(use_new_combine_kwarg_defaults=True):
+            expected = DataTree.from_dict(
+                data={"/a": ("x", [1, 2]), "/b": 3}, coords={"/x": [0, 1]}
+            )
+            actual = concat([dt1, dt2], dim="x")
+
+            assert actual.identical(expected)
 
     def test_concat_datatree_isomorphic_error(self):
         dt1 = DataTree.from_dict(data={"/data": ("x", [1]), "/a": None})

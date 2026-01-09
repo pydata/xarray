@@ -477,6 +477,12 @@ class TestNestedCombine:
         ds1 = Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = Dataset({"a": ("x", [2, 3]), "x": [1, 2]})
         expected = Dataset({"a": ("x", [1, 2, 3]), "x": [0, 1, 2]})
+        with pytest.warns(
+            FutureWarning,
+            match="will change from compat='no_conflicts' to compat='override'",
+        ):
+            actual = combine_nested([ds1, ds2], join="outer", concat_dim=None)
+        assert_identical(expected, actual)
         actual = combine_nested(
             [ds1, ds2], join="outer", compat="no_conflicts", concat_dim=None
         )
@@ -491,6 +497,11 @@ class TestNestedCombine:
         tmp2 = Dataset({"x": np.nan})
         actual = combine_nested([tmp1, tmp2], compat="no_conflicts", concat_dim=None)
         assert_identical(tmp1, actual)
+        with pytest.warns(
+            FutureWarning,
+            match="will change from compat='no_conflicts' to compat='override'",
+        ):
+            combine_nested([tmp1, tmp2], concat_dim=None)
         actual = combine_nested([tmp1, tmp2], compat="no_conflicts", concat_dim=[None])
         assert_identical(tmp1, actual)
 
@@ -1044,7 +1055,8 @@ class TestCombineDatasetsbyCoords:
         expected = data
         assert expected.broadcast_equals(actual)  # type: ignore[arg-type]
 
-        actual = combine_by_coords(objs)
+        with set_options(use_new_combine_kwarg_defaults=True):
+            actual = combine_by_coords(objs)
         assert_identical(actual, expected)
 
     def test_combine_leaving_bystander_dimensions(self):
@@ -1252,11 +1264,11 @@ class TestNewDefaults:
         expected = Dataset({"a": ("x", [1, 2, 3]), "x": [0, 1, 2]})
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
-                FutureWarning, match="changed from join='outer' to join='exact'"
+                FutureWarning, match="will change from join='outer' to join='exact'"
             ):
                 with pytest.warns(
                     FutureWarning,
-                    match="changed from compat='no_conflicts' to compat='override'",
+                    match="will change from compat='no_conflicts' to compat='override'",
                 ):
                     old = combine_nested([ds1, ds2], concat_dim=None)
         with set_options(use_new_combine_kwarg_defaults=True):
@@ -1271,7 +1283,7 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
                 FutureWarning,
-                match="changed from compat='no_conflicts' to compat='override'",
+                match="will change from compat='no_conflicts' to compat='override'",
             ):
                 old = combine_nested([ds1, ds2], concat_dim=None)
         with set_options(use_new_combine_kwarg_defaults=True):
@@ -1283,7 +1295,7 @@ class TestNewDefaults:
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
                 FutureWarning,
-                match="changed from compat='no_conflicts' to compat='override'",
+                match="will change from compat='no_conflicts' to compat='override'",
             ):
                 old = combine_nested([ds2, ds1], concat_dim=None)
         with set_options(use_new_combine_kwarg_defaults=True):
@@ -1319,7 +1331,7 @@ class TestNewDefaults:
         )
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
-                FutureWarning, match="changed from join='outer' to join='exact'"
+                FutureWarning, match="will change from join='outer' to join='exact'"
             ):
                 old = combine_nested(datasets, concat_dim="t")
         with set_options(use_new_combine_kwarg_defaults=True):
@@ -1336,7 +1348,7 @@ class TestNewDefaults:
 
         with set_options(use_new_combine_kwarg_defaults=False):
             with pytest.warns(
-                FutureWarning, match="changed from join='outer' to join='exact'"
+                FutureWarning, match="will change from join='outer' to join='exact'"
             ):
                 old = combine_by_coords(objs)
         with set_options(use_new_combine_kwarg_defaults=True):
