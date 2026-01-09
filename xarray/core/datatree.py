@@ -78,7 +78,11 @@ except ImportError:
 if TYPE_CHECKING:
     import numpy as np
     import pandas as pd
+
+    # External accessor types (for IDE support)
+    from cf_xarray.accessor import CFAccessor
     from dask.delayed import Delayed
+    from hvplot.xarray import hvPlotAccessor
 
     from xarray.backends import ZarrStore
     from xarray.backends.writers import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
@@ -513,6 +517,39 @@ class DataTree(
         "_node_indexes",
         "_parent",
     )
+
+    # External accessor properties (for IDE support)
+    # These provide full autocompletion when packages are installed
+
+    @property
+    def hvplot(self) -> hvPlotAccessor:
+        """
+        hvPlot accessor for interactive plotting.
+
+        Requires: ``pip install hvplot``
+
+        See Also
+        --------
+        hvplot : https://hvplot.holoviz.org/
+        """
+        from xarray.accessors import ACCESSORS, _get_cached_accessor
+
+        return _get_cached_accessor("hvplot", self, ACCESSORS)
+
+    @property
+    def cf(self) -> CFAccessor:
+        """
+        CF conventions accessor.
+
+        Requires: ``pip install cf-xarray``
+
+        See Also
+        --------
+        cf_xarray : https://cf-xarray.readthedocs.io/
+        """
+        from xarray.accessors import ACCESSORS, _get_cached_accessor
+
+        return _get_cached_accessor("cf", self, ACCESSORS)
 
     def __init__(
         self,

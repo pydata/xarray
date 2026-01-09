@@ -129,9 +129,15 @@ from xarray.util.deprecation_helpers import (
 )
 
 if TYPE_CHECKING:
+    # External accessor types (for IDE support)
+    from cf_xarray.accessor import CFAccessor
     from dask.dataframe import DataFrame as DaskDataFrame
     from dask.delayed import Delayed
+    from hvplot.xarray import hvPlotAccessor
     from numpy.typing import ArrayLike
+    from pint_xarray import PintDatasetAccessor
+    from rioxarray import RasterDataset
+    from xarray_plotly import DatasetPlotlyAccessor
 
     from xarray.backends import AbstractDataStore, ZarrStore
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
@@ -368,6 +374,84 @@ class Dataset(
         "_indexes",
         "_variables",
     )
+
+    # External accessor properties (for IDE support)
+    # These provide full autocompletion when packages are installed
+
+    @property
+    def hvplot(self) -> hvPlotAccessor:
+        """
+        hvPlot accessor for interactive plotting.
+
+        Requires: ``pip install hvplot``
+
+        See Also
+        --------
+        hvplot : https://hvplot.holoviz.org/
+        """
+        from xarray.accessors import ACCESSORS, _get_cached_accessor
+
+        return _get_cached_accessor("hvplot", self, ACCESSORS)
+
+    @property
+    def cf(self) -> CFAccessor:
+        """
+        CF conventions accessor.
+
+        Requires: ``pip install cf-xarray``
+
+        See Also
+        --------
+        cf_xarray : https://cf-xarray.readthedocs.io/
+        """
+        from xarray.accessors import ACCESSORS, _get_cached_accessor
+
+        return _get_cached_accessor("cf", self, ACCESSORS)
+
+    @property
+    def pint(self) -> PintDatasetAccessor:
+        """
+        Pint unit accessor for unit-aware arrays.
+
+        Requires: ``pip install pint-xarray``
+
+        See Also
+        --------
+        pint_xarray : https://pint-xarray.readthedocs.io/
+        """
+        from xarray.accessors import DATASET_ACCESSORS, _get_cached_accessor
+
+        return _get_cached_accessor("pint", self, DATASET_ACCESSORS)
+
+    @property
+    def rio(self) -> RasterDataset:
+        """
+        Rasterio accessor for geospatial raster data.
+
+        Requires: ``pip install rioxarray``
+
+        See Also
+        --------
+        rioxarray : https://corteva.github.io/rioxarray/
+        """
+        from xarray.accessors import DATASET_ACCESSORS, _get_cached_accessor
+
+        return _get_cached_accessor("rio", self, DATASET_ACCESSORS)
+
+    @property
+    def plotly(self) -> DatasetPlotlyAccessor:
+        """
+        Plotly accessor for interactive Plotly visualizations.
+
+        Requires: ``pip install xarray-plotly``
+
+        See Also
+        --------
+        xarray_plotly : https://github.com/xarray-contrib/xarray-plotly
+        """
+        from xarray.accessors import DATASET_ACCESSORS, _get_cached_accessor
+
+        return _get_cached_accessor("plotly", self, DATASET_ACCESSORS)
 
     def __init__(
         self,
