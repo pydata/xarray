@@ -354,10 +354,10 @@ def _datatree_from_backend_datatree(
             try:
                 from zarr.core.sync import sync as zarr_sync
 
-                async def create_indexes_async():
+                async def create_indexes_async() -> dict[str, Dataset]:
                     import asyncio
 
-                    results = {}
+                    results: dict[str, Dataset] = {}
                     tasks = [
                         _create_index_for_node(path, node.dataset)
                         for path, [node] in group_subtrees(backend_tree)
@@ -367,7 +367,9 @@ def _datatree_from_backend_datatree(
                         results[path] = ds
                     return results
 
-                async def _create_index_for_node(path, ds):
+                async def _create_index_for_node(
+                    path: str, ds: Dataset
+                ) -> tuple[str, Dataset]:
                     return path, await _maybe_create_default_indexes_async(ds)
 
                 results = zarr_sync(create_indexes_async())

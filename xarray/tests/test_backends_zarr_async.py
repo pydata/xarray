@@ -339,12 +339,13 @@ class TestAsyncZarrGroupLoading:
     @parametrize_zarr_format
     def test_async_source_encoding(self, zarr_format):
         """Test that async open_datatree sets source encoding."""
+        import os
         import tempfile
 
         dtree = create_test_datatree(n_groups=2, coords_per_group=2)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            store_path = f"{tmpdir}/test.zarr"
+            store_path = os.path.join(tmpdir, "test.zarr")
             dtree.to_zarr(
                 store_path, mode="w", consolidated=False, zarr_format=zarr_format
             )
@@ -359,7 +360,10 @@ class TestAsyncZarrGroupLoading:
 
             dtree_async = asyncio.run(load_async())
             assert "source" in dtree_async.encoding
-            assert store_path in dtree_async.encoding["source"]
+            # Normalize paths for cross-platform comparison
+            source = os.path.normpath(dtree_async.encoding["source"])
+            expected = os.path.normpath(store_path)
+            assert expected in source
 
     @pytest.mark.asyncio
     @parametrize_zarr_format
