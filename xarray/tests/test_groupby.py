@@ -2553,7 +2553,7 @@ class TestDatasetResample:
 @pytest.mark.parametrize(
     "method, dim, expected_array, use_flox, use_dask, use_lazy_group_idx",
     [
-        # cumsum, x
+        # cumsum, time:
         (
             "cumsum",
             "time",
@@ -2594,7 +2594,7 @@ class TestDatasetResample:
             False,
             False,
         ),
-        # cumsum, y
+        # cumsum, test:
         pytest.param(
             "cumsum",
             "test",
@@ -2644,7 +2644,7 @@ class TestDatasetResample:
             False,
             False,
         ),
-        # cumsum, ...
+        # cumsum, ...:
         pytest.param(
             "cumsum",
             ...,
@@ -2694,7 +2694,7 @@ class TestDatasetResample:
             False,
             False,
         ),
-        # cumprod, x:
+        # cumprod, time:
         pytest.param(
             "cumprod",
             "time",
@@ -2759,6 +2759,146 @@ class TestDatasetResample:
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
                 [2.0, 4.0, 2.0, 4.0, 2.0, 4.0],
+            ],
+            False,
+            False,
+            False,
+        ),
+        # cumprod, test:
+        pytest.param(
+            "cumprod",
+            "test",
+            [
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [14.0, 4.0, 0.0, 2.0, 4.0, 2.0],
+            ],
+            True,
+            True,
+            True,
+            marks=pytest.mark.skip(
+                reason="TODO: Groupby with cumprod is currently not supported with flox"
+            ),
+        ),
+        pytest.param(
+            "cumprod",
+            "test",
+            [
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [14.0, 4.0, 0.0, 2.0, 4.0, 2.0],
+            ],
+            True,
+            True,
+            False,
+            marks=pytest.mark.skip(
+                reason="TODO: Groupby with cumprod is currently not supported with flox"
+            ),
+        ),
+        pytest.param(
+            "cumprod",
+            "test",
+            [
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [14.0, 4.0, 0.0, 2.0, 4.0, 2.0],
+            ],
+            True,
+            False,
+            False,
+            marks=pytest.mark.skip(
+                reason="TODO: Groupby with cumprod is currently not supported with flox"
+            ),
+        ),
+        (
+            "cumprod",
+            "test",
+            [
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [14.0, 4.0, 0.0, 2.0, 4.0, 2.0],
+            ],
+            False,
+            True,
+            False,
+        ),
+        (
+            "cumprod",
+            "test",
+            [
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [7.0, 2.0, 0.0, 1.0, 2.0, 1.0],
+                [14.0, 4.0, 0.0, 2.0, 4.0, 2.0],
+            ],
+            False,
+            False,
+            False,
+        ),
+        # cumprod, ...:
+        pytest.param(
+            "cumprod",
+            ...,
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
+            ],
+            True,
+            True,
+            True,
+            marks=pytest.mark.skip(
+                reason="TODO: Groupby with cumprod is currently not supported with flox"
+            ),
+        ),
+        pytest.param(
+            "cumprod",
+            ...,
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
+            ],
+            True,
+            True,
+            False,
+            marks=pytest.mark.skip(
+                reason="TODO: Groupby with cumprod is currently not supported with flox"
+            ),
+        ),
+        pytest.param(
+            "cumprod",
+            ...,
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
+            ],
+            True,
+            False,
+            False,
+            marks=pytest.mark.skip(
+                reason="TODO: Groupby with cumprod is currently not supported with flox"
+            ),
+        ),
+        (
+            "cumprod",
+            ...,
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
+            ],
+            False,
+            True,
+            False,
+        ),
+        (
+            "cumprod",
+            ...,
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
             ],
             False,
             False,
@@ -2774,15 +2914,11 @@ def test_groupby_scans(
     use_dask: bool,
     use_lazy_group_idx: bool,
 ) -> None:
+    # TODO: Once flox handles more cases the parametrize can be simplified a lot.
     if use_dask and not has_dask:
         pytest.skip("requires dask")
 
     # Test Dataset groupby:
-    # ds = xr.Dataset(
-    #     {"foo": (("x",), [7, 2, 0, 1, 2, np.nan])},
-    #     coords={"x": [0, 1, 2, 3, 4, 5], "group_idx": ("x", [0, 0, 1, 1, 2, 2])},
-    # )
-
     ds = xr.Dataset(
         {
             "foo": (
@@ -2797,17 +2933,6 @@ def test_groupby_scans(
             "group_idx2": ("time", [0, 1, 1, 1, 1, 1]),
         },
     )
-
-    # with xr.set_options(use_flox=False):
-    #     # print(ds.groupby("group_idx").cumsum(dim="time").foo)
-    #     # print(ds.groupby("group_idx").cumsum(dim="test").foo)  # flox fail
-    #     # print(ds.groupby("group_idx").cumsum(dim=...).foo)  # flox fail
-
-    #     #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim="time").foo)
-    #     #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim="test").foo)
-    #     #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim=...).foo)
-
-    #     print(ds.groupby("group_idx").cumprod(dim=...).foo)  # flox fail
 
     grp_idx = "group_idx"
     with xr.set_options(use_flox=use_flox):
