@@ -2551,7 +2551,7 @@ class TestDatasetResample:
         # cumsum, x
         (
             "cumsum",
-            "x",
+            "time",
             [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
             True,
             True,
@@ -2559,7 +2559,7 @@ class TestDatasetResample:
         ),
         (
             "cumsum",
-            "x",
+            "time",
             [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
             True,
             True,
@@ -2567,7 +2567,7 @@ class TestDatasetResample:
         ),
         (
             "cumsum",
-            "x",
+            "time",
             [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
             True,
             False,
@@ -2575,7 +2575,7 @@ class TestDatasetResample:
         ),
         (
             "cumsum",
-            "x",
+            "time",
             [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
             False,
             True,
@@ -2583,7 +2583,7 @@ class TestDatasetResample:
         ),
         (
             "cumsum",
-            "x",
+            "time",
             [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
             False,
             False,
@@ -2592,7 +2592,7 @@ class TestDatasetResample:
         # cumsum, y
         (
             "cumsum",
-            "y",
+            "test",
             [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
             True,
             True,
@@ -2600,7 +2600,7 @@ class TestDatasetResample:
         ),
         (
             "cumsum",
-            "y",
+            "test",
             [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
             True,
             True,
@@ -2608,7 +2608,7 @@ class TestDatasetResample:
         ),
         (
             "cumsum",
-            "y",
+            "test",
             [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
             True,
             False,
@@ -2616,7 +2616,7 @@ class TestDatasetResample:
         ),
         (
             "cumsum",
-            "y",
+            "test",
             [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
             False,
             True,
@@ -2624,7 +2624,7 @@ class TestDatasetResample:
         ),
         (
             "cumsum",
-            "y",
+            "test",
             [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
             False,
             False,
@@ -2674,7 +2674,7 @@ class TestDatasetResample:
         # cumprod, x:
         pytest.param(
             "cumprod",
-            "x",
+            "time",
             [
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
@@ -2689,7 +2689,7 @@ class TestDatasetResample:
         ),
         pytest.param(
             "cumprod",
-            "x",
+            "time",
             [
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
@@ -2704,7 +2704,7 @@ class TestDatasetResample:
         ),
         pytest.param(
             "cumprod",
-            "x",
+            "time",
             [
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
@@ -2719,7 +2719,7 @@ class TestDatasetResample:
         ),
         (
             "cumprod",
-            "x",
+            "time",
             [
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
@@ -2731,7 +2731,7 @@ class TestDatasetResample:
         ),
         (
             "cumprod",
-            "x",
+            "time",
             [
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
                 [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
