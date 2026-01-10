@@ -2639,7 +2639,7 @@ def test_groupby_scans(
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
                 grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-                groupby_method = getattr(ds.groupby(**{"group_idx": grouper}), method)
+                groupby_method = getattr(ds.groupby(group_idx=grouper), method)
             else:
                 grouper = ds["group_idx"].compute()
                 groupby_method = getattr(ds.groupby(grouper), method)
@@ -2666,9 +2666,7 @@ def test_groupby_scans(
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
                 grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-                groupby_method = getattr(
-                    ds.foo.groupby(**{"group_idx": grouper}), method
-                )
+                groupby_method = getattr(ds.foo.groupby(group_idx=grouper), method)
             else:
                 grouper = ds["group_idx"].compute()
                 groupby_method = getattr(ds.foo.groupby(grouper), method)
