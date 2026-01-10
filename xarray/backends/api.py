@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import (
     Callable,
+    Hashable,
     Iterable,
     Mapping,
     Sequence,
@@ -66,6 +67,7 @@ if TYPE_CHECKING:
         NestedSequence,
         T_Chunks,
     )
+    from xarray.core.variable import Variable
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
@@ -415,7 +417,7 @@ def _datatree_from_backend_datatree(
     return tree
 
 
-async def _maybe_create_default_indexes_async(ds):
+async def _maybe_create_default_indexes_async(ds: Dataset) -> Dataset:
     """Create default indexes for dimension coordinates asynchronously.
 
     This function parallelizes both data loading and index creation,
@@ -434,7 +436,7 @@ async def _maybe_create_default_indexes_async(ds):
     if not to_index_names:
         return ds
 
-    async def load_var(var):
+    async def load_var(var: Variable) -> Variable:
         try:
             return await var.load_async()
         except NotImplementedError:
@@ -444,10 +446,10 @@ async def _maybe_create_default_indexes_async(ds):
         *[load_var(ds.coords[name].variable) for name in to_index_names]
     )
 
-    async def create_index(name):
+    async def create_index(name: Hashable) -> tuple[Hashable, PandasIndex]:
         var = ds.coords[name].variable
 
-        def _create():
+        def _create() -> tuple[Hashable, PandasIndex]:
             return name, PandasIndex.from_variables({name: var}, options={})
 
         return await asyncio.to_thread(_create)
