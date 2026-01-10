@@ -2606,14 +2606,13 @@ def test_groupby_scans(
         pytest.skip("TODO: Groupby with cumprod is currently not supported with flox")
 
     if use_flox:
+        msg = ""
         if dim == ...:
-            pytest.skip(
-                "TODO: Scans are only supported along a single dimension in flox."
-            )
+            msg = "TODO: Scans are only supported along a single dimension in flox."
         elif dim != "time":
-            pytest.skip(
-                "TODO: Scans are only supported along a single dimension in flox."
-            )
+            msg = "TODO: Scans are only supported along a single dimension in flox."
+        if msg:
+            pytest.skip(msg)
 
     # Test Dataset groupby:
     ds = xr.Dataset(
