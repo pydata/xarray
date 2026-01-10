@@ -349,7 +349,34 @@ def _datatree_from_backend_datatree(
 
     _protect_datatree_variables_inplace(backend_tree, cache)
     if create_default_indexes:
-        tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
+        # Use async index creation for zarr v3 (concurrent loading)
+        if engine == "zarr":
+            try:
+                from zarr.core.sync import sync as zarr_sync
+
+                async def create_indexes_async():
+                    import asyncio
+
+                    results = {}
+                    tasks = [
+                        _create_index_for_node(path, node.dataset)
+                        for path, [node] in group_subtrees(backend_tree)
+                    ]
+                    for fut in asyncio.as_completed(tasks):
+                        path, ds = await fut
+                        results[path] = ds
+                    return results
+
+                async def _create_index_for_node(path, ds):
+                    return path, await _maybe_create_default_indexes_async(ds)
+
+                results = zarr_sync(create_indexes_async())
+                tree = DataTree.from_dict(results, name=backend_tree.name)
+            except ImportError:
+                # Fallback for zarr v2
+                tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
+        else:
+            tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
     else:
         tree = backend_tree
     if chunks is not None:
@@ -387,32 +414,56 @@ def _datatree_from_backend_datatree(
 
 
 async def _maybe_create_default_indexes_async(ds):
+    """Create default indexes for dimension coordinates asynchronously.
+
+    This function parallelizes both data loading and index creation,
+    which can significantly speed up opening datasets with many coordinates.
+    """
     import asyncio
 
-    # Determine which coords need default indexes
+    from xarray.core.indexes import PandasIndex
+
     to_index_names = [
         name
         for name, coord in ds.coords.items()
         if coord.dims == (name,) and name not in ds.xindexes
     ]
 
-    if to_index_names:
+    if not to_index_names:
+        return ds
 
-        async def load_var(var):
-            try:
-                return await var.load_async()
-            except NotImplementedError:
-                return await asyncio.to_thread(var.load)
+    async def load_var(var):
+        try:
+            return await var.load_async()
+        except NotImplementedError:
+            return await asyncio.to_thread(var.load)
 
-        await asyncio.gather(
-            *[load_var(ds.coords[name].variable) for name in to_index_names]
-        )
+    await asyncio.gather(
+        *[load_var(ds.coords[name].variable) for name in to_index_names]
+    )
 
-    # Build indexes (now data is in-memory so no remote I/O per coord)
-    to_index = {name: ds.coords[name].variable for name in to_index_names}
-    if to_index:
-        return ds.assign_coords(Coordinates(to_index))
-    return ds
+    async def create_index(name):
+        var = ds.coords[name].variable
+
+        def _create():
+            return name, PandasIndex.from_variables({name: var}, options={})
+
+        return await asyncio.to_thread(_create)
+
+    index_results = await asyncio.gather(
+        *[create_index(name) for name in to_index_names]
+    )
+
+    indexes: dict = {}
+    variables: dict = {}
+    for name, idx in index_results:
+        idx_vars = idx.create_variables({name: ds.coords[name].variable})
+        variables.update(idx_vars)
+        for var_name in idx_vars:
+            indexes[var_name] = idx
+
+    new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
+    return ds.assign_coords(new_coords)
 
 
 def open_dataset(
@@ -1175,6 +1226,11 @@ async def open_datatree_async(
     if from_array_kwargs is None:
         from_array_kwargs = {}
 
+    if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
+        raise ValueError(
+            f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
+        )
+
     # Only zarr supports async lazy loading at present
     if engine != "zarr":
         raise ValueError(f"Engine {engine!r} does not support asynchronous operations")
@@ -1256,6 +1312,13 @@ async def open_datatree_async(
     if create_default_indexes or chunks is not None:
         for _path, [node] in group_subtrees(backend_tree):
             tree[_path].set_close(node._close)
+
+    # Ensure source filename always stored in dataset object
+    if "source" not in tree.encoding:
+        path = getattr(filename_or_obj, "path", filename_or_obj)
+
+        if isinstance(path, str | os.PathLike):
+            tree.encoding["source"] = _normalize_path(path)
 
     return tree
 

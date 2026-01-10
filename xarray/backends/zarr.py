@@ -619,6 +619,107 @@ class ZarrStore(AbstractWritableDataStore):
     )
 
     @classmethod
+    def _build_group_members(
+        cls,
+        zarr_group,
+        group_paths: list[str],
+        parent: str | None,
+    ):
+        """Build group members dict from discovered group paths.
+
+        Parameters
+        ----------
+        zarr_group : zarr.Group
+            The root zarr group.
+        group_paths : list[str]
+            List of discovered group paths.
+        parent : str | None
+            Parent group path.
+
+        Returns
+        -------
+        dict[str, zarr.Group]
+            Dictionary mapping group paths to zarr Group instances.
+        """
+        from zarr import Group
+
+        parent = parent if parent else "/"
+        group_members: dict[str, Group] = {}
+
+        for path in group_paths:
+            if path == parent:
+                group_members[path] = zarr_group
+            else:
+                rel_path = path.removeprefix(f"{parent}/").removeprefix("/")
+                group_members[path] = zarr_group[rel_path]
+
+        return group_members
+
+    @classmethod
+    def _create_stores_from_members(
+        cls,
+        group_members,
+        mode,
+        consolidate_on_close,
+        append_dim,
+        write_region,
+        safe_chunks,
+        write_empty,
+        close_store_on_close,
+        use_zarr_fill_value_as_mask,
+        align_chunks,
+        cache_members,
+    ):
+        """Create ZarrStore instances from group members dict.
+
+        Parameters
+        ----------
+        group_members : dict[str, zarr.Group]
+            Dictionary mapping group paths to zarr Group instances.
+        mode : str
+            Access mode.
+        consolidate_on_close : bool
+            Whether to consolidate on close.
+        append_dim : str | None
+            Dimension to append along.
+        write_region : dict | None
+            Region to write to.
+        safe_chunks : bool
+            Whether to check chunk compatibility.
+        write_empty : bool | None
+            Whether to write empty chunks.
+        close_store_on_close : bool
+            Whether to close store on close.
+        use_zarr_fill_value_as_mask : bool
+            Whether to use zarr fill value as mask.
+        align_chunks : bool
+            Whether to align chunks.
+        cache_members : bool
+            Whether to cache group members.
+
+        Returns
+        -------
+        dict[str, ZarrStore]
+            Dictionary mapping group paths to ZarrStore instances.
+        """
+        return {
+            grp: cls(
+                group_store,
+                mode,
+                consolidate_on_close,
+                append_dim,
+                write_region,
+                safe_chunks,
+                write_empty,
+                close_store_on_close,
+                use_zarr_fill_value_as_mask,
+                align_chunks=align_chunks,
+                cache_members=cache_members,
+            )
+            for grp, group_store in group_members.items()
+        }
+
+    @classmethod
     def open_store(
         cls,
         store,
@@ -658,34 +759,131 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_format=zarr_format,
         )
 
-        from zarr import Group
-
-        group_members: dict[str, Group] = {}
         group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
-        for path in group_paths:
-            if path == group:
-                group_members[path] = zarr_group
-            else:
-                rel_path = path.removeprefix(f"{group}/")
-                group_members[path] = zarr_group[rel_path.removeprefix("/")]
+        group_members = cls._build_group_members(zarr_group, group_paths, group)
 
-        out = {
-            group: cls(
-                group_store,
-                mode,
-                consolidate_on_close,
-                append_dim,
-                write_region,
-                safe_chunks,
-                write_empty,
-                close_store_on_close,
-                use_zarr_fill_value_as_mask,
-                align_chunks=align_chunks,
-                cache_members=cache_members,
-            )
-            for group, group_store in group_members.items()
-        }
-        return out
+        return cls._create_stores_from_members(
+            group_members,
+            mode,
+            consolidate_on_close,
+            append_dim,
+            write_region,
+            safe_chunks,
+            write_empty,
+            close_store_on_close,
+            use_zarr_fill_value_as_mask,
+            align_chunks,
+            cache_members,
+        )
+
+    @classmethod
+    async def open_store_async(
+        cls,
+        store,
+        mode: ZarrWriteModes = "r",
+        synchronizer=None,
+        group=None,
+        consolidated=False,
+        consolidate_on_close=False,
+        chunk_store=None,
+        storage_options=None,
+        append_dim=None,
+        write_region=None,
+        safe_chunks=True,
+        align_chunks=False,
+        zarr_version=None,
+        zarr_format=None,
+        use_zarr_fill_value_as_mask=None,
+        write_empty: bool | None = None,
+        cache_members: bool = False,
+    ):
+        """Async version of open_store using flat group discovery.
+
+        This method uses store.list() to discover all groups in a single
+        async call, which is significantly faster than recursive traversal
+        for stores that support listing (like icechunk).
+
+        Parameters
+        ----------
+        store : MutableMapping, str, or path-like
+            Store or path to directory in file system or name of zip file.
+        mode : {"r", "r+", "a", "a-", "w", "w-"}, optional
+            Access mode for the store.
+        synchronizer : object, optional
+            Zarr synchronizer.
+        group : str, optional
+            Group path.
+        consolidated : bool, optional
+            Whether to use consolidated metadata.
+        consolidate_on_close : bool, optional
+            Whether to consolidate metadata on close.
+        chunk_store : MutableMapping, optional
+            Separate chunk store.
+        storage_options : dict, optional
+            Storage options for fsspec.
+        append_dim : str, optional
+            Dimension to append along.
+        write_region : dict, optional
+            Region to write to.
+        safe_chunks : bool, optional
+            Whether to check chunk compatibility.
+        align_chunks : bool, optional
+            Whether to align chunks.
+        zarr_version : int, optional
+            Deprecated, use zarr_format.
+        zarr_format : int, optional
+            Zarr format version (2 or 3).
+        use_zarr_fill_value_as_mask : bool, optional
+            Whether to use zarr fill value as mask.
+        write_empty : bool, optional
+            Whether to write empty chunks.
+        cache_members : bool, optional
+            Whether to cache group members. Defaults to False for async
+            to avoid synchronous member fetching overhead.
+
+        Returns
+        -------
+        dict[str, ZarrStore]
+            Dictionary mapping group paths to ZarrStore instances.
+        """
+        (
+            zarr_group,
+            consolidate_on_close,
+            close_store_on_close,
+            use_zarr_fill_value_as_mask,
+        ) = _get_open_params(
+            store=store,
+            mode=mode,
+            synchronizer=synchronizer,
+            group=group,
+            consolidated=consolidated,
+            consolidate_on_close=consolidate_on_close,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
+            zarr_version=zarr_version,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+            zarr_format=zarr_format,
+        )
+
+        # Use async group discovery (single store.list() call)
+        group_paths = await _iter_zarr_groups_async(zarr_group, parent=group)
+
+        # Build group members and create stores using shared helpers
+        group_members = cls._build_group_members(zarr_group, group_paths, group)
+
+        return cls._create_stores_from_members(
+            group_members,
+            mode,
+            consolidate_on_close,
+            append_dim,
+            write_region,
+            safe_chunks,
+            write_empty,
+            close_store_on_close,
+            use_zarr_fill_value_as_mask,
+            align_chunks,
+            cache_members,
+        )
 
     @classmethod
     def open_group(
@@ -1924,8 +2122,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         else:
             parent = str(NodePath("/"))
 
-        # Discover group stores (synchronous metadata step)
-        stores = ZarrStore.open_store(
+        stores = await ZarrStore.open_store_async(
             filename_or_obj,
             group=parent,
             mode=mode,
@@ -2021,6 +2218,92 @@ def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
     for path, group in root.groups():
         gpath = parent_nodepath / path
         yield from _iter_zarr_groups(group, parent=str(gpath))
+
+
+async def _iter_zarr_groups_async(root: ZarrGroup, parent: str = "/") -> list[str]:
+    import json
+
+    import zarr
+
+    store = root.store
+
+    # Check if store supports listing (backward compat)
+    if not getattr(store, "supports_listing", False):
+        # Fallback to sync recursive discovery
+        return list(_iter_zarr_groups(root, parent=parent))
+
+    parent_nodepath = NodePath(parent)
+    group_paths: list[str] = [str(parent_nodepath)]  # Include root
+
+    async def is_zarr_group(dir_path: str) -> bool:
+        # Check for zarr v2 .zgroup marker (always indicates a group)
+        zgroup_path = f"{dir_path}/.zgroup" if dir_path else ".zgroup"
+        try:
+            content = await store.get(
+                zgroup_path, prototype=zarr.core.buffer.default_buffer_prototype()
+            )
+            if content is not None:
+                return True
+        except (KeyError, FileNotFoundError):
+            pass
+
+        # Check for zarr v3 zarr.json with node_type=group
+        zarr_json_path = f"{dir_path}/zarr.json" if dir_path else "zarr.json"
+        try:
+            content = await store.get(
+                zarr_json_path, prototype=zarr.core.buffer.default_buffer_prototype()
+            )
+            if content is not None:
+                data = json.loads(content.to_bytes())
+                return data.get("node_type") == "group"
+        except (KeyError, FileNotFoundError, json.JSONDecodeError):
+            pass
+
+        return False
+
+    async def discover_subgroups(dir_path: str) -> list[str]:
+        found_groups: list[str] = []
+        subdirs: list[str] = []
+
+        # list_dir returns files and directories in this path
+        async for entry in store.list_dir(dir_path):
+            # Skip marker files and chunk directories
+            if entry.endswith((".zgroup", "zarr.json")):
+                continue
+            if entry.startswith("c/") or entry == "c":
+                continue  # Chunk storage directory
+            if "/" not in entry:
+                # This is a potential subdirectory
+                subdir = f"{dir_path}/{entry}" if dir_path else entry
+                subdirs.append(subdir)
+
+        # Check each subdirectory in parallel
+        async def check_subdir(subdir: str) -> tuple[str | None, list[str]]:
+            """Check if subdir is a group and discover its subgroups."""
+            if await is_zarr_group(subdir):
+                group_path = (
+                    str(parent_nodepath / subdir) if subdir else str(parent_nodepath)
+                )
+                # Recursively find subgroups
+                sub_groups = await discover_subgroups(subdir)
+                return group_path, sub_groups
+            return None, []
+
+        # Run all subdirectory checks in parallel
+        results = await asyncio.gather(*[check_subdir(sd) for sd in subdirs])
+
+        for group_path, sub_groups in results:
+            if group_path:
+                found_groups.append(group_path)
+                found_groups.extend(sub_groups)
+
+        return found_groups
+
+    # Start discovery from root
+    subgroups = await discover_subgroups("")
+    group_paths.extend(subgroups)
+
+    return sorted(group_paths)
 
 
 def _get_open_params(
