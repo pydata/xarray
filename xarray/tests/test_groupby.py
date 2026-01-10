@@ -2633,6 +2633,8 @@ def test_groupby_scans(
         {"foo": (("x",), [7, 2, 0, 1, 2, np.nan])},
         coords={"x": [0, 1, 2, 3, 4, 5], "group_idx": ("x", [0, 0, 1, 1, 2, 2])},
     )
+
+    grp_idx = "group_idx"
     with xr.set_options(use_flox=use_flox):
         if use_dask:
             ds = ds.chunk()
