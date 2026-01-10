@@ -2546,15 +2546,19 @@ class TestDatasetResample:
 
 
 @pytest.mark.parametrize(
-    "method, expected_array, use_flox, use_dask, use_lazy_group_idx",
+    "method, dim, expected_array, use_flox, use_dask, use_lazy_group_idx",
     [
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True, True),
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True, False),
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, False, False),
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, True, False),
-        ("cumsum", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, False, False),
+        # cumsum, x
+        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True, True),
+        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True, False),
+        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, False, False),
+        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, True, False),
+        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, False, False),
+        # cumsum, y
+        # cumprod:
         pytest.param(
             "cumprod",
+            "x",
             [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
             True,
             True,
@@ -2565,6 +2569,7 @@ class TestDatasetResample:
         ),
         pytest.param(
             "cumprod",
+            "x",
             [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
             True,
             True,
@@ -2575,6 +2580,7 @@ class TestDatasetResample:
         ),
         pytest.param(
             "cumprod",
+            "x",
             [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
             True,
             False,
@@ -2583,12 +2589,13 @@ class TestDatasetResample:
                 reason="TODO: Groupby with cumprod is currently not supported with flox"
             ),
         ),
-        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, True, False),
-        ("cumprod", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, False, False),
+        ("cumprod", "x", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, True, False),
+        ("cumprod", "x", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, False, False),
     ],
 )
 def test_groupby_scans(
     method: Literal["cumsum", "cumprod"],
+    dim: str,
     expected_array: list[float],
     use_flox: bool,
     use_dask: bool,
@@ -2596,6 +2603,30 @@ def test_groupby_scans(
 ) -> None:
     if use_dask and not has_dask:
         pytest.skip("requires dask")
+
+    # ds = xr.Dataset(
+    #     {
+    #         "foo": (
+    #             ("test", "time"),
+    #             [[7, 2, 0, 1, 2, np.nan], [1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2]],
+    #         )
+    #     },
+    #     coords={
+    #         "time": [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6],
+    #         "test": ["a", "b", "b"],
+    #         "group_idx": ("time", [0, 0, 1, 1, 2, 2]),
+    #         "group_idx2": ("time", [0, 1, 1, 1, 1, 1]),
+    #     },
+    # )
+
+    # with xr.set_options(use_flox=False):
+    #     # print(ds.groupby("group_idx").cumsum(dim="time").foo)
+    #     # print(ds.groupby("group_idx").cumsum(dim="test").foo) # flox fail
+    #     # print(ds.groupby("group_idx").cumsum(dim=...).foo) # flox fail
+
+    #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim="time").foo)
+    #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim="test").foo)
+    #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim=...).foo)
 
     # Test Dataset groupby:
     ds = xr.Dataset(
@@ -2608,12 +2639,14 @@ def test_groupby_scans(
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
                 grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-                actual = getattr(ds.groupby(group_idx=grouper), method)(dim="x")
+                groupby_method = getattr(ds.groupby(**{"group_idx": grouper}), method)
             else:
-                grouper = ds.group_idx.compute()
-                actual = getattr(ds.groupby(grouper), method)(dim="x")
+                grouper = ds["group_idx"].compute()
+                groupby_method = getattr(ds.groupby(grouper), method)
         else:
-            actual = getattr(ds.groupby("group_idx"), method)(dim="x")
+            groupby_method = getattr(ds.groupby("group_idx"), method)
+
+        actual = groupby_method(dim=dim)
 
     expected = xr.Dataset(
         {
@@ -2633,12 +2666,16 @@ def test_groupby_scans(
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
                 grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-                actual = getattr(ds.foo.groupby(group_idx=grouper), method)(dim="x")
+                groupby_method = getattr(
+                    ds.foo.groupby(**{"group_idx": grouper}), method
+                )
             else:
-                grouper = ds.group_idx.compute()
-                actual = getattr(ds.foo.groupby(grouper), method)(dim="x")
+                grouper = ds["group_idx"].compute()
+                groupby_method = getattr(ds.foo.groupby(grouper), method)
         else:
-            actual = getattr(ds.foo.groupby("group_idx"), method)(dim="x")
+            groupby_method = getattr(ds.foo.groupby("group_idx"), method)
+
+        actual = groupby_method(dim=dim)
     assert_identical(expected.foo.compute(), actual.compute())
 
 
