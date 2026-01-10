@@ -2188,7 +2188,8 @@ class DataTree(
         for path, node in self.subtree_with_keys:
             reduce_dims = [d for d in node._node_dims if d in dims]
 
-            # Prefer Dataset.func(...) over Dataset.reduce(func, ...):
+            # Prefer Dataset.func(...) over Dataset.reduce(func, ...),
+            # because Dataset.func(...) may do further func-specific processing:
             f = getattr(node.dataset, func.__name__, None)
             if f:
                 node_result = f(reduce_dims, keep_attrs=keep_attrs, **kwargs)
