@@ -2549,17 +2549,137 @@ class TestDatasetResample:
     "method, dim, expected_array, use_flox, use_dask, use_lazy_group_idx",
     [
         # cumsum, x
-        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True, True),
-        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, True, False),
-        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], True, False, False),
-        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, True, False),
-        ("cumsum", "x", [7.0, 9.0, 0.0, 1.0, 2.0, 2.0], False, False, False),
+        (
+            "cumsum",
+            "x",
+            [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
+            True,
+            True,
+            True,
+        ),
+        (
+            "cumsum",
+            "x",
+            [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
+            True,
+            True,
+            False,
+        ),
+        (
+            "cumsum",
+            "x",
+            [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
+            True,
+            False,
+            False,
+        ),
+        (
+            "cumsum",
+            "x",
+            [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
+            False,
+            True,
+            False,
+        ),
+        (
+            "cumsum",
+            "x",
+            [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
+            False,
+            False,
+            False,
+        ),
         # cumsum, y
-        # cumprod:
+        (
+            "cumsum",
+            "y",
+            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+            True,
+            True,
+            True,
+        ),
+        (
+            "cumsum",
+            "y",
+            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+            True,
+            True,
+            False,
+        ),
+        (
+            "cumsum",
+            "y",
+            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+            True,
+            False,
+            False,
+        ),
+        (
+            "cumsum",
+            "y",
+            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+            False,
+            True,
+            False,
+        ),
+        (
+            "cumsum",
+            "y",
+            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+            False,
+            False,
+            False,
+        ),
+        # cumsum, ...
+        (
+            "cumsum",
+            ...,
+            [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
+            True,
+            True,
+            True,
+        ),
+        (
+            "cumsum",
+            ...,
+            [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
+            True,
+            True,
+            False,
+        ),
+        (
+            "cumsum",
+            ...,
+            [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
+            True,
+            False,
+            False,
+        ),
+        (
+            "cumsum",
+            ...,
+            [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
+            False,
+            True,
+            False,
+        ),
+        (
+            "cumsum",
+            ...,
+            [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
+            False,
+            False,
+            False,
+        ),
+        # cumprod, x:
         pytest.param(
             "cumprod",
             "x",
-            [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
+            ],
             True,
             True,
             True,
@@ -2570,7 +2690,11 @@ class TestDatasetResample:
         pytest.param(
             "cumprod",
             "x",
-            [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
+            ],
             True,
             True,
             False,
@@ -2581,7 +2705,11 @@ class TestDatasetResample:
         pytest.param(
             "cumprod",
             "x",
-            [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
+            ],
             True,
             False,
             False,
@@ -2589,13 +2717,35 @@ class TestDatasetResample:
                 reason="TODO: Groupby with cumprod is currently not supported with flox"
             ),
         ),
-        ("cumprod", "x", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, True, False),
-        ("cumprod", "x", [7.0, 14.0, 0.0, 0.0, 2.0, 2.0], False, False, False),
+        (
+            "cumprod",
+            "x",
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
+            ],
+            False,
+            True,
+            False,
+        ),
+        (
+            "cumprod",
+            "x",
+            [
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [7.0, 14.0, 0.0, 0.0, 2.0, 2.0],
+                [14.0, 56.0, 0.0, 0.0, 4.0, 8.0],
+            ],
+            False,
+            False,
+            False,
+        ),
     ],
 )
 def test_groupby_scans(
     method: Literal["cumsum", "cumprod"],
-    dim: str,
+    dim: str | Ellipsis,
     expected_array: list[float],
     use_flox: bool,
     use_dask: bool,
@@ -2604,35 +2754,37 @@ def test_groupby_scans(
     if use_dask and not has_dask:
         pytest.skip("requires dask")
 
+    # Test Dataset groupby:
     # ds = xr.Dataset(
-    #     {
-    #         "foo": (
-    #             ("test", "time"),
-    #             [[7, 2, 0, 1, 2, np.nan], [1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2]],
-    #         )
-    #     },
-    #     coords={
-    #         "time": [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6],
-    #         "test": ["a", "b", "b"],
-    #         "group_idx": ("time", [0, 0, 1, 1, 2, 2]),
-    #         "group_idx2": ("time", [0, 1, 1, 1, 1, 1]),
-    #     },
+    #     {"foo": (("x",), [7, 2, 0, 1, 2, np.nan])},
+    #     coords={"x": [0, 1, 2, 3, 4, 5], "group_idx": ("x", [0, 0, 1, 1, 2, 2])},
     # )
+
+    ds = xr.Dataset(
+        {
+            "foo": (
+                ("test", "time"),
+                [[7, 2, 0, 1, 2, np.nan], [1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2]],
+            )
+        },
+        coords={
+            "time": [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6],
+            "test": ["a", "b", "b"],
+            "group_idx": ("time", [0, 0, 1, 1, 2, 2]),
+            "group_idx2": ("time", [0, 1, 1, 1, 1, 1]),
+        },
+    )
 
     # with xr.set_options(use_flox=False):
     #     # print(ds.groupby("group_idx").cumsum(dim="time").foo)
-    #     # print(ds.groupby("group_idx").cumsum(dim="test").foo) # flox fail
-    #     # print(ds.groupby("group_idx").cumsum(dim=...).foo) # flox fail
+    #     # print(ds.groupby("group_idx").cumsum(dim="test").foo)  # flox fail
+    #     # print(ds.groupby("group_idx").cumsum(dim=...).foo)  # flox fail
 
-    #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim="time").foo)
-    #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim="test").foo)
-    #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim=...).foo)
+    #     #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim="time").foo)
+    #     #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim="test").foo)
+    #     #     print(ds.groupby(["group_idx", "group_idx2"]).cumsum(dim=...).foo)
 
-    # Test Dataset groupby:
-    ds = xr.Dataset(
-        {"foo": (("x",), [7, 2, 0, 1, 2, np.nan])},
-        coords={"x": [0, 1, 2, 3, 4, 5], "group_idx": ("x", [0, 0, 1, 1, 2, 2])},
-    )
+    #     print(ds.groupby("group_idx").cumprod(dim=...).foo)  # flox fail
 
     grp_idx = "group_idx"
     with xr.set_options(use_flox=use_flox):
