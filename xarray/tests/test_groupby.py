@@ -15,7 +15,7 @@ import xarray as xr
 from xarray import DataArray, Dataset, Variable, date_range
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import (
-    EllipsisType,
+    Dims,
     InterpOptions,
     PDDatetimeUnitOptions,
     ResampleCompatible,
@@ -2750,7 +2750,7 @@ class TestDatasetResample:
 )
 def test_groupby_scans(
     method: Literal["cumsum", "cumprod"],
-    dim: str | EllipsisType,
+    dim: Dims,
     expected_array: list[float],
     use_flox: bool,
     use_dask: bool,
