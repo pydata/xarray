@@ -2641,14 +2641,12 @@ def test_groupby_scans(
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
                 grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-                groupby_method = getattr(ds.groupby(**{grp_idx: grouper}), method)
+                actual = getattr(ds.groupby(**{grp_idx: grouper}), method)(dim)
             else:
                 grouper = ds[grp_idx].compute()
-                groupby_method = getattr(ds.groupby(grouper), method)
+                actual = getattr(ds.groupby(grouper), method)(dim)
         else:
-            groupby_method = getattr(ds.groupby(grp_idx), method)
-
-        actual = groupby_method(dim=dim)
+            actual = getattr(ds.groupby(grp_idx), method)(dim)
 
     expected = xr.Dataset(
         {
@@ -2665,14 +2663,14 @@ def test_groupby_scans(
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
                 grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-                groupby_method = getattr(ds.foo.groupby(**{grp_idx: grouper}), method)
+                actual = getattr(ds.foo.groupby(**{grp_idx: grouper}), method)(dim)
+
             else:
                 grouper = ds[grp_idx].compute()
-                groupby_method = getattr(ds.foo.groupby(grouper), method)
+                actual = getattr(ds.foo.groupby(grouper), method)(dim)
         else:
-            groupby_method = getattr(ds.foo.groupby(grp_idx), method)
+            actual = getattr(ds.foo.groupby(grp_idx), method)(dim)
 
-        actual = groupby_method(dim=dim)
     assert_identical(expected.foo.compute(), actual.compute())
 
 
