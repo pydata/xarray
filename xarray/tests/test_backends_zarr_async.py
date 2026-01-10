@@ -322,3 +322,63 @@ class TestAsyncZarrGroupLoading:
 
         result = await _maybe_create_default_indexes_async(ds)
         assert result is ds  # Same object returned
+
+    def test_async_invalid_chunks_raises_error(self):
+        """Test that invalid chunks parameter raises ValueError."""
+
+        async def test_invalid_chunks():
+            with pytest.raises(ValueError, match="chunks must be an int, dict"):
+                await open_datatree_async(
+                    "/fake/path",
+                    engine="zarr",
+                    chunks="invalid",  # Invalid value
+                )
+
+        asyncio.run(test_invalid_chunks())
+
+    @parametrize_zarr_format
+    def test_async_source_encoding(self, zarr_format):
+        """Test that async open_datatree sets source encoding."""
+        import tempfile
+
+        dtree = create_test_datatree(n_groups=2, coords_per_group=2)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store_path = f"{tmpdir}/test.zarr"
+            dtree.to_zarr(
+                store_path, mode="w", consolidated=False, zarr_format=zarr_format
+            )
+
+            async def load_async():
+                return await open_datatree_async(
+                    store_path,
+                    consolidated=False,
+                    zarr_format=zarr_format,
+                    engine="zarr",
+                )
+
+            dtree_async = asyncio.run(load_async())
+            assert "source" in dtree_async.encoding
+            assert store_path in dtree_async.encoding["source"]
+
+    @pytest.mark.asyncio
+    @parametrize_zarr_format
+    async def test_async_with_chunks_parameter(self, zarr_format):
+        """Test async open_datatree with chunks parameter."""
+        pytest.importorskip("dask")
+
+        dtree = create_test_datatree(n_groups=2, coords_per_group=2)
+
+        with self.create_zarr_store() as store:
+            dtree.to_zarr(store, mode="w", consolidated=False, zarr_format=zarr_format)
+
+            dtree_async = await open_datatree_async(
+                store,
+                consolidated=False,
+                zarr_format=zarr_format,
+                chunks={},  # Use default chunking
+                engine="zarr",
+            )
+
+            # Verify the tree was loaded
+            assert len(list(dtree_async.subtree)) == 3
