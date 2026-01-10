@@ -2607,9 +2607,7 @@ def test_groupby_scans(
 
     if use_flox:
         msg = ""
-        if dim == ...:
-            msg = "TODO: Scans are only supported along a single dimension in flox."
-        elif dim != "time":
+        if dim == ... or dim != "time":
             msg = "TODO: Scans are only supported along a single dimension in flox."
         if msg:
             pytest.skip(msg)
