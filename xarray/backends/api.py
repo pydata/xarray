@@ -1315,10 +1315,10 @@ async def open_datatree_async(
 
     # Ensure source filename always stored in dataset object
     if "source" not in tree.encoding:
-        path = getattr(filename_or_obj, "path", filename_or_obj)
+        source_path = getattr(filename_or_obj, "path", filename_or_obj)
 
-        if isinstance(path, str | os.PathLike):
-            tree.encoding["source"] = _normalize_path(path)
+        if isinstance(source_path, str | os.PathLike):
+            tree.encoding["source"] = _normalize_path(source_path)
 
     return tree
 
