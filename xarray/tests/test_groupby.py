@@ -2640,11 +2640,12 @@ def test_groupby_scans(
             ds = ds.chunk()
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
-                grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-                actual = getattr(ds.groupby({grp_idx: grouper}), method)(dim)
+                actual = getattr(
+                    ds.groupby({grp_idx: xr.groupers.UniqueGrouper(labels=[0, 1, 2])}),
+                    method,
+                )(dim)
             else:
-                grouper = ds[grp_idx].compute()
-                actual = getattr(ds.groupby(grouper), method)(dim)
+                actual = getattr(ds.groupby(ds[grp_idx].compute()), method)(dim)
         else:
             actual = getattr(ds.groupby(grp_idx), method)(dim)
 
@@ -2662,12 +2663,15 @@ def test_groupby_scans(
             ds = ds.chunk()
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
-                grouper = xr.groupers.UniqueGrouper(labels=[0, 1, 2])
-                actual = getattr(ds.foo.groupby({grp_idx: grouper}), method)(dim)
+                actual = getattr(
+                    ds.foo.groupby(
+                        {grp_idx: xr.groupers.UniqueGrouper(labels=[0, 1, 2])}
+                    ),
+                    method,
+                )(dim)
 
             else:
-                grouper = ds[grp_idx].compute()
-                actual = getattr(ds.foo.groupby(grouper), method)(dim)
+                actual = getattr(ds.foo.groupby(ds[grp_idx].compute()), method)(dim)
         else:
             actual = getattr(ds.foo.groupby(grp_idx), method)(dim)
 
