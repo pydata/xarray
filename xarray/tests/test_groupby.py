@@ -2556,35 +2556,41 @@ class TestDatasetResample:
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("use_flox", [True, False])
 @pytest.mark.parametrize(
-    "method, dim, expected_array",
+    "method, grp_idx, dim, expected_array",
     [
         (
             "cumsum",
+            "group_idx",
             "time",
             [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
         ),
         (
             "cumsum",
+            "group_idx",
             "test",
             [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
         ),
         (
             "cumsum",
+            "group_idx",
             ...,
             [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
         ),
         (
             "cumprod",
+            "group_idx",
             "time",
             [[7, 14, 0, 0, 2, 2], [1, 1, 1, 1, 1, 1], [2, 4, 2, 4, 2, 4]],
         ),
         (
             "cumprod",
+            "group_idx",
             "test",
             [[7, 2, 0, 1, 2, 1], [7, 2, 0, 1, 2, 1], [14, 4, 0, 2, 4, 2]],
         ),
         (
             "cumprod",
+            "group_idx",
             ...,
             [[7, 14, 0, 0, 2, 2], [7, 14, 0, 0, 2, 2], [14, 56, 0, 0, 4, 8]],
         ),
@@ -2592,20 +2598,24 @@ class TestDatasetResample:
 )
 def test_groupby_scans(
     method: Literal["cumsum", "cumprod"],
-    dim: Dims,
+    grp_idx,
+    dim,
     expected_array: list[float],
     use_flox: bool,
     use_dask: bool,
     use_lazy_group_idx: bool,
 ) -> None:
-    # TODO: Once flox handles more cases the parametrize can be simplified a lot.
     if use_dask and not has_dask:
         pytest.skip("requires dask")
 
-    if method == "cumprod" and use_flox:
-        pytest.skip("TODO: Groupby with cumprod is currently not supported with flox")
-
     if use_flox:
+        if not has_flox:
+            pytest.skip("requires flox")
+
+        if method == "cumprod":
+            pytest.skip(
+                "TODO: Groupby with cumprod is currently not supported with flox"
+            )
         if dim == ...:
             pytest.skip(
                 "TODO: Scans are only supported along a single dimension in flox."
@@ -2614,6 +2624,9 @@ def test_groupby_scans(
             pytest.skip(
                 "TODO: group_idx along time dim and axis along test dim not currently supported with flox."
             )
+    else:
+        if use_lazy_group_idx:
+            pytest.skip("Lazy group_idx is not supported without flox.")
 
     # Test Dataset groupby:
     ds = xr.Dataset(
@@ -2631,20 +2644,27 @@ def test_groupby_scans(
         },
     )
 
-    grp_idx = "group_idx"
+    if isinstance(grp_idx, str):
+        _grp_idx = [grp_idx]
+    else:
+        _grp_idx = grp_idx
+
     with xr.set_options(use_flox=use_flox):
         if use_dask:
             ds = ds.chunk()
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
-                actual = getattr(
-                    ds.groupby({grp_idx: xr.groupers.UniqueGrouper(labels=[0, 1, 2])}),
-                    method,
-                )(dim)
+
+                gs = {
+                    g: xr.groupers.UniqueGrouper(labels=pd.unique(ds[g]))
+                    for g in _grp_idx
+                }
+                actual = getattr(ds.groupby(gs), method)(dim)
             else:
-                actual = getattr(ds.groupby(ds[grp_idx].compute()), method)(dim)
+                ds[_grp_idx].load()
+                actual = getattr(ds.groupby(_grp_idx), method)(dim)
         else:
-            actual = getattr(ds.groupby(grp_idx), method)(dim)
+            actual = getattr(ds.groupby(_grp_idx), method)(dim)
 
     expected = xr.Dataset(
         {
