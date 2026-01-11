@@ -2716,7 +2716,7 @@ def test_groupby_scans(
 
             else:
                 ds[grp_idx].load()
-                actual = getattr(ds.foo.groupby(ds[grp_idx]), method)(dim)
+                actual = getattr(ds.foo.groupby(grp_idx), method)(dim)
         else:
             actual = getattr(ds.foo.groupby(grp_idx), method)(dim)
 
