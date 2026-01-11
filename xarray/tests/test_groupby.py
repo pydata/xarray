@@ -15,7 +15,6 @@ import xarray as xr
 from xarray import DataArray, Dataset, Variable, date_range
 from xarray.core.groupby import _consolidate_slices
 from xarray.core.types import (
-    Dims,
     InterpOptions,
     PDDatetimeUnitOptions,
     ResampleCompatible,
@@ -2624,9 +2623,8 @@ def test_groupby_scans(
             pytest.skip(
                 "TODO: group_idx along time dim and axis along test dim not currently supported with flox."
             )
-    else:
-        if use_lazy_group_idx:
-            pytest.skip("Lazy group_idx is not supported without flox.")
+    elif use_lazy_group_idx:
+        pytest.skip("Lazy group_idx is not supported without flox.")
 
     # Test Dataset groupby:
     ds = xr.Dataset(
