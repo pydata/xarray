@@ -2654,7 +2654,7 @@ def test_groupby_scans(
                 # This path requires flox installed.
 
                 gs = {
-                    g: xr.groupers.UniqueGrouper(labels=pd.unique(ds[g]))
+                    g: xr.groupers.UniqueGrouper(labels=np.unique(ds[g]))
                     for g in _grp_idx
                 }
                 actual = getattr(ds.groupby(gs), method)(dim)
