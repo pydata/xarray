@@ -2559,37 +2559,73 @@ class TestDatasetResample:
     [
         (
             "cumsum",
-            "group_idx",
+            ["group_idx"],
             "time",
             [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
         ),
         (
             "cumsum",
-            "group_idx",
+            ["group_idx"],
             "test",
             [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
         ),
         (
             "cumsum",
-            "group_idx",
+            ["group_idx"],
+            ...,
+            [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
+        ),
+        (
+            "cumsum",
+            ["group_idx", "group_idx2"],
+            "time",
+            [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
+        ),
+        (
+            "cumsum",
+            ["group_idx", "group_idx2"],
+            "test",
+            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+        ),
+        (
+            "cumsum",
+            ["group_idx", "group_idx2"],
             ...,
             [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
         ),
         (
             "cumprod",
-            "group_idx",
+            ["group_idx"],
             "time",
             [[7, 14, 0, 0, 2, 2], [1, 1, 1, 1, 1, 1], [2, 4, 2, 4, 2, 4]],
         ),
         (
             "cumprod",
-            "group_idx",
+            ["group_idx"],
             "test",
             [[7, 2, 0, 1, 2, 1], [7, 2, 0, 1, 2, 1], [14, 4, 0, 2, 4, 2]],
         ),
         (
             "cumprod",
-            "group_idx",
+            ["group_idx"],
+            ...,
+            [[7, 14, 0, 0, 2, 2], [7, 14, 0, 0, 2, 2], [14, 56, 0, 0, 4, 8]],
+        ),
+        (
+            "cumprod",
+            ["group_idx", "group_idx2"],
+            "time",
+            [[7, 14, 0, 0, 2, 2], [1, 1, 1, 1, 1, 1], [2, 4, 2, 4, 2, 4]],
+        ),
+        (
+            "cumprod",
+            ["group_idx", "group_idx2"],
+            "test",
+            [[7, 2, 0, 1, 2, 1], [7, 2, 0, 1, 2, 1], [14, 4, 0, 2, 4, 2]],
+        ),
+        (
+            "cumprod",
+            ["group_idx", "group_idx2"],
             ...,
             [[7, 14, 0, 0, 2, 2], [7, 14, 0, 0, 2, 2], [14, 56, 0, 0, 4, 8]],
         ),
@@ -2597,7 +2633,7 @@ class TestDatasetResample:
 )
 def test_groupby_scans(
     method: Literal["cumsum", "cumprod"],
-    grp_idx,
+    grp_idx: list[str],
     dim,
     expected_array: list[float],
     use_flox: bool,
@@ -2642,27 +2678,21 @@ def test_groupby_scans(
         },
     )
 
-    if isinstance(grp_idx, str):
-        _grp_idx = [grp_idx]
-    else:
-        _grp_idx = grp_idx
-
     with xr.set_options(use_flox=use_flox):
         if use_dask:
             ds = ds.chunk()
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
-
                 gs = {
                     g: xr.groupers.UniqueGrouper(labels=np.unique(ds[g]))
-                    for g in _grp_idx
+                    for g in grp_idx
                 }
                 actual = getattr(ds.groupby(gs), method)(dim)
             else:
-                ds[_grp_idx].load()
-                actual = getattr(ds.groupby(_grp_idx), method)(dim)
+                ds[grp_idx].load()
+                actual = getattr(ds.groupby(grp_idx), method)(dim)
         else:
-            actual = getattr(ds.groupby(_grp_idx), method)(dim)
+            actual = getattr(ds.groupby(grp_idx), method)(dim)
 
     expected = xr.Dataset(
         {
@@ -2678,15 +2708,15 @@ def test_groupby_scans(
             ds = ds.chunk()
             if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
                 # This path requires flox installed.
-                actual = getattr(
-                    ds.foo.groupby(
-                        {grp_idx: xr.groupers.UniqueGrouper(labels=[0, 1, 2])}
-                    ),
-                    method,
-                )(dim)
+                gs = {
+                    g: xr.groupers.UniqueGrouper(labels=np.unique(ds[g]))
+                    for g in grp_idx
+                }
+                actual = getattr(ds.foo.groupby(gs), method)(dim)
 
             else:
-                actual = getattr(ds.foo.groupby(ds[grp_idx].compute()), method)(dim)
+                ds[grp_idx].load()
+                actual = getattr(ds.foo.groupby(ds[grp_idx]), method)(dim)
         else:
             actual = getattr(ds.foo.groupby(grp_idx), method)(dim)
 
