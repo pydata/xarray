@@ -141,13 +141,10 @@ sparse = "0.15.*"
 toolz = "0.12.*"
 zarr = "2.18.*"
 
-# TODO: Remove `platforms` restriction once pandas nightly has win-64 wheels again.
+# TODO: Remove `target.unix` restriction once pandas nightly has win-64 wheels again.
 # Without this, `pixi lock` fails because it can't solve the nightly feature for win-64,
 # which breaks RTD builds (RTD has no lock file cache, unlike GitHub Actions CI).
-[feature.nightly]
-platforms = ["linux-64", "osx-arm64"]
-
-[feature.nightly.dependencies]
+[feature.nightly.target.unix.dependencies]
 python = "*"
 
 [feature.nightly.pypi-options.dependency-overrides]
@@ -172,7 +169,7 @@ h5netcdf = { git = "https://github.com/h5netcdf/h5netcdf" }
 opt_einsum = { git = "https://github.com/dgasmith/opt_einsum" }
 # sparse = { git = "https://github.com/pydata/sparse"}
 
-[feature.nightly.pypi-dependencies]
+[feature.nightly.target.unix.pypi-dependencies]
 xarray = { path = ".", editable = true }
 
 numpy = "*"
