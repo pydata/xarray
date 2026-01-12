@@ -61,6 +61,9 @@ Bug Fixes
 - Ensure the :py:class:`~xarray.groupers.SeasonResampler` preserves the datetime
   unit of the underlying time index when resampling (:issue:`11048`,
   :pull:`11049`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix :py:meth:`Dataset.interp` silently dropping datetime64 and timedelta64
+  variables (:issue:`10900`, :pull:`11081`).
+  By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 
 Documentation
 ~~~~~~~~~~~~~

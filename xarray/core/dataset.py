@@ -3934,6 +3934,23 @@ class Dataset(
                 # For normal number types do the interpolation:
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
+            elif dtype_kind in "Mm" and (use_indexers.keys() & var.dims):
+                # For datetime-like types, interpolate as float64:
+                var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
+                int_data = var.data.view(np.int64)
+                nat = np.iinfo(np.int64).min
+                as_float = np.where(
+                    int_data == nat, np.nan, int_data.astype(np.float64)
+                )
+                result = missing.interp(
+                    var.copy(data=as_float), var_indexers, method, **kwargs
+                )
+                as_int = np.where(
+                    np.isnan(result.data),
+                    nat,
+                    np.round(np.nan_to_num(result.data)).astype(np.int64),
+                )
+                variables[name] = result.copy(data=as_int.view(var.dtype))
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
                     # Broadcastable, can be handled quickly without reindex:
