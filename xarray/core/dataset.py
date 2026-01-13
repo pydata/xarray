@@ -7765,7 +7765,7 @@ class Dataset(
             return type(self)(new_data_vars)
 
         other_coords: Coordinates | None = getattr(other, "coords", None)
-        ds = self.coords.merge(other_coords)
+        ds = self.coords.merge(other_coords, compat=OPTIONS["arithmetic_compat"])
 
         if isinstance(other, Dataset):
             new_vars = apply_over_both(

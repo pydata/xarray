@@ -4908,7 +4908,9 @@ class DataArray(
             if not reflexive
             else f(other_variable_or_arraylike, self.variable)
         )
-        coords, indexes = self.coords._merge_raw(other_coords, reflexive)
+        coords, indexes = self.coords._merge_raw(
+            other_coords, reflexive, compat=OPTIONS["arithmetic_compat"]
+        )
         name = result_name([self, other])
 
         return self._replace(variable, coords, name, indexes=indexes)
@@ -4928,7 +4930,9 @@ class DataArray(
         other_coords = getattr(other, "coords", None)
         other_variable = getattr(other, "variable", other)
         try:
-            with self.coords._merge_inplace(other_coords):
+            with self.coords._merge_inplace(
+                other_coords, compat=OPTIONS["arithmetic_compat"]
+            ):
                 f(self.variable, other_variable)
         except MergeError as exc:
             raise MergeError(
