@@ -30,8 +30,8 @@ New Features
 - Added typed properties for external accessor packages (hvplot, cf-xarray,
   pint-xarray, rioxarray, xarray-plotly), enabling full IDE support including
   autocompletion, parameter hints, and docstrings. For uninstalled packages,
-  ``hasattr()`` returns ``False`` to keep the namespace clean (:pull:`xxxx`).
-  By `Your Name <https://github.com/yourname>`_.
+  ``hasattr()`` returns ``False`` to keep the namespace clean (:pull:`11079`).
+  By `Your Name <https://github.com/FBumann>`_.
 
 - :py:func:`set_options` now supports an ``arithmetic_compat`` option which determines how non-index coordinates
   of the same name are compared for potential conflicts when performing binary operations. The default for it is
