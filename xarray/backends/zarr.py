@@ -2162,55 +2162,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         results = await asyncio.gather(*tasks)
         return dict(results)
 
-    async def open_datatree_async(
-        self,
-        filename_or_obj: T_PathFileOrDataStore,
-        *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
-        drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        group: str | None = None,
-        mode="r",
-        synchronizer=None,
-        consolidated=None,
-        chunk_store=None,
-        storage_options=None,
-        zarr_version=None,
-        zarr_format=None,
-    ) -> DataTree:
-        """Asynchronously open a DataTree with concurrent group and index loading.
-
-        This method opens groups concurrently and creates default indexes in parallel,
-        which can significantly reduce latency when opening DataTrees from
-        high-latency storage backends like cloud object stores.
-        """
-        # Open all groups concurrently
-        groups_dict = await self.open_groups_as_dict_async(
-            filename_or_obj=filename_or_obj,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-            group=group,
-            mode=mode,
-            synchronizer=synchronizer,
-            consolidated=consolidated,
-            chunk_store=chunk_store,
-            storage_options=storage_options,
-            zarr_version=zarr_version,
-            zarr_format=zarr_format,
-        )
-
-        # Index creation is handled by api.py's _maybe_create_default_indexes()
-        return datatree_from_dict_with_io_cleanup(groups_dict)
-
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
     parent_nodepath = NodePath(parent)

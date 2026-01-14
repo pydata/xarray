@@ -1,16 +1,14 @@
-"""Tests for asynchronous zarr group loading functionality."""
+"""Tests for internal asynchronous zarr group loading functionality."""
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
-from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.backends.api import _maybe_create_default_indexes_async, open_datatree_async
+from xarray.backends.api import _maybe_create_default_indexes_async
 from xarray.backends.zarr import ZarrBackendEntrypoint
 from xarray.testing import assert_equal
 from xarray.tests import (
@@ -60,7 +58,7 @@ def create_test_datatree(n_groups=3, coords_per_group=5):
 
 @requires_zarr
 class TestAsyncZarrGroupLoading:
-    """Tests for asynchronous zarr group loading functionality."""
+    """Tests for internal asynchronous zarr group loading functionality."""
 
     @contextlib.contextmanager
     def create_zarr_store(self):
@@ -75,164 +73,22 @@ class TestAsyncZarrGroupLoading:
             yield store
 
     @parametrize_zarr_format
-    def test_async_datatree_roundtrip(self, zarr_format):
-        """Test that async datatree loading preserves data integrity."""
-
+    def test_sync_datatree_roundtrip_with_async_optimization(self, zarr_format):
+        """Test that sync open_datatree with internal async optimization preserves data integrity."""
         dtree = create_test_datatree(n_groups=3, coords_per_group=4)
 
         with self.create_zarr_store() as store:
             dtree.to_zarr(store, mode="w", consolidated=False, zarr_format=zarr_format)
 
-            async def load_async():
-                return await open_datatree_async(
-                    store,
-                    consolidated=False,
-                    zarr_format=zarr_format,
-                    create_default_indexes=True,
-                    engine="zarr",
-                )
-
-            dtree_async = asyncio.run(load_async())
-            assert_equal(dtree, dtree_async)
-
-    def test_async_error_handling_unsupported_engine(self):
-        """Test that async functions properly handle unsupported engines."""
-
-        async def test_unsupported_engine():
-            with pytest.raises(
-                ValueError, match="does not support asynchronous operations"
-            ):
-                await open_datatree_async("/fake/path", engine="netcdf4")
-
-        asyncio.run(test_unsupported_engine())
-
-    @pytest.mark.asyncio
-    @requires_zarr_v3
-    async def test_async_concurrent_loading(self):
-        """Test that async loading uses concurrent calls for multiple groups."""
-        import zarr
-
-        dtree = create_test_datatree(n_groups=3, coords_per_group=4)
-
-        with self.create_zarr_store() as store:
-            dtree.to_zarr(store, mode="w", consolidated=False, zarr_format=3)
-
-            target_class = zarr.AsyncGroup
-            original_method = target_class.getitem
-
-            with patch.object(
-                target_class, "getitem", wraps=original_method, autospec=True
-            ) as mocked_method:
-                dtree_async = await open_datatree_async(
-                    store,
-                    consolidated=False,
-                    zarr_format=3,
-                    create_default_indexes=True,
-                    engine="zarr",
-                )
-
-                assert_equal(dtree, dtree_async)
-
-                assert mocked_method.call_count > 0
-                mocked_method.assert_awaited()
-
-    @pytest.mark.asyncio
-    @parametrize_zarr_format
-    async def test_async_root_only_datatree(self, zarr_format):
-        """Test async loading of datatree with only root node (no child groups)."""
-
-        root_ds = create_dataset_with_coordinates(3)
-        dtree = xr.DataTree(root_ds)
-
-        with self.create_zarr_store() as store:
-            dtree.to_zarr(store, mode="w", consolidated=False, zarr_format=zarr_format)
-
-            dtree_async = await open_datatree_async(
+            # Use sync open_datatree which internally uses async for zarr v3
+            dtree_loaded = xr.open_datatree(
                 store,
                 consolidated=False,
                 zarr_format=zarr_format,
                 create_default_indexes=True,
                 engine="zarr",
             )
-
-            assert len(list(dtree_async.subtree)) == 1
-            assert dtree_async.path == "/"
-            assert dtree_async.ds is not None
-
-    @pytest.mark.asyncio
-    @parametrize_zarr_format
-    @pytest.mark.parametrize("n_groups", [1, 3, 10])
-    async def test_async_multiple_groups(self, zarr_format, n_groups):
-        """Test async loading of datatree with varying numbers of groups."""
-        dtree = create_test_datatree(n_groups=n_groups, coords_per_group=3)
-
-        with self.create_zarr_store() as store:
-            dtree.to_zarr(store, mode="w", consolidated=False, zarr_format=zarr_format)
-
-            # Load asynchronously
-            dtree_async = await open_datatree_async(
-                store,
-                consolidated=False,
-                zarr_format=zarr_format,
-                create_default_indexes=True,
-                engine="zarr",
-            )
-
-            expected_groups = ["/"] + [f"/group_{i:03d}" for i in range(n_groups)]
-            group_paths = [node.path for node in dtree_async.subtree]
-
-            assert len(group_paths) == len(expected_groups)
-            for expected_path in expected_groups:
-                assert expected_path in group_paths
-
-    @pytest.mark.asyncio
-    @parametrize_zarr_format
-    async def test_async_create_default_indexes_false(self, zarr_format):
-        """Test that create_default_indexes=False prevents index creation."""
-        dtree = create_test_datatree(n_groups=2, coords_per_group=3)
-
-        with self.create_zarr_store() as store:
-            dtree.to_zarr(store, mode="w", consolidated=False, zarr_format=zarr_format)
-
-            dtree_async = await open_datatree_async(
-                store,
-                consolidated=False,
-                zarr_format=zarr_format,
-                create_default_indexes=False,
-                engine="zarr",
-            )
-
-            assert len(list(dtree_async.subtree)) == 3
-
-            for node in dtree_async.subtree:
-                dataset = node.dataset
-                if dataset is not None:
-                    coord_names = [
-                        name
-                        for name, coord in dataset.coords.items()
-                        if coord.dims == (name,)
-                    ]
-                    for coord_name in coord_names:
-                        assert coord_name not in dataset.xindexes, (
-                            f"Index should not exist for coordinate '{coord_name}' when create_default_indexes=False"
-                        )
-
-    def test_sync_vs_async_api_compatibility(self):
-        """Test that sync and async APIs have compatible signatures."""
-        import inspect
-
-        from xarray.backends.api import open_datatree
-
-        sync_sig = inspect.signature(open_datatree)
-        async_sig = inspect.signature(open_datatree_async)
-
-        sync_params = list(sync_sig.parameters.keys())
-        async_params = list(async_sig.parameters.keys())
-
-        for param in sync_params:
-            assert param in async_params, (
-                f"Parameter '{param}' missing from async version"
-            )
+            assert_equal(dtree, dtree_loaded)
 
     @pytest.mark.asyncio
     @requires_zarr
@@ -323,22 +179,9 @@ class TestAsyncZarrGroupLoading:
         result = await _maybe_create_default_indexes_async(ds)
         assert result is ds  # Same object returned
 
-    def test_async_invalid_chunks_raises_error(self):
-        """Test that invalid chunks parameter raises ValueError."""
-
-        async def test_invalid_chunks():
-            with pytest.raises(ValueError, match="chunks must be an int, dict"):
-                await open_datatree_async(
-                    "/fake/path",
-                    engine="zarr",
-                    chunks="invalid",  # Invalid value
-                )
-
-        asyncio.run(test_invalid_chunks())
-
     @parametrize_zarr_format
-    def test_async_source_encoding(self, zarr_format):
-        """Test that async open_datatree sets source encoding."""
+    def test_sync_open_datatree_source_encoding(self, zarr_format):
+        """Test that open_datatree sets source encoding correctly."""
         import os
         import tempfile
 
@@ -350,39 +193,42 @@ class TestAsyncZarrGroupLoading:
                 store_path, mode="w", consolidated=False, zarr_format=zarr_format
             )
 
-            async def load_async():
-                return await open_datatree_async(
-                    store_path,
-                    consolidated=False,
-                    zarr_format=zarr_format,
-                    engine="zarr",
-                )
-
-            dtree_async = asyncio.run(load_async())
-            assert "source" in dtree_async.encoding
+            dtree_loaded = xr.open_datatree(
+                store_path,
+                consolidated=False,
+                zarr_format=zarr_format,
+                engine="zarr",
+            )
+            assert "source" in dtree_loaded.encoding
             # Normalize paths for cross-platform comparison
-            source = os.path.normpath(dtree_async.encoding["source"])
+            source = os.path.normpath(dtree_loaded.encoding["source"])
             expected = os.path.normpath(store_path)
             assert expected in source
 
-    @pytest.mark.asyncio
+    @requires_zarr_v3
     @parametrize_zarr_format
-    async def test_async_with_chunks_parameter(self, zarr_format):
-        """Test async open_datatree with chunks parameter."""
-        pytest.importorskip("dask")
+    def test_sync_open_datatree_uses_async_internally(self, zarr_format):
+        """Test that sync open_datatree uses async index creation for zarr v3."""
+        from unittest.mock import patch
 
-        dtree = create_test_datatree(n_groups=2, coords_per_group=2)
+        dtree = create_test_datatree(n_groups=2, coords_per_group=3)
 
         with self.create_zarr_store() as store:
             dtree.to_zarr(store, mode="w", consolidated=False, zarr_format=zarr_format)
 
-            dtree_async = await open_datatree_async(
-                store,
-                consolidated=False,
-                zarr_format=zarr_format,
-                chunks={},  # Use default chunking
-                engine="zarr",
-            )
+            # Patch the async index creation function to verify it's called
+            with patch(
+                "xarray.backends.api._maybe_create_default_indexes_async",
+                wraps=_maybe_create_default_indexes_async,
+            ) as mock_async:
+                dtree_loaded = xr.open_datatree(
+                    store,
+                    consolidated=False,
+                    zarr_format=zarr_format,
+                    create_default_indexes=True,
+                    engine="zarr",
+                )
 
-            # Verify the tree was loaded
-            assert len(list(dtree_async.subtree)) == 3
+                # For zarr v3, the async function should be called
+                assert mock_async.call_count > 0
+                assert_equal(dtree, dtree_loaded)
