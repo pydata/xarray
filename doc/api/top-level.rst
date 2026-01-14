@@ -6,6 +6,12 @@ Top-level functions
 Computation
 -----------
 
+.. note::
+
+   For worked examples and advanced usage of ``apply_ufunc``, see the
+   :doc:`User Guide on Computation </user-guide/computation>`, and the
+   `apply_ufunc tutorial <https://tutorial.xarray.dev/advanced/apply_ufunc/apply_ufunc.html>`_.
+
 .. autosummary::
    :toctree: ../generated/
 

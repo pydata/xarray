@@ -92,36 +92,51 @@ with zarr-python.
 
 .. jupyter-execute::
 
+    zarr_v2_filename = "example_v2.zarr"
+
+.. jupyter-execute::
+    :hide-code:
+
+    import tempfile
+    import os.path
+    tempdir = tempfile.TemporaryDirectory()
+    zarr_v2_filename = os.path.join(tempdir.name, zarr_v2_filename)
+
+.. jupyter-execute::
+
     import os
     import xarray as xr
     import zarr
 
     # Load tutorial dataset and write as Zarr V2
     ds = xr.tutorial.load_dataset("rasm")
-    ds.to_zarr("rasm_v2.zarr", mode="w", consolidated=False, zarr_format=2)
+    ds.to_zarr(zarr_v2_filename, mode="w", consolidated=False, zarr_format=2)
 
     # Open with zarr-python and examine attributes
-    zgroup = zarr.open("rasm_v2.zarr")
+    zgroup = zarr.open(zarr_v2_filename)
     print("Zarr V2 - Tair attributes:")
     tair_attrs = dict(zgroup["Tair"].attrs)
     for key, value in tair_attrs.items():
         print(f"  '{key}': {repr(value)}")
 
-.. jupyter-execute::
-    :hide-code:
-
-    import shutil
-    shutil.rmtree("rasm_v2.zarr")
-
 **Example 2: Zarr V3 Format**
 
 .. jupyter-execute::
 
+    zarr_v3_filename = "example_v3.zarr"
+
+.. jupyter-execute::
+    :hide-code:
+
+    zarr_v3_filename = os.path.join(tempdir.name, zarr_v3_filename)
+
+.. jupyter-execute::
+
     # Write the same dataset as Zarr V3
-    ds.to_zarr("rasm_v3.zarr", mode="w", consolidated=False, zarr_format=3)
+    ds.to_zarr(zarr_v3_filename, mode="w", consolidated=False, zarr_format=3)
 
     # Open with zarr-python and examine attributes
-    zgroup = zarr.open("rasm_v3.zarr")
+    zgroup = zarr.open(zarr_v3_filename)
     print("Zarr V3 - Tair attributes:")
     tair_attrs = dict(zgroup["Tair"].attrs)
     for key, value in tair_attrs.items():
@@ -130,12 +145,6 @@ with zarr-python.
     # For Zarr V3, dimension information is in metadata
     tair_array = zgroup["Tair"]
     print(f"\nZarr V3 - dimension_names in metadata: {tair_array.metadata.dimension_names}")
-
-.. jupyter-execute::
-    :hide-code:
-
-    import shutil
-    shutil.rmtree("rasm_v3.zarr")
 
 
 Chunk Key Encoding
@@ -147,6 +156,16 @@ is particularly useful when working with Zarr V2 arrays and you need to control 
 dimension separator in chunk keys.
 
 For example, to specify a custom separator for chunk keys:
+
+
+.. jupyter-execute::
+
+    example_filename = "example.zarr"
+
+.. jupyter-execute::
+    :hide-code:
+
+    example_filename = os.path.join(tempdir.name, example_filename)
 
 .. jupyter-execute::
 
@@ -161,7 +180,7 @@ For example, to specify a custom separator for chunk keys:
     arr = np.ones((42, 100))
     ds = xr.DataArray(arr, name="var1").to_dataset()
     ds.to_zarr(
-        "example.zarr",
+        example_filename,
         zarr_format=2,
         mode="w",
         encoding={"var1": {"chunks": (42, 50), "chunk_key_encoding": enc}},
@@ -181,6 +200,4 @@ when working with tools that expect a particular chunk key format.
 .. jupyter-execute::
     :hide-code:
 
-    import shutil
-
-    shutil.rmtree("example.zarr")
+    tempdir.cleanup()

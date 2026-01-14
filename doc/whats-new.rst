@@ -28,11 +28,23 @@ New Features
   :py:class:`~xarray.indexes.PandasIndex` to perform the selection
   (:issue:`9703`, :pull:`11029`).
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
-
+- The minimum supported version of ``h5netcdf`` is now 1.4. Version 1.4.0
+  brings improved alignment between h5netcdf and libnetcdf4 in the storage of
+  complex numbers (:pull:`11068`). By `Mark Harfouche
+  <https://github.com/hmaarrfk>`_.
+- :py:func:`set_options` now supports an ``arithmetic_compat`` option which determines how non-index coordinates
+  of the same name are compared for potential conflicts when performing binary operations. The default for it is
+  ``arithmetic_compat='minimal'`` which matches the existing behaviour.
+  By `Matthew Willson <https://github.com/mjwillson>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- Change the default value for ``chunk`` in ``open_zarr`` to ``_default`` and remove special mapping of ``"auto"``
+  to ``{}`` or ``None`` in ``open_zarr``. If ``chunks`` is not set, the default behavior is the same as before.
+  Explicitly setting ``chunks="auto"`` will match the behavior of ``chunks="auto"`` in
+  ``open_dataset(..., engine="zarr")`` (:issue:`11002` :pull:`11010`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 - :py:meth:`Dataset.identical`,` :py:meth:`DataArray.identical`, and
   :py:func:`testings.assert_identical` now compare indexes (xindexes).
   Two objects with identical data but different indexes will no longer
