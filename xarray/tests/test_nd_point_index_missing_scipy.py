@@ -8,8 +8,9 @@ from xarray.indexes import NDPointIndex
 
 
 def test_ndpointindex_missing_scipy(monkeypatch):
-    # Simulate scipy not being installed
+    # Simulate scipy not being installed (fully, including submodules)
     monkeypatch.setitem(sys.modules, "scipy", None)
+    monkeypatch.setitem(sys.modules, "scipy.spatial", None)
 
     xx = xr.DataArray(
         np.random.rand(2, 2),
