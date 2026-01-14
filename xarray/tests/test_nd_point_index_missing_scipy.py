@@ -1,8 +1,9 @@
 import sys
+
 import numpy as np
 import pytest
-import xarray as xr
 
+import xarray as xr
 from xarray.indexes import NDPointIndex
 
 
