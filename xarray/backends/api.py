@@ -461,12 +461,8 @@ async def _maybe_create_default_indexes_async(ds: Dataset) -> Dataset:
     indexes: dict = {}
     variables: dict = {}
     for name, idx in index_results:
-        idx_vars = idx.create_variables({name: ds.coords[name].variable})
-        variables.update(idx_vars)
-        for var_name in idx_vars:
-            indexes[var_name] = idx
-
-    new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
+        indexes[name] = idx
+        variables.update(idx.create_variables({name: ds.variables[name]}))
     return ds.assign_coords(new_coords)
 
 
