@@ -619,43 +619,6 @@ class ZarrStore(AbstractWritableDataStore):
     )
 
     @classmethod
-    def _build_group_members(
-        cls,
-        zarr_group,
-        group_paths: list[str],
-        parent: str | None,
-    ):
-        """Build group members dict from discovered group paths.
-
-        Parameters
-        ----------
-        zarr_group : zarr.Group
-            The root zarr group.
-        group_paths : list[str]
-            List of discovered group paths.
-        parent : str | None
-            Parent group path.
-
-        Returns
-        -------
-        dict[str, zarr.Group]
-            Dictionary mapping group paths to zarr Group instances.
-        """
-        from zarr import Group
-
-        parent = parent if parent else "/"
-        group_members: dict[str, Group] = {}
-
-        for path in group_paths:
-            if path == parent:
-                group_members[path] = zarr_group
-            else:
-                rel_path = path.removeprefix(f"{parent}/").removeprefix("/")
-                group_members[path] = zarr_group[rel_path]
-
-        return group_members
-
-    @classmethod
     def _create_stores_from_members(
         cls,
         group_members,
@@ -760,7 +723,7 @@ class ZarrStore(AbstractWritableDataStore):
         )
 
         group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
-        group_members = cls._build_group_members(zarr_group, group_paths, group)
+        group_members = _build_group_members(zarr_group, group_paths, group)
 
         return cls._create_stores_from_members(
             group_members,
@@ -869,7 +832,7 @@ class ZarrStore(AbstractWritableDataStore):
         group_paths = await _iter_zarr_groups_async(zarr_group, parent=group)
 
         # Build group members and create stores using shared helpers
-        group_members = cls._build_group_members(zarr_group, group_paths, group)
+        group_members = _build_group_members(zarr_group, group_paths, group)
 
         return cls._create_stores_from_members(
             group_members,
@@ -2163,6 +2126,24 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         return dict(results)
 
 
+def _build_group_members(
+    zarr_group: ZarrGroup,
+    group_paths: list[str],
+    parent: str | None,
+) -> dict[str, ZarrGroup]:
+    parent = parent if parent else "/"
+    group_members: dict[str, ZarrGroup] = {}
+
+    for path in group_paths:
+        if path == parent:
+            group_members[path] = zarr_group
+        else:
+            rel_path = path.removeprefix(f"{parent}/").removeprefix("/")
+            group_members[path] = zarr_group[rel_path]
+
+    return group_members
+
+
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
     parent_nodepath = NodePath(parent)
     yield str(parent_nodepath)
@@ -2250,7 +2231,7 @@ async def _iter_zarr_groups_async(root: ZarrGroup, parent: str = "/") -> list[st
 
         return found_groups
 
-    # Start discovery from root
+    # Start discovery from rootshalgive
     subgroups = await discover_subgroups("")
     group_paths.extend(subgroups)
 
