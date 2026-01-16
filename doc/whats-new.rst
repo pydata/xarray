@@ -6,6 +6,87 @@
 What's New
 ==========
 
+.. _whats-new.v2025.12.1:
+
+v2025.12.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Improved :py:class:`DataTree` HTML representation: groups are now collapsible
+  with item counts shown in labels, large trees are automatically truncated
+  using ``display_max_children`` and ``display_max_html_elements`` options,
+  and the Indexes section is now displayed (matching the text repr) (:pull:`10816`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- :py:meth:`Dataset.set_xindex` and :py:meth:`DataArray.set_xindex`
+  automatically replace any existing index being set instead of erroring
+  or needing needing to call :py:meth:`drop_indexes` first (:pull:`11008`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Calling :py:meth:`Dataset.sel` or :py:meth:`DataArray.sel` on a 1-dimensional coordinate
+  without an index will now automatically create a temporary
+  :py:class:`~xarray.indexes.PandasIndex` to perform the selection
+  (:issue:`9703`, :pull:`11029`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- The minimum supported version of ``h5netcdf`` is now 1.4. Version 1.4.0
+  brings improved alignment between h5netcdf and libnetcdf4 in the storage of
+  complex numbers (:pull:`11068`). By `Mark Harfouche
+  <https://github.com/hmaarrfk>`_.
+- :py:func:`set_options` now supports an ``arithmetic_compat`` option which determines how non-index coordinates
+  of the same name are compared for potential conflicts when performing binary operations. The default for it is
+  ``arithmetic_compat='minimal'`` which matches the existing behaviour.
+  By `Matthew Willson <https://github.com/mjwillson>`_.
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+- Change the default value for ``chunk`` in ``open_zarr`` to ``_default`` and remove special mapping of ``"auto"``
+  to ``{}`` or ``None`` in ``open_zarr``. If ``chunks`` is not set, the default behavior is the same as before.
+  Explicitly setting ``chunks="auto"`` will match the behavior of ``chunks="auto"`` in
+  ``open_dataset(..., engine="zarr")`` (:issue:`11002` :pull:`11010`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+- :py:meth:`Dataset.identical`,` :py:meth:`DataArray.identical`, and
+  :py:func:`testings.assert_identical` now compare indexes (xindexes).
+  Two objects with identical data but different indexes will no longer
+  be considered identical. This also affects (:issue:`11033` :pull:`11035`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+- Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
+  only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+- :py:meth:`~xarray.indexes.RangeIndex.equals` now uses floating point error tolerant
+  ``np.isclose`` by default to handle accumulated floating point errors from
+  slicing operations. Use ``exact=True`` for exact comparison (:pull:`11035`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- Ensure the :py:class:`~xarray.groupers.SeasonResampler` preserves the datetime
+  unit of the underlying time index when resampling (:issue:`11048`,
+  :pull:`11049`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Better description of ``keep_attrs`` option on ``xarray.where`` docstring (:issue:`10982` :pull:`10997`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+Performance
+~~~~~~~~~~~
+
+- Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
+  By `Sam Levang <https://github.com/slevang>`_.
+
+
 .. _whats-new.2025.12.0:
 
 v2025.12.0 (Dec 5, 2025)

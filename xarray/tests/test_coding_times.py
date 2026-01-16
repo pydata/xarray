@@ -599,7 +599,7 @@ def test_cf_timedelta(timedeltas, units, numbers) -> None:
     if timedeltas == "NaT":
         timedeltas = np.timedelta64("NaT", "ns")
     else:
-        timedeltas = pd.to_timedelta(timedeltas).to_numpy()
+        timedeltas = pd.to_timedelta(timedeltas).as_unit("ns").to_numpy()
     numbers = np.array(numbers)
 
     expected = numbers
@@ -623,8 +623,9 @@ def test_cf_timedelta_2d() -> None:
     units = "days"
     numbers = np.atleast_2d([1, 2, 3])
 
-    timedeltas = np.atleast_2d(pd.to_timedelta(["1D", "2D", "3D"]).to_numpy())
-    expected = timedeltas
+    timedeltas = pd.to_timedelta(["1D", "2D", "3D"]).as_unit("ns")
+    timedeltas_2d = np.atleast_2d(timedeltas.to_numpy())
+    expected = timedeltas_2d
 
     actual = decode_cf_timedelta(numbers, units)
     assert_array_equal(expected, actual)
@@ -2087,7 +2088,7 @@ def test_timedelta_decode_via_dtype_invalid_encoding() -> None:
     attrs = {"dtype": "timedelta64[s]", "units": "seconds"}
     encoding = {"units": "foo"}
     encoded = Variable(["time"], [0, 1, 2], attrs=attrs, encoding=encoding)
-    with pytest.raises(ValueError, match="failed to prevent"):
+    with pytest.raises(ValueError, match=r"Key .* already exists"):
         conventions.decode_cf_variable("timedeltas", encoded)
 
 
@@ -2096,7 +2097,7 @@ def test_timedelta_encode_via_dtype_invalid_attribute(attribute) -> None:
     timedeltas = pd.timedelta_range(0, freq="D", periods=3)
     attrs = {attribute: "foo"}
     variable = Variable(["time"], timedeltas, attrs=attrs)
-    with pytest.raises(ValueError, match="failed to prevent"):
+    with pytest.raises(ValueError, match=r"Key .* already exists"):
         conventions.encode_cf_variable(variable)
 
 

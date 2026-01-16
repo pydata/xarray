@@ -16,6 +16,7 @@ from xarray.coding.cftime_offsets import (
 )
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.resample_cftime import CFTimeGrouper
+from xarray.core.types import PDDatetimeUnitOptions
 from xarray.tests import has_pandas_3
 
 cftime = pytest.importorskip("cftime")
@@ -114,7 +115,7 @@ def compare_against_pandas(
             origin=origin_cftime,
             offset=offset,
         ).mean()
-    # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+    # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
     result_cftimeindex["time"] = (
         result_cftimeindex.xindexes["time"]
         .to_pandas_index()
@@ -141,7 +142,7 @@ def test_resample_with_tick_resample_freq(freqs, closed, label, offset) -> None:
     origin = "start"
 
     datetime_index = pd.date_range(
-        start=start, periods=5, freq=_new_to_legacy_freq(initial_freq)
+        start=start, periods=5, freq=_new_to_legacy_freq(initial_freq), unit="ns"
     )
     cftime_index = xr.date_range(
         start=start, periods=5, freq=initial_freq, use_cftime=True
@@ -178,7 +179,7 @@ def test_resample_with_non_tick_resample_freq(freqs, closed, label) -> None:
     origin = "start_day"
 
     datetime_index = pd.date_range(
-        start=start, periods=5, freq=_new_to_legacy_freq(initial_freq)
+        start=start, periods=5, freq=_new_to_legacy_freq(initial_freq), unit="ns"
     )
     cftime_index = xr.date_range(
         start=start, periods=5, freq=initial_freq, use_cftime=True
@@ -231,10 +232,12 @@ def test_calendars(calendar: str) -> None:
         calendar=calendar,
         use_cftime=True,
     )
-    pd_index = pd.date_range(start="2004-01-01T12:07:01", periods=7, freq="3D")
+    pd_index = pd.date_range(
+        start="2004-01-01T12:07:01", periods=7, freq="3D", unit="ns"
+    )
     da_cftime = da(xr_index).resample(time=freq, closed=closed, label=label).mean()
     da_datetime = da(pd_index).resample(time=freq, closed=closed, label=label).mean()
-    # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+    # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
     new_pd_index = da_cftime.xindexes["time"].to_pandas_index()
     assert isinstance(new_pd_index, CFTimeIndex)  # shouldn't that be a pd.Index?
     da_cftime["time"] = new_pd_index.to_datetimeindex(time_unit="ns")
@@ -245,6 +248,7 @@ class DateRangeKwargs(TypedDict):
     start: str
     periods: int
     freq: str
+    unit: PDDatetimeUnitOptions
 
 
 @pytest.mark.parametrize("closed", ["left", "right"])
@@ -256,7 +260,9 @@ class DateRangeKwargs(TypedDict):
 def test_origin(closed, origin) -> None:
     initial_freq, resample_freq = ("3h", "9h")
     start = "1969-12-31T12:07:01"
-    index_kwargs: DateRangeKwargs = dict(start=start, periods=12, freq=initial_freq)
+    index_kwargs: DateRangeKwargs = dict(
+        start=start, periods=12, freq=initial_freq, unit="ns"
+    )
     datetime_index = pd.date_range(**index_kwargs)
     cftime_index = xr.date_range(**index_kwargs, use_cftime=True)
     da_datetimeindex = da(datetime_index)

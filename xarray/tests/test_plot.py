@@ -528,7 +528,7 @@ class TestPlot(PlotTestCase):
             [-0.5, 0.5, 5.0, 9.5, 10.5], _infer_interval_breaks([0, 1, 9, 10])
         )
         assert_array_equal(
-            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),  # type: ignore[operator]
+            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),
             _infer_interval_breaks(pd.date_range("20000101", periods=3)),
         )
 
@@ -2897,7 +2897,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2["hue"] = pd.date_range("2000-1-1", periods=4)
         ds2.plot.scatter(x="A", y="B", hue="hue")
 
-        ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D")
+        ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D", unit="ns")  # type: ignore[call-arg,unused-ignore]
         ds2.plot.scatter(x="A", y="B", hue="hue")
 
     def test_facetgrid_hue_style(self) -> None:
