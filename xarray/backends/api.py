@@ -445,16 +445,8 @@ async def _maybe_create_default_indexes_async(ds: Dataset) -> Dataset:
         *[load_var(ds.coords[name].variable) for name in to_index_names]
     )
 
-    # Sync index creation
-    indexes: dict = {}
-    variables: dict = {}
-    for name in to_index_names:
-        var = ds.coords[name].variable
-        idx = PandasIndex.from_variables({name: var}, options={})
-        indexes[name] = idx
-        variables.update(idx.create_variables({name: ds.variables[name]}))
-
-    new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
+    variables = {name: ds.variables[name] for name in to_index_names}
+    new_coords = Coordinates(variables)
     return ds.assign_coords(new_coords)
 
 
