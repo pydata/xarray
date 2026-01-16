@@ -2139,7 +2139,7 @@ def _build_group_members(
             group_members[path] = zarr_group
         else:
             rel_path = path.removeprefix(f"{parent}/").removeprefix("/")
-            group_members[path] = zarr_group[rel_path]
+            group_members[path] = cast("ZarrGroup", zarr_group[rel_path])
 
     return group_members
 
