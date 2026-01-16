@@ -289,7 +289,6 @@ release-contributors = "python ci/release_contributors.py"
 [feature.dev.dependencies]
 ipython = ">=9.8.0,<10"
 black = ">=25.1.0,<26"
-ipdb = ">=0.13.13,<0.14"
 
 [feature.dev.pypi-dependencies]
 pytest-accept = ">=0.2.2, <0.3"
