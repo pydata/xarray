@@ -3497,7 +3497,8 @@ class TestDataset:
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         original = Dataset({}, midx_coords)
 
-        midx_renamed = midx.rename(["a", "c"])
+        # pandas-stubs expects Hashable for rename, but list of names works for MultiIndex
+        midx_renamed = midx.rename(["a", "c"])  # type: ignore[call-overload]
         midx_coords_renamed = Coordinates.from_pandas_multiindex(midx_renamed, "x")
         expected = Dataset({}, midx_coords_renamed)
 
@@ -5602,7 +5603,8 @@ class TestDataset:
         y = np.random.randn(10, 3)
         y[2] = np.nan
         t = pd.Series(pd.date_range("20130101", periods=10))
-        t[2] = np.nan
+        # pandas-stubs doesn't allow np.nan for datetime Series, but it converts to NaT
+        t[2] = np.nan  # type: ignore[call-overload]
 
         lat = [77.7, 83.2, 76]
         ds = Dataset(
@@ -7016,6 +7018,41 @@ class TestDataset:
             expected = xr.Dataset({"bar": 4, "baz": np.nan})
             actual = ds1 + ds2
             assert_equal(actual, expected)
+
+    def test_binary_op_compat_setting(self) -> None:
+        # Setting up a clash of non-index coordinate 'foo':
+        a = xr.Dataset(
+            data_vars={"var": (["x"], [0, 0, 0])},
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [1.0, 2.0, np.nan]),
+            },
+        )
+        b = xr.Dataset(
+            data_vars={"var": (["x"], [0, 0, 0])},
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [np.nan, 2.0, 3.0]),
+            },
+        )
+
+        with xr.set_options(arithmetic_compat="minimal"):
+            assert_equal(a + b, a.drop_vars("foo"))
+
+        with xr.set_options(arithmetic_compat="override"):
+            assert_equal(a + b, a)
+            assert_equal(b + a, b)
+
+        with xr.set_options(arithmetic_compat="no_conflicts"):
+            expected = a.assign_coords(foo=(["x"], [1.0, 2.0, 3.0]))
+            assert_equal(a + b, expected)
+            assert_equal(b + a, expected)
+
+        with xr.set_options(arithmetic_compat="equals"):
+            with pytest.raises(MergeError):
+                a + b
+            with pytest.raises(MergeError):
+                b + a
 
     @pytest.mark.parametrize(
         ["keep_attrs", "expected"],

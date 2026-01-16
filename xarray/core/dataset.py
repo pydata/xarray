@@ -7407,8 +7407,8 @@ class Dataset(
                 "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
             )
 
-        arrays = []
-        extension_arrays = []
+        arrays: list[tuple[Hashable, np.ndarray]] = []
+        extension_arrays: list[tuple[Hashable, pd.Series]] = []
         for k, v in dataframe.items():
             if not is_allowed_extension_array(v) or isinstance(
                 v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
@@ -7768,7 +7768,7 @@ class Dataset(
             return type(self)(new_data_vars)
 
         other_coords: Coordinates | None = getattr(other, "coords", None)
-        ds = self.coords.merge(other_coords)
+        ds = self.coords.merge(other_coords, compat=OPTIONS["arithmetic_compat"])
 
         if isinstance(other, Dataset):
             new_vars = apply_over_both(
