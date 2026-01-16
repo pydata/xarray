@@ -2391,6 +2391,40 @@ class TestOps:
         result = dt * other_ds
         assert_equal(result, expected)
 
+    def test_binary_op_on_dataset_skip_empty_nodes(self) -> None:
+        # https://github.com/pydata/xarray/issues/10013
+
+        a = xr.Dataset(data_vars={"x": ("time", [10])}, coords={"time": [0]})
+        b = xr.Dataset(data_vars={"x": ("time", [11, 22])}, coords={"time": [0, 1]})
+
+        dt = DataTree.from_dict({"a": a, "b": b})
+
+        expected = DataTree.from_dict({"a": a - b, "b": b - b})
+
+        # if the empty root node is not skipped its coordinates become inconsistent
+        # with the ones of node a
+        result = dt - b
+
+        assert_equal(result, expected)
+
+    def test_binary_op_on_dataset_one_empty_node(self) -> None:
+        # https://github.com/pydata/xarray/issues/10013
+
+        a = xr.Dataset(data_vars={"x": ("time", [10])}, coords={"time": [0]})
+
+        dt1 = DataTree.from_dict({"a": xr.Dataset()})
+        dt2 = DataTree.from_dict({"a": a})
+
+        # the first dt is empty
+        expected = DataTree.from_dict({"a": xr.Dataset() - a})
+        result = dt1 - dt2
+        assert_equal(result, expected)
+
+        # the second dt is empty
+        expected = DataTree.from_dict({"a": a - xr.Dataset()})
+        result = dt2 - dt1
+        assert_equal(result, expected)
+
     def test_binary_op_on_datatree(self) -> None:
         ds1 = xr.Dataset({"a": [5], "b": [3]})
         ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})

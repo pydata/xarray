@@ -1755,6 +1755,7 @@ class DataTree(
         func: Callable[..., Dataset | None],
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
+        default_num_return_values: int | None = None,
     ) -> DataTree: ...
 
     @overload
@@ -1763,6 +1764,7 @@ class DataTree(
         func: Callable[..., tuple[Dataset | None, Dataset | None]],
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
+        default_num_return_values: int | None = None,
     ) -> tuple[DataTree, DataTree]: ...
 
     @overload
@@ -1771,6 +1773,7 @@ class DataTree(
         func: Callable[..., tuple[Dataset | None, ...]],
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
+        default_num_return_values: int | None = None,
     ) -> tuple[DataTree, ...]: ...
 
     def map_over_datasets(
@@ -1778,6 +1781,7 @@ class DataTree(
         func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
+        default_num_return_values: int | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
         """
         Apply a function to every dataset in this subtree, returning a new tree which stores the results.
@@ -1799,6 +1803,10 @@ class DataTree(
             converted to Dataset objects via `.dataset`.
         kwargs : dict, optional
             Optional keyword arguments passed directly to ``func``.
+        num_return_values : int | None, default None
+            Number of returned DataTree objects if none of the passed nodes contains any data.
+            Ignored if ``func`` returns a ``Dataset`` for at least one of the nodes. A single
+            ``DataTree`` is returned when None is passed, otherwise returns a tuple of ``DataTree`` objects.
 
         Returns
         -------
@@ -1810,7 +1818,13 @@ class DataTree(
         map_over_datasets
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
-        return map_over_datasets(func, self, *args, kwargs=kwargs)  # type: ignore[arg-type]
+        return map_over_datasets(
+            func,  # type: ignore[arg-type]
+            self,
+            *args,
+            kwargs=kwargs,
+            default_num_return_values=default_num_return_values,
+        )
 
     @overload
     def pipe(
