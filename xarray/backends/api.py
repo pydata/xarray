@@ -446,23 +446,16 @@ async def _maybe_create_default_indexes_async(ds: Dataset) -> Dataset:
         *[load_var(ds.coords[name].variable) for name in to_index_names]
     )
 
-    async def create_index(name: Hashable) -> tuple[Hashable, PandasIndex]:
-        var = ds.coords[name].variable
-
-        def _create() -> tuple[Hashable, PandasIndex]:
-            return name, PandasIndex.from_variables({name: var}, options={})
-
-        return await asyncio.to_thread(_create)
-
-    index_results = await asyncio.gather(
-        *[create_index(name) for name in to_index_names]
-    )
-
+    # Sync index creation
     indexes: dict = {}
     variables: dict = {}
-    for name, idx in index_results:
+    for name in to_index_names:
+        var = ds.coords[name].variable
+        idx = PandasIndex.from_variables({name: var}, options={})
         indexes[name] = idx
         variables.update(idx.create_variables({name: ds.variables[name]}))
+
+    new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
     return ds.assign_coords(new_coords)
 
 
