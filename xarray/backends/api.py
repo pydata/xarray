@@ -439,9 +439,7 @@ async def _maybe_create_default_indexes_async(ds: Dataset) -> Dataset:
         except NotImplementedError:
             return await asyncio.to_thread(var.load)
 
-    await asyncio.gather(
-        *[load_var(ds.variables[name]) for name in to_index_names]
-    )
+    await asyncio.gather(*[load_var(ds.variables[name]) for name in to_index_names])
 
     variables = {name: ds.variables[name] for name in to_index_names}
     new_coords = Coordinates(variables)
