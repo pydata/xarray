@@ -424,8 +424,6 @@ async def _maybe_create_default_indexes_async(ds: Dataset) -> Dataset:
     """
     import asyncio
 
-    from xarray.core.indexes import PandasIndex
-
     to_index_names = [
         name
         for name, coord in ds.coords.items()
