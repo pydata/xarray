@@ -550,6 +550,8 @@ class DataArrayWeighted(Weighted["DataArray"]):
         # (weighted operations can propagate attrs from weights through internal computations)
         if kwargs.get("keep_attrs") is False:
             result.attrs = {}
+            for var in result.coords.values():
+                var.attrs = {}
 
         return result
 
@@ -564,6 +566,8 @@ class DatasetWeighted(Weighted["Dataset"]):
         if kwargs.get("keep_attrs") is False:
             result.attrs = {}
             for var in result.data_vars.values():
+                var.attrs = {}
+            for var in result.coords.values():
                 var.attrs = {}
 
         return result

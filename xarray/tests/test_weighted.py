@@ -786,6 +786,25 @@ def test_weighted_mean_keep_attrs_ds():
     assert data.coords["dim_1"].attrs == result.coords["dim_1"].attrs
 
 
+@pytest.mark.parametrize("as_dataset", (True, False))
+def test_weighted_operations_drop_coord_attrs(as_dataset):
+    # Test that coord attrs are cleared when keep_attrs=False
+    weights = DataArray(np.random.randn(2))
+    data = Dataset(
+        {"a": (["dim_0", "dim_1"], np.random.randn(2, 2), {"attr": "data"})},
+        coords={"dim_1": ("dim_1", ["a", "b"], {"coord_attr": "value"})},
+    )
+
+    if not as_dataset:
+        data = data["a"]
+
+    result = data.weighted(weights).mean(dim="dim_0", keep_attrs=False)
+
+    # All attrs should be cleared
+    assert result.attrs == {}
+    assert result.coords["dim_1"].attrs == {}
+
+
 @pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean", "quantile"))
 @pytest.mark.parametrize("as_dataset", (True, False))
 def test_weighted_bad_dim(operation, as_dataset):
