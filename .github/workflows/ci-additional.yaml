@@ -14,7 +14,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
-  PIXI_VERSION: "v0.62.2"
+  PIXI_VERSION: "v0.63.1"
 
 jobs:
   detect-ci-trigger:
@@ -37,7 +37,7 @@ jobs:
   cache-pixi-lock:
     uses: ./.github/workflows/cache-pixi-lock.yml
     with:
-      pixi-version: "v0.62.2" # keep in sync with env var above
+      pixi-version: "v0.63.1" # keep in sync with env var above
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
