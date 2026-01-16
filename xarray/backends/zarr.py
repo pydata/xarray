@@ -206,6 +206,10 @@ class ZarrArrayWrapper(BackendArray):
             not _zarr_v3()
             and self._array.filters is not None
             and any(filt.codec_id == "vlen-utf8" for filt in self._array.filters)
+        ) or (
+            _zarr_v3()
+            and self._array.serializer
+            and self._array.serializer.to_dict()["name"] == "vlen-utf8"
         ):
             dtype = coding.strings.create_vlen_dtype(str)
         else:
