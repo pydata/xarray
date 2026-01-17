@@ -322,10 +322,10 @@ class Dataset(
     <xarray.Dataset> Size: 552B
     Dimensions:         (loc: 2, instrument: 3, time: 4)
     Coordinates:
-      * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
-      * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
         lon             (loc) float64 16B -99.83 -99.32
         lat             (loc) float64 16B 42.25 42.21
+      * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
+      * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
         reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: loc
     Data variables:
@@ -4733,8 +4733,8 @@ class Dataset(
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * x        (x) int64 16B 0 1
-          * y        (y) int64 24B 0 1 2
             a        (x) int64 16B 3 4
+          * y        (y) int64 24B 0 1 2
         Data variables:
             v        (x, y) float64 48B 1.0 1.0 1.0 1.0 1.0 1.0
         >>> ds.set_index(x="a")
@@ -8713,9 +8713,9 @@ class Dataset(
         <xarray.Dataset> Size: 192B
         Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
-          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
@@ -8728,9 +8728,9 @@ class Dataset(
         <xarray.Dataset> Size: 288B
         Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
-          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
