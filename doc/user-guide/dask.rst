@@ -17,6 +17,9 @@ Parallel Computing with Dask
     :hide-code:
 
     import os
+    import tempfile
+
+    tempdir = tempfile.TemporaryDirectory()
 
     np.random.seed(123456)
 
@@ -35,7 +38,7 @@ Parallel Computing with Dask
             "latitude": np.arange(89.5, -90.5, -1),
         }
     )
-    ds.to_netcdf("example-data.nc")
+    ds.to_netcdf(os.path.join(tempdir.name, "example-data.nc"))
 
 
 Xarray integrates with `Dask <https://dask.org/?utm_source=xarray-docs>`__, a general purpose library for parallel computing, to handle larger-than-memory computations.
@@ -444,7 +447,7 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
     :hide-code:
 
     ds.close()  # Closes "example-data.nc".
-    os.remove("example-data.nc")
+    tempdir.cleanup()
 
 .. tip::
 
