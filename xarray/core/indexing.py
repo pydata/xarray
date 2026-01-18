@@ -1023,7 +1023,7 @@ def as_indexable(array):
 def _outer_to_vectorized_indexer(
     indexer: BasicIndexer | OuterIndexer, shape: _Shape
 ) -> VectorizedIndexer:
-    """Convert an OuterIndexer into an vectorized indexer.
+    """Convert an OuterIndexer into a vectorized indexer.
 
     Parameters
     ----------
