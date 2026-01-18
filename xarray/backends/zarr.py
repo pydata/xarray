@@ -487,7 +487,7 @@ def extract_zarr_variable_encoding(
 # The only change is to raise an error for object dtypes.
 def encode_zarr_variable(var, needs_copy=True, name=None):
     """
-    Converts an Variable into an Variable which follows some
+    Converts a Variable into another Variable which follows some
     of the CF conventions:
 
         - Nans are masked using _FillValue (or the deprecated missing_value)
