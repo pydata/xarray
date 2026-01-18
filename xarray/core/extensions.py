@@ -50,11 +50,28 @@ class _CachedAccessor:
 def _register_accessor(name, cls):
     def decorator(accessor):
         if hasattr(cls, name):
+            # Skip registration for known external accessors - xarray provides
+            # typed properties that load them directly for IDE support
+            from xarray.accessors import (
+                DATAARRAY_ACCESSORS,
+                DATASET_ACCESSORS,
+                DATATREE_ACCESSORS,
+            )
+
+            known_external = (
+                set(DATAARRAY_ACCESSORS)
+                | set(DATASET_ACCESSORS)
+                | set(DATATREE_ACCESSORS)
+            )
+            if name in known_external:
+                # Don't overwrite - our typed property handles this accessor
+                return accessor
+
             warnings.warn(
                 f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
                 "overriding a preexisting attribute with the same name.",
                 AccessorRegistrationWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
         setattr(cls, name, _CachedAccessor(name, accessor))
         return accessor
