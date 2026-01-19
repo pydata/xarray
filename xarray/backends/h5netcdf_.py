@@ -297,6 +297,15 @@ class H5NetCDFStore(WritableCFDataStore):
 
         encoding.update(var.filters())
 
+        # Convert h5py-style compression options to NetCDF4-Python
+        # style, if possible
+        if var.compression == "gzip":
+            encoding["zlib"] = True
+            encoding["complevel"] = var.compression_opts
+        elif var.compression is not None:
+            encoding["compression"] = var.compression
+            encoding["compression_opts"] = var.compression_opts
+
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
         encoding["original_shape"] = data.shape
