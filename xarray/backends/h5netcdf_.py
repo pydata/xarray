@@ -295,28 +295,7 @@ class H5NetCDFStore(WritableCFDataStore):
             encoding["contiguous"] = True
             encoding["chunksizes"] = None
 
-        # filters only exists in an unreleased version of h5netcdf for now
-        if hasattr(var, "filters"):
-            filters = var.filters()
-            if filters is not None:
-                encoding.update(filters)
-        else:
-            # Continue with the old path before the filters() method existed
-            encoding |= {
-                "chunksizes": var.chunks,
-                "fletcher32": var.fletcher32,
-                "shuffle": var.shuffle,
-            }
-
-        # Special historical case for gzip.
-        if var.compression == "gzip":
-            encoding["zlib"] = True
-            encoding["complevel"] = var.compression_opts
-        # I'm pretty sure compression is always None if it is not gzip
-        # The filters() method returns more information
-        elif var.compression is not None:
-            encoding["compression"] = var.compression
-            encoding["compression_opts"] = var.compression_opts
+        encoding.update(var.filters())
 
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
