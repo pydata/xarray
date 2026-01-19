@@ -318,20 +318,7 @@ class H5NetCDFStore(WritableCFDataStore):
             encoding["compression"] = var.compression
             encoding["compression_opts"] = var.compression_opts
 
-        # Also keep the "compression"??? does the netcdf4 backend do this?
-        # if encoding.get("zlib"):
-        #     encoding["compression"] = "zlib"
-        # if encoding.get("szip"):
-        #     encoding["compression"] = "szip"
-        # if encoding.get("bzip2"):
-        #     encoding["compression"] = "bzip2"
-        # if encoding.get("blosc"):
-        #     encoding["compression"] = "blosc"
-        # if encoding.get("lzf"):
-        #     encoding["compression"] = "lzf"
-        # if encoding.get("zstd"):
-        #     encoding["compression"] = "zstd"
-
+        # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
         encoding["original_shape"] = data.shape
 
