@@ -118,7 +118,9 @@ cftime = "1.6.*"
 dask-core = "2025.2.*"
 distributed = "2025.2.*"
 flox = "0.10.*"
-h5netcdf = "1.5.*"
+# h5netcdf 1.18.0 introduced a few compatiility features with netcdf4
+# https://github.com/pydata/xarray/issues/10657#issuecomment-3711095986
+h5netcdf = "1.18.*"
 # h5py and hdf5 tend to cause conflicts
 # for e.g. hdf5 1.12 conflicts with h5py=3.1
 # prioritize bumping other packages instead
