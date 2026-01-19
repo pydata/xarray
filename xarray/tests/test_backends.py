@@ -2354,6 +2354,7 @@ class TestNetCDF4Data(NetCDF4Base):
             }
         )
         with self.roundtrip(data) as actual:
+            # Something should get updated here
             expected_encoding = data["var2"].encoding.copy()
             # compression does not appear in the retrieved encoding, that differs
             # from the input encoding. shuffle also chantges. Here we modify the
