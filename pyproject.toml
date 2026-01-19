@@ -37,9 +37,9 @@ accel = [
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
   "netCDF4>=1.6.0",
-  # h5netcdf 1.18.0 introduced a few compatiility features with netcdf4
+  # h5netcdf 1.8.0 introduced a few compatibility features with netcdf4
   # https://github.com/pydata/xarray/issues/10657#issuecomment-3711095986
-  "h5netcdf>=1.18.0",
+  "h5netcdf>=1.8.0",
   "pydap",
   "scipy>=1.13",
   "zarr>=2.18",
