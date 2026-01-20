@@ -11,6 +11,7 @@ from math import ceil
 from typing import TYPE_CHECKING
 
 from xarray.core.formatting import (
+    _coord_sort_key,
     filter_nondefault_indexes,
     inherited_vars,
     inline_index_repr,
@@ -120,7 +121,7 @@ def summarize_coords(variables) -> str:
     li_items = []
     dims = tuple(variables._data.dims)
     dim_ordered_coords = sorted(
-        variables.items(), key=lambda x: dims.index(x[0]) if x[0] in dims else len(dims)
+        variables.items(), key=partial(_coord_sort_key, dims=dims)
     )
     for k, v in dim_ordered_coords:
         li_content = summarize_variable(k, v, is_index=k in variables.xindexes)
