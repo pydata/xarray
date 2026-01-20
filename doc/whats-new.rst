@@ -36,6 +36,8 @@ New Features
   of the same name are compared for potential conflicts when performing binary operations. The default for it is
   ``arithmetic_compat='minimal'`` which matches the existing behaviour.
   By `Matthew Willson <https://github.com/mjwillson>`_.
+- Better ordering of coordinates when displaying Xarray objects. (:pull:`11098`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_, `Julia Signell <https://github.com/jsignell>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

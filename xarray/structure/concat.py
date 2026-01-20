@@ -239,8 +239,8 @@ def concat(
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * y        (y) int64 24B 10 20 30
         x        (new_dim) <U1 8B 'a' 'b'
+      * y        (y) int64 24B 10 20 30
     Dimensions without coordinates: new_dim
 
     >>> xr.concat(
@@ -253,8 +253,8 @@ def concat(
            [3, 4, 5]])
     Coordinates:
       * new_dim  (new_dim) int64 16B -90 -100
-      * y        (y) int64 24B 10 20 30
         x        (new_dim) <U1 8B 'a' 'b'
+      * y        (y) int64 24B 10 20 30
 
     # Concatenate a scalar variable along a new dimension of the same name with and without creating a new index
 
