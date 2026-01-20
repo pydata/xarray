@@ -447,7 +447,7 @@ def _coord_sort_key(coord, dims):
     """Sort key for coordinate ordering.
 
         Orders by:
-        1. Primary: index of the first matching dimension in dataset dims
+        1. Primary: index of the matching dimension in dataset dims.
         2. Secondary: dimension coordinates (name == dim) come before non-dimension coordinates
 
         This groups non-dimension coordinates right after their associated dimension
@@ -455,16 +455,17 @@ def _coord_sort_key(coord, dims):
     """
     name, var = coord
 
-    # Dimension coordinates sorted by their position in dims come first (0)
+    # Dimension coordinates come first within their dim section
     if name in dims:
         return (dims.index(name), 0)
 
-    # Non-dimension coordinates sorted by their last dim come second (1)
+    # Non-dimension coordinates come second within their dim section
+    # Check the var.dims list in backwards order to put (x, y) after (x) and (y)
     for d in var.dims[::-1]:
         if d in dims:
             return (dims.index(d), 1)
 
-    # Scalar coords or coords with dims not in dataset dims go at end
+    # Scalar coords or coords with dims not in dataset dims go at the end
     return (len(dims), 1)
 
 
