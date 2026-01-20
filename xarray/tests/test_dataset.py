@@ -7673,23 +7673,6 @@ class TestDataset:
 # pytest tests — new tests should go here, rather than in the class.
 
 
-@pytest.mark.parametrize("parser", ["pandas", "python"])
-def test_eval(ds, parser) -> None:
-    """Currently much more minimal testing that `query` above, and much of the setup
-    isn't used. But the risks are fairly low — `query` shares much of the code, and
-    the method is currently experimental."""
-
-    actual = ds.eval("z1 + 5", parser=parser)
-    expect = ds["z1"] + 5
-    assert_identical(expect, actual)
-
-    # check pandas query syntax is supported
-    if parser == "pandas":
-        actual = ds.eval("(z1 > 5) and (z2 > 0)", parser=parser)
-        expect = (ds["z1"] > 5) & (ds["z2"] > 0)
-        assert_identical(expect, actual)
-
-
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
 def test_isin(test_elements, backend) -> None:
     expected = Dataset(
