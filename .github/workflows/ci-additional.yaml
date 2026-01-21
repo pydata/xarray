@@ -254,17 +254,13 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v5
-        id: restore-pixi-lock
+        uses: Parcels-code/pixi-lock/restore@82087290114bffa037dc527b2afc3d1c797eda8f
         with:
-          enableCrossOsArchive: true
-          path: |
-            pixi.lock
-          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
 
       - uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: "policy"
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
