@@ -159,6 +159,12 @@ DataArray:
         def __init__(self, data):
             self._data = data
 
+        @classmethod
+        def from_variables(cls, variables, *, options=None):
+            # Required method for creating index from coordinates
+            (name, var), = variables.items()
+            return cls(var.data)
+
         def _repr_inline_(self, max_width: int) -> str:
             # Return a concise representation
             return f"{type(self).__name__} (size={len(self._data)})"
