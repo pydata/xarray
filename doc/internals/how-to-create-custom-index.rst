@@ -154,6 +154,7 @@ DataArray:
     import numpy as np
     import xarray as xr
     from xarray import Index
+    from xarray.core.variable import IndexVariable
 
     class MyIndex(Index):
         def __init__(self, data):
@@ -164,6 +165,11 @@ DataArray:
             # Required method for creating index from coordinates
             (name, var), = variables.items()
             return cls(var.data)
+
+        def create_variables(self, variables=None):
+            # Return the coordinate variable
+            (name, var), = variables.items()
+            return {name: IndexVariable(var.dims, self._data, attrs=var.attrs)}
 
         def _repr_inline_(self, max_width: int) -> str:
             # Return a concise representation
