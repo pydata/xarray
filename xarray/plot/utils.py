@@ -297,6 +297,10 @@ def _determine_cmap_params(
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 
+        # GH10911
+        if calc_data.max() >= levels[-1]:
+            levels[-1] = np.nextafter(levels[-1], np.inf)
+
     # GH3734
     if vmin == vmax:
         vmin, vmax = mpl.ticker.LinearLocator(2).tick_values(vmin, vmax)
