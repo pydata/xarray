@@ -10,7 +10,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 from xarray.core.indexes import Index
-from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
+from xarray.tests import has_pandas_3, requires_cftime, requires_dask, requires_netCDF4
 
 
 class CustomIndex(Index):
@@ -297,6 +297,7 @@ class TestFormatting:
         )
 
         byteorder = "<" if sys.byteorder == "little" else ">"
+        str_dtype = "str" if has_pandas_3 else "object"
         expected = dedent(
             f"""\
         Left and right DataArray objects are not identical
@@ -317,8 +318,8 @@ class TestFormatting:
             label    (x) int64 16B 1 2
         Indexes only on the left object:  ['y']
         Differing indexes:
-        L   x                    Index(['a', 'b'], dtype='object', name='x')
-        R   x                    Index(['a', 'c'], dtype='object', name='x')
+        L   x                    Index(['a', 'b'], dtype='{str_dtype}', name='x')
+        R   x                    Index(['a', 'c'], dtype='{str_dtype}', name='x')
         Differing attributes:
         L   units: m
         R   units: kg
@@ -501,6 +502,7 @@ class TestFormatting:
         )
 
         byteorder = "<" if sys.byteorder == "little" else ">"
+        str_dtype = "str" if has_pandas_3 else "object"
         expected = dedent(
             f"""\
         Left and right Dataset objects are not identical
@@ -525,8 +527,8 @@ class TestFormatting:
             var2     (x) int64 16B 3 4
         Indexes only on the left object:  ['y']
         Differing indexes:
-        L   x                    Index(['a', 'b'], dtype='object', name='x')
-        R   x                    Index(['a', 'c'], dtype='object', name='x')
+        L   x                    Index(['a', 'b'], dtype='{str_dtype}', name='x')
+        R   x                    Index(['a', 'c'], dtype='{str_dtype}', name='x')
         Differing attributes:
         L   title: mytitle
         R   title: newtitle

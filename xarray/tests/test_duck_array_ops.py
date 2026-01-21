@@ -43,6 +43,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
+    requires_cupy,
     requires_dask,
     requires_pyarrow,
 )
@@ -183,6 +184,20 @@ class TestOps:
         assert (
             where_res == pd.Categorical(["cat1", "cat1", "cat2", "cat3", "cat1"])
         ).all()
+
+    @requires_cupy
+    def test_where_cupy_duck_array(self):
+        import cupy as cp
+
+        arr = cp.array([[cp.nan, cp.nan], [2, 3], [4, 5]])
+        mask = ~cp.isnan(arr)
+        da = DataArray(arr, dims=("x", "y"), name="example")
+        output = da.where(mask, 0)
+
+        expected = np.array([[0, 0], [2, 3], [4, 5]])
+
+        assert isinstance(output.data, cp.ndarray)
+        assert_array_equal(output.to_numpy(), expected)
 
     def test_concatenate_extension_duck_array(self, categorical1, categorical2):
         concate_res = concatenate(
@@ -1135,6 +1150,7 @@ def test_extension_array_attr():
     assert (roundtripped == wrapped).all()
 
     interval_array = pd.arrays.IntervalArray.from_breaks([0, 1, 2, 3], closed="right")
-    wrapped = PandasExtensionArray(interval_array)
+    # pandas-stubs types PandasExtensionArray too narrowly; IntervalArray is valid
+    wrapped = PandasExtensionArray(interval_array)  # type: ignore[arg-type]
     assert_array_equal(wrapped.left, interval_array.left, strict=True)
     assert wrapped.closed == interval_array.closed

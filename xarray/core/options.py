@@ -2,20 +2,24 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, get_args
 
+from xarray.core.types import CompatOptions
 from xarray.core.utils import FrozenDict
 
 if TYPE_CHECKING:
     from matplotlib.colors import Colormap
 
     Options = Literal[
+        "arithmetic_compat",
         "arithmetic_join",
         "chunk_manager",
         "cmap_divergent",
         "cmap_sequential",
         "display_max_children",
+        "display_max_html_elements",
         "display_max_rows",
+        "display_max_items",
         "display_values_threshold",
         "display_style",
         "display_width",
@@ -40,12 +44,15 @@ if TYPE_CHECKING:
 
     class T_Options(TypedDict):
         arithmetic_broadcast: bool
+        arithmetic_compat: CompatOptions
         arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
         chunk_manager: str
         cmap_divergent: str | Colormap
         cmap_sequential: str | Colormap
         display_max_children: int
+        display_max_html_elements: int
         display_max_rows: int
+        display_max_items: int
         display_values_threshold: int
         display_style: Literal["text", "html"]
         display_width: int
@@ -70,12 +77,15 @@ if TYPE_CHECKING:
 
 OPTIONS: T_Options = {
     "arithmetic_broadcast": True,
+    "arithmetic_compat": "minimal",
     "arithmetic_join": "inner",
     "chunk_manager": "dask",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
-    "display_max_children": 6,
+    "display_max_children": 12,
+    "display_max_html_elements": 300,
     "display_max_rows": 12,
+    "display_max_items": 20,
     "display_values_threshold": 200,
     "display_style": "html",
     "display_width": 80,
@@ -109,9 +119,12 @@ def _positive_integer(value: Any) -> bool:
 
 _VALIDATORS = {
     "arithmetic_broadcast": lambda value: isinstance(value, bool),
+    "arithmetic_compat": get_args(CompatOptions).__contains__,
     "arithmetic_join": _JOIN_OPTIONS.__contains__,
     "display_max_children": _positive_integer,
+    "display_max_html_elements": _positive_integer,
     "display_max_rows": _positive_integer,
+    "display_max_items": _positive_integer,
     "display_values_threshold": _positive_integer,
     "display_style": _DISPLAY_OPTIONS.__contains__,
     "display_width": _positive_integer,
@@ -178,8 +191,27 @@ class set_options:
 
     Parameters
     ----------
+    arithmetic_broadcast : bool, default: True
+        Whether to perform automatic broadcasting in binary operations.
+    arithmetic_compat: {"identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"}, default: "minimal"
+        How to compare non-index coordinates of the same name for potential
+        conflicts when performing binary operations. (For the alignment of index
+        coordinates in binary operations, see `arithmetic_join`.)
+
+        - "identical": all values, dimensions and attributes of the coordinates
+          must be the same.
+        - "equals": all values and dimensions of the coordinates must be the
+          same.
+        - "broadcast_equals": all values of the coordinates must be equal after
+          broadcasting to ensure common dimensions.
+        - "no_conflicts": only values which are not null in both coordinates
+          must be equal. The returned coordinate then contains the combination
+          of all non-null values.
+        - "override": skip comparing and take the coordinates from the first
+          operand.
+        - "minimal": drop conflicting coordinates.
     arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
-        DataArray/Dataset alignment in binary operations:
+        DataArray/Dataset index alignment in binary operations:
 
         - "outer": use the union of object indexes
         - "inner": use the intersection of object indexes
@@ -187,9 +219,6 @@ class set_options:
         - "right": use indexes from the last object with each dimension
         - "exact": instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
-        - "override": if indexes are of same size, rewrite indexes to be
-          those of the first object with that dimension. Indexes for the same
-          dimension must have the same size in all objects.
     chunk_manager : str, default: "dask"
         Chunk manager to use for chunked array computations when multiple
         options are installed.
@@ -236,10 +265,16 @@ class set_options:
         * ``True`` : to always expand indexes
         * ``False`` : to always collapse indexes
         * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
-    display_max_children : int, default: 6
+    display_max_children : int, default: 12
         Maximum number of children to display for each node in a DataTree.
+    display_max_html_elements : int, default: 300
+        Maximum number of HTML elements to include in DataTree HTML displays.
+        Additional items are truncated.
     display_max_rows : int, default: 12
         Maximum display rows.
+    display_max_items : int, default 20
+        Maximum number of items to display for a DataTree before collapsing
+        child nodes, across all levels.
     display_values_threshold : int, default: 200
         Total number of array elements which trigger summarization rather
         than full repr for variable data views (numpy arrays).
