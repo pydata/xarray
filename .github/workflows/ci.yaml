@@ -36,9 +36,20 @@ jobs:
           keyword: "[skip-ci]"
 
   cache-pixi-lock:
-    uses: ./.github/workflows/cache-pixi-lock.yml
-    with:
-      pixi-version: "v0.63.1" # keep in sync with env var above
+    runs-on: ubuntu-slim
+    outputs:
+      cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
+      pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Parcels-code/pixi-lock/create-and-cache@82087290114bffa037dc527b2afc3d1c797eda8f
+        id: pixi-lock
+        with:
+          pixi-version: ${{env.PIXI_VERSION}}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: pixi-lock
+          path: pixi.lock
   test:
     name: "${{ matrix.os }} | ${{ matrix.pixi-env }}${{ matrix.pytest-addopts && format(' ({0})', matrix.pytest-addopts) || '' }}"
     runs-on: ${{ matrix.os }}
@@ -84,16 +95,12 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v5
-        id: restore-pixi-lock
+        uses: Parcels-code/pixi-lock/restore@82087290114bffa037dc527b2afc3d1c797eda8f
         with:
-          enableCrossOsArchive: true
-          path: |
-            pixi.lock
-          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
       - uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
