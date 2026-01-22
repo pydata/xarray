@@ -44,7 +44,7 @@ jobs:
       pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
     steps:
       - uses: actions/checkout@v6
-      - uses: Parcels-code/pixi-lock/create-and-cache@82087290114bffa037dc527b2afc3d1c797eda8f
+      - uses: Parcels-code/pixi-lock/create-and-cache@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
         id: pixi-lock
         with:
           pixi-version: ${{env.PIXI_VERSION}}
@@ -75,7 +75,7 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Restore cached pixi lockfile
-        uses: Parcels-code/pixi-lock/restore@82087290114bffa037dc527b2afc3d1c797eda8f
+        uses: Parcels-code/pixi-lock/restore@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
       - uses: prefix-dev/setup-pixi@v0.9.3
@@ -128,7 +128,7 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Restore cached pixi lockfile
-        uses: Parcels-code/pixi-lock/restore@82087290114bffa037dc527b2afc3d1c797eda8f
+        uses: Parcels-code/pixi-lock/restore@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
       - uses: prefix-dev/setup-pixi@v0.9.3
