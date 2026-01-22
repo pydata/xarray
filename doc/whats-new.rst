@@ -38,6 +38,8 @@ New Features
   By `Matthew Willson <https://github.com/mjwillson>`_.
 - Better ordering of coordinates when displaying Xarray objects. (:pull:`11098`).
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_, `Julia Signell <https://github.com/jsignell>`_.
+- Use ``np.dtypes.StringDType`` when reading Zarr string variables  (:pull:`11097`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
