@@ -515,6 +515,14 @@ def dot(
     We recommend installing the optional ``opt_einsum`` package, or alternatively passing ``optimize=True``,
     which is passed through to ``np.einsum``, and works for most array backends.
 
+    **Coordinate Handling**
+
+    Like all xarray operations, ``dot`` automatically aligns array coordinates.
+    Coordinates are aligned by their **values**, not their order. By default, xarray uses
+    an inner join, so only overlapping coordinate values are included. With the default
+    ``arithmetic_join="inner"``, ``dot(a, b)`` is mathematically equivalent to ``(a * b).sum()``
+    over the specified dimensions. See :ref:`math automatic alignment` for more details.
+
     Examples
     --------
     >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
@@ -572,6 +580,37 @@ def dot(
     >>> xr.dot(da_a, da_b, dim=...)
     <xarray.DataArray ()> Size: 8B
     array(235)
+
+    **Coordinate alignment examples:**
+
+    Coordinates are aligned by their values, not their order:
+
+    >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+    >>> y = xr.DataArray([2, 20], coords=[("foo", ["b", "a"])])
+    >>> xr.dot(x, y)
+    <xarray.DataArray ()> Size: 8B
+    array(40)
+
+    Non-overlapping coordinates are excluded from the computation:
+
+    >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+    >>> y = xr.DataArray([2, 30], coords=[("foo", ["b", "c"])])
+    >>> xr.dot(x, y)  # only 'b' overlaps: 10 * 2 = 20
+    <xarray.DataArray ()> Size: 8B
+    array(20)
+
+    Dimensions not involved in the dot product keep their coordinates:
+
+    >>> x = xr.DataArray(
+    ...     [[1, 2], [3, 4]],
+    ...     coords=[("time", [0, 1]), ("space", ["IA", "IL"])],
+    ... )
+    >>> y = xr.DataArray([10, 20], coords=[("space", ["IA", "IL"])])
+    >>> xr.dot(x, y, dim="space")  # time coordinates are preserved
+    <xarray.DataArray (time: 2)> Size: 16B
+    array([ 50, 110])
+    Coordinates:
+      * time     (time) int64 16B 0 1
     """
     from xarray.core.dataarray import DataArray
 
@@ -656,8 +695,12 @@ def where(cond, x, y, keep_attrs=None):
         values to choose from where `cond` is True
     y : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is False
-    keep_attrs : bool or str or callable, optional
-        How to treat attrs. If True, keep the attrs of `x`.
+    keep_attrs : bool or {"drop", "identical", "no_conflicts", "drop_conflicts", "override"} or callable, optional
+        - 'override' or True (default): skip comparing and copy attrs from `x` to the result.
+        - 'drop' or False: empty attrs on returned xarray object.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have the same name must also have the same value.
+        - 'drop_conflicts': attrs from all objects are combined, any that have the same name but different values are dropped.
 
     Returns
     -------
@@ -672,18 +715,40 @@ def where(cond, x, y, keep_attrs=None):
     ...     dims=["lat"],
     ...     coords={"lat": np.arange(10)},
     ...     name="sst",
+    ...     attrs={"standard_name": "sea_surface_temperature"},
     ... )
     >>> x
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
       * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
 
     >>> xr.where(x < 0.5, x, x * 100)
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
       * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
+
+    If `x` is a scalar then by default there are no attrs on the result
+    >>> xr.where(x < 0.5, 1, 0)
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
+    array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+    Coordinates:
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+
+    If `x` is a scalar (and therefore has no attrs), preserve the
+    attrs on `cond` by using `keep_attrs="drop_conflicts"`
+    >>> xr.where(x < 0.5, 1, 0, keep_attrs="drop_conflicts")
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
+    array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+    Coordinates:
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
 
     >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
@@ -746,7 +811,7 @@ def where(cond, x, y, keep_attrs=None):
     # be consistent with the `where` method of `DataArray` and `Dataset`
     # rebuild the attrs from x at each level of the output, which could be
     # Dataset, DataArray, or Variable, and also handle coords
-    if keep_attrs is True and hasattr(result, "attrs"):
+    if keep_attrs in (True, "override") and hasattr(result, "attrs"):
         if isinstance(y, Dataset) and not isinstance(x, Dataset):
             # handle special case where x gets promoted to Dataset
             result.attrs = {}

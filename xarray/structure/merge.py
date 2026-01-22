@@ -22,7 +22,12 @@ from xarray.core.utils import (
     emit_user_level_warning,
     equivalent,
 )
-from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.core.variable import (
+    IndexVariable,
+    Variable,
+    as_variable,
+    calculate_dimensions,
+)
 from xarray.structure.alignment import deep_align
 from xarray.util.deprecation_helpers import (
     _COMPAT_DEFAULT,
@@ -433,6 +438,7 @@ def merge_coordinates_without_align(
     prioritized: Mapping[Any, MergeElement] | None = None,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
+    compat: CompatOptions | CombineKwargDefault = "minimal",
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
 
@@ -457,7 +463,7 @@ def merge_coordinates_without_align(
     # TODO: indexes should probably be filtered in collected elements
     # before merging them
     merged_coords, merged_indexes = merge_collected(
-        filtered, prioritized, combine_attrs=combine_attrs
+        filtered, prioritized, compat=compat, combine_attrs=combine_attrs
     )
     merged_indexes = filter_indexes_from_coords(merged_indexes, set(merged_coords))
 
@@ -1206,7 +1212,11 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
                     if c not in value.dims and c in dataset.coords
                 ]
                 if coord_names:
-                    other[key] = value.drop_vars(coord_names)
+                    value = value.drop_vars(coord_names)
+                if isinstance(value.variable, IndexVariable):
+                    variable = value.variable.to_base_variable()
+                    value = value._replace(variable=variable)
+                other[key] = value
 
     return merge_core(
         [dataset, other],

@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 
 import xarray as xr
+from xarray.core.coordinates import Coordinates
+from xarray.core.indexes import Index
 from xarray.tests import has_dask
 
 try:
@@ -16,7 +18,7 @@ except ImportError:
 try:
     import pint
 
-    unit_registry = pint.UnitRegistry(force_ndarray_like=True)
+    unit_registry: pint.UnitRegistry = pint.UnitRegistry(force_ndarray_like=True)
 
     def quantity(x):
         return unit_registry.Quantity(x, "m")
@@ -237,3 +239,248 @@ def test_ensure_warnings_not_elevated(func) -> None:
             getattr(xr.testing, func)(a, b)
 
         assert len(w) == 0
+
+
+class CustomIndex(Index):
+    """Custom index without equals() implementation for testing."""
+
+    pass
+
+
+class CustomIndexWithEquals(Index):
+    """Custom index with equals() implementation for testing."""
+
+    def __init__(self, name: str = "default"):
+        self.name = name
+
+    def equals(self, other: Index, **kwargs) -> bool:
+        if not isinstance(other, CustomIndexWithEquals):
+            return False
+        return self.name == other.name
+
+
+class TestAssertIdenticalXindexes:
+    """Tests for xindex comparison in assert_identical."""
+
+    @pytest.fixture
+    def dataset_with_extra_coord(self) -> xr.Dataset:
+        """Dataset with a coordinate that can be indexed.
+
+        Returns a Dataset with 'time' indexed and 'time_metadata' not indexed::
+
+            <xarray.Dataset>
+            Dimensions:        (time: 4)
+            Coordinates:
+              * time           (time) float64 0.1 0.2 0.3 0.4
+                time_metadata  (time) int64 10 15 20 25
+            Data variables:
+                data           (time) int64 0 1 2 3
+
+            xindexes: ['time']
+        """
+        return xr.Dataset(
+            {"data": ("time", [0, 1, 2, 3])},
+            coords={
+                "time": [0.1, 0.2, 0.3, 0.4],
+                "time_metadata": ("time", [10, 15, 20, 25]),
+            },
+        )
+
+    @pytest.fixture
+    def dataset_2d(self) -> xr.Dataset:
+        """2D dataset for MultiIndex tests.
+
+        Returns a Dataset with both 'x' and 'y' indexed::
+
+            <xarray.Dataset>
+            Dimensions:  (x: 2, y: 2)
+            Coordinates:
+              * x        (x) int64 10 20
+              * y        (y) <U1 'a' 'b'
+            Data variables:
+                data     (x, y) int64 1 2 3 4
+
+            xindexes: ['x', 'y']
+        """
+        return xr.Dataset(
+            {"data": (("x", "y"), [[1, 2], [3, 4]])},
+            coords={"x": [10, 20], "y": ["a", "b"]},
+        )
+
+    def test_dataset_xindex_difference(
+        self, dataset_with_extra_coord: xr.Dataset
+    ) -> None:
+        """Test that Dataset.identical() and assert_identical detect different xindexes."""
+        ds = dataset_with_extra_coord
+        ds_extra_index = ds.set_xindex("time_metadata")
+
+        # equals should pass (indexes not compared)
+        assert ds.equals(ds_extra_index)
+        xr.testing.assert_equal(ds, ds_extra_index)
+
+        # identical should fail (indexes ARE compared)
+        assert not ds.identical(ds_extra_index)
+        with pytest.raises(AssertionError, match="Indexes only on the right"):
+            xr.testing.assert_identical(ds, ds_extra_index)
+
+    def test_assert_identical_same_xindexes(
+        self, dataset_with_extra_coord: xr.Dataset
+    ) -> None:
+        """Test that assert_identical passes when xindexes match."""
+        ds = dataset_with_extra_coord
+
+        # Same base datasets - should pass
+        xr.testing.assert_identical(ds, ds.copy())
+
+        # Both with extra index - should pass
+        ds_extra1 = ds.set_xindex("time_metadata")
+        ds_extra2 = ds.set_xindex("time_metadata")
+        xr.testing.assert_identical(ds_extra1, ds_extra2)
+
+    def test_dataarray_xindex_difference(
+        self, dataset_with_extra_coord: xr.Dataset
+    ) -> None:
+        """Test that DataArray.identical() and assert_identical detect different xindexes."""
+        ds = dataset_with_extra_coord
+        ds_extra_index = ds.set_xindex("time_metadata")
+
+        da = ds["data"]
+        da_extra_index = ds_extra_index["data"]
+
+        # equals should pass (indexes not compared)
+        assert da.equals(da_extra_index)
+        xr.testing.assert_equal(da, da_extra_index)
+
+        # identical should fail (indexes ARE compared)
+        assert not da.identical(da_extra_index)
+        with pytest.raises(AssertionError, match="Indexes only on the right"):
+            xr.testing.assert_identical(da, da_extra_index)
+
+    def test_identical_custom_index_without_equals(self) -> None:
+        """Test identical() with custom index that doesn't implement equals().
+
+        When equals() is not implemented, falls back to variable comparison.
+        Two different CustomIndex objects with the same coordinate values
+        should be considered identical via the fallback mechanism.
+        """
+        coords1 = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        coords2 = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+
+        ds1 = xr.Dataset({"data": ("x", [10, 20, 30])}, coords=coords1)
+        ds2 = xr.Dataset({"data": ("x", [10, 20, 30])}, coords=coords2)
+
+        # Different index objects but same variable values
+        # Should be identical via fallback to variable comparison
+        assert ds1.xindexes["x"] is not ds2.xindexes["x"]  # Different objects
+        assert ds1.identical(ds2)
+        xr.testing.assert_identical(ds1, ds2)
+
+    def test_identical_custom_index_with_equals(self) -> None:
+        """Test identical() with custom index that implements equals().
+
+        This tests that a custom Index.equals() implementation is actually
+        called and its result determines identity.
+        """
+        coords1 = Coordinates(
+            coords={"x": ("x", [1, 2, 3])},
+            indexes={"x": CustomIndexWithEquals("index_a")},
+        )
+        coords2 = Coordinates(
+            coords={"x": ("x", [1, 2, 3])},
+            indexes={"x": CustomIndexWithEquals("index_a")},
+        )
+        coords3 = Coordinates(
+            coords={"x": ("x", [1, 2, 3])},
+            indexes={"x": CustomIndexWithEquals("index_b")},
+        )
+
+        ds1 = xr.Dataset({"data": ("x", [10, 20, 30])}, coords=coords1)
+        ds2 = xr.Dataset({"data": ("x", [10, 20, 30])}, coords=coords2)
+        ds3 = xr.Dataset({"data": ("x", [10, 20, 30])}, coords=coords3)
+
+        # Same index name - should be identical
+        assert ds1.identical(ds2)
+        xr.testing.assert_identical(ds1, ds2)
+
+        # Different index name (same coord values) - should not be identical
+        # This specifically tests the custom equals() is being called
+        assert not ds1.identical(ds3)
+        with pytest.raises(AssertionError, match="Differing indexes"):
+            xr.testing.assert_identical(ds1, ds3)
+
+    def test_identical_mixed_index_types(self) -> None:
+        """Test identical() when comparing different index types.
+
+        Different index types should NOT be considered identical, even if
+        the underlying coordinate values are the same.
+        """
+        # Create dataset with PandasIndex (default)
+        ds_pandas = xr.Dataset(
+            {"data": ("x", [10, 20, 30])},
+            coords={"x": [1, 2, 3]},
+        )
+
+        # Create dataset with CustomIndex
+        coords_custom = Coordinates(
+            coords={"x": ("x", [1, 2, 3])}, indexes={"x": CustomIndex()}
+        )
+        ds_custom = xr.Dataset({"data": ("x", [10, 20, 30])}, coords=coords_custom)
+
+        # Different index types - should NOT be identical
+        assert not ds_pandas.identical(ds_custom)
+
+        # But equals should still pass (compares data values only)
+        assert ds_pandas.equals(ds_custom)
+
+    def test_identical_pandas_multiindex(self, dataset_2d: xr.Dataset) -> None:
+        """Test identical() with PandasMultiIndex."""
+        # Stack to create MultiIndex
+        ds_stacked1 = dataset_2d.stack(z=("x", "y"))
+        ds_stacked2 = dataset_2d.stack(z=("x", "y"))
+
+        # Same MultiIndex - should be identical
+        assert ds_stacked1.identical(ds_stacked2)
+        xr.testing.assert_identical(ds_stacked1, ds_stacked2)
+
+        # Different stacking order creates different MultiIndex
+        ds_stacked_different = dataset_2d.stack(z=("y", "x"))
+        assert not ds_stacked1.identical(ds_stacked_different)
+
+    def test_identical_no_indexes(self) -> None:
+        """Test identical() when both objects have no indexes.
+
+        Dimensions without coordinates have no indexes.
+        """
+        ds1 = xr.Dataset({"data": (("x", "y"), [[1, 2], [3, 4]])})
+        ds2 = xr.Dataset({"data": (("x", "y"), [[1, 2], [3, 4]])})
+
+        # Dimensions without coordinates = no indexes
+        assert list(ds1.xindexes.keys()) == []
+        assert list(ds2.xindexes.keys()) == []
+        assert ds1.identical(ds2)
+        xr.testing.assert_identical(ds1, ds2)
+
+    def test_identical_index_on_different_coords(self) -> None:
+        """Test identical() when indexes are on different coordinates."""
+        # Index on 'x'
+        coords1 = Coordinates(
+            coords={"x": ("x", [1, 2, 3]), "y": ("x", [4, 5, 6])},
+            indexes={"x": CustomIndex()},
+        )
+        # Index on 'y' instead
+        coords2 = Coordinates(
+            coords={"x": ("x", [1, 2, 3]), "y": ("x", [4, 5, 6])},
+            indexes={"y": CustomIndex()},
+        )
+
+        ds1 = xr.Dataset({"data": ("x", [10, 20, 30])}, coords=coords1)
+        ds2 = xr.Dataset({"data": ("x", [10, 20, 30])}, coords=coords2)
+
+        # Different indexed coordinates - should not be identical
+        assert not ds1.identical(ds2)
+        with pytest.raises(AssertionError, match="Indexes only on the left"):
+            xr.testing.assert_identical(ds1, ds2)

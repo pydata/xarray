@@ -13,6 +13,7 @@ on:
 
 env:
   FORCE_COLOR: 3
+  PIXI_VERSION: "v0.63.1"
 
 jobs:
   detect-ci-trigger:
@@ -33,10 +34,15 @@ jobs:
         with:
           keyword: "[skip-ci]"
 
+  cache-pixi-lock:
+    uses: ./.github/workflows/cache-pixi-lock.yml
+    with:
+      pixi-version: "v0.63.1" # keep in sync with env var above
+
   hypothesis:
     name: Slow Hypothesis Tests
     runs-on: "ubuntu-latest"
-    needs: detect-ci-trigger
+    needs: [detect-ci-trigger, cache-pixi-lock]
     if: |
       always()
       && (
@@ -49,40 +55,41 @@ jobs:
         shell: bash -l {0}
 
     env:
-      CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.12"
+      PIXI_ENV: "test-py313"
 
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
+      - name: Restore cached pixi lockfile
+        uses: actions/cache/restore@v5
+        id: restore-pixi-lock
+        with:
+          enableCrossOsArchive: true
+          path: |
+            pixi.lock
+          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
+      - uses: prefix-dev/setup-pixi@v0.9.3
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          environments: ${{ env.PIXI_ENV }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+
       - name: set environment variables
         run: |
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
 
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: ci/requirements/environment.yml
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{env.PYTHON_VERSION}}
-            pytest-reportlog
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          python xarray/util/print_versions.py
+          pixi run -e ${{ env.PIXI_ENV }} python xarray/util/print_versions.py
 
       # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
       - name: Restore cached hypothesis directory
         id: restore-hypothesis-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: .hypothesis/
           key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
@@ -93,14 +100,14 @@ jobs:
         if: success()
         id: status
         run: |
-          python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
-            --report-log output-${{ matrix.python-version }}-log.jsonl
+          pixi run -e ${{ env.PIXI_ENV }} python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
+            --report-log output-${{ env.PIXI_ENV }}-log.jsonl
 
       # explicitly save the cache so it gets updated, also do this even if it fails.
       - name: Save cached hypothesis directory
         id: save-hypothesis-cache
         if: always() && steps.status.outcome != 'skipped'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: .hypothesis/
           key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
@@ -113,6 +120,6 @@ jobs:
           && github.repository_owner == 'pydata'
         uses: scientific-python/issue-from-pytest-log-action@v1
         with:
-          log-path: output-${{ matrix.python-version }}-log.jsonl
+          log-path: output-${{ env.PIXI_ENV }}-log.jsonl
           issue-title: "Nightly Hypothesis tests failed"
           issue-label: "topic-hypothesis"
