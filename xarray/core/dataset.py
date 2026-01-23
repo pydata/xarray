@@ -4439,16 +4439,14 @@ class Dataset(
                     variables.update(index_vars)
                     coord_names.update(index_vars)
             else:
-                var = current_variable.to_base_variable()
+                # See issue #11099: Copy over indexes of non-dimension variables or they get lost
+                if current_name in self._indexes and current_name not in self.dims:
+                    var = current_variable.to_index_variable()
+                    indexes[current_name] = self._indexes[current_name]
+                else:
+                    var = current_variable.to_base_variable()
                 var.dims = dims
                 variables[current_name] = var
-                # See issue #11099: Copy over indexes of non-dimension variables or they get lost
-                if current_name in self._indexes:
-                    indexes[current_name] = self._indexes[current_name]
-
-                # Alternative to copy only indexes for non-demoted variables.
-                # if current_name in self._indexes and current_name not in self.dims:
-                #     indexes[current_name] = self._indexes[current_name]
 
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
