@@ -238,9 +238,8 @@ class CachingFileManager(FileManager[T_File]):
         with self._optional_lock(needs_lock):
             default = None
             file = self._cache.pop(self._key, default)
-            if file is None:
-                return
-            file.close()
+            if file is not None:
+                file.close()
 
     def __del__(self) -> None:
         # If we're the only CachingFileManger referencing an unclosed file,
