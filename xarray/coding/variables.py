@@ -125,11 +125,13 @@ def _apply_mask(
     dtype: np.typing.DTypeLike | None,
 ) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
-    data = np.asarray(data, dtype=dtype)
-    condition = False
-    for fv in encoded_fill_values:
-        condition |= data == fv
-    return np.where(condition, decoded_fill_value, data)
+    data = np.asarray(data, dtype=dtype, copy=True)
+    if encoded_fill_values:
+        condition = False
+        for fv in encoded_fill_values:
+            condition |= data == fv
+        data[condition] = decoded_fill_value
+    return data
 
 
 def _is_time_like(units):
