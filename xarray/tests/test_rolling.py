@@ -14,7 +14,6 @@ from xarray.tests import (
     assert_identical,
     has_dask,
     requires_dask,
-    requires_dask_ge_2024_11_0,
     requires_numbagg,
 )
 
@@ -614,7 +613,7 @@ class TestDatasetRolling:
         ):
             ds.rolling(foo=2)
 
-    @requires_dask_ge_2024_11_0
+    @requires_dask
     def test_rolling_construct_automatic_rechunk(self):
         import dask
 
