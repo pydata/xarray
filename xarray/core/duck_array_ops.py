@@ -177,7 +177,12 @@ def isnull(data):
         # timedelta64 inherits from np.integer
         return isnat(data)
     elif HAS_STRING_DTYPE and isinstance(scalar_type, np.dtypes.StringDType):
-        return xp.isnan(data)
+        # na is settable, but it defaults to an empty string
+        na_object = getattr(scalar_type, "na_object", "")
+        if isna(na_object):
+            return xp.isnan(data)
+        else:
+            return data == na_object
     elif dtypes.isdtype(scalar_type, ("real floating", "complex floating"), xp=xp):
         # float types use NaN for null
         return xp.isnan(data)
