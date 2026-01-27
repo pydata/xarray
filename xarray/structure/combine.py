@@ -535,7 +535,7 @@ def combine_nested(
           * None: Means ``"all"`` if ``concat_dim`` is not present in any of
             the ``objs``, and ``"minimal"`` if ``concat_dim`` is present
             in any of ``objs``.
-          * list of dims: The listed data variables will be concatenated, in
+          * list of str: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
 
     coords : {"minimal", "different", "all"} or list of str, default: "different"
@@ -551,7 +551,7 @@ def combine_nested(
             loaded.
           * "all": All coordinate variables will be concatenated, except
             those corresponding to other dimensions.
-          * list of Hashable: The listed coordinate variables will be concatenated,
+          * list of str: The listed coordinate variables will be concatenated,
             in addition to the "minimal" coordinates.
 
     fill_value : scalar or dict-like, optional
@@ -882,7 +882,7 @@ def combine_by_coords(
           loaded.
         - "all": All coordinate variables will be concatenated, except
           those corresponding to other dimensions.
-        - list of Hashable: The listed coordinate variables will be concatenated,
+        - list of str: The listed coordinate variables will be concatenated,
           in addition to the "minimal" coordinates.
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps

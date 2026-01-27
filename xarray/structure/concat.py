@@ -114,7 +114,7 @@ def concat(
         unchanged. If dimension is provided as a Variable, DataArray or Index, its name
         is used as the dimension to concatenate along and the values are added
         as a coordinate.
-    data_vars : {"minimal", "different", "all", None} or list of Hashable, default: "all"
+    data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
             appears are included.
@@ -126,11 +126,11 @@ def concat(
           * "all": All data variables will be concatenated.
           * None: Means ``"all"`` if ``dim`` is not present in any of the ``objs``,
             and ``"minimal"`` if ``dim`` is present in any of ``objs``.
-          * list of dims: The listed data variables will be concatenated, in
+          * list of str: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
 
         If objects are DataArrays, data_vars must be "all" or None.
-    coords : {"minimal", "different", "all"} or list of Hashable, default: "different"
+    coords : {"minimal", "different", "all"} or list of str, default: "different"
         These coordinate variables will be concatenated together:
           * "minimal": Only coordinates in which the dimension already appears
             are included.
@@ -141,7 +141,7 @@ def concat(
             loaded.
           * "all": All coordinate variables will be concatenated, except
             those corresponding to other dimensions.
-          * list of Hashable: The listed coordinate variables will be concatenated,
+          * list of str: The listed coordinate variables will be concatenated,
             in addition to the "minimal" coordinates.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, \
              default: "equals"
