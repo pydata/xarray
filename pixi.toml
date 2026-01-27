@@ -139,8 +139,8 @@ pydap = "3.5.*"
 rasterio = "1.4.*"
 seaborn = "0.13.*"
 sparse = "0.15.*"
-zarr = "2.18.*"
 toolz = "1.0.*"
+zarr = "3.0.*"
 
 # TODO: Remove `target.unix` restriction once pandas nightly has win-64 wheels again.
 # Without this, `pixi lock` fails because it can't solve the nightly feature for win-64,

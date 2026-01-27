@@ -60,6 +60,7 @@ Breaking Changes
     rasterio                1.3      1.4
     scipy                   1.13     1.15
     toolz                  0.12      1.0
+    zarr                   2.18      3.0
   ===================== =========  =======
 
 - Change the default value for ``chunk`` in ``open_zarr`` to ``_default`` and remove special mapping of ``"auto"``
