@@ -854,6 +854,7 @@ def combine_by_coords(
 
     data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
+
         - "minimal": Only data variables in which the dimension already
           appears are included.
         - "different": Data variables which are not equal (ignoring
@@ -869,6 +870,7 @@ def combine_by_coords(
           addition to the "minimal" data variables.
     coords : {"minimal", "different", "all"} or list of str, default: "different"
         These coordinate variables will be concatenated together:
+
         - "minimal": Only coordinates in which the dimension already
           appears are included. If concatenating over a dimension _not_
           present in any of the objects, then all data variables will
