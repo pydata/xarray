@@ -1514,9 +1514,9 @@ class CoordinateTransformIndex(Index):
         from xarray.core.dataarray import DataArray
         from xarray.core.variable import Variable
 
-        if method != "nearest":
+        if method is not None and method != "nearest":
             raise ValueError(
-                "CoordinateTransformIndex only supports selection with method='nearest'"
+                "CoordinateTransformIndex only supports selection with method='nearest' or None"
             )
 
         labels_set = set(labels)
@@ -1559,11 +1559,23 @@ class CoordinateTransformIndex(Index):
 
         results: dict[str, Variable | DataArray] = {}
         dims0 = tuple(dim_size0)
+        eps = np.finfo(float).eps * 1000
         for dim, pos in dim_positions.items():
             # TODO: rounding the decimal positions is not always the behavior we expect
             # (there are different ways to represent implicit intervals)
             # we should probably make this customizable.
-            pos = np.round(pos).astype("int")
+            if method == "nearest":
+                pos = np.round(pos).astype("int")
+            else:
+                # Exact matching: check if positions are close to integers
+                if not np.all(np.abs(pos - (rounded := np.round(pos))) < eps):
+                    coord_name = (
+                        self.transform.coord_names[0]
+                        if len(self.transform.coord_names) == 1
+                        else dim
+                    )
+                    raise KeyError(f"not all values found in index {coord_name!r}")
+                pos = rounded.astype("int")
             if isinstance(label0_obj, Variable):
                 results[dim] = Variable(dims0, pos)
             else:
