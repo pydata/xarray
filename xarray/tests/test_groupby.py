@@ -36,16 +36,12 @@ from xarray.tests import (
     create_test_data,
     has_cftime,
     has_dask,
-    has_dask_ge_2024_08_1,
     has_flox,
-    has_pandas_ge_2_2,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
-    requires_dask_ge_2024_08_1,
     requires_flox,
     requires_flox_0_9_12,
-    requires_pandas_ge_2_2,
     requires_scipy,
 )
 
@@ -148,15 +144,10 @@ def test_multi_index_groupby_sum() -> None:
         )
         assert_equal(expected, ds)
 
-    if not has_pandas_ge_2_2:
-        # the next line triggers a mysterious multiindex error on pandas 2.0
-        return
-
     actual = ds.stack(space=["x", "y"]).groupby("space").sum(...).unstack("space")
     assert_equal(expected, actual)
 
 
-@requires_pandas_ge_2_2
 def test_multi_index_propagation() -> None:
     # regression test for GH9648
     times = pd.date_range("2023-01-01", periods=4)
@@ -659,8 +650,6 @@ def test_groupby_repr_datetime(obj) -> None:
     ],
 )
 def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None:
-    if shuffle and chunk and not has_dask_ge_2024_08_1:
-        pytest.skip()
     # GH2383
     # nan in 2D data variable (requires stacking)
     ds = xr.Dataset(
@@ -1420,9 +1409,6 @@ class TestDataArrayGroupBy:
     def test_groupby_reductions(
         self, use_flox: bool, method: str, shuffle: bool, chunk: bool
     ) -> None:
-        if shuffle and chunk and not has_dask_ge_2024_08_1:
-            pytest.skip()
-
         array = self.da
         if chunk:
             array.data = array.chunk({"y": 5}).data
@@ -3232,7 +3218,7 @@ def test_groupby_multiple_bin_grouper_missing_groups() -> None:
     assert_identical(actual, expected)
 
 
-@requires_dask_ge_2024_08_1
+@requires_dask
 def test_shuffle_simple() -> None:
     import dask
 
@@ -3249,7 +3235,7 @@ def test_shuffle_simple() -> None:
         da.chunk(x=2, eagerly_load_group=False).groupby("label").shuffle_to_chunks()
 
 
-@requires_dask_ge_2024_08_1
+@requires_dask
 @pytest.mark.parametrize(
     "chunks, expected_chunks",
     [

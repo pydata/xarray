@@ -15,7 +15,6 @@ import xarray as xr
 from xarray import DataTree, load_datatree, open_datatree, open_groups
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
-    has_zarr_v3,
     network,
     parametrize_zarr_format,
     requires_dask,
@@ -702,7 +701,7 @@ class TestZarrDatatreeIO:
             from numcodecs.blosc import Blosc
 
             codec = Blosc(cname="zstd", clevel=3, shuffle=2)
-            comp = {"compressors": (codec,)} if has_zarr_v3 else {"compressor": codec}
+            comp = {"compressors": (codec,)}
         elif zarr_format == 3:
             # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
             from zarr.registry import get_codec_class
@@ -714,9 +713,8 @@ class TestZarrDatatreeIO:
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
-            compressor_key = "compressors" if has_zarr_v3 else "compressor"
             assert (
-                roundtrip_dt["/set2/a"].encoding[compressor_key] == comp[compressor_key]
+                roundtrip_dt["/set2/a"].encoding["compressors"] == comp["compressors"]
             )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
@@ -757,15 +755,8 @@ class TestZarrDatatreeIO:
     ) -> None:
         simple_datatree.to_zarr(str(tmpdir), zarr_format=zarr_format)
 
-        import zarr
-
-        # expected exception type changed in zarr-python v2->v3, see https://github.com/zarr-developers/zarr-python/issues/2821
-        expected_exception_type = (
-            FileExistsError if has_zarr_v3 else zarr.errors.ContainsGroupError
-        )
-
         # with default settings, to_zarr should not overwrite an existing dir
-        with pytest.raises(expected_exception_type):
+        with pytest.raises(FileExistsError):
             simple_datatree.to_zarr(str(tmpdir))
 
     @requires_dask
@@ -825,8 +816,8 @@ class TestZarrDatatreeIO:
                     assert not chunk_file.exists()
 
         DEFAULT_ZARR_FILL_VALUE = 0
-        # The default value of write_empty_chunks changed from True->False in zarr-python v2->v3
-        WRITE_EMPTY_CHUNKS_DEFAULT = not has_zarr_v3
+        # The default value of write_empty_chunks is False in zarr-python v3
+        WRITE_EMPTY_CHUNKS_DEFAULT = False
 
         for node in original_dt.subtree:
             # inherited variables aren't meant to be written to zarr

@@ -92,7 +92,6 @@ def _importorskip(
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
-has_scipy_ge_1_13, requires_scipy_ge_1_13 = _importorskip("scipy", "1.13")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -112,29 +111,12 @@ with warnings.catch_warnings():
     has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
-has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
-    "dask", minversion="2024.08.1"
-)
-has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
-has_dask_ge_2025_1_0, requires_dask_ge_2025_1_0 = _importorskip("dask", "2025.1.0")
-if has_dask_ge_2025_1_0:
-    has_dask_expr = True
-    requires_dask_expr = pytest.mark.skipif(not has_dask_expr, reason="should not skip")
-else:
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The current Dask DataFrame implementation is deprecated.",
-            category=DeprecationWarning,
-        )
-        has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
-has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
 has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
 has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", "3.1.2")
-if has_zarr_v3:
+if has_zarr:
     import zarr
 
     # manual update by checking attrs for now
@@ -171,7 +153,6 @@ has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_netcdf, requires_netcdf = _importorskip("netcdf")
-has_pandas_ge_2_2, requires_pandas_ge_2_2 = _importorskip("pandas", "2.2")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0")
 
 
@@ -188,7 +169,6 @@ has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_numbagg_or_bottleneck, reason="requires numbagg or bottleneck"
 )
-has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
@@ -197,14 +177,7 @@ parametrize_zarr_format = pytest.mark.parametrize(
     "zarr_format",
     [
         pytest.param(2, id="zarr_format=2"),
-        pytest.param(
-            3,
-            marks=pytest.mark.skipif(
-                not has_zarr_v3,
-                reason="zarr-python v2 cannot understand the zarr v3 format",
-            ),
-            id="zarr_format=3",
-        ),
+        pytest.param(3, id="zarr_format=3"),
     ],
 )
 

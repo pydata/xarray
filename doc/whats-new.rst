@@ -44,6 +44,27 @@ New Features
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- The minimum versions of some dependencies were changed:
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    boto3                  1.34     1.36
+    cartopy                0.23     0.24
+    dask                 2024.6   2025.1
+    distributed          2024.6   2025.1
+    h5netcdf                1.4      1.5
+    iris                    3.9     3.11
+    lxml                    5.1      5.3
+    matplotlib              3.8     3.10
+    numpy                   1.26      2.0
+    packaging              24.1     24.2
+    rasterio                1.3      1.4
+    scipy                   1.13     1.15
+    toolz                  0.12      1.0
+    zarr                   2.18      3.0
+  ===================== =========  =======
+
 - Change the default value for ``chunk`` in ``open_zarr`` to ``_default`` and remove special mapping of ``"auto"``
   to ``{}`` or ``None`` in ``open_zarr``. If ``chunks`` is not set, the default behavior is the same as before.
   Explicitly setting ``chunks="auto"`` will match the behavior of ``chunks="auto"`` in

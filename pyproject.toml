@@ -18,7 +18,7 @@ name = "xarray"
 readme = "README.md"
 requires-python = ">=3.11"
 
-dependencies = ["numpy>=1.26", "packaging>=24.1", "pandas>=2.2"]
+dependencies = ["numpy>=2.0", "packaging>=24.2", "pandas>=2.2"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -27,7 +27,7 @@ dependencies = ["numpy>=1.26", "packaging>=24.1", "pandas>=2.2"]
 
 [project.optional-dependencies]
 accel = [
-  "scipy>=1.13",
+  "scipy>=1.15",
   "bottleneck",
   "numbagg>=0.8",
   "numba>=0.62",  # numba 0.62 added support for numpy 2.3
@@ -37,17 +37,17 @@ accel = [
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
   "netCDF4>=1.6.0",
-  "h5netcdf>=1.4.0",
+  "h5netcdf>=1.5",
   "pydap",
-  "scipy>=1.13",
-  "zarr>=2.18",
+  "scipy>=1.15",
+  "zarr>=3.0",
   "fsspec",
   "cftime",
   "pooch",
 ]
 etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
-viz = ["cartopy>=0.23", "matplotlib>=3.8", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.24", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
@@ -340,7 +340,7 @@ filterwarnings = [
   # Zarr 2 V3 implementation
   "default:Zarr-Python is not in alignment with the final V3 specification",
   # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
-  "default:is currently not part .* the Zarr version 3 specification.",
+  "ignore:is currently not part in the Zarr format 3 specification",
   # Zarr V3 data type specifications warnings - very repetitive
   "ignore:The data type .* does not have a Zarr V3 specification",
   "ignore:Consolidated metadata is currently not part",

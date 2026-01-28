@@ -22,7 +22,6 @@ from xarray.tests import (
     assert_identical,
     has_dask,
     has_scipy,
-    has_scipy_ge_1_13,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -184,11 +183,7 @@ def test_interpolate_1d_methods(method: InterpOptions) -> None:
     (
         (False, "linear"),
         (False, "akima"),
-        pytest.param(
-            False,
-            "makima",
-            marks=pytest.mark.skipif(not has_scipy_ge_1_13, reason="scipy too old"),
-        ),
+        (False, "makima"),
         pytest.param(
             True,
             "linear",
