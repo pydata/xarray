@@ -137,7 +137,7 @@ class TestDataArrayRolling:
         # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
         np.testing.assert_allclose(actual.values, expected)
 
-        with pytest.warns(DeprecationWarning, match="Reductions are applied"):
+        with pytest.warns(FutureWarning, match="Reductions are applied"):
             getattr(rolling_obj, name)(dim="time")
 
         # Test center
@@ -157,7 +157,7 @@ class TestDataArrayRolling:
         rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
         actual = getattr(rolling_obj, name)().load()
         if name != "count":
-            with pytest.warns(DeprecationWarning, match="Reductions are applied"):
+            with pytest.warns(FutureWarning, match="Reductions are applied"):
                 getattr(rolling_obj, name)(dim="time")
         # numpy version
         rolling_obj = da.load().rolling(

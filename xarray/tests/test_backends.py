@@ -6479,7 +6479,7 @@ class TestPydapOnline(TestPydap):
             yield actual, expected
 
     def output_grid_deprecation_warning_dap2dataset(self):
-        with pytest.warns(DeprecationWarning, match="`output_grid` is deprecated"):
+        with pytest.warns(FutureWarning, match="`output_grid` is deprecated"):
             with self.create_dap2_datasets(output_grid=True) as (actual, expected):
                 assert_equal(actual, expected)
 
