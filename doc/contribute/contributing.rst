@@ -198,7 +198,7 @@ Xarray uses `Pixi <https://pixi.sh/latest/>`_ to manage development environments
 Before starting any development, you'll need to create an isolated xarray
 development environment:
 
-- Install `Pixi <https://pixi.sh/latest/installation/>`_ - preferably the same version as the one listed in our ``ci.yaml`` `file <https://github.com/pydata/xarray/blob/main/.github/workflows/ci.yaml>`_
+- `Install Pixi <https://pixi.sh/latest/installation/>`_ - preferably the same version as the one listed in our ``ci.yaml`` `file <https://github.com/pydata/xarray/blob/main/.github/workflows/ci.yaml>`_
 
   - Some features in Pixi are in active development, and xarray depends on these features.
     Using the same version results in the best dev experience.
