@@ -14,6 +14,16 @@ v2026.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:class:`~xarray.indexes.RangeIndex` now supports label-based slice selection
+  with both ``method="nearest"`` (rounds to nearest positions) and ``method=None``
+  (exact matching with ceil/floor). Both are inclusive on the stop value, matching
+  pandas label-based slicing behavior (:pull:`XXXX`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
+- :py:class:`~xarray.core.indexes.CoordinateTransformIndex` now supports
+  ``method=None`` for exact matching in addition to ``method="nearest"``.
+  When using exact matching, a ``KeyError`` is raised if values don't match
+  index positions (:pull:`XXXX`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
