@@ -305,6 +305,7 @@ ban-relative-imports = "all"
 "pandas.api.types.is_extension_array_dtype".msg = "Use xarray.core.utils.is_allowed_extension_array{_dtype} instead.  Only use the banend API if the incoming data has already been sanitized by xarray"
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 addopts = [
   "--strict-config",
   "--strict-markers",
