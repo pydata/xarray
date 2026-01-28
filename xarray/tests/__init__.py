@@ -97,7 +97,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
         message="'cgi' is deprecated and slated for removal in Python 3.13",
-        category=DeprecationWarning,
+        category=FutureWarning,
     )
     has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
@@ -125,7 +125,7 @@ else:
         warnings.filterwarnings(
             "ignore",
             message="The current Dask DataFrame implementation is deprecated.",
-            category=DeprecationWarning,
+            category=FutureWarning,
         )
         has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
@@ -160,7 +160,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
         message="is_categorical_dtype is deprecated and will be removed in a future version.",
-        category=DeprecationWarning,
+        category=FutureWarning,
     )
     # seaborn uses the deprecated `pandas.is_categorical_dtype`
     has_seaborn, requires_seaborn = _importorskip("seaborn")

@@ -927,7 +927,7 @@ artist :
             if len(args) > 4:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+                warnings.warn(msg, FutureWarning, stacklevel=2)
         del args
 
         if hue_style is not None:
@@ -939,7 +939,7 @@ artist :
                     "Convert numbers to string for a discrete hue "
                     "and use add_legend or add_colorbar to control which guide to display."
                 ),
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
 
@@ -1460,7 +1460,7 @@ artist :
             if len(args) > 2:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+                warnings.warn(msg, FutureWarning, stacklevel=2)
         del args
 
         # Decide on a default for the colorbar before facetgrids

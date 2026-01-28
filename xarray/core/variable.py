@@ -2491,7 +2491,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 "change to return a dict of indices of each dimension. To get a "
                 "single, flat index, please use np.argmin(da.data) or "
                 "np.argmax(da.data) instead of da.argmin() or da.argmax().",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=3,
             )
 
