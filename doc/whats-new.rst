@@ -54,14 +54,10 @@ Breaking Changes
   ``open_dataset(..., engine="zarr")`` (:issue:`11002` :pull:`11010`).
   By `Julia Signell <https://github.com/jsignell>`_.
 - :py:meth:`Dataset.identical`,` :py:meth:`DataArray.identical`, and
-  :py:func:`testings.assert_identical` now compare indexes (xindexes).
+  :py:func:`testing.assert_identical` now compare indexes.
   Two objects with identical data but different indexes will no longer
   be considered identical. This also affects (:issue:`11033` :pull:`11035`).
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
-
-
-Deprecations
-~~~~~~~~~~~~
 
 
 Bug Fixes
@@ -86,10 +82,6 @@ Documentation
 
 - Better description of ``keep_attrs`` option on ``xarray.where`` docstring (:issue:`10982` :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
 
 Performance
 ~~~~~~~~~~~
