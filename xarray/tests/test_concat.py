@@ -979,8 +979,12 @@ class TestConcatDataset:
             Dataset({"y": ("t", [1])}, {"x": 1, "t": [0]}),
             Dataset({"y": ("t", [2])}, {"x": 2, "t": [0]}),
         ]
-        with pytest.raises(ValueError):
-            concat(objs, "t", coords="minimal")
+        with set_options(use_new_combine_kwarg_defaults=False):
+            with pytest.raises(ValueError):
+                concat(objs, "t", coords="minimal")
+        with set_options(use_new_combine_kwarg_defaults=True):
+            with pytest.raises(ValueError):
+                concat(objs, "t", compat="equals")
 
     def test_concat_dim_is_variable(self) -> None:
         objs = [Dataset({"x": 0}), Dataset({"x": 1})]
@@ -1664,7 +1668,16 @@ class TestConcatDataTree:
             FutureWarning, match="will change from data_vars='all' to data_vars=None"
         ):
             actual = concat([dt1, dt2], dim="x")
+
         assert actual.identical(expected)
+
+        with set_options(use_new_combine_kwarg_defaults=True):
+            expected = DataTree.from_dict(
+                data={"/a": ("x", [1, 2]), "/b": 3}, coords={"/x": [0, 1]}
+            )
+            actual = concat([dt1, dt2], dim="x")
+
+            assert actual.identical(expected)
 
     def test_concat_datatree_isomorphic_error(self):
         dt1 = DataTree.from_dict(data={"/data": ("x", [1]), "/a": None})
