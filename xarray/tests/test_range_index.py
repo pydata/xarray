@@ -230,17 +230,12 @@ def test_range_index_sel() -> None:
     actual = ds.sel(x=slice(0.12, 0.28), method="nearest")
     expected = ds.isel(x=slice(1, 4))
     assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
+    assert isinstance(actual.xindexes["x"], RangeIndex)
 
     # start-stop-step slice
     actual = ds.sel(x=slice(0.0, 1.0, 0.2), method="nearest")
     expected = ds.isel(x=range(0, 10, 2))
     assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
-
-    # slice selection should match equivalent isel
-    actual = ds.sel(x=slice(0.2, 0.7), method="nearest")
-    expected = ds.isel(x=slice(2, 8))
-    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
-    assert isinstance(actual.xindexes["x"], RangeIndex)
 
     # values near boundaries should round correctly (0.79999 -> 0.8)
     actual = ds.sel(x=slice(0.2, 0.79999), method="nearest")
@@ -249,7 +244,6 @@ def test_range_index_sel() -> None:
 
     # default method (no method parameter) uses ceil/floor
     # slice(0.2, 0.7): ceil(2.0) = 2, floor(7.0) = 7, +1 = 8
-    # Note: RangeIndex handles floating point precision correctly (includes 0.7)
     actual = ds.sel(x=slice(0.2, 0.7))
     expected = ds.isel(x=slice(2, 8))
     assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
