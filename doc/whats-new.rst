@@ -44,6 +44,10 @@ New Features
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- Skip empty nodes in :py:func:`map_over_datasets`. This is a breaking change in xarray,
+  but restores the behavior of the xarray-datatree package; also affects binary operations with
+  :py:class:`DataTree` objects. (:issue:`9693`, :pull:`10042`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Change the default value for ``chunk`` in ``open_zarr`` to ``_default`` and remove special mapping of ``"auto"``
   to ``{}`` or ``None`` in ``open_zarr``. If ``chunks`` is not set, the default behavior is the same as before.
   Explicitly setting ``chunks="auto"`` will match the behavior of ``chunks="auto"`` in
