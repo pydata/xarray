@@ -140,6 +140,9 @@ Documentation
 Performance
 ~~~~~~~~~~~
 
+- Improve performance of :py:func:`open_datatree` for zarr stores by using async/concurrent
+  loading of groups and indexes (:pull:`10742`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
 - Optimize :py:class:`~xarray.coding.variables.CFMaskCoder` decoder (:pull:`11105`).
