@@ -8,7 +8,7 @@ name = "xarray"
 version = "dynamic" # dynamic versioning needs better support in pixi https://github.com/prefix-dev/pixi/issues/2923#issuecomment-2598460666 . Putting `version = "dynamic"` here for now until pixi recommends something else.
 
 [package.build]
-backend = { name = "pixi-build-python", version = "==0.4.0" }
+backend = { name = "pixi-build-python", version = ">=0.4.4" }
 
 [package.host-dependencies]
 setuptools = "*"
@@ -286,6 +286,13 @@ cytoolz = "*"
 [feature.release.tasks]
 release-contributors = "python ci/release_contributors.py"
 
+[feature.dev.dependencies]
+ipython = ">=9.8.0,<10"
+black = ">=25.1.0,<26"
+
+[feature.dev.pypi-dependencies]
+pytest-accept = ">=0.2.2, <0.3"
+
 [feature.policy.pypi-dependencies]
 xarray-minimum-dependency-policy = "*"
 
@@ -422,4 +429,15 @@ doc = { features = [
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 release = { features = ["release"], no-default-feature = true }
+default = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "dev",
+] }
 policy = { features = ["policy"], no-default-feature = true }

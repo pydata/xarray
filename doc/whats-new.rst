@@ -14,6 +14,11 @@ v2025.12.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Improved :py:class:`DataTree` HTML representation: groups are now collapsible
+  with item counts shown in labels, large trees are automatically truncated
+  using ``display_max_children`` and ``display_max_html_elements`` options,
+  and the Indexes section is now displayed (matching the text repr) (:pull:`10816`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - :py:meth:`Dataset.set_xindex` and :py:meth:`DataArray.set_xindex`
   automatically replace any existing index being set instead of erroring
   or needing needing to call :py:meth:`drop_indexes` first (:pull:`11008`).
@@ -31,6 +36,10 @@ New Features
   of the same name are compared for potential conflicts when performing binary operations. The default for it is
   ``arithmetic_compat='minimal'`` which matches the existing behaviour.
   By `Matthew Willson <https://github.com/mjwillson>`_.
+- Better ordering of coordinates when displaying Xarray objects. (:pull:`11098`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_, `Julia Signell <https://github.com/jsignell>`_.
+- Use ``np.dtypes.StringDType`` when reading Zarr string variables  (:pull:`11097`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -64,6 +73,9 @@ Bug Fixes
 - Ensure the :py:class:`~xarray.groupers.SeasonResampler` preserves the datetime
   unit of the underlying time index when resampling (:issue:`11048`,
   :pull:`11049`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Partially support pandas 3 default string indexes by coercing ``pd.StringDtype``
+  to ``np.dtypes.StringDType`` in ``PandasIndexingAdapter`` (:issue:`11098`, :pull:`11102`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Documentation
 ~~~~~~~~~~~~~
