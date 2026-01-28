@@ -6,10 +6,14 @@
 What's New
 ==========
 
-.. _whats-new.v2025.12.1:
+.. _whats-new.2026.01.0:
 
-v2025.12.1 (unreleased)
------------------------
+v2026.01.0 (Jan 28, 2026)
+-------------------------
+This release includes an improved DataTree HTML representation with collapsible groups and automatic truncation, easier selection on coordinates without explicit indexes, partial pandas 3 compatibility, and various bug fixes and performance improvements.
+
+Thanks to the 25 contributors to this release:
+Barron H. Henderson, Christine P. Chai, DHRUVA KUMAR KAUSHAL, David Bold, Davis Bennett, Deepak Cherian, Dhruva Kumar Kaushal, Florian Knappers, Ian Hunt-Isaak, Jacob Tomlinson, Joshua Gould, Julia Signell, Justus Magin, Lucas Colley, Mark Harfouche, Matthew, Maximilian Roos, Nick Hodgskin, Sakshee_D, Sam Levang, Samay Mehar, Simon Høxbro Hansen, Spencer Clark, Stephan Hoyer and knappersfy
 
 New Features
 ~~~~~~~~~~~~
