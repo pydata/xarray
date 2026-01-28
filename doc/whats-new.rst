@@ -27,7 +27,7 @@ Bug Fixes
 ~~~~~~~~~
 
  - Fixes error when from ``.plot`` when using positional args with ``col`` and
-   ``row`` (:issue:`11104` :pull:`11097`).
+   ``row`` (:issue:`11104` :pull:`11111`).
    By `Julia Signell <https://github.com/jsignell>`_.
 
 
