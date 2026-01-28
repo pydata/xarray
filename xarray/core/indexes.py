@@ -1569,12 +1569,7 @@ class CoordinateTransformIndex(Index):
             else:
                 # Exact matching: check if positions are close to integers
                 if not np.all(np.abs(pos - (rounded := np.round(pos))) < eps):
-                    coord_name = (
-                        self.transform.coord_names[0]
-                        if len(self.transform.coord_names) == 1
-                        else dim
-                    )
-                    raise KeyError(f"not all values found in index {coord_name!r}")
+                    raise KeyError(f"not all values found in index {dim!r}")
                 pos = rounded.astype("int")
             if isinstance(label0_obj, Variable):
                 results[dim] = Variable(dims0, pos)
