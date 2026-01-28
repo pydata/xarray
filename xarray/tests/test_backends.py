@@ -58,6 +58,7 @@ from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.cftime_offsets import date_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
+from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.common import _contains_cftime_datetimes
@@ -1088,8 +1089,9 @@ class CFEncodedBase(DatasetIOBase):
                 # eg. NETCDF3 based backends do not roundtrip metadata
                 if actual["a"].dtype.metadata is not None:
                     assert check_vlen_dtype(actual["a"].dtype) is str
+            elif HAS_STRING_DTYPE:
+                assert np.issubdtype(actual["a"].dtype, np.dtypes.StringDType())
             else:
-                # zarr v3 sends back "<U1"
                 assert np.issubdtype(actual["a"].dtype, np.dtype("=U1"))
 
     @pytest.mark.parametrize(
