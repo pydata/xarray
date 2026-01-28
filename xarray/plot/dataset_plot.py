@@ -213,6 +213,7 @@ levels : int or array-like, optional
                 raise ValueError(msg)
             else:
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            del msg
         del args
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)

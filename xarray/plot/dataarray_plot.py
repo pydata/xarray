@@ -928,6 +928,7 @@ artist :
                 raise ValueError(msg)
             else:
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            del msg
         del args
 
         if hue_style is not None:
@@ -1461,6 +1462,7 @@ artist :
                 raise ValueError(msg)
             else:
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            del msg
         del args
 
         # Decide on a default for the colorbar before facetgrids
