@@ -766,27 +766,37 @@ def test_isnull_with_dask():
 
 @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType to exist")
 @pytest.mark.parametrize(
-    ["array", "expected"],
+    ["input", "na_object", "expected"],
     [
         (
-            np.array(["a", None, "c"], dtype=np.dtypes.StringDType(na_object=None)),
+            ["a", None, "c"],
+            None,
             np.array([False, True, False]),
         ),
         (
-            np.array(["a", "", "c"], dtype=np.dtypes.StringDType(na_object="")),
+            ["a", "", "c"],
+            "",
             np.array([False, True, False]),
         ),
         (
-            np.array(["a", np.nan, "c"], dtype=np.dtypes.StringDType(na_object=np.nan)),
+            ["a", np.nan, "c"],
+            np.nan,
             np.array([False, True, False]),
-        ),
-        (
-            np.array(["a", np.nan, "c"], dtype=np.dtypes.StringDType()),
-            np.array([False, False, False]),
         ),
     ],
 )
-def test_isnull_with_StringDType(array, expected):
+def test_isnull_with_different_StringDType_na_objects(input, na_object, expected):
+    dtype = np.dtypes.StringDType(na_object=na_object)
+    array = np.array(input, dtype=dtype)
+    actual = duck_array_ops.isnull(array)
+    np.testing.assert_equal(actual, expected)
+
+
+@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType to exist")
+def test_isnull_with_default_StringDType():
+    dtype = np.dtypes.StringDType()
+    array = np.array(["a", np.nan, "c"], dtype=dtype)
+    expected = np.array([False, False, False])
     actual = duck_array_ops.isnull(array)
     np.testing.assert_equal(actual, expected)
 
