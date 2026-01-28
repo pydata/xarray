@@ -16,6 +16,7 @@ import pandas as pd
 from numpy.typing import DTypeLike
 from packaging.version import Version
 
+from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.nputils import NumpyVIndexAdapter
@@ -1023,7 +1024,7 @@ def as_indexable(array):
 def _outer_to_vectorized_indexer(
     indexer: BasicIndexer | OuterIndexer, shape: _Shape
 ) -> VectorizedIndexer:
-    """Convert an OuterIndexer into an vectorized indexer.
+    """Convert an OuterIndexer into a vectorized indexer.
 
     Parameters
     ----------
@@ -1916,6 +1917,8 @@ class PandasIndexingAdapter(IndexingAdapter):
                 self._dtype = get_valid_numpy_dtype(array)
         elif is_allowed_extension_array_dtype(dtype):
             self._dtype = cast(pd.api.extensions.ExtensionDtype, dtype)
+        elif HAS_STRING_DTYPE and isinstance(dtype, pd.StringDtype):
+            self._dtype = np.dtypes.StringDType(na_object=dtype.na_value)
         else:
             self._dtype = np.dtype(cast(DTypeLike, dtype))
 
