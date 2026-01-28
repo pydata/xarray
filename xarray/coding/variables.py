@@ -125,7 +125,7 @@ def _apply_mask(
     dtype: np.typing.DTypeLike | None,
 ) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
-    data = np.asarray(data, dtype=dtype, copy=True)
+    data = np.array(data, dtype=dtype, copy=True)
     if encoded_fill_values:
         condition = False
         for fv in encoded_fill_values:
