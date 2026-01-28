@@ -2282,6 +2282,38 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"cannot convert Datasets"):
             Dataset({"a": (["t", "r"], x2d), "b": (["t", "r"], y2d)}).to_pandas()
 
+    def test_to_dataframe_create_index(self) -> None:
+        # Test create_index parameter for Dataset
+        x = np.random.randn(3, 4)
+        y = np.random.randn(3, 4)
+        ds = Dataset(
+            {"a": (("x", "y"), x), "b": (("x", "y"), y)},
+            coords={"x": [1, 2, 3], "y": list("abcd")},
+        )
+
+        # Default behavior: create MultiIndex
+        df_with_index = ds.to_dataframe()
+        assert isinstance(df_with_index.index, pd.MultiIndex)
+        assert df_with_index.index.names == ["x", "y"]
+        assert len(df_with_index) == 12
+
+        # With create_index=False: use RangeIndex
+        df_without_index = ds.to_dataframe(create_index=False)
+        assert isinstance(df_without_index.index, pd.RangeIndex)
+        assert len(df_without_index) == 12
+
+        # Data should be the same regardless
+        assert_array_equal(df_with_index["a"].values, df_without_index["a"].values)
+        assert_array_equal(df_with_index["b"].values, df_without_index["b"].values)
+
+        # Test with dim_order and create_index=False
+        df_reordered = ds.to_dataframe(dim_order=["y", "x"], create_index=False)
+        assert isinstance(df_reordered.index, pd.RangeIndex)
+        assert len(df_reordered) == 12
+        # Check that dim_order affects the data ordering
+        df_reordered_with_idx = ds.to_dataframe(dim_order=["y", "x"])
+        assert_array_equal(df_reordered["a"].values, df_reordered_with_idx["a"].values)
+
     def test_reindex_like(self) -> None:
         data = create_test_data()
         data["letters"] = ("dim3", 10 * ["a"])
