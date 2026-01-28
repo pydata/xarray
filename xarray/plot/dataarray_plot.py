@@ -641,7 +641,7 @@ def step(
 
 def hist(
     darray: DataArray,
-    *args: Any,
+    *,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
     aspect: AspectOptions = None,
@@ -695,8 +695,6 @@ def hist(
         Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
     """
-    assert len(args) == 0
-
     if darray.ndim == 0 or darray.size == 0:
         # TypeError to be consistent with pandas
         raise TypeError("No numeric data to plot.")
@@ -928,6 +926,7 @@ artist :
                 raise ValueError(msg)
             else:
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            del msg
         del args
 
         if hue_style is not None:
@@ -1461,6 +1460,7 @@ artist :
                 raise ValueError(msg)
             else:
                 warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            del msg
         del args
 
         # Decide on a default for the colorbar before facetgrids
