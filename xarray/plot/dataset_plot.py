@@ -753,7 +753,7 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
 @overload
 def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -794,7 +794,7 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
 @overload
 def scatter(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -835,7 +835,7 @@ def scatter(
 @overload
 def scatter(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -876,7 +876,7 @@ def scatter(
 @_update_doc_to_dataset(dataarray_plot.scatter)
 def scatter(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
