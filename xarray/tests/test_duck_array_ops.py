@@ -13,6 +13,7 @@ from numpy import array, nan
 
 from xarray import DataArray, Dataset, concat, date_range
 from xarray.coding.times import _NS_PER_TIME_DELTA
+from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv,
@@ -763,6 +764,43 @@ def test_isnull_with_dask():
     assert_equal(da.isnull().load(), da.load().isnull())
 
 
+@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType to exist")
+@pytest.mark.parametrize(
+    ["input", "na_object", "expected"],
+    [
+        (
+            ["a", None, "c"],
+            None,
+            np.array([False, True, False]),
+        ),
+        (
+            ["a", "", "c"],
+            "",
+            np.array([False, True, False]),
+        ),
+        (
+            ["a", np.nan, "c"],
+            np.nan,
+            np.array([False, True, False]),
+        ),
+    ],
+)
+def test_isnull_with_different_StringDType_na_objects(input, na_object, expected):
+    dtype = np.dtypes.StringDType(na_object=na_object)
+    array = np.array(input, dtype=dtype)
+    actual = duck_array_ops.isnull(array)
+    np.testing.assert_equal(actual, expected)
+
+
+@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType to exist")
+def test_isnull_with_default_StringDType():
+    dtype = np.dtypes.StringDType()
+    array = np.array(["a", np.nan, "c"], dtype=dtype)
+    expected = np.array([False, False, False])
+    actual = duck_array_ops.isnull(array)
+    np.testing.assert_equal(actual, expected)
+
+
 @pytest.mark.skipif(not has_dask, reason="This is for dask.")
 @pytest.mark.parametrize("axis", [0, -1, 1])
 @pytest.mark.parametrize("edge_order", [1, 2])
@@ -1150,6 +1188,7 @@ def test_extension_array_attr():
     assert (roundtripped == wrapped).all()
 
     interval_array = pd.arrays.IntervalArray.from_breaks([0, 1, 2, 3], closed="right")
-    wrapped = PandasExtensionArray(interval_array)
+    # pandas-stubs types PandasExtensionArray too narrowly; IntervalArray is valid
+    wrapped = PandasExtensionArray(interval_array)  # type: ignore[arg-type]
     assert_array_equal(wrapped.left, interval_array.left, strict=True)
     assert wrapped.closed == interval_array.closed

@@ -628,7 +628,9 @@ def get_indexer_nd(index: pd.Index, labels, method=None, tolerance=None) -> np.n
     flat_labels = np.ravel(labels)
     if flat_labels.dtype == "float16":
         flat_labels = flat_labels.astype("float64")
-    flat_indexer = index.get_indexer(flat_labels, method=method, tolerance=tolerance)
+    flat_indexer = index.get_indexer(
+        pd.Index(flat_labels), method=method, tolerance=tolerance
+    )
     indexer = flat_indexer.reshape(labels.shape)
     return indexer
 
@@ -978,14 +980,15 @@ def remove_unused_levels_categories(index: T_PDIndex) -> T_PDIndex:
     Remove unused levels from MultiIndex and unused categories from CategoricalIndex
     """
     if isinstance(index, pd.MultiIndex):
-        new_index = cast(pd.MultiIndex, index.remove_unused_levels())
+        new_index = index.remove_unused_levels()
         # if it contains CategoricalIndex, we need to remove unused categories
         # manually. See https://github.com/pandas-dev/pandas/issues/30846
         if any(isinstance(lev, pd.CategoricalIndex) for lev in new_index.levels):
             levels = []
             for i, level in enumerate(new_index.levels):
                 if isinstance(level, pd.CategoricalIndex):
-                    level = level[new_index.codes[i]].remove_unused_categories()
+                    # pandas-stubs is missing remove_unused_categories on CategoricalIndex
+                    level = level[new_index.codes[i]].remove_unused_categories()  # type: ignore[attr-defined]
                 else:
                     level = level[new_index.codes[i]]
                 levels.append(level)
@@ -1229,7 +1232,7 @@ class PandasMultiIndex(PandasIndex):
         its corresponding coordinates.
 
         """
-        index = cast(pd.MultiIndex, self.index.reorder_levels(level_variables.keys()))
+        index = self.index.reorder_levels(list(level_variables.keys()))
         level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
         return self._replace(index, level_coords_dtype=level_coords_dtype)
 
@@ -1378,28 +1381,29 @@ class PandasMultiIndex(PandasIndex):
                     indexer = DataArray(indexer, coords=coords, dims=label.dims)
 
         if new_index is not None:
+            xr_index: PandasIndex | PandasMultiIndex
             if isinstance(new_index, pd.MultiIndex):
                 level_coords_dtype = {
                     k: self.level_coords_dtype[k] for k in new_index.names
                 }
-                new_index = self._replace(
+                xr_index = self._replace(
                     new_index, level_coords_dtype=level_coords_dtype
                 )
                 dims_dict = {}
-                drop_coords = []
+                drop_coords: list[Hashable] = []
             else:
-                new_index = PandasIndex(
+                xr_index = PandasIndex(
                     new_index,
                     new_index.name,
                     coord_dtype=self.level_coords_dtype[new_index.name],
                 )
-                dims_dict = {self.dim: new_index.index.name}
+                dims_dict = {self.dim: xr_index.index.name}
                 drop_coords = [self.dim]
 
             # variable(s) attrs and encoding metadata are propagated
             # when replacing the indexes in the resulting xarray object
-            new_vars = new_index.create_variables()
-            indexes = cast(dict[Any, Index], dict.fromkeys(new_vars, new_index))
+            new_vars = xr_index.create_variables()
+            indexes = cast(dict[Any, Index], dict.fromkeys(new_vars, xr_index))
 
             # add scalar variable for each dropped level
             variables = new_vars
@@ -1522,6 +1526,13 @@ class CoordinateTransformIndex(Index):
         if missing_labels:
             missing_labels_str = ",".join([f"{name}" for name in missing_labels])
             raise ValueError(f"missing labels for coordinate(s): {missing_labels_str}.")
+
+        labels = {
+            name: Variable(dims=(name,), data=data)
+            if isinstance(data, np.ndarray)
+            else data
+            for (name, data) in labels.items()
+        }
 
         label0_obj = next(iter(labels.values()))
         dim_size0 = getattr(label0_obj, "sizes", {})

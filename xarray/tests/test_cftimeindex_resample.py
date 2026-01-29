@@ -115,7 +115,7 @@ def compare_against_pandas(
             origin=origin_cftime,
             offset=offset,
         ).mean()
-    # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+    # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
     result_cftimeindex["time"] = (
         result_cftimeindex.xindexes["time"]
         .to_pandas_index()
@@ -237,7 +237,7 @@ def test_calendars(calendar: str) -> None:
     )
     da_cftime = da(xr_index).resample(time=freq, closed=closed, label=label).mean()
     da_datetime = da(pd_index).resample(time=freq, closed=closed, label=label).mean()
-    # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+    # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
     new_pd_index = da_cftime.xindexes["time"].to_pandas_index()
     assert isinstance(new_pd_index, CFTimeIndex)  # shouldn't that be a pd.Index?
     da_cftime["time"] = new_pd_index.to_datetimeindex(time_unit="ns")

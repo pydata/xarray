@@ -443,12 +443,38 @@ attrs_repr = functools.partial(
 )
 
 
+def _coord_sort_key(coord, dims):
+    """Sort key for coordinate ordering.
+
+        Orders by:
+        1. Primary: index of the matching dimension in dataset dims.
+        2. Secondary: dimension coordinates (name == dim) come before non-dimension coordinates
+
+        This groups non-dimension coordinates right after their associated dimension
+    coordinate.
+    """
+    name, var = coord
+
+    # Dimension coordinates come first within their dim section
+    if name in dims:
+        return (dims.index(name), 0)
+
+    # Non-dimension coordinates come second within their dim section
+    # Check the var.dims list in backwards order to put (x, y) after (x) and (y)
+    for d in var.dims[::-1]:
+        if d in dims:
+            return (dims.index(d), 1)
+
+    # Scalar coords or coords with dims not in dataset dims go at the end
+    return (len(dims), 1)
+
+
 def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     dims = tuple(coords._data.dims)
     dim_ordered_coords = sorted(
-        coords.items(), key=lambda x: dims.index(x[0]) if x[0] in dims else len(dims)
+        coords.items(), key=functools.partial(_coord_sort_key, dims=dims)
     )
     return _mapping_repr(
         dict(dim_ordered_coords),
