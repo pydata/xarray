@@ -140,6 +140,37 @@ IndexesToAlign = dict[MatchingIndexKey, Index]
 IndexVarsToAlign = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
 
+def _is_datatree(obj: object) -> bool:
+    """Check if an object is a DataTree without importing it at module level."""
+    from xarray.core.datatree import DataTree
+
+    return isinstance(obj, DataTree)
+
+
+def _validate_coordinate_ownership(trees: Iterable[Any]) -> dict[str, str]:
+    """Validate all trees have coordinates defined at same tree locations.
+
+    Returns mapping of coord_name -> defining_path.
+    """
+    coord_locations: dict[str, str] = {}
+
+    for tree in trees:
+        for path, node in tree.subtree_with_keys:
+            for coord_name in node._node_coord_variables:
+                if coord_name in coord_locations:
+                    if coord_locations[coord_name] != path:
+                        raise AlignmentError(
+                            f"Coordinate {coord_name!r} is defined at "
+                            f"{coord_locations[coord_name]!r} in some trees but "
+                            f"{path!r} in others. Trees must have identical "
+                            f"coordinate ownership structure for alignment."
+                        )
+                else:
+                    coord_locations[coord_name] = path
+
+    return coord_locations
+
+
 class Aligner(Generic[T_Alignable]):
     """Implements all the complex logic for the re-indexing and alignment of Xarray
     objects.
@@ -302,7 +333,11 @@ class Aligner(Generic[T_Alignable]):
         objects_matching_index_vars = []
 
         for obj in self.objects:
-            obj_indexes, obj_index_vars = self._collect_indexes(obj.xindexes)
+            if _is_datatree(obj):
+                obj_xindexes = obj._alignment_indexes  # type: ignore[attr-defined]
+            else:
+                obj_xindexes = obj.xindexes
+            obj_indexes, obj_index_vars = self._collect_indexes(obj_xindexes)
             objects_matching_indexes.append(obj_indexes)
             objects_matching_index_vars.append(obj_index_vars)
             for key, idx in obj_indexes.items():
@@ -330,9 +365,16 @@ class Aligner(Generic[T_Alignable]):
         unindexed_dim_sizes = defaultdict(set)
 
         for obj in self.objects:
-            for dim in obj.dims:
-                if dim not in self.exclude_dims and dim not in obj.xindexes.dims:
-                    unindexed_dim_sizes[dim].add(obj.sizes[dim])
+            if _is_datatree(obj):
+                obj_dims = obj._alignment_dims  # type: ignore[attr-defined]
+                obj_xindexes = obj._alignment_indexes  # type: ignore[attr-defined]
+                for dim in obj_dims:
+                    if dim not in self.exclude_dims and dim not in obj_xindexes.dims:
+                        unindexed_dim_sizes[dim].add(obj_dims[dim])
+            else:
+                for dim in obj.dims:
+                    if dim not in self.exclude_dims and dim not in obj.xindexes.dims:
+                        unindexed_dim_sizes[dim].add(obj.sizes[dim])
 
         self.unindexed_dim_sizes = unindexed_dim_sizes
 
@@ -769,7 +811,7 @@ def align(
     fill_value=dtypes.NA,
 ) -> tuple[T_Alignable, ...]:
     """
-    Given any number of Dataset and/or DataArray objects, returns new
+    Given any number of Dataset, DataArray, and/or DataTree objects, returns new
     objects with aligned indexes and dimension sizes.
 
     Array from the aligned objects are suitable as input to mathematical
@@ -780,8 +822,10 @@ def align(
 
     Parameters
     ----------
-    *objects : Dataset or DataArray
-        Objects to align.
+    *objects : Dataset, DataArray, or DataTree
+        Objects to align. If DataTree objects are passed, all objects must
+        be DataTrees and they must have identical coordinate ownership
+        structure (same coordinates defined at same tree paths).
     join : {"outer", "inner", "left", "right", "exact", "override"}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
@@ -956,6 +1000,16 @@ def align(
       * lon      (lon) float64 16B 100.0 120.0
 
     """
+    # Validate DataTree inputs
+    datatrees = [obj for obj in objects if _is_datatree(obj)]
+    if datatrees:
+        if not all(_is_datatree(obj) for obj in objects):
+            raise TypeError(
+                "Cannot align DataTree objects with non-DataTree objects. "
+                "Convert to Dataset first or align trees separately."
+            )
+        _validate_coordinate_ownership(datatrees)
+
     aligner = Aligner(
         objects,
         join=join,
