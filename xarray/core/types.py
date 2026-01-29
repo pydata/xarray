@@ -149,6 +149,7 @@ class Alignable(Protocol):
 
     def copy(
         self,
+        *,
         deep: bool = False,
     ) -> Self: ...
 

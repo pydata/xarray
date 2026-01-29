@@ -2907,7 +2907,7 @@ class TestAlignDataTree:
         ds = Dataset(coords={"x": [0, 1]})
 
         with pytest.raises(TypeError, match="Cannot align DataTree"):
-            xr.align(tree, ds)  # type: ignore[arg-type]
+            xr.align(tree, ds)
 
     def test_align_already_aligned(self) -> None:
         tree1 = DataTree.from_dict(
