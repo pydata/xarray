@@ -421,7 +421,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                         "argument is provided"
                     )
                 root = manager
-            manager = DummyFileManager(root)
+            manager = DummyFileManager(root, lock=NETCDF4_PYTHON_LOCK)
 
         self._manager = manager
         self._group = group
@@ -510,17 +510,21 @@ class NetCDF4DataStore(WritableCFDataStore):
                 "<xarray-in-memory-write>", mode=mode, memory=memory, **kwargs
             )
             close = _CloseWithCopy(filename, nc4_dataset)
-            manager = DummyFileManager(nc4_dataset, close=close)
+            manager = DummyFileManager(nc4_dataset, close=close, lock=lock)
 
         elif isinstance(filename, bytes | memoryview):
             assert mode == "r"
             kwargs["memory"] = filename
             manager = PickleableFileManager(
-                netCDF4.Dataset, "<xarray-in-memory-read>", mode=mode, kwargs=kwargs
+                netCDF4.Dataset,
+                "<xarray-in-memory-read>",
+                mode=mode,
+                kwargs=kwargs,
+                lock=lock,
             )
         else:
             manager = CachingFileManager(
-                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
+                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs, lock=lock
             )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 

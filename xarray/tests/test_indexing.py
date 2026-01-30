@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Dataset, Variable
+from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
 from xarray.core.types import T_Xarray
@@ -18,6 +18,7 @@ from xarray.tests import (
     assert_identical,
     raise_if_dask_computes,
     requires_dask,
+    requires_pandas_3,
 )
 from xarray.tests.arrays import DuckArrayWrapper
 
@@ -1193,3 +1194,10 @@ def test_backend_indexing_non_numpy() -> None:
         raw_indexing_method=array.__getitem__,
     )
     np.testing.assert_array_equal(indexed.array, np.array([1]))
+
+
+@requires_pandas_3
+def test_pandas_StringDtype_index_coerces_to_numpy() -> None:
+    da = DataArray([0, 1], coords={"x": ["x1", "x2"]})
+    actual = concat([da, da], dim=pd.Index(["y1", "y2"], name="y"))
+    assert isinstance(actual["y"].dtype, np.dtypes.StringDType)

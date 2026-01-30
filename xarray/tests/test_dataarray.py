@@ -25,6 +25,7 @@ from xarray import (
     DataArray,
     Dataset,
     IndexVariable,
+    MergeError,
     Variable,
     align,
     broadcast,
@@ -2626,6 +2627,43 @@ class TestDataArray:
         actual = alt + orig
         assert_identical(expected, actual)
 
+    def test_math_with_arithmetic_compat_options(self) -> None:
+        # Setting up a clash of non-index coordinate 'foo':
+        a = xr.DataArray(
+            data=[0, 0, 0],
+            dims=["x"],
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [1.0, 2.0, np.nan]),
+            },
+        )
+        b = xr.DataArray(
+            data=[0, 0, 0],
+            dims=["x"],
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [np.nan, 2.0, 3.0]),
+            },
+        )
+
+        with xr.set_options(arithmetic_compat="minimal"):
+            assert_equal(a + b, a.drop_vars("foo"))
+
+        with xr.set_options(arithmetic_compat="override"):
+            assert_equal(a + b, a)
+            assert_equal(b + a, b)
+
+        with xr.set_options(arithmetic_compat="no_conflicts"):
+            expected = a.assign_coords(foo=(["x"], [1.0, 2.0, 3.0]))
+            assert_equal(a + b, expected)
+            assert_equal(b + a, expected)
+
+        with xr.set_options(arithmetic_compat="equals"):
+            with pytest.raises(MergeError):
+                a + b
+            with pytest.raises(MergeError):
+                b + a
+
     def test_index_math(self) -> None:
         orig = DataArray(range(3), dims="x", name="x")
         actual = orig + 1
@@ -3931,7 +3969,8 @@ class TestDataArray:
         y = np.random.randn(10, 3)
         y[2] = np.nan
         t = pd.Series(pd.date_range("20130101", periods=10))
-        t[2] = np.nan
+        # pandas-stubs doesn't allow np.nan for datetime Series, but it converts to NaT
+        t[2] = np.nan  # type: ignore[call-overload]
         lat = [77.7, 83.2, 76]
         da = DataArray(y, {"t": t, "lat": lat}, dims=["t", "lat"])
         roundtripped = DataArray.from_dict(da.to_dict())
@@ -7002,7 +7041,7 @@ class TestIrisConversion:
         # to iris
         coord_dict: dict[Hashable, Any] = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
-        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
+        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3, unit="ns"))
         coord_dict["height"] = 10
         coord_dict["distance2"] = ("distance", [0, 1], {"foo": "bar"})
         coord_dict["time2"] = (("distance", "time"), [[0, 1, 2], [2, 3, 4]])
@@ -7073,7 +7112,7 @@ class TestIrisConversion:
 
         coord_dict: dict[Hashable, Any] = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
-        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3))
+        coord_dict["time"] = ("time", pd.date_range("2000-01-01", periods=3, unit="ns"))
         coord_dict["height"] = 10
         coord_dict["distance2"] = ("distance", [0, 1], {"foo": "bar"})
         coord_dict["time2"] = (("distance", "time"), [[0, 1, 2], [2, 3, 4]])

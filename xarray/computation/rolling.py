@@ -279,7 +279,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             Object to window.
         windows : mapping of hashable to int
             A mapping from the name of the dimension to create the rolling
-            exponential window along (e.g. `time`) to the size of the moving window.
+            window along (e.g. `time`) to the size of the moving window.
         min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
@@ -791,7 +791,7 @@ class DatasetRolling(Rolling["Dataset"]):
             Object to window.
         windows : mapping of hashable to int
             A mapping from the name of the dimension to create the rolling
-            exponential window along (e.g. `time`) to the size of the moving window.
+            window along (e.g. `time`) to the size of the moving window.
         min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
@@ -1061,7 +1061,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
             Object to window.
         windows : mapping of hashable to int
             A mapping from the name of the dimension to create the rolling
-            exponential window along (e.g. `time`) to the size of the moving window.
+            window along (e.g. `time`) to the size of the moving window.
         boundary : {"exact", "trim", "pad"}
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of window size. If 'trim', the excess indexes are trimmed.

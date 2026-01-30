@@ -369,9 +369,9 @@ class DataArray(
            [[22.60070734, 13.78914233, 14.17424919],
             [18.28478802, 16.15234857, 26.63418806]]])
     Coordinates:
-      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
         lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
         lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
+      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
         reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: x, y
     Attributes:
@@ -2807,8 +2807,8 @@ class DataArray(
                [1., 1., 1.]])
         Coordinates:
           * x        (x) int64 16B 0 1
-          * y        (y) int64 24B 0 1 2
             a        (x) int64 16B 3 4
+          * y        (y) int64 24B 0 1 2
         >>> arr.set_index(x="a")
         <xarray.DataArray (x: 2, y: 3)> Size: 48B
         array([[1., 1., 1.],
@@ -4208,7 +4208,7 @@ class DataArray(
         Notes
         -----
         Only xarray.Dataset objects can be written to netCDF files, so
-        the xarray.DataArray is converted to a xarray.Dataset object
+        the xarray.DataArray is converted to an xarray.Dataset object
         containing a single variable. If the DataArray has no name, or if the
         name is the same as a coordinate name, then it is given the name
         ``"__xarray_dataarray_variable__"``.
@@ -4906,7 +4906,9 @@ class DataArray(
             if not reflexive
             else f(other_variable_or_arraylike, self.variable)
         )
-        coords, indexes = self.coords._merge_raw(other_coords, reflexive)
+        coords, indexes = self.coords._merge_raw(
+            other_coords, reflexive, compat=OPTIONS["arithmetic_compat"]
+        )
         name = result_name([self, other])
 
         return self._replace(variable, coords, name, indexes=indexes)
@@ -4926,7 +4928,9 @@ class DataArray(
         other_coords = getattr(other, "coords", None)
         other_variable = getattr(other, "variable", other)
         try:
-            with self.coords._merge_inplace(other_coords):
+            with self.coords._merge_inplace(
+                other_coords, compat=OPTIONS["arithmetic_compat"]
+            ):
                 f(self.variable, other_variable)
         except MergeError as exc:
             raise MergeError(
@@ -5170,6 +5174,11 @@ class DataArray(
         dot
         numpy.tensordot
 
+        Notes
+        -----
+        This method automatically aligns coordinates by their values (not their order).
+        See :ref:`math automatic alignment` and :py:func:`xarray.dot` for more details.
+
         Examples
         --------
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
@@ -5186,6 +5195,14 @@ class DataArray(
         >>> dot_result = da.dot(dm)
         >>> dot_result.dims
         ('x', 'y')
+
+        Coordinates are aligned by their values:
+
+        >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+        >>> y = xr.DataArray([2, 20], coords=[("foo", ["b", "a"])])
+        >>> x.dot(y)
+        <xarray.DataArray ()> Size: 8B
+        array(40)
 
         """
         if isinstance(other, Dataset):
@@ -5947,8 +5964,8 @@ class DataArray(
                [nan, nan, nan, nan]])
         Coordinates:
           * x        (x) float64 32B nan 0.0 1.0 nan
-          * y        (y) int64 32B 10 20 30 40
             z        (x) float64 32B nan 100.0 200.0 nan
+          * y        (y) int64 32B 10 20 30 40
 
         Careful, ``constant_values`` are coerced to the data type of the array which may
         lead to a loss of precision:
@@ -5961,8 +5978,8 @@ class DataArray(
                [ 1,  1,  1,  1]])
         Coordinates:
           * x        (x) float64 32B nan 0.0 1.0 nan
-          * y        (y) int64 32B 10 20 30 40
             z        (x) float64 32B nan 100.0 200.0 nan
+          * y        (y) int64 32B 10 20 30 40
         """
         ds = self._to_temp_dataset().pad(
             pad_width=pad_width,
