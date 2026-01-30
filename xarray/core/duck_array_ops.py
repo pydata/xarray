@@ -26,6 +26,7 @@ from numpy import (
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
+from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import dtypes, nputils
 from xarray.core.extension_array import (
     PandasExtensionArray,
@@ -175,9 +176,15 @@ def isnull(data):
         # note: must check timedelta64 before integers, because currently
         # timedelta64 inherits from np.integer
         return isnat(data)
+    elif HAS_STRING_DTYPE and isinstance(scalar_type, np.dtypes.StringDType):
+        # na is settable, but it defaults to an empty string
+        na_object = getattr(scalar_type, "na_object", "")
+        if isna(na_object):
+            return xp.isnan(data)
+        else:
+            return data == na_object
     elif dtypes.isdtype(scalar_type, ("real floating", "complex floating"), xp=xp):
         # float types use NaN for null
-        xp = get_array_namespace(data)
         return xp.isnan(data)
     elif dtypes.isdtype(scalar_type, ("bool", "integral"), xp=xp) or (
         isinstance(scalar_type, np.dtype)

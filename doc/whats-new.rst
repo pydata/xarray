@@ -6,10 +6,47 @@
 What's New
 ==========
 
-.. _whats-new.v2025.12.1:
+.. _whats-new.2026.02.0:
 
-v2025.12.1 (unreleased)
+v2026.02.0 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Performance
+~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2026.01.0:
+
+v2026.01.0 (Jan 28, 2026)
+-------------------------
+This release includes an improved DataTree HTML representation with collapsible groups and automatic truncation, easier selection on coordinates without explicit indexes, pandas 3 compatibility, and various bug fixes and performance improvements.
+
+Thanks to the 25 contributors to this release:
+Barron H. Henderson, Christine P. Chai, DHRUVA KUMAR KAUSHAL, David Bold, Davis Bennett, Deepak Cherian, Dhruva Kumar Kaushal, Florian Knappers, Ian Hunt-Isaak, Jacob Tomlinson, Joshua Gould, Julia Signell, Justus Magin, Lucas Colley, Mark Harfouche, Matthew, Maximilian Roos, Nick Hodgskin, Sakshee_D, Sam Levang, Samay Mehar, Simon Høxbro Hansen, Spencer Clark, Stephan Hoyer and knappersfy
 
 New Features
 ~~~~~~~~~~~~
@@ -34,35 +71,33 @@ New Features
   <https://github.com/hmaarrfk>`_.
 - :py:func:`set_options` now supports an ``arithmetic_compat`` option which determines how non-index coordinates
   of the same name are compared for potential conflicts when performing binary operations. The default for it is
-  ``arithmetic_compat='minimal'`` which matches the existing behaviour.
+  ``arithmetic_compat='minimal'`` which matches the existing behaviour (:pull:`10943`).
   By `Matthew Willson <https://github.com/mjwillson>`_.
-- Better ordering of coordinates when displaying Xarray objects. (:pull:`11098`).
+- Better ordering of coordinates when displaying xarray objects (:pull:`11091`).
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_, `Julia Signell <https://github.com/jsignell>`_.
+- Use ``np.dtypes.StringDType`` when reading Zarr string variables  (:pull:`11097`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
-- Change the default value for ``chunk`` in ``open_zarr`` to ``_default`` and remove special mapping of ``"auto"``
-  to ``{}`` or ``None`` in ``open_zarr``. If ``chunks`` is not set, the default behavior is the same as before.
+- Change the default value for ``chunk`` in :py:func:`open_zarr` to ``_default`` and remove special mapping of ``"auto"``
+  to ``{}`` or ``None`` in :py:func:`open_zarr`. If ``chunks`` is not set, the default behavior is the same as before.
   Explicitly setting ``chunks="auto"`` will match the behavior of ``chunks="auto"`` in
-  ``open_dataset(..., engine="zarr")`` (:issue:`11002` :pull:`11010`).
+  :py:func:`open_dataset` with ``engine="zarr"`` (:issue:`11002`, :pull:`11010`).
   By `Julia Signell <https://github.com/jsignell>`_.
-- :py:meth:`Dataset.identical`,` :py:meth:`DataArray.identical`, and
-  :py:func:`testings.assert_identical` now compare indexes (xindexes).
+- :py:meth:`Dataset.identical`, :py:meth:`DataArray.identical`, and
+  :py:func:`testing.assert_identical` now compare indexes.
   Two objects with identical data but different indexes will no longer
-  be considered identical. This also affects (:issue:`11033` :pull:`11035`).
+  be considered identical (:issue:`11033`, :pull:`11035`).
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
-
-
-Deprecations
-~~~~~~~~~~~~
 
 
 Bug Fixes
 ~~~~~~~~~
 
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
-  only one xarray object given to ``apply_ufunc`` (:issue:`10982` :pull:`10997`).
+  only one xarray object given to :py:func:`apply_ufunc` (:issue:`10982`, :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
 - :py:meth:`~xarray.indexes.RangeIndex.equals` now uses floating point error tolerant
   ``np.isclose`` by default to handle accumulated floating point errors from
@@ -71,23 +106,50 @@ Bug Fixes
 - Ensure the :py:class:`~xarray.groupers.SeasonResampler` preserves the datetime
   unit of the underlying time index when resampling (:issue:`11048`,
   :pull:`11049`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Partially support pandas 3 default string indexes by coercing ``pd.StringDtype``
+  to ``np.dtypes.StringDType`` in ``PandasIndexingAdapter`` (:issue:`11098`, :pull:`11102`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+- :py:meth:`Dataset.eval` now works with more than 2 dimensions (:pull:`11064`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Fix :py:func:`where` for ``cupy.array`` inputs (:pull:`11026`).
+  By `Simon Høxbro Hansen <https://github.com/hoxbro>`_.
+- Fix :py:meth:`CombinedLock.locked` to correctly call the underlying lock's
+  ``locked()`` method (:issue:`10843`, :pull:`11022`).
+  By `Samay Mehar <https://github.com/samay2504>`_.
+- Fix :py:meth:`DatasetGroupBy.map` when grouping by more than one variable (:pull:`11005`).
+  By `Joshua Gould <https://github.com/joshua-gould>`_.
+- Fix indexing bugs in :py:class:`~xarray.indexes.CoordinateTransformIndex` (:pull:`10980`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Ensure the netCDF4 backend locks files while closing to prevent race conditions (:pull:`10788`).
+  By `David Bold <https://github.com/dschwoerer>`_.
+- Improve error message when scipy is missing for :py:class:`~xarray.indexes.NDPointIndex` (:pull:`11085`).
+  By `Sakshee_D <https://github.com/Sakshee-D>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
-- Better description of ``keep_attrs`` option on ``xarray.where`` docstring (:issue:`10982` :pull:`10997`).
+- Better description of ``keep_attrs`` option on :py:func:`xarray.where` docstring (:issue:`10982`, :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
-
+- Document how :py:func:`xarray.dot` interacts with coordinates (:pull:`10958`).
+  By `Dhruva Kumar Kaushal <https://github.com/dhruvak001>`_.
+- Improve ``rolling`` window documentation (:pull:`11094`).
+  By `Barron H. Henderson <https://github.com/barronh>`_.
+- Improve ``combine_nested`` and ``combine_by_coords`` docstrings (:pull:`11080`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Performance
 ~~~~~~~~~~~
 
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Optimize :py:class:`~xarray.coding.variables.CFMaskCoder` decoder (:pull:`11105`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Update contributing instructions with note on pixi version (:pull:`11108`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 .. _whats-new.2025.12.0:
 

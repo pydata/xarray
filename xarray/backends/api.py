@@ -1463,7 +1463,7 @@ def open_mfdataset(
         "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
-    data_vars : {"minimal", "different", "all"} or list of str, default: "all"
+    data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
             appears are included.
@@ -1473,9 +1473,12 @@ def open_mfdataset(
             load the data payload of data variables into memory if they are not
             already loaded.
           * "all": All data variables will be concatenated.
+          * None: Means ``"all"`` if ``concat_dim`` is not present in any of
+            the ``objs``, and ``"minimal"`` if ``concat_dim`` is present
+            in any of ``objs``.
           * list of str: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
-    coords : {"minimal", "different", "all"} or list of str, optional
+    coords : {"minimal", "different", "all"} or list of str, default: "different"
         These coordinate variables will be concatenated together:
          * "minimal": Only coordinates in which the dimension already appears
            are included.
