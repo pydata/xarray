@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
-from itertools import pairwise
 from typing import Literal, cast
 from unittest import mock
 
@@ -15,7 +14,7 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Dataset, Variable, date_range
 from xarray.core.groupby import _consolidate_slices
-from xarray.core.types import InterpOptions, ResampleCompatible
+from xarray.core.types import InterpOptions, PDDatetimeUnitOptions, ResampleCompatible
 from xarray.groupers import (
     BinGrouper,
     EncodedGroups,
@@ -1812,13 +1811,7 @@ class TestDataArrayGroupBy:
         )
         actual = field.groupby_bins(by, bins=bins).count()
 
-        bincoord = np.array(
-            [
-                pd.Interval(left, right, closed="right")
-                for left, right in pairwise(bins)
-            ],
-            dtype=object,
-        )
+        bincoord = pd.IntervalIndex.from_breaks(bins, closed="right")
         expected = DataArray(
             np.array([6, np.nan, 3, 6]),
             dims="group_bins",
@@ -2995,13 +2988,7 @@ def test_multiple_groupers_mixed(use_flox: bool, shuffle: bool) -> None:
         coords={
             "x_bins": (
                 "x_bins",
-                np.array(
-                    [
-                        pd.Interval(5, 15, closed="right"),
-                        pd.Interval(15, 25, closed="right"),
-                    ],
-                    dtype=object,
-                ),
+                pd.IntervalIndex.from_breaks([5, 15, 25], closed="right"),
             ),
             "letters": ("letters", np.array(["a", "b"], dtype=object)),
         },
@@ -3618,6 +3605,16 @@ class TestSeasonGrouperAndResampler:
         gb = da.groupby(time=resampler).sum()
         assert_identical(rs, gb)
 
+    def test_season_resampler_preserves_time_unit(
+        self, time_unit: PDDatetimeUnitOptions
+    ) -> None:
+        time = date_range("2000", periods=12, freq="MS", unit=time_unit)
+        da = DataArray(np.ones(time.size), dims="time", coords={"time": time})
+        resampler = SeasonResampler(["DJF", "MAM", "JJA", "SON"])
+        result = da.resample(time=resampler).sum()
+        result_unit, _ = np.datetime_data(result.time.dtype)
+        assert result_unit == time_unit
+
 
 @pytest.mark.parametrize(
     "chunk",
@@ -3848,6 +3845,20 @@ def test_groupby_bins_mean_time_series():
     assert "time" in ds_agged.data_vars
     assert "measurement" in ds_agged.data_vars
     assert ds_agged.time.dtype == np.dtype("datetime64[ns]")
+
+
+def test_groupby_multi_map():
+    # https://github.com/pydata/xarray/issues/11004
+    d = xr.DataArray(
+        [[0, 1], [2, 3]],
+        coords={
+            "lon": (["ny", "nx"], [[30, 40], [40, 50]]),
+            "lat": (["ny", "nx"], [[10, 10], [20, 20]]),
+        },
+        dims=["ny", "nx"],
+    )
+    xr.testing.assert_equal(d, d.groupby("lon").map(lambda x: x))
+    xr.testing.assert_equal(d, d.groupby(("lon", "lat")).map(lambda x: x))
 
 
 # TODO: Possible property tests to add to this module

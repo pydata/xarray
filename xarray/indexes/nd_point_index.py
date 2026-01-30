@@ -75,7 +75,13 @@ class ScipyKDTreeAdapter(TreeAdapter):
     _kdtree: KDTree
 
     def __init__(self, points: np.ndarray, options: Mapping[str, Any]):
-        from scipy.spatial import KDTree
+        try:
+            from scipy.spatial import KDTree
+        except ImportError as err:
+            raise ImportError(
+                "`NDPointIndex` requires `scipy` when used with `ScipyKDTreeAdapter`. "
+                "Please ensure that `scipy` is installed and importable."
+            ) from err
 
         self._kdtree = KDTree(points, **options)
 

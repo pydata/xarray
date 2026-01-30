@@ -13,7 +13,7 @@ on:
 
 env:
   FORCE_COLOR: 3
-  PIXI_VERSION: "v0.58.0"
+  PIXI_VERSION: "v0.63.2"
 
 jobs:
   detect-ci-trigger:
@@ -37,7 +37,7 @@ jobs:
   cache-pixi-lock:
     uses: ./.github/workflows/cache-pixi-lock.yml
     with:
-      pixi-version: "v0.58.0" # keep in sync with env var above
+      pixi-version: "v0.63.2" # keep in sync with env var above
 
   hypothesis:
     name: Slow Hypothesis Tests
@@ -63,7 +63,7 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: restore-pixi-lock
         with:
           enableCrossOsArchive: true
@@ -89,7 +89,7 @@ jobs:
       # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
       - name: Restore cached hypothesis directory
         id: restore-hypothesis-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: .hypothesis/
           key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
@@ -107,7 +107,7 @@ jobs:
       - name: Save cached hypothesis directory
         id: save-hypothesis-cache
         if: always() && steps.status.outcome != 'skipped'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: .hypothesis/
           key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
