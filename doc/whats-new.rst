@@ -30,6 +30,9 @@ Bug Fixes
   Dask chunk boundaries must now align with shard boundaries, not just internal
   Zarr chunk boundaries (:issue:`10831`).
 
+- Fix :py:meth:`Dataset.sortby` and :py:meth:`DataArray.sortby` placing NaN values
+  at the beginning instead of the end when using ``ascending=False`` (:issue:`7358`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 
 Documentation
 ~~~~~~~~~~~~~
