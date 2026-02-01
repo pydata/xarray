@@ -26,6 +26,7 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix slicing with negative step (:issue:`11000` and :pull:`11044`).
 
 Documentation
 ~~~~~~~~~~~~~
