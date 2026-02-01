@@ -528,7 +528,7 @@ class TestMergeFunction:
     def test_merge_error(self):
         ds = xr.Dataset({"x": 0})
         with pytest.raises(xr.MergeError):
-            xr.merge([ds, ds + 1])
+            xr.merge([ds, ds + 1], compat="no_conflicts")
 
     def test_merge_alignment_error(self):
         ds = xr.Dataset(coords={"x": [1, 2]})
@@ -624,7 +624,7 @@ class TestMergeMethod:
         assert_identical(data, actual)
 
         with pytest.raises(ValueError, match="conflicting values for variable"):
-            ds1.merge(ds2.rename({"var3": "var1"}))
+            ds1.merge(ds2.rename({"var3": "var1"}), compat="no_conflicts")
         with pytest.raises(ValueError, match=r"should be coordinates or not"):
             data.reset_coords().merge(data)
         with pytest.raises(ValueError, match=r"should be coordinates or not"):
@@ -948,7 +948,7 @@ class TestMergeDataTree:
                 "Raised whilst mapping function over node(s) with path 'a'"
             ),
         ):
-            xr.merge([tree1, tree2], join="exact")
+            xr.merge([tree1, tree2], join="exact", compat="no_conflicts")
 
     def test_fill_value_errors(self) -> None:
         trees = [xr.DataTree(), xr.DataTree()]
