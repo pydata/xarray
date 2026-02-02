@@ -9933,7 +9933,7 @@ class Dataset(
         time part of the timestamps.
 
         Parameters
-        ---------
+        ----------
         calendar : str
             The target calendar name.
         dim : Hashable, default: "time"

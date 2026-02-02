@@ -3199,7 +3199,7 @@ class DataArray(
             New Dataset copied from `self` with variables removed.
 
         Examples
-        -------
+        --------
         >>> data = np.arange(12).reshape(4, 3)
         >>> da = xr.DataArray(
         ...     data=data,
@@ -4702,7 +4702,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are broadcast equal.
 
@@ -4756,7 +4756,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are equal.
 
@@ -4812,7 +4812,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are identical.
 
@@ -6746,7 +6746,7 @@ class DataArray(
         time part of the timestamps.
 
         Parameters
-        ---------
+        ----------
         calendar : str
             The target calendar name.
         dim : str
