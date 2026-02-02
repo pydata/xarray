@@ -69,6 +69,12 @@ New Features
   brings improved alignment between h5netcdf and libnetcdf4 in the storage of
   complex numbers (:pull:`11068`). By `Mark Harfouche
   <https://github.com/hmaarrfk>`_.
+- Added typed properties for external accessor packages (hvplot, cf-xarray,
+  pint-xarray, rioxarray, xarray-plotly), enabling full IDE support including
+  autocompletion, parameter hints, and docstrings. For uninstalled packages,
+  ``hasattr()`` returns ``False`` to keep the namespace clean (:pull:`11079`).
+  By `Your Name <https://github.com/FBumann>`_.
+
 - :py:func:`set_options` now supports an ``arithmetic_compat`` option which determines how non-index coordinates
   of the same name are compared for potential conflicts when performing binary operations. The default for it is
   ``arithmetic_compat='minimal'`` which matches the existing behaviour (:pull:`10943`).

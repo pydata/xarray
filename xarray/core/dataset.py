@@ -31,6 +31,7 @@ from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
 import numpy as np
 import pandas as pd
 
+from xarray.accessors import DatasetExternalAccessorMixin
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from xarray.compat.array_api_compat import to_like_array
@@ -203,6 +204,7 @@ class Dataset(
     DataWithCoords,
     DatasetAggregations,
     DatasetArithmetic,
+    DatasetExternalAccessorMixin,
     Mapping[Hashable, "DataArray"],
 ):
     """A multi-dimensional, in memory, array database.

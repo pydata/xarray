@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, TypeVar, over
 import numpy as np
 import pandas as pd
 
+from xarray.accessors import DataArrayExternalAccessorMixin
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.computation import computation, ops
@@ -259,6 +260,7 @@ class DataArray(
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
+    DataArrayExternalAccessorMixin,
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 

@@ -28,6 +28,7 @@ from typing import (
     overload,
 )
 
+from xarray.accessors import DataTreeExternalAccessorMixin
 from xarray.core import utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
@@ -464,6 +465,7 @@ class DataTree(
     DataTreeAggregations,
     DataTreeOpsMixin,
     TreeAttrAccessMixin,
+    DataTreeExternalAccessorMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
     """
