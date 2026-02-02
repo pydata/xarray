@@ -1092,7 +1092,7 @@ def merge(
     xarray.MergeError
         If any variables with the same name have conflicting values.
 
-    See also
+    See Also
     --------
     concat
     combine_nested

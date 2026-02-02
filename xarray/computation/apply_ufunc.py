@@ -1040,6 +1040,12 @@ def apply_ufunc(
 
     Note that due to the overhead :py:func:`xarray.map_blocks` is considerably slower than ``apply_ufunc``.
 
+    :ref:`dask.automatic-parallelization`
+        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
+
+    :doc:`xarray-tutorial:advanced/apply_ufunc/apply_ufunc`
+        Advanced Tutorial on applying numpy function using :py:func:`apply_ufunc`
+
     Examples
     --------
     Calculate the vector magnitude of two arguments:
@@ -1140,14 +1146,6 @@ def apply_ufunc(
     numba.guvectorize
     dask.array.apply_gufunc
     xarray.map_blocks
-
-    Notes
-    -----
-    :ref:`dask.automatic-parallelization`
-        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
-
-    :doc:`xarray-tutorial:advanced/apply_ufunc/apply_ufunc`
-        Advanced Tutorial on applying numpy function using :py:func:`apply_ufunc`
 
     References
     ----------

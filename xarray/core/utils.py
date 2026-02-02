@@ -162,7 +162,7 @@ def did_you_mean(
     >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
     'Did you mean one of (None,)?'
 
-    See also
+    See Also
     --------
     https://en.wikipedia.org/wiki/String_metric
     """

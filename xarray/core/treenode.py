@@ -830,7 +830,7 @@ def group_subtrees(
     TreeIsomorphismError
         If trees are not isomorphic, i.e., they have different structures.
 
-    See also
+    See Also
     --------
     DataTree.subtree
     DataTree.subtree_with_keys

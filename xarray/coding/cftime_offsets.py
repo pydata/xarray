@@ -1415,7 +1415,7 @@ def date_range(
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
                 dtype='object', length=6, calendar='noleap', freq='2MS')
 
-    See also
+    See Also
     --------
     pandas.date_range
     cftime_range
