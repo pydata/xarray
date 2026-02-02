@@ -1963,7 +1963,7 @@ class PandasIndexingAdapter(IndexingAdapter):
             return np.asarray(array.values, dtype=dtype)
 
     def get_duck_array(self) -> np.ndarray | PandasExtensionArray:
-        # We return an PandasExtensionArray wrapper type that satisfies
+        # We return a PandasExtensionArray wrapper type that satisfies
         # duck array protocols.
         # `NumpyExtensionArray` is excluded
         if is_allowed_extension_array(self.array):
