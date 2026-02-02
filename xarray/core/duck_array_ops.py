@@ -285,7 +285,7 @@ def asarray(data, xp=np, dtype=None):
 
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
-    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
+    """Cast arrays to a shared dtype using xarray's type promotion rules."""
     # Avoid calling array_type("cupy") repeatidely in the any check
     array_type_cupy = array_type("cupy")
     if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):
