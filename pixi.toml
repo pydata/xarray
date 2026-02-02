@@ -319,15 +319,17 @@ policy-min-versions = [
     "pixi:test-py311-min-versions",
   ] },
 ]
-policy = [
-  { task = "check-policy", args = [
-    """\
+policy = [{ task = "check-policy", args = ["""\
     pixi:test-py311-bare-minimum \
     pixi:test-py311-bare-min-and-scipy \
     pixi:test-py311-min-versions \
-    """,
-  ] },
-]
+    """] }]
+
+[feature.numpydoc-lint.dependencies]
+numpydoc = "*"
+
+[feature.numpydoc-lint.tasks]
+numpydoc-lint = { cmd = "python doc/numpydoc-public-api.py" }
 
 [environments]
 # Testing
@@ -419,14 +421,7 @@ test-py311-min-versions = { features = [
 
 # Extra
 typing = { features = ["typing"] }
-doc = { features = [
-  "doc",
-  "backends",
-  "test",
-  "accel",
-  "viz",
-  "extras",
-] }
+doc = { features = ["doc", "backends", "test", "accel", "viz", "extras"] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 release = { features = ["release"], no-default-feature = true }
 default = { features = [
@@ -441,3 +436,4 @@ default = { features = [
   "dev",
 ] }
 policy = { features = ["policy"], no-default-feature = true }
+numpydoc-lint = { features = ["numpydoc-lint"] }
