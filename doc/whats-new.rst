@@ -37,6 +37,8 @@ Performance
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Add script for linting of public docstrings according to numpydoc (:pull:`11121`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 
 .. _whats-new.2026.01.0:
