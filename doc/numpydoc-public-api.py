@@ -152,6 +152,9 @@ def main():
         try:
             res = validate(item)
         except (AttributeError, StopIteration, ValueError) as e:
+            if isinstance(e, ValueError) and "Error parsing See Also entry" in str(e): # TODO: Fix later https://github.com/pydata/xarray/issues/8596#issuecomment-3832443795
+                logger.info(f"Skipping See Also parsing error for {item!r}.")
+                continue
             logger.warning(f"Could not process {item!r}. Encountered error. {e!r}")
             continue
         if res["type"] in ("module", "float", "int", "dict"):
