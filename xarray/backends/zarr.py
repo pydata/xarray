@@ -163,7 +163,7 @@ class FillValueCoder:
 
 def encode_zarr_attr_value(value):
     """
-    Encode a attribute value as something that can be serialized as json
+    Encode an attribute value as something that can be serialized as json
 
     Many xarray datasets / variables have numpy arrays and values. This
     function handles encoding / decoding of such items.

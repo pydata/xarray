@@ -2138,7 +2138,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         Returns
         -------
-        Variable that is a view of the original array with a added dimension of
+        Variable that is a view of the original array with an added dimension of
         size w.
         The return dim: self.dims + (window_dim, )
         The return shape: self.shape + (window, )

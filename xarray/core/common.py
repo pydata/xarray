@@ -29,7 +29,7 @@ try:
 except ImportError:
     cftime = None
 
-# Used as a sentinel value to indicate a all dimensions
+# Used as a sentinel value to indicate all dimensions
 ALL_DIMS = ...
 
 

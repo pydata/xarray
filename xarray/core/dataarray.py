@@ -2434,7 +2434,7 @@ class DataArray(
         ----------
         other : Dataset or DataArray
             Object with an 'indexes' attribute giving a mapping from dimension
-            names to an 1d array-like, which provides coordinates upon
+            names to a 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
         method : { "linear", "nearest", "zero", "slinear", "quadratic", "cubic", \
             "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima" }
