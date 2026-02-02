@@ -86,7 +86,7 @@ def map_over_datasets(
     Result of applying `func` to each node in the provided trees, packed back
     into DataTree objects via `DataTree.from_dict`.
 
-    See also
+    See Also
     --------
     DataTree.map_over_datasets
     group_subtrees

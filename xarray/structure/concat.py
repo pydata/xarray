@@ -202,7 +202,7 @@ def concat(
     -------
     concatenated : type of objs
 
-    See also
+    See Also
     --------
     merge
 

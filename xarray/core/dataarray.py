@@ -3985,7 +3985,7 @@ class DataArray(
         result: DataFrame
             DataArray as a pandas DataFrame.
 
-        See also
+        See Also
         --------
         DataArray.to_pandas
         DataArray.to_series
@@ -4028,7 +4028,7 @@ class DataArray(
         result : Series
             DataArray as a pandas Series.
 
-        See also
+        See Also
         --------
         DataArray.to_pandas
         DataArray.to_dataframe
@@ -5487,7 +5487,7 @@ class DataArray(
         -------
         differentiated: DataArray
 
-        See also
+        See Also
         --------
         numpy.gradient: corresponding numpy function
 
@@ -5545,7 +5545,7 @@ class DataArray(
         -------
         integrated : DataArray
 
-        See also
+        See Also
         --------
         Dataset.integrate
         numpy.trapz : corresponding numpy function
@@ -5602,7 +5602,7 @@ class DataArray(
         -------
         integrated : DataArray
 
-        See also
+        See Also
         --------
         Dataset.cumulative_integrate
         scipy.integrate.cumulative_trapezoid : corresponding scipy function
@@ -6867,8 +6867,8 @@ class DataArray(
         dim : str
             The time coordinate name.
 
-        Return
-        ------
+        Returns
+        -------
         DataArray
             The source interpolated on the decimal years of target,
         """

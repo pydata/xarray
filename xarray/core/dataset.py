@@ -1178,7 +1178,7 @@ class Dataset(
         """
         Coerces wrapped data and coordinates into numpy arrays, returning a Dataset.
 
-        See also
+        See Also
         --------
         DataArray.as_numpy
         DataArray.to_numpy : Returns only the data as a numpy.ndarray object.
@@ -1688,8 +1688,8 @@ class Dataset(
         """Like equals, but also checks all dataset attributes, the
         attributes on all variables and coordinates, and indexes.
 
-        Example
-        -------
+        Examples
+        --------
 
         >>> a = xr.Dataset(
         ...     {"Width": ("X", [1, 2, 3])},
@@ -6558,7 +6558,7 @@ class Dataset(
         interpolated: Dataset
             Filled in Dataset.
 
-        Warning
+        Warnings
         --------
         When passing fill_value as a keyword argument with method="linear", it does not use
         ``numpy.interp`` but it uses ``scipy.interpolate.interp1d``, which provides the fill_value parameter.
@@ -7601,7 +7601,7 @@ class Dataset(
         -------
         obj : Dataset
 
-        See also
+        See Also
         --------
         Dataset.to_dict
         DataArray.from_dict
@@ -8398,7 +8398,7 @@ class Dataset(
         -------
         differentiated: Dataset
 
-        See also
+        See Also
         --------
         numpy.gradient: corresponding numpy function
         """
@@ -8464,7 +8464,7 @@ class Dataset(
         -------
         integrated : Dataset
 
-        See also
+        See Also
         --------
         DataArray.integrate
         numpy.trapz : corresponding numpy function
@@ -8585,7 +8585,7 @@ class Dataset(
         -------
         integrated : Dataset
 
-        See also
+        See Also
         --------
         DataArray.cumulative_integrate
         scipy.integrate.cumulative_trapezoid : corresponding scipy function
@@ -9592,8 +9592,8 @@ class Dataset(
         result : Dataset or DataArray, depending on whether ``statement`` contains an
             assignment.
 
-        Warning
-        -------
+        Warnings
+        --------
         Like ``pd.eval()``, this method should not be used with untrusted input.
 
         Examples
@@ -10054,8 +10054,8 @@ class Dataset(
         dim : Hashable, default: "time"
             The time coordinate name.
 
-        Return
-        ------
+        Returns
+        -------
         DataArray
             The source interpolated on the decimal years of target,
         """
