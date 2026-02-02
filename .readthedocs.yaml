@@ -17,8 +17,6 @@ build:
     post_checkout:
       - (git --no-pager log --pretty="tformat:%s" -1 | grep -vqF "[skip-rtd]") || exit 183
       - git fetch --unshallow || true
-    pre_install:
-      - git update-index --assume-unchanged doc/conf.py
     install:
       - pixi install -e doc
     build:
