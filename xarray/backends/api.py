@@ -942,6 +942,7 @@ def open_datatree(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
+    max_concurrency: int | None = None,
     **kwargs,
 ) -> DataTree:
     """
@@ -1074,6 +1075,13 @@ def open_datatree(
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
         For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
         to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+    max_concurrency : int, optional
+        Maximum number of concurrent I/O operations when opening groups in
+        parallel. This limits the number of groups that are loaded simultaneously.
+        Useful for controlling resource usage with large datatrees or stores
+        that may have limitations on concurrent access (e.g., icechunk).
+        Only used by backends that support parallel loading (currently Zarr v3).
+        If None (default), the backend uses its default value (typically 10).
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -1133,6 +1141,9 @@ def open_datatree(
         decode_coords=decode_coords,
     )
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+
+    if max_concurrency is not None:
+        kwargs["max_concurrency"] = max_concurrency
 
     backend_tree = backend.open_datatree(
         filename_or_obj,
