@@ -151,32 +151,27 @@ DataArray:
 
 .. jupyter-execute::
 
-    import numpy as np
-    import xarray as xr
-    from xarray import Index
-    from xarray.core.variable import IndexVariable
+   import numpy as np
+   import xarray as xr
+   from xarray import Index
 
-    class MyIndex(Index):
-        def __init__(self, data):
-            self._data = data
+   class MyIndex(Index):
+       def __init__(self, data):
+           self._data = data
 
-        @classmethod
-        def from_variables(cls, variables, *, options=None):
-            # Required method for creating index from coordinates
-            (name, var), = variables.items()
-            return cls(var.data)
+       @classmethod
+       def from_variables(cls, variables, *, options=None):
+           (name, var), = variables.items()
+           return cls(var.data)
 
-        def create_variables(self, variables=None):
-            # Return the coordinate variable
-            (name, var), = variables.items()
-            return {name: IndexVariable(var.dims, self._data, attrs=var.attrs)}
+       def create_variables(self, variables):
+           (name, var), = variables.items()
+           return {name: xr.Variable(var.dims, self._data, attrs=var.attrs)}
 
-        def _repr_inline_(self, max_width: int) -> str:
-            # Return a concise representation
-            return f"{type(self).__name__} (size={len(self._data)})"
+       def _repr_inline_(self, max_width: int) -> str:
+           return f"{self.__class__.__name__} (size={len(self._data)})"
 
-    # Demonstrate how it looks in a DataArray
-    xr.DataArray(np.arange(10), dims="x").set_xindex("x", MyIndex)
+   xr.DataArray(np.arange(10), dims="x").set_index(x=MyIndex(np.arange(10)))
 
 Alignment
 ---------
