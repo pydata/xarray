@@ -48,7 +48,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: "test-py313"
+      PIXI_ENV: "test-py313-pandas-3"
     steps:
       - uses: actions/checkout@v6
         with:

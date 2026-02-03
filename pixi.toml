@@ -76,6 +76,9 @@ matplotlib-base = "*"
 nc-time-axis = "*"
 seaborn = "*"
 
+[feature.pandas3.dependencies]
+pandas = "3.0.*"
+
 [feature.extras.dependencies]
 # array
 sparse = "*"
@@ -359,6 +362,17 @@ test-py313 = { features = [
   "dask",
   "viz",
   "extras",
+] }
+test-py313-pandas-3 = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "pandas3",
 ] }
 test-nightly = { features = [
   "py313",
