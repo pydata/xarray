@@ -26,6 +26,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix silent data corruption when writing dask arrays to sharded Zarr stores.
+  Dask chunk boundaries must now align with shard boundaries, not just internal
+  Zarr chunk boundaries (:issue:`10831`).
+
 
 Documentation
 ~~~~~~~~~~~~~

@@ -2870,6 +2870,41 @@ class ZarrBase(CFEncodedBase):
                     pass
 
     @requires_dask
+    def test_shard_encoding_with_dask(self) -> None:
+        # Test that dask chunks must align with shard boundaries.
+        # See https://github.com/pydata/xarray/issues/10831
+        if not (has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3):
+            pytest.skip("sharding requires zarr v3 format")
+
+        ds = xr.DataArray(np.arange(12), dims="x", name="var1").to_dataset()
+
+        # Case 1: Dask chunks equal to shards should work
+        # (zarr chunk=3, shard=6, dask chunk=6)
+        ds1 = ds.chunk({"x": 6})
+        ds1["var1"].encoding = {"chunks": (3,), "shards": (6,)}
+        with self.roundtrip(ds1) as actual:
+            assert_identical(ds, actual)
+
+        # Case 2: Dask chunks that are multiples of shards should work
+        # (zarr chunk=1, shard=3, dask chunk=6)
+        ds2 = ds.chunk({"x": 6})
+        ds2["var1"].encoding = {"chunks": (1,), "shards": (3,)}
+        with self.roundtrip(ds2) as actual:
+            assert_identical(ds, actual)
+
+        # Case 3: Dask chunks smaller than shards should fail
+        # (zarr chunk=2, shard=4, dask chunk=3) - dask chunk doesn't align with shard
+        ds3 = ds.chunk({"x": 3})
+        ds3["var1"].encoding = {"chunks": (2,), "shards": (4,)}
+        with pytest.raises(ValueError, match=r"would overlap"):
+            with self.roundtrip(ds3) as actual:
+                pass
+
+        # Case 4: Can bypass with safe_chunks=False (but data may be corrupted)
+        with self.roundtrip(ds3, save_kwargs={"safe_chunks": False}) as actual:
+            pass
+
+    @requires_dask
     @pytest.mark.skipif(
         ON_WINDOWS,
         reason="Very flaky on Windows CI. Can re-enable assuming it starts consistently passing.",
