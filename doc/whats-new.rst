@@ -27,6 +27,7 @@ Bug Fixes
 ~~~~~~~~~
 
 - Fix slicing with negative step (:issue:`11000` and :pull:`11044`).
+  By `Antonio Valentino <https://github.com/avalentino>`_.
 
 Documentation
 ~~~~~~~~~~~~~
