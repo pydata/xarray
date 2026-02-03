@@ -16,6 +16,9 @@ New Features
 
 - Added ``inherit='all_coords'`` option to :py:meth:`DataTree.to_dataset` to inherit
   all parent coordinates, not just indexed ones (:issue:`10812`, :pull:`11230`).
+- Added ``max_concurrency`` parameter to :py:func:`open_datatree` to control
+  the maximum number of concurrent I/O operations when opening groups in parallel
+  with the Zarr backend (:pull:`10742`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Breaking Changes
