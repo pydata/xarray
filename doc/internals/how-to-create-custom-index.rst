@@ -171,7 +171,9 @@ DataArray:
        def _repr_inline_(self, max_width: int) -> str:
            return f"{self.__class__.__name__} (size={len(self._data)})"
 
-   xr.DataArray(np.arange(10), dims="x").set_index(x=MyIndex(np.arange(10)))
+   da = xr.DataArray(np.arange(10), dims="x", coords={"x": np.arange(10)})
+   da.set_index(x=MyIndex(np.arange(10)))
+
 
 Alignment
 ---------
