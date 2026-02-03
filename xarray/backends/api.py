@@ -866,7 +866,7 @@ def open_dataarray(
     All parameters are passed directly to `xarray.open_dataset`. See that
     documentation for further details.
 
-    See also
+    See Also
     --------
     open_dataset
     """

@@ -30,7 +30,7 @@ jobs:
           path: |
             pixi.lock
           key: ${{ steps.date.outputs.date }}_${{ inputs.pixi-version }}_${{hashFiles('pixi.toml')}}
-      - uses: prefix-dev/setup-pixi@v0.9.3
+      - uses: prefix-dev/setup-pixi@v0.9.4
         if: ${{ !steps.restore.outputs.cache-hit }}
         with:
           pixi-version: ${{ inputs.pixi-version }}

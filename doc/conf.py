@@ -192,9 +192,7 @@ language = "en"
 project = "xarray"
 copyright = f"2014-{datetime.datetime.now().year}, xarray Developers"
 
-# The short Y.M.D version.
-v = packaging.version.parse(xarray.__version__)
-version = ".".join(str(p) for p in v.release)
+version = xarray.__version__
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
