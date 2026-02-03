@@ -679,7 +679,7 @@ def combine_nested(
         temperature    (t) float64 80B -0.8878 -1.981 -0.3479 ... -0.4381 -1.253
         precipitation  (t) float64 80B 1.202 -0.3873 -0.3023 ... -0.8955 0.3869
 
-    See also
+    See Also
     --------
     concat
     merge
@@ -925,7 +925,7 @@ def combine_by_coords(
         Will return a Dataset unless all the inputs are unnamed DataArrays, in which case a
         DataArray will be returned.
 
-    See also
+    See Also
     --------
     concat
     merge
