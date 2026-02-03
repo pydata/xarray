@@ -184,6 +184,57 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
+  stubtest:
+    name: Stubtest
+    runs-on: "ubuntu-latest"
+    needs: [detect-ci-trigger, cache-pixi-lock]
+    # Phase 1: Non-blocking (informational only)
+    # Change to 'false' once stubtest is stable to make it required
+    continue-on-error: true
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      PIXI_ENV: test-py313-with-typing
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Restore cached pixi lockfile
+        uses: actions/cache/restore@v5
+        id: restore-pixi-lock
+        with:
+          enableCrossOsArchive: true
+          path: |
+            pixi.lock
+          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
+
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: ${{ env.PIXI_VERSION }}
+          cache: true
+          environments: ${{ env.PIXI_ENV }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+
+      - name: Version info
+        run: |
+          pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
+
+      - name: Install type stubs
+        run: |
+          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive xarray/ || true
+
+      - name: Run stubtest (core modules)
+        run: |
+          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy.stubtest \
+            xarray.core.dataarray \
+            xarray.core.dataset \
+            xarray.core.variable \
+            --mypy-config-file pyproject.toml \
+            --allowlist _stubtest/allowlist.txt
+
   pyright:
     name: Pyright | ${{ matrix.pixi-env }}"
     runs-on: "ubuntu-latest"
