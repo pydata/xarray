@@ -514,7 +514,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         -------
         Chunked array
 
-        See also
+        See Also
         --------
         dask.array.cumreduction
         """
