@@ -9,6 +9,7 @@ import pytest
 
 import xarray as xr
 from xarray.backends.api import _maybe_create_default_indexes_async
+from xarray.backends.store import StoreBackendEntrypoint
 from xarray.backends.zarr import ZarrBackendEntrypoint
 from xarray.testing import assert_equal
 from xarray.tests import (
@@ -232,3 +233,27 @@ class TestAsyncZarrGroupLoading:
                 # For zarr v3, the async function should be called
                 assert mock_async.call_count > 0
                 assert_equal(dtree, dtree_loaded)
+
+    @pytest.mark.asyncio
+    @requires_zarr_v3
+    @parametrize_zarr_format
+    async def test_store_backend_open_dataset_async_equivalence(self, zarr_format):
+        """Test that StoreBackendEntrypoint.open_dataset_async returns same result as sync."""
+        from xarray.backends.zarr import ZarrStore
+
+        ds = create_dataset_with_coordinates(n_coords=3)
+
+        with self.create_zarr_store() as store:
+            ds.to_zarr(store, mode="w", consolidated=False, zarr_format=zarr_format)
+
+            zarr_store = ZarrStore.open_group(
+                store,
+                consolidated=False,
+                zarr_format=zarr_format,
+            )
+
+            store_entrypoint = StoreBackendEntrypoint()
+            ds_sync = store_entrypoint.open_dataset(zarr_store)
+            ds_async = await store_entrypoint.open_dataset_async(zarr_store)
+
+            assert_equal(ds_sync, ds_async)
