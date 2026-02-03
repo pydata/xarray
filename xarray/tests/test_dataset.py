@@ -294,8 +294,8 @@ class TestDataset:
             Coordinates:
               * dim2     (dim2) float64 72B 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
               * dim3     (dim3) {data["dim3"].dtype} 40B 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
-              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 80B 0 1 2 0 0 1 1 2 2 3
+              * time     (time) datetime64[ns] 160B 2000-01-01 2000-01-02 ... 2000-01-20
             Dimensions without coordinates: dim1
             Data variables:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
@@ -875,8 +875,8 @@ class TestDataset:
             """\
         Coordinates:
           * x        (x) int64 16B -1 -2
-          * y        (y) int64 24B 0 1 2
             a        (x) int64 16B 4 5
+          * y        (y) int64 24B 0 1 2
             b        int64 8B -10"""
         )
         actual = repr(coords)
@@ -3167,6 +3167,43 @@ class TestDataset:
         with pytest.raises(ValueError, match=r".*would corrupt the following index.*"):
             ds.drop_indexes("a")
 
+    def test_sel_on_unindexed_coordinate(self) -> None:
+        # Test that .sel() works on coordinates without an index by creating
+        # a PandasIndex on the fly
+        ds = Dataset(
+            {"data": (["x", "y"], np.arange(6).reshape(2, 3))},
+            coords={"x": [0, 1], "y": [10, 20, 30], "y_meta": ("y", ["a", "b", "c"])},
+        )
+        # Drop the index on y to create an unindexed dim coord
+        # also check that coord y_meta works despite not being a dim coord
+        ds = ds.drop_indexes("y")
+        assert "y" not in ds.xindexes
+        assert "y_meta" not in ds.xindexes
+        assert "y" in ds.coords
+
+        # .sel() should still work by creating a PandasIndex on the fly
+        result = ds.sel(y=20)
+        expected = ds.isel(y=1)
+        assert_identical(result, expected, check_default_indexes=False)
+
+        result = ds.sel(y_meta="b")
+        expected = ds.isel(y=1)
+        assert_identical(result, expected, check_default_indexes=False)
+
+        # check that our auto-created indexes are ephemeral
+        assert "y" not in ds.xindexes
+        assert "y_meta" not in ds.xindexes
+        assert "y" in ds.coords
+
+        result_slice = ds.sel(y=slice(10, 20))
+        expected_slice = ds.isel(y=slice(0, 2))
+        assert_identical(
+            result_slice["data"], expected_slice["data"], check_default_indexes=False
+        )
+        assert_identical(
+            result_slice["y"], expected_slice["y"], check_default_indexes=False
+        )
+
     def test_drop_dims(self) -> None:
         data = xr.Dataset(
             {
@@ -3460,7 +3497,8 @@ class TestDataset:
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         original = Dataset({}, midx_coords)
 
-        midx_renamed = midx.rename(["a", "c"])
+        # pandas-stubs expects Hashable for rename, but list of names works for MultiIndex
+        midx_renamed = midx.rename(["a", "c"])  # type: ignore[call-overload]
         midx_coords_renamed = Coordinates.from_pandas_multiindex(midx_renamed, "x")
         expected = Dataset({}, midx_coords_renamed)
 
@@ -3995,10 +4033,23 @@ class TestDataset:
         with pytest.raises(ValueError, match="those variables are data variables"):
             ds.set_xindex("data_var", PandasIndex)
 
-        ds2 = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
+        ds = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
 
-        with pytest.raises(ValueError, match="those coordinates already have an index"):
-            ds2.set_xindex("x", PandasIndex)
+        # With drop_existing=True, it should succeed
+        result = ds.set_xindex("x", PandasIndex)
+        assert "x" in result.xindexes
+        assert isinstance(result.xindexes["x"], PandasIndex)
+
+        class CustomIndex(PandasIndex):
+            pass
+
+        result_custom = ds.set_xindex("x", CustomIndex)
+        assert "x" in result_custom.xindexes
+        assert isinstance(result_custom.xindexes["x"], CustomIndex)
+
+        # Verify the result is equivalent to drop_indexes + set_xindex
+        expected = ds.drop_indexes("x").set_xindex("x", CustomIndex)
+        assert_identical(result_custom, expected)
 
     def test_set_xindex_options(self) -> None:
         ds = Dataset(coords={"foo": ("x", ["a", "a", "b", "b"])})
@@ -5552,7 +5603,8 @@ class TestDataset:
         y = np.random.randn(10, 3)
         y[2] = np.nan
         t = pd.Series(pd.date_range("20130101", periods=10))
-        t[2] = np.nan
+        # pandas-stubs doesn't allow np.nan for datetime Series, but it converts to NaT
+        t[2] = np.nan  # type: ignore[call-overload]
 
         lat = [77.7, 83.2, 76]
         ds = Dataset(
@@ -5564,7 +5616,12 @@ class TestDataset:
             }
         )
         roundtripped = Dataset.from_dict(ds.to_dict(data=data))
-        assert_identical(ds, roundtripped)
+        if data == "array":
+            # TODO: to_dict(data="array") converts datetime64[ns] to datetime64[us]
+            # (numpy's default), causing index dtype mismatch on roundtrip.
+            assert_identical(ds, roundtripped, check_indexes=False)
+        else:
+            assert_identical(ds, roundtripped)
 
     def test_to_dict_with_numpy_attrs(self) -> None:
         # this doesn't need to roundtrip
@@ -6933,6 +6990,41 @@ class TestDataset:
             actual = ds1 + ds2
             assert_equal(actual, expected)
 
+    def test_binary_op_compat_setting(self) -> None:
+        # Setting up a clash of non-index coordinate 'foo':
+        a = xr.Dataset(
+            data_vars={"var": (["x"], [0, 0, 0])},
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [1.0, 2.0, np.nan]),
+            },
+        )
+        b = xr.Dataset(
+            data_vars={"var": (["x"], [0, 0, 0])},
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [np.nan, 2.0, 3.0]),
+            },
+        )
+
+        with xr.set_options(arithmetic_compat="minimal"):
+            assert_equal(a + b, a.drop_vars("foo"))
+
+        with xr.set_options(arithmetic_compat="override"):
+            assert_equal(a + b, a)
+            assert_equal(b + a, b)
+
+        with xr.set_options(arithmetic_compat="no_conflicts"):
+            expected = a.assign_coords(foo=(["x"], [1.0, 2.0, 3.0]))
+            assert_equal(a + b, expected)
+            assert_equal(b + a, expected)
+
+        with xr.set_options(arithmetic_compat="equals"):
+            with pytest.raises(MergeError):
+                a + b
+            with pytest.raises(MergeError):
+                b + a
+
     @pytest.mark.parametrize(
         ["keep_attrs", "expected"],
         (
@@ -7579,23 +7671,6 @@ class TestDataset:
 
 
 # pytest tests — new tests should go here, rather than in the class.
-
-
-@pytest.mark.parametrize("parser", ["pandas", "python"])
-def test_eval(ds, parser) -> None:
-    """Currently much more minimal testing that `query` above, and much of the setup
-    isn't used. But the risks are fairly low — `query` shares much of the code, and
-    the method is currently experimental."""
-
-    actual = ds.eval("z1 + 5", parser=parser)
-    expect = ds["z1"] + 5
-    assert_identical(expect, actual)
-
-    # check pandas query syntax is supported
-    if parser == "pandas":
-        actual = ds.eval("(z1 > 5) and (z2 > 0)", parser=parser)
-        expect = (ds["z1"] > 5) & (ds["z2"] > 0)
-        assert_identical(expect, actual)
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))

@@ -3,13 +3,15 @@ from __future__ import annotations
 import uuid
 from collections import OrderedDict
 from collections.abc import Mapping
+from dataclasses import dataclass
 from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
 from math import ceil
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from xarray.core.formatting import (
+    _coord_sort_key,
     filter_nondefault_indexes,
     inherited_vars,
     inline_index_repr,
@@ -119,7 +121,7 @@ def summarize_coords(variables) -> str:
     li_items = []
     dims = tuple(variables._data.dims)
     dim_ordered_coords = sorted(
-        variables.items(), key=lambda x: dims.index(x[0]) if x[0] in dims else len(dims)
+        variables.items(), key=partial(_coord_sort_key, dims=dims)
     )
     for k, v in dim_ordered_coords:
         li_content = summarize_variable(k, v, is_index=k in variables.xindexes)
@@ -176,25 +178,31 @@ def summarize_indexes(indexes) -> str:
 
 
 def collapsible_section(
-    name, inline_details="", details="", n_items=None, enabled=True, collapsed=False
+    header: str,
+    inline_details="",
+    details="",
+    n_items=None,
+    enabled=True,
+    collapsed=False,
+    span_grid=False,
 ) -> str:
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
 
     has_items = n_items is not None and n_items
     n_items_span = "" if n_items is None else f" <span>({n_items})</span>"
-    enabled = "" if enabled and has_items else "disabled"
-    collapsed = "" if collapsed or not has_items else "checked"
-    tip = " title='Expand/collapse section'" if enabled else ""
-
-    return (
-        f"<input id='{data_id}' class='xr-section-summary-in' "
-        f"type='checkbox' {enabled} {collapsed}>"
-        f"<label for='{data_id}' class='xr-section-summary' {tip}>"
-        f"{name}:{n_items_span}</label>"
+    enabled_attr = "" if enabled and has_items else " disabled"
+    collapsed_attr = "" if collapsed or not has_items else " checked"
+    span_grid_attr = " xr-span-grid" if span_grid else ""
+    tip = " title='Expand/collapse section'" if enabled_attr == "" else ""
+    html = (
+        f"<input id='{data_id}' class='xr-section-summary-in' type='checkbox'{enabled_attr}{collapsed_attr} />"
+        f"<label for='{data_id}' class='xr-section-summary{span_grid_attr}'{tip}>{header}{n_items_span}</label>"
         f"<div class='xr-section-inline-details'>{inline_details}</div>"
-        f"<div class='xr-section-details'>{details}</div>"
     )
+    if details:
+        html += f"<div class='xr-section-details'>{details}</div>"
+    return html
 
 
 def _mapping_section(
@@ -204,24 +212,17 @@ def _mapping_section(
     max_items_collapse,
     expand_option_name,
     enabled=True,
-    max_option_name: Literal["display_max_children"] | None = None,
+    **kwargs,
 ) -> str:
     n_items = len(mapping)
-    expanded = _get_boolean_with_default(
+    expanded = max_items_collapse is None or _get_boolean_with_default(
         expand_option_name, n_items < max_items_collapse
     )
     collapsed = not expanded
 
-    inline_details = ""
-    if max_option_name and max_option_name in OPTIONS:
-        max_items = int(OPTIONS[max_option_name])
-        if n_items > max_items:
-            inline_details = f"({max_items}/{n_items})"
-
     return collapsible_section(
-        name,
-        inline_details=inline_details,
-        details=details_func(mapping),
+        f"{name}:",
+        details=details_func(mapping, **kwargs),
         n_items=n_items,
         enabled=enabled,
         collapsed=collapsed,
@@ -232,7 +233,7 @@ def dim_section(obj) -> str:
     dim_list = format_dims(obj.sizes, obj.xindexes.dims)
 
     return collapsible_section(
-        "Dimensions", inline_details=dim_list, enabled=False, collapsed=True
+        "Dimensions:", inline_details=dim_list, enabled=False, collapsed=True
     )
 
 
@@ -298,6 +299,11 @@ def _get_indexes_dict(indexes):
     }
 
 
+def _sections_repr(sections: list[str]) -> str:
+    section_items = "".join(f"<li class='xr-section-item'>{s}</li>" for s in sections)
+    return f"<ul class='xr-sections'>{section_items}</ul>"
+
+
 def _obj_repr(obj, header_components, sections):
     """Return HTML repr of an xarray object.
 
@@ -305,7 +311,6 @@ def _obj_repr(obj, header_components, sections):
 
     """
     header = f"<div class='xr-header'>{''.join(h for h in header_components)}</div>"
-    sections = "".join(f"<li class='xr-section-item'>{s}</li>" for s in sections)
 
     icons_svg, css_style = _load_static_files()
     return (
@@ -314,7 +319,7 @@ def _obj_repr(obj, header_components, sections):
         f"<pre class='xr-text-repr-fallback'>{escape(repr(obj))}</pre>"
         "<div class='xr-wrap' style='display:none'>"
         f"{header}"
-        f"<ul class='xr-sections'>{sections}</ul>"
+        f"{_sections_repr(sections)}"
         "</div>"
         "</div>"
     )
@@ -388,7 +393,16 @@ def dataset_repr(ds) -> str:
     return _obj_repr(ds, header_components, sections)
 
 
-def datatree_node_sections(node: DataTree, root: bool = False) -> list[str]:
+inherited_coord_section = partial(
+    _mapping_section,
+    name="Inherited coordinates",
+    details_func=summarize_coords,
+    max_items_collapse=25,
+    expand_option_name="display_expand_coords",
+)
+
+
+def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]:
     from xarray.core.coordinates import Coordinates
 
     ds = node._to_dataset_view(rebuild_dims=False, inherit=True)
@@ -401,78 +415,192 @@ def datatree_node_sections(node: DataTree, root: bool = False) -> list[str]:
     )
 
     # Only show dimensions if also showing a variable or coordinates section.
-    show_dims = (
-        node._node_coord_variables
-        or (root and inherited_coords)
-        or node._data_variables
+    show_dims = node_coords or (root and inherited_coords) or ds.data_vars
+
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(ds.xindexes), not display_default_indexes
     )
 
     sections = []
-
-    if node.children:
-        children_max_items = 1 if ds.data_vars else 6
-        sections.append(
-            children_section(node.children, max_items_collapse=children_max_items)
-        )
-
     if show_dims:
         sections.append(dim_section(ds))
-
     if node_coords:
         sections.append(coord_section(node_coords))
-
-    # only show inherited coordinates on the root
     if root and inherited_coords:
         sections.append(inherited_coord_section(inherited_coords))
-
     if ds.data_vars:
         sections.append(datavar_section(ds.data_vars))
-
+    if xindexes:
+        sections.append(index_section(xindexes))
     if ds.attrs:
         sections.append(attr_section(ds.attrs))
 
-    return sections
+    displayed_line_count = (
+        len(node.children)
+        + int(bool(show_dims))
+        + int(bool(node_coords))
+        + len(node_coords)
+        + int(root) * (int(bool(inherited_coords)) + len(inherited_coords))
+        + int(bool(ds.data_vars))
+        + len(ds.data_vars)
+        + int(bool(xindexes))
+        + len(xindexes)
+        + int(bool(ds.attrs))
+        + len(ds.attrs)
+    )
+
+    return sections, displayed_line_count
 
 
-def summarize_datatree_children(children: Mapping[str, DataTree]) -> str:
-    MAX_CHILDREN = OPTIONS["display_max_children"]
-    n_children = len(children)
+def _tree_item_count(node: DataTree, cache: dict[int, int]) -> int:
+    if id(node) in cache:
+        return cache[id(node)]
 
-    children_html = []
-    for i, child in enumerate(children.values()):
-        if i < ceil(MAX_CHILDREN / 2) or i >= ceil(n_children - MAX_CHILDREN / 2):
-            is_last = i == (n_children - 1)
-            children_html.append(datatree_child_repr(child, end=is_last))
-        elif n_children > MAX_CHILDREN and i == ceil(MAX_CHILDREN / 2):
-            children_html.append("<div>...</div>")
+    node_ds = node.to_dataset(inherit=False)
+    node_count = len(node_ds.variables) + len(node_ds.attrs)
+    child_count = sum(
+        _tree_item_count(child, cache) for child in node.children.values()
+    )
+    total = node_count + child_count
+    cache[id(node)] = total
+    return total
 
-    return "".join(
-        [
-            "<div style='display: inline-grid; grid-template-columns: 100%; grid-column: 1 / -1'>",
-            "".join(children_html),
-            "</div>",
-        ]
+
+@dataclass
+class _DataTreeDisplay:
+    node: DataTree
+    sections: list[str]
+    item_count: int
+    collapsed: bool
+    disabled: bool
+
+
+def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
+    displayed_line_count = 0
+    html_line_count = 0
+    displays: dict[str, _DataTreeDisplay] = {}
+    item_count_cache: dict[int, int] = {}
+    root = True
+    collapsed = False
+    disabled = False
+
+    html_limit = OPTIONS["display_max_html_elements"]
+    uncollapsed_limit = OPTIONS["display_max_items"]
+
+    too_many_items_section = collapsible_section(
+        "<em>Too many items to display (display_max_html_elements exceeded)</em>",
+        enabled=False,
+        collapsed=True,
+        span_grid=True,
+    )
+
+    for node in tree.subtree:  # breadth-first
+        parent = node.parent
+        if parent is not None:
+            parent_display = displays.get(parent.path, None)
+            if parent_display is not None and parent_display.disabled:
+                break  # no need to build display
+
+        item_count = _tree_item_count(node, item_count_cache)
+
+        sections, node_line_count = _datatree_node_sections(node, root)
+        new_displayed_count = displayed_line_count + node_line_count
+        new_html_count = html_line_count + node_line_count
+
+        disabled = not root and (disabled or new_html_count > html_limit)
+        if disabled:
+            sections = [too_many_items_section]
+            collapsed = True
+        else:
+            html_line_count = new_html_count
+
+        collapsed = not root and (collapsed or new_displayed_count > uncollapsed_limit)
+        if not collapsed:
+            displayed_line_count = new_displayed_count
+
+        displays[node.path] = _DataTreeDisplay(
+            node, sections, item_count, collapsed, disabled
+        )
+        root = False
+
+    # If any node is collapsed, ensure its immediate siblings are also collapsed
+    for display in displays.values():
+        if not display.disabled:
+            if any(
+                displays[child.path].collapsed
+                for child in display.node.children.values()
+            ):
+                for child in display.node.children.values():
+                    displays[child.path].collapsed = True
+
+    return displays
+
+
+def _ellipsis_element() -> str:
+    """Create an ellipsis element for truncated children."""
+    return (
+        "<div class='xr-group-box'>"
+        "<div class='xr-group-box-vline' style='height: 100%'></div>"
+        "<div class='xr-group-box-contents'>"
+        "<div class='xr-group-box-ellipsis'>⋮</div>"
+        "</div>"
+        "</div>"
     )
 
 
-children_section = partial(
-    _mapping_section,
-    name="Groups",
-    details_func=summarize_datatree_children,
-    max_option_name="display_max_children",
-    expand_option_name="display_expand_groups",
-)
+def children_section(
+    children: Mapping[str, DataTree], displays: dict[str, _DataTreeDisplay]
+) -> str:
+    child_elements = []
+    children_list = list(children.values())
+    nchildren = len(children_list)
+    max_children = int(OPTIONS["display_max_children"])
 
-inherited_coord_section = partial(
-    _mapping_section,
-    name="Inherited coordinates",
-    details_func=summarize_coords,
-    max_items_collapse=25,
-    expand_option_name="display_expand_coords",
-)
+    if nchildren <= max_children:
+        # Render all children
+        for i, child in enumerate(children_list):
+            is_last = i == nchildren - 1
+            child_elements.append(datatree_child_repr(child, displays, end=is_last))
+    else:
+        # Truncate: show first ceil(max/2), ellipsis, last floor(max/2)
+        first_n = ceil(max_children / 2)
+        last_n = max_children - first_n
+
+        child_elements.extend(
+            datatree_child_repr(children_list[i], displays, end=False)
+            for i in range(first_n)
+        )
+
+        child_elements.append(_ellipsis_element())
+
+        child_elements.extend(
+            datatree_child_repr(children_list[i], displays, end=(i == nchildren - 1))
+            for i in range(nchildren - last_n, nchildren)
+        )
+
+    children_html = "".join(child_elements)
+    return f"<div class='xr-children'>{children_html}</div>"
 
 
-def datatree_child_repr(node: DataTree, end: bool = False) -> str:
+def datatree_sections(
+    node: DataTree, displays: dict[str, _DataTreeDisplay]
+) -> list[str]:
+    display = displays[node.path]
+    sections = []
+    if node.children and not display.disabled:
+        sections.append(children_section(node.children, displays))
+    sections.extend(display.sections)
+    return sections
+
+
+def datatree_child_repr(
+    node: DataTree,
+    displays: dict[str, _DataTreeDisplay],
+    end: bool,
+) -> str:
     # Wrap DataTree HTML representation with a tee to the left of it.
     #
     # Enclosing HTML tag is a <div> with :code:`display: inline-grid` style.
@@ -491,26 +619,30 @@ def datatree_child_repr(node: DataTree, end: bool = False) -> str:
     # └─ [    title    ]
     #    |   details   |
     #    |_____________|
-    end = bool(end)
-    height = "100%" if end is False else "1.2em"  # height of line
+
+    vline_height = "1.2em" if end else "100%"
 
     path = escape(node.path)
-    sections = datatree_node_sections(node, root=False)
-    section_items = "".join(f"<li class='xr-section-item'>{s}</li>" for s in sections)
+    display = displays[node.path]
 
-    # TODO: Can we make the group name clickable to toggle the sections below?
-    # This looks like it would require the input/label pattern used above.
+    group_id = "group-" + str(uuid.uuid4())
+    collapsed = " checked" if display.collapsed else ""
+    tip = " title='Expand/collapse group'" if not display.disabled else ""
+
+    sections = datatree_sections(node, displays)
+    sections_html = _sections_repr(sections) if sections else ""
+
     html = f"""
         <div class='xr-group-box'>
-            <div class='xr-group-box-vline' style='height: {height}'></div>
+            <div class='xr-group-box-vline' style='height: {vline_height}'></div>
             <div class='xr-group-box-hline'></div>
             <div class='xr-group-box-contents'>
-                <div class='xr-header'>
-                    <div class='xr-group-name'>{path}</div>
-                </div>
-                <ul class='xr-sections'>
-                    {section_items}
-                </ul>
+                <input id='{group_id}' type='checkbox'{collapsed} />
+                <label for='{group_id}'{tip}>
+                    {path}
+                    <span>({display.item_count})</span>
+                </label>
+                {sections_html}
             </div>
         </div>
     """
@@ -518,12 +650,12 @@ def datatree_child_repr(node: DataTree, end: bool = False) -> str:
 
 
 def datatree_repr(node: DataTree) -> str:
+    displays = _build_datatree_displays(node)
     header_components = [
         f"<div class='xr-obj-type'>xarray.{type(node).__name__}</div>",
     ]
     if node.name is not None:
         name = escape(repr(node.name))
         header_components.append(f"<div class='xr-obj-name'>{name}</div>")
-
-    sections = datatree_node_sections(node, root=True)
+    sections = datatree_sections(node, displays)
     return _obj_repr(node, header_components, sections)

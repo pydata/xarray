@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Dataset, Variable
+from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
 from xarray.core.types import T_Xarray
@@ -18,6 +18,7 @@ from xarray.tests import (
     assert_identical,
     raise_if_dask_computes,
     requires_dask,
+    requires_pandas_3,
 )
 from xarray.tests.arrays import DuckArrayWrapper
 
@@ -109,14 +110,31 @@ class TestIndexers:
                 assert indexers == {"y": 0}
         assert len(grouped_indexers) == 3
 
-        with pytest.raises(KeyError, match=r"no index found for coordinate 'y2'"):
-            indexing.group_indexers_by_index(data, {"y2": 2.0}, {})
         with pytest.raises(
             KeyError, match=r"'w' is not a valid dimension or coordinate"
         ):
             indexing.group_indexers_by_index(data, {"w": "a"}, {})
         with pytest.raises(ValueError, match=r"cannot supply.*"):
             indexing.group_indexers_by_index(data, {"z": 1}, {"method": "nearest"})
+
+    def test_group_indexers_by_index_creates_index_for_unindexed_coord(self) -> None:
+        # Test that selecting on a coordinate without an index creates a PandasIndex on the fly
+        data = DataArray(
+            np.zeros((2, 3)), coords={"x": [0, 1], "y": [10, 20, 30]}, dims=("x", "y")
+        )
+        data.coords["y2"] = ("y", [2.0, 3.0, 4.0])
+
+        # y2 is a coordinate but has no index
+        assert "y2" in data.coords
+        assert "y2" not in data.xindexes
+
+        # group_indexers_by_index should create a PandasIndex on the fly
+        grouped_indexers = indexing.group_indexers_by_index(data, {"y2": 3.0}, {})
+
+        assert len(grouped_indexers) == 1
+        idx, indexers = grouped_indexers[0]
+        assert isinstance(idx, PandasIndex)
+        assert indexers == {"y2": 3.0}
 
     def test_map_index_queries(self) -> None:
         def create_sel_results(
@@ -1175,3 +1193,10 @@ def test_backend_indexing_non_numpy() -> None:
         raw_indexing_method=array.__getitem__,
     )
     np.testing.assert_array_equal(indexed.array, np.array([1]))
+
+
+@requires_pandas_3
+def test_pandas_StringDtype_index_coerces_to_numpy() -> None:
+    da = DataArray([0, 1], coords={"x": ["x1", "x2"]})
+    actual = concat([da, da], dim=pd.Index(["y1", "y2"], name="y"))
+    assert isinstance(actual["y"].dtype, np.dtypes.StringDType)

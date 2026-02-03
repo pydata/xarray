@@ -8,7 +8,7 @@ name = "xarray"
 version = "dynamic" # dynamic versioning needs better support in pixi https://github.com/prefix-dev/pixi/issues/2923#issuecomment-2598460666 . Putting `version = "dynamic"` here for now until pixi recommends something else.
 
 [package.build]
-backend = { name = "pixi-build-python", version = "==0.4.0" }
+backend = { name = "pixi-build-python", version = ">=0.4.4" }
 
 [package.host-dependencies]
 setuptools = "*"
@@ -79,6 +79,8 @@ seaborn = "*"
 [feature.extras.dependencies]
 # array
 sparse = "*"
+pint = "*"
+array-api-strict = "*"
 
 # algorithms
 scipy = "*"
@@ -87,9 +89,10 @@ toolz = "*"
 # tutorial
 pooch = "*"
 
-# other
+# calendar
 cftime = "*"
-pint = "*"
+
+# other
 iris = "*"
 
 [feature.extras.pypi-dependencies]
@@ -106,11 +109,6 @@ pandas = "2.2.*"
 scipy = "1.13.*"
 
 [feature.min-versions.dependencies]
-# minimal versions for all dependencies
-# Note that when you update min-supported versions, you should:
-# - Update the min version lower-bound in the corresponding feature(s) where applicable
-# - Update this section to pin to the min version
-
 array-api-strict = "2.4.*" # dependency for testing the array api compat
 boto3 = "1.34.*"
 bottleneck = "1.4.*"
@@ -119,7 +117,7 @@ cftime = "1.6.*"
 dask-core = "2024.6.*"
 distributed = "2024.6.*"
 flox = "0.9.*"
-h5netcdf = "1.3.*"
+h5netcdf = "1.4.*"
 # h5py and hdf5 tend to cause conflicts
 # for e.g. hdf5 1.12 conflicts with h5py=3.1
 # prioritize bumping other packages instead
@@ -143,7 +141,10 @@ sparse = "0.15.*"
 toolz = "0.12.*"
 zarr = "2.18.*"
 
-[feature.nightly.dependencies]
+# TODO: Remove `target.unix` restriction once pandas nightly has win-64 wheels again.
+# Without this, `pixi lock` fails because it can't solve the nightly feature for win-64,
+# which breaks RTD builds (RTD has no lock file cache, unlike GitHub Actions CI).
+[feature.nightly.target.unix.dependencies]
 python = "*"
 
 [feature.nightly.pypi-options.dependency-overrides]
@@ -168,7 +169,7 @@ h5netcdf = { git = "https://github.com/h5netcdf/h5netcdf" }
 opt_einsum = { git = "https://github.com/dgasmith/opt_einsum" }
 # sparse = { git = "https://github.com/pydata/sparse"}
 
-[feature.nightly.pypi-dependencies]
+[feature.nightly.target.unix.pypi-dependencies]
 xarray = { path = ".", editable = true }
 
 numpy = "*"
@@ -198,7 +199,6 @@ cartopy = "*"
 seaborn = "*"
 
 [feature.test.dependencies]
-array-api-strict = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
@@ -252,7 +252,7 @@ mypy = "==1.18.1"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"
-pandas-stubs = "<=2.2.3.241126" # https://github.com/pydata/xarray/issues/10110
+pandas-stubs = "<=2.3.3.251219"
 types-colorama = "*"
 types-docutils = "*"
 types-psutil = "*"
@@ -285,6 +285,49 @@ cytoolz = "*"
 
 [feature.release.tasks]
 release-contributors = "python ci/release_contributors.py"
+
+[feature.dev.dependencies]
+ipython = ">=9.8.0,<10"
+black = ">=25.1.0,<26"
+
+[feature.dev.pypi-dependencies]
+pytest-accept = ">=0.2.2, <0.3"
+
+[feature.policy.pypi-dependencies]
+xarray-minimum-dependency-policy = "*"
+
+[feature.policy.dependencies]
+python = "3.13.*"
+
+[feature.policy.tasks.check-policy]
+cmd = "minimum-versions validate --policy ci/policy.yaml --manifest-path pixi.toml {{ env }}"
+args = ["env"]
+
+[feature.policy.tasks]
+policy-bare-minimum = [
+  { task = "check-policy", args = [
+    "pixi:test-py311-bare-minimum",
+  ] },
+]
+policy-bare-min-and-scipy = [
+  { task = "check-policy", args = [
+    "pixi:test-py311-bare-min-and-scipy",
+  ] },
+]
+policy-min-versions = [
+  { task = "check-policy", args = [
+    "pixi:test-py311-min-versions",
+  ] },
+]
+policy = [
+  { task = "check-policy", args = [
+    """\
+    pixi:test-py311-bare-minimum \
+    pixi:test-py311-bare-min-and-scipy \
+    pixi:test-py311-min-versions \
+    """,
+  ] },
+]
 
 [environments]
 # Testing
@@ -386,3 +429,15 @@ doc = { features = [
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 release = { features = ["release"], no-default-feature = true }
+default = { features = [
+  "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "dev",
+] }
+policy = { features = ["policy"], no-default-feature = true }

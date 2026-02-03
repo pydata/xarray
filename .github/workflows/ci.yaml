@@ -14,7 +14,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
-  PIXI_VERSION: "v0.58.0"
+  PIXI_VERSION: "v0.63.2"
 
 jobs:
   detect-ci-trigger:
@@ -38,7 +38,7 @@ jobs:
   cache-pixi-lock:
     uses: ./.github/workflows/cache-pixi-lock.yml
     with:
-      pixi-version: "v0.58.0" # keep in sync with env var above
+      pixi-version: "v0.63.2" # keep in sync with env var above
   test:
     name: "${{ matrix.os }} | ${{ matrix.pixi-env }}${{ matrix.pytest-addopts && format(' ({0})', matrix.pytest-addopts) || '' }}"
     runs-on: ${{ matrix.os }}
@@ -84,14 +84,14 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: restore-pixi-lock
         with:
           enableCrossOsArchive: true
           path: |
             pixi.lock
           key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
-      - uses: prefix-dev/setup-pixi@v0.9.3
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           pixi-version: ${{ env.PIXI_VERSION }}
           cache: true
@@ -135,7 +135,7 @@ jobs:
           pixi run -e ${{ matrix.pixi-env }} -- python -c "import xarray"
 
       - name: Restore cached hypothesis directory
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .hypothesis/
           key: cache-hypothesis
@@ -152,13 +152,13 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: Test results for OS ${{ runner.os }} pixi-env ${{ matrix.pixi-env }} pytest-addopts ${{ matrix.pytest-addopts }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@v5.5.2
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
@@ -174,7 +174,7 @@ jobs:
     if: github.repository == 'pydata/xarray'
     steps:
       - name: Upload
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: Event File
           path: ${{ github.event_path }}

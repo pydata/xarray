@@ -353,7 +353,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     The main functional difference between Variables and numpy arrays is that
     numerical operations on Variables implement array broadcasting by dimension
-    name. For example, adding an Variable with dimensions `('time',)` to
+    name. For example, adding a Variable with dimensions `('time',)` to
     another Variable with dimensions `('space',)` results in a new Variable
     with dimensions `('time', 'space')`. Furthermore, numpy reduce operations
     like ``mean`` or ``sum`` are overwritten to take a "dimension" argument
@@ -2138,7 +2138,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         Returns
         -------
-        Variable that is a view of the original array with a added dimension of
+        Variable that is a view of the original array with an added dimension of
         size w.
         The return dim: self.dims + (window_dim, )
         The return shape: self.shape + (window, )

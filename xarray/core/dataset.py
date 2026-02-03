@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 import asyncio
+import builtins
 import copy
 import datetime
 import io
@@ -51,6 +53,11 @@ from xarray.core.coordinates import (
 from xarray.core.dataset_utils import _get_virtual_variable, _LocIndexer
 from xarray.core.dataset_variables import DataVariables
 from xarray.core.duck_array_ops import datetime_to_numeric
+from xarray.core.eval import (
+    EVAL_BUILTINS,
+    LogicalOperatorTransformer,
+    validate_expression,
+)
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -72,7 +79,6 @@ from xarray.core.types import (
     Self,
     T_ChunkDim,
     T_ChunksFreq,
-    T_DataArray,
     T_DataArrayOrSet,
     ZarrWriteModes,
 )
@@ -316,10 +322,10 @@ class Dataset(
     <xarray.Dataset> Size: 552B
     Dimensions:         (loc: 2, instrument: 3, time: 4)
     Coordinates:
-      * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
-      * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
         lon             (loc) float64 16B -99.83 -99.32
         lat             (loc) float64 16B 42.25 42.21
+      * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
+      * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
         reference_time  datetime64[ns] 8B 2014-09-05
     Dimensions without coordinates: loc
     Data variables:
@@ -1172,7 +1178,7 @@ class Dataset(
         """
         Coerces wrapped data and coordinates into numpy arrays, returning a Dataset.
 
-        See also
+        See Also
         --------
         DataArray.as_numpy
         DataArray.to_numpy : Returns only the data as a numpy.ndarray object.
@@ -1514,6 +1520,13 @@ class Dataset(
         if not callable(compat):
             compat_str = compat
 
+            # For identical, also compare indexes
+            if compat_str == "identical":
+                from xarray.core.indexes import indexes_identical
+
+                if not indexes_identical(self.xindexes, other.xindexes):
+                    return False
+
             # some stores (e.g., scipy) do not seem to preserve order, so don't
             # require matching order for equality
             def compat(x: Variable, y: Variable) -> bool:
@@ -1672,11 +1685,11 @@ class Dataset(
             return False
 
     def identical(self, other: Self) -> bool:
-        """Like equals, but also checks all dataset attributes and the
-        attributes on all variables and coordinates.
+        """Like equals, but also checks all dataset attributes, the
+        attributes on all variables and coordinates, and indexes.
 
-        Example
-        -------
+        Examples
+        --------
 
         >>> a = xr.Dataset(
         ...     {"Width": ("X", [1, 2, 3])},
@@ -4720,8 +4733,8 @@ class Dataset(
         Dimensions:  (x: 2, y: 3)
         Coordinates:
           * x        (x) int64 16B 0 1
-          * y        (y) int64 24B 0 1 2
             a        (x) int64 16B 3 4
+          * y        (y) int64 24B 0 1 2
         Data variables:
             v        (x, y) float64 48B 1.0 1.0 1.0 1.0 1.0 1.0
         >>> ds.set_index(x="a")
@@ -4959,7 +4972,7 @@ class Dataset(
         **options,
     ) -> Self:
         """Set a new, Xarray-compatible index from one or more existing
-        coordinate(s).
+        coordinate(s). Existing index(es) on the coord(s) will be replaced.
 
         Parameters
         ----------
@@ -5004,15 +5017,6 @@ class Dataset(
                     f"those variables are data variables: {data_vars}, use `set_coords` first"
                 )
             raise ValueError("\n".join(msg))
-
-        # we could be more clever here (e.g., drop-in index replacement if index
-        # coordinates do not conflict), but let's not allow this for now
-        indexed_coords = set(coord_names) & set(self._indexes)
-
-        if indexed_coords:
-            raise ValueError(
-                f"those coordinates already have an index: {indexed_coords}"
-            )
 
         coord_vars = {name: self._variables[name] for name in coord_names}
 
@@ -6554,7 +6558,7 @@ class Dataset(
         interpolated: Dataset
             Filled in Dataset.
 
-        Warning
+        Warnings
         --------
         When passing fill_value as a keyword argument with method="linear", it does not use
         ``numpy.interp`` but it uses ``scipy.interpolate.interp1d``, which provides the fill_value parameter.
@@ -7404,8 +7408,8 @@ class Dataset(
                 "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
             )
 
-        arrays = []
-        extension_arrays = []
+        arrays: list[tuple[Hashable, np.ndarray]] = []
+        extension_arrays: list[tuple[Hashable, pd.Series]] = []
         for k, v in dataframe.items():
             if not is_allowed_extension_array(v) or isinstance(
                 v.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES
@@ -7597,7 +7601,7 @@ class Dataset(
         -------
         obj : Dataset
 
-        See also
+        See Also
         --------
         Dataset.to_dict
         DataArray.from_dict
@@ -7765,7 +7769,7 @@ class Dataset(
             return type(self)(new_data_vars)
 
         other_coords: Coordinates | None = getattr(other, "coords", None)
-        ds = self.coords.merge(other_coords)
+        ds = self.coords.merge(other_coords, compat=OPTIONS["arithmetic_compat"])
 
         if isinstance(other, Dataset):
             new_vars = apply_over_both(
@@ -8394,7 +8398,7 @@ class Dataset(
         -------
         differentiated: Dataset
 
-        See also
+        See Also
         --------
         numpy.gradient: corresponding numpy function
         """
@@ -8460,7 +8464,7 @@ class Dataset(
         -------
         integrated : Dataset
 
-        See also
+        See Also
         --------
         DataArray.integrate
         numpy.trapz : corresponding numpy function
@@ -8581,7 +8585,7 @@ class Dataset(
         -------
         integrated : Dataset
 
-        See also
+        See Also
         --------
         DataArray.cumulative_integrate
         scipy.integrate.cumulative_trapezoid : corresponding scipy function
@@ -8709,9 +8713,9 @@ class Dataset(
         <xarray.Dataset> Size: 192B
         Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
-          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
@@ -8724,9 +8728,9 @@ class Dataset(
         <xarray.Dataset> Size: 288B
         Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
-          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
@@ -9535,19 +9539,48 @@ class Dataset(
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
+    def _eval_expression(self, expr: str) -> DataArray:
+        """Evaluate an expression string using xarray's native operations."""
+        try:
+            tree = ast.parse(expr, mode="eval")
+        except SyntaxError as e:
+            raise ValueError(f"Invalid expression syntax: {expr}") from e
+
+        # Transform logical operators for consistency with query().
+        # See LogicalOperatorTransformer docstring for details.
+        tree = LogicalOperatorTransformer().visit(tree)
+        ast.fix_missing_locations(tree)
+
+        validate_expression(tree)
+
+        # Build namespace: data variables, coordinates, modules, and safe builtins.
+        # Empty __builtins__ blocks dangerous functions like __import__, exec, open.
+        # Priority order (highest to lowest): data variables > coordinates > modules > builtins
+        # This ensures user data always wins when names collide with builtins.
+        import xarray as xr  # Lazy import to avoid circular dependency
+
+        namespace: dict[str, Any] = dict(EVAL_BUILTINS)
+        namespace.update({"np": np, "pd": pd, "xr": xr})
+        namespace.update({str(name): self.coords[name] for name in self.coords})
+        namespace.update({str(name): self[name] for name in self.data_vars})
+
+        code = compile(tree, "<xarray.eval>", "eval")
+        return builtins.eval(code, {"__builtins__": {}}, namespace)
+
     def eval(
         self,
         statement: str,
         *,
-        parser: QueryParserOptions = "pandas",
-    ) -> Self | T_DataArray:
+        parser: QueryParserOptions | Default = _default,
+    ) -> Self | DataArray:
         """
         Calculate an expression supplied as a string in the context of the dataset.
 
         This is currently experimental; the API may change particularly around
         assignments, which currently return a ``Dataset`` with the additional variable.
-        Currently only the ``python`` engine is supported, which has the same
-        performance as executing in python.
+
+        Logical operators (``and``, ``or``, ``not``) are automatically transformed
+        to bitwise operators (``&``, ``|``, ``~``) which work element-wise on arrays.
 
         Parameters
         ----------
@@ -9557,7 +9590,11 @@ class Dataset(
         Returns
         -------
         result : Dataset or DataArray, depending on whether ``statement`` contains an
-        assignment.
+            assignment.
+
+        Warnings
+        --------
+        Like ``pd.eval()``, this method should not be used with untrusted input.
 
         Examples
         --------
@@ -9586,16 +9623,55 @@ class Dataset(
             b        (x) float64 40B 0.0 0.25 0.5 0.75 1.0
             c        (x) float64 40B 0.0 1.25 2.5 3.75 5.0
         """
+        if parser is not _default:
+            emit_user_level_warning(
+                "The 'parser' argument to Dataset.eval() is deprecated and will be "
+                "removed in a future version. Logical operators (and/or/not) are now "
+                "always transformed to bitwise operators (&/|/~) for array compatibility.",
+                FutureWarning,
+            )
 
-        return pd.eval(  # type: ignore[return-value]
-            statement,
-            resolvers=[self],
-            target=self,
-            parser=parser,
-            # Because numexpr returns a numpy array, using that engine results in
-            # different behavior. We'd be very open to a contribution handling this.
-            engine="python",
-        )
+        statement = statement.strip()
+
+        # Check for assignment: "target = expr"
+        # Must handle compound operators like ==, !=, <=, >=
+        # Use ast to detect assignment properly
+        try:
+            tree = ast.parse(statement, mode="exec")
+        except SyntaxError as e:
+            raise ValueError(f"Invalid statement syntax: {statement}") from e
+
+        if len(tree.body) != 1:
+            raise ValueError("Only single statements are supported")
+
+        stmt = tree.body[0]
+
+        if isinstance(stmt, ast.Assign):
+            # Assignment: "c = a + b"
+            if len(stmt.targets) != 1:
+                raise ValueError("Only single assignment targets are supported")
+            target = stmt.targets[0]
+            if not isinstance(target, ast.Name):
+                raise ValueError(
+                    f"Assignment target must be a simple name, got {type(target).__name__}"
+                )
+            target_name = target.id
+
+            # Get the expression source
+            expr_source = ast.unparse(stmt.value)
+            result: DataArray = self._eval_expression(expr_source)
+            return self.assign({target_name: result})
+
+        elif isinstance(stmt, ast.Expr):
+            # Expression: "a + b"
+            expr_source = ast.unparse(stmt.value)
+            return self._eval_expression(expr_source)
+
+        else:
+            raise ValueError(
+                f"Unsupported statement type: {type(stmt).__name__}. "
+                f"Only expressions and assignments are supported."
+            )
 
     def query(
         self,
@@ -9857,7 +9933,7 @@ class Dataset(
         time part of the timestamps.
 
         Parameters
-        ---------
+        ----------
         calendar : str
             The target calendar name.
         dim : Hashable, default: "time"
@@ -9978,8 +10054,8 @@ class Dataset(
         dim : Hashable, default: "time"
             The time coordinate name.
 
-        Return
-        ------
+        Returns
+        -------
         DataArray
             The source interpolated on the decimal years of target,
         """

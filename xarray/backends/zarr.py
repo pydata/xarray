@@ -30,6 +30,7 @@ from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
+    _default,
     attempt_import,
     close_on_error,
     emit_user_level_warning,
@@ -162,7 +163,7 @@ class FillValueCoder:
 
 def encode_zarr_attr_value(value):
     """
-    Encode a attribute value as something that can be serialized as json
+    Encode an attribute value as something that can be serialized as json
 
     Many xarray datasets / variables have numpy arrays and values. This
     function handles encoding / decoding of such items.
@@ -205,6 +206,10 @@ class ZarrArrayWrapper(BackendArray):
             not _zarr_v3()
             and self._array.filters is not None
             and any(filt.codec_id == "vlen-utf8" for filt in self._array.filters)
+        ) or (
+            _zarr_v3()
+            and self._array.serializer
+            and self._array.serializer.to_dict()["name"] == "vlen-utf8"
         ):
             dtype = coding.strings.create_vlen_dtype(str)
         else:
@@ -489,7 +494,7 @@ def extract_zarr_variable_encoding(
 # The only change is to raise an error for object dtypes.
 def encode_zarr_variable(var, needs_copy=True, name=None):
     """
-    Converts an Variable into an Variable which follows some
+    Converts a Variable into another Variable which follows some
     of the CF conventions:
 
         - Nans are masked using _FillValue (or the deprecated missing_value)
@@ -1238,16 +1243,22 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_format=3 if is_zarr_v3_format else 2,
             )
 
-            if self._align_chunks and isinstance(encoding["chunks"], tuple):
+            # When shards are specified, dask chunks must align with shard boundaries
+            # (not just zarr chunk boundaries) to avoid data corruption during
+            # parallel writes. See https://github.com/pydata/xarray/issues/10831
+            effective_write_chunks = encoding.get("shards") or encoding["chunks"]
+
+            if self._align_chunks and isinstance(effective_write_chunks, tuple):
                 v = grid_rechunk(
                     v=v,
-                    enc_chunks=encoding["chunks"],
+                    enc_chunks=effective_write_chunks,
                     region=region,
                 )
 
-            if self._safe_chunks and isinstance(encoding["chunks"], tuple):
+            if self._safe_chunks and isinstance(effective_write_chunks, tuple):
                 # the hard case
                 # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
+                # (or shard, when sharding is enabled)
                 # this avoids the need to get involved in zarr synchronization / locking
                 # From zarr docs:
                 #  "If each worker in a parallel computation is writing to a
@@ -1258,7 +1269,7 @@ class ZarrStore(AbstractWritableDataStore):
                 shape = zarr_shape or v.shape
                 validate_grid_chunks_alignment(
                     nd_v_chunks=v.chunks,
-                    enc_chunks=encoding["chunks"],
+                    enc_chunks=effective_write_chunks,
                     region=region,
                     allow_partial_chunks=self._mode != "r+",
                     name=name,
@@ -1403,7 +1414,7 @@ def open_zarr(
     store,
     group=None,
     synchronizer=None,
-    chunks="auto",
+    chunks=_default,
     decode_cf=True,
     mask_and_scale=True,
     decode_times=True,
@@ -1439,8 +1450,9 @@ def open_zarr(
         Array synchronizer provided to zarr
     group : str, optional
         Group path. (a.k.a. `path` in zarr terminology.)
-    chunks : int, dict, 'auto' or None, default: 'auto'
-        If provided, used to load the data into dask arrays.
+    chunks : int, dict, "auto" or None, optional
+        Used to load the data into dask arrays. Default behavior is to use
+        ``chunks={}`` if dask is available, otherwise ``chunks=None``.
 
         - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
@@ -1561,7 +1573,7 @@ def open_zarr(
     if from_array_kwargs is None:
         from_array_kwargs = {}
 
-    if chunks == "auto":
+    if chunks is _default:
         try:
             guess_chunkmanager(
                 chunked_array_type
