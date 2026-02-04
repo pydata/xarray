@@ -287,8 +287,8 @@ def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integ
     >>> _expand_slice(slice(0, -1), 10)
     array([0, 1, 2, 3, 4, 5, 6, 7, 8])
     """
-    sl = slice(*slice_.indices(size))
-    return np.arange(sl.start, sl.stop, sl.step)
+    start, stop, step = slice_.indices(size)
+    return np.arange(start, stop, step)
 
 
 def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
