@@ -265,6 +265,7 @@ def _chunk_ds(
             inline_array=inline_array,
             chunked_array_type=chunkmanager,
             from_array_kwargs=from_array_kwargs.copy(),
+            just_use_token=True,
         )
     return backend_ds._replace(variables)
 
@@ -805,7 +806,7 @@ def open_dataarray(
     All parameters are passed directly to `xarray.open_dataset`. See that
     documentation for further details.
 
-    See also
+    See Also
     --------
     open_dataset
     """
