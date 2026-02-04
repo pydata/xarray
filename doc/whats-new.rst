@@ -26,7 +26,7 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
-- Fixes error when from ``.plot`` when using positional args with ``col`` and
+- Fix ``.plot`` error when using positional args with ``col`` and
   ``row`` (:issue:`11104` :pull:`11111`).
   By `Julia Signell <https://github.com/jsignell>`_.
 - Slightly amend `Xarray's Zarr Encoding Specification doc <https://docs.xarray.dev/en/latest/internals/zarr-encoding-spec.html>`_ for clarity, and provide a code comment in ``xarray.backends.zarr._get_zarr_dims_and_attrs`` referencing the doc (:issue:`8749` :pull:`11013`).
