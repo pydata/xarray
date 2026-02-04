@@ -150,15 +150,15 @@ In general explicit index creation should be preferred over implicit index creat
 
 For which coordinates?
 
-- A. only 1D coordinates with a name matching their dimension name
-- B. all 1D coordinates
+- 1A. only 1D coordinates with a name matching their dimension name
+- 1B. all 1D coordinates
 
 When to create it?
 
-- A. each time when a new Dataset/DataArray is created
-- B. only when we need it (i.e., when calling `.sel()` or `indexes`)
+- 2A. each time when a new Dataset/DataArray is created
+- 2B. only when we need it (i.e., when calling `.sel()` or `indexes`)
 
-Options A and B are what Xarray currently does and may be the best choice considering that indexes could possibly be invalidated by coordinate mutation.
+Options 1A and 2A are what Xarray currently does and may be the best choice considering that indexes could possibly be invalidated by coordinate mutation.
 
 Besides `pandas.Index`, other indexes currently supported in Xarray like `CFTimeIndex` could be built depending on the coordinate data type.
 
