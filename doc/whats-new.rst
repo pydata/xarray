@@ -26,6 +26,8 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix slicing with negative step (:issue:`11000` and :pull:`11044`).
+  By `Antonio Valentino <https://github.com/avalentino>`_.
 - Fix ``.plot`` error when using positional args with ``col`` and
   ``row`` (:issue:`11104` :pull:`11111`).
   By `Julia Signell <https://github.com/jsignell>`_.
