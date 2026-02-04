@@ -5,8 +5,7 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [package]
 name = "xarray"
-version = "dynamic" # dynamic versioning needs better support in pixi https://github.com/prefix-dev/pixi/issues/2923#issuecomment-2598460666 . Putting `version = "dynamic"` here for now until pixi recommends something else.
-
+version = "9999.0.0" # dynamic versioning needs better support in pixi https://github.com/pydata/xarray/pull/11130#issuecomment-3849274518
 [package.build]
 backend = { name = "pixi-build-python", version = ">=0.4.4" }
 
@@ -75,9 +74,6 @@ cartopy = "*"
 matplotlib-base = "*"
 nc-time-axis = "*"
 seaborn = "*"
-
-[feature.pandas3.dependencies]
-pandas = "3.0.*"
 
 [feature.extras.dependencies]
 # array
@@ -362,17 +358,6 @@ test-py313 = { features = [
   "dask",
   "viz",
   "extras",
-] }
-test-py313-pandas-3 = { features = [
-  "py313",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-  "pandas3",
 ] }
 test-nightly = { features = [
   "py313",
