@@ -360,6 +360,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
+    # Check for attributes and dimension name metadata as discussed in the Zarr encoding
+    # specification https://docs.xarray.dev/en/stable/internals/zarr-encoding-spec.html
+
     # Zarr V3 explicitly stores the dimension names in the metadata
     try:
         # if this exists, we are looking at a Zarr V3 array
@@ -1240,16 +1243,22 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_format=3 if is_zarr_v3_format else 2,
             )
 
-            if self._align_chunks and isinstance(encoding["chunks"], tuple):
+            # When shards are specified, dask chunks must align with shard boundaries
+            # (not just zarr chunk boundaries) to avoid data corruption during
+            # parallel writes. See https://github.com/pydata/xarray/issues/10831
+            effective_write_chunks = encoding.get("shards") or encoding["chunks"]
+
+            if self._align_chunks and isinstance(effective_write_chunks, tuple):
                 v = grid_rechunk(
                     v=v,
-                    enc_chunks=encoding["chunks"],
+                    enc_chunks=effective_write_chunks,
                     region=region,
                 )
 
-            if self._safe_chunks and isinstance(encoding["chunks"], tuple):
+            if self._safe_chunks and isinstance(effective_write_chunks, tuple):
                 # the hard case
                 # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
+                # (or shard, when sharding is enabled)
                 # this avoids the need to get involved in zarr synchronization / locking
                 # From zarr docs:
                 #  "If each worker in a parallel computation is writing to a
@@ -1260,7 +1269,7 @@ class ZarrStore(AbstractWritableDataStore):
                 shape = zarr_shape or v.shape
                 validate_grid_chunks_alignment(
                     nd_v_chunks=v.chunks,
-                    enc_chunks=encoding["chunks"],
+                    enc_chunks=effective_write_chunks,
                     region=region,
                     allow_partial_chunks=self._mode != "r+",
                     name=name,
