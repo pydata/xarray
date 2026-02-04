@@ -269,6 +269,8 @@ def normalize_slice(sl: slice, size: int) -> slice:
     slice(0, 9, 1)
     >>> normalize_slice(slice(0, -1), 10)
     slice(0, 9, 1)
+    >>> normalize_slice(slice(None, None, -1), 10)
+    slice(9, None, -1)
     """
     start, stop, step = sl.indices(size)
     return slice(start, stop if stop >= 0 else None, step)
