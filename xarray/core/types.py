@@ -289,7 +289,9 @@ ScaleOptions = Literal["linear", "symlog", "log", "logit"] | None
 HueStyleOptions = Literal["continuous", "discrete"] | None
 AspectOptions = Union[Literal["auto", "equal"], float, None]
 ExtendOptions = Literal["neither", "both", "min", "max"] | None
-
+NormOptions = Literal[
+    "asinh", "function", "functionlog", "linear", "log", "logit", "symlog"
+]
 
 _T_co = TypeVar("_T_co", covariant=True)
 

@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.types import AspectOptions, ScaleOptions
+    from xarray.core.types import AspectOptions, NormOptions, ScaleOptions
 
     try:
         import matplotlib.pyplot as plt
@@ -56,6 +56,26 @@ ROBUST_PERCENTILE = 2.0
 # copied from seaborn
 _MARKERSIZE_RANGE = (18.0, 36.0, 72.0)
 _LINEWIDTH_RANGE = (1.5, 1.5, 6.0)
+
+
+def _make_norm_from_string(
+    norm: NormOptions,
+) -> type[Normalize]:
+    """
+    Get norm from string.
+
+    Examples
+    --------
+    >>> _make_norm_from_string("log")
+    <class 'matplotlib.colors.LogScaleNorm'>
+
+    """
+    from matplotlib.colors import Normalize, make_norm_from_scale
+    from matplotlib.scale import scale_factory
+
+    scale = type(scale_factory(norm, None))  # type: ignore [arg-type] # mpl issue, use of ax is discouraged
+
+    return make_norm_from_scale(scale, Normalize)
 
 
 def _determine_extend(calc_data, vmin, vmax):
@@ -259,6 +279,8 @@ def _determine_cmap_params(
 
     # now check norm and harmonize with vmin, vmax
     if norm is not None:
+        norm = _make_norm_from_string(norm)() if isinstance(norm, str) else norm
+
         if norm.vmin is None:
             norm.vmin = vmin
         else:
