@@ -3928,6 +3928,12 @@ class Dataset(
         variables: dict[Hashable, Variable] = {}
         reindex_vars: list[Hashable] = []
         for name, var in obj._variables.items():
+            if var.isnull().any():
+                emit_user_level_warning(
+                    "Interpolation behavior with NaNs is inconsistent. Consider using"
+                    " .dropna() or .interpna()."
+                )
+
             if name in indexers:
                 continue
 
