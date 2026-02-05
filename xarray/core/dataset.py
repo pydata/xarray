@@ -7204,7 +7204,7 @@ class Dataset(
             "Please use Dataset.to_dataframe() instead."
         )
 
-    def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
+    def _to_dataframe(self, ordered_dims: Mapping[Any, int], copy: bool = True):
         from xarray.core.extension_array import PandasExtensionArray
 
         # All and only non-index arrays (whether data or coordinates) should
@@ -7245,6 +7245,7 @@ class Dataset(
                 },
             },
             index=index,
+            copy=copy,
         )
         for extension_array_column in extension_array_columns_different_index:
             extension_array = self.variables[extension_array_column].data
