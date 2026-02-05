@@ -81,7 +81,7 @@ T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]
 
-_DimsLike = Union[str, Iterable[_Dim]]
+_DimsLike = Union[_Dim, Iterable[_Dim]]
 
 # https://data-apis.org/array-api/latest/API_specification/indexing.html
 # TODO: np.array_api was bugged and didn't allow (None,), but should!
