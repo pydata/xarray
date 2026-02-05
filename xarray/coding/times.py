@@ -1370,15 +1370,24 @@ class CFDatetimeCoder(VariableCoder):
         May not be supported by all the backends.
     time_unit : PDDatetimeUnitOptions
           Target resolution when decoding dates. Defaults to "ns".
+    on_error  :  str, optional
+        What to do if there is an error when attempting to decode
+        a time variable. Options are: "raise", "warn", "ignore".
+        Defaults to "raise". 
     """
 
     def __init__(
         self,
         use_cftime: bool | None = None,
         time_unit: PDDatetimeUnitOptions = "ns",
+        on_error: str = "raise"
     ) -> None:
         self.use_cftime = use_cftime
         self.time_unit = time_unit
+        if on_error in {"raise", "warn", "ignore"}:
+            self.on_error = on_error
+        else:
+            raise ValueError('on_error must be one of "raise", "warn", "ignore")')  
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
@@ -1411,9 +1420,19 @@ class CFDatetimeCoder(VariableCoder):
 
             units = pop_to(attrs, encoding, "units")
             calendar = pop_to(attrs, encoding, "calendar")
-            dtype = _decode_cf_datetime_dtype(
-                data, units, calendar, self.use_cftime, self.time_unit
-            )
+            try:
+                dtype = _decode_cf_datetime_dtype(
+                    data, units, calendar, self.use_cftime, self.time_unit
+                )
+            except ValueError as err:
+                if self.on_error == "ignore":
+                    return variable
+                elif self.on_error == "warn":
+                    emit_user_level_warning(err.args[0])
+                    return variable
+                else:
+                    raise
+
             transform = partial(
                 decode_cf_datetime,
                 units=units,

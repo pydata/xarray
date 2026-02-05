@@ -2229,3 +2229,60 @@ def test_roundtrip_empty_datetime64_array(time_unit: PDDatetimeUnitOptions) -> N
     )
     assert_identical(variable, roundtripped)
     assert roundtripped.dtype == variable.dtype
+
+@requires_cftime
+def test_on_error_raises():
+    """
+    By default, decoding errors should raise
+    """
+    array = np.array([0, 1, 2], dtype=np.dtype("int64"))
+    encoded = Variable(["time"],
+                       array,
+                       attrs={"units": "ms since 00:00:00"})
+
+    default is "raise"
+    coder = CFDatetimeCoder()
+
+    with pytest.raises(ValueError):
+        coder.decode(encoded)
+
+    # setting to "raise" should do the same thing.
+    coder = CFDatetimeCoder(on_error="raise")
+
+    with pytest.raises(ValueError):
+        coder.decode(encoded)
+
+@requires_cftime
+def test_on_error_ignore():
+    """
+    If on_error="ignore", no change.
+    """
+    array = np.array([0, 1, 2], dtype=np.dtype("int64"))
+    encoded = Variable(["time"],
+                       array,
+                       attrs={"units": "ms since 00:00:00"})
+
+    coder = CFDatetimeCoder(on_error="ignore")
+
+    decoded = coder.decode(encoded)
+
+    # it shouldn't have changed the variable
+    assert decoded is encoded
+
+@requires_cftime
+def test_on_error_warn():
+    """
+    If on_error="warn", no change, with a warning.
+    """
+    array = np.array([0, 1, 2], dtype=np.dtype("int64"))
+    encoded = Variable(["time"],
+                       array,
+                       attrs={"units": "ms since 00:00:00"})
+
+    coder = CFDatetimeCoder(on_error="warn")
+
+    with pytest.warns(UserWarning, match="unable to decode time units"):
+        decoded = coder.decode(encoded)
+
+    # it shouldn't have changed the variable 
+    assert decoded is encoded
