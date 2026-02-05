@@ -2187,8 +2187,13 @@ class TestDataset:
         actual = data.sel(dim2=[1.45], method="backfill")
         assert_identical(expected, actual)
 
-        with pytest.raises(NotImplementedError, match=r"slice objects"):
-            data.sel(dim2=slice(1, 3), method="ffill")
+        expected = data.isel(dim2=slice(2, 7))
+        actual = data.sel(dim2=slice(1, 3), method="ffill")
+        assert_identical(expected, actual)
+
+        expected = data.isel(dim2=slice(2, 7, 2))
+        actual = data.sel(dim2=slice(1, 3, 2), method="ffill")
+        assert_identical(expected, actual)
 
         with pytest.raises(TypeError, match=r"``method``"):
             # this should not pass silently
@@ -2197,6 +2202,110 @@ class TestDataset:
         # cannot pass method if there is no associated coordinate
         with pytest.raises(ValueError, match=r"cannot supply"):
             data.sel(dim1=0, method="nearest")
+
+    def test_sel_method_with_slice(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/10710
+
+        data_int_coords = xr.Dataset(coords={"lat": ("lat", [20, 21, 22, 23])})
+        expected = xr.Dataset(coords={"lat": ("lat", [21, 22])})
+        actual = data_int_coords.sel(lat=slice(21, 22), method="nearest")
+        assert_identical(expected, actual)
+
+        # check non-zero step
+        expected = xr.Dataset(coords={"lat": ("lat", [21])})
+        actual = data_int_coords.sel(lat=slice(21, 22, 2), method="nearest")
+        assert_identical(expected, actual)
+
+        # check consistency with not passing method kwarg, for case of ints, where method kwarg should be irrelevant
+        expected = data_int_coords.sel(lat=slice(21, 22))
+        actual = data_int_coords.sel(lat=slice(21, 22), method="nearest")
+        assert_identical(expected, actual)
+
+        data_float_coords = xr.Dataset(
+            coords={"lat": ("lat", [20.1, 21.1, 22.1, 23.1])}
+        )
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1, 22.1])})
+        actual = data_float_coords.sel(lat=slice(21, 22), method="nearest")
+        assert_identical(expected, actual)
+
+        # "no match" case - should return zero-size slice
+        expected = xr.Dataset(coords={"lat": ("lat", [])})
+        actual = data_float_coords.sel(
+            lat=slice(21.5, 21.6), method="nearest", tolerance=1e-3
+        )
+        assert_identical(expected, actual)
+
+        # test supposed default behaviour
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1, 22.1])})
+        actual = data_float_coords.sel(lat=slice(21.0, 22.2))
+        assert_identical(expected, actual)
+
+        # tolerance specified but method not specified
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1, 22.1])})
+        actual = data_float_coords.sel(
+            lat=slice(21.0, 22.2),
+            tolerance=1.0,
+        )
+        assert_identical(expected, actual)
+        # test this matches default behaviour without tolerance specified
+        default = data_float_coords.sel(lat=slice(21.0, 22.2))
+        assert_identical(default, actual)
+
+        # "no match" case - should return zero-size slice
+        expected = xr.Dataset(coords={"lat": ("lat", [])})
+        actual = data_float_coords.sel(
+            lat=slice(21.5, 21.6), method="nearest", tolerance=1e-3
+        )
+        assert_identical(expected, actual)
+
+        # non-unique coordinate values
+        data_non_unique = xr.Dataset(
+            coords={"lat": ("lat", [20.1, 21.1, 21.1, 22.1, 22.1, 23.1])}
+        )
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1, 21.1, 22.1, 22.1])})
+        with pytest.raises(
+            NotImplementedError,
+            match="slice object as an indexer and an index with non-unique values",
+        ):
+            data_non_unique.sel(lat=slice(21.0, 22.2), method="nearest")
+
+        # check non-zero step
+        data_float_coords = xr.Dataset(
+            coords={"lat": ("lat", [20.1, 21.1, 22.1, 23.1])}
+        )
+        expected = xr.Dataset(coords={"lat": ("lat", [21.1])})
+        actual = data_float_coords.sel(lat=slice(21, 22, 2), method="nearest")
+        assert_identical(expected, actual)
+
+        # backwards slices
+        data_int_coords = xr.Dataset(coords={"lat": ("lat", [23, 22, 21, 20])})
+        expected = xr.Dataset(coords={"lat": ("lat", [22, 21])})
+        actual = data_int_coords.sel(lat=slice(22, 21), method="nearest")
+        assert_identical(expected, actual)
+
+        data_float_coords = xr.Dataset(
+            coords={"lat": ("lat", [23.1, 22.1, 21.1, 20.1])}
+        )
+        expected = xr.Dataset(coords={"lat": ("lat", [22.1, 21.1])})
+        actual = data_float_coords.sel(lat=slice(22, 21), method="nearest")
+        assert_identical(expected, actual)
+
+    def test_sel_negative_slices(self) -> None:
+        data_int_coords = xr.Dataset(coords={"lat": ("lat", [-23, -22, -21, -20])})
+        expected = xr.Dataset(coords={"lat": ("lat", [-22, -21])})
+        actual = data_int_coords.sel(lat=slice(-22, -21))
+        assert_identical(expected, actual)
+
+        expected = xr.Dataset(coords={"lat": ("lat", [-22, -21])})
+        actual = data_int_coords.sel(lat=slice(-22, -21), method="nearest")
+        assert_identical(expected, actual)
+
+        data_float_coords = xr.Dataset(
+            coords={"lat": ("lat", [-23.1, -22.1, -21.1, -20.1])}
+        )
+        expected = xr.Dataset(coords={"lat": ("lat", [-22.1, -21.1])})
+        actual = data_float_coords.sel(lat=slice(-22, -21), method="nearest")
+        assert_identical(expected, actual)
 
     def test_loc(self) -> None:
         data = create_test_data()
