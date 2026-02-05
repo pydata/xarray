@@ -1248,7 +1248,7 @@ def test_cftime_range(
     if isinstance(end, tuple):
         end = date_type(*end)
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         result = cftime_range(
             start=start,
             end=end,
