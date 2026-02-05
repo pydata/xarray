@@ -1762,6 +1762,14 @@ class TestRestructuring:
         result = dt.assign({"foo": xr.DataArray(0), "a": DataTree()})
         assert_equal(result, expected)
 
+    def test_assign_encoding(self) -> None:
+        ds = xr.Dataset({"foo": 0})
+        ds.encoding = {"test": "test"}
+        node = xr.DataTree(ds)
+        assert node.encoding == {"test": "test"}
+        node = node.assign(bar=xr.DataArray(1))
+        assert node.encoding == {"test": "test"}
+
     def test_filter_like(self) -> None:
         flower_tree = DataTree.from_dict(
             {"root": None, "trunk": None, "leaves": None, "flowers": None}
