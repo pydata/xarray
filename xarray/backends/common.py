@@ -31,6 +31,7 @@ from xarray.core.utils import (
     NdimSizeLenMixin,
     attempt_import,
     emit_user_level_warning,
+    is_http_url,
     is_remote_uri,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -156,28 +157,31 @@ def _find_absolute_paths(
     ['common.py']
     """
     if isinstance(paths, str):
-        if is_remote_uri(paths) and kwargs.get("engine") == "zarr":
-            if TYPE_CHECKING:
-                import fsspec
-            else:
-                fsspec = attempt_import("fsspec")
+        if is_remote_uri(paths):
+            if not is_http_url(paths):
+                # remote uris that are not http are likely s3 or similar, which support globbing with fsspec
 
-            fs, _, _ = fsspec.core.get_fs_token_paths(
-                paths,
-                mode="rb",
-                storage_options=kwargs.get("backend_kwargs", {}).get(
-                    "storage_options", {}
-                ),
-                expand=False,
-            )
-            tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
-            return [fs.get_mapper(path) for path in tmp_paths]
-        elif is_remote_uri(paths):
-            raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs "
-                f"unless engine='zarr' is specified. Got paths: {paths}. "
-                "Instead, supply paths as an explicit list of strings."
-            )
+                if TYPE_CHECKING:
+                    import fsspec
+                else:
+                    fsspec = attempt_import("fsspec")
+
+                fs, _, _ = fsspec.core.get_fs_token_paths(
+                    paths,
+                    mode="rb",
+                    storage_options=kwargs.get("backend_kwargs", {}).get(
+                        "storage_options", {}
+                    ),
+                    expand=False,
+                )
+                tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
+                return [fs.get_mapper(path) for path in tmp_paths]
+            else:
+                raise ValueError(
+                    "cannot do wild-card matching for paths that are remote http URLs. "
+                    f"Got paths: {paths}. "
+                    "Instead, supply paths as an explicit list of strings."
+                )
         else:
             return sorted(glob(_normalize_path(paths)))
     elif isinstance(paths, os.PathLike):

@@ -5852,11 +5852,11 @@ class TestDask(DatasetIOBase):
 
     @requires_fsspec
     def test_open_mfdataset_no_files(self) -> None:
-        pytest.importorskip("aiobotocore")
-
-        # glob is attempted as of #4823, but finds no files
-        with pytest.raises(OSError, match=r"no files"):
-            open_mfdataset("http://some/remote/uri", engine="zarr")
+        with pytest.raises(
+            ValueError,
+            match=r"cannot do wild-card matching for paths that are remote http URLs",
+        ):
+            open_mfdataset("http://some/remote/uri")
 
     def test_open_mfdataset_2d(self) -> None:
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
