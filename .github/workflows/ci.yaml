@@ -36,10 +36,15 @@ jobs:
           keyword: "[skip-ci]"
 
   cache-pixi-lock:
+    needs: detect-ci-trigger
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+
     runs-on: ubuntu-slim
+
     outputs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
       pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
+
     steps:
       - uses: actions/checkout@v6
       - uses: Parcels-code/pixi-lock/create-and-cache@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
@@ -50,11 +55,11 @@ jobs:
         with:
           name: pixi-lock
           path: pixi.lock
+
   test:
     name: "${{ matrix.os }} | ${{ matrix.pixi-env }}${{ matrix.pytest-addopts && format(' ({0})', matrix.pytest-addopts) || '' }}"
     runs-on: ${{ matrix.os }}
-    needs: [detect-ci-trigger, cache-pixi-lock]
-    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    needs: cache-pixi-lock
     defaults:
       run:
         shell: bash -l {0}
