@@ -5,7 +5,7 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [package]
 name = "xarray"
-version = "dynamic" # dynamic versioning needs better support in pixi https://github.com/prefix-dev/pixi/issues/2923#issuecomment-2598460666 . Putting `version = "dynamic"` here for now until pixi recommends something else.
+version = "9999.0.0" # dynamic versioning needs better support in pixi https://github.com/prefix-dev/pixi/issues/2923#issuecomment-2598460666 . Putting `version = "..."` here for now until pixi recommends something else.
 
 [package.build]
 backend = { name = "pixi-build-python", version = ">=0.4.4" }
