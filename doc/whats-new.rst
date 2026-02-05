@@ -26,10 +26,16 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix slicing with negative step (:issue:`11000` and :pull:`11044`).
+  By `Antonio Valentino <https://github.com/avalentino>`_.
+- Fix ``.plot`` error when using positional args with ``col`` and
+  ``row`` (:issue:`11104` :pull:`11111`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+- Slightly amend `Xarray's Zarr Encoding Specification doc <https://docs.xarray.dev/en/latest/internals/zarr-encoding-spec.html>`_ for clarity, and provide a code comment in ``xarray.backends.zarr._get_zarr_dims_and_attrs`` referencing the doc (:issue:`8749` :pull:`11013`).
+  By `Ewan Short <https://github.com/eshort0401>`_.
 - Fix silent data corruption when writing dask arrays to sharded Zarr stores.
   Dask chunk boundaries must now align with shard boundaries, not just internal
   Zarr chunk boundaries (:issue:`10831`).
-
 - Fix :py:meth:`Dataset.sortby` and :py:meth:`DataArray.sortby` placing NaN values
   at the beginning instead of the end when using ``ascending=False`` (:issue:`7358`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
