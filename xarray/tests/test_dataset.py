@@ -3939,6 +3939,20 @@ class TestDataset:
         with pytest.raises(ValueError, match=r".*not coordinates with an index"):
             ds.reset_index("y")
 
+    def test_reset_multi_index_resets_levels(self) -> None:
+        # ND DataArray that gets stacked along a multiindex
+        da = DataArray(np.ones((3, 3)), coords={"dim1": [1, 2, 3], "dim2": [4, 5, 6]})
+        da = da.stack(feature=["dim1", "dim2"])
+
+        # Extract just the stacked coordinates for saving in a dataset
+        ds = Dataset(data_vars={"feature": da.feature})
+        xr.testing.assertions._assert_internal_invariants(
+            ds.reset_index(["feature", "dim1", "dim2"]), check_default_indexes=False
+        )  # succeeds
+        xr.testing.assertions._assert_internal_invariants(
+            ds.reset_index(["feature"]), check_default_indexes=False
+        )  # fails, but no warning either
+
     def test_reset_index_keep_attrs(self) -> None:
         coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
         ds = Dataset({}, {"coord_1": coord_1})
@@ -3985,6 +3999,9 @@ class TestDataset:
             assert name not in reset.variables
         for name in converted:
             assert_identical(reset[name].variable, ds[name].variable.to_base_variable())
+            # check that variable data is converted back to a numpy array
+            # (https://github.com/pydata/xarray/issues/8887)
+            assert isinstance(reset[name].variable._data, np.ndarray)
         for old_name, new_name in renamed.items():
             assert_identical(ds[old_name].variable, reset[new_name].variable)
 

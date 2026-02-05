@@ -27,6 +27,7 @@ from xarray.core.indexing import (
     CoordinateTransformIndexingAdapter,
     OuterIndexer,
     PandasIndexingAdapter,
+    PandasMultiIndexingAdapter,
     VectorizedIndexer,
     as_indexable,
 )
@@ -561,8 +562,13 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def to_base_variable(self) -> Variable:
         """Return this variable as a base xarray.Variable"""
+        if isinstance(self._data, PandasMultiIndexingAdapter):
+            data = np.asarray(self._data)
+        else:
+            data = self._data
+
         return Variable(
-            self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
+            self._dims, data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
     to_variable = utils.alias(to_base_variable, "to_variable")
