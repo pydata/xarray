@@ -47,7 +47,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
-  - sparse
+  - sparse>=0.15
   - toolz
   - types-colorama
   - types-docutils

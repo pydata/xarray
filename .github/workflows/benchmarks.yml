@@ -25,7 +25,8 @@ jobs:
           fetch-depth: 0
 
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@v2
+        # uses: mamba-org/setup-micromamba@v2
+        uses: conda-incubator/setup-miniconda@v2
         with:
           micromamba-version: "1.5.10-0"
           environment-file: ${{env.CONDA_ENV_FILE}}

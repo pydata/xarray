@@ -41,7 +41,7 @@
 
   // The Pythons you'd like to test against.  If not provided, defaults
   // to the current version of Python used to run `asv`.
-  "pythons": ["3.11"],
+  "pythons": ["3.13"],
 
   // The matrix of dependencies to test.  Each key is the name of a
   // package (in PyPI) and the values are version numbers.  An empty
@@ -59,8 +59,8 @@
   //     "pip+emcee": [""],   // emcee is only available for install with pip.
   // },
   "matrix": {
-    "setuptools_scm": [""], // GH6609
-    "numpy": ["2.2"],
+    "setuptools": [""],
+    "numpy": [""],
     "pandas": [""],
     "netcdf4": [""],
     "scipy": [""],
@@ -69,7 +69,7 @@
     "distributed": [""],
     "flox": [""],
     "numpy_groupies": [""],
-    "sparse": [""],
+    "sparse": ["0.15"],
     "cftime": [""]
   },
   // fix for bad builds
