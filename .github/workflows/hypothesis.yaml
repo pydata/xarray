@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.repository == 'pydata/xarray'
-      && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'schedule')
+      && github.event_name == 'pull_request'
       && !contains(github.event.pull_request.labels.*.name, 'skip-ci')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
@@ -35,6 +35,18 @@ jobs:
           keyword: "[skip-ci]"
 
   cache-pixi-lock:
+    needs: detect-ci-trigger
+    if: |
+      always()
+      && (
+        (
+          github.event_name == 'pull_request'
+          && needs.detect-ci-trigger.outputs.triggered == 'false'
+          && !contains(github.event.pull_request.labels.*.name, 'run-slow-hypothesis')
+        )
+        || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      )
+
     runs-on: ubuntu-slim
     outputs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
@@ -53,14 +65,9 @@ jobs:
   hypothesis:
     name: Slow Hypothesis Tests
     runs-on: "ubuntu-latest"
-    needs: [detect-ci-trigger, cache-pixi-lock]
-    if: |
-      always()
-      && (
-          needs.detect-ci-trigger.outputs.triggered == 'false'
-          && ( (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-              || contains( github.event.pull_request.labels.*.name, 'run-slow-hypothesis'))
-      )
+
+    needs: cache-pixi-lock
+
     defaults:
       run:
         shell: bash -l {0}
