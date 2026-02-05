@@ -22,7 +22,7 @@ env:
 jobs:
   detect-ci-trigger:
     name: detect upstream-dev ci trigger
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: |
       github.repository == 'pydata/xarray'
       && (github.event_name == 'push' || github.event_name == 'pull_request')
@@ -37,8 +37,24 @@ jobs:
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
+
   cache-pixi-lock:
     runs-on: ubuntu-slim
+    needs: detect-ci-trigger
+    if: |
+      always()
+      && github.repository == 'pydata/xarray'
+      && (
+        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        || (
+          github.event_name == 'pull_request'
+          && (
+            needs.detect-ci-trigger.outputs.triggered == 'true'
+            || contains( github.event.pull_request.labels.*.name, 'run-upstream')
+          )
+        )
+      )
+
     outputs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
       pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
@@ -52,17 +68,11 @@ jobs:
         with:
           name: pixi-lock
           path: pixi.lock
+
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
-    needs: [detect-ci-trigger, cache-pixi-lock]
-    if: |
-      always()
-      && (
-          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-          || needs.detect-ci-trigger.outputs.triggered == 'true'
-          || contains( github.event.pull_request.labels.*.name, 'run-upstream')
-      )
+    needs: cache-pixi-lock
     defaults:
       run:
         shell: bash -l {0}
