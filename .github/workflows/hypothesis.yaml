@@ -39,12 +39,12 @@ jobs:
     if: |
       always()
       && (
-        (
+        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        || (
           github.event_name == 'pull_request'
           && needs.detect-ci-trigger.outputs.triggered == 'false'
-          && !contains(github.event.pull_request.labels.*.name, 'run-slow-hypothesis')
+          && contains(github.event.pull_request.labels.*.name, 'run-slow-hypothesis')
         )
-        || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
       )
 
     runs-on: ubuntu-slim
