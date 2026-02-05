@@ -14,6 +14,11 @@ v2026.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:class:`~xarray.indexes.NDPointIndex` now supports coordinates with fewer
+  dimensions than coordinate variables, enabling indexing of scattered points
+  and trajectories where multiple coordinates (e.g., ``x``, ``y``) share a
+  single dimension (e.g., ``points``) (:issue:`10940`, :pull:`11116`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -32,6 +37,8 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix slicing with negative step (:issue:`11000` and :pull:`11044`).
+  By `Antonio Valentino <https://github.com/avalentino>`_.
 - Fix ``.plot`` error when using positional args with ``col`` and
   ``row`` (:issue:`11104` :pull:`11111`).
   By `Julia Signell <https://github.com/jsignell>`_.
