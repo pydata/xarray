@@ -182,7 +182,7 @@ jobs:
 
   event_file:
     name: "Event File"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: github.repository == 'pydata/xarray'
     steps:
       - name: Upload
