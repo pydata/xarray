@@ -17,7 +17,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 3
-  PIXI_VERSION: "v0.63.1"
+  PIXI_VERSION: "v0.63.2"
 
 jobs:
   detect-ci-trigger:
@@ -88,7 +88,7 @@ jobs:
         uses: Parcels-code/pixi-lock/restore@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
-      - uses: prefix-dev/setup-pixi@v0.9.3
+      - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true

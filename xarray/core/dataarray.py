@@ -1479,7 +1479,7 @@ class DataArray(
             utils.emit_user_level_warning(
                 "Supplying chunks as dimension-order tuples is deprecated. "
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
-                category=DeprecationWarning,
+                category=FutureWarning,
             )
             if len(chunks) != len(self.dims):
                 raise ValueError(
@@ -2434,7 +2434,7 @@ class DataArray(
         ----------
         other : Dataset or DataArray
             Object with an 'indexes' attribute giving a mapping from dimension
-            names to an 1d array-like, which provides coordinates upon
+            names to a 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
         method : { "linear", "nearest", "zero", "slinear", "quadratic", "cubic", \
             "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima" }
@@ -3199,7 +3199,7 @@ class DataArray(
             New Dataset copied from `self` with variables removed.
 
         Examples
-        -------
+        --------
         >>> data = np.arange(12).reshape(4, 3)
         >>> da = xr.DataArray(
         ...     data=data,
@@ -3985,7 +3985,7 @@ class DataArray(
         result: DataFrame
             DataArray as a pandas DataFrame.
 
-        See also
+        See Also
         --------
         DataArray.to_pandas
         DataArray.to_series
@@ -4028,7 +4028,7 @@ class DataArray(
         result : Series
             DataArray as a pandas Series.
 
-        See also
+        See Also
         --------
         DataArray.to_pandas
         DataArray.to_dataframe
@@ -4702,7 +4702,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are broadcast equal.
 
@@ -4756,7 +4756,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are equal.
 
@@ -4812,7 +4812,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are identical.
 
@@ -5487,7 +5487,7 @@ class DataArray(
         -------
         differentiated: DataArray
 
-        See also
+        See Also
         --------
         numpy.gradient: corresponding numpy function
 
@@ -5545,7 +5545,7 @@ class DataArray(
         -------
         integrated : DataArray
 
-        See also
+        See Also
         --------
         Dataset.integrate
         numpy.trapz : corresponding numpy function
@@ -5602,7 +5602,7 @@ class DataArray(
         -------
         integrated : DataArray
 
-        See also
+        See Also
         --------
         Dataset.cumulative_integrate
         scipy.integrate.cumulative_trapezoid : corresponding scipy function
@@ -6746,7 +6746,7 @@ class DataArray(
         time part of the timestamps.
 
         Parameters
-        ---------
+        ----------
         calendar : str
             The target calendar name.
         dim : str
@@ -6867,8 +6867,8 @@ class DataArray(
         dim : str
             The time coordinate name.
 
-        Return
-        ------
+        Returns
+        -------
         DataArray
             The source interpolated on the decimal years of target,
         """

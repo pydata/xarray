@@ -1178,7 +1178,7 @@ class Dataset(
         """
         Coerces wrapped data and coordinates into numpy arrays, returning a Dataset.
 
-        See also
+        See Also
         --------
         DataArray.as_numpy
         DataArray.to_numpy : Returns only the data as a numpy.ndarray object.
@@ -1688,8 +1688,8 @@ class Dataset(
         """Like equals, but also checks all dataset attributes, the
         attributes on all variables and coordinates, and indexes.
 
-        Example
-        -------
+        Examples
+        --------
 
         >>> a = xr.Dataset(
         ...     {"Width": ("X", [1, 2, 3])},
@@ -2561,7 +2561,7 @@ class Dataset(
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             chunks = {}
@@ -2571,7 +2571,7 @@ class Dataset(
                 utils.emit_user_level_warning(
                     "Supplying chunks as dimension-order tuples is deprecated. "
                     "It will raise an error in the future. Instead use a dict with dimensions as keys.",
-                    category=DeprecationWarning,
+                    category=FutureWarning,
                 )
             chunks_mapping = dict.fromkeys(self.dims, chunks)
         else:
@@ -5899,7 +5899,7 @@ class Dataset(
             emit_user_level_warning(
                 f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
                 f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
-                DeprecationWarning,
+                FutureWarning,
             )
 
         assert_no_index_corrupted(self.xindexes, names_set)
@@ -5990,7 +5990,7 @@ class Dataset(
         if is_dict_like(labels) and not isinstance(labels, dict):
             emit_user_level_warning(
                 "dropping coordinates using `drop` is deprecated; use drop_vars.",
-                DeprecationWarning,
+                FutureWarning,
             )
             return self.drop_vars(labels, errors=errors)
 
@@ -6002,7 +6002,7 @@ class Dataset(
         if dim is None and (is_scalar(labels) or isinstance(labels, Iterable)):
             emit_user_level_warning(
                 "dropping variables using `drop` is deprecated; use drop_vars.",
-                DeprecationWarning,
+                FutureWarning,
             )
             # for mypy
             if is_scalar(labels):
@@ -6012,14 +6012,14 @@ class Dataset(
             warnings.warn(
                 "dropping labels using list-like labels is deprecated; using "
                 "dict-like arguments with `drop_sel`, e.g. `ds.drop_sel(dim=[labels]).",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
             return self.drop_sel({dim: labels}, errors=errors, **labels_kwargs)
 
         emit_user_level_warning(
             "dropping labels using `drop` is deprecated; use `drop_sel` instead.",
-            DeprecationWarning,
+            FutureWarning,
         )
         return self.drop_sel(labels, errors=errors)
 
@@ -6558,7 +6558,7 @@ class Dataset(
         interpolated: Dataset
             Filled in Dataset.
 
-        Warning
+        Warnings
         --------
         When passing fill_value as a keyword argument with method="linear", it does not use
         ``numpy.interp`` but it uses ``scipy.interpolate.interp1d``, which provides the fill_value parameter.
@@ -7601,7 +7601,7 @@ class Dataset(
         -------
         obj : Dataset
 
-        See also
+        See Also
         --------
         Dataset.to_dict
         DataArray.from_dict
@@ -8398,7 +8398,7 @@ class Dataset(
         -------
         differentiated: Dataset
 
-        See also
+        See Also
         --------
         numpy.gradient: corresponding numpy function
         """
@@ -8464,7 +8464,7 @@ class Dataset(
         -------
         integrated : Dataset
 
-        See also
+        See Also
         --------
         DataArray.integrate
         numpy.trapz : corresponding numpy function
@@ -8585,7 +8585,7 @@ class Dataset(
         -------
         integrated : Dataset
 
-        See also
+        See Also
         --------
         DataArray.cumulative_integrate
         scipy.integrate.cumulative_trapezoid : corresponding scipy function
@@ -9425,7 +9425,7 @@ class Dataset(
                 "dim changes to return a dict of indices of each dimension, for "
                 "consistency it will be an error to call Dataset.argmin() with no argument,"
                 "since we don't return a dict of Datasets.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
         if (
@@ -9518,7 +9518,7 @@ class Dataset(
                 "dim changes to return a dict of indices of each dimension, for "
                 "consistency it will be an error to call Dataset.argmin() with no argument,"
                 "since we don't return a dict of Datasets.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
         if (
@@ -9592,8 +9592,8 @@ class Dataset(
         result : Dataset or DataArray, depending on whether ``statement`` contains an
             assignment.
 
-        Warning
-        -------
+        Warnings
+        --------
         Like ``pd.eval()``, this method should not be used with untrusted input.
 
         Examples
@@ -9933,7 +9933,7 @@ class Dataset(
         time part of the timestamps.
 
         Parameters
-        ---------
+        ----------
         calendar : str
             The target calendar name.
         dim : Hashable, default: "time"
@@ -10054,8 +10054,8 @@ class Dataset(
         dim : Hashable, default: "time"
             The time coordinate name.
 
-        Return
-        ------
+        Returns
+        -------
         DataArray
             The source interpolated on the decimal years of target,
         """

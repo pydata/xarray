@@ -198,8 +198,11 @@ Xarray uses `Pixi <https://pixi.sh/latest/>`_ to manage development environments
 Before starting any development, you'll need to create an isolated xarray
 development environment:
 
-- Install `Pixi <https://pixi.sh/latest/installation/>`_
-- Make sure your Pixi is up to date (``pixi self-update``)
+- `Install Pixi <https://pixi.sh/latest/installation/>`_ - preferably the same version as the one listed in our ``ci.yaml`` `file <https://github.com/pydata/xarray/blob/main/.github/workflows/ci.yaml>`_
+
+  - Some features in Pixi are in active development, and xarray depends on these features.
+    Using the same version results in the best dev experience.
+  - Instructions for installing specific versions of Pixi can be seen on the Pixi installation page.
 - Make sure that you have :ref:`cloned the repository <contributing.dev_workflow>`
 - ``cd`` to the *xarray* source directory
 
@@ -573,7 +576,7 @@ a user passes ``old_arg``, we would instead catch it:
             emit_user_level_warning(
                 "`old_arg` has been deprecated, and in the future will raise an error."
                 "Please use `new_arg` from now on.",
-                DeprecationWarning,
+                FutureWarning,
             )
 
             # Still do what the user intended here

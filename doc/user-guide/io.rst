@@ -311,7 +311,7 @@ __ https://www.unidata.ucar.edu/software/netcdf/
     If you aren't familiar with this data format, the `netCDF FAQ`_ is a good
     place to start.
 
-.. _netCDF FAQ: https://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
+.. _netCDF FAQ: https://docs.unidata.ucar.edu/netcdf-c/current/faq.html
 
 Reading and writing netCDF files with xarray requires scipy, h5netcdf, or the
 `netCDF4-Python`__ library to be installed. SciPy only supports reading and writing

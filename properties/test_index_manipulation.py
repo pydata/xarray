@@ -195,9 +195,9 @@ class DatasetStateMachine(RuleBasedStateMachine):
             )
         )
         note(f"> drop_dims: {dims}")
-        # TODO: dropping a multi-index dimension raises a DeprecationWarning
+        # TODO: dropping a multi-index dimension raises a FutureWarning
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=DeprecationWarning)
+            warnings.simplefilter("ignore", category=FutureWarning)
             self.dataset = self.dataset.drop_dims(dims)
 
         for dim in dims:

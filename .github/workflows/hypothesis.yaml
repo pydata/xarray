@@ -13,7 +13,7 @@ on:
 
 env:
   FORCE_COLOR: 3
-  PIXI_VERSION: "v0.63.1"
+  PIXI_VERSION: "v0.63.2"
 
 jobs:
   detect-ci-trigger:
