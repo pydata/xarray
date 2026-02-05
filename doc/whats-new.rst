@@ -23,6 +23,11 @@ New Features
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- When deprecating functionality, xarray has sometimes used ``FutureWarning``
+  and sometimes used ``DeprecationWarning``. ``DeprecationWarning`` is
+  not intended to be visible to end-users so this version of xarray
+  switches to using ``FutureWarning`` everywhere (:pull:`11112`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Deprecations
 ~~~~~~~~~~~~

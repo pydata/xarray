@@ -344,7 +344,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
         if self.eagerly_compute_group is not None:
             emit_user_level_warning(
                 "Passing `eagerly_compute_group` is now deprecated. It has no effect.",
-                DeprecationWarning,
+                FutureWarning,
             )
 
         if not isinstance(self.group, _DummyGroup) and is_chunked_array(

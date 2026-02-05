@@ -310,7 +310,7 @@ class TreeNode:
         warn(
             "`iter_lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         return (self, *self.parents)
@@ -323,7 +323,7 @@ class TreeNode:
         warn(
             "`lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         return self.iter_lineage()
@@ -342,7 +342,7 @@ class TreeNode:
         warn(
             "`ancestors` has been deprecated, and in the future will raise an error."
             "Please use `parents`. Example: `tuple(reversed(node.parents))`",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         return (*reversed(self.parents), self)

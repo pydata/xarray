@@ -1479,7 +1479,7 @@ class DataArray(
             utils.emit_user_level_warning(
                 "Supplying chunks as dimension-order tuples is deprecated. "
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
-                category=DeprecationWarning,
+                category=FutureWarning,
             )
             if len(chunks) != len(self.dims):
                 raise ValueError(
