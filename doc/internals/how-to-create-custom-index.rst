@@ -154,7 +154,8 @@ Here is a small example of a meta-index for geospatial, raster datasets (i.e.,
 regularly spaced 2-dimensional data) that internally relies on two
 ``PandasIndex`` instances for the x and y dimensions respectively:
 
-.. code-block:: python
+.. jupyter-execute::
+
 
     from xarray import Index
     from xarray.core.indexes import PandasIndex
@@ -172,11 +173,12 @@ regularly spaced 2-dimensional data) that internally relies on two
             self._xy_indexes = xy_indexes
 
         @classmethod
-        def from_variables(cls, variables):
+        def from_variables(cls, variables, *, options):
             assert len(variables) == 2
 
             xy_indexes = {
-                k: PandasIndex.from_variables({k: v}) for k, v in variables.items()
+                k: PandasIndex.from_variables({k: v}, options=options)
+                for k, v in variables.items()
             }
 
             return cls(xy_indexes)
@@ -213,7 +215,7 @@ How to use a custom index
 You can use :py:meth:`Dataset.set_xindex` or :py:meth:`DataArray.set_xindex` to assign a
 custom index to a Dataset or DataArray, e.g., using the ``RasterIndex`` above:
 
-.. code-block:: python
+.. jupyter-execute::
 
     import numpy as np
     import xarray as xr
@@ -230,4 +232,4 @@ custom index to a Dataset or DataArray, e.g., using the ``RasterIndex`` above:
     da_raster = da.set_xindex(["x", "y"], RasterIndex)
 
     # RasterIndex now takes care of label-based selection
-    selected = da_raster.sel(x=10, y=slice(20, 50))
+    da_raster.sel(x=10, y=slice(20, 50))
