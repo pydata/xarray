@@ -225,15 +225,38 @@ def test_range_index_empty_slice() -> None:
 def test_range_index_sel() -> None:
     ds = create_dataset_arange(0.0, 1.0, 0.1)
 
-    # start-stop slice
+    # start-stop slice (inclusive on both ends)
+    # 0.12 rounds to position 1 (value 0.1), 0.28 rounds to position 3 (value 0.3)
     actual = ds.sel(x=slice(0.12, 0.28), method="nearest")
-    expected = create_dataset_arange(0.1, 0.3, 0.1)
+    expected = ds.isel(x=slice(1, 4))
     assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
+    assert isinstance(actual.xindexes["x"], RangeIndex)
 
     # start-stop-step slice
     actual = ds.sel(x=slice(0.0, 1.0, 0.2), method="nearest")
     expected = ds.isel(x=range(0, 10, 2))
     assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
+
+    # values near boundaries should round correctly (0.79999 -> 0.8)
+    actual = ds.sel(x=slice(0.2, 0.79999), method="nearest")
+    expected = ds.isel(x=slice(2, 9))  # 0.79999 rounds to position 8, +1 = 9
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
+
+    # default method (no method parameter) uses ceil/floor
+    # slice(0.2, 0.7): ceil(2.0) = 2, floor(7.0) = 7, +1 = 8
+    actual = ds.sel(x=slice(0.2, 0.7))
+    expected = ds.isel(x=slice(2, 8))
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
+
+    # default method with non-exact boundaries
+    # slice(0.15, 0.65): ceil(1.5) = 2, floor(6.5) = 6, +1 = 7
+    actual = ds.sel(x=slice(0.15, 0.65))
+    expected = ds.isel(x=slice(2, 7))
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
+
+    # reverse slice returns empty (matching pandas behavior)
+    actual = ds.sel(x=slice(0.7, 0.2), method="nearest")
+    assert actual.sizes["x"] == 0
 
     # basic indexing
     actual = ds.sel(x=0.52, method="nearest")
@@ -257,8 +280,14 @@ def test_range_index_sel() -> None:
     expected = xr.Dataset(coords={"x": ("y", [0.5, 0.6])}).set_xindex("x")
     assert_allclose(actual, expected, check_default_indexes=False)
 
-    with pytest.raises(ValueError, match=r"RangeIndex only supports.*method.*nearest"):
-        ds.sel(x=0.1)
+    # exact value should work without method
+    actual = ds.sel(x=0.1)
+    expected = xr.Dataset(coords={"x": 0.1})
+    assert_allclose(actual, expected)
+
+    # non-exact value without method should raise KeyError
+    with pytest.raises(KeyError, match=r"not all values found in index"):
+        ds.sel(x=0.15)
 
     with pytest.raises(ValueError, match=r"RangeIndex doesn't support.*tolerance"):
         ds.sel(x=0.1, method="nearest", tolerance=1e-3)
