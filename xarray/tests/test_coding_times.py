@@ -2240,7 +2240,7 @@ def test_on_error_raises():
                        array,
                        attrs={"units": "ms since 00:00:00"})
 
-    default is "raise"
+    # default is "raise"
     coder = CFDatetimeCoder()
 
     with pytest.raises(ValueError):
