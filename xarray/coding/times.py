@@ -1373,21 +1373,21 @@ class CFDatetimeCoder(VariableCoder):
     on_error  :  str, optional
         What to do if there is an error when attempting to decode
         a time variable. Options are: "raise", "warn", "ignore".
-        Defaults to "raise". 
+        Defaults to "raise".
     """
 
     def __init__(
         self,
         use_cftime: bool | None = None,
         time_unit: PDDatetimeUnitOptions = "ns",
-        on_error: str = "raise"
+        on_error: str = "raise",
     ) -> None:
         self.use_cftime = use_cftime
         self.time_unit = time_unit
         if on_error in {"raise", "warn", "ignore"}:
             self.on_error = on_error
         else:
-            raise ValueError('on_error must be one of "raise", "warn", "ignore")')  
+            raise ValueError('on_error must be one of "raise", "warn", "ignore")')
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
