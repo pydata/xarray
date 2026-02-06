@@ -292,9 +292,9 @@ def _dataset_from_backend_dataset(
     create_default_indexes,
     **extra_tokens,
 ):
-    if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
+    if not isinstance(chunks, int | dict) and chunks not in {None, "auto", "preserve"}:
         raise ValueError(
-            f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
+            f"chunks must be an int, dict, 'auto', 'preserve', or None. Instead found {chunks}."
         )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
