@@ -8129,8 +8129,21 @@ class Dataset(
 
         indices = {}
         for key, arrays in vars_by_dim.items():
-            order = np.lexsort(tuple(reversed(arrays)))
-            indices[key] = order if ascending else order[::-1]
+            if ascending:
+                indices[key] = np.lexsort(tuple(reversed(arrays)))
+            else:
+                # For descending order, we need to keep NaNs at the end.
+                # By adding notnull(arr) as additional sort keys, null values
+                # sort to the beginning (False=0 < True=1), then reversing
+                # puts them at the end. See https://github.com/pydata/xarray/issues/7358
+                indices[key] = np.lexsort(
+                    tuple(
+                        [
+                            *reversed(arrays),
+                            *[duck_array_ops.notnull(arr) for arr in reversed(arrays)],
+                        ]
+                    )
+                )[::-1]
         return aligned_self.isel(indices)
 
     def quantile(

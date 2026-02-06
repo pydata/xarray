@@ -7232,6 +7232,47 @@ class TestDataset:
         actual = ds.sortby(["x", "y"], ascending=False)
         assert_equal(actual, ds)
 
+    def test_sortby_descending_nans(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/7358
+        # NaN values should remain at the end when sorting in descending order
+        ds = Dataset({"var": ("x", [3.0, np.nan, 4.0, 2.0, np.nan])})
+
+        # Ascending: NaNs at end
+        result_asc = ds.sortby("var", ascending=True)
+        assert_array_equal(result_asc["var"].values[:3], [2.0, 3.0, 4.0])
+        assert np.all(np.isnan(result_asc["var"].values[3:]))
+
+        # Descending: NaNs should also be at end (not beginning)
+        result_desc = ds.sortby("var", ascending=False)
+        assert_array_equal(result_desc["var"].values[:3], [4.0, 3.0, 2.0])
+        assert np.all(np.isnan(result_desc["var"].values[3:]))
+
+    def test_sortby_descending_nans_multi_key(self) -> None:
+        # Test sortby with multiple keys where one has NaN values
+        # Regression test for https://github.com/pydata/xarray/issues/7358
+        ds = Dataset(
+            {
+                "A": (("x", "y"), [[1, 2, 3], [4, 5, 6]]),
+                "B": (("x", "y"), [[7, 8, 9], [10, 11, 12]]),
+            },
+            coords={"x": ["b", "a"], "y": [np.nan, 1, 0]},
+        )
+
+        # Sort by multiple keys in descending order
+        result = ds.sortby(["x", "y"], ascending=False)
+
+        # x should be sorted descending: ["b", "a"]
+        assert_array_equal(result["x"].values, ["b", "a"])
+
+        # y should be sorted descending with NaN at end: [1, 0, nan]
+        assert_array_equal(result["y"].values[:2], [1, 0])
+        assert np.isnan(result["y"].values[2])
+
+        # Verify data is reordered correctly
+        # Original y=[nan, 1, 0] -> sorted y=[1, 0, nan] means columns reordered [1, 2, 0]
+        assert_array_equal(result["A"].values, [[2, 3, 1], [5, 6, 4]])
+        assert_array_equal(result["B"].values, [[8, 9, 7], [11, 12, 10]])
+
     def test_attribute_access(self) -> None:
         ds = create_test_data(seed=1)
         for key in ["var1", "var2", "var3", "time", "dim1", "dim2", "dim3", "numbers"]:
