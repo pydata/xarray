@@ -94,7 +94,7 @@ def cov(
            [3.2, 0.6, 1.8]])
     Coordinates:
       * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> da_b = DataArray(
     ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -110,7 +110,7 @@ def cov(
            [ 3.2,  0.6,  1.8]])
     Coordinates:
       * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> xr.cov(da_a, da_b)
     <xarray.DataArray ()> Size: 8B
     array(-3.53055556)
@@ -135,7 +135,7 @@ def cov(
     <xarray.DataArray (time: 3)> Size: 24B
     array([-4.69346939, -4.49632653, -3.37959184])
     Coordinates:
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
@@ -197,7 +197,7 @@ def corr(
            [3.2, 0.6, 1.8]])
     Coordinates:
       * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> da_b = DataArray(
     ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -213,7 +213,7 @@ def corr(
            [ 3.2,  0.6,  1.8]])
     Coordinates:
       * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> xr.corr(da_a, da_b)
     <xarray.DataArray ()> Size: 8B
     array(-0.57087777)
@@ -238,7 +238,7 @@ def corr(
     <xarray.DataArray (time: 3)> Size: 24B
     array([-0.50240504, -0.83215028, -0.99057446])
     Coordinates:
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
