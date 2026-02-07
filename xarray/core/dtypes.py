@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import numpy as np
+import pandas as pd
 from pandas.api.extensions import ExtensionDtype
 
 from xarray.compat import array_api_compat, npcompat
@@ -13,6 +14,8 @@ from xarray.core import utils
 
 if TYPE_CHECKING:
     from typing import Any
+
+    from pandas._typing import Scalar
 
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
@@ -297,7 +300,7 @@ def should_promote_to_object(
 def result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype,
     xp=None,
-) -> np.dtype:
+) -> np.dtype | ExtensionDtype:
     """Like np.result_type, but with type promotion rules matching pandas.
 
     Examples of changed behavior:
@@ -311,7 +314,7 @@ def result_type(
 
     Returns
     -------
-    numpy.dtype for the result.
+    numpy.dtype or pandas ExtensionDtype for the result.
     """
     # TODO (keewis): replace `array_api_compat.result_type` with `xp.result_type` once we
     # can require a version of the Array API that supports passing scalars to it.
@@ -320,13 +323,82 @@ def result_type(
     if xp is None:
         xp = get_array_namespace(arrays_and_dtypes)
 
+    extension_dtypes: list[ExtensionDtype] = [
+        cast(ExtensionDtype, getattr(x, "dtype", x))
+        for x in arrays_and_dtypes
+        if utils.is_allowed_extension_array(x)
+        or (utils.is_allowed_extension_array_dtype(x) and not isinstance(x, type))
+    ]
+    if extension_dtypes:
+        from xarray.core.extension_array import (
+            is_scalar as extension_is_scalar,
+            union_unordered_categorical_and_scalar,
+        )
+
+        scalars = [
+            x
+            for x in arrays_and_dtypes
+            if extension_is_scalar(x) and x not in {pd.NA, np.nan}
+        ]
+        other_stuff = [
+            x
+            for x in arrays_and_dtypes
+            if not utils.is_allowed_extension_array(x)
+            and not utils.is_allowed_extension_array_dtype(x)
+            and not extension_is_scalar(x)
+        ]
+        if not other_stuff and all(
+            isinstance(x, pd.CategoricalDtype) and not x.ordered
+            for x in extension_dtypes
+        ):
+            return union_unordered_categorical_and_scalar(
+                cast(list[pd.CategoricalDtype], extension_dtypes),
+                cast("list[Scalar]", scalars),
+            )
+        if not other_stuff and all(
+            isinstance(x, type(extension_dtypes[0])) for x in extension_dtypes
+        ):
+            return extension_dtypes[0]
+        return np.dtype(object)
+
     if should_promote_to_object(arrays_and_dtypes, xp):
         return np.dtype(object)
+
+    dtype_inputs: list[np.dtype] = []
+    if arrays_and_dtypes:
+        has_explicit_dtype = False
+        only_string_specifiers = True
+        for value in arrays_and_dtypes:
+            if isinstance(value, np.dtype):
+                dtype_inputs.append(value)
+                has_explicit_dtype = True
+                only_string_specifiers = False
+            elif isinstance(value, type):
+                try:
+                    dtype_inputs.append(np.dtype(value))
+                    has_explicit_dtype = True
+                    only_string_specifiers = False
+                except (TypeError, ValueError):
+                    dtype_inputs = []
+                    break
+            elif isinstance(value, str | bytes):
+                try:
+                    dtype_inputs.append(np.dtype(value))
+                except (TypeError, ValueError):
+                    dtype_inputs = []
+                    break
+            else:
+                dtype_inputs = []
+                break
+        if dtype_inputs and (has_explicit_dtype or only_string_specifiers):
+            promoted_inputs = [maybe_promote_to_variable_width(x) for x in dtype_inputs]
+            return np.result_type(*promoted_inputs)
     maybe_promote = functools.partial(
         maybe_promote_to_variable_width,
         # let extension arrays handle their own str/bytes
         should_return_str_or_bytes=any(
-            map(utils.is_allowed_extension_array_dtype, arrays_and_dtypes)
+            utils.is_allowed_extension_array_dtype(x) and not isinstance(x, type)
+            for x in arrays_and_dtypes
         ),
     )
     return array_api_compat.result_type(*map(maybe_promote, arrays_and_dtypes), xp=xp)

@@ -216,7 +216,7 @@ def maybe_coerce_to_str(index, original_coords):
     except TypeError:
         pass
     else:
-        if result_type.kind in "SU":
+        if isinstance(result_type, np.dtype) and result_type.kind in "SU":
             index = np.asarray(index, dtype=result_type.type)
 
     return index
