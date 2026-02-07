@@ -980,7 +980,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         if fill_value is _default:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
-            dtype = dtypes.result_type(self.dtype, fill_value)
+            dtype = cast(np.dtype, dtypes.result_type(self.dtype, fill_value))
 
         if sparse_format is _default:
             sparse_format = "coo"
