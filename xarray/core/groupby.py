@@ -79,11 +79,10 @@ def check_reduce_dims(reduce_dims, dimensions):
     if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
-        if any(dim not in dimensions for dim in reduce_dims):
+        invalid_dims = [dim for dim in reduce_dims if dim not in dimensions]
+        if invalid_dims:
             raise ValueError(
-                f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
-                f"to reduce over all dimensions or one or more of {dimensions!r}. "
-                f"Alternatively, install the `flox` package. "
+                f"Dimensions {invalid_dims!r} not found in grouped object dimensions {dimensions!r}."
             )
 
 
@@ -1108,11 +1107,14 @@ class GroupBy(Generic[T_Xarray]):
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
+        available_dims = set(obj.dims)
         for grouper in self.groupers:
-            if any(
-                d not in grouper.codes.dims and d not in obj.dims for d in parsed_dim
-            ):
-                raise ValueError(f"cannot reduce over dimensions {dim}.")
+            available_dims.update(grouper.codes.dims)
+        invalid_dims = [d for d in parsed_dim if d not in available_dims]
+        if invalid_dims:
+            raise ValueError(
+                f"Dimensions {invalid_dims!r} not found in grouped object dimensions {tuple(available_dims)!r}."
+            )
 
         has_missing_groups = (
             self.encoded.unique_coord.size != self.encoded.full_index.size

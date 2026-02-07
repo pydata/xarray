@@ -36,6 +36,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Improve error message when reducing over non-existent dimensions after
+  ``groupby`` (:issue:`10875`).
+  By `Kristian Kollsga <https://github.com/kkollsga>`_.
 - Fix slicing with negative step (:issue:`11000` and :pull:`11044`).
   By `Antonio Valentino <https://github.com/avalentino>`_.
 - Fix ``.plot`` error when using positional args with ``col`` and

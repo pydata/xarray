@@ -770,10 +770,10 @@ def test_groupby_reduce_dimension_error(array) -> None:
     grouped = array.groupby("y")
     # assert_identical(array, grouped.mean())
 
-    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"not found in grouped object dimensions"):
         grouped.mean("huh")
 
-    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"not found in grouped object dimensions"):
         grouped.mean(("x", "y", "asd"))
 
     assert_identical(array.mean("x"), grouped.reduce(np.mean, "x"))
