@@ -1813,6 +1813,13 @@ New Features
   new dimension coordinates by passing the new kwarg ``create_index_for_new_dim=False``. (:issue:`8871`, :pull:`8872`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
+Deprecations
+~~~~~~~~~~~~
+- Passing variables with the same name as their only dimension to the :py:class:`Dataset` constructor will now raise a `PendingDeprecationWarning`.
+  This is to deprecate the current behaviour of auto-promoting such variables to coordinates. To avoid the warning pass such variables explicitly via the `coords` kwarg.
+  (:pull:`8979`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - The PyNIO backend has been deleted (:issue:`4491`, :pull:`7301`).
