@@ -161,9 +161,15 @@ def union_unordered_categorical_and_scalar(
     categorical_dtypes: list[pd.CategoricalDtype], scalars: list[Scalar]
 ) -> pd.CategoricalDtype:
     scalars = [x for x in scalars if x is not pd.CategoricalDtype.na_value]
-    all_categories = set().union(*(x.categories for x in categorical_dtypes))
-    all_categories = all_categories.union(scalars)
-    return pd.CategoricalDtype(categories=list(all_categories))
+    if categorical_dtypes:
+        all_categories = categorical_dtypes[0].categories
+        for dtype in categorical_dtypes[1:]:
+            all_categories = all_categories.append(dtype.categories)
+    else:
+        all_categories = pd.Index([], dtype="object")
+    if scalars:
+        all_categories = all_categories.append(pd.Index(scalars))
+    return pd.CategoricalDtype(categories=all_categories.unique())
 
 
 @implements(np.broadcast_to)

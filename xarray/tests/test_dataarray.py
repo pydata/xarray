@@ -3015,6 +3015,51 @@ class TestDataArray:
         actual = array.where([True, False])
         assert_identical(actual, expected)
 
+    def test_where_categorical_values(self) -> None:
+        cat = pd.Categorical(["a", "b", "a", "c"], categories=["a", "b", "c"])
+        da = DataArray(cat, dims="x", coords={"x": [0, 1, 2, 3]}, name="cat_val")
+        result = da.where(da != "a")
+        assert isinstance(result.dtype, pd.CategoricalDtype)
+        assert result.dtype == cat.dtype
+
+    def test_where_categorical_values_with_null(self) -> None:
+        cat = pd.Categorical(["a", None, "b", "c"], categories=["a", "b", "c"])
+        da = DataArray(cat, dims="x", coords={"x": [0, 1, 2, 3]}, name="cat_val_na")
+        result = da.where(~da.isnull())
+        assert isinstance(result.dtype, pd.CategoricalDtype)
+        assert result.dtype == cat.dtype
+
+    def test_align_categorical_index_with_object(self) -> None:
+        idx_obj = pd.Index(["A", "B"], dtype="object", name="lab")
+        ds1 = xr.Dataset({"v": ("lab", [1, 2])}, coords={"lab": idx_obj})
+
+        idx_cat = pd.CategoricalIndex(
+            ["B", "C"], categories=["A", "B", "C"], name="lab"
+        )
+        ds2 = xr.Dataset({"v": ("lab", [3, 4])}, coords={"lab": idx_cat})
+
+        aligned1, aligned2 = xr.align(ds1, ds2, join="inner")
+        assert list(aligned1.indexes["lab"]) == ["B"]
+        assert list(aligned2.indexes["lab"]) == ["B"]
+
+    def test_align_categorical_index_with_null(self) -> None:
+        cat_idx1 = pd.CategoricalIndex(
+            ["A", None, "C"], categories=["A", "B", "C"], name="lab"
+        )
+        da1 = DataArray([1, 2, 3], dims="lab", coords={"lab": cat_idx1}, name="v1")
+
+        cat_idx2 = pd.CategoricalIndex(
+            ["A", "B"], categories=["A", "B", "C"], name="lab"
+        )
+        da2 = DataArray([10, 20], dims="lab", coords={"lab": cat_idx2}, name="v2")
+
+        aligned1, aligned2 = xr.align(da1, da2, join="outer")
+        assert aligned1.indexes["lab"].equals(aligned2.indexes["lab"])
+
+        values = aligned1.indexes["lab"].tolist()
+        assert any(pd.isna(value) for value in values)
+        assert {value for value in values if not pd.isna(value)} == {"A", "B", "C"}
+
     def test_cumops(self) -> None:
         coords = {
             "x": [-1, -2],

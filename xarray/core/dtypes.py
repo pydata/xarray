@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import numpy as np
+import pandas as pd
 from pandas.api.extensions import ExtensionDtype
 
 from xarray.compat import array_api_compat, npcompat
@@ -297,7 +298,7 @@ def should_promote_to_object(
 def result_type(
     *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype,
     xp=None,
-) -> np.dtype:
+) -> np.dtype | ExtensionDtype:
     """Like np.result_type, but with type promotion rules matching pandas.
 
     Examples of changed behavior:
@@ -311,7 +312,7 @@ def result_type(
 
     Returns
     -------
-    numpy.dtype for the result.
+    numpy.dtype or pandas ExtensionDtype for the result.
     """
     # TODO (keewis): replace `array_api_compat.result_type` with `xp.result_type` once we
     # can require a version of the Array API that supports passing scalars to it.
@@ -319,6 +320,46 @@ def result_type(
 
     if xp is None:
         xp = get_array_namespace(arrays_and_dtypes)
+
+    extension_dtypes: list[ExtensionDtype] = [
+        cast(ExtensionDtype, getattr(x, "dtype", x))
+        for x in arrays_and_dtypes
+        if utils.is_allowed_extension_array(x)
+        or utils.is_allowed_extension_array_dtype(x)
+    ]
+    if extension_dtypes:
+        from xarray.core.extension_array import (
+            is_scalar as extension_is_scalar,
+        )
+        from xarray.core.extension_array import (
+            union_unordered_categorical_and_scalar,
+        )
+
+        scalars = [
+            x
+            for x in arrays_and_dtypes
+            if extension_is_scalar(x) and x not in {pd.NA, np.nan}
+        ]
+        other_stuff = [
+            x
+            for x in arrays_and_dtypes
+            if not utils.is_allowed_extension_array(x)
+            and not utils.is_allowed_extension_array_dtype(x)
+            and not extension_is_scalar(x)
+        ]
+        if not other_stuff and all(
+            isinstance(x, pd.CategoricalDtype) and not x.ordered
+            for x in extension_dtypes
+        ):
+            return union_unordered_categorical_and_scalar(
+                cast(list[pd.CategoricalDtype], extension_dtypes),
+                cast(list[object], scalars),
+            )
+        if not other_stuff and all(
+            isinstance(x, type(extension_dtypes[0])) for x in extension_dtypes
+        ):
+            return extension_dtypes[0]
+        return np.dtype(object)
 
     if should_promote_to_object(arrays_and_dtypes, xp):
         return np.dtype(object)
