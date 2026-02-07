@@ -330,8 +330,6 @@ def result_type(
     if extension_dtypes:
         from xarray.core.extension_array import (
             is_scalar as extension_is_scalar,
-        )
-        from xarray.core.extension_array import (
             union_unordered_categorical_and_scalar,
         )
 
@@ -360,6 +358,19 @@ def result_type(
         ):
             return extension_dtypes[0]
         return np.dtype(object)
+
+    dtype_inputs: list[np.dtype] = []
+    if arrays_and_dtypes and all(
+        isinstance(x, np.dtype | str | bytes) for x in arrays_and_dtypes
+    ):
+        for value in arrays_and_dtypes:
+            try:
+                dtype_inputs.append(np.dtype(value))
+            except (TypeError, ValueError):
+                dtype_inputs = []
+                break
+    if dtype_inputs:
+        return np.result_type(*dtype_inputs)
 
     if should_promote_to_object(arrays_and_dtypes, xp):
         return np.dtype(object)
