@@ -225,7 +225,20 @@ def decode_cf_variable(
                     "    ds = xr.open_dataset(decode_times=time_coder)\n",
                     FutureWarning,
                 )
-            decode_times = CFDatetimeCoder(use_cftime=use_cftime)
+#            decode_times = CFDatetimeCoder(use_cftime=use_cftime)
+            decode_times_options = {True: 'raise',
+                                    'error': 'raise',
+                                    'ignore': 'ignore',
+                                    'warn': 'warn',
+                                    }
+            try:
+                on_error = decode_times_options[decode_times]
+            except KeyError:
+                raise ValueError("`decode_times` must be one of:"
+                                 "True, False, 'raise', 'warn', 'ignore'"
+                                 ) from None
+            decode_times = CFDatetimeCoder(use_cftime=use_cftime, on_error=on_error)
+
         elif use_cftime is not None:
             raise TypeError(
                 "Usage of 'use_cftime' as a kwarg is not allowed "
