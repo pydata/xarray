@@ -3043,9 +3043,8 @@ class TestDataArray:
         assert list(aligned2.indexes["lab"]) == ["B"]
 
     def test_align_categorical_index_with_null(self) -> None:
-        cat_idx1 = pd.CategoricalIndex(
-            ["A", pd.NA, "C"], categories=["A", "B", "C"], name="lab"
-        )
+        cat = pd.Categorical(["A", pd.NA, "C"], categories=["A", "B", "C"])
+        cat_idx1 = pd.CategoricalIndex(cat, name="lab")
         da1 = DataArray([1, 2, 3], dims="lab", coords={"lab": cat_idx1}, name="v1")
 
         cat_idx2 = pd.CategoricalIndex(

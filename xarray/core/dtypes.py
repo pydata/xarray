@@ -385,7 +385,7 @@ def result_type(
                     break
             elif isinstance(value, str | bytes):
                 try:
-                    dtype_inputs.append(np.dtype(value))
+                    dtype_inputs.append(np.dtype(cast(str, value)))
                 except (TypeError, ValueError):
                     dtype_inputs = []
                     break
@@ -399,9 +399,10 @@ def result_type(
                 ):
                     return np.dtype(object)
             if any(isinstance(x, type) for x in arrays_and_dtypes):
-                promoted_inputs = [
-                    maybe_promote_to_variable_width(x) for x in dtype_inputs
-                ]
+                promoted_inputs = cast(
+                    "list[Any]",
+                    [maybe_promote_to_variable_width(x) for x in dtype_inputs],
+                )
                 return np.result_type(*promoted_inputs)
             return np.result_type(*dtype_inputs)
     maybe_promote = functools.partial(
