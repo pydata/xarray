@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pytest
 
@@ -53,7 +55,7 @@ def test_result_type(args, expected) -> None:
     ),
 )
 def test_result_type_scalars(values, expected) -> None:
-    actual = dtypes.result_type(*values)
+    actual = cast(np.dtype, dtypes.result_type(*values))
 
     assert np.issubdtype(actual, expected)
 

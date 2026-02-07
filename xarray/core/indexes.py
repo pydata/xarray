@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 import numpy as np
 import pandas as pd
 
-from xarray.core import formatting, nputils, utils
+from xarray.core import dtypes, formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
@@ -775,7 +775,7 @@ class PandasIndex(Index):
             if len(indexes_coord_dtypes) == 1:
                 coord_dtype = next(iter(indexes_coord_dtypes))
             else:
-                coord_dtype = np.result_type(*indexes_coord_dtypes)
+                coord_dtype = dtypes.result_type(*indexes_coord_dtypes)
 
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
@@ -898,7 +898,7 @@ class PandasIndex(Index):
             # how = "inner"
             index = self.index.intersection(other.index)
 
-        coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
+        coord_dtype = dtypes.result_type(self.coord_dtype, other.coord_dtype)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
     def reindex_like(
@@ -1077,7 +1077,7 @@ class PandasMultiIndex(PandasIndex):
         else:
             level_coords_dtype = {}
             for name in indexes[0].level_coords_dtype:
-                level_coords_dtype[name] = np.result_type(
+                level_coords_dtype[name] = dtypes.result_type(
                     *[idx.level_coords_dtype[name] for idx in indexes]
                 )
 
@@ -1434,7 +1434,7 @@ class PandasMultiIndex(PandasIndex):
             index = self.index.intersection(other.index)
 
         level_coords_dtype = {
-            k: np.result_type(lvl_dtype, other.level_coords_dtype[k])
+            k: dtypes.result_type(lvl_dtype, other.level_coords_dtype[k])
             for k, lvl_dtype in self.level_coords_dtype.items()
         }
 
