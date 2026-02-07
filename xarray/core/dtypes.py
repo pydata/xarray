@@ -332,6 +332,8 @@ def result_type(
     if extension_dtypes:
         from xarray.core.extension_array import (
             is_scalar as extension_is_scalar,
+        )
+        from xarray.core.extension_array import (
             union_unordered_categorical_and_scalar,
         )
 
