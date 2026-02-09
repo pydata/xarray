@@ -532,7 +532,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                         " Casting to `float64` for you, but in the future please"
                         " manually cast to either `float32` and `float64`."
                     ),
-                    category=DeprecationWarning,
+                    category=FutureWarning,
                 )
                 kwargs["dtype"] = "float64"
 

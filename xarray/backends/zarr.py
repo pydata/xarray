@@ -360,6 +360,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
+    # Check for attributes and dimension name metadata as discussed in the Zarr encoding
+    # specification https://docs.xarray.dev/en/stable/internals/zarr-encoding-spec.html
+
     # Zarr V3 explicitly stores the dimension names in the metadata
     try:
         # if this exists, we are looking at a Zarr V3 array

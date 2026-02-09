@@ -43,9 +43,9 @@ When accessing arrays with zarr-python, this information is available in the arr
 metadata but not in the attributes dictionary.
 
 When reading a Zarr group, Xarray looks for dimension information in the appropriate
-location based on the format version, raising an error if it can't be found. The
+location based on the inferred format version, raising an error if it can't be found. The
 dimension information is used to define the variable dimension names and then
-(for Zarr V2) removed from the attributes dictionary returned to the user.
+(for Zarr V2) is removed from the attributes dictionary returned to the user.
 
 CF Conventions
 --------------
@@ -59,17 +59,14 @@ used to describe metadata in NetCDF and Zarr.
 Compatibility and Reading
 -------------------------
 
-Because of these encoding choices, Xarray cannot read arbitrary Zarr arrays, but only
-Zarr data with valid dimension metadata. Xarray supports:
+Because of these encoding choices, Xarray cannot read arbitrary Zarr groups, but only
+Zarr groups containing arrays with valid dimension metadata. Xarray supports:
 
-- Zarr V2 arrays with ``_ARRAY_DIMENSIONS`` attributes
-- Zarr V3 arrays with ``dimension_names`` metadata
-- `NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ format
-  (dimension names are defined in the ``.zarray`` file)
+1. Zarr V3 arrays with ``dimension_names`` metadata
+2. Zarr V2 arrays with ``_ARRAY_DIMENSIONS`` attributes
+3. `NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ format (dimension names are defined in the ``dimrefs`` field in the custom ``.zarray`` file)
 
-After decoding the dimension information and assigning the variable dimensions,
-Xarray proceeds to [optionally] decode each variable using its standard CF decoding
-machinery used for NetCDF data.
+Xarray checks each of these three conventions, in the order given above, when looking for dimension name metadata. Note that while Xarray can read NCZarr groups, it currently does not write NCZarr groups. After decoding the dimension information and assigning the variable dimensions, Xarray proceeds to [optionally] decode each variable using its standard CF decoding machinery used for NetCDF data.
 
 Finally, it's worth noting that Xarray writes (and attempts to read)
 "consolidated metadata" by default (the ``.zmetadata`` file), which is another
