@@ -1891,6 +1891,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         else:
             parent = str(NodePath("/"))
 
+        # Open stores synchronously to avoid nested event-loop issues
         stores = ZarrStore.open_store(
             filename_or_obj,
             group=parent,
@@ -1908,8 +1909,8 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         if _zarr_v3():
             from zarr.core.sync import sync as zarr_sync
 
-            return zarr_sync(
-                self._open_datatree_from_stores_async(
+            groups_dict = zarr_sync(
+                self._open_groups_from_stores_async(
                     stores=stores,
                     parent=parent,
                     group=group,
@@ -1924,29 +1925,28 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 )
             )
         else:
-            # Fallback for zarr v2: sequential loading
-            groups_dict = {}
-            for path_group, store in stores.items():
-                store_entrypoint = StoreBackendEntrypoint()
-                with close_on_error(store):
-                    group_ds = store_entrypoint.open_dataset(
-                        store,
-                        mask_and_scale=mask_and_scale,
-                        decode_times=decode_times,
-                        concat_characters=concat_characters,
-                        decode_coords=decode_coords,
-                        drop_variables=drop_variables,
-                        use_cftime=use_cftime,
-                        decode_timedelta=decode_timedelta,
-                    )
-                if group:
-                    group_name = str(NodePath(path_group).relative_to(parent))
-                else:
-                    group_name = str(NodePath(path_group))
-                groups_dict[group_name] = group_ds
-            return datatree_from_dict_with_io_cleanup(groups_dict)
+            groups_dict = self.open_groups_as_dict(
+                filename_or_obj,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+                group=group,
+                mode=mode,
+                synchronizer=synchronizer,
+                consolidated=consolidated,
+                chunk_store=chunk_store,
+                storage_options=storage_options,
+                zarr_version=zarr_version,
+                zarr_format=zarr_format,
+            )
 
-    async def _open_datatree_from_stores_async(
+        return datatree_from_dict_with_io_cleanup(groups_dict)
+
+    async def _open_groups_from_stores_async(
         self,
         stores: dict,
         parent: str,
@@ -1960,11 +1960,22 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         max_concurrency: int | None = None,
-    ) -> DataTree:
-        """Async helper to open datasets from pre-opened stores and create indexes.
+    ) -> dict[str, Dataset]:
+        """Shared async core: open datasets from pre-opened stores concurrently.
 
-        This method takes already-opened stores (avoiding nested zarr_sync() calls)
-        and runs the Dataset opening and index creation concurrently.
+        This takes already-opened stores (avoiding nested zarr_sync() calls)
+        and runs Dataset opening and index creation with bounded concurrency.
+
+        Parameters
+        ----------
+        stores : dict
+            Mapping of group paths to already-opened ZarrStore instances.
+        parent : str
+            The resolved parent group path.
+        group : str or None
+            The user-requested group, used for relative path computation.
+        max_concurrency : int or None, optional
+            Maximum number of groups to open concurrently. Defaults to 10.
         """
         from xarray.backends.api import _maybe_create_default_indexes_async
 
@@ -1986,7 +1997,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                         use_cftime=use_cftime,
                         decode_timedelta=decode_timedelta,
                     )
-                # Create indexes in parallel (within this group)
+                # Create indexes concurrently
                 ds = await _maybe_create_default_indexes_async(ds)
                 if group:
                     group_name = str(NodePath(path_group).relative_to(parent))
@@ -2004,7 +2015,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             for path_group, store in stores.items():
                 tg.create_task(collect_result(path_group, store))
 
-        return datatree_from_dict_with_io_cleanup(groups_dict)
+        return groups_dict
 
     def open_groups_as_dict(
         self,
@@ -2088,11 +2099,18 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
+        max_concurrency: int | None = None,
     ) -> dict[str, Dataset]:
         """Asynchronously open each group into a Dataset concurrently.
 
-        This mirrors open_groups_as_dict but parallelizes per-group Dataset opening,
+        This mirrors open_groups_as_dict but parallelizes per-group Dataset
+        opening with bounded concurrency and proper async index creation,
         which can significantly reduce latency on high-RTT object stores.
+
+        Parameters
+        ----------
+        max_concurrency : int or None, optional
+            Maximum number of groups to open concurrently. Defaults to 10.
         """
         filename_or_obj = _normalize_path(filename_or_obj)
 
@@ -2115,32 +2133,19 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
         )
 
-        async def open_one(path_group: str, store) -> tuple[str, Dataset]:
-            store_entrypoint = StoreBackendEntrypoint()
-
-            def _load_sync():
-                with close_on_error(store):
-                    return store_entrypoint.open_dataset(
-                        store,
-                        mask_and_scale=mask_and_scale,
-                        decode_times=decode_times,
-                        concat_characters=concat_characters,
-                        decode_coords=decode_coords,
-                        drop_variables=drop_variables,
-                        use_cftime=use_cftime,
-                        decode_timedelta=decode_timedelta,
-                    )
-
-            ds = await asyncio.to_thread(_load_sync)
-            if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
-            else:
-                group_name = str(NodePath(path_group))
-            return group_name, ds
-
-        tasks = [open_one(path_group, store) for path_group, store in stores.items()]
-        results = await asyncio.gather(*tasks)
-        return dict(results)
+        return await self._open_groups_from_stores_async(
+            stores=stores,
+            parent=parent,
+            group=group,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            max_concurrency=max_concurrency,
+        )
 
 
 def _build_group_members(
@@ -2148,7 +2153,7 @@ def _build_group_members(
     group_paths: list[str],
     parent: str | None,
 ) -> dict[str, ZarrGroup]:
-    parent = parent if parent else "/"
+    parent = parent or "/"
     group_members: dict[str, ZarrGroup] = {}
 
     for path in group_paths:
