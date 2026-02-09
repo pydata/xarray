@@ -3282,7 +3282,7 @@ def test_groupby_dask_eager_load_warnings() -> None:
     ).chunk(z=6)
 
     with pytest.raises(ValueError, match="Please pass"):
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             ds.groupby("x", eagerly_compute_group=False)
     with pytest.raises(ValueError, match="Eagerly computing"):
         ds.groupby("x", eagerly_compute_group=True)  # type: ignore[arg-type]
@@ -3291,16 +3291,16 @@ def test_groupby_dask_eager_load_warnings() -> None:
     # will see an error, so let's warn and have them opt-in.
     ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]))
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]), eagerly_compute_group=False)
 
     with pytest.raises(ValueError, match="Please pass"):
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             ds.groupby_bins("x", bins=3, eagerly_compute_group=False)
     with pytest.raises(ValueError, match="Eagerly computing"):
         ds.groupby_bins("x", bins=3, eagerly_compute_group=True)  # type: ignore[arg-type]
     ds.groupby_bins("x", bins=[1, 2, 3])
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
 
 
