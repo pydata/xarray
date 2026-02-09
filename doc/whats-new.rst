@@ -372,6 +372,13 @@ v2025.10.1 (Oct 7, 2025)
 
 This release reverts a breaking change to Xarray's preferred netCDF backend.
 
+Performance
+~~~~~~~~~~~
+
+- Small optimizations to help reduce indexing speed of datasets (:pull:`9003`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
