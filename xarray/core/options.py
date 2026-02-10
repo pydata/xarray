@@ -362,7 +362,7 @@ class set_options:
     warn_for_unclosed_files : bool, default: False
         Whether or not to issue a warning when unclosed files are deallocated.
         This is mostly useful for debugging.
-    
+
     Examples
     --------
     It is possible to use ``set_options`` either as a context manager:
