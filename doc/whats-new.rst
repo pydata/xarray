@@ -53,6 +53,10 @@ Bug Fixes
 - Fix :py:meth:`Dataset.sortby` and :py:meth:`DataArray.sortby` placing NaN values
   at the beginning instead of the end when using ``ascending=False`` (:issue:`7358`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Raise :py:class:`FileNotFoundError` instead of a confusing ``ValueError`` when
+  :py:func:`open_dataset` is called with a non-existent local file path
+  (:issue:`10896`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 
 Documentation
 ~~~~~~~~~~~~~
