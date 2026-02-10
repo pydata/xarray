@@ -14,10 +14,20 @@ v2026.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:class:`~xarray.indexes.NDPointIndex` now supports coordinates with fewer
+  dimensions than coordinate variables, enabling indexing of scattered points
+  and trajectories where multiple coordinates (e.g., ``x``, ``y``) share a
+  single dimension (e.g., ``points``) (:issue:`10940`, :pull:`11116`).
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
+- When deprecating functionality, xarray has sometimes used ``FutureWarning``
+  and sometimes used ``DeprecationWarning``. ``DeprecationWarning`` is
+  not intended to be visible to end-users so this version of xarray
+  switches to using ``FutureWarning`` everywhere (:pull:`11112`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -36,6 +46,13 @@ Bug Fixes
 - Fix silent data corruption when writing dask arrays to sharded Zarr stores.
   Dask chunk boundaries must now align with shard boundaries, not just internal
   Zarr chunk boundaries (:issue:`10831`).
+- Fix :py:meth:`Dataset.sortby` and :py:meth:`DataArray.sortby` placing NaN values
+  at the beginning instead of the end when using ``ascending=False`` (:issue:`7358`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Raise :py:class:`FileNotFoundError` instead of a confusing ``ValueError`` when
+  :py:func:`open_dataset` is called with a non-existent local file path
+  (:issue:`10896`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 
 Documentation
 ~~~~~~~~~~~~~

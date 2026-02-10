@@ -2076,7 +2076,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"expected positive int"):
             data.thin(time=-3)
 
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_sel_fancy(self) -> None:
         data = create_test_data()
 
@@ -2980,26 +2980,26 @@ class TestDataset:
 
         # deprecated approach with `drop` works (straight copy paste from above)
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = data.drop("not_found_here", errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = data.drop(["not_found_here"], errors="ignore")
         assert_identical(data, actual)
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = data.drop(["time", "not_found_here"], errors="ignore")
         assert_identical(expected, actual)
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = data.drop({"time", "not_found_here"}, errors="ignore")
         assert_identical(expected, actual)
 
     def test_drop_multiindex_level(self) -> None:
         data = create_test_multiindex()
         expected = data.drop_vars(["x", "level_1", "level_2"])
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = data.drop_vars("level_1")
         assert_identical(expected, actual)
 
@@ -3021,29 +3021,29 @@ class TestDataset:
     def test_drop_index_labels(self) -> None:
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = data.drop(["a"], dim="x")
         expected = data.isel(x=[1])
         assert_identical(expected, actual)
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = data.drop(["a", "b"], dim="x")
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
 
         with pytest.raises(KeyError):
             # not contained in axis
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 data.drop(["c"], dim="x")
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = data.drop(["c"], dim="x", errors="ignore")
         assert_identical(data, actual)
 
         with pytest.raises(ValueError):
             data.drop(["c"], dim="x", errors="wrong_value")  # type: ignore[arg-type]
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = data.drop(["a", "b", "c"], "x", errors="ignore")
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
@@ -3053,7 +3053,7 @@ class TestDataset:
         actual = data.drop_sel(x=DataArray(["a", "b", "c"]), errors="ignore")
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             data.drop(DataArray(["a", "b", "c"]), dim="x", errors="ignore")
         assert_identical(expected, actual)
 
@@ -3071,7 +3071,7 @@ class TestDataset:
         # Basic functionality.
         assert len(data.coords["x"]) == 2
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             ds1 = data.drop(["a"], dim="x")
         ds2 = data.drop_sel(x="a")
         ds3 = data.drop_sel(x=["a"])
@@ -3079,9 +3079,9 @@ class TestDataset:
         ds5 = data.drop_sel(x=["a", "b"], y=range(0, 6, 2))
 
         arr = DataArray(range(3), dims=["c"])
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             data.drop(arr.coords)
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             data.drop(arr.xindexes)
 
         assert_array_equal(ds1.coords["x"], ["b"])
@@ -6170,9 +6170,7 @@ class TestDataset:
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
         assert "var6" not in data1.mean(dim="dim2") and "var7" in data1.mean(dim="dim2")
 
-    @pytest.mark.filterwarnings(
-        "ignore:Once the behaviour of DataArray:DeprecationWarning"
-    )
+    @pytest.mark.filterwarnings("ignore:Once the behaviour of DataArray:FutureWarning")
     def test_reduce_strings(self) -> None:
         expected = Dataset({"x": "a"})
         ds = Dataset({"x": ("y", ["a", "b"])})
@@ -6250,9 +6248,7 @@ class TestDataset:
         for v in ds.data_vars.values():
             assert v.attrs == {}
 
-    @pytest.mark.filterwarnings(
-        "ignore:Once the behaviour of DataArray:DeprecationWarning"
-    )
+    @pytest.mark.filterwarnings("ignore:Once the behaviour of DataArray:FutureWarning")
     def test_reduce_argmin(self) -> None:
         # regression test for #205
         ds = Dataset({"a": ("x", [0, 1])})
@@ -7235,6 +7231,47 @@ class TestDataset:
         # test descending order sort
         actual = ds.sortby(["x", "y"], ascending=False)
         assert_equal(actual, ds)
+
+    def test_sortby_descending_nans(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/7358
+        # NaN values should remain at the end when sorting in descending order
+        ds = Dataset({"var": ("x", [3.0, np.nan, 4.0, 2.0, np.nan])})
+
+        # Ascending: NaNs at end
+        result_asc = ds.sortby("var", ascending=True)
+        assert_array_equal(result_asc["var"].values[:3], [2.0, 3.0, 4.0])
+        assert np.all(np.isnan(result_asc["var"].values[3:]))
+
+        # Descending: NaNs should also be at end (not beginning)
+        result_desc = ds.sortby("var", ascending=False)
+        assert_array_equal(result_desc["var"].values[:3], [4.0, 3.0, 2.0])
+        assert np.all(np.isnan(result_desc["var"].values[3:]))
+
+    def test_sortby_descending_nans_multi_key(self) -> None:
+        # Test sortby with multiple keys where one has NaN values
+        # Regression test for https://github.com/pydata/xarray/issues/7358
+        ds = Dataset(
+            {
+                "A": (("x", "y"), [[1, 2, 3], [4, 5, 6]]),
+                "B": (("x", "y"), [[7, 8, 9], [10, 11, 12]]),
+            },
+            coords={"x": ["b", "a"], "y": [np.nan, 1, 0]},
+        )
+
+        # Sort by multiple keys in descending order
+        result = ds.sortby(["x", "y"], ascending=False)
+
+        # x should be sorted descending: ["b", "a"]
+        assert_array_equal(result["x"].values, ["b", "a"])
+
+        # y should be sorted descending with NaN at end: [1, 0, nan]
+        assert_array_equal(result["y"].values[:2], [1, 0])
+        assert np.isnan(result["y"].values[2])
+
+        # Verify data is reordered correctly
+        # Original y=[nan, 1, 0] -> sorted y=[1, 0, nan] means columns reordered [1, 2, 0]
+        assert_array_equal(result["A"].values, [[2, 3, 1], [5, 6, 4]])
+        assert_array_equal(result["B"].values, [[8, 9, 7], [11, 12, 10]])
 
     def test_attribute_access(self) -> None:
         ds = create_test_data(seed=1)
