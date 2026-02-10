@@ -536,7 +536,13 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 )
                 kwargs["dtype"] = "float64"
 
-        index = pd.Index(to_numpy(array), **kwargs)
+        values = to_numpy(array)
+        try:
+            index = pd.Index(values, **kwargs)
+        except UnicodeEncodeError:
+            # coerce to object if pandas fails to coerce to string
+            kwargs["dtype"] = "object"
+            index = pd.Index(values, **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
 
