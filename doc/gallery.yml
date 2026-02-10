@@ -37,7 +37,7 @@ external-examples:
     thumbnail: https://avatars.githubusercontent.com/u/60833341?s=200&v=4
 
   - title: Xarray with Dask Arrays
-    path: https://examples.dask.org/xarray.html_
+    path: https://examples.dask.org/xarray.html
     thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
   - title: Project Pythia Foundations Book

@@ -32,6 +32,7 @@ from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
+    IndexableArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -73,11 +74,16 @@ def var():
     ],
 )
 def test_as_compatible_data_writeable(data):
-    pd.set_option("mode.copy_on_write", True)
+    # In pandas 3 the mode.copy_on_write option defaults to True, so the option
+    # setting logic can be removed once our minimum version of pandas is
+    # greater than or equal to 3.
+    if not has_pandas_3:
+        pd.set_option("mode.copy_on_write", True)
     # GH8843, ensure writeable arrays for data_vars even with
     # pandas copy-on-write mode
     assert as_compatible_data(data).flags.writeable
-    pd.reset_option("mode.copy_on_write")
+    if not has_pandas_3:
+        pd.reset_option("mode.copy_on_write")
 
 
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
@@ -224,7 +230,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             x, np.timedelta64(td), np.dtype("timedelta64[us]")
         )
 
-        x = self.cls(["x"], pd.to_timedelta([td]))
+        x = self.cls(["x"], pd.to_timedelta([td]).as_unit("ns"))
         self._assertIndexedLikeNDArray(x, np.timedelta64(td), "timedelta64[ns]")
 
     def test_index_0d_not_a_time(self):
@@ -278,7 +284,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
-    dt64_data = pd.date_range("1970-01-01", periods=3)
+    dt64_data = pd.date_range("1970-01-01", periods=3, unit="ns")
 
     @pytest.mark.parametrize(
         "values, unit",
@@ -310,7 +316,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             (td64_data.values.astype("timedelta64[m]"), "s"),
             (td64_data.values.astype("timedelta64[s]"), "s"),
             (td64_data.values.astype("timedelta64[ps]"), "ns"),
-            (td64_data.to_pytimedelta(), "ns"),
+            (td64_data.to_pytimedelta(), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion(self, values, unit):
@@ -1086,7 +1092,7 @@ class TestVariable(VariableSubclassobjects):
         [
             (np.datetime64("2000-01-01"), "s"),
             (
-                pd.Timestamp("2000-01-01T00"),
+                pd.Timestamp("2000-01-01T00").as_unit("s"),
                 "s" if has_pandas_3 else "ns",
             ),
             (
@@ -1108,8 +1114,8 @@ class TestVariable(VariableSubclassobjects):
             (np.timedelta64(1, "m"), "s"),
             (np.timedelta64(1, "D"), "s"),
             (np.timedelta64(1001, "ps"), "ns"),
-            (pd.Timedelta("1 day"), "ns"),
-            (timedelta(days=1), "ns"),
+            (pd.Timedelta("1 day").as_unit("ns"), "ns"),
+            (timedelta(days=1), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion_scalar(self, values, unit):
@@ -1128,13 +1134,14 @@ class TestVariable(VariableSubclassobjects):
         assert v.values == "foo".encode("ascii")
 
     def test_0d_datetime(self):
-        v = Variable([], pd.Timestamp("2000-01-01"))
+        v = Variable([], pd.Timestamp("2000-01-01").as_unit("s"))
         expected_unit = "s" if has_pandas_3 else "ns"
         assert v.dtype == np.dtype(f"datetime64[{expected_unit}]")
         assert v.values == np.datetime64("2000-01-01", expected_unit)  # type: ignore[call-overload]
 
     @pytest.mark.parametrize(
-        "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
+        "values, unit",
+        [(pd.to_timedelta("1s").as_unit("ns"), "ns"), (np.timedelta64(1, "s"), "s")],
     )
     def test_0d_timedelta(self, values, unit):
         # todo: check, if this test is OK
@@ -3157,7 +3164,7 @@ class TestNumpyCoercion:
         (np.datetime64("2000-01-01", "s"), "s"),
         (np.array([np.datetime64("2000-01-01", "ns")]), "ns"),
         (np.array([np.datetime64("2000-01-01", "s")]), "s"),
-        (pd.date_range("2000", periods=1), "ns"),
+        (pd.date_range("2000", periods=1, unit="ns"), "ns"),
         (
             datetime(2000, 1, 1),
             "us" if has_pandas_3 else "ns",
@@ -3166,10 +3173,17 @@ class TestNumpyCoercion:
             np.array([datetime(2000, 1, 1)]),
             "us" if has_pandas_3 else "ns",
         ),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
+        (
+            pd.date_range(
+                "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+            ),
+            "ns",
+        ),
         (
             pd.Series(
-                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+                pd.date_range(
+                    "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+                )
             ),
             "ns",
         ),
@@ -3244,8 +3258,8 @@ def test_pandas_two_only_datetime_conversion_warnings(
         (np.array([np.timedelta64(10, "ns")]), "ns"),
         (np.array([np.timedelta64(10, "s")]), "s"),
         (pd.timedelta_range("1", periods=1), "ns"),
-        (timedelta(days=1), "ns"),
-        (np.array([timedelta(days=1)]), "ns"),
+        (timedelta(days=1), "us" if has_pandas_3 else "ns"),
+        (np.array([timedelta(days=1)]), "us" if has_pandas_3 else "ns"),
         (pd.timedelta_range("1", periods=1).astype("timedelta64[s]"), "s"),
     ],
     ids=lambda x: f"{x}",
@@ -3255,3 +3269,15 @@ def test_timedelta_conversion(values, unit) -> None:
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     var = Variable(dims, values)
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
+
+
+def test_explicitly_indexed_array_preserved() -> None:
+    """Test that methods using ._data preserve ExplicitlyIndexed arrays.
+
+    Regression test for methods that should use ._data instead of .data
+    to avoid loading lazy arrays into memory.
+    """
+    arr = IndexableArray(np.array([1, 2, 3]))
+    var = Variable(["x"], arr)
+    result = var.drop_encoding()
+    assert isinstance(result._data, indexing.ExplicitlyIndexed)

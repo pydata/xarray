@@ -246,6 +246,8 @@ def build_output_coords_and_indexes(
         (unpacked_coords,) = coords_list
         merged_vars = dict(unpacked_coords.variables)
         merged_indexes = dict(unpacked_coords.xindexes)
+        if combine_attrs == "drop":
+            merged_vars = {k: var._replace(attrs={}) for k, var in merged_vars.items()}
     else:
         merged_vars, merged_indexes = merge_coordinates_without_align(
             coords_list, exclude_dims=exclude_dims, combine_attrs=combine_attrs
@@ -713,7 +715,7 @@ def apply_variable_ufunc(
     keep_attrs="override",
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
-    """Apply a ndarray level function over Variable and/or ndarray objects."""
+    """Apply an ndarray level function over Variable and/or ndarray objects."""
     from xarray.core.formatting import short_array_repr
     from xarray.core.variable import as_compatible_data
 
@@ -869,7 +871,7 @@ def apply_variable_ufunc(
 
 
 def apply_array_ufunc(func, *args, dask="forbidden"):
-    """Apply a ndarray level function over ndarray objects."""
+    """Apply an ndarray level function over ndarray objects."""
     if any(is_chunked_array(arg) for arg in args):
         if dask == "forbidden":
             raise ValueError(
@@ -1038,6 +1040,12 @@ def apply_ufunc(
 
     Note that due to the overhead :py:func:`xarray.map_blocks` is considerably slower than ``apply_ufunc``.
 
+    :ref:`dask.automatic-parallelization`
+        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
+
+    :doc:`xarray-tutorial:advanced/apply_ufunc/apply_ufunc`
+        Advanced Tutorial on applying numpy function using :py:func:`apply_ufunc`
+
     Examples
     --------
     Calculate the vector magnitude of two arguments:
@@ -1138,14 +1146,6 @@ def apply_ufunc(
     numba.guvectorize
     dask.array.apply_gufunc
     xarray.map_blocks
-
-    Notes
-    -----
-    :ref:`dask.automatic-parallelization`
-        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
-
-    :doc:`xarray-tutorial:advanced/apply_ufunc/apply_ufunc`
-        Advanced Tutorial on applying numpy function using :py:func:`apply_ufunc`
 
     References
     ----------

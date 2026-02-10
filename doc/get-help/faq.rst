@@ -63,7 +63,7 @@ if you were using Panels:
 
 - You need to create a new factory type for each dimensionality.
 - You can't do math between NDPanels with different dimensionality.
-- Each dimension in a NDPanel has a name (e.g., 'labels', 'items',
+- Each dimension in an NDPanel has a name (e.g., 'labels', 'items',
   'major_axis', etc.) but the dimension names refer to order, not their
   meaning. You can't specify an operation as to be applied along the "time"
   axis.
@@ -423,7 +423,7 @@ How stable is Xarray's API?
 
 Xarray tries very hard to maintain backwards compatibility in our :ref:`api` between released versions.
 Whilst we do occasionally make breaking changes in order to improve the library,
-we `signpost changes <https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility>`_ with ``DeprecationWarnings`` for many releases in advance.
+we `signpost changes <https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility>`_ with ``FutureWarnings`` for many releases in advance.
 (An exception is bugs - whose behaviour we try to fix as soon as we notice them.)
 Our `test-driven development practices <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_ helps to ensure any accidental regressions are caught.
 This philosophy applies to everything in the `public API <https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#what-parts-of-xarray-are-considered-public-api>`_.

@@ -13,6 +13,7 @@ from numpy import array, nan
 
 from xarray import DataArray, Dataset, concat, date_range
 from xarray.coding.times import _NS_PER_TIME_DELTA
+from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv,
@@ -43,6 +44,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
+    requires_cupy,
     requires_dask,
     requires_pyarrow,
 )
@@ -183,6 +185,20 @@ class TestOps:
         assert (
             where_res == pd.Categorical(["cat1", "cat1", "cat2", "cat3", "cat1"])
         ).all()
+
+    @requires_cupy
+    def test_where_cupy_duck_array(self):
+        import cupy as cp
+
+        arr = cp.array([[cp.nan, cp.nan], [2, 3], [4, 5]])
+        mask = ~cp.isnan(arr)
+        da = DataArray(arr, dims=("x", "y"), name="example")
+        output = da.where(mask, 0)
+
+        expected = np.array([[0, 0], [2, 3], [4, 5]])
+
+        assert isinstance(output.data, cp.ndarray)
+        assert_array_equal(output.to_numpy(), expected)
 
     def test_concatenate_extension_duck_array(self, categorical1, categorical2):
         concate_res = concatenate(
@@ -748,6 +764,43 @@ def test_isnull_with_dask():
     assert_equal(da.isnull().load(), da.load().isnull())
 
 
+@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType to exist")
+@pytest.mark.parametrize(
+    ["input", "na_object", "expected"],
+    [
+        (
+            ["a", None, "c"],
+            None,
+            np.array([False, True, False]),
+        ),
+        (
+            ["a", "", "c"],
+            "",
+            np.array([False, True, False]),
+        ),
+        (
+            ["a", np.nan, "c"],
+            np.nan,
+            np.array([False, True, False]),
+        ),
+    ],
+)
+def test_isnull_with_different_StringDType_na_objects(input, na_object, expected):
+    dtype = np.dtypes.StringDType(na_object=na_object)
+    array = np.array(input, dtype=dtype)
+    actual = duck_array_ops.isnull(array)
+    np.testing.assert_equal(actual, expected)
+
+
+@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType to exist")
+def test_isnull_with_default_StringDType():
+    dtype = np.dtypes.StringDType()
+    array = np.array(["a", np.nan, "c"], dtype=dtype)
+    expected = np.array([False, False, False])
+    actual = duck_array_ops.isnull(array)
+    np.testing.assert_equal(actual, expected)
+
+
 @pytest.mark.skipif(not has_dask, reason="This is for dask.")
 @pytest.mark.parametrize("axis", [0, -1, 1])
 @pytest.mark.parametrize("edge_order", [1, 2])
@@ -1109,6 +1162,21 @@ def test_extension_array_repr(int1):
     assert repr(int1) in repr(int_duck_array)
 
 
+def test_extension_array_result_type_categorical(categorical1, categorical2):
+    res = np.result_type(
+        PandasExtensionArray(categorical1), PandasExtensionArray(categorical2)
+    )
+    assert isinstance(res, pd.CategoricalDtype)
+    assert set(res.categories) == set(categorical1.categories) | set(
+        categorical2.categories
+    )
+    assert not res.ordered
+
+    assert categorical1.dtype == np.result_type(
+        PandasExtensionArray(categorical1), pd.CategoricalDtype.na_value
+    )
+
+
 def test_extension_array_attr():
     array = pd.Categorical(["cat2", "cat1", "cat2", "cat3", "cat1"])
     wrapped = PandasExtensionArray(array)
@@ -1120,6 +1188,7 @@ def test_extension_array_attr():
     assert (roundtripped == wrapped).all()
 
     interval_array = pd.arrays.IntervalArray.from_breaks([0, 1, 2, 3], closed="right")
-    wrapped = PandasExtensionArray(interval_array)
+    # pandas-stubs types PandasExtensionArray too narrowly; IntervalArray is valid
+    wrapped = PandasExtensionArray(interval_array)  # type: ignore[arg-type]
     assert_array_equal(wrapped.left, interval_array.left, strict=True)
     assert wrapped.closed == interval_array.closed

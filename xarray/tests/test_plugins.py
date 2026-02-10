@@ -188,24 +188,75 @@ def test_build_engines_sorted() -> None:
     "xarray.backends.plugins.list_engines",
     mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
 )
-def test_no_matching_engine_found() -> None:
-    with pytest.raises(ValueError, match=r"did not find a match in any"):
+def test_no_matching_engine_found(tmp_path) -> None:
+    # Non-existent local file raises FileNotFoundError
+    with pytest.raises(FileNotFoundError, match=r"No such file"):
         plugins.guess_engine("not-valid")
 
+    # Existing file with unrecognized extension raises ValueError
+    existing_file = tmp_path / "test.unknown"
+    existing_file.write_bytes(b"")
+    with pytest.raises(ValueError, match=r"did not find a match in any"):
+        plugins.guess_engine(str(existing_file))
+
+    # Existing file with recognized magic number raises ValueError
+    nc_file = tmp_path / "foo.nc"
+    nc_file.write_bytes(b"CDF\x01\x00\x00\x00\x00")
     with pytest.raises(ValueError, match=r"found the following matches with the input"):
-        plugins.guess_engine("foo.nc")
+        plugins.guess_engine(str(nc_file))
 
 
 @mock.patch(
     "xarray.backends.plugins.list_engines",
     mock.MagicMock(return_value={}),
 )
-def test_engines_not_installed() -> None:
-    with pytest.raises(ValueError, match=r"xarray is unable to open"):
+def test_engines_not_installed(tmp_path) -> None:
+    # Non-existent local file raises FileNotFoundError
+    with pytest.raises(FileNotFoundError, match=r"No such file"):
         plugins.guess_engine("not-valid")
 
+    # Existing file with no matching engine raises ValueError
+    existing_file = tmp_path / "test.unknown"
+    existing_file.write_bytes(b"")
+    with pytest.raises(ValueError, match=r"xarray is unable to open"):
+        plugins.guess_engine(str(existing_file))
+
+    # Existing file with recognized magic number raises ValueError
+    nc_file = tmp_path / "foo.nc"
+    nc_file.write_bytes(b"CDF\x01\x00\x00\x00\x00")
     with pytest.raises(ValueError, match=r"found the following matches with the input"):
-        plugins.guess_engine("foo.nc")
+        plugins.guess_engine(str(nc_file))
+
+
+@mock.patch(
+    "xarray.backends.plugins.list_engines",
+    mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
+)
+def test_guess_engine_file_not_found() -> None:
+    # Non-existent local file path (string)
+    with pytest.raises(
+        FileNotFoundError, match=r"No such file: '/nonexistent/path.h5'"
+    ):
+        plugins.guess_engine("/nonexistent/path.h5")
+
+    # Non-existent local file path (PathLike)
+    from pathlib import Path
+
+    with pytest.raises(FileNotFoundError, match=r"No such file"):
+        plugins.guess_engine(Path("/nonexistent/path.h5"))
+
+    # Remote URIs should not raise FileNotFoundError (raises ValueError instead)
+    with pytest.raises(ValueError):
+        plugins.guess_engine("https://example.com/missing.h5")
+
+
+@pytest.mark.parametrize("engine", common.BACKEND_ENTRYPOINTS.keys())
+def test_get_backend_fastpath_skips_list_engines(engine: str) -> None:
+    """Test that built-in engines skip list_engines (fastpath)."""
+    plugins.list_engines.cache_clear()
+    initial_misses = plugins.list_engines.cache_info().misses
+    plugins.get_backend(engine)
+    assert plugins.list_engines.cache_info().misses == initial_misses
 
 
 def test_lazy_import() -> None:

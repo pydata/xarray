@@ -20,14 +20,6 @@ allowed_failures = set()
 
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
-
-if "CONDA_DEFAULT_ENV" in os.environ or "conda" in sys.executable:
-    print("conda environment:")
-    subprocess.run([os.environ.get("CONDA_EXE", "conda"), "list"])
-else:
-    print("pip environment:")
-    subprocess.run([sys.executable, "-m", "pip", "list"])
-
 print(f"xarray: {xarray.__version__}, {xarray.__file__}")
 
 with suppress(ImportError):
@@ -71,6 +63,7 @@ extensions = [
     "sphinx_design",
     "sphinx_inline_tabs",
     "sphinx_remove_toctrees",
+    "sphinx_llm.txt",
 ]
 
 
@@ -199,9 +192,7 @@ language = "en"
 project = "xarray"
 copyright = f"2014-{datetime.datetime.now().year}, xarray Developers"
 
-# The short Y.M.D version.
-v = packaging.version.parse(xarray.__version__)
-version = ".".join(str(p) for p in v.release)
+version = xarray.__version__
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:

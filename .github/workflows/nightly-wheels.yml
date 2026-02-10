@@ -3,12 +3,17 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   cron:
     runs-on: ubuntu-latest
     if: github.repository == 'pydata/xarray'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v6
@@ -21,12 +26,14 @@ jobs:
           python -m pip install build twine
 
       - name: Build tarball and wheels
+        id: build
         run: |
           git clean -xdf
           git restore -SW .
           python -m build
 
       - name: Check built artifacts
+        id: check
         run: |
           python -m twine check --strict dist/*
           pwd
@@ -38,7 +45,40 @@ jobs:
           fi
 
       - name: Upload wheel
-        uses: scientific-python/upload-nightly-action@b36e8c0c10dbcfd2e05bf95f17ef8c14fd708dbf # 0.6.2
+        id: upload
+        uses: scientific-python/upload-nightly-action@5748273c71e2d8d3a61f3a11a16421c8954f9ecf # 0.6.3
         with:
           anaconda_nightly_upload_token: ${{ secrets.ANACONDA_NIGHTLY }}
           artifacts_path: dist
+
+      - name: Create or update failure issue
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          # Read the template
+          template=$(cat .github/nightly-wheel-failure-template.md)
+
+          # Replace placeholders
+          issue_body="${template//\{\{WORKFLOW\}\}/${{ github.workflow }}}"
+          issue_body="${issue_body//\{\{RUN_ID\}\}/${{ github.run_id }}}"
+          issue_body="${issue_body//\{\{RUN_URL\}\}/${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}}"
+          issue_body="${issue_body//\{\{DATE\}\}/$(date -u)}"
+
+          # Check for existing open issue with same title
+          issue_title="Nightly wheel build/upload failed"
+          existing_issue=$(gh issue list --state open --label "CI" --search "\"$issue_title\" in:title" --json number --jq '.[0].number // empty')
+
+          if [ -n "$existing_issue" ]; then
+            echo "Found existing open issue #$existing_issue, updating it..."
+            echo "$issue_body" | gh issue edit "$existing_issue" --body-file -
+            echo "Updated existing issue #$existing_issue"
+          else
+            echo "No existing open issue found, creating new one..."
+            echo "$issue_body" | gh issue create \
+              --title "$issue_title" \
+              --body-file - \
+              --label "CI"
+            echo "Created new issue"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
