@@ -7100,7 +7100,7 @@ def test_encode_zarr_attr_value() -> None:
 
 
 @requires_zarr
-@pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+@pytest.mark.parametrize("dtype", [complex, np.complex64, np.complex128])
 def test_fill_value_coder_complex(dtype) -> None:
     """Test that FillValueCoder round-trips complex fill values."""
     from xarray.backends.zarr import FillValueCoder

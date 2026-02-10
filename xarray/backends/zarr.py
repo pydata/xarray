@@ -139,7 +139,9 @@ class FillValueCoder:
             return base64.standard_b64encode(struct.pack("<d", float(value))).decode()
         elif dtype.kind in "c":
             # complex - encode each component as base64, matching float encoding
-            assert isinstance(value, complex)
+            assert isinstance(value, complex) or np.issubdtype(
+                type(value), np.complexfloating
+            )
             return [
                 base64.standard_b64encode(
                     struct.pack("<d", float(value.real))
