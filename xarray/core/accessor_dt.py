@@ -328,26 +328,26 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
     <xarray.DataArray (time: 10)> Size: 80B
-    array(['2000-01-01T00:00:00.000000000', '2000-01-02T00:00:00.000000000',
-           '2000-01-03T00:00:00.000000000', '2000-01-04T00:00:00.000000000',
-           '2000-01-05T00:00:00.000000000', '2000-01-06T00:00:00.000000000',
-           '2000-01-07T00:00:00.000000000', '2000-01-08T00:00:00.000000000',
-           '2000-01-09T00:00:00.000000000', '2000-01-10T00:00:00.000000000'],
-          dtype='datetime64[ns]')
+    array(['2000-01-01T00:00:00.000000', '2000-01-02T00:00:00.000000',
+           '2000-01-03T00:00:00.000000', '2000-01-04T00:00:00.000000',
+           '2000-01-05T00:00:00.000000', '2000-01-06T00:00:00.000000',
+           '2000-01-07T00:00:00.000000', '2000-01-08T00:00:00.000000',
+           '2000-01-09T00:00:00.000000', '2000-01-10T00:00:00.000000'],
+          dtype='datetime64[us]')
     Coordinates:
-      * time     (time) datetime64[ns] 80B 2000-01-01 2000-01-02 ... 2000-01-10
+      * time     (time) datetime64[us] 80B 2000-01-01 2000-01-02 ... 2000-01-10
     >>> ts.dt  # doctest: +ELLIPSIS
     <xarray.core.accessor_dt.DatetimeAccessor object at 0x...>
     >>> ts.dt.dayofyear
     <xarray.DataArray 'dayofyear' (time: 10)> Size: 80B
     array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10])
     Coordinates:
-      * time     (time) datetime64[ns] 80B 2000-01-01 2000-01-02 ... 2000-01-10
+      * time     (time) datetime64[us] 80B 2000-01-01 2000-01-02 ... 2000-01-10
     >>> ts.dt.quarter
     <xarray.DataArray 'quarter' (time: 10)> Size: 80B
     array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
     Coordinates:
-      * time     (time) datetime64[ns] 80B 2000-01-01 2000-01-02 ... 2000-01-10
+      * time     (time) datetime64[us] 80B 2000-01-01 2000-01-02 ... 2000-01-10
 
     """
 
@@ -587,40 +587,39 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
     <xarray.DataArray (time: 20)> Size: 160B
-    array([ 86400000000000, 108000000000000, 129600000000000, 151200000000000,
-           172800000000000, 194400000000000, 216000000000000, 237600000000000,
-           259200000000000, 280800000000000, 302400000000000, 324000000000000,
-           345600000000000, 367200000000000, 388800000000000, 410400000000000,
-           432000000000000, 453600000000000, 475200000000000, 496800000000000],
-          dtype='timedelta64[ns]')
+    array([ 86400000000, 108000000000, 129600000000, 151200000000, 172800000000,
+           194400000000, 216000000000, 237600000000, 259200000000, 280800000000,
+           302400000000, 324000000000, 345600000000, 367200000000, 388800000000,
+           410400000000, 432000000000, 453600000000, 475200000000, 496800000000],
+          dtype='timedelta64[us]')
     Coordinates:
-      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[us] 160B 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt  # doctest: +ELLIPSIS
     <xarray.core.accessor_dt.TimedeltaAccessor object at 0x...>
     >>> ts.dt.days
     <xarray.DataArray 'days' (time: 20)> Size: 160B
     array([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5])
     Coordinates:
-      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[us] 160B 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt.microseconds
     <xarray.DataArray 'microseconds' (time: 20)> Size: 160B
     array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     Coordinates:
-      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[us] 160B 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt.seconds
     <xarray.DataArray 'seconds' (time: 20)> Size: 160B
     array([    0, 21600, 43200, 64800,     0, 21600, 43200, 64800,     0,
            21600, 43200, 64800,     0, 21600, 43200, 64800,     0, 21600,
            43200, 64800])
     Coordinates:
-      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[us] 160B 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt.total_seconds()
     <xarray.DataArray 'total_seconds' (time: 20)> Size: 160B
     array([ 86400., 108000., 129600., 151200., 172800., 194400., 216000.,
            237600., 259200., 280800., 302400., 324000., 345600., 367200.,
            388800., 410400., 432000., 453600., 475200., 496800.])
     Coordinates:
-      * time     (time) timedelta64[ns] 160B 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[us] 160B 1 days 00:00:00 ... 5 days 18:00:00
     """
 
     @property
