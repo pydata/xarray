@@ -13,7 +13,6 @@ on:
 
 env:
   FORCE_COLOR: 3
-  PIXI_VERSION: "v0.63.2"
 
 jobs:
   detect-ci-trigger:
@@ -55,8 +54,6 @@ jobs:
       - uses: actions/checkout@v6
       - uses: Parcels-code/pixi-lock/create-and-cache@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
         id: pixi-lock
-        with:
-          pixi-version: ${{env.PIXI_VERSION}}
       - uses: actions/upload-artifact@v6
         with:
           name: pixi-lock
