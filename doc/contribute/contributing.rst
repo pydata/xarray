@@ -208,7 +208,7 @@ development environment:
 
 That's it! Now you're ready to contribute to Xarray.
 
-Pixi defines multiple environments as well as tasks to help you with development. These include tasks for:
+Pixi defines multiple environments as well as tasks to help you with development (view these by running ``pixi task list``). These include tasks for:
 
 - running the test suite
 - building the documentation
