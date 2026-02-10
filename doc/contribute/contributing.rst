@@ -221,16 +221,10 @@ are only run in a single environment (e.g., building the documentation or runnin
 
 You can see all available environments and tasks by running::
 
-    pixi list
+    pixi info
 
-For example:
 
-- ``pixi run doc`` will build the documentation
-- ``pixi run mypy`` will run the static type checker
-- ``pixi run test`` will run the test suite
-- ``pixi run pre-commit`` will run all code formatters and linters - defined via the pre-commit hooks
-
-When running ``pixi run test`` you will be prompted to select which environment you want to use. You can specify the environment
+When running a test you may be prompted to select which environment you want to use. You can specify the environment
 directly by providing the ``-e`` flag, e.g., ``pixi run -e my_environment test`` . Our CI setup uses Pixi as well - you can easily
 reproduce CI tests by running the same tasks in the same environments as defined in the CI.
 
