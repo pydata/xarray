@@ -212,10 +212,17 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         subplot_kws = {} if subplot_kws is None else subplot_kws
 
         if figsize is None:
-            # Calculate the base figure size with extra horizontal space for a
-            # colorbar
-            cbar_space = 1
-            figsize = (ncol * size * aspect + cbar_space, nrow * size)
+            from xarray.core.options import OPTIONS
+
+            if OPTIONS["facetgrid_figsize"] == "rcparams":
+                import matplotlib as mpl
+
+                figsize = tuple(mpl.rcParams["figure.figsize"])
+            else:
+                # Calculate the base figure size with extra horizontal space
+                # for a colorbar
+                cbar_space = 1
+                figsize = (ncol * size * aspect + cbar_space, nrow * size)
 
         fig, axs = plt.subplots(
             nrow,

@@ -3571,3 +3571,40 @@ def test_temp_dataarray() -> None:
     locals_ = dict(x="x", extend="var2")
     da = _temp_dataarray(ds, y_, locals_)
     assert da.shape == (3,)
+
+
+@requires_matplotlib
+def test_facetgrid_figsize_rcparams() -> None:
+    """Test that facetgrid_figsize='rcparams' uses matplotlib rcParams."""
+    import matplotlib as mpl
+
+    da = DataArray(
+        np.random.randn(10, 15, 3),
+        dims=["y", "x", "z"],
+        coords={"z": ["a", "b", "c"]},
+    )
+    custom_figsize = (12.0, 8.0)
+
+    with figure_context():
+        # Default behavior: computed from size and aspect
+        g = xplt.FacetGrid(da, col="z")
+        default_figsize = g.fig.get_size_inches()
+        # Default should be (ncol * size * aspect + cbar_space, nrow * size)
+        # = (3 * 3 * 1 + 1, 1 * 3) = (10, 3)
+        np.testing.assert_allclose(default_figsize, (10.0, 3.0))
+
+    with figure_context():
+        # rcparams mode: should use mpl.rcParams['figure.figsize']
+        with mpl.rc_context({"figure.figsize": custom_figsize}):
+            with xr.set_options(facetgrid_figsize="rcparams"):
+                g = xplt.FacetGrid(da, col="z")
+                actual_figsize = g.fig.get_size_inches()
+                np.testing.assert_allclose(actual_figsize, custom_figsize)
+
+    with figure_context():
+        # Explicit figsize should override the option
+        with xr.set_options(facetgrid_figsize="rcparams"):
+            explicit_size = (6.0, 4.0)
+            g = xplt.FacetGrid(da, col="z", figsize=explicit_size)
+            actual_figsize = g.fig.get_size_inches()
+            np.testing.assert_allclose(actual_figsize, explicit_size)
