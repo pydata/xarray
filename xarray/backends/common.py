@@ -400,8 +400,7 @@ class ArrayWriter:
         elif region:
             target[region] = source
         else:
-            key = (slice(None),) * source.ndim
-            target[key] = source
+            target[...] = source
 
     def sync(self, compute=True, chunkmanager_store_kwargs=None):
         if self.sources:
