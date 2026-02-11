@@ -47,7 +47,7 @@ jobs:
         )
       )
 
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     outputs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
       pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}

@@ -38,7 +38,7 @@ jobs:
   cache-pixi-lock:
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
 
     outputs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}

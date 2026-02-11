@@ -39,7 +39,7 @@ jobs:
           keyword: "[test-upstream]"
 
   cache-pixi-lock:
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     needs: detect-ci-trigger
     if: |
       always()
