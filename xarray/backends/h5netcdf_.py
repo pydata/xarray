@@ -232,6 +232,7 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
+        manager: FileManager[Any]
         if isinstance(filename, str) and not is_remote_uri(filename):
             manager = CachingFileManager(
                 h5netcdf.File, filename, mode=mode, kwargs=kwargs
