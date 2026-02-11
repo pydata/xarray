@@ -297,8 +297,8 @@ def as_compatible_data(
         isinstance(data, array_type("dask"))
         and isinstance(getattr(data, "_meta", None), np.ma.MaskedArray)
     ):
-        _dtype, fill_value = dtypes.maybe_promote(data.dtype)
-        data = duck_array_ops.filled(data, fill_value)
+        mask = duck_array_ops.getmaskarray(data)
+        data = duck_array_ops.where_method(data, ~mask)
 
     if isinstance(data, np.matrix):
         data = np.asarray(data)
