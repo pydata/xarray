@@ -140,7 +140,9 @@ def _multi_file_closer(closers):
         closer()
 
 
-def _preprocess_mfdataset(ds: Dataset, preprocess: Callable[[Dataset], Dataset]) -> Dataset:
+def _preprocess_mfdataset(
+    ds: Dataset, preprocess: Callable[[Dataset], Dataset]
+) -> Dataset:
     # Preserve the underlying file closer if preprocess returns a Dataset without one.
     # This keeps resource cleanup reliable while allowing arbitrary preprocess functions.
     processed_ds = preprocess(ds)

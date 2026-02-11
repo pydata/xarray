@@ -233,7 +233,9 @@ class H5NetCDFStore(WritableCFDataStore):
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
         if isinstance(filename, str) and not is_remote_uri(filename):
-            manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+            manager = CachingFileManager(
+                h5netcdf.File, filename, mode=mode, kwargs=kwargs
+            )
         elif mode == "r" and _is_fsspec_file_obj(filename):
             # Reopen fsspec-backed files from fs/path instead of serializing a live
             # file handle across distributed workers.
@@ -245,7 +247,9 @@ class H5NetCDFStore(WritableCFDataStore):
                 kwargs={"h5netcdf_kwargs": kwargs},
             )
         else:
-            manager = PickleableFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+            manager = PickleableFileManager(
+                h5netcdf.File, filename, mode=mode, kwargs=kwargs
+            )
 
         return cls(
             manager,
