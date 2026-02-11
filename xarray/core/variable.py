@@ -293,16 +293,18 @@ def as_compatible_data(
         else:
             data = pandas_data
 
-    if isinstance(data, np.ma.MaskedArray) or (
-        isinstance(data, array_type("dask"))
-        and isinstance(getattr(data, "_meta", None), np.ma.MaskedArray)
-    ):
+    if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
         if mask.any():
             _dtype, fill_value = dtypes.maybe_promote(data.dtype)
             data = duck_array_ops.where_method(data, ~mask, fill_value)
         else:
             data = np.asarray(data)
+    elif isinstance(data, array_type("dask")) and isinstance(
+        getattr(data, "_meta", None), np.ma.MaskedArray
+    ):
+        _dtype, fill_value = dtypes.maybe_promote(data.dtype)
+        data = duck_array_ops.filled(data, fill_value)
 
     if isinstance(data, np.matrix):
         data = np.asarray(data)
