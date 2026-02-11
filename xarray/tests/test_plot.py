@@ -835,7 +835,7 @@ class TestPlot1D(PlotTestCase):
         assert "d = [10.009]" == title
 
     def test_warns_for_few_positional_args(self) -> None:
-        with pytest.warns(DeprecationWarning, match="Using positional arguments"):
+        with pytest.warns(FutureWarning, match="Using positional arguments"):
             self.darray.plot.scatter("period")
 
     def test_raises_for_too_many_positional_args(self) -> None:
@@ -1744,7 +1744,7 @@ class Common2dMixin:
             dims=("time", "x", "y"),
             coords={"x": np.arange(6), "y": np.arange(6)},
         )
-        with pytest.warns(DeprecationWarning, match="Using positional arguments"):
+        with pytest.warns(FutureWarning, match="Using positional arguments"):
             self.plotfunc(da, "x", "y", col="time")
 
     def test_plot_raises_too_many_for_positional_args(self) -> None:
@@ -3463,7 +3463,7 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 @requires_matplotlib
 def test_facetgrid_axes_raises_deprecation_warning() -> None:
     with pytest.warns(
-        DeprecationWarning,
+        FutureWarning,
         match=(
             "self.axes is deprecated since 2022.11 in order to align with "
             "matplotlibs plt.subplots, use self.axs instead."

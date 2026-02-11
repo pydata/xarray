@@ -223,7 +223,7 @@ def decode_cf_variable(
                     "Example usage:\n"
                     "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
                     "    ds = xr.open_dataset(decode_times=time_coder)\n",
-                    DeprecationWarning,
+                    FutureWarning,
                 )
             decode_times = CFDatetimeCoder(use_cftime=use_cftime)
         elif use_cftime is not None:
