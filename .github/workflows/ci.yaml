@@ -19,7 +19,7 @@ env:
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: |
       github.repository == 'pydata/xarray'
       && (github.event_name == 'push' || github.event_name == 'pull_request')
@@ -36,14 +36,30 @@ jobs:
           keyword: "[skip-ci]"
 
   cache-pixi-lock:
-    uses: ./.github/workflows/cache-pixi-lock.yml
-    with:
-      pixi-version: "v0.63.2" # keep in sync with env var above
+    needs: detect-ci-trigger
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
+      pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Parcels-code/pixi-lock/create-and-cache@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
+        id: pixi-lock
+        with:
+          pixi-version: ${{env.PIXI_VERSION}}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: pixi-lock
+          path: pixi.lock
+
   test:
     name: "${{ matrix.os }} | ${{ matrix.pixi-env }}${{ matrix.pytest-addopts && format(' ({0})', matrix.pytest-addopts) || '' }}"
     runs-on: ${{ matrix.os }}
-    needs: [detect-ci-trigger, cache-pixi-lock]
-    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    needs: cache-pixi-lock
     defaults:
       run:
         shell: bash -l {0}
@@ -84,16 +100,12 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v5
-        id: restore-pixi-lock
+        uses: Parcels-code/pixi-lock/restore@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
         with:
-          enableCrossOsArchive: true
-          path: |
-            pixi.lock
-          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
-      - uses: prefix-dev/setup-pixi@v0.9.4
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+      - uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
@@ -170,7 +182,7 @@ jobs:
 
   event_file:
     name: "Event File"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: github.repository == 'pydata/xarray'
     steps:
       - name: Upload
