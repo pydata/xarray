@@ -53,6 +53,9 @@ Bug Fixes
   :py:func:`open_dataset` is called with a non-existent local file path
   (:issue:`10896`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Fix a regression where :py:func:`open_mfdataset` could hang indefinitely with
+  ``engine="h5netcdf"`` and ``parallel=True`` on distributed schedulers when
+  opening file-like objects from remote filesystems (:issue:`10807`).
 
 Documentation
 ~~~~~~~~~~~~~
