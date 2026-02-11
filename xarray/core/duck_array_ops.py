@@ -127,8 +127,6 @@ masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
 )
 
-filled = _dask_or_eager_func("filled", eager_module=np.ma, dask_module="dask.array.ma")
-
 
 def sliding_window_view(array, window_shape, axis=None, **kwargs):
     # TODO: some libraries (e.g. jax) don't have this, implement an alternative?

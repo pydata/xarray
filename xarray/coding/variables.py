@@ -333,9 +333,6 @@ class CFMaskCoder(VariableCoder):
 
         # apply fillna
         if fill_value is not None and not pd.isnull(fill_value):
-            # fill in the data if it is masked
-            data = duck_array_ops.filled(data, fill_value=fill_value)
-
             # special case DateTime to properly handle NaT
             if _is_time_like(attrs.get("units")):
                 if data.dtype.kind in "iu":
