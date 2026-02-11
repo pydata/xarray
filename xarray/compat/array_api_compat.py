@@ -65,20 +65,15 @@ def is_dtype(value):
 
 
 def result_type(*arrays_and_dtypes, xp) -> np.dtype:
-    is_np_dtype = [
-        is_dtype(getattr(t, "dtype", t) if not isinstance(t, type) else t)
-        for t in arrays_and_dtypes
-    ]
-
-    if xp is np or any(is_np_dtype):
-        if any(
-            not is_numpy and not is_builtin_type(t)
-            for is_numpy, t in zip(is_np_dtype, arrays_and_dtypes, strict=True)
+    try:
+        if xp is np or any(
+            isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
         ):
-            return np.dtype("object")
-        return xp.result_type(*arrays_and_dtypes)
-    else:
-        return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)
+            return xp.result_type(*arrays_and_dtypes)
+        else:
+            return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)
+    except TypeError:
+        return np.dtype(object)
 
 
 def get_array_namespace(*values):
