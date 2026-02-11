@@ -243,6 +243,7 @@ cfgrib = "*"
 [feature.doc.tasks]
 doc = { cmd = "make html", cwd = "doc" }
 doc-clean = { cmd = "make clean && make html", cwd = "doc" }
+linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in documentation." }
 
 
 [feature.typing.dependencies]
