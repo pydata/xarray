@@ -851,7 +851,7 @@ Natively the xarray data structures can only handle one level of nesting, organi
 DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you
 can only access one group and a time and will need to specify group names.
 
-.. _HDF5: https://hdfgroup.github.io/hdf5/index.html
+.. _HDF5: https://www.hdfgroup.org/solutions/hdf5/
 .. _h5py: https://www.h5py.org/
 
 
