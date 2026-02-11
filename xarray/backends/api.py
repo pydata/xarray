@@ -140,6 +140,15 @@ def _multi_file_closer(closers):
         closer()
 
 
+def _preprocess_mfdataset(ds: Dataset, preprocess: Callable[[Dataset], Dataset]) -> Dataset:
+    # Preserve the underlying file closer if preprocess returns a Dataset without one.
+    # This keeps resource cleanup reliable while allowing arbitrary preprocess functions.
+    processed_ds = preprocess(ds)
+    if processed_ds._close is None and ds._close is not None:
+        processed_ds.set_close(ds._close)
+    return processed_ds
+
+
 def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
     """Open, load into memory, and close a Dataset from a file or file-like
     object.
@@ -1617,14 +1626,10 @@ def open_mfdataset(
     if parallel:
         import dask
 
-        # wrap the open_dataset, getattr, and preprocess with delayed
+        # wrap open_dataset and preprocess with delayed
         open_ = dask.delayed(open_dataset)
-        getattr_ = dask.delayed(getattr)
-        if preprocess is not None:
-            preprocess = dask.delayed(preprocess)
     else:
         open_ = open_dataset
-        getattr_ = getattr
 
     if errors not in ("raise", "warn", "ignore"):
         raise ValueError(
@@ -1652,14 +1657,15 @@ def open_mfdataset(
             combined_ids_paths = _infer_concat_order_from_positions(paths)
             ids = list(combined_ids_paths.keys())
 
-    closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
-        datasets = [preprocess(ds) for ds in datasets]
+        datasets = [_preprocess_mfdataset(ds, preprocess) for ds in datasets]
 
     if parallel:
-        # calling compute here will return the datasets/file_objs lists,
-        # the underlying datasets will still be stored as dask arrays
-        datasets, closers = dask.compute(datasets, closers)
+        # calling compute here will return the list of datasets; the underlying
+        # arrays remain lazy and dask-backed.
+        (datasets,) = dask.compute(datasets)
+
+    closers = [ds._close for ds in datasets if ds._close is not None]
 
     # Combine all datasets, closing them in case of a ValueError
     try:

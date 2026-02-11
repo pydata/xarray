@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import pickle
 from typing import TYPE_CHECKING, Any
 
@@ -40,6 +41,7 @@ from xarray.tests import (
     has_netCDF4,
     has_scipy,
     requires_cftime,
+    requires_h5netcdf,
     requires_netCDF4,
     requires_zarr,
 )
@@ -174,6 +176,65 @@ def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
                 fnames, parallel=parallel, concat_dim="time", combine="nested"
             ) as tf:
                 assert_identical(tf["test"], da)
+
+
+@requires_h5netcdf
+def test_open_mfdataset_file_like_parallel_distributed_h5netcdf():
+    time = np.arange(20)
+    x = np.arange(4)
+    data = np.arange(80).reshape(20, 4)
+    da = xr.DataArray(data, coords={"time": time, "x": x}, dims=("time", "x"), name="v")
+
+    file_objs = []
+    for i in range(0, 20, 10):
+        ds = da.isel(time=slice(i, i + 10)).to_dataset()
+        file_content = ds.to_netcdf(engine="h5netcdf")
+        file_objs.append(io.BytesIO(file_content))
+
+    with cluster() as (s, [_a, _b]):
+        with Client(s["address"]):
+            with xr.open_mfdataset(
+                file_objs,
+                engine="h5netcdf",
+                parallel=True,
+                concat_dim="time",
+                combine="nested",
+            ) as tf:
+                assert_identical(tf["v"], da)
+
+
+@requires_h5netcdf
+@pytest.mark.timeout(30)
+def test_open_mfdataset_parallel_distributed_h5netcdf_fsspec_file_objects(tmp_path):
+    fsspec = pytest.importorskip("fsspec")
+
+    time = np.arange(20)
+    x = np.arange(4)
+    data = np.arange(80).reshape(20, 4)
+    da = xr.DataArray(data, coords={"time": time, "x": x}, dims=("time", "x"), name="v")
+
+    paths = []
+    for i in range(0, 20, 10):
+        path = tmp_path / f"chunk_{i}.nc"
+        da.isel(time=slice(i, i + 10)).to_dataset().to_netcdf(path, engine="h5netcdf")
+        paths.append(path)
+
+    fs = fsspec.filesystem("file")
+    with fs.open(str(paths[0]), "rb") as f0, fs.open(str(paths[1]), "rb") as f1:
+        # Regression test for GH10807:
+        # the buggy implementation builds delayed tasks that serialize closer
+        # callables extracted from worker-side datasets. With h5netcdf and
+        # file-like inputs this can block indefinitely on distributed.
+        with cluster() as (s, [_a, _b]):
+            with Client(s["address"]):
+                with xr.open_mfdataset(
+                    [f0, f1],
+                    engine="h5netcdf",
+                    parallel=True,
+                    concat_dim="time",
+                    combine="nested",
+                ) as tf:
+                    assert_identical(tf["v"], da)
 
 
 # TODO: move this to test_backends.py
