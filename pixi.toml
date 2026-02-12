@@ -298,30 +298,30 @@ xarray-minimum-dependency-policy = "*"
 [feature.policy.dependencies]
 python = "3.13.*"
 
-[feature.policy.tasks.check-policy]
+[feature.policy.tasks._check-policy]
 cmd = "minimum-versions validate --policy ci/policy.yaml --manifest-path pixi.toml {{ env }}"
 args = ["env"]
 
 [feature.policy.tasks]
 policy-bare-minimum = [
-  { task = "check-policy", args = [
+  { task = "_check-policy", args = [
     "pixi:test-py311-bare-minimum",
   ] },
 ]
 policy-bare-min-and-scipy = [
-  { task = "check-policy", args = [
+  { task = "_check-policy", args = [
     "pixi:test-py311-bare-min-and-scipy",
   ] },
 ]
 policy-min-versions = [
-  { task = "check-policy", args = [
+  { task = "_check-policy", args = [
     "pixi:test-py311-min-versions",
   ] },
 ]
 [feature.policy.tasks.policy]
 
 depends-on = [
-  { task = "check-policy", args = [
+  { task = "_check-policy", args = [
     """\
     pixi:test-py311-bare-minimum \
     pixi:test-py311-bare-min-and-scipy \
