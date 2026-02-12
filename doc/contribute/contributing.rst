@@ -1056,7 +1056,7 @@ PR checklist
   - Test the code using `Pytest <https://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
   - By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior per commit by adding a ``[test-upstream]`` tag to the first line of the commit message. For documentation-only commits, you can skip the CI per commit by adding a ``[skip-ci]`` tag to the first line of the commit message.
 
-- **Properly format your code** and verify that it passes the formatting guidelines set by `ruff <https://github.com/astral-sh/ruff>`_. See `"Code formatting" <https://docs.xarray.dev/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
+- **Properly format your code** and verify that it passes the formatting guidelines set by `ruff <https://github.com/astral-sh/ruff>`_. See `"Code formatting" <https://docs.xarray.dev/en/stable/contributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
 
   - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
 

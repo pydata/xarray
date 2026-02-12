@@ -22,7 +22,7 @@ env:
 jobs:
   detect-ci-trigger:
     name: detect upstream-dev ci trigger
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: |
       github.repository == 'pydata/xarray'
       && (github.event_name == 'push' || github.event_name == 'pull_request')
@@ -37,21 +37,42 @@ jobs:
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
+
   cache-pixi-lock:
-    uses: ./.github/workflows/cache-pixi-lock.yml
-    with:
-      pixi-version: "v0.63.2" # keep in sync with env var above
+    runs-on: ubuntu-latest
+    needs: detect-ci-trigger
+    if: |
+      always()
+      && github.repository == 'pydata/xarray'
+      && (
+        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        || (
+          github.event_name == 'pull_request'
+          && (
+            needs.detect-ci-trigger.outputs.triggered == 'true'
+            || contains( github.event.pull_request.labels.*.name, 'run-upstream')
+          )
+        )
+      )
+
+    outputs:
+      cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
+      pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Parcels-code/pixi-lock/create-and-cache@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
+        id: pixi-lock
+        with:
+          pixi-version: ${{env.PIXI_VERSION}}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: pixi-lock
+          path: pixi.lock
+
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
-    needs: [detect-ci-trigger, cache-pixi-lock]
-    if: |
-      always()
-      && (
-          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-          || needs.detect-ci-trigger.outputs.triggered == 'true'
-          || contains( github.event.pull_request.labels.*.name, 'run-upstream')
-      )
+    needs: cache-pixi-lock
     defaults:
       run:
         shell: bash -l {0}
@@ -64,16 +85,12 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v5
-        id: restore-pixi-lock
+        uses: Parcels-code/pixi-lock/restore@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
         with:
-          enableCrossOsArchive: true
-          path: |
-            pixi.lock
-          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
@@ -121,16 +138,12 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Restore cached pixi lockfile
-        uses: actions/cache/restore@v5
-        id: restore-pixi-lock
+        uses: Parcels-code/pixi-lock/restore@9a2866f8258b87a3c616d5ad7d51c6cd853df78b
         with:
-          enableCrossOsArchive: true
-          path: |
-            pixi.lock
-          key: ${{ needs.cache-pixi-lock.outputs.cache-id }}
-      - uses: prefix-dev/setup-pixi@v0.9.4
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+      - uses: prefix-dev/setup-pixi@v0.9.3
         with:
-          pixi-version: ${{ env.PIXI_VERSION }}
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}

@@ -16,7 +16,7 @@ Some numpy-like array types that xarray already has some support for:
 * `Sparse <https://sparse.pydata.org/en/stable/>`_ - for performant arrays with many zero elements,
 * `Pint <https://pint.readthedocs.io/en/latest/>`_ - for tracking the physical units of your data (see `pint-xarray <https://pint-xarray.readthedocs.io>`_),
 * `Dask <https://docs.dask.org/en/stable/>`_ - parallel computing on larger-than-memory arrays (see :ref:`using dask with xarray <dask>`),
-* `Cubed <https://github.com/tomwhite/cubed/tree/main/cubed>`_ - another parallel computing framework that emphasises reliability (see `cubed-xarray <https://github.com/cubed-xarray>`_).
+* `Cubed <https://github.com/cubed-dev/cubed/tree/main/cubed>`_ - another parallel computing framework that emphasises reliability (see `cubed-xarray <https://github.com/cubed-dev/cubed-xarray>`_).
 
 .. warning::
 
