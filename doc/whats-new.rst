@@ -941,6 +941,8 @@ This release brings bug fixes, better support for extension arrays including ret
 Thanks to the 24 contributors to this release:
 Alban Farchi, Andrecho, Benoit Bovy, Deepak Cherian, Dimitri Papadopoulos Orfanos, Florian Jetter, Giacomo Caria, Ilan Gold, Illviljan, Joren Hammudoglu, Julia Signell, Kai Muehlbauer, Kai Mühlbauer, Mathias Hauser, Mattia Almansi, Michael Sumner, Miguel Jimenez, Nick Hodgskin (🦎 Vecko), Pascal Bourgault, Philip Chmielowiec, Scott Henderson, Spencer Clark, Stephan Hoyer and Tom Nicholas
 
+A number of changes involve :py:class:`pandas.api.extensions.ExtensionDtype` (as an index or `Variable.data`).  To convert to `numpy`, you can use :py:meth:`numpy.asarray`, converting to a :py:class:`pandas.Series` and then calling :py:meth:`pandas.Series.to_numpy`, or `pandas.api.extensions.ExtensionArray.astype` with a `numpy` type.  Note that the underlying :py:class:`pandas.api.extensions.ExtensionArray` is itself always available at ``.data`` whether a :py:class:`xarray.Variable` or :py:class:`xarray.DataArray`.
+
 New Features
 ~~~~~~~~~~~~
 - By default xarray now encodes :py:class:`numpy.timedelta64` values by
@@ -965,7 +967,7 @@ New Features
   :py:meth:`Index.should_add_coord_to_array`. For example, this enables support for CF boundaries coordinate (e.g.,
   ``time(time)`` and ``time_bnds(time, nbnd)``) in a DataArray (:pull:`10137`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
-- Improved support pandas categorical extension as indices (i.e., :py:class:`pandas.IntervalIndex`). (:issue:`9661`, :pull:`9671`)
+- Improved support for pandas extension array indices (i.e., :py:class:`pandas.IntervalIndex`). (:issue:`9661`, :pull:`9671`)
   By `Ilan Gold <https://github.com/ilan-gold>`_.
 - Improved checks and errors raised when trying to align objects with conflicting indexes.
   It is now possible to align objects each with multiple indexes sharing common dimension(s).
@@ -988,7 +990,10 @@ Breaking changes
   now return objects indexed by :py:meth:`pandas.IntervalArray` objects,
   instead of numpy object arrays containing tuples. This change enables interval-aware indexing of
   such Xarray objects. (:pull:`9671`). By `Ilan Gold <https://github.com/ilan-gold>`_.
-- Remove ``PandasExtensionArrayIndex`` from :py:attr:`xarray.Variable.data` when the attribute is a :py:class:`pandas.api.extensions.ExtensionArray` (:pull:`10263`). By `Ilan Gold <https://github.com/ilan-gold>`_.
+- By being more permissive about what pandas extension array indices are let through without casting internally,
+there may be unexpected changes to functionality such as i/o or reductions (see above).
+To return to previous functionality, ensure that extension arrays are cast to numpy arrays beforehand. (:pull:`9671`). By `Ilan Gold <https://github.com/ilan-gold>`_.
+- Remove ``PandasExtensionArray`` from :py:attr:`xarray.Variable.data` when the attribute is a :py:class:`pandas.api.extensions.ExtensionArray` (:pull:`10263`). By `Ilan Gold <https://github.com/ilan-gold>`_.
 - The html and text ``repr`` for ``DataTree`` are now truncated. Up to 6 children are displayed
   for each node -- the first 3 and the last 3 children -- with a ``...`` between them. The number
   of children to include in the display is configurable via options. For instance use
