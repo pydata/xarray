@@ -16,8 +16,8 @@ indexing, switches all deprecation warnings to FutureWarning for better end-user
 visibility, fixes silent data corruption when writing dask arrays to sharded Zarr
 stores, and improves chunked array tokenization performance.
 
-Thanks to the 10 contributors to this release:
-Antonio Valentino, Chris Barker, Christine P. Chai, Deepak Cherian, Ewan Short, Ian Hunt-Isaak, Julia Signell, Justus Magin, Nick Hodgskin and Kristian Kollsgård
+Thanks to the 11 contributors to this release:
+Antonio Valentino, Chris Barker, Christine P. Chai, Deepak Cherian, Ewan Short, Harikrishna KP, Ian Hunt-Isaak, Julia Signell, Justus Magin, Kristian Kollsgård and Nick Hodgskin
 
 New Features
 ~~~~~~~~~~~~
@@ -65,6 +65,9 @@ Bug Fixes
 - Improve error message when a chunk manager is not available, suggesting how
   to install the required package (:pull:`11056`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- Raise :py:class:`ValueError` on slice-based selection of multi-index levels,
+  which previously returned silently wrong results (:issue:`10534`, :pull:`11168`).
+  By `Harikrishna KP <https://github.com/Mr-Neutr0n>`_.
 
 Documentation
 ~~~~~~~~~~~~~
