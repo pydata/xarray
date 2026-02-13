@@ -332,6 +332,15 @@ depends-on = [
 ]
 description = "Check all minimum version test environments match Xarray's version policy."
 
+[feature.tools.dependencies]
+python = "3.13.*"
+
+[feature.tools.pypi-dependencies]
+rst-to-myst = { version = "*", extras = ["sphinx"] }
+
+[feature.tools.tasks]
+rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -444,3 +453,4 @@ default = { features = [
   "dev",
 ] }
 policy = { features = ["policy"], no-default-feature = true }
+tools = { features = ["tools"], no-default-feature = true }
