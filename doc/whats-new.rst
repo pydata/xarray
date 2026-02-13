@@ -53,6 +53,8 @@ Bug Fixes
   :py:func:`open_dataset` is called with a non-existent local file path
   (:issue:`10896`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
+  By `Julia Signell <https://github.com/jsignell>`_
 
 Documentation
 ~~~~~~~~~~~~~

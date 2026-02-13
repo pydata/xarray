@@ -50,6 +50,7 @@ from xarray.core.utils import (
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
+    array_type,
     async_to_duck_array,
     integer_types,
     is_0d_dask_array,
@@ -292,13 +293,12 @@ def as_compatible_data(
         else:
             data = pandas_data
 
-    if isinstance(data, np.ma.MaskedArray):
-        mask = np.ma.getmaskarray(data)
-        if mask.any():
-            _dtype, fill_value = dtypes.maybe_promote(data.dtype)
-            data = duck_array_ops.where_method(data, ~mask, fill_value)
-        else:
-            data = np.asarray(data)
+    if isinstance(data, np.ma.MaskedArray) or (
+        isinstance(data, array_type("dask"))
+        and isinstance(getattr(data, "_meta", None), np.ma.MaskedArray)
+    ):
+        mask = duck_array_ops.getmaskarray(data)
+        data = duck_array_ops.where_method(data, ~mask)
 
     if isinstance(data, np.matrix):
         data = np.asarray(data)

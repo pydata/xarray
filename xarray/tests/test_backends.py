@@ -85,6 +85,7 @@ from xarray.tests import (
     mock,
     network,
     parametrize_zarr_format,
+    raise_if_dask_computes,
     requires_cftime,
     requires_dask,
     requires_fsspec,
@@ -2230,6 +2231,28 @@ class NetCDF4Base(NetCDFBase):
                 )
             else:
                 assert len(loaded_ds.xindexes) == 0
+
+    @requires_dask
+    def test_encoding_masked_arrays(self, tmp_path) -> None:
+        store_path = tmp_path / "tmp.nc"
+
+        with raise_if_dask_computes():
+            ds = xr.DataArray(
+                dask.array.from_array(
+                    np.ma.masked_array(
+                        np.array([[np.nan, np.nan], [np.nan, 2]]),
+                        np.array([[True, True], [True, False]]),
+                    )
+                ).astype("float32"),
+                dims=("x", "y"),
+            ).to_dataset(name="mydata")
+
+        expected = ds.mean("x")
+        expected.to_netcdf(
+            store_path, encoding=dict(mydata=dict(_FillValue=np.float32(1e20)))
+        )
+        with open_dataset(store_path, engine=self.engine) as actual:
+            assert_identical(expected.compute(), actual.compute())
 
 
 @requires_netCDF4
