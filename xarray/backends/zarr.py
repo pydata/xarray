@@ -602,6 +602,15 @@ def _put_attrs(zarr_obj, attrs):
         raise TypeError("Invalid attribute in Dataset.attrs.") from e
     return zarr_obj
 
+async def _put_attrs_async(zarr_async_obj, attrs):
+    """Async version of _put_attrs using zarr's asynchronous API."""
+    try:
+        zarr_async_obj.attrs.clear()
+        await zarr_async_obj.update_attributes(attrs)
+    except TypeError as e:
+        raise TypeError("Invalid attribute in Dataset.attrs.") from e
+    return zarr_async_obj
+
 
 class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
@@ -1150,7 +1159,7 @@ class ZarrStore(AbstractWritableDataStore):
 
             from zarr.api.asynchronous import open as zarr_async_open
 
-            zarr_async_array = zarr_async_open(
+            zarr_async_array = await zarr_async_open(
                 store=(
                     self.zarr_group.store
                 ),
@@ -1238,9 +1247,9 @@ class ZarrStore(AbstractWritableDataStore):
             shape=shape,
             dtype=dtype,
             fill_value=fill_value,
-            # attributes=attrs,#TODO
             **encoding,
         )
+        zarr_async_array = await _put_attrs_async(zarr_async_array, attrs)
         return zarr_async_array
 
     def set_variables(
