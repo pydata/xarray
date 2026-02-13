@@ -199,7 +199,6 @@ class set_options:
         coordinates in binary operations, see `arithmetic_join`.)
 
         Default is ``"minimal"``. Allowed values are:
-            {"identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"}
 
 
         - ``"identical"``: all values, dimensions and attributes of the coordinates
