@@ -239,6 +239,7 @@ sphinx-remove-toctrees = "*"
 sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
+myst-parser = "*"
 
 [feature.doc.tasks]
 doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation." }
@@ -330,6 +331,15 @@ depends-on = [
   ] },
 ]
 description = "Check all minimum version test environments match Xarray's version policy."
+
+[feature.tools.dependencies]
+python = "3.13.*"
+
+[feature.tools.pypi-dependencies]
+rst-to-myst = { version = "*", extras = ["sphinx"] }
+
+[feature.tools.tasks]
+rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
 
 [environments]
 # Testing
@@ -443,3 +453,4 @@ default = { features = [
   "dev",
 ] }
 policy = { features = ["policy"], no-default-feature = true }
+tools = { features = ["tools"], no-default-feature = true }
