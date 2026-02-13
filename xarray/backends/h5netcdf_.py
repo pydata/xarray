@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import io
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
@@ -232,12 +232,25 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        manager_cls = (
-            CachingFileManager
-            if isinstance(filename, str) and not is_remote_uri(filename)
-            else PickleableFileManager
-        )
-        manager = manager_cls(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        manager: FileManager[Any]
+        if isinstance(filename, str) and not is_remote_uri(filename):
+            manager = CachingFileManager(
+                h5netcdf.File, filename, mode=mode, kwargs=kwargs
+            )
+        elif mode == "r" and _is_fsspec_file_obj(filename):
+            # Reopen fsspec-backed files from fs/path instead of serializing a live
+            # file handle across distributed workers.
+            manager = PickleableFileManager(
+                _open_h5netcdf_from_fsspec,
+                filename.fs,
+                filename.path,
+                mode=mode,
+                kwargs={"h5netcdf_kwargs": kwargs},
+            )
+        else:
+            manager = PickleableFileManager(
+                h5netcdf.File, filename, mode=mode, kwargs=kwargs
+            )
 
         return cls(
             manager,
@@ -463,6 +476,27 @@ def _normalize_filename_or_obj(
         return io.BytesIO(filename_or_obj)
     else:
         return _normalize_path(filename_or_obj)
+
+
+def _is_fsspec_file_obj(obj: Any) -> bool:
+    fs = getattr(obj, "fs", None)
+    path = getattr(obj, "path", None)
+    return fs is not None and path is not None and callable(getattr(fs, "open", None))
+
+
+def _open_h5netcdf_from_fsspec(
+    fs: Any,
+    path: str,
+    *,
+    mode: str = "r",
+    h5netcdf_kwargs: Mapping[str, Any] | None = None,
+):
+    import h5netcdf
+
+    file_mode = "rb" if mode == "r" else mode
+    file_obj = fs.open(path, mode=file_mode)
+    kwargs = {} if h5netcdf_kwargs is None else dict(h5netcdf_kwargs)
+    return h5netcdf.File(file_obj, mode=mode, **kwargs)
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):

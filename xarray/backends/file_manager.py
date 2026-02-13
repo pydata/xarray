@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import pickle
 import threading
 import uuid
 import warnings
@@ -422,6 +423,10 @@ class PickleableFileManager(FileManager[T_File]):
     def __getstate__(self):
         # file is intentionally omitted: we want to open it again
         opener = _get_none if self._closed else self._opener
+        # Fail fast if opener arguments are not serializable. Without this guard,
+        # distributed execution can block while attempting to serialize delayed
+        # tasks that capture unpickleable file-like handles.
+        pickle.dumps((self._args, self._kwargs))
         return (opener, self._args, self._mode, self._lock, self._kwargs)
 
     def __setstate__(self, state) -> None:
