@@ -128,6 +128,53 @@ e.g., a kd-tree object may not be easily indexed. If ``Index.isel()`` is not
 implemented, the index in just dropped in the DataArray or Dataset resulting
 from the selection.
 
+Custom representation
+---------------------
+
+When a :py:class:`Dataset` or :py:class:`DataArray` is displayed, Xarray shows
+a summary of its indexes. By default, the base :py:class:`Index` class returns
+just the class name. You can customize this by implementing the
+:py:meth:`Index._repr_inline_` method, which should return a short, single-line
+string representation of the index.
+
+The ``_repr_inline_`` method receives a ``max_width`` argument (number of
+characters) that indicates the available space for the representation. The
+output of the method must not exceed this width.
+
+Here are some examples from Xarray's built-in indexes:
+
+- :py:class:`~xarray.indexes.RangeIndex` returns: ``RangeIndex (start=0, stop=1, step=0.1)``
+- :py:class:`~xarray.indexes.NDPointIndex` returns: ``NDPointIndex (KDTree)``
+
+This representation appears in the indexes section when displaying a Dataset or
+DataArray:
+
+.. jupyter-execute::
+
+   import numpy as np
+   import xarray as xr
+   from xarray import Index
+
+   class MyIndex(Index):
+       def __init__(self, data):
+           self._data = data
+
+       @classmethod
+       def from_variables(cls, variables, *, options=None):
+           (name, var), = variables.items()
+           return cls(var.data)
+
+       def create_variables(self, variables):
+           (name, var), = variables.items()
+           return {name: xr.Variable(var.dims, self._data, attrs=var.attrs)}
+
+       def _repr_inline_(self, max_width: int) -> str:
+           return f"{self.__class__.__name__} (size={len(self._data)})"
+
+   da = xr.DataArray(np.arange(10), dims="x", coords={"x": np.arange(10)})
+   da.set_index(x=MyIndex(np.arange(10)))
+
+
 Alignment
 ---------
 
@@ -197,6 +244,10 @@ regularly spaced 2-dimensional data) that internally relies on two
                     results.append(index.sel({k: labels[k]}))
 
             return merge_sel_results(results)
+
+        def _repr_inline_(self, max_width: int) -> str:
+            dims = [idx.dim for idx in self._xy_indexes.values()]
+            return f"{type(self).__name__} (dims={dims})"
 
 
 This basic index only supports label-based selection. Providing a full-featured
