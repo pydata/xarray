@@ -56,6 +56,8 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Add support for myst markdown (:pull:`11167`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 
 Performance
