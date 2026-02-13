@@ -331,6 +331,12 @@ depends-on = [
 ]
 description = "Check all minimum version test environments match Xarray's version policy."
 
+[feature.numpydoc-lint.dependencies]
+numpydoc = "*"
+
+[feature.numpydoc-lint.tasks]
+numpydoc-lint = { cmd = "python doc/numpydoc-public-api.py" }
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -443,3 +449,4 @@ default = { features = [
   "dev",
 ] }
 policy = { features = ["policy"], no-default-feature = true }
+numpydoc-lint = { features = ["numpydoc-lint"] }
