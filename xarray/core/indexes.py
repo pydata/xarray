@@ -1308,6 +1308,16 @@ class PandasMultiIndex(PandasIndex):
 
             has_slice = any(isinstance(v, slice) for v in label_values.values())
 
+            if has_slice:
+                slice_levels = [
+                    k for k, v in label_values.items() if isinstance(v, slice)
+                ]
+                raise ValueError(
+                    f"slice-based selection on multi-index level(s) {slice_levels} "
+                    f"is not supported. Use scalar values for multi-index level "
+                    f"selection instead, e.g., ``.sel({slice_levels[0]}=value)``."
+                )
+
             if len(label_values) == self.index.nlevels and not has_slice:
                 indexer = self.index.get_loc(
                     tuple(label_values[k] for k in self.index.names)
