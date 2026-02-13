@@ -209,6 +209,9 @@ Performance
 
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
+  as well. (:issue:`6528`, :pull:`10987`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Optimize :py:class:`~xarray.coding.variables.CFMaskCoder` decoder (:pull:`11105`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 

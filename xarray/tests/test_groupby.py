@@ -14,7 +14,12 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Dataset, Variable, date_range
 from xarray.core.groupby import _consolidate_slices
-from xarray.core.types import InterpOptions, PDDatetimeUnitOptions, ResampleCompatible
+from xarray.core.types import (
+    InterpOptions,
+    PDDatetimeUnitOptions,
+    ResampleCompatible,
+)
+from xarray.core.utils import module_available
 from xarray.groupers import (
     BinGrouper,
     EncodedGroups,
@@ -1070,9 +1075,11 @@ def test_groupby_bins_cut_kwargs(use_flox: bool, x_bins) -> None:
         coords={
             "x_bins": (
                 "x_bins",
-                x_bins
-                if isinstance(x_bins, pd.IntervalIndex)
-                else pd.IntervalIndex.from_breaks(x_bins, closed="left"),
+                (
+                    x_bins
+                    if isinstance(x_bins, pd.IntervalIndex)
+                    else pd.IntervalIndex.from_breaks(x_bins, closed="left")
+                ),
             )
         },
     )
@@ -2544,54 +2551,176 @@ class TestDatasetResample:
         assert_identical(expected, actual)
 
 
-def test_groupby_cumsum() -> None:
+@pytest.mark.parametrize("use_lazy_group_idx", [True, False])
+@pytest.mark.parametrize("use_dask", [True, False])
+@pytest.mark.parametrize("use_flox", [True, False])
+@pytest.mark.parametrize(
+    "method, grp_idx, dim, expected_array",
+    [
+        (
+            "cumsum",
+            ["group_idx"],
+            "time",
+            [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
+        ),
+        (
+            "cumsum",
+            ["group_idx"],
+            "test",
+            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+        ),
+        (
+            "cumsum",
+            ["group_idx"],
+            ...,
+            [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
+        ),
+        (
+            "cumsum",
+            ["group_idx", "group_idx2"],
+            "time",
+            [[7, 2, 0, 1, 2, 2], [1, 1, 1, 2, 1, 2], [2, 2, 2, 4, 2, 4]],
+        ),
+        (
+            "cumsum",
+            ["group_idx", "group_idx2"],
+            "test",
+            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+        ),
+        (
+            "cumsum",
+            ["group_idx", "group_idx2"],
+            ...,
+            [[7, 2, 0, 1, 2, 2], [8, 3, 1, 3, 3, 4], [10, 5, 3, 7, 5, 8]],
+        ),
+        (
+            "cumprod",
+            ["group_idx"],
+            "time",
+            [[7, 14, 0, 0, 2, 2], [1, 1, 1, 1, 1, 1], [2, 4, 2, 4, 2, 4]],
+        ),
+        (
+            "cumprod",
+            ["group_idx"],
+            "test",
+            [[7, 2, 0, 1, 2, 1], [7, 2, 0, 1, 2, 1], [14, 4, 0, 2, 4, 2]],
+        ),
+        (
+            "cumprod",
+            ["group_idx"],
+            ...,
+            [[7, 14, 0, 0, 2, 2], [7, 14, 0, 0, 2, 2], [14, 56, 0, 0, 4, 8]],
+        ),
+        (
+            "cumprod",
+            ["group_idx", "group_idx2"],
+            "time",
+            [[7, 2, 0, 0, 2, 2], [1, 1, 1, 1, 1, 1], [2, 2, 2, 4, 2, 4]],
+        ),
+        (
+            "cumprod",
+            ["group_idx", "group_idx2"],
+            "test",
+            [[7, 2, 0, 1, 2, 1], [7, 2, 0, 1, 2, 1], [14, 4, 0, 2, 4, 2]],
+        ),
+        (
+            "cumprod",
+            ["group_idx", "group_idx2"],
+            ...,
+            [[7, 2, 0, 0, 2, 2], [7, 2, 0, 0, 2, 2], [14, 4, 0, 0, 4, 8]],
+        ),
+    ],
+)
+def test_groupby_scans(
+    method: Literal["cumsum", "cumprod"],
+    grp_idx: list[str],
+    dim,
+    expected_array: list[float],
+    use_flox: bool,
+    use_dask: bool,
+    use_lazy_group_idx: bool,
+) -> None:
+    if use_dask and not has_dask:
+        pytest.skip("requires dask")
+
+    if use_flox:
+        if not has_flox:
+            pytest.skip("requires flox")
+
+        if method == "cumprod":
+            pytest.skip(
+                "TODO: Groupby with cumprod is currently not supported with flox"
+            )
+        if dim == ...:
+            pytest.skip(
+                "TODO: Scans are only supported along a single dimension in flox."
+            )
+        elif dim == "test":
+            pytest.skip(
+                "TODO: group_idx along time dim and axis along test dim not currently supported with flox."
+            )
+    elif use_lazy_group_idx:
+        pytest.skip("Lazy group_idx is not supported without flox.")
+
+    # Test Dataset groupby:
     ds = xr.Dataset(
-        {"foo": (("x",), [7, 3, 1, 1, 1, 1, 1])},
-        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
-    )
-    actual = ds.groupby("group_id").cumsum(dim="x")
-    expected = xr.Dataset(
         {
-            "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
+            "foo": (
+                ("test", "time"),
+                [[7, 2, 0, 1, 2, np.nan], [1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2]],
+            )
         },
         coords={
-            "x": [0, 1, 2, 3, 4, 5, 6],
-            "group_id": ds.group_id,
+            "time": [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6],
+            "test": ["a", "b", "b"],
+            "group_idx": ("time", [0, 0, 1, 1, 2, 2]),
+            "group_idx2": ("time", [0, 1, 1, 1, 1, 1]),
         },
     )
-    # TODO: Remove drop_vars when GH6528 is fixed
-    # when Dataset.cumsum propagates indexes, and the group variable?
-    assert_identical(expected.drop_vars(["x", "group_id"]), actual)
 
-    actual = ds.foo.groupby("group_id").cumsum(dim="x")
-    expected.coords["group_id"] = ds.group_id
-    expected.coords["x"] = np.arange(7)
-    assert_identical(expected.foo, actual)
+    with xr.set_options(use_flox=use_flox):
+        if use_dask:
+            ds = ds.chunk()
+            if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
+                # This path requires flox installed.
+                gs = {
+                    g: xr.groupers.UniqueGrouper(labels=np.unique(ds[g]))
+                    for g in grp_idx
+                }
+                actual = getattr(ds.groupby(gs), method)(dim)
+            else:
+                ds[grp_idx].load()
+                actual = getattr(ds.groupby(grp_idx), method)(dim)
+        else:
+            actual = getattr(ds.groupby(grp_idx), method)(dim)
 
-
-def test_groupby_cumprod() -> None:
-    ds = xr.Dataset(
-        {"foo": (("x",), [7, 3, 0, 1, 1, 2, 1])},
-        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
-    )
-    actual = ds.groupby("group_id").cumprod(dim="x")
     expected = xr.Dataset(
         {
-            "foo": (("x",), [7, 21, 0, 0, 1, 2, 2]),
+            "foo": (ds["foo"].dims, expected_array),
         },
-        coords={
-            "x": [0, 1, 2, 3, 4, 5, 6],
-            "group_id": ds.group_id,
-        },
+        coords=ds.coords,
     )
-    # TODO: Remove drop_vars when GH6528 is fixed
-    # when Dataset.cumsum propagates indexes, and the group variable?
-    assert_identical(expected.drop_vars(["x", "group_id"]), actual)
+    assert_identical(expected, actual.compute())
 
-    actual = ds.foo.groupby("group_id").cumprod(dim="x")
-    expected.coords["group_id"] = ds.group_id
-    expected.coords["x"] = np.arange(7)
-    assert_identical(expected.foo, actual)
+    # Test DataArray groupby:
+    with xr.set_options(use_flox=use_flox):
+        if use_dask:
+            ds = ds.chunk()
+            if use_lazy_group_idx and module_available("flox", minversion="0.10.5"):
+                # This path requires flox installed.
+                gs = {
+                    g: xr.groupers.UniqueGrouper(labels=np.unique(ds[g]))
+                    for g in grp_idx
+                }
+                actual = getattr(ds.foo.groupby(gs), method)(dim)
+
+            else:
+                ds[grp_idx].load()
+                actual = getattr(ds.foo.groupby(grp_idx), method)(dim)
+        else:
+            actual = getattr(ds.foo.groupby(grp_idx), method)(dim)
+
+    assert_identical(expected.foo.compute(), actual.compute())
 
 
 @pytest.mark.parametrize(
@@ -2601,7 +2730,7 @@ def test_groupby_cumprod() -> None:
         ("cumprod", [1.0, 2.0, 6.0, 6.0, 2.0, 2.0]),
     ],
 )
-def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
+def test_resample_scans(method: str, expected_array: list[float]) -> None:
     ds = xr.Dataset(
         {"foo": ("time", [1, 2, 3, 1, 2, np.nan])},
         coords={
@@ -2615,13 +2744,11 @@ def test_resample_cumsum(method: str, expected_array: list[float]) -> None:
             "time": xr.date_range("01-01-2001", freq="ME", periods=6, use_cftime=False),
         },
     )
-    # TODO: Remove drop_vars when GH6528 is fixed
-    # when Dataset.cumsum propagates indexes, and the group variable?
-    assert_identical(expected.drop_vars(["time"]), actual)
+    assert_identical(expected, actual)
 
     actual = getattr(ds.foo.resample(time="3ME"), method)(dim="time")
     expected.coords["time"] = ds.time
-    assert_identical(expected.drop_vars(["time"]).foo, actual)
+    assert_identical(expected.foo, actual)
 
 
 def test_groupby_binary_op_regression() -> None:
