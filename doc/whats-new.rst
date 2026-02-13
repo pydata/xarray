@@ -36,6 +36,11 @@ Breaking Changes
   not intended to be visible to end-users so this version of xarray
   switches to using ``FutureWarning`` everywhere (:pull:`11112`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- Passing a :py:class:`Dataset` as ``data_vars`` to the :py:class:`Dataset`
+  constructor now raises :py:class:`TypeError`. This was never intended behavior
+  and silently dropped ``attrs``. Use :py:meth:`Dataset.copy` instead
+  (:issue:`11095`).
+  By `Kristian Kollsga <https://github.com/kkollsga>`_.
 
 Bug Fixes
 ~~~~~~~~~
