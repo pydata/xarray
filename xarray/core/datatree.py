@@ -697,6 +697,153 @@ class DataTree(
             None,
         )
 
+    def _get_coordinate_ownership(self) -> dict[Hashable, str]:
+        """Return mapping of coordinate name to tree path where it's defined."""
+        ownership: dict[Hashable, str] = {}
+        for path, node in self.subtree_with_keys:
+            for coord_name in node._node_coord_variables:
+                if coord_name not in ownership:
+                    ownership[coord_name] = path
+        return ownership
+
+    @property
+    def _alignment_indexes(self) -> Indexes[Index]:
+        """All indexes across the entire subtree for alignment purposes."""
+        all_indexes: dict[Hashable, Index] = {}
+        all_vars: dict[Hashable, Variable] = {}
+        for node in self.subtree:
+            for name, idx in node._node_indexes.items():
+                if name not in all_indexes:
+                    all_indexes[name] = idx
+                    all_vars[name] = node._node_coord_variables[name]
+        return Indexes(all_indexes, all_vars)
+
+    @property
+    def _alignment_dims(self) -> Mapping[Hashable, int]:
+        """All dimensions across the entire subtree for alignment purposes."""
+        all_dims: dict[Hashable, int] = {}
+        for node in self.subtree:
+            for dim, size in node._node_dims.items():
+                if dim in all_dims and all_dims[dim] != size:
+                    raise ValueError(
+                        f"Dimension {dim!r} has inconsistent sizes within tree"
+                    )
+                all_dims[dim] = size
+        return all_dims
+
+    def _reindex_callback(
+        self,
+        aligner: Any,
+        dim_pos_indexers: dict[Hashable, Any],
+        variables: dict[Hashable, Variable],
+        indexes: dict[Hashable, Index],
+        fill_value: Any,
+        exclude_dims: frozenset[Hashable],
+        exclude_vars: frozenset[Hashable],
+    ) -> Self:
+        """Callback from Aligner to create a reindexed DataTree."""
+        from xarray.structure.alignment import reindex_variables
+
+        coord_ownership = self._get_coordinate_ownership()
+
+        new_nodes: dict[str, Dataset] = {}
+
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset(inherit=False)
+
+            # Determine which new indexes belong to this node
+            node_new_indexes = {
+                k: v for k, v in indexes.items() if coord_ownership.get(k) == path
+            }
+            node_new_variables = {
+                k: v for k, v in variables.items() if coord_ownership.get(k) == path
+            }
+
+            # Re-assign variable metadata from originals
+            for name, new_var in node_new_variables.items():
+                var = node_ds._variables.get(name)
+                if var is not None:
+                    new_var.attrs = var.attrs
+                    new_var.encoding = var.encoding
+
+            # Pass through indexes from excluded dimensions
+            for name, idx in node_ds._indexes.items():
+                var = node_ds._variables[name]
+                if set(var.dims) <= exclude_dims:
+                    node_new_indexes[name] = idx
+                    node_new_variables[name] = var
+
+            # Filter dim_pos_indexers to only dims present in this node
+            node_dim_pos_indexers = {
+                k: v for k, v in dim_pos_indexers.items() if k in node_ds.dims
+            }
+
+            if not node_dim_pos_indexers:
+                # No reindexing needed for this node
+                if set(node_new_indexes) - set(node_ds._indexes):
+                    new_nodes[path] = node_ds._overwrite_indexes(
+                        node_new_indexes, node_new_variables
+                    )
+                else:
+                    new_nodes[path] = node_ds.copy(deep=aligner.copy)
+            else:
+                # Reindex variables at this node
+                to_reindex = {
+                    k: v
+                    for k, v in node_ds.variables.items()
+                    if k not in node_new_variables and k not in exclude_vars
+                }
+                reindexed_vars = reindex_variables(
+                    to_reindex,
+                    node_dim_pos_indexers,
+                    copy=aligner.copy,
+                    fill_value=fill_value,
+                    sparse=aligner.sparse,
+                )
+                all_vars = dict(node_new_variables)
+                all_vars.update(reindexed_vars)
+                new_coord_names = node_ds._coord_names | set(node_new_indexes)
+                new_nodes[path] = node_ds._replace_with_new_dims(
+                    all_vars, new_coord_names, indexes=node_new_indexes
+                )
+
+            new_nodes[path].encoding = node_ds.encoding
+
+        return type(self).from_dict(new_nodes, name=self.name)
+
+    def _overwrite_indexes(
+        self,
+        indexes: Mapping[Any, Index],
+        variables: Mapping[Any, Variable] | None = None,
+    ) -> Self:
+        """Replace indexes throughout the tree at the nodes where they are owned."""
+        if variables is None:
+            variables = {}
+
+        coord_ownership = self._get_coordinate_ownership()
+        new_nodes: dict[str, Dataset] = {}
+
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset(inherit=False)
+
+            # Filter indexes/variables for this node
+            node_indexes = {
+                k: v for k, v in indexes.items() if coord_ownership.get(k) == path
+            }
+            node_variables = {
+                k: v for k, v in variables.items() if coord_ownership.get(k) == path
+            }
+
+            if node_indexes:
+                new_nodes[path] = node_ds._overwrite_indexes(
+                    indexes=node_indexes,
+                    variables=node_variables,
+                )
+            else:
+                new_nodes[path] = node_ds.copy()
+
+        return type(self).from_dict(new_nodes, name=self.name)
+
     @property
     def has_data(self) -> bool:
         """Whether or not there are any variables in this node."""
@@ -750,7 +897,7 @@ class DataTree(
         self._encoding = dict(value)
 
     @property
-    def dims(self) -> Mapping[Hashable, int]:
+    def dims(self) -> Frozen[Hashable, int]:
         """Mapping from dimension names to lengths.
 
         Cannot be modified directly, but is updated when adding new variables.
