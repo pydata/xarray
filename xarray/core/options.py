@@ -193,8 +193,7 @@ class set_options:
     ----------
     arithmetic_broadcast : bool, default: True
         Whether to perform automatic broadcasting in binary operations.
-
-    arithmetic_compat : optional
+    arithmetic_compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"}, default: "minimal"
         How to compare non-index coordinates of the same name for potential
         conflicts when performing binary operations. (For the alignment of index
         coordinates in binary operations, see `arithmetic_join`.)
