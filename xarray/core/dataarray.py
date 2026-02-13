@@ -3954,7 +3954,10 @@ class DataArray(
         return pandas_object
 
     def to_dataframe(
-        self, name: Hashable | None = None, dim_order: Sequence[Hashable] | None = None
+        self,
+        name: Hashable | None = None,
+        dim_order: Sequence[Hashable] | None = None,
+        create_index: bool = True,
     ) -> pd.DataFrame:
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
@@ -3979,6 +3982,11 @@ class DataArray(
 
             If provided, must include all dimensions of this DataArray. By default,
             dimensions are sorted according to the DataArray dimensions order.
+        create_index : bool, default: True
+            If True (default), create a :py:class:`pandas.MultiIndex` from the Cartesian product
+            of this DataArray's indices. If False, use a :py:class:`pandas.RangeIndex` instead.
+            This can be useful to avoid the potentially expensive MultiIndex
+            creation.
 
         Returns
         -------
@@ -4013,7 +4021,7 @@ class DataArray(
         else:
             ordered_dims = ds._normalize_dim_order(dim_order=dim_order)
 
-        df = ds._to_dataframe(ordered_dims)
+        df = ds._to_dataframe(ordered_dims, create_index=create_index)
         df.columns = [name if c == unique_name else c for c in df.columns]
         return df
 
@@ -7603,6 +7611,7 @@ class DataArray(
         self,
         dim_order: Sequence[Hashable] | None = None,
         set_index: bool = False,
+        create_index: bool = True,
     ) -> DaskDataFrame:
         """Convert this array into a dask.dataframe.DataFrame.
 
@@ -7618,6 +7627,14 @@ class DataArray(
             If set_index=True, the dask DataFrame is indexed by this dataset's
             coordinate. Since dask DataFrames do not support multi-indexes,
             set_index only works if the dataset only contains one dimension.
+        create_index : bool, default: True
+            If ``create_index=True`` (default), dimension coordinates will be included
+            as columns in the resulting DataFrame. If ``create_index=False``, dimension
+            coordinates will be excluded, leaving only data variables and non-dimension
+            coordinates. This can improve performance and reduce memory usage when dimension
+            information is not needed. ``create_index=False`` is incompatible with ``set_index=True``.
+
+            .. versionadded:: 2025.01.1
 
         Returns
         -------
@@ -7662,7 +7679,7 @@ class DataArray(
             )
         name = self.name
         ds = self._to_dataset_whole(name, shallow_copy=False)
-        return ds.to_dask_dataframe(dim_order, set_index)
+        return ds.to_dask_dataframe(dim_order, set_index, create_index)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

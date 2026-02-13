@@ -107,6 +107,13 @@ New Features
 - Use ``np.dtypes.StringDType`` when reading Zarr string variables  (:pull:`11097`).
   By `Julia Signell <https://github.com/jsignell>`_.
 
+- Added ``create_index`` parameter to :py:meth:`Dataset.to_dataframe`, :py:meth:`DataArray.to_dataframe`,
+  :py:meth:`Dataset.to_dask_dataframe`, and :py:meth:`DataArray.to_dask_dataframe` methods.
+  When ``create_index=False``, the resulting DataFrame will use a :py:class:`pandas.RangeIndex`
+  instead of setting dimension coordinates as the index, which can significantly improve performance
+  when the default multi-index is not needed.
+  By `Sanjay Kumar <https://github.com/sanjay>`_.
+
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 
