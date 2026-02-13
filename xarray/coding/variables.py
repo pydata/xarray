@@ -699,3 +699,53 @@ class NativeEnumCoder(VariableCoder):
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         raise NotImplementedError()
+
+
+class IntervalCoder(VariableCoder):
+    """
+    Xarray-specific Interval Coder to roundtrip 1D pd.IntervalArray objects.
+    """
+
+    encoded_dtype = "pandas_interval"
+    encoded_bounds_dim = "__xarray_bounds__"
+
+    def encode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if isinstance(dtype := variable.dtype, pd.IntervalDtype):
+            dims, data, attrs, encoding = unpack_for_encoding(variable)
+
+            new_data = np.stack([data.left, data.right], axis=0)
+            dims = (self.encoded_bounds_dim, *dims)
+            safe_setitem(attrs, "closed", dtype.closed, name=name)
+            safe_setitem(attrs, "dtype", self.encoded_dtype, name=name)
+            safe_setitem(attrs, "bounds_dim", self.encoded_bounds_dim, name=name)
+            return Variable(dims, new_data, attrs, encoding, fastpath=True)
+        else:
+            return variable
+
+    def decode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if (
+            variable.attrs.get("dtype", None) == self.encoded_dtype
+            and self.encoded_bounds_dim in variable.dims
+        ):
+            if variable.ndim != 2:
+                raise ValueError(
+                    f"Cannot decode intervals for variable named {name!r} with more than two dimensions."
+                )
+
+            dims, data, attrs, encoding = unpack_for_decoding(variable)
+            pop_to(attrs, encoding, "dtype", name=name)
+            pop_to(attrs, encoding, "bounds_dim", name=name)
+            closed = pop_to(attrs, encoding, "closed", name=name)
+
+            _, new_dims = variable.dims
+            variable = variable.load()
+            new_data = pd.arrays.IntervalArray.from_arrays(
+                variable.isel({self.encoded_bounds_dim: 0}).data,
+                variable.isel({self.encoded_bounds_dim: 1}).data,
+                closed=closed,
+            )
+            return Variable(
+                dims=new_dims, data=new_data, attrs=attrs, encoding=encoding
+            )
+        else:
+            return variable
