@@ -681,6 +681,16 @@ class PandasIndex(Index):
                 coord_dtype = index.dtype
             else:
                 coord_dtype = get_valid_numpy_dtype(index)
+                if coord_dtype == object and index.dtype == object:
+                    inferred = getattr(index, "inferred_type", None)
+                    if inferred in ("string", "unicode"):
+                        coord_dtype = np.dtype(str)
+                    else:
+                        data = index.to_numpy(dtype=object, copy=False)
+                        if data.size and all(
+                            isinstance(x, (str, np.str_)) for x in data.ravel()
+                        ):
+                            coord_dtype = np.asarray(data, dtype=str).dtype
         self.coord_dtype = coord_dtype
 
     def _replace(self, index, dim=None, coord_dtype=None):
