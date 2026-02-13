@@ -11,6 +11,7 @@ from xarray.namedarray.utils import is_duck_dask_array, module_available
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        T_ChunkDim,
         T_Chunks,
         _DType_co,
         _NormalizedChunks,
@@ -45,11 +46,11 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     def normalize_chunks(
         self,
-        chunks: T_Chunks | _NormalizedChunks,
+        chunks: tuple[T_ChunkDim, ...] | _NormalizedChunks,
         shape: tuple[int, ...] | None = None,
         limit: int | None = None,
         dtype: _DType_co | None = None,
-        previous_chunks: _NormalizedChunks | None = None,
+        previous_chunks: tuple[int, ...] | _NormalizedChunks | None = None,
     ) -> Any:
         """Called by open_dataset"""
         from dask.array.core import normalize_chunks
