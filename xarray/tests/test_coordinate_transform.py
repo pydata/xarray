@@ -221,7 +221,16 @@ def test_coordinate_transform_sel() -> None:
     # doesn't work with coordinate transform index coordinate variables)
     assert actual.equals(expected)
 
-    with pytest.raises(ValueError, match=r".*only supports selection.*nearest"):
+    # exact values should work without method="nearest"
+    # scale=2.0, shape=(4,4) -> x,y values are 0.0, 2.0, 4.0, 6.0
+    actual_exact = ds.sel(
+        x=xr.Variable("z", [0.0, 4.0]), y=xr.Variable("z", [0.0, 2.0])
+    )
+    expected_exact = ds.isel(x=xr.Variable("z", [0, 2]), y=xr.Variable("z", [0, 1]))
+    assert actual_exact.equals(expected_exact)
+
+    # non-exact values without method="nearest" should raise KeyError
+    with pytest.raises(KeyError, match=r"not all values found in index"):
         ds.sel(x=xr.Variable("z", [0.5, 5.5]), y=xr.Variable("z", [0.0, 0.5]))
 
     with pytest.raises(ValueError, match=r"missing labels for coordinate.*y"):
