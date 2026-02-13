@@ -2,6 +2,7 @@
 preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults"]
 platforms = ["win-64", "linux-64", "osx-arm64", "osx-64"]
+requires-pixi = ">=0.63.2"
 
 [package]
 name = "xarray"
