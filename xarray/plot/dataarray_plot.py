@@ -543,12 +543,8 @@ def line(
             # Find all columns belonging to this hue group
             col_indices = [i for i, h in enumerate(hue_values) if h == hue_val]
             for col_idx in col_indices:
-                x_vals = (
-                    xplt_val[:, col_idx] if xplt_val.ndim == 2 else xplt_val
-                )
-                y_vals = (
-                    yplt_val[:, col_idx] if yplt_val.ndim == 2 else yplt_val
-                )
+                x_vals = xplt_val[:, col_idx] if xplt_val.ndim == 2 else xplt_val
+                y_vals = yplt_val[:, col_idx] if yplt_val.ndim == 2 else yplt_val
                 lines = ax.plot(x_vals, y_vals, *args, **plot_kwargs)
                 primitive.extend(lines)
                 # Keep only the first line per group for the legend
