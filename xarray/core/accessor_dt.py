@@ -98,6 +98,8 @@ def _access_through_series(values, name):
             field_values = np.array(field_values, dtype=np.int64)
         # isocalendar returns iso- year, week, and weekday -> reshape
         return field_values.T.reshape(3, *values.shape)
+    elif name == "to_pytimedelta":
+        field_values = getattr(values_as_series.dt, name)()
     else:
         field_values = getattr(values_as_series.dt, name).values
 
@@ -646,6 +648,14 @@ class TimedeltaAccessor(TimeAccessor[T_DataArray]):
     def total_seconds(self) -> T_DataArray:
         """Total duration of each element expressed in seconds."""
         return self._date_field("total_seconds", np.float64)
+
+    @property
+    def to_pytimedelta(self):
+        """Timedelta values as python timedelta objects."""
+        result = _get_date_field(self._obj.data, "to_pytimedelta", object)
+        new_obj = self._obj.copy()
+        new_obj.variable._data = result
+        return new_obj
 
 
 class CombinedDatetimelikeAccessor(

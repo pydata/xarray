@@ -391,6 +391,16 @@ class TestTimedeltaAccessor:
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual.compute(), expected.compute())
 
+    def test_to_pytimedelta(self):
+
+        np.testing.assert_equal(
+            self.times.to_pytimedelta(), self.data.time.dt.to_pytimedelta
+        )
+
+        td = self.times_data.dt.to_pytimedelta
+        assert td.dtype == "O"
+        assert_equal(td.copy(data=td), self.times_data)
+
 
 _NT = 100
 
