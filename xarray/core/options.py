@@ -198,7 +198,7 @@ class set_options:
         conflicts when performing binary operations. (For the alignment of index
         coordinates in binary operations, see `arithmetic_join`.)
 
-        Default is ``"minimal"``. Allowed values are:
+        Allowed values are:
 
 
         - ``"identical"``: all values, dimensions and attributes of the coordinates
