@@ -134,8 +134,10 @@ class FillValueCoder:
             return bool(value)
         elif dtype.kind in "iu":
             # todo: do we want to check for decimals?
+            assert isinstance(value, int | float)
             return int(value)
         elif dtype.kind in "f":
+            assert isinstance(value, int | float)
             return base64.standard_b64encode(struct.pack("<d", float(value))).decode()
         elif dtype.kind in "c":
             # complex - encode each component as base64, matching float encoding
@@ -144,10 +146,10 @@ class FillValueCoder:
             )
             return [
                 base64.standard_b64encode(
-                    struct.pack("<d", float(value.real))
+                    struct.pack("<d", float(value.real))  # type: ignore[union-attr]
                 ).decode(),
                 base64.standard_b64encode(
-                    struct.pack("<d", float(value.imag))
+                    struct.pack("<d", float(value.imag))  # type: ignore[union-attr]
                 ).decode(),
             ]
         elif dtype.kind in "U":
@@ -179,6 +181,7 @@ class FillValueCoder:
         elif np_dtype.kind in "b":
             return bool(value)
         elif np_dtype.kind in "iu":
+            assert isinstance(value, int | float)
             return int(value)
         else:
             raise ValueError(f"Failed to decode fill_value. Unsupported dtype {dtype}")
