@@ -54,6 +54,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "jupyter_sphinx",
+    "myst_parser",
     "nbsphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",

@@ -239,6 +239,7 @@ sphinx-remove-toctrees = "*"
 sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
+myst-parser = "*"
 
 [feature.doc.tasks]
 doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation." }
