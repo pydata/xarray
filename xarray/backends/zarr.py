@@ -43,7 +43,7 @@ from xarray.namedarray.utils import module_available
 if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ZarrArray, ZarrGroup
+    from xarray.core.types import ZarrArray, ZarrGroup, ZarrAsyncArray
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -1070,7 +1070,20 @@ class ZarrStore(AbstractWritableDataStore):
                 kwargs["zarr_format"] = self.zarr_group.metadata.zarr_format
             zarr.consolidate_metadata(self.zarr_group.store, **kwargs)
 
+    def _zarr_async_group(self):
+        # Using private zarr attribute
+        return self.zarr_group._async_group
+        # Equivalent with public API
+        # return AsyncGroup(self.zarr_group.metadata, self.zarr_group.store_path)
+
     def _open_existing_array(self, *, name) -> ZarrArray:
+        if _zarr_v3():
+            from zarr.api.synchronous import sync
+            from zarr import Array as ZarrArray
+
+            zarr_async_array = sync(self._open_existing_array_async(name=name))
+            return ZarrArray(zarr_async_array)
+        # zarr v2: no async API, use sync open
         import zarr
         from zarr import Array as ZarrArray
 
@@ -1094,15 +1107,10 @@ class ZarrStore(AbstractWritableDataStore):
             #     - The size of dimensions can not be expanded, that would require a call using `append_dim`
             #        which is mutually exclusive with `region`
             empty: dict[str, bool] | dict[str, dict[str, bool]]
-            if _zarr_v3():
-                empty = dict(config={"write_empty_chunks": self._write_empty})
-            else:
-                empty = dict(write_empty_chunks=self._write_empty)
+            empty = dict(write_empty_chunks=self._write_empty)
 
             zarr_array = zarr.open(
-                store=(
-                    self.zarr_group.store if _zarr_v3() else self.zarr_group.chunk_store
-                ),
+                store=self.zarr_group.chunk_store,
                 # TODO: see if zarr should normalize these strings.
                 path="/".join([self.zarr_group.name.rstrip("/"), name]).lstrip("/"),
                 **empty,
@@ -1112,9 +1120,68 @@ class ZarrStore(AbstractWritableDataStore):
 
         return cast(ZarrArray, zarr_array)
 
+    async def _open_existing_array_async(self, *, name) -> ZarrAsyncArray:
+        """Async version of _open_existing_array using zarr's asynchronous API."""
+
+        import zarr
+        from zarr import Array as ZarrAsyncArray
+
+        # TODO: if mode="a", consider overriding the existing variable
+        # metadata. This would need some case work properly with region
+        # and append_dim.
+        if self._write_empty is not None:
+            # Write to zarr_group.chunk_store instead of zarr_group.store
+            # See https://github.com/pydata/xarray/pull/8326#discussion_r1365311316 for a longer explanation
+            #    The open_consolidated() enforces a mode of r or r+
+            #    (and to_zarr with region provided enforces a read mode of r+),
+            #    and this function makes sure the resulting Group has a store of type ConsolidatedMetadataStore
+            #    and a 'normal Store subtype for chunk_store.
+            #    The exact type depends on if a local path was used, or a URL of some sort,
+            #    but the point is that it's not a read-only ConsolidatedMetadataStore.
+            #    It is safe to write chunk data to the chunk_store because no metadata would be changed by
+            #    to_zarr with the region parameter:
+            #     - Because the write mode is enforced to be r+, no new variables can be added to the store
+            #       (this is also checked and enforced in xarray.backends.api.py::to_zarr()).
+            #     - Existing variables already have their attrs included in the consolidated metadata file.
+            #     - The size of dimensions can not be expanded, that would require a call using `append_dim`
+            #        which is mutually exclusive with `region`
+            empty: dict[str, bool] | dict[str, dict[str, bool]]
+            empty = dict(config={"write_empty_chunks": self._write_empty})
+
+            from zarr.api.asynchronous import open as zarr_async_open
+
+            zarr_async_array = zarr_async_open(
+                store=(
+                    self.zarr_group.store
+                ),
+                # TODO: see if zarr should normalize these strings.
+                path="/".join([self.zarr_group.name.rstrip("/"), name]).lstrip("/"),
+                **empty,
+            )
+        else:
+            zarr_async_array = await self._zarr_async_group().getitem(name)
+
+        return cast(ZarrAsyncArray, zarr_async_array)
+
     def _create_new_array(
         self, *, name, shape, dtype, fill_value, encoding, attrs
     ) -> ZarrArray:
+        if _zarr_v3():
+            from zarr.api.synchronous import sync
+            from zarr import Array as ZarrArray
+
+            zarr_async_array = sync(
+                self._create_new_array_async(
+                    name=name,
+                    shape=shape,
+                    dtype=dtype,
+                    fill_value=fill_value,
+                    encoding=encoding,
+                    attrs=attrs,
+                )
+            )
+            return ZarrArray(zarr_async_array)
+        # zarr v2: no async API, use sync create
         if coding.strings.check_vlen_dtype(dtype) is str:
             dtype = str
 
@@ -1130,14 +1197,6 @@ class ZarrStore(AbstractWritableDataStore):
             else:
                 encoding["write_empty_chunks"] = self._write_empty
 
-        if _zarr_v3():
-            # zarr v3 deprecated origin and write_empty_chunks
-            # instead preferring to pass them via the config argument
-            encoding["config"] = {}
-            for c in ("write_empty_chunks", "order"):
-                if c in encoding:
-                    encoding["config"][c] = encoding.pop(c)
-
         zarr_array = self.zarr_group.create(
             name,
             shape=shape,
@@ -1147,6 +1206,42 @@ class ZarrStore(AbstractWritableDataStore):
         )
         zarr_array = _put_attrs(zarr_array, attrs)
         return zarr_array
+
+    async def _create_new_array_async(
+        self, *, name, shape, dtype, fill_value, encoding, attrs
+    ) -> ZarrAsyncArray:
+        """Async version of _create_new_array using zarr's asynchronous API."""
+        if coding.strings.check_vlen_dtype(dtype) is str:
+            dtype = str
+
+        if self._write_empty is not None:
+            if (
+                "write_empty_chunks" in encoding
+                and encoding["write_empty_chunks"] != self._write_empty
+            ):
+                raise ValueError(
+                    'Differing "write_empty_chunks" values in encoding and parameters'
+                    f'Got {encoding["write_empty_chunks"] = } and {self._write_empty = }'
+                )
+            else:
+                encoding["write_empty_chunks"] = self._write_empty
+
+        # zarr v3 deprecated origin and write_empty_chunks
+        # instead preferring to pass them via the config argument
+        encoding["config"] = {}
+        for c in ("write_empty_chunks", "order"):
+            if c in encoding:
+                encoding["config"][c] = encoding.pop(c)
+
+        zarr_async_array = await self._zarr_async_group().create_array(
+            name,
+            shape=shape,
+            dtype=dtype,
+            fill_value=fill_value,
+            # attributes=attrs,#TODO
+            **encoding,
+        )
+        return zarr_async_array
 
     def set_variables(
         self,
@@ -1171,7 +1266,26 @@ class ZarrStore(AbstractWritableDataStore):
             List of dimension names that should be treated as unlimited
             dimensions.
         """
+        # Note: set_variables is not defined in terms of sync(_set_variables_async)
+        # because inside the async runner we cannot call self.zarr_group[name]
+        # (zarr would raise "Calling sync() from within a running loop").
+        # So the sync path uses _set_variables_sync, which calls _create_new_array
+        # and _open_existing_array (those use sync() internally on v3).
+        self._set_variables_sync(
+            variables=variables,
+            check_encoding_set=check_encoding_set,
+            writer=writer,
+            unlimited_dims=unlimited_dims,
+        )
 
+    def _set_variables_sync(
+        self,
+        variables: dict[str, Variable],
+        check_encoding_set,
+        writer,
+        unlimited_dims=None,
+    ):
+        """Sync implementation of set_variables (zarr v2 or internal use)."""
         existing_keys = self.array_keys()
         is_zarr_v3_format = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
 
@@ -1296,6 +1410,109 @@ class ZarrStore(AbstractWritableDataStore):
                     attrs=encoded_attrs,
                 )
 
+            writer.add(v.data, zarr_array, region)
+
+    async def _set_variables_async(
+        self,
+        variables: dict[str, Variable],
+        check_encoding_set,
+        writer,
+        unlimited_dims=None,
+    ):
+        """Async version of set_variables using zarr's asynchronous API."""
+        existing_keys = self.array_keys()
+        is_zarr_v3_format = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
+
+        for vn, v in variables.items():
+            name = _encode_variable_name(vn)
+            attrs = v.attrs.copy()
+            dims = v.dims
+            dtype = v.dtype
+            shape = v.shape
+
+            if self._use_zarr_fill_value_as_mask:
+                fill_value = attrs.pop("_FillValue", None)
+            else:
+                fill_value = v.encoding.pop("fill_value", None)
+                if fill_value is None and v.dtype.kind == "f":
+                    fill_value = np.nan
+                if "_FillValue" in attrs:
+                    fv = attrs.pop("_FillValue")
+                    if fv is not None:
+                        attrs["_FillValue"] = FillValueCoder.encode(fv, dtype)
+
+            if "_FillValue" in v.encoding:
+                if v.encoding.get("_FillValue") is not None:
+                    raise ValueError("Zarr does not support _FillValue in encoding.")
+                else:
+                    del v.encoding["_FillValue"]
+
+            zarr_shape = None
+            write_region = self._write_region if self._write_region is not None else {}
+            write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
+
+            if self._mode != "w" and name in existing_keys:
+                # existing variable: open and optionally resize via zarr async API
+                zarr_async_array = await self._open_existing_array_async(name=name)
+                if self._append_dim is not None and self._append_dim in dims:
+                    append_axis = dims.index(self._append_dim)
+                    assert write_region[self._append_dim] == slice(None)
+                    write_region[self._append_dim] = slice(
+                        zarr_async_array.shape[append_axis], None
+                    )
+                    new_shape = (
+                        zarr_async_array.shape[:append_axis]
+                        + (zarr_async_array.shape[append_axis] + v.shape[append_axis],)
+                        + zarr_async_array.shape[append_axis + 1 :]
+                    )
+                    await zarr_async_array.resize(new_shape)
+                zarr_shape = zarr_async_array.shape
+            region = tuple(write_region[dim] for dim in dims)
+
+            encoding = extract_zarr_variable_encoding(
+                v,
+                raise_on_invalid=vn in check_encoding_set,
+                name=vn,
+                zarr_format=3 if is_zarr_v3_format else 2,
+            )
+            effective_write_chunks = encoding.get("shards") or encoding["chunks"]
+
+            if self._align_chunks and isinstance(effective_write_chunks, tuple):
+                v = grid_rechunk(
+                    v=v,
+                    enc_chunks=effective_write_chunks,
+                    region=region,
+                )
+
+            if self._safe_chunks and isinstance(effective_write_chunks, tuple):
+                shape = zarr_shape or v.shape
+                validate_grid_chunks_alignment(
+                    nd_v_chunks=v.chunks,
+                    enc_chunks=effective_write_chunks,
+                    region=region,
+                    allow_partial_chunks=self._mode != "r+",
+                    name=name,
+                    backend_shape=shape,
+                )
+
+            if self._mode == "w" or name not in existing_keys:
+                encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
+                if is_zarr_v3_format:
+                    encoding["dimension_names"] = dims
+                else:
+                    encoded_attrs[DIMENSION_KEY] = dims
+                encoding["overwrite"] = self._mode == "w"
+
+                zarr_async_array = await self._create_new_array_async(
+                    name=name,
+                    dtype=dtype,
+                    shape=shape,
+                    fill_value=fill_value,
+                    encoding=encoding,
+                    attrs=encoded_attrs,
+                )
+
+            zarr_array = ZarrArray(zarr_async_array)
             writer.add(v.data, zarr_array, region)
 
     def sync(self) -> None:

@@ -63,8 +63,10 @@ if TYPE_CHECKING:
     try:
         # this is V3 only
         from zarr.storage import StoreLike as ZarrStoreLike
+        from zarr import AsyncArray as ZarrAsyncArray
     except ImportError:
         ZarrStoreLike = Any  # type: ignore[misc, assignment, unused-ignore]
+        ZarrAsyncArray = Any  # type: ignore[misc, assignment, unused-ignore]
 
     # Anything that can be coerced to a shape tuple
     _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
