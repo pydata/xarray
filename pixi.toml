@@ -212,7 +212,7 @@ hypothesis = "*"
 coveralls = "*"
 
 [feature.test.tasks]
-test = { cmd = "pytest" }
+test = { cmd = "pytest", description = "Run the test suite with pytest." }
 
 [feature.doc.dependencies]
 kerchunk = "*"
@@ -241,8 +241,9 @@ sphinxext-rediraffe = "*"
 cfgrib = "*"
 
 [feature.doc.tasks]
-doc = { cmd = "make html", cwd = "doc" }
-doc-clean = { cmd = "make clean && make html", cwd = "doc" }
+doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation." }
+doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch." }
+linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in documentation." }
 
 
 [feature.typing.dependencies]
@@ -269,20 +270,20 @@ types-defusedxml = "*"
 types-pexpect = "*"
 
 [feature.typing.tasks]
-mypy = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report"
+mypy = { cmd = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report", description = "Run mypy type checking and generate a Cobertura XML report." }
 
 [feature.pre-commit.dependencies]
 pre-commit = "*"
 
 [feature.pre-commit.tasks]
-pre-commit = { cmd = "pre-commit" }
+pre-commit = { cmd = "pre-commit", description = "Run pre-commit hooks and linters." }
 
 [feature.release.dependencies]
 gitpython = "*"
 cytoolz = "*"
 
 [feature.release.tasks]
-release-contributors = "python ci/release_contributors.py"
+release-contributors = { cmd = "python ci/release_contributors.py", description = "Generate a list of contributors for a release." }
 
 [feature.dev.dependencies]
 ipython = ">=9.8.0,<10"
@@ -297,28 +298,30 @@ xarray-minimum-dependency-policy = "*"
 [feature.policy.dependencies]
 python = "3.13.*"
 
-[feature.policy.tasks.check-policy]
+[feature.policy.tasks._check-policy]
 cmd = "minimum-versions validate --policy ci/policy.yaml --manifest-path pixi.toml {{ env }}"
 args = ["env"]
 
 [feature.policy.tasks]
 policy-bare-minimum = [
-  { task = "check-policy", args = [
+  { task = "_check-policy", args = [
     "pixi:test-py311-bare-minimum",
   ] },
 ]
 policy-bare-min-and-scipy = [
-  { task = "check-policy", args = [
+  { task = "_check-policy", args = [
     "pixi:test-py311-bare-min-and-scipy",
   ] },
 ]
 policy-min-versions = [
-  { task = "check-policy", args = [
+  { task = "_check-policy", args = [
     "pixi:test-py311-min-versions",
   ] },
 ]
-policy = [
-  { task = "check-policy", args = [
+[feature.policy.tasks.policy]
+
+depends-on = [
+  { task = "_check-policy", args = [
     """\
     pixi:test-py311-bare-minimum \
     pixi:test-py311-bare-min-and-scipy \
@@ -326,6 +329,7 @@ policy = [
     """,
   ] },
 ]
+description = "Check all minimum version test environments match Xarray's version policy."
 
 [environments]
 # Testing

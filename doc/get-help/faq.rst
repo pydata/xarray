@@ -426,7 +426,7 @@ Whilst we do occasionally make breaking changes in order to improve the library,
 we `signpost changes <https://docs.xarray.dev/en/stable/contributing.html#backwards-compatibility>`_ with ``FutureWarnings`` for many releases in advance.
 (An exception is bugs - whose behaviour we try to fix as soon as we notice them.)
 Our `test-driven development practices <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_ helps to ensure any accidental regressions are caught.
-This philosophy applies to everything in the `public API <https://docs.xarray.dev/en/stable/getting-started-guide/faq.html#what-parts-of-xarray-are-considered-public-api>`_.
+This philosophy applies to everything in the public API.
 
 .. _public-api:
 
