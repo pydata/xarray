@@ -848,7 +848,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     async def _fetch_members_async(self) -> dict[str, ZarrAsyncArray | ZarrAsyncGroup]:
         members = []
-        async for key, node in await self._zarr_async_group().members():
+        async for key, node in self._zarr_async_group().members():
             members.append((key, node))
         return dict(members)
 
