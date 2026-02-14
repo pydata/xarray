@@ -65,6 +65,7 @@ if TYPE_CHECKING:
         NestedSequence,
         T_Chunks,
     )
+    from xarray.core.variable import Variable
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
@@ -349,7 +350,37 @@ def _datatree_from_backend_datatree(
 
     _protect_datatree_variables_inplace(backend_tree, cache)
     if create_default_indexes:
-        tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
+        _use_zarr_async = False
+        if engine == "zarr":
+            from xarray.backends.zarr import _zarr_v3
+
+            _use_zarr_async = _zarr_v3()
+
+        if _use_zarr_async:
+            from zarr.core.sync import sync as zarr_sync
+
+            async def create_indexes_async() -> dict[str, Dataset]:
+                import asyncio
+
+                results: dict[str, Dataset] = {}
+                tasks = [
+                    _create_index_for_node(path, node.dataset)
+                    for path, [node] in group_subtrees(backend_tree)
+                ]
+                for fut in asyncio.as_completed(tasks):
+                    path, ds = await fut
+                    results[path] = ds
+                return results
+
+            async def _create_index_for_node(
+                path: str, ds: Dataset
+            ) -> tuple[str, Dataset]:
+                return path, await _maybe_create_default_indexes_async(ds)
+
+            results = zarr_sync(create_indexes_async())
+            tree = DataTree.from_dict(results, name=backend_tree.name)
+        else:
+            tree = backend_tree.map_over_datasets(_maybe_create_default_indexes)
     else:
         tree = backend_tree
     if chunks is not None:
@@ -384,6 +415,36 @@ def _datatree_from_backend_datatree(
             tree.encoding["source"] = _normalize_path(path)
 
     return tree
+
+
+async def _maybe_create_default_indexes_async(ds: Dataset) -> Dataset:
+    """Create default indexes for dimension coordinates asynchronously.
+
+    This function parallelizes both data loading and index creation,
+    which can significantly speed up opening datasets with many coordinates.
+    """
+    import asyncio
+
+    to_index_names = [
+        name
+        for name, coord in ds.coords.items()
+        if coord.dims == (name,) and name not in ds.xindexes
+    ]
+
+    if not to_index_names:
+        return ds
+
+    async def load_var(var: Variable) -> Variable:
+        try:
+            return await var.load_async()
+        except NotImplementedError:
+            return await asyncio.to_thread(var.load)
+
+    await asyncio.gather(*[load_var(ds.variables[name]) for name in to_index_names])
+
+    variables = {name: ds.variables[name] for name in to_index_names}
+    new_coords = Coordinates(variables)
+    return ds.assign_coords(new_coords)
 
 
 def open_dataset(
@@ -882,6 +943,7 @@ def open_datatree(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
     backend_kwargs: dict[str, Any] | None = None,
+    max_concurrency: int | None = None,
     **kwargs,
 ) -> DataTree:
     """
@@ -1014,6 +1076,13 @@ def open_datatree(
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
         For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
         to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+    max_concurrency : int, optional
+        Maximum number of concurrent I/O operations when opening groups in
+        parallel. This limits the number of groups that are loaded simultaneously.
+        Useful for controlling resource usage with large datatrees or stores
+        that may have limitations on concurrent access (e.g., icechunk).
+        Only used by backends that support parallel loading (currently Zarr v3).
+        If None (default), the backend uses its default value (typically 10).
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -1073,6 +1142,9 @@ def open_datatree(
         decode_coords=decode_coords,
     )
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+
+    if max_concurrency is not None:
+        kwargs["max_concurrency"] = max_concurrency
 
     backend_tree = backend.open_datatree(
         filename_or_obj,
