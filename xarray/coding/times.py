@@ -1492,13 +1492,12 @@ class CFTimedeltaCoder(VariableCoder):
     def __init__(
         self,
         time_unit: PDDatetimeUnitOptions | None = None,
-        decode_via_units: bool = True,
+        decode_via_units: bool = False,
         decode_via_dtype: bool = True,
     ) -> None:
         self.time_unit = time_unit
         self.decode_via_units = decode_via_units
         self.decode_via_dtype = decode_via_dtype
-        self._emit_decode_timedelta_future_warning = False
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.timedelta64):
@@ -1540,23 +1539,6 @@ class CFTimedeltaCoder(VariableCoder):
                 else:
                     time_unit = self.time_unit
             else:
-                if self._emit_decode_timedelta_future_warning:
-                    var_string = f"the variable {name!r}" if name else ""
-                    emit_user_level_warning(
-                        "In a future version, xarray will not decode "
-                        f"{var_string} into a timedelta64 dtype based on the "
-                        "presence of a timedelta-like 'units' attribute by "
-                        "default. Instead it will rely on the presence of a "
-                        "timedelta64 'dtype' attribute, which is now xarray's "
-                        "default way of encoding timedelta64 values.\n"
-                        "To continue decoding into a timedelta64 dtype, either "
-                        "set `decode_timedelta=True` when opening this "
-                        "dataset, or add the attribute "
-                        "`dtype='timedelta64[ns]'` to this variable on disk.\n"
-                        "To opt-in to future behavior, set "
-                        "`decode_timedelta=False`.",
-                        FutureWarning,
-                    )
                 if self.time_unit is None:
                     time_unit = "ns"
                 else:
