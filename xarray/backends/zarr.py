@@ -1321,7 +1321,7 @@ class ZarrStore(AbstractWritableDataStore):
                 unlimited_dims=unlimited_dims,
             ))
         else:
-            writes = self._set_variables_sync(
+            writes = self._set_variables_sync_v2(
                 variables=variables,
                 check_encoding_set=check_encoding_set,
                 writer=writer,
@@ -1330,7 +1330,7 @@ class ZarrStore(AbstractWritableDataStore):
         for source, target, region in writes:
             writer.add(source, target, region)
 
-    def _set_variables_sync(
+    def _set_variables_sync_v2(
         self,
         variables: dict[str, Variable],
         check_encoding_set,
