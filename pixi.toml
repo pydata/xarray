@@ -233,6 +233,7 @@ sphinx-design = "*"
 sphinx-inline-tabs = "*"
 sphinx-llm = ">=0.2.1"
 sphinx = ">=6,<8"
+sphinx-autobuild = "*"
 sphinxcontrib-mermaid = "*"
 sphinxcontrib-srclinks = "*"
 sphinx-remove-toctrees = "*"
@@ -244,6 +245,7 @@ myst-parser = "*"
 [feature.doc.tasks]
 doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation." }
 doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch." }
+doc-watch = { cmd = "make livehtml", cwd = "doc", description = "Build and auto-rebuild the documentation on changes." }
 linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in documentation." }
 
 
