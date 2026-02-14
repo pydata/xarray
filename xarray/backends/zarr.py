@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import os
@@ -1479,102 +1480,126 @@ class ZarrStore(AbstractWritableDataStore):
         existing_keys = await self._array_keys_async()
         is_zarr_v3_format = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
 
-        writes = []
+        writes = await asyncio.gather(
+            *[
+                self._process_one_variable_async(
+                    vn,
+                    v,
+                    existing_keys=existing_keys,
+                    is_zarr_v3_format=is_zarr_v3_format,
+                    check_encoding_set=check_encoding_set,
+                )
+                for vn, v in variables.items()
+            ]
+        )
+        return list(writes)
 
-        for vn, v in variables.items():
-            name = _encode_variable_name(vn)
-            attrs = v.attrs.copy()
-            dims = v.dims
-            dtype = v.dtype
-            shape = v.shape
+    async def _process_one_variable_async(
+        self,
+        vn: str,
+        v: Variable,
+        *,
+        existing_keys: tuple[str, ...],
+        is_zarr_v3_format: bool,
+        check_encoding_set,
+    ):
+        """Process a single variable for async set_variables; returns (source, target, region) for writer.add."""
+        from zarr import Array as ZarrArray
 
-            if self._use_zarr_fill_value_as_mask:
-                fill_value = attrs.pop("_FillValue", None)
+        print("processing variable", vn)
+
+        name = _encode_variable_name(vn)
+        attrs = v.attrs.copy()
+        dims = v.dims
+        dtype = v.dtype
+        shape = v.shape
+
+        if self._use_zarr_fill_value_as_mask:
+            fill_value = attrs.pop("_FillValue", None)
+        else:
+            fill_value = v.encoding.pop("fill_value", None)
+            if fill_value is None and v.dtype.kind == "f":
+                fill_value = np.nan
+            if "_FillValue" in attrs:
+                fv = attrs.pop("_FillValue")
+                if fv is not None:
+                    attrs["_FillValue"] = FillValueCoder.encode(fv, dtype)
+
+        if "_FillValue" in v.encoding:
+            if v.encoding.get("_FillValue") is not None:
+                raise ValueError("Zarr does not support _FillValue in encoding.")
             else:
-                fill_value = v.encoding.pop("fill_value", None)
-                if fill_value is None and v.dtype.kind == "f":
-                    fill_value = np.nan
-                if "_FillValue" in attrs:
-                    fv = attrs.pop("_FillValue")
-                    if fv is not None:
-                        attrs["_FillValue"] = FillValueCoder.encode(fv, dtype)
+                del v.encoding["_FillValue"]
 
-            if "_FillValue" in v.encoding:
-                if v.encoding.get("_FillValue") is not None:
-                    raise ValueError("Zarr does not support _FillValue in encoding.")
-                else:
-                    del v.encoding["_FillValue"]
+        zarr_shape = None
+        write_region = self._write_region if self._write_region is not None else {}
+        write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
 
-            zarr_shape = None
-            write_region = self._write_region if self._write_region is not None else {}
-            write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
+        if self._mode != "w" and name in existing_keys:
+            # existing variable: open and optionally resize via zarr async API
+            zarr_async_array = await self._open_existing_array_async(name=name)
+            if self._append_dim is not None and self._append_dim in dims:
+                append_axis = dims.index(self._append_dim)
+                assert write_region[self._append_dim] == slice(None)
+                write_region[self._append_dim] = slice(
+                    zarr_async_array.shape[append_axis], None
+                )
+                new_shape = (
+                    zarr_async_array.shape[:append_axis]
+                    + (zarr_async_array.shape[append_axis] + v.shape[append_axis],)
+                    + zarr_async_array.shape[append_axis + 1 :]
+                )
+                await zarr_async_array.resize(new_shape)
+            zarr_shape = zarr_async_array.shape
+        region = tuple(write_region[dim] for dim in dims)
 
-            if self._mode != "w" and name in existing_keys:
-                # existing variable: open and optionally resize via zarr async API
-                zarr_async_array = await self._open_existing_array_async(name=name)
-                if self._append_dim is not None and self._append_dim in dims:
-                    append_axis = dims.index(self._append_dim)
-                    assert write_region[self._append_dim] == slice(None)
-                    write_region[self._append_dim] = slice(
-                        zarr_async_array.shape[append_axis], None
-                    )
-                    new_shape = (
-                        zarr_async_array.shape[:append_axis]
-                        + (zarr_async_array.shape[append_axis] + v.shape[append_axis],)
-                        + zarr_async_array.shape[append_axis + 1 :]
-                    )
-                    await zarr_async_array.resize(new_shape)
-                zarr_shape = zarr_async_array.shape
-            region = tuple(write_region[dim] for dim in dims)
+        encoding = extract_zarr_variable_encoding(
+            v,
+            raise_on_invalid=vn in check_encoding_set,
+            name=vn,
+            zarr_format=3 if is_zarr_v3_format else 2,
+        )
+        effective_write_chunks = encoding.get("shards") or encoding["chunks"]
 
-            encoding = extract_zarr_variable_encoding(
-                v,
-                raise_on_invalid=vn in check_encoding_set,
-                name=vn,
-                zarr_format=3 if is_zarr_v3_format else 2,
+        if self._align_chunks and isinstance(effective_write_chunks, tuple):
+            v = grid_rechunk(
+                v=v,
+                enc_chunks=effective_write_chunks,
+                region=region,
             )
-            effective_write_chunks = encoding.get("shards") or encoding["chunks"]
 
-            if self._align_chunks and isinstance(effective_write_chunks, tuple):
-                v = grid_rechunk(
-                    v=v,
-                    enc_chunks=effective_write_chunks,
-                    region=region,
-                )
+        if self._safe_chunks and isinstance(effective_write_chunks, tuple):
+            shape = zarr_shape or v.shape
+            validate_grid_chunks_alignment(
+                nd_v_chunks=v.chunks,
+                enc_chunks=effective_write_chunks,
+                region=region,
+                allow_partial_chunks=self._mode != "r+",
+                name=name,
+                backend_shape=shape,
+            )
 
-            if self._safe_chunks and isinstance(effective_write_chunks, tuple):
-                shape = zarr_shape or v.shape
-                validate_grid_chunks_alignment(
-                    nd_v_chunks=v.chunks,
-                    enc_chunks=effective_write_chunks,
-                    region=region,
-                    allow_partial_chunks=self._mode != "r+",
-                    name=name,
-                    backend_shape=shape,
-                )
+        if self._mode == "w" or name not in existing_keys:
+            encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
+            if is_zarr_v3_format:
+                encoding["dimension_names"] = dims
+            else:
+                encoded_attrs[DIMENSION_KEY] = dims
+            encoding["overwrite"] = self._mode == "w"
 
-            if self._mode == "w" or name not in existing_keys:
-                encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
-                if is_zarr_v3_format:
-                    encoding["dimension_names"] = dims
-                else:
-                    encoded_attrs[DIMENSION_KEY] = dims
-                encoding["overwrite"] = self._mode == "w"
+            zarr_async_array = await self._create_new_array_async(
+                name=name,
+                dtype=dtype,
+                shape=shape,
+                fill_value=fill_value,
+                encoding=encoding,
+                attrs=encoded_attrs,
+            )
 
-                zarr_async_array = await self._create_new_array_async(
-                    name=name,
-                    dtype=dtype,
-                    shape=shape,
-                    fill_value=fill_value,
-                    encoding=encoding,
-                    attrs=encoded_attrs,
-                )
+        print("done processing variable", vn)
 
-            from zarr import Array as ZarrArray
-            zarr_array = ZarrArray(zarr_async_array)
-            writes.append((v.data, zarr_array, region))
-
-        return writes
+        zarr_array = ZarrArray(zarr_async_array)
+        return (v.data, zarr_array, region)
 
     def sync(self) -> None:
         pass
