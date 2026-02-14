@@ -829,7 +829,7 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             return self._members
 
-    async def _members_async(self) -> dict[str, ZarrAsyncArray | ZarrAsyncGroup]:
+    async def _members_async(self) -> dict[str, ZarrAsyncArray | ZarrAsyncGroup | ZarrArray | ZarrGroup]:
         if not self._cache_members:
             return await self._fetch_members_async()
         else:
@@ -862,9 +862,10 @@ class ZarrStore(AbstractWritableDataStore):
 
     async def _array_keys_async(self) -> tuple[str, ...]:
         from zarr import AsyncArray as ZarrAsyncArray
+        from zarr import Array as ZarrArray
 
         return tuple(
-            key for (key, node) in (await self._members_async()).items() if isinstance(node, ZarrAsyncArray)
+            key for (key, node) in (await self._members_async()).items() if isinstance(node, (ZarrAsyncArray, ZarrArray))
         )
 
     def arrays(self) -> tuple[tuple[str, ZarrArray], ...]:
