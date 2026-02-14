@@ -62,9 +62,9 @@ if TYPE_CHECKING:
         ZarrGroup = Any  # type: ignore[misc, assignment, unused-ignore]
     try:
         # this is V3 only
-        from zarr.storage import StoreLike as ZarrStoreLike
         from zarr import AsyncArray as ZarrAsyncArray
         from zarr import AsyncGroup as ZarrAsyncGroup
+        from zarr.storage import StoreLike as ZarrStoreLike
     except ImportError:
         ZarrStoreLike = Any  # type: ignore[misc, assignment, unused-ignore]
         ZarrAsyncArray = Any  # type: ignore[misc, assignment, unused-ignore]
