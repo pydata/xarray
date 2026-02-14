@@ -1485,7 +1485,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         writes = await asyncio.gather(
             *[
-                self._process_one_variable_async(
+                self._set_one_variable_async(
                     vn,
                     v,
                     existing_keys=existing_keys,
@@ -1497,7 +1497,7 @@ class ZarrStore(AbstractWritableDataStore):
         )
         return list(writes)
 
-    async def _process_one_variable_async(
+    async def _set_one_variable_async(
         self,
         vn: str,
         v: Variable,
@@ -1508,8 +1508,6 @@ class ZarrStore(AbstractWritableDataStore):
     ):
         """Process a single variable for async set_variables; returns (source, target, region) for writer.add."""
         from zarr import Array as ZarrArray
-
-        print("processing variable", vn)
 
         name = _encode_variable_name(vn)
         attrs = v.attrs.copy()
@@ -1598,8 +1596,6 @@ class ZarrStore(AbstractWritableDataStore):
                 encoding=encoding,
                 attrs=encoded_attrs,
             )
-
-        print("done processing variable", vn)
 
         zarr_array = ZarrArray(zarr_async_array)
         return (v.data, zarr_array, region)
