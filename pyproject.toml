@@ -37,7 +37,7 @@ accel = [
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
   "netCDF4>=1.6.0",
-  "h5netcdf>=1.4.0",
+  "h5netcdf[h5py]>=1.4.0",
   "pydap",
   "scipy>=1.13",
   "zarr>=2.18",
@@ -81,6 +81,7 @@ dev = [
   "pytest-timeout",
   "pytest-xdist",
   "pytest-asyncio",
+  "pytz",
   "ruff>=0.8.0",
   "sphinx",
   "sphinx_autosummary_accessors",
