@@ -43,7 +43,7 @@ from xarray.namedarray.utils import module_available
 if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ZarrArray, ZarrGroup, ZarrAsyncArray
+    from xarray.core.types import ZarrArray, ZarrGroup, ZarrAsyncArray, ZarrAsyncGroup
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -829,6 +829,12 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             return self._members
 
+    async def _members_async(self) -> dict[str, ZarrAsyncArray | ZarrAsyncGroup]:
+        if not self._cache_members:
+            return await self._fetch_members_async()
+        else:
+            return self._members
+
     def _fetch_members(self) -> dict[str, ZarrArray | ZarrGroup]:
         """
         Get the arrays and groups defined in the zarr group modelled by this Store
@@ -840,11 +846,25 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             return dict(self.zarr_group.items())
 
+    async def _fetch_members_async(self) -> dict[str, ZarrAsyncArray | ZarrAsyncGroup]:
+        members = []
+        async for key, node in await self._zarr_async_group().members():
+            members.append((key, node))
+        return dict(members)
+
+
     def array_keys(self) -> tuple[str, ...]:
         from zarr import Array as ZarrArray
 
         return tuple(
             key for (key, node) in self.members.items() if isinstance(node, ZarrArray)
+        )
+
+    async def _array_keys_async(self) -> tuple[str, ...]:
+        from zarr import AsyncArray as ZarrAsyncArray
+
+        return tuple(
+            key for (key, node) in (await self._members_async()).items() if isinstance(node, ZarrAsyncArray)
         )
 
     def arrays(self) -> tuple[tuple[str, ZarrArray], ...]:
@@ -1079,7 +1099,7 @@ class ZarrStore(AbstractWritableDataStore):
                 kwargs["zarr_format"] = self.zarr_group.metadata.zarr_format
             zarr.consolidate_metadata(self.zarr_group.store, **kwargs)
 
-    def _zarr_async_group(self):
+    def _zarr_async_group(self) -> ZarrAsyncGroup:
         # Using private zarr attribute
         return self.zarr_group._async_group
         # Equivalent with public API
@@ -1092,7 +1112,10 @@ class ZarrStore(AbstractWritableDataStore):
 
             zarr_async_array = sync(self._open_existing_array_async(name=name))
             return ZarrArray(zarr_async_array)
-        # zarr v2: no async API, use sync open
+        return self._open_existing_array_sync_v2(name=name)
+
+    def _open_existing_array_sync_v2(self, *, name) -> ZarrArray:
+        """Sync open of an existing array (zarr v2 only)."""
         import zarr
         from zarr import Array as ZarrArray
 
@@ -1190,7 +1213,19 @@ class ZarrStore(AbstractWritableDataStore):
                 )
             )
             return ZarrArray(zarr_async_array)
-        # zarr v2: no async API, use sync create
+        return self._create_new_array_sync_v2(
+            name=name,
+            shape=shape,
+            dtype=dtype,
+            fill_value=fill_value,
+            encoding=encoding,
+            attrs=attrs,
+        )
+
+    def _create_new_array_sync_v2(
+        self, *, name, shape, dtype, fill_value, encoding, attrs
+    ) -> ZarrArray:
+        """Sync create of a new array (zarr v2 only)."""
         if coding.strings.check_vlen_dtype(dtype) is str:
             dtype = str
 
@@ -1275,17 +1310,24 @@ class ZarrStore(AbstractWritableDataStore):
             List of dimension names that should be treated as unlimited
             dimensions.
         """
-        # Note: set_variables is not defined in terms of sync(_set_variables_async)
-        # because inside the async runner we cannot call self.zarr_group[name]
-        # (zarr would raise "Calling sync() from within a running loop").
-        # So the sync path uses _set_variables_sync, which calls _create_new_array
-        # and _open_existing_array (those use sync() internally on v3).
-        self._set_variables_sync(
-            variables=variables,
-            check_encoding_set=check_encoding_set,
-            writer=writer,
-            unlimited_dims=unlimited_dims,
-        )
+        if _zarr_v3():
+            from zarr.api.synchronous import sync
+
+            writes = sync(self._set_variables_async(
+                variables=variables,
+                check_encoding_set=check_encoding_set,
+                writer=writer,
+                unlimited_dims=unlimited_dims,
+            ))
+        else:
+            writes = self._set_variables_sync(
+                variables=variables,
+                check_encoding_set=check_encoding_set,
+                writer=writer,
+                unlimited_dims=unlimited_dims,
+            )
+        for source, target, region in writes:
+            writer.add(source, target, region)
 
     def _set_variables_sync(
         self,
@@ -1297,6 +1339,8 @@ class ZarrStore(AbstractWritableDataStore):
         """Sync implementation of set_variables (zarr v2 or internal use)."""
         existing_keys = self.array_keys()
         is_zarr_v3_format = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
+
+        writes = []
 
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
@@ -1419,7 +1463,9 @@ class ZarrStore(AbstractWritableDataStore):
                     attrs=encoded_attrs,
                 )
 
-            writer.add(v.data, zarr_array, region)
+            writes.append((v.data, zarr_array, region))
+
+        return writes
 
     async def _set_variables_async(
         self,
@@ -1429,8 +1475,10 @@ class ZarrStore(AbstractWritableDataStore):
         unlimited_dims=None,
     ):
         """Async version of set_variables using zarr's asynchronous API."""
-        existing_keys = self.array_keys()
+        existing_keys = await self._array_keys_async()
         is_zarr_v3_format = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
+
+        writes = []
 
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
@@ -1521,8 +1569,11 @@ class ZarrStore(AbstractWritableDataStore):
                     attrs=encoded_attrs,
                 )
 
+            from zarr import Array as ZarrArray
             zarr_array = ZarrArray(zarr_async_array)
-            writer.add(v.data, zarr_array, region)
+            writes.append((v.data, zarr_array, region))
+
+        return writes
 
     def sync(self) -> None:
         pass
