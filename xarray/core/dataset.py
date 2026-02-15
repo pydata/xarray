@@ -7206,11 +7206,23 @@ class Dataset(
 
     def _to_dataframe(self, ordered_dims: Mapping[Any, int]):
         from xarray.core.extension_array import PandasExtensionArray
+        from xarray.core.indexes import PandasIndex, PandasMultiIndex
 
-        # All and only non-index arrays (whether data or coordinates) should
-        # become columns in the output DataFrame. Excluding indexes rather
-        # than dims handles the case of a MultiIndex along a single dimension.
-        columns_in_order = [k for k in self.variables if k not in self.xindexes]
+        # All non-index variables become columns. For indexes, I excluded:
+        # 1. PandasMultiIndex components (A, B from a MultiIndex)
+        # 2. PandasIndex where name matches dim (e.g., 'x' indexing dim 'x')
+        # 3. Any index whose name matches a dimension
+        # This allows PandasIndex coords created via set_xindex with a different
+        # name (e.g., 'pf' indexing dim 'pos') to be included as columns.
+        indexes_to_exclude = set()
+        for name, idx in self.xindexes.items():
+            if (
+                isinstance(idx, PandasMultiIndex)
+                or (isinstance(idx, PandasIndex) and name == idx.dim)
+                or name in self.dims
+            ):
+                indexes_to_exclude.add(name)
+        columns_in_order = [k for k in self.variables if k not in indexes_to_exclude]
         non_extension_array_columns = [
             k
             for k in columns_in_order
