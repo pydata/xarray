@@ -3818,6 +3818,17 @@ class ZarrBase(CFEncodedBase):
             # ``raise_on_invalid=vn in check_encoding_set`` line in zarr.py
             # ds.foo.encoding["fill_value"] = fv
 
+    def test_object_codec(self) -> None:
+        data = xr.DataArray(
+            data=np.zeros((2, 2)),
+            dims=["x", "y"],
+            coords=dict(y=np.array(["a", "b"], dtype=object)),
+        )
+        with self.create_zarr_target() as store_target:
+            data.to_zarr(store_target, **self.version_kwargs)
+            data = xr.open_zarr(store_target, **self.version_kwargs)
+            data.to_zarr(store_target, **self.version_kwargs, mode="w")
+
 
 @requires_zarr
 @pytest.mark.skipif(
