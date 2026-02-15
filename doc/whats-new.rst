@@ -603,6 +603,9 @@ New Features
 - ``compute=False`` is now supported by :py:meth:`DataTree.to_netcdf` and
   :py:meth:`DataTree.to_zarr`.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- ``.sel`` operations now support the ``method`` and ``tolerance`` keyword arguments,
+  for the case of indexing with a slice.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - ``open_dataset`` will now correctly infer a path ending in ``.zarr/`` as zarr
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
