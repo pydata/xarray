@@ -17,7 +17,16 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
-
+- Xarray will no longer by default decode a variable into a
+  :py:class:`np.timedelta64` dtype based on the presence of a timedelta-like
+  ``"units"`` attribute alone. Instead it will rely on the presence of a
+  :py:class:`np.timedelta64` dtype attribute, which is now xarray's default way
+  of encoding :py:class:`np.timedelta64` values. The old decoding behavior can
+  be restored by specifying ``decode_timedelta=True`` or
+  ``decode_timedelta=CFTimedeltaCoder(decode_via_units=True)`` in
+  :py:meth:`open_dataset`. This finalizes the deprecation cycle initiated in
+  xarray version 2025.01.2 (:pull:`11173`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Deprecations
 ~~~~~~~~~~~~
