@@ -2246,6 +2246,12 @@ class TestDataset:
 
         assert_identical(mdata.sel(x={"one": "a", "two": 1}), mdata.sel(one="a", two=1))
 
+        # GH10534: slicing on multi-index levels should raise
+        with pytest.raises(ValueError, match="slice-based selection on multi-index"):
+            mdata.sel(one=slice("a", "b"))
+        with pytest.raises(ValueError, match="slice-based selection on multi-index"):
+            mdata.sel(two=slice(1, 2))
+
     def test_broadcast_like(self) -> None:
         original1 = DataArray(
             np.random.randn(5), [("x", range(5))], name="a"
