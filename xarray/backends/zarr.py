@@ -819,8 +819,7 @@ class ZarrStore(AbstractWritableDataStore):
         """
         loop = asyncio.get_running_loop()
 
-        # _get_open_params calls zarr.open_group() → sync(). Safe on
-        # executor thread: IO loop is free (awaiting run_in_executor).
+        # Run on executor to avoid reentrant sync() deadlock
         (
             zarr_group,
             consolidate_on_close,
@@ -843,12 +842,9 @@ class ZarrStore(AbstractWritableDataStore):
             ),
         )
 
-        # Already async — no change needed
         group_paths = await _iter_zarr_groups_async(zarr_group, parent=group)
 
-        # _build_group_members calls zarr_group[rel_path] → sync().
-        # _create_stores_from_members with cache_members calls _fetch_members → sync().
-        # Both safe on executor thread for the same reason.
+        # Run on executor to avoid reentrant sync() deadlock
         def _build_and_create():
             group_members = _build_group_members(zarr_group, group_paths, group)
             return cls._create_stores_from_members(
@@ -1915,10 +1911,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         if _zarr_v3():
             from zarr.core.sync import sync as zarr_sync
 
-            # Decompose open_store() to use async group discovery.
-            # Each step must be a separate top-level call — we cannot nest
-            # zarr_sync() calls (e.g., calling _get_open_params from within
-            # an async function dispatched via zarr_sync would deadlock).
+            # Sync call — safe outside zarr's IO loop
             (
                 zarr_group,
                 consolidate_on_close,
@@ -1938,7 +1931,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 zarr_format=zarr_format,
             )
 
-            # Async parallel group discovery (25x faster than sync recursive)
             group_paths = zarr_sync(_iter_zarr_groups_async(zarr_group, parent=parent))
 
             return zarr_sync(
@@ -2016,21 +2008,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         decode_timedelta=None,
         max_concurrency: int | None = None,
     ) -> DataTree:
-        """Async helper to open datatree groups concurrently.
-
-        Builds group members and creates ZarrStore instances on executor threads
-        where zarr_sync() calls are safe (the IO loop is free, awaiting
-        run_in_executor). This avoids the deadlock that occurs when zarr_sync()
-        is called from the main thread while the IO loop is already running.
-
-        Uses a dedicated ThreadPoolExecutor instead of the event loop's default
-        executor to prevent thread pool exhaustion deadlocks. The deadlock occurs
-        because open_dataset() triggers eager data reads (e.g., for time decoding)
-        which call zarr_sync() — blocking the thread while waiting for the zarr IO
-        loop. The IO loop in turn needs the default executor for codec decompression.
-        If all default executor threads are blocked waiting on the IO loop, neither
-        can proceed. A separate pool breaks this circular dependency.
-        """
+        """Open datatree groups concurrently using a dedicated executor."""
         from xarray.backends.api import _maybe_create_default_indexes_async
 
         if max_concurrency is None:
