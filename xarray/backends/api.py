@@ -427,10 +427,7 @@ def _datatree_from_backend_datatree(
     return tree
 
 
-async def _maybe_create_default_indexes_async(
-    ds: Dataset, executor=None
-) -> Dataset:
-
+async def _maybe_create_default_indexes_async(ds: Dataset, executor=None) -> Dataset:
     import asyncio
 
     to_index_names = [
