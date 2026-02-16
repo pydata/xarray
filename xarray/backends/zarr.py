@@ -2266,7 +2266,11 @@ def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
 
 
 async def _iter_zarr_groups_async(root: ZarrGroup, parent: str = "/") -> list[str]:
-    from zarr.core.group import AsyncGroup
+    try:
+        from zarr.core.group import AsyncGroup
+    except (ImportError, ModuleNotFoundError):
+        # zarr v2: no async group support, fall back to sync
+        return list(_iter_zarr_groups(root, parent=parent))
 
     parent_nodepath = NodePath(parent)
     group_paths = [str(parent_nodepath)]
