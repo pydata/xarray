@@ -6,6 +6,7 @@ import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import numpy as np
@@ -816,44 +817,55 @@ class ZarrStore(AbstractWritableDataStore):
         dict[str, ZarrStore]
             Dictionary mapping group paths to ZarrStore instances.
         """
+        loop = asyncio.get_running_loop()
+
+        # _get_open_params calls zarr.open_group() → sync(). Safe on
+        # executor thread: IO loop is free (awaiting run_in_executor).
         (
             zarr_group,
             consolidate_on_close,
             close_store_on_close,
             use_zarr_fill_value_as_mask,
-        ) = _get_open_params(
-            store=store,
-            mode=mode,
-            synchronizer=synchronizer,
-            group=group,
-            consolidated=consolidated,
-            consolidate_on_close=consolidate_on_close,
-            chunk_store=chunk_store,
-            storage_options=storage_options,
-            zarr_version=zarr_version,
-            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
-            zarr_format=zarr_format,
+        ) = await loop.run_in_executor(
+            None,
+            lambda: _get_open_params(
+                store=store,
+                mode=mode,
+                synchronizer=synchronizer,
+                group=group,
+                consolidated=consolidated,
+                consolidate_on_close=consolidate_on_close,
+                chunk_store=chunk_store,
+                storage_options=storage_options,
+                zarr_version=zarr_version,
+                use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+                zarr_format=zarr_format,
+            ),
         )
 
-        # Use async group discovery (single store.list() call)
+        # Already async — no change needed
         group_paths = await _iter_zarr_groups_async(zarr_group, parent=group)
 
-        # Build group members and create stores using shared helpers
-        group_members = _build_group_members(zarr_group, group_paths, group)
+        # _build_group_members calls zarr_group[rel_path] → sync().
+        # _create_stores_from_members with cache_members calls _fetch_members → sync().
+        # Both safe on executor thread for the same reason.
+        def _build_and_create():
+            group_members = _build_group_members(zarr_group, group_paths, group)
+            return cls._create_stores_from_members(
+                group_members,
+                mode,
+                consolidate_on_close,
+                append_dim,
+                write_region,
+                safe_chunks,
+                write_empty,
+                close_store_on_close,
+                use_zarr_fill_value_as_mask,
+                align_chunks,
+                cache_members,
+            )
 
-        return cls._create_stores_from_members(
-            group_members,
-            mode,
-            consolidate_on_close,
-            append_dim,
-            write_region,
-            safe_chunks,
-            write_empty,
-            close_store_on_close,
-            use_zarr_fill_value_as_mask,
-            align_chunks,
-            cache_members,
-        )
+        return await loop.run_in_executor(None, _build_and_create)
 
     @classmethod
     def open_group(
@@ -1899,28 +1911,48 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         else:
             parent = str(NodePath("/"))
 
-        stores = ZarrStore.open_store(
-            filename_or_obj,
-            group=parent,
-            mode=mode,
-            synchronizer=synchronizer,
-            consolidated=consolidated,
-            consolidate_on_close=False,
-            chunk_store=chunk_store,
-            storage_options=storage_options,
-            zarr_version=zarr_version,
-            zarr_format=zarr_format,
-        )
-
         # Use async path for zarr v3 (concurrent loading), sync path for zarr v2
         if _zarr_v3():
             from zarr.core.sync import sync as zarr_sync
 
+            # Decompose open_store() to use async group discovery.
+            # Each step must be a separate top-level call — we cannot nest
+            # zarr_sync() calls (e.g., calling _get_open_params from within
+            # an async function dispatched via zarr_sync would deadlock).
+            (
+                zarr_group,
+                consolidate_on_close,
+                close_store_on_close,
+                use_zarr_fill_value_as_mask,
+            ) = _get_open_params(
+                store=filename_or_obj,
+                mode=mode,
+                synchronizer=synchronizer,
+                group=parent,
+                consolidated=consolidated,
+                consolidate_on_close=False,
+                chunk_store=chunk_store,
+                storage_options=storage_options,
+                zarr_version=zarr_version,
+                use_zarr_fill_value_as_mask=None,
+                zarr_format=zarr_format,
+            )
+
+            # Async parallel group discovery (25x faster than sync recursive)
+            group_paths = zarr_sync(
+                _iter_zarr_groups_async(zarr_group, parent=parent)
+            )
+
             return zarr_sync(
                 self._open_datatree_from_stores_async(
-                    stores=stores,
+                    zarr_group=zarr_group,
+                    group_paths=group_paths,
                     parent=parent,
                     group=group,
+                    mode=mode,
+                    consolidate_on_close=consolidate_on_close,
+                    close_store_on_close=close_store_on_close,
+                    use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
                     mask_and_scale=mask_and_scale,
                     decode_times=decode_times,
                     concat_characters=concat_characters,
@@ -1933,6 +1965,18 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             )
         else:
             # Fallback for zarr v2: sequential loading
+            stores = ZarrStore.open_store(
+                filename_or_obj,
+                group=parent,
+                mode=mode,
+                synchronizer=synchronizer,
+                consolidated=consolidated,
+                consolidate_on_close=False,
+                chunk_store=chunk_store,
+                storage_options=storage_options,
+                zarr_version=zarr_version,
+                zarr_format=zarr_format,
+            )
             groups_dict = {}
             for path_group, store in stores.items():
                 store_entrypoint = StoreBackendEntrypoint()
@@ -1956,10 +2000,15 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     async def _open_datatree_from_stores_async(
         self,
-        stores: dict,
+        zarr_group,
+        group_paths: list[str],
         parent: str,
         group: str | None,
         *,
+        mode,
+        consolidate_on_close,
+        close_store_on_close,
+        use_zarr_fill_value_as_mask,
         mask_and_scale=True,
         decode_times=True,
         concat_characters=True,
@@ -1969,22 +2018,58 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         decode_timedelta=None,
         max_concurrency: int | None = None,
     ) -> DataTree:
-        """Async helper to open datasets from pre-opened stores and create indexes.
+        """Async helper to open datatree groups concurrently.
 
-        This method takes already-opened stores (avoiding nested zarr_sync() calls)
-        and runs the Dataset opening and index creation concurrently.
+        Builds group members and creates ZarrStore instances on executor threads
+        where zarr_sync() calls are safe (the IO loop is free, awaiting
+        run_in_executor). This avoids the deadlock that occurs when zarr_sync()
+        is called from the main thread while the IO loop is already running.
+
+        Uses a dedicated ThreadPoolExecutor instead of the event loop's default
+        executor to prevent thread pool exhaustion deadlocks. The deadlock occurs
+        because open_dataset() triggers eager data reads (e.g., for time decoding)
+        which call zarr_sync() — blocking the thread while waiting for the zarr IO
+        loop. The IO loop in turn needs the default executor for codec decompression.
+        If all default executor threads are blocked waiting on the IO loop, neither
+        can proceed. A separate pool breaks this circular dependency.
         """
         from xarray.backends.api import _maybe_create_default_indexes_async
 
         if max_concurrency is None:
             max_concurrency = 10
-        sem = asyncio.Semaphore(max_concurrency)
 
-        async def open_one(path_group: str, store) -> tuple[str, Dataset]:
-            async with sem:
+        loop = asyncio.get_running_loop()
+        executor = ThreadPoolExecutor(
+            max_workers=max_concurrency, thread_name_prefix="xarray"
+        )
+
+        async def open_one(path_group: str) -> tuple[str, Dataset]:
+            def _sync_open():
+                if path_group == parent:
+                    group_store = zarr_group
+                else:
+                    rel_path = path_group.removeprefix(f"{parent}/").removeprefix(
+                        "/"
+                    )
+                    group_store = zarr_group[rel_path]
+
+                store = ZarrStore(
+                    group_store,
+                    mode,
+                    consolidate_on_close,
+                    append_dim=None,
+                    write_region=None,
+                    safe_chunks=True,
+                    write_empty=None,
+                    close_store_on_close=close_store_on_close,
+                    use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+                    align_chunks=False,
+                    cache_members=True,
+                )
+
                 store_entrypoint = StoreBackendEntrypoint()
                 with close_on_error(store):
-                    ds = await store_entrypoint.open_dataset_async(
+                    return store_entrypoint.open_dataset(
                         store,
                         mask_and_scale=mask_and_scale,
                         decode_times=decode_times,
@@ -1994,23 +2079,27 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                         use_cftime=use_cftime,
                         decode_timedelta=decode_timedelta,
                     )
-                # Create indexes in parallel (within this group)
-                ds = await _maybe_create_default_indexes_async(ds)
-                if group:
-                    group_name = str(NodePath(path_group).relative_to(parent))
-                else:
-                    group_name = str(NodePath(path_group))
-                return group_name, ds
+
+            ds = await loop.run_in_executor(executor, _sync_open)
+            ds = await _maybe_create_default_indexes_async(ds, executor=executor)
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
+            return group_name, ds
 
         groups_dict: dict[str, Dataset] = {}
 
-        async def collect_result(path_group: str, store) -> None:
-            group_name, ds = await open_one(path_group, store)
+        async def collect_result(path_group: str) -> None:
+            group_name, ds = await open_one(path_group)
             groups_dict[group_name] = ds
 
-        async with asyncio.TaskGroup() as tg:
-            for path_group, store in stores.items():
-                tg.create_task(collect_result(path_group, store))
+        try:
+            async with asyncio.TaskGroup() as tg:
+                for path_group in group_paths:
+                    tg.create_task(collect_result(path_group))
+        finally:
+            executor.shutdown(wait=True, cancel_futures=True)
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
@@ -2123,6 +2212,11 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
         )
 
+        loop = asyncio.get_running_loop()
+        max_workers = min(len(stores), 10) if stores else 1
+        executor = ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="xarray"
+        )
         async def open_one(path_group: str, store) -> tuple[str, Dataset]:
             store_entrypoint = StoreBackendEntrypoint()
 
@@ -2139,15 +2233,20 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                         decode_timedelta=decode_timedelta,
                     )
 
-            ds = await asyncio.to_thread(_load_sync)
+            ds = await loop.run_in_executor(executor, _load_sync)
             if group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
             return group_name, ds
 
-        tasks = [open_one(path_group, store) for path_group, store in stores.items()]
-        results = await asyncio.gather(*tasks)
+        try:
+            tasks = [
+                open_one(path_group, store) for path_group, store in stores.items()
+            ]
+            results = await asyncio.gather(*tasks)
+        finally:
+            executor.shutdown(wait=True, cancel_futures=True)
         return dict(results)
 
 
@@ -2178,87 +2277,15 @@ def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
 
 
 async def _iter_zarr_groups_async(root: ZarrGroup, parent: str = "/") -> list[str]:
-    import json
-
-    import zarr
-
-    store = root.store
-
-    # Check if store supports listing (backward compat)
-    if not getattr(store, "supports_listing", False):
-        # Fallback to sync recursive discovery
-        return list(_iter_zarr_groups(root, parent=parent))
+    from zarr.core.group import AsyncGroup
 
     parent_nodepath = NodePath(parent)
-    group_paths: list[str] = [str(parent_nodepath)]  # Include root
+    group_paths = [str(parent_nodepath)]
 
-    async def is_zarr_group(dir_path: str) -> bool:
-        # Check for zarr v2 .zgroup marker (always indicates a group)
-        zgroup_path = f"{dir_path}/.zgroup" if dir_path else ".zgroup"
-        try:
-            content = await store.get(
-                zgroup_path, prototype=zarr.core.buffer.default_buffer_prototype()
-            )
-            if content is not None:
-                return True
-        except (KeyError, FileNotFoundError):
-            pass
-
-        # Check for zarr v3 zarr.json with node_type=group
-        zarr_json_path = f"{dir_path}/zarr.json" if dir_path else "zarr.json"
-        try:
-            content = await store.get(
-                zarr_json_path, prototype=zarr.core.buffer.default_buffer_prototype()
-            )
-            if content is not None:
-                data = json.loads(content.to_bytes())
-                return data.get("node_type") == "group"
-        except (KeyError, FileNotFoundError, json.JSONDecodeError):
-            pass
-
-        return False
-
-    async def discover_subgroups(dir_path: str) -> list[str]:
-        found_groups: list[str] = []
-        subdirs: list[str] = []
-
-        # list_dir returns files and directories in this path
-        async for entry in store.list_dir(dir_path):
-            # Skip marker files and chunk directories
-            if entry.endswith((".zgroup", "zarr.json")):
-                continue
-            if entry.startswith("c/") or entry == "c":
-                continue  # Chunk storage directory
-            if "/" not in entry:
-                # This is a potential subdirectory
-                subdir = f"{dir_path}/{entry}" if dir_path else entry
-                subdirs.append(subdir)
-
-        # Check each subdirectory in parallel
-        async def check_subdir(subdir: str) -> tuple[str | None, list[str]]:
-            """Check if subdir is a group and discover its subgroups."""
-            if await is_zarr_group(subdir):
-                group_path = (
-                    str(parent_nodepath / subdir) if subdir else str(parent_nodepath)
-                )
-                # Recursively find subgroups
-                sub_groups = await discover_subgroups(subdir)
-                return group_path, sub_groups
-            return None, []
-
-        # Run all subdirectory checks in parallel
-        results = await asyncio.gather(*[check_subdir(sd) for sd in subdirs])
-
-        for group_path, sub_groups in results:
-            if group_path:
-                found_groups.append(group_path)
-                found_groups.extend(sub_groups)
-
-        return found_groups
-
-    # Start discovery from rootshalgive
-    subgroups = await discover_subgroups("")
-    group_paths.extend(subgroups)
+    async_group = root._async_group
+    async for name, member in async_group.members(max_depth=None):
+        if isinstance(member, AsyncGroup):
+            group_paths.append(str(parent_nodepath / name))
 
     return sorted(group_paths)
 
