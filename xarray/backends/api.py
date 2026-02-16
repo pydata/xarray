@@ -361,21 +361,31 @@ def _datatree_from_backend_datatree(
 
             async def create_indexes_async() -> dict[str, Dataset]:
                 import asyncio
+                from concurrent.futures import ThreadPoolExecutor
 
-                results: dict[str, Dataset] = {}
-                tasks = [
-                    _create_index_for_node(path, node.dataset)
-                    for path, [node] in group_subtrees(backend_tree)
-                ]
-                for fut in asyncio.as_completed(tasks):
-                    path, ds = await fut
-                    results[path] = ds
-                return results
+                executor = ThreadPoolExecutor(
+                    max_workers=10, thread_name_prefix="xarray-idx"
+                )
+                try:
+                    results: dict[str, Dataset] = {}
 
-            async def _create_index_for_node(
-                path: str, ds: Dataset
-            ) -> tuple[str, Dataset]:
-                return path, await _maybe_create_default_indexes_async(ds)
+                    async def _create_index_for_node(
+                        path: str, ds: Dataset
+                    ) -> tuple[str, Dataset]:
+                        return path, await _maybe_create_default_indexes_async(
+                            ds, executor=executor
+                        )
+
+                    tasks = [
+                        _create_index_for_node(path, node.dataset)
+                        for path, [node] in group_subtrees(backend_tree)
+                    ]
+                    for fut in asyncio.as_completed(tasks):
+                        path, ds = await fut
+                        results[path] = ds
+                    return results
+                finally:
+                    executor.shutdown(wait=True, cancel_futures=True)
 
             results = zarr_sync(create_indexes_async())
             tree = DataTree.from_dict(results, name=backend_tree.name)
@@ -417,12 +427,10 @@ def _datatree_from_backend_datatree(
     return tree
 
 
-async def _maybe_create_default_indexes_async(ds: Dataset) -> Dataset:
-    """Create default indexes for dimension coordinates asynchronously.
+async def _maybe_create_default_indexes_async(
+    ds: Dataset, executor=None
+) -> Dataset:
 
-    This function parallelizes both data loading and index creation,
-    which can significantly speed up opening datasets with many coordinates.
-    """
     import asyncio
 
     to_index_names = [
@@ -434,11 +442,13 @@ async def _maybe_create_default_indexes_async(ds: Dataset) -> Dataset:
     if not to_index_names:
         return ds
 
+    loop = asyncio.get_running_loop()
+
     async def load_var(var: Variable) -> Variable:
         try:
             return await var.load_async()
         except NotImplementedError:
-            return await asyncio.to_thread(var.load)
+            return await loop.run_in_executor(executor, var.load)
 
     await asyncio.gather(*[load_var(ds.variables[name]) for name in to_index_names])
 
