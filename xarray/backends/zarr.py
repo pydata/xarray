@@ -1939,9 +1939,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             )
 
             # Async parallel group discovery (25x faster than sync recursive)
-            group_paths = zarr_sync(
-                _iter_zarr_groups_async(zarr_group, parent=parent)
-            )
+            group_paths = zarr_sync(_iter_zarr_groups_async(zarr_group, parent=parent))
 
             return zarr_sync(
                 self._open_datatree_from_stores_async(
@@ -2048,9 +2046,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 if path_group == parent:
                     group_store = zarr_group
                 else:
-                    rel_path = path_group.removeprefix(f"{parent}/").removeprefix(
-                        "/"
-                    )
+                    rel_path = path_group.removeprefix(f"{parent}/").removeprefix("/")
                     group_store = zarr_group[rel_path]
 
                 store = ZarrStore(
@@ -2217,6 +2213,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         executor = ThreadPoolExecutor(
             max_workers=max_workers, thread_name_prefix="xarray"
         )
+
         async def open_one(path_group: str, store) -> tuple[str, Dataset]:
             store_entrypoint = StoreBackendEntrypoint()
 
