@@ -2009,8 +2009,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         max_concurrency: int | None = None,
     ) -> DataTree:
         """Open datatree groups concurrently using a dedicated executor."""
-        from xarray.backends.api import _maybe_create_default_indexes_async
-
         if max_concurrency is None:
             max_concurrency = 10
 
@@ -2055,7 +2053,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     )
 
             ds = await loop.run_in_executor(executor, _sync_open)
-            ds = await _maybe_create_default_indexes_async(ds, executor=executor)
             if group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
