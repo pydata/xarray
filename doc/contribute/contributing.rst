@@ -208,7 +208,7 @@ development environment:
 
 That's it! Now you're ready to contribute to Xarray.
 
-Pixi defines multiple environments as well as tasks to help you with development. These include tasks for:
+Pixi defines multiple environments as well as tasks to help you with development (view these by running ``pixi task list``). These include tasks for:
 
 - running the test suite
 - building the documentation
@@ -221,16 +221,10 @@ are only run in a single environment (e.g., building the documentation or runnin
 
 You can see all available environments and tasks by running::
 
-    pixi list
+    pixi info
 
-For example:
 
-- ``pixi run doc`` will build the documentation
-- ``pixi run mypy`` will run the static type checker
-- ``pixi run test`` will run the test suite
-- ``pixi run pre-commit`` will run all code formatters and linters - defined via the pre-commit hooks
-
-When running ``pixi run test`` you will be prompted to select which environment you want to use. You can specify the environment
+When running a test you may be prompted to select which environment you want to use. You can specify the environment
 directly by providing the ``-e`` flag, e.g., ``pixi run -e my_environment test`` . Our CI setup uses Pixi as well - you can easily
 reproduce CI tests by running the same tasks in the same environments as defined in the CI.
 
@@ -1056,7 +1050,7 @@ PR checklist
   - Test the code using `Pytest <https://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
   - By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior per commit by adding a ``[test-upstream]`` tag to the first line of the commit message. For documentation-only commits, you can skip the CI per commit by adding a ``[skip-ci]`` tag to the first line of the commit message.
 
-- **Properly format your code** and verify that it passes the formatting guidelines set by `ruff <https://github.com/astral-sh/ruff>`_. See `"Code formatting" <https://docs.xarray.dev/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
+- **Properly format your code** and verify that it passes the formatting guidelines set by `ruff <https://github.com/astral-sh/ruff>`_. See `"Code formatting" <https://docs.xarray.dev/en/stable/contributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
 
   - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
 
