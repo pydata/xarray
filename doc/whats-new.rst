@@ -26,6 +26,8 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
+  By `Julia Signell <https://github.com/jsignell>`_
 
 Documentation
 ~~~~~~~~~~~~~
