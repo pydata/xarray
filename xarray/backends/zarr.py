@@ -1931,12 +1931,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 zarr_format=zarr_format,
             )
 
-            group_paths = zarr_sync(_iter_zarr_groups_async(zarr_group, parent=parent))
-
             return zarr_sync(
                 self._open_datatree_from_stores_async(
                     zarr_group=zarr_group,
-                    group_paths=group_paths,
                     parent=parent,
                     group=group,
                     mode=mode,
@@ -1991,7 +1988,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     async def _open_datatree_from_stores_async(
         self,
         zarr_group,
-        group_paths: list[str],
         parent: str,
         group: str | None,
         *,
@@ -2008,25 +2004,65 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         decode_timedelta=None,
         max_concurrency: int | None = None,
     ) -> DataTree:
-        """Open datatree groups concurrently using a dedicated executor."""
+        """Open datatree using native async for I/O, threads only for CPU decode."""
         if max_concurrency is None:
             max_concurrency = 10
 
         loop = asyncio.get_running_loop()
         executor = ThreadPoolExecutor(
-            max_workers=max_concurrency, thread_name_prefix="xarray"
+            max_workers=max_concurrency, thread_name_prefix="xarray-cpu"
         )
 
+        from zarr import Array as ZarrSyncArray
+        from zarr import Group as ZarrSyncGroup
+        from zarr.core.group import AsyncGroup as ZarrAsyncGroup
+
+        async_root = zarr_group._async_group
+        parent_nodepath = NodePath(parent)
+
+        # Phase 1: Walk tree, collect groups + per-group members in one async pass.
+        # This replaces both _iter_zarr_groups_async and per-group _fetch_members.
+        group_async: dict[str, ZarrAsyncGroup] = {
+            str(parent_nodepath): async_root,
+        }
+        group_children: dict[str, dict] = {str(parent_nodepath): {}}
+
+        async for rel_path, member in async_root.members(max_depth=None):
+            full_path = str(parent_nodepath / rel_path)
+
+            if isinstance(member, ZarrAsyncGroup):
+                group_async[full_path] = member
+                group_children[full_path] = {}
+
+            parts = rel_path.rsplit("/", 1)
+            child_name = parts[-1]
+            parent_rel = parts[0] if len(parts) > 1 else ""
+            parent_path = (
+                str(parent_nodepath / parent_rel)
+                if parent_rel
+                else str(parent_nodepath)
+            )
+            if parent_path in group_children:
+                group_children[parent_path][child_name] = member
+
+        # Phase 2: Open each group — wrap async objects, run CPU decode in threads.
         async def open_one(path_group: str) -> tuple[str, Dataset]:
-            def _sync_open():
-                if path_group == parent:
-                    group_store = zarr_group
-                else:
-                    rel_path = path_group.removeprefix(f"{parent}/").removeprefix("/")
-                    group_store = zarr_group[rel_path]
+            async_grp = group_async[path_group]
+            children = group_children.get(path_group, {})
+
+            def _cpu_open():
+                sync_group = ZarrSyncGroup(async_grp)
+                sync_members = {
+                    name: (
+                        ZarrSyncGroup(child)
+                        if isinstance(child, ZarrAsyncGroup)
+                        else ZarrSyncArray(child)
+                    )
+                    for name, child in children.items()
+                }
 
                 store = ZarrStore(
-                    group_store,
+                    sync_group,
                     mode,
                     consolidate_on_close,
                     append_dim=None,
@@ -2036,8 +2072,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     close_store_on_close=close_store_on_close,
                     use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
                     align_chunks=False,
-                    cache_members=True,
+                    cache_members=False,
                 )
+                store._members = sync_members
+                store._cache_members = True
 
                 store_entrypoint = StoreBackendEntrypoint()
                 with close_on_error(store):
@@ -2052,7 +2090,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                         decode_timedelta=decode_timedelta,
                     )
 
-            ds = await loop.run_in_executor(executor, _sync_open)
+            ds = await loop.run_in_executor(executor, _cpu_open)
             if group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
@@ -2067,7 +2105,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         try:
             async with asyncio.TaskGroup() as tg:
-                for path_group in group_paths:
+                for path_group in sorted(group_async.keys()):
                     tg.create_task(collect_result(path_group))
         finally:
             executor.shutdown(wait=True, cancel_futures=True)
