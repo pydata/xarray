@@ -45,6 +45,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Fix a typo in ``xarray/backends/api.py`` (:pull:`11180`).
+  By `Yaocheng Chen <https://github.com/yaochengchen>`_.
+
 
 .. _whats-new.2026.02.0:
 
