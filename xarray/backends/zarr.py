@@ -767,11 +767,13 @@ class ZarrStore(AbstractWritableDataStore):
         write_empty: bool | None = None,
         cache_members: bool = False,
     ):
-        """Async version of open_store using flat group discovery.
+        """Async version of open_store using asynchronous group discovery.
 
-        This method uses store.list() to discover all groups in a single
-        async call, which is significantly faster than recursive traversal
-        for stores that support listing (like icechunk).
+        This method discovers all groups by recursively traversing the store,
+        issuing asynchronous directory listing calls (via store.list_dir when
+        available) and per-directory store.get calls. As a result, group discovery
+        may involve multiple asynchronous operations and round-trips, especially
+        for large or deeply nested hierarchies.
 
         Parameters
         ----------
@@ -1960,6 +1962,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         max_concurrency: int | None = None,
+        create_default_indexes: bool = True,
     ) -> dict[str, Dataset]:
         """Shared async core: open datasets from pre-opened stores concurrently.
 
@@ -1981,6 +1984,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         if max_concurrency is None:
             max_concurrency = 10
+        elif max_concurrency < 1:
+            raise ValueError(
+                f"max_concurrency must be None or an integer >= 1, got {max_concurrency!r}"
+            )
         sem = asyncio.Semaphore(max_concurrency)
 
         async def open_one(path_group: str, store) -> tuple[str, Dataset]:
@@ -1998,7 +2005,8 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                         decode_timedelta=decode_timedelta,
                     )
                 # Create indexes concurrently
-                ds = await _maybe_create_default_indexes_async(ds)
+                if create_default_indexes:
+                    ds = await _maybe_create_default_indexes_async(ds)
                 if group:
                     group_name = str(NodePath(path_group).relative_to(parent))
                 else:
@@ -2232,16 +2240,19 @@ async def _iter_zarr_groups_async(root: ZarrGroup, parent: str = "/") -> list[st
                 subdirs.append(subdir)
 
         # Check each subdirectory in parallel
+        _sem = asyncio.Semaphore(10)
+
         async def check_subdir(subdir: str) -> tuple[str | None, list[str]]:
             """Check if subdir is a group and discover its subgroups."""
-            if await is_zarr_group(subdir):
-                group_path = (
-                    str(parent_nodepath / subdir) if subdir else str(parent_nodepath)
-                )
-                # Recursively find subgroups
-                sub_groups = await discover_subgroups(subdir)
-                return group_path, sub_groups
-            return None, []
+            async with _sem:
+                if await is_zarr_group(subdir):
+                    group_path = (
+                        str(parent_nodepath / subdir) if subdir else str(parent_nodepath)
+                    )
+                    # Recursively find subgroups
+                    sub_groups = await discover_subgroups(subdir)
+                    return group_path, sub_groups
+                return None, []
 
         # Run all subdirectory checks in parallel
         results = await asyncio.gather(*[check_subdir(sd) for sd in subdirs])
@@ -2253,7 +2264,7 @@ async def _iter_zarr_groups_async(root: ZarrGroup, parent: str = "/") -> list[st
 
         return found_groups
 
-    # Start discovery from rootshalgive
+    # Start discovery from root
     subgroups = await discover_subgroups("")
     group_paths.extend(subgroups)
 

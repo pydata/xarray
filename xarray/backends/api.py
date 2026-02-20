@@ -362,9 +362,17 @@ def _datatree_from_backend_datatree(
             async def create_indexes_async() -> dict[str, Dataset]:
                 import asyncio
 
+                sem = asyncio.Semaphore(10)
+
+                async def _bounded_create_index(
+                    path: str, ds: Dataset,
+                ) -> tuple[str, Dataset]:
+                    async with sem:
+                        return await _create_index_for_node(path, ds)
+
                 results: dict[str, Dataset] = {}
                 tasks = [
-                    _create_index_for_node(path, node.dataset)
+                    _bounded_create_index(path, node.dataset)
                     for path, [node] in group_subtrees(backend_tree)
                 ]
                 for fut in asyncio.as_completed(tasks):
