@@ -45,7 +45,7 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- Fix a typo in ``xarray/core/variable.py`` (:pull:`11181`).
+- Fix a typo in ``xarray/core/dataset.py`` (:pull:`11181`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 
