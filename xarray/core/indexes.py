@@ -536,7 +536,13 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 )
                 kwargs["dtype"] = "float64"
 
-        index = pd.Index(to_numpy(array), **kwargs)
+        values = to_numpy(array)
+        try:
+            index = pd.Index(values, **kwargs)
+        except UnicodeEncodeError:
+            # coerce to object if pandas fails to coerce to string
+            kwargs["dtype"] = "object"
+            index = pd.Index(values, **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
 
@@ -1301,6 +1307,16 @@ class PandasMultiIndex(PandasIndex):
                     ) from err
 
             has_slice = any(isinstance(v, slice) for v in label_values.values())
+
+            if has_slice:
+                slice_levels = [
+                    k for k, v in label_values.items() if isinstance(v, slice)
+                ]
+                raise ValueError(
+                    f"slice-based selection on multi-index level(s) {slice_levels} "
+                    f"is not supported. Use scalar values for multi-index level "
+                    f"selection instead, e.g., ``.sel({slice_levels[0]}=value)``."
+                )
 
             if len(label_values) == self.index.nlevels and not has_slice:
                 indexer = self.index.get_loc(

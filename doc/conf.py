@@ -54,6 +54,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "jupyter_sphinx",
+    "myst_parser",
     "nbsphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",
@@ -268,6 +269,10 @@ html_favicon = "_static/logos/Xarray_Icon_Final.svg"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 html_css_files = ["style.css"]
+
+linkcheck_exclude_documents = [
+    r'whats-new.*', # Allow broken links in old release notes
+]
 
 
 # configuration for sphinxext.opengraph

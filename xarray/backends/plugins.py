@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 import itertools
+import os
 import warnings
 from collections.abc import Callable
 from importlib.metadata import entry_points
@@ -10,10 +11,9 @@ from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.options import OPTIONS
-from xarray.core.utils import module_available
+from xarray.core.utils import is_remote_uri, module_available
 
 if TYPE_CHECKING:
-    import os
     from importlib.metadata import EntryPoint, EntryPoints
 
     from xarray.backends.common import AbstractDataStore
@@ -208,6 +208,11 @@ def guess_engine(
             "https://docs.xarray.dev/en/stable/user-guide/io.html \n"
             "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"
         )
+
+    if isinstance(store_spec, str | os.PathLike):
+        store_spec_str = str(store_spec)
+        if not is_remote_uri(store_spec_str) and not os.path.exists(store_spec_str):
+            raise FileNotFoundError(f"No such file: '{store_spec_str}'")
 
     raise ValueError(error_msg)
 
