@@ -45,6 +45,10 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Add stubtest configuration and allowlist for validating type annotations against
+  runtime behavior. This enables CI integration for type stub validation and helps
+  prevent type annotation regressions (:issue:`11086`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 
 .. _whats-new.2026.02.0:
 
@@ -140,10 +144,6 @@ Performance
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- Add stubtest configuration and allowlist for validating type annotations against
-  runtime behavior. This enables CI integration for type stub validation and helps
-  prevent type annotation regressions (:issue:`11086`).
-  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 - Temporarily silence shape assignment warnings raised in ``netCDF4``
   (:pull:`11146`).
   By `Justus Magin <https://github.com/keewis>`_.
