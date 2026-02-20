@@ -45,6 +45,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Fix a typo in ``xarray/core/variable.py`` (:pull:`11182`).
+  By `Yaocheng Chen <https://github.com/yaochengchen>`_.
+
 
 .. _whats-new.2026.02.0:
 
