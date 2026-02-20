@@ -245,6 +245,7 @@ You can either run pre-commit manually via Pixi as described above, or set up gi
 This is done by:
 
 .. code-block:: sh
+
     pixi shell -e pre-commit # enter the pre-commit environment
     pre-commit install # install the git hooks
 
