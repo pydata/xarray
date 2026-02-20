@@ -382,10 +382,9 @@ def linkcode_resolve(domain, info):
     if "+" in xarray.__version__:
         return f"https://github.com/pydata/xarray/blob/main/xarray/{fn}{linespec}"
     else:
-        return (
-            f"https://github.com/pydata/xarray/blob/"
-            f"v{xarray.__version__}/xarray/{fn}{linespec}"
-        )
+        tag = subprocess.getoutput("git describe --tags --exact-match HEAD")
+        ref = tag if tag.startswith("v") else f"v{xarray.__version__}"
+        return f"https://github.com/pydata/xarray/blob/{ref}/xarray/{fn}{linespec}"
 
 
 def html_page_context(app, pagename, templatename, context, doctree):
