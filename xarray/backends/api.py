@@ -365,7 +365,8 @@ def _datatree_from_backend_datatree(
                 sem = asyncio.Semaphore(10)
 
                 async def _bounded_create_index(
-                    path: str, ds: Dataset,
+                    path: str,
+                    ds: Dataset,
                 ) -> tuple[str, Dataset]:
                     async with sem:
                         return await _create_index_for_node(path, ds)

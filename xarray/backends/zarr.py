@@ -2247,7 +2247,9 @@ async def _iter_zarr_groups_async(root: ZarrGroup, parent: str = "/") -> list[st
             async with _sem:
                 if await is_zarr_group(subdir):
                     group_path = (
-                        str(parent_nodepath / subdir) if subdir else str(parent_nodepath)
+                        str(parent_nodepath / subdir)
+                        if subdir
+                        else str(parent_nodepath)
                     )
                     # Recursively find subgroups
                     sub_groups = await discover_subgroups(subdir)
