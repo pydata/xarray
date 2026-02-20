@@ -41,6 +41,8 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Fix a typo in ``xarray/doc/user-guide/reshaping.rst`` (:pull:`11186`).
+  By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
