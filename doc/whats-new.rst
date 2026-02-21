@@ -41,11 +41,14 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Fix a typo in ``xarray/core/dataarray.py`` (:pull:`11185`).
+  By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
 - Fix a typo in ``xarray/core/variable.py`` (:pull:`11182`).
+- Fix a typo in ``xarray/backends/api.py`` (:pull:`11180`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 - Add stubtest configuration and allowlist for validating type annotations against
