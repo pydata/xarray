@@ -41,6 +41,8 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Fix a typo in ``xarray/core/dataarray.py`` (:pull:`11185`).
+  By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
