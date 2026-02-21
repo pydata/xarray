@@ -41,6 +41,7 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Fix a typo in ``xarray/doc/user-guide/reshaping.rst`` (:pull:`11186`).
 - Fix a typo in ``xarray/core/dataarray.py`` (:pull:`11185`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
