@@ -50,20 +50,6 @@ def _future_array_api_result_type(*arrays_and_dtypes, xp):
     return xp.result_type(dtype, *dtypes)
 
 
-def is_builtin_type(value):
-    if isinstance(value, type):
-        return issubclass(value, builtin_types)
-    else:
-        return isinstance(value, builtin_types)
-
-
-def is_dtype(value):
-    if isinstance(value, type):
-        return issubclass(value, np.generic)
-    else:
-        return isinstance(value, np.dtype)
-
-
 def result_type(*arrays_and_dtypes, xp) -> np.dtype:
     try:
         if xp is np or any(

@@ -211,13 +211,9 @@ def maybe_coerce_to_str(index, original_coords):
     """
     from xarray.core import dtypes
 
-    try:
-        result_type = dtypes.result_type(*original_coords)
-    except TypeError:
-        pass
-    else:
-        if result_type.kind in "SU":
-            index = np.asarray(index, dtype=result_type.type)
+    result_type = dtypes.result_type(*original_coords)
+    if result_type.kind in "SU":
+        index = np.asarray(index, dtype=result_type.type)
 
     return index
 
