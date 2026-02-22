@@ -1900,10 +1900,13 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_format=None,
         max_concurrency: int | None = None,
     ) -> DataTree:
+        from xarray.backends.common import _is_glob_pattern, _resolve_group_and_filter
+
         filename_or_obj = _normalize_path(filename_or_obj)
 
-        if group:
-            parent = str(NodePath("/") / NodePath(group))
+        effective_group = None if (group and _is_glob_pattern(group)) else group
+        if effective_group:
+            parent = str(NodePath("/") / NodePath(effective_group))
         else:
             parent = str(NodePath("/"))
 
@@ -1964,8 +1967,11 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 zarr_version=zarr_version,
                 zarr_format=zarr_format,
             )
+            all_paths = list(stores.keys())
+            _, filtered_paths = _resolve_group_and_filter(group, all_paths)
             groups_dict = {}
-            for path_group, store in stores.items():
+            for path_group in filtered_paths:
+                store = stores[path_group]
                 store_entrypoint = StoreBackendEntrypoint()
                 with close_on_error(store):
                     group_ds = store_entrypoint.open_dataset(
@@ -1978,7 +1984,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                         use_cftime=use_cftime,
                         decode_timedelta=decode_timedelta,
                     )
-                if group:
+                if effective_group:
                     group_name = str(NodePath(path_group).relative_to(parent))
                 else:
                     group_name = str(NodePath(path_group))
@@ -2045,6 +2051,16 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             if parent_path in group_children:
                 group_children[parent_path][child_name] = member
 
+        # Filter groups when glob pattern is used
+        from xarray.backends.common import _resolve_group_and_filter
+
+        effective_group, filtered_paths = _resolve_group_and_filter(
+            group, list(group_async.keys())
+        )
+        filtered_set = set(filtered_paths)
+        group_async = {k: v for k, v in group_async.items() if k in filtered_set}
+        group_children = {k: v for k, v in group_children.items() if k in filtered_set}
+
         # Phase 2: Open each group — wrap async objects, run CPU decode in threads.
         async def open_one(path_group: str) -> tuple[str, Dataset]:
             async_grp = group_async[path_group]
@@ -2091,7 +2107,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     )
 
             ds = await loop.run_in_executor(executor, _cpu_open)
-            if group:
+            if effective_group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
@@ -2132,11 +2148,13 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         zarr_format=None,
     ) -> dict[str, Dataset]:
+        from xarray.backends.common import _is_glob_pattern, _resolve_group_and_filter
+
         filename_or_obj = _normalize_path(filename_or_obj)
 
-        # Check for a group and make it a parent if it exists
-        if group:
-            parent = str(NodePath("/") / NodePath(group))
+        effective_group = None if (group and _is_glob_pattern(group)) else group
+        if effective_group:
+            parent = str(NodePath("/") / NodePath(effective_group))
         else:
             parent = str(NodePath("/"))
 
@@ -2153,8 +2171,11 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
         )
 
+        _, filtered_paths = _resolve_group_and_filter(group, list(stores.keys()))
+
         groups_dict = {}
-        for path_group, store in stores.items():
+        for path_group in filtered_paths:
+            store = stores[path_group]
             store_entrypoint = StoreBackendEntrypoint()
 
             with close_on_error(store):
@@ -2168,7 +2189,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            if group:
+            if effective_group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
@@ -2200,11 +2221,13 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         This mirrors open_groups_as_dict but parallelizes per-group Dataset opening,
         which can significantly reduce latency on high-RTT object stores.
         """
+        from xarray.backends.common import _is_glob_pattern, _resolve_group_and_filter
+
         filename_or_obj = _normalize_path(filename_or_obj)
 
-        # Determine parent group path context
-        if group:
-            parent = str(NodePath("/") / NodePath(group))
+        effective_group = None if (group and _is_glob_pattern(group)) else group
+        if effective_group:
+            parent = str(NodePath("/") / NodePath(effective_group))
         else:
             parent = str(NodePath("/"))
 
@@ -2220,6 +2243,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_version=zarr_version,
             zarr_format=zarr_format,
         )
+
+        _, filtered_paths = _resolve_group_and_filter(group, list(stores.keys()))
+        filtered_set = set(filtered_paths)
 
         loop = asyncio.get_running_loop()
         max_workers = min(len(stores), 10) if stores else 1
@@ -2244,7 +2270,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     )
 
             ds = await loop.run_in_executor(executor, _load_sync)
-            if group:
+            if effective_group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
@@ -2252,7 +2278,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         try:
             tasks = [
-                open_one(path_group, store) for path_group, store in stores.items()
+                open_one(path_group, store)
+                for path_group, store in stores.items()
+                if path_group in filtered_set
             ]
             results = await asyncio.gather(*tasks)
         finally:
