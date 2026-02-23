@@ -48,6 +48,7 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Fix a typo in ``xarray/core/variable.py`` (:pull:`11182`).
 - Fix a typo in ``xarray/backends/api.py`` (:pull:`11180`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
