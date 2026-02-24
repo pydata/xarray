@@ -35,6 +35,8 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix ``Source`` link in api docs (:pull:`11187`)
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_
 - Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
   By `Julia Signell <https://github.com/jsignell>`_
 
