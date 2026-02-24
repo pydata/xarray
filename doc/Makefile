@@ -52,6 +52,7 @@ clean:
 	rm -rf $(BUILDDIR)/*
 	rm -rf generated/*
 	rm -rf auto_gallery/
+	rm -rf jupyter_execute/
 
 .PHONY: html
 html:
