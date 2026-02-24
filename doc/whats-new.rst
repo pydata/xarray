@@ -35,6 +35,8 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix ``Source`` link in api docs (:pull:`11187`)
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_
 - Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
   By `Julia Signell <https://github.com/jsignell>`_
 
@@ -43,10 +45,21 @@ Documentation
 - Use ``jupyterlite-sphinx`` to provide interactive examples (:pull:`10299`).
   By `Justus Magin <https://github.com/keewis>`_.
 
+- Fix a typo in ``xarray/doc/user-guide/reshaping.rst`` (:pull:`11186`).
+- Fix a typo in ``xarray/core/dataarray.py`` (:pull:`11185`).
+  By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Fix a typo in ``xarray/core/variable.py`` (:pull:`11182`).
+- Fix a typo in ``xarray/backends/api.py`` (:pull:`11180`).
+  By `Yaocheng Chen <https://github.com/yaochengchen>`_.
+
+- Add stubtest configuration and allowlist for validating type annotations against
+  runtime behavior. This enables CI integration for type stub validation and helps
+  prevent type annotation regressions (:issue:`11086`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 
 .. _whats-new.2026.02.0:
 
