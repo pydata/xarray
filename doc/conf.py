@@ -190,6 +190,7 @@ np.random.seed(0)
 """.strip()
 
 jupyterlite_silence = False
+jupyterlite_bind_ipynb_suffix = False
 
 # mermaid config
 mermaid_version = "11.6.0"
@@ -218,7 +219,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "debug.ipynb", "**.ipynb_checkpoints", "_contents"]
+exclude_patterns = ["_build", "debug.ipynb", "**.ipynb_checkpoints"]
 
 
 # The name of the Pygments (syntax highlighting) style to use.
