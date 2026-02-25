@@ -34,7 +34,7 @@ import pandas as pd
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from xarray.compat.array_api_compat import to_like_array
-from xarray.computation import ops
+from xarray.computation import computation, ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.core import dtypes as xrdtypes
 from xarray.core import duck_array_ops, formatting, formatting_html, utils
@@ -3943,20 +3943,18 @@ class Dataset(
             elif dtype_kind in "Mm" and (use_indexers.keys() & var.dims):
                 # For datetime-like types, interpolate as float64:
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
-                int_data = var.data.view(np.int64)
+                int_data = var.astype(np.int64)
                 nat = np.iinfo(np.int64).min
-                as_float = np.where(
+                as_float = computation.where(
                     int_data == nat, np.nan, int_data.astype(np.float64)
                 )
-                result = missing.interp(
-                    var.copy(data=as_float), var_indexers, method, **kwargs
-                )
-                as_int = np.where(
-                    np.isnan(result.data),
+                result = missing.interp(as_float, var_indexers, method, **kwargs)
+                as_int = computation.where(
+                    result.isnull(),
                     nat,
-                    np.round(np.nan_to_num(result.data)).astype(np.int64),
+                    result.fillna(0).round().astype(np.int64),
                 )
-                variables[name] = result.copy(data=as_int.view(var.dtype))
+                variables[name] = as_int.astype(var.dtype)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
                     # Broadcastable, can be handled quickly without reindex:

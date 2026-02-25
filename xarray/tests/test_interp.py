@@ -1267,7 +1267,8 @@ def test_dataset_interp_datetime_dask() -> None:
         coords={"x": np.arange(5), "y": np.arange(5)},
     ).chunk({"x": 2, "y": 2})
 
-    result = ds.interp(x=[0.5, 1.5], y=[0.5, 1.5])
+    with raise_if_dask_computes():
+        result = ds.interp(x=[0.5, 1.5], y=[0.5, 1.5])
 
     assert "time" in result.data_vars
     computed = result.compute()
