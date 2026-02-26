@@ -3946,13 +3946,13 @@ class Dataset(
                 int_data = var.astype(np.int64)
                 nat = np.iinfo(np.int64).min
                 as_float = computation.where(
-                    int_data == nat, np.nan, int_data.astype(np.float64)
+                    int_data != nat, int_data.astype(np.float64), np.nan
                 )
                 result = missing.interp(as_float, var_indexers, method, **kwargs)
                 as_int = computation.where(
-                    result.isnull(),
-                    nat,
+                    ~result.isnull(),
                     result.fillna(0).round().astype(np.int64),
+                    nat,
                 )
                 variables[name] = as_int.astype(var.dtype)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
