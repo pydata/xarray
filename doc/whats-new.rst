@@ -35,20 +35,22 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix ``Source`` link in api docs (:pull:`11187`)
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_
 - Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
   By `Julia Signell <https://github.com/jsignell>`_
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Fix a typo in ``xarray/doc/user-guide/reshaping.rst`` (:pull:`11186`).
 - Fix a typo in ``xarray/core/dataarray.py`` (:pull:`11185`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- Fix a typo in ``xarray/core/dataset.py`` (:pull:`11181`).
-- Fix a typo in ``xarray/backends/api.py`` (:pull:`11180`).
+- Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 - Add stubtest configuration and allowlist for validating type annotations against
