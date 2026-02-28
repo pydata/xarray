@@ -43,16 +43,11 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Fix a typo in ``xarray/doc/user-guide/reshaping.rst`` (:pull:`11186`).
-- Fix a typo in ``xarray/core/dataarray.py`` (:pull:`11185`).
+- Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
-- Fix a typo in ``xarray/core/variable.py`` (:pull:`11182`).
-- Fix a typo in ``xarray/backends/api.py`` (:pull:`11180`).
-  By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
 - Add stubtest configuration and allowlist for validating type annotations against
   runtime behavior. This enables CI integration for type stub validation and helps

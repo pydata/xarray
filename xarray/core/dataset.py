@@ -10443,7 +10443,7 @@ class Dataset(
             User guide describing :py:func:`~xarray.Dataset.coarsen`
 
         :ref:`compute.coarsen`
-            User guide on block arrgragation :py:func:`~xarray.Dataset.coarsen`
+            User guide on block aggregation :py:func:`~xarray.Dataset.coarsen`
 
         :doc:`xarray-tutorial:fundamentals/03.3_windowed`
             Tutorial on windowed computation using :py:func:`~xarray.Dataset.coarsen`
