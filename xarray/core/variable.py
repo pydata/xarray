@@ -773,7 +773,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 if dim in variable_dims:
                     # We only convert slice objects to variables if they share
                     # a dimension with at least one other variable. Otherwise,
-                    # we can equivalently leave them as slices aknd transpose
+                    # we can equivalently leave them as slices and transpose
                     # the result. This is significantly faster/more efficient
                     # for most array backends.
                     values = np.arange(*value.indices(self.sizes[dim]))
@@ -1355,7 +1355,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def roll(self, shifts=None, **shifts_kwargs):
         """
-        Return a new Variable with rolld data.
+        Return a new Variable with rolled data.
 
         Parameters
         ----------

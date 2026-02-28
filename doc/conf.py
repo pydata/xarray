@@ -338,6 +338,11 @@ intersphinx_mapping = {
     "xarray-lmfit": ("https://xarray-lmfit.readthedocs.io/stable", None),
 }
 
+# Resolve the git ref once at import time, not per-object.
+tag = subprocess.getoutput("git describe --tags --exact-match HEAD")
+source_ref = tag if tag.startswith("v") else "main"
+
+
 # based on numpy doc/source/conf.py
 def linkcode_resolve(domain, info):
     """
@@ -379,13 +384,7 @@ def linkcode_resolve(domain, info):
 
     fn = os.path.relpath(fn, start=os.path.dirname(xarray.__file__))
 
-    if "+" in xarray.__version__:
-        return f"https://github.com/pydata/xarray/blob/main/xarray/{fn}{linespec}"
-    else:
-        return (
-            f"https://github.com/pydata/xarray/blob/"
-            f"v{xarray.__version__}/xarray/{fn}{linespec}"
-        )
+    return f"https://github.com/pydata/xarray/blob/{source_ref}/xarray/{fn}{linespec}"
 
 
 def html_page_context(app, pagename, templatename, context, doctree):

@@ -605,7 +605,7 @@ def open_dataset(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -841,7 +841,7 @@ def open_dataarray(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce the underlying data array to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -1076,7 +1076,7 @@ def open_datatree(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -1330,7 +1330,7 @@ def open_groups(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create

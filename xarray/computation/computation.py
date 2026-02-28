@@ -696,6 +696,7 @@ def where(cond, x, y, keep_attrs=None):
     y : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is False
     keep_attrs : bool or {"drop", "identical", "no_conflicts", "drop_conflicts", "override"} or callable, optional
+
         - 'override' or True (default): skip comparing and copy attrs from `x` to the result.
         - 'drop' or False: empty attrs on returned xarray object.
         - 'identical': all attrs must be the same on every object.
@@ -734,6 +735,7 @@ def where(cond, x, y, keep_attrs=None):
         standard_name:  sea_surface_temperature
 
     If `x` is a scalar then by default there are no attrs on the result
+
     >>> xr.where(x < 0.5, 1, 0)
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
@@ -742,6 +744,7 @@ def where(cond, x, y, keep_attrs=None):
 
     If `x` is a scalar (and therefore has no attrs), preserve the
     attrs on `cond` by using `keep_attrs="drop_conflicts"`
+
     >>> xr.where(x < 0.5, 1, 0, keep_attrs="drop_conflicts")
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
