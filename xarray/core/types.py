@@ -111,8 +111,9 @@ DatetimeLike: TypeAlias = (
 class Alignable(Protocol):
     """Represents any Xarray type that supports alignment.
 
-    It may be ``Dataset``, ``DataArray`` or ``Coordinates``. This protocol class
-    is needed since those types do not all have a common base class.
+    It may be ``Dataset``, ``DataArray``, ``Coordinates``, or ``DataTree``.
+    This protocol class is needed since those types do not all have a common
+    base class.
 
     """
 
@@ -148,6 +149,7 @@ class Alignable(Protocol):
 
     def copy(
         self,
+        *,
         deep: bool = False,
     ) -> Self: ...
 

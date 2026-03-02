@@ -2752,3 +2752,215 @@ class TestDask:
 
         with pytest.raises(ValueError, match="not found in data dimensions"):
             tree.chunk({"u": 2})
+
+
+class TestAlignDataTree:
+    def test_align_basic_inner(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1, 2]}),
+                "/child": Dataset({"var": ("x", [10, 20, 30])}),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1, 2, 3]}),
+                "/child": Dataset({"var": ("x", [100, 200, 300])}),
+            }
+        )
+
+        aligned1, aligned2 = xr.align(tree1, tree2, join="inner")
+
+        assert_array_equal(aligned1["/"].coords["x"], [1, 2])
+        assert_array_equal(aligned2["/"].coords["x"], [1, 2])
+        assert_array_equal(aligned1["/child"]["var"], [20, 30])
+        assert_array_equal(aligned2["/child"]["var"], [100, 200])
+
+    def test_align_outer_join(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1]}),
+                "/child": Dataset({"var": ("x", [10, 20])}),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1, 2]}),
+                "/child": Dataset({"var": ("x", [100, 200])}),
+            }
+        )
+
+        a1, a2 = xr.align(tree1, tree2, join="outer", fill_value=-999)
+
+        assert_array_equal(a1["/"].coords["x"], [0, 1, 2])
+        assert_array_equal(a1["/child"]["var"], [10, 20, -999])
+        assert_array_equal(a2["/child"]["var"], [-999, 100, 200])
+
+    def test_align_left_join(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1]}),
+                "/child": Dataset({"var": ("x", [10, 20])}),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1, 2]}),
+                "/child": Dataset({"var": ("x", [100, 200])}),
+            }
+        )
+
+        a1, a2 = xr.align(tree1, tree2, join="left")
+
+        assert_array_equal(a1["/"].coords["x"], [0, 1])
+        assert_array_equal(a1["/child"]["var"], [10, 20])
+        # tree2 reindexed to tree1's x=[0, 1]: x=0 missing so NaN, x=1 -> 100
+        assert_array_equal(a2["/child"]["var"].values, [np.nan, 100])
+
+    def test_align_exact_raises(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1]}),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1, 2]}),
+            }
+        )
+
+        with pytest.raises(
+            xr.structure.alignment.AlignmentError, match="cannot align objects"
+        ):
+            xr.align(tree1, tree2, join="exact")
+
+    def test_align_override(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1]}),
+                "/child": Dataset({"var": ("x", [10, 20])}),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [5, 6]}),
+                "/child": Dataset({"var": ("x", [100, 200])}),
+            }
+        )
+
+        a1, a2 = xr.align(tree1, tree2, join="override")
+
+        # Override uses first object's indexes
+        assert_array_equal(a1["/"].coords["x"], [0, 1])
+        assert_array_equal(a2["/"].coords["x"], [0, 1])
+        # Data values unchanged
+        assert_array_equal(a2["/child"]["var"], [100, 200])
+
+    def test_align_multi_level_coords(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1]}),
+                "/child": Dataset(
+                    coords={"y": [0, 1]},
+                    data_vars={"var": (("x", "y"), [[1, 2], [3, 4]])},
+                ),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [1, 2]}),
+                "/child": Dataset(
+                    coords={"y": [1, 2]},
+                    data_vars={"var": (("x", "y"), [[5, 6], [7, 8]])},
+                ),
+            }
+        )
+
+        a1, a2 = xr.align(tree1, tree2, join="inner")
+
+        assert_array_equal(a1["/"].coords["x"], [1])
+        assert_array_equal(a1["/child"].coords["y"], [1])
+        assert_array_equal(a1["/child"]["var"], [[4]])  # x=1, y=1
+        assert_array_equal(a2["/child"]["var"], [[5]])  # x=1, y=1
+
+    def test_align_ownership_mismatch_raises(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1, 2]}),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset(),
+                "/child": Dataset(coords={"x": [0, 1, 2]}),
+            }
+        )
+
+        with pytest.raises(
+            xr.structure.alignment.AlignmentError,
+            match="coordinate ownership structure",
+        ):
+            xr.align(tree1, tree2)
+
+    def test_align_mixed_types_raises(self) -> None:
+        tree = DataTree.from_dict({"/": Dataset(coords={"x": [0, 1]})})
+        ds = Dataset(coords={"x": [0, 1]})
+
+        with pytest.raises(TypeError, match="Cannot align DataTree"):
+            xr.align(tree, ds)
+
+    def test_align_already_aligned(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1]}),
+                "/child": Dataset({"var": ("x", [10, 20])}),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1]}),
+                "/child": Dataset({"var": ("x", [30, 40])}),
+            }
+        )
+
+        a1, a2 = xr.align(tree1, tree2, join="inner")
+
+        assert_array_equal(a1["/"].coords["x"], [0, 1])
+        assert_array_equal(a1["/child"]["var"], [10, 20])
+        assert_array_equal(a2["/child"]["var"], [30, 40])
+
+    def test_align_no_coords(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset({"var": ("x", [1, 2])}),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset({"var": ("x", [3, 4])}),
+            }
+        )
+
+        a1, a2 = xr.align(tree1, tree2)
+
+        assert_array_equal(a1["/"]["var"], [1, 2])
+        assert_array_equal(a2["/"]["var"], [3, 4])
+
+    def test_align_preserves_attrs(self) -> None:
+        tree1 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1]}, attrs={"desc": "tree1"}),
+                "/child": Dataset({"var": ("x", [10, 20])}, attrs={"note": "child1"}),
+            }
+        )
+        tree2 = DataTree.from_dict(
+            {
+                "/": Dataset(coords={"x": [0, 1]}, attrs={"desc": "tree2"}),
+                "/child": Dataset({"var": ("x", [30, 40])}, attrs={"note": "child2"}),
+            }
+        )
+
+        a1, a2 = xr.align(tree1, tree2)
+
+        assert a1["/"].attrs == {"desc": "tree1"}
+        assert a2["/child"].attrs == {"note": "child2"}
