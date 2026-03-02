@@ -3631,6 +3631,23 @@ class TestDataset:
         assert isinstance(actual.variables["x"], Variable)
         assert actual.xindexes["y"].equals(expected.xindexes["y"])
 
+        # Ensure that indexes on non-dimension variables are preserved
+        ds = xr.Dataset(
+            data_vars={"var1": ("dim1", [1, 3])},
+            coords={
+                "coord1": ("midx_dim", [0.0]),
+                "coord2": ("midx_dim", [2]),
+            },
+        )
+        ds = ds.set_xindex(["coord1", "coord2"])
+        assert "coord1" in ds.indexes
+        assert "coord2" in ds.indexes
+        assert "midx_dim" in ds.indexes
+        ds_swapped = ds.swap_dims(dim1="dim1_")
+        assert "coord1" in ds_swapped.indexes
+        assert "coord2" in ds_swapped.indexes
+        assert "midx_dim" in ds_swapped.indexes
+
     def test_expand_dims_error(self) -> None:
         original = Dataset(
             {
