@@ -1202,7 +1202,7 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
     from xarray.core.dataset import Dataset
 
     indexes_to_use = None
-    
+
     if not isinstance(other, Dataset):
         other = dict(other)
         for key, value in other.items():

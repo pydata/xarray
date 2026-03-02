@@ -4731,17 +4731,15 @@ class TestDataset:
     def test_setitem_with_larger_indexed_dimension(self) -> None:
         # GH#11206: assigning a DataArray with a larger indexed dimension
         # should update the dataset variable and expand coordinates
-        ds = Dataset({
-            "var": (["x"], [1, 2]),
-            "x": ["a", "b"],
-        })
-        da_new = DataArray(
-            [1, 2, 3],
-            dims=["x"],
-            coords={"x": ["a", "b", "c"]}
+        ds = Dataset(
+            {
+                "var": (["x"], [1, 2]),
+                "x": ["a", "b"],
+            }
         )
+        da_new = DataArray([1, 2, 3], dims=["x"], coords={"x": ["a", "b", "c"]})
         ds["var"] = da_new
-        
+
         # The variable should have the new shape
         assert ds["var"].shape == (3,)
         # The coordinate should be updated
