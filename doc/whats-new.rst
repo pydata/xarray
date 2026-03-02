@@ -42,6 +42,8 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Use ``jupyterlite-sphinx`` to provide interactive examples (:pull:`10299`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.

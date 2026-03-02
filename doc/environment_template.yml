@@ -1,0 +1,29 @@
+name: xeus-python-kernel
+channels:
+  - https://prefix.dev/emscripten-forge-dev
+  - https://prefix.dev/conda-forge
+dependencies:
+  - xeus-python
+  - "{{ local-package }}"
+  - numpy
+  - pandas
+  - packaging
+  - boto3
+  - cartopy
+  - cftime
+  - h5netcdf
+  - h5py
+  - hdf5
+  - lxml # Optional dep of pydap
+  - matplotlib
+  - nc-time-axis
+  - netcdf4
+  - pint>=0.22
+  - pooch
+  - pydap
+  - rasterio
+  - scipy
+  - seaborn
+  - setuptools
+  - toolz
+  - zarr
