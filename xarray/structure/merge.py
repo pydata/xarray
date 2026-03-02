@@ -1201,6 +1201,8 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
+    indexes_to_use = None
+    
     if not isinstance(other, Dataset):
         other = dict(other)
         for key, value in other.items():
@@ -1217,13 +1219,19 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
                     variable = value.variable.to_base_variable()
                     value = value._replace(variable=variable)
                 other[key] = value
+        # Don't use dataset's indexes for dict input - let merge determine indexes naturally
+        # This allows dimensions with different coordinate values to expand (GH#11206)
+        indexes_to_use = None
+    else:
+        # For Dataset input, use the original indexes for compatibility
+        indexes_to_use = dataset.xindexes
 
     return merge_core(
         [dataset, other],
         compat="broadcast_equals",
         join="outer",
         priority_arg=1,
-        indexes=dataset.xindexes,
+        indexes=indexes_to_use,
         combine_attrs="override",
     )
 
