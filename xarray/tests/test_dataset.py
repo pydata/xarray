@@ -494,6 +494,14 @@ class TestDataset:
         actual = Dataset({"z": expected["z"]})
         assert_identical(expected, actual)
 
+    def test_constructor_dataset_as_data_vars_raises(self) -> None:
+        ds = Dataset({"x": ("x", [1, 2, 3])}, attrs={"key": "value"})
+        with pytest.raises(
+            TypeError,
+            match=r"Passing a Dataset as `data_vars`.*Use `ds\.copy\(\)`",
+        ):
+            Dataset(ds)
+
     def test_constructor_1d(self) -> None:
         expected = Dataset({"x": (["x"], 5.0 + np.arange(5))})
         actual = Dataset({"x": 5.0 + np.arange(5)})
