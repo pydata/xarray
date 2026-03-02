@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import numpy as np
@@ -625,6 +627,70 @@ class ZarrStore(AbstractWritableDataStore):
     )
 
     @classmethod
+    def _create_stores_from_members(
+        cls,
+        group_members,
+        mode,
+        consolidate_on_close,
+        append_dim,
+        write_region,
+        safe_chunks,
+        write_empty,
+        close_store_on_close,
+        use_zarr_fill_value_as_mask,
+        align_chunks,
+        cache_members,
+    ):
+        """Create ZarrStore instances from group members dict.
+
+        Parameters
+        ----------
+        group_members : dict[str, zarr.Group]
+            Dictionary mapping group paths to zarr Group instances.
+        mode : str
+            Access mode.
+        consolidate_on_close : bool
+            Whether to consolidate on close.
+        append_dim : str | None
+            Dimension to append along.
+        write_region : dict | None
+            Region to write to.
+        safe_chunks : bool
+            Whether to check chunk compatibility.
+        write_empty : bool | None
+            Whether to write empty chunks.
+        close_store_on_close : bool
+            Whether to close store on close.
+        use_zarr_fill_value_as_mask : bool
+            Whether to use zarr fill value as mask.
+        align_chunks : bool
+            Whether to align chunks.
+        cache_members : bool
+            Whether to cache group members.
+
+        Returns
+        -------
+        dict[str, ZarrStore]
+            Dictionary mapping group paths to ZarrStore instances.
+        """
+        return {
+            grp: cls(
+                group_store,
+                mode,
+                consolidate_on_close,
+                append_dim,
+                write_region,
+                safe_chunks,
+                write_empty,
+                close_store_on_close,
+                use_zarr_fill_value_as_mask,
+                align_chunks=align_chunks,
+                cache_members=cache_members,
+            )
+            for grp, group_store in group_members.items()
+        }
+
+    @classmethod
     def open_store(
         cls,
         store,
@@ -664,20 +730,125 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_format=zarr_format,
         )
 
-        from zarr import Group
-
-        group_members: dict[str, Group] = {}
         group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
-        for path in group_paths:
-            if path == group:
-                group_members[path] = zarr_group
-            else:
-                rel_path = path.removeprefix(f"{group}/")
-                group_members[path] = zarr_group[rel_path.removeprefix("/")]
+        group_members = _build_group_members(zarr_group, group_paths, group)
 
-        out = {
-            group: cls(
-                group_store,
+        return cls._create_stores_from_members(
+            group_members,
+            mode,
+            consolidate_on_close,
+            append_dim,
+            write_region,
+            safe_chunks,
+            write_empty,
+            close_store_on_close,
+            use_zarr_fill_value_as_mask,
+            align_chunks,
+            cache_members,
+        )
+
+    @classmethod
+    async def open_store_async(
+        cls,
+        store,
+        mode: ZarrWriteModes = "r",
+        synchronizer=None,
+        group=None,
+        consolidated=False,
+        consolidate_on_close=False,
+        chunk_store=None,
+        storage_options=None,
+        append_dim=None,
+        write_region=None,
+        safe_chunks=True,
+        align_chunks=False,
+        zarr_version=None,
+        zarr_format=None,
+        use_zarr_fill_value_as_mask=None,
+        write_empty: bool | None = None,
+        cache_members: bool = False,
+    ):
+        """Async version of open_store using flat group discovery.
+
+        This method uses store.list() to discover all groups in a single
+        async call, which is significantly faster than recursive traversal
+        for stores that support listing (like icechunk).
+
+        Parameters
+        ----------
+        store : MutableMapping, str, or path-like
+            Store or path to directory in file system or name of zip file.
+        mode : {"r", "r+", "a", "a-", "w", "w-"}, optional
+            Access mode for the store.
+        synchronizer : object, optional
+            Zarr synchronizer.
+        group : str, optional
+            Group path.
+        consolidated : bool, optional
+            Whether to use consolidated metadata.
+        consolidate_on_close : bool, optional
+            Whether to consolidate metadata on close.
+        chunk_store : MutableMapping, optional
+            Separate chunk store.
+        storage_options : dict, optional
+            Storage options for fsspec.
+        append_dim : str, optional
+            Dimension to append along.
+        write_region : dict, optional
+            Region to write to.
+        safe_chunks : bool, optional
+            Whether to check chunk compatibility.
+        align_chunks : bool, optional
+            Whether to align chunks.
+        zarr_version : int, optional
+            Deprecated, use zarr_format.
+        zarr_format : int, optional
+            Zarr format version (2 or 3).
+        use_zarr_fill_value_as_mask : bool, optional
+            Whether to use zarr fill value as mask.
+        write_empty : bool, optional
+            Whether to write empty chunks.
+        cache_members : bool, optional
+            Whether to cache group members. Defaults to False for async
+            to avoid synchronous member fetching overhead.
+
+        Returns
+        -------
+        dict[str, ZarrStore]
+            Dictionary mapping group paths to ZarrStore instances.
+        """
+        loop = asyncio.get_running_loop()
+
+        # Run on executor to avoid reentrant sync() deadlock
+        (
+            zarr_group,
+            consolidate_on_close,
+            close_store_on_close,
+            use_zarr_fill_value_as_mask,
+        ) = await loop.run_in_executor(
+            None,
+            lambda: _get_open_params(
+                store=store,
+                mode=mode,
+                synchronizer=synchronizer,
+                group=group,
+                consolidated=consolidated,
+                consolidate_on_close=consolidate_on_close,
+                chunk_store=chunk_store,
+                storage_options=storage_options,
+                zarr_version=zarr_version,
+                use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+                zarr_format=zarr_format,
+            ),
+        )
+
+        group_paths = await _iter_zarr_groups_async(zarr_group, parent=group)
+
+        # Run on executor to avoid reentrant sync() deadlock
+        def _build_and_create():
+            group_members = _build_group_members(zarr_group, group_paths, group)
+            return cls._create_stores_from_members(
+                group_members,
                 mode,
                 consolidate_on_close,
                 append_dim,
@@ -686,12 +857,11 @@ class ZarrStore(AbstractWritableDataStore):
                 write_empty,
                 close_store_on_close,
                 use_zarr_fill_value_as_mask,
-                align_chunks=align_chunks,
-                cache_members=cache_members,
+                align_chunks,
+                cache_members,
             )
-            for group, group_store in group_members.items()
-        }
-        return out
+
+        return await loop.run_in_executor(None, _build_and_create)
 
     @classmethod
     def open_group(
@@ -1728,26 +1898,217 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_version=None,
         zarr_format=None,
+        max_concurrency: int | None = None,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
-        groups_dict = self.open_groups_as_dict(
-            filename_or_obj=filename_or_obj,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-            group=group,
-            mode=mode,
-            synchronizer=synchronizer,
-            consolidated=consolidated,
-            chunk_store=chunk_store,
-            storage_options=storage_options,
-            zarr_version=zarr_version,
-            zarr_format=zarr_format,
+
+        if group:
+            parent = str(NodePath("/") / NodePath(group))
+        else:
+            parent = str(NodePath("/"))
+
+        # Use async path for zarr v3 (concurrent loading), sync path for zarr v2
+        if _zarr_v3():
+            from zarr.core.sync import sync as zarr_sync
+
+            # Sync call — safe outside zarr's IO loop
+            (
+                zarr_group,
+                consolidate_on_close,
+                close_store_on_close,
+                use_zarr_fill_value_as_mask,
+            ) = _get_open_params(
+                store=filename_or_obj,
+                mode=mode,
+                synchronizer=synchronizer,
+                group=parent,
+                consolidated=consolidated,
+                consolidate_on_close=False,
+                chunk_store=chunk_store,
+                storage_options=storage_options,
+                zarr_version=zarr_version,
+                use_zarr_fill_value_as_mask=None,
+                zarr_format=zarr_format,
+            )
+
+            return zarr_sync(
+                self._open_datatree_from_stores_async(
+                    zarr_group=zarr_group,
+                    parent=parent,
+                    group=group,
+                    mode=mode,
+                    consolidate_on_close=consolidate_on_close,
+                    close_store_on_close=close_store_on_close,
+                    use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                    max_concurrency=max_concurrency,
+                )
+            )
+        else:
+            # Fallback for zarr v2: sequential loading
+            stores = ZarrStore.open_store(
+                filename_or_obj,
+                group=parent,
+                mode=mode,
+                synchronizer=synchronizer,
+                consolidated=consolidated,
+                consolidate_on_close=False,
+                chunk_store=chunk_store,
+                storage_options=storage_options,
+                zarr_version=zarr_version,
+                zarr_format=zarr_format,
+            )
+            groups_dict = {}
+            for path_group, store in stores.items():
+                store_entrypoint = StoreBackendEntrypoint()
+                with close_on_error(store):
+                    group_ds = store_entrypoint.open_dataset(
+                        store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
+                if group:
+                    group_name = str(NodePath(path_group).relative_to(parent))
+                else:
+                    group_name = str(NodePath(path_group))
+                groups_dict[group_name] = group_ds
+            return datatree_from_dict_with_io_cleanup(groups_dict)
+
+    async def _open_datatree_from_stores_async(
+        self,
+        zarr_group,
+        parent: str,
+        group: str | None,
+        *,
+        mode,
+        consolidate_on_close,
+        close_store_on_close,
+        use_zarr_fill_value_as_mask,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        max_concurrency: int | None = None,
+    ) -> DataTree:
+        """Open datatree using native async for I/O, threads only for CPU decode."""
+        if max_concurrency is None:
+            max_concurrency = 10
+
+        loop = asyncio.get_running_loop()
+        executor = ThreadPoolExecutor(
+            max_workers=max_concurrency, thread_name_prefix="xarray-cpu"
         )
+
+        from zarr import Array as ZarrSyncArray
+        from zarr import Group as ZarrSyncGroup
+        from zarr.core.group import AsyncGroup as ZarrAsyncGroup
+
+        async_root = zarr_group._async_group
+        parent_nodepath = NodePath(parent)
+
+        # Phase 1: Walk tree, collect groups + per-group members in one async pass.
+        # This replaces both _iter_zarr_groups_async and per-group _fetch_members.
+        group_async: dict[str, ZarrAsyncGroup] = {
+            str(parent_nodepath): async_root,
+        }
+        group_children: dict[str, dict] = {str(parent_nodepath): {}}
+
+        async for rel_path, member in async_root.members(max_depth=None):
+            full_path = str(parent_nodepath / rel_path)
+
+            if isinstance(member, ZarrAsyncGroup):
+                group_async[full_path] = member
+                group_children[full_path] = {}
+
+            parts = rel_path.rsplit("/", 1)
+            child_name = parts[-1]
+            parent_rel = parts[0] if len(parts) > 1 else ""
+            parent_path = (
+                str(parent_nodepath / parent_rel)
+                if parent_rel
+                else str(parent_nodepath)
+            )
+            if parent_path in group_children:
+                group_children[parent_path][child_name] = member
+
+        # Phase 2: Open each group — wrap async objects, run CPU decode in threads.
+        async def open_one(path_group: str) -> tuple[str, Dataset]:
+            async_grp = group_async[path_group]
+            children = group_children.get(path_group, {})
+
+            def _cpu_open():
+                sync_group = ZarrSyncGroup(async_grp)
+                sync_members = {
+                    name: (
+                        ZarrSyncGroup(child)
+                        if isinstance(child, ZarrAsyncGroup)
+                        else ZarrSyncArray(child)
+                    )
+                    for name, child in children.items()
+                }
+
+                store = ZarrStore(
+                    sync_group,
+                    mode,
+                    consolidate_on_close,
+                    append_dim=None,
+                    write_region=None,
+                    safe_chunks=True,
+                    write_empty=None,
+                    close_store_on_close=close_store_on_close,
+                    use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+                    align_chunks=False,
+                    cache_members=False,
+                )
+                store._members = sync_members
+                store._cache_members = True
+
+                store_entrypoint = StoreBackendEntrypoint()
+                with close_on_error(store):
+                    return store_entrypoint.open_dataset(
+                        store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
+
+            ds = await loop.run_in_executor(executor, _cpu_open)
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
+            return group_name, ds
+
+        groups_dict: dict[str, Dataset] = {}
+
+        async def collect_result(path_group: str) -> None:
+            group_name, ds = await open_one(path_group)
+            groups_dict[group_name] = ds
+
+        try:
+            async with asyncio.TaskGroup() as tg:
+                for path_group in sorted(group_async.keys()):
+                    tg.create_task(collect_result(path_group))
+        finally:
+            executor.shutdown(wait=True, cancel_futures=True)
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
@@ -1814,6 +2175,108 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             groups_dict[group_name] = group_ds
         return groups_dict
 
+    async def open_groups_as_dict_async(
+        self,
+        filename_or_obj: T_PathFileOrDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | None = None,
+        mode="r",
+        synchronizer=None,
+        consolidated=None,
+        chunk_store=None,
+        storage_options=None,
+        zarr_version=None,
+        zarr_format=None,
+    ) -> dict[str, Dataset]:
+        """Asynchronously open each group into a Dataset concurrently.
+
+        This mirrors open_groups_as_dict but parallelizes per-group Dataset opening,
+        which can significantly reduce latency on high-RTT object stores.
+        """
+        filename_or_obj = _normalize_path(filename_or_obj)
+
+        # Determine parent group path context
+        if group:
+            parent = str(NodePath("/") / NodePath(group))
+        else:
+            parent = str(NodePath("/"))
+
+        stores = await ZarrStore.open_store_async(
+            filename_or_obj,
+            group=parent,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            consolidate_on_close=False,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
+            zarr_version=zarr_version,
+            zarr_format=zarr_format,
+        )
+
+        loop = asyncio.get_running_loop()
+        max_workers = min(len(stores), 10) if stores else 1
+        executor = ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="xarray"
+        )
+
+        async def open_one(path_group: str, store) -> tuple[str, Dataset]:
+            store_entrypoint = StoreBackendEntrypoint()
+
+            def _load_sync():
+                with close_on_error(store):
+                    return store_entrypoint.open_dataset(
+                        store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
+
+            ds = await loop.run_in_executor(executor, _load_sync)
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
+            return group_name, ds
+
+        try:
+            tasks = [
+                open_one(path_group, store) for path_group, store in stores.items()
+            ]
+            results = await asyncio.gather(*tasks)
+        finally:
+            executor.shutdown(wait=True, cancel_futures=True)
+        return dict(results)
+
+
+def _build_group_members(
+    zarr_group: ZarrGroup,
+    group_paths: list[str],
+    parent: str | None,
+) -> dict[str, ZarrGroup]:
+    parent = parent if parent else "/"
+    group_members: dict[str, ZarrGroup] = {}
+
+    for path in group_paths:
+        if path == parent:
+            group_members[path] = zarr_group
+        else:
+            rel_path = path.removeprefix(f"{parent}/").removeprefix("/")
+            group_members[path] = cast("ZarrGroup", zarr_group[rel_path])
+
+    return group_members
+
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
     parent_nodepath = NodePath(parent)
@@ -1821,6 +2284,24 @@ def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
     for path, group in root.groups():
         gpath = parent_nodepath / path
         yield from _iter_zarr_groups(group, parent=str(gpath))
+
+
+async def _iter_zarr_groups_async(root: ZarrGroup, parent: str = "/") -> list[str]:
+    try:
+        from zarr.core.group import AsyncGroup
+    except (ImportError, ModuleNotFoundError):
+        # zarr v2: no async group support, fall back to sync
+        return list(_iter_zarr_groups(root, parent=parent))
+
+    parent_nodepath = NodePath(parent)
+    group_paths = [str(parent_nodepath)]
+
+    async_group = root._async_group
+    async for name, member in async_group.members(max_depth=None):
+        if isinstance(member, AsyncGroup):
+            group_paths.append(str(parent_nodepath / name))
+
+    return sorted(group_paths)
 
 
 def _get_open_params(
