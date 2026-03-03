@@ -280,6 +280,7 @@ ignore = [
   "PLW2901", # `for` loop variable overwritten by assignment target
   "UP007",   # use X | Y for type annotations
   "FURB105", # unnecessary empty string passed to `print`
+  "FURB171", # membership test against single-item container
   "RUF001",  # string contains ambiguous unicode character
   "RUF002",  # docstring contains ambiguous acute accent unicode character
   "RUF003",  # comment contains ambiguous no-break space unicode character
