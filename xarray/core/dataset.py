@@ -8974,6 +8974,16 @@ class Dataset(
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
+        coord_pad_mode: PadModeOptions | None = None,
+        coord_end_values: int
+        | tuple[int, int]
+        | Mapping[Any, tuple[int, int]]
+        | None = None,
+        coord_constant_values: T_DatasetPadConstantValues | None = None,
+        coord_stat_length: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
+        coord_reflect_type: PadReflectOptions = None,
         **pad_width_kwargs: Any,
     ) -> Self:
         """Pad this dataset along one or more dimensions.
@@ -9057,6 +9067,11 @@ class Dataset(
             If True, the attributes (``attrs``) will be copied from the
             original object to the new one. If False, the new object
             will be returned without attributes.
+        coord_pad_mode : see ``mode``, but this will be used to extend the coordinates
+        coord_end_values : see ``end_values``
+        coord_constant_values : see ``constant_values``
+        coord_stat_length : see ``stat_length``
+        coord_reflect_type : see ``reflect_type``
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.
             One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
@@ -9091,17 +9106,33 @@ class Dataset(
         """
         pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
 
-        if mode in ("edge", "reflect", "symmetric", "wrap"):
-            coord_pad_mode = mode
+        if not coord_pad_mode:
+            # if not provided, use mode dependent default
+            if mode in ("edge", "reflect", "symmetric", "wrap"):
+                coord_pad_mode = mode
+            else:
+                coord_pad_mode = "constant"
+
+        if coord_pad_mode in ("edge", "reflect", "symmetric", "wrap"):
+            # The ternaries here are for backward compatibility, if we can break that,
+            # then this block would be unnecessary
             coord_pad_options = {
-                "stat_length": stat_length,
-                "constant_values": constant_values,
-                "end_values": end_values,
-                "reflect_type": reflect_type,
+                "stat_length": coord_stat_length if coord_stat_length else stat_length,
+                "constant_values": (
+                    coord_constant_values if coord_constant_values else constant_values
+                ),
+                "end_values": coord_end_values if coord_end_values else end_values,
+                "reflect_type": (
+                    coord_reflect_type if coord_reflect_type else reflect_type
+                ),
             }
         else:
-            coord_pad_mode = "constant"
-            coord_pad_options = {}
+            coord_pad_options = {
+                "stat_length": coord_stat_length,
+                "constant_values": coord_constant_values,
+                "end_values": coord_end_values,
+                "reflect_type": coord_reflect_type,
+            }
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
