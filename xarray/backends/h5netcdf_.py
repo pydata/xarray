@@ -183,13 +183,18 @@ class H5NetCDFStore(WritableCFDataStore):
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
+        cache_options: dict[str, Any] | None = None,
     ):
         import h5netcdf
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
+
             filename = _open_remote_file(
-                filename, mode=mode_, storage_options=storage_options
+                filename,
+                mode=mode_,
+                storage_options=storage_options,
+                cache_options=cache_options,
             )
 
         if isinstance(filename, BytesIOProxy):
@@ -633,6 +638,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        storage_options: dict[str, Any] | None = None,
+        cache_options: dict[str, Any] | None = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups
@@ -654,6 +661,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_vlen_strings=decode_vlen_strings,
             driver=driver,
             driver_kwds=driver_kwds,
+            storage_options=storage_options,
+            cache_options=cache_options,
         )
 
         # Check for a group and make it a parent if it exists
