@@ -188,16 +188,16 @@ class H5NetCDFStore(WritableCFDataStore):
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
-            storage_options: dict = storage_options or {}
+            # storage_options: dict = storage_options or {}
 
-            # Use blockcache with size 8MB by default
-            if "cache_type" not in storage_options:
-                storage_options["cache_type"] = "blockcache"
-            if (
-                storage_options["cache_type"] == "blockcache"
-                and "block_size" not in storage_options
-            ):
-                storage_options["block_size"] = 8 * 1024 * 1024
+            # # Use blockcache with size 8MB by default
+            # if "cache_type" not in storage_options:
+            #     storage_options["cache_type"] = "blockcache"
+            # if (
+            #     storage_options["cache_type"] == "blockcache"
+            #     and "block_size" not in storage_options
+            # ):
+            #     storage_options["block_size"] = 8 * 1024 * 1024
 
             filename = _open_remote_file(
                 filename, mode=mode_, storage_options=storage_options
