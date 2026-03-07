@@ -1734,7 +1734,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the first `n`
+        """Return a new DataArray whose data is given by the first `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also
@@ -1777,7 +1777,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the last `n`
+        """Return a new DataArray whose data is given by the last `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also

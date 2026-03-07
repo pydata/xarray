@@ -1419,7 +1419,7 @@ def open_zarr(
     mask_and_scale=True,
     decode_times=True,
     concat_characters=True,
-    decode_coords=True,
+    decode_coords: Literal["coordinates", "all"] | bool = True,
     drop_variables=None,
     consolidated=None,
     overwrite_encoded_chunks=False,
@@ -1487,9 +1487,17 @@ def open_zarr(
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
+    decode_coords : bool or {"coordinates", "all"}, optional
+        Controls which variables are set as coordinate variables:
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
+          as coordinate variables.
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+          other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or

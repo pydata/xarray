@@ -6,10 +6,66 @@
 What's New
 ==========
 
+.. _whats-new.2026.03.0:
+
+v2026.03.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Xarray will no longer by default decode a variable into a
+  :py:class:`np.timedelta64` dtype based on the presence of a timedelta-like
+  ``"units"`` attribute alone. Instead it will rely on the presence of a
+  :py:class:`np.timedelta64` dtype attribute, which is now xarray's default way
+  of encoding :py:class:`np.timedelta64` values. The old decoding behavior can
+  be restored by specifying ``decode_timedelta=True`` or
+  ``decode_timedelta=CFTimedeltaCoder(decode_via_units=True)`` in
+  :py:meth:`open_dataset`. This finalizes the deprecation cycle initiated in
+  xarray version 2025.01.2 (:pull:`11173`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix ``Source`` link in api docs (:pull:`11187`)
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_
+- Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
+  By `Julia Signell <https://github.com/jsignell>`_
+
+Documentation
+~~~~~~~~~~~~~
+
+- Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
+  By `Yaocheng Chen <https://github.com/yaochengchen>`_.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Add stubtest configuration and allowlist for validating type annotations against
+  runtime behavior. This enables CI integration for type stub validation and helps
+  prevent type annotation regressions (:issue:`11086`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+
 .. _whats-new.2026.02.0:
 
-v2026.02.0 (unreleased)
------------------------
+v2026.02.0 (Feb 13, 2026)
+-------------------------
+
+This release adds support for 1D coordinates in NDPointIndex for scattered point
+indexing, switches all deprecation warnings to FutureWarning for better end-user
+visibility, fixes silent data corruption when writing dask arrays to sharded Zarr
+stores, and improves chunked array tokenization performance.
+
+Thanks to the 11 contributors to this release:
+Antonio Valentino, Chris Barker, Christine P. Chai, Deepak Cherian, Ewan Short, Harikrishna KP, Ian Hunt-Isaak, Julia Signell, Justus Magin, Kristian Kollsgård and Nick Hodgskin
 
 New Features
 ~~~~~~~~~~~~
@@ -29,41 +85,76 @@ Breaking Changes
   switches to using ``FutureWarning`` everywhere (:pull:`11112`).
   By `Julia Signell <https://github.com/jsignell>`_.
 
-Deprecations
-~~~~~~~~~~~~
-
-
 Bug Fixes
 ~~~~~~~~~
 
-- Fix slicing with negative step (:issue:`11000` and :pull:`11044`).
+- Fix slicing with negative step (:issue:`11000`, :pull:`11044`).
   By `Antonio Valentino <https://github.com/avalentino>`_.
 - Fix ``.plot`` error when using positional args with ``col`` and
-  ``row`` (:issue:`11104` :pull:`11111`).
+  ``row`` (:issue:`11104`, :pull:`11111`).
   By `Julia Signell <https://github.com/jsignell>`_.
-- Slightly amend `Xarray's Zarr Encoding Specification doc <https://docs.xarray.dev/en/latest/internals/zarr-encoding-spec.html>`_ for clarity, and provide a code comment in ``xarray.backends.zarr._get_zarr_dims_and_attrs`` referencing the doc (:issue:`8749` :pull:`11013`).
+- Slightly amend `Xarray's Zarr Encoding Specification doc <https://docs.xarray.dev/en/latest/internals/zarr-encoding-spec.html>`_
+  for clarity, and provide a code comment in
+  ``xarray.backends.zarr._get_zarr_dims_and_attrs`` referencing the doc
+  (:issue:`8749`, :pull:`11013`).
   By `Ewan Short <https://github.com/eshort0401>`_.
 - Fix silent data corruption when writing dask arrays to sharded Zarr stores.
   Dask chunk boundaries must now align with shard boundaries, not just internal
-  Zarr chunk boundaries (:issue:`10831`).
+  Zarr chunk boundaries (:issue:`10831`, :pull:`11117`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 - Fix :py:meth:`Dataset.sortby` and :py:meth:`DataArray.sortby` placing NaN values
-  at the beginning instead of the end when using ``ascending=False`` (:issue:`7358`).
+  at the beginning instead of the end when using ``ascending=False``
+  (:issue:`7358`, :pull:`11118`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 - Raise :py:class:`FileNotFoundError` instead of a confusing ``ValueError`` when
   :py:func:`open_dataset` is called with a non-existent local file path
-  (:issue:`10896`).
+  (:issue:`10896`, :pull:`11150`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Improve error message when a chunk manager is not available, suggesting how
+  to install the required package (:pull:`11056`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+- Raise :py:class:`ValueError` on slice-based selection of multi-index levels,
+  which previously returned silently wrong results (:issue:`10534`, :pull:`11168`).
+  By `Harikrishna KP <https://github.com/Mr-Neutr0n>`_.
 
 Documentation
 ~~~~~~~~~~~~~
+- Add support for myst markdown (:pull:`11167`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
+- Update docstrings for pandas 3 compatibility (:pull:`11130`).
+  By `Julia Signell <https://github.com/jsignell>`_.
+- Various Numpydoc fixes (:pull:`11122`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+- Correct wording mistakes in documentation (:pull:`11120`, :pull:`11127`).
+  By `Christine P. Chai <https://github.com/star1327p>`_.
+- Fix broken links in documentation (:pull:`11115`, :pull:`11135`, :pull:`11161`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+- Fix "latest" version displayed on landing page (:pull:`11119`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+- Add descriptions for pixi tasks (:pull:`11155`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+- Update :py:func:`open_zarr` ``decode_cf`` docstring (:pull:`11165`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+- Add MyST Markdown support for documentation (:pull:`11167`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 Performance
 ~~~~~~~~~~~
 
+- Add a fast path that skips normalized chunks during tokenization (:pull:`11017`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Temporarily silence shape assignment warnings raised in ``netCDF4``
+  (:pull:`11146`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add osx-64 to the pixi configuration (:pull:`11137`).
+  By `Chris Barker <https://github.com/ChrisBarker-NOAA>`_.
+- Preserve string dtypes instead of converting to object where possible (:pull:`11152`).
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 
 .. _whats-new.2026.01.0:
