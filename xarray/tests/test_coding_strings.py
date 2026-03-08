@@ -39,6 +39,16 @@ def test_vlen_dtype() -> None:
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
 
+@pytest.mark.skipif(
+    not hasattr(np.dtypes, "StringDType"), reason="requires StringDType"
+)
+def test_is_unicode_dtype_stringdtype() -> None:
+    # GH11199
+    dtype = np.dtypes.StringDType()
+    assert strings.is_unicode_dtype(dtype)
+    assert not strings.is_bytes_dtype(dtype)
+
+
 @pytest.mark.parametrize("numpy_str_type", (np.str_, np.bytes_))
 def test_numpy_subclass_handling(numpy_str_type) -> None:
     with pytest.raises(TypeError, match="unsupported type for vlen_dtype"):
