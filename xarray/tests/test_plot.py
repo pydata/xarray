@@ -1171,9 +1171,9 @@ class TestDetermineCmapParams:
 @requires_matplotlib
 class TestDiscreteColorMap:
     @pytest.fixture(autouse=True)
-    def setUp(self):
-        x = np.arange(start=0, stop=10, step=2)
-        y = np.arange(start=9, stop=-7, step=-3)
+    def setUp(self) -> Generator[None, None, None]:
+        x = np.arange(0, 10, 2)
+        y = np.arange(9, -7, -3)
         xy = np.dstack(np.meshgrid(x, y))
         distance = np.linalg.norm(xy, axis=2)
         self.darray = DataArray(distance, list(zip(("y", "x"), (y, x), strict=True)))
