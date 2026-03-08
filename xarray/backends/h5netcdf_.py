@@ -183,7 +183,7 @@ class H5NetCDFStore(WritableCFDataStore):
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
-        cache_options: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
     ):
         import h5netcdf
 
@@ -194,7 +194,7 @@ class H5NetCDFStore(WritableCFDataStore):
                 filename,
                 mode=mode_,
                 storage_options=storage_options,
-                cache_options=cache_options,
+                open_kwargs=open_kwargs,
             )
 
         if isinstance(filename, BytesIOProxy):
@@ -536,6 +536,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
     ) -> Dataset:
         # Keep this message for some versions
         # remove and set phony_dims="access" above
@@ -553,6 +554,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             driver=driver,
             driver_kwds=driver_kwds,
             storage_options=storage_options,
+            open_kwargs=open_kwargs,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -639,7 +641,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
-        cache_options: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups
@@ -662,7 +664,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             driver=driver,
             driver_kwds=driver_kwds,
             storage_options=storage_options,
-            cache_options=cache_options,
+            open_kwargs=open_kwargs,
         )
 
         # Check for a group and make it a parent if it exists

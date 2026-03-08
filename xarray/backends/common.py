@@ -214,25 +214,22 @@ class BytesIOProxy:
         return self.getvalue()
 
 
-def _open_remote_file(file, mode, storage_options=None, cache_options=None):
+def _open_remote_file(file, mode, storage_options=None, open_kwargs=None):
     import fsspec
 
     fs, _, paths = fsspec.get_fs_token_paths(
         file, mode=mode, storage_options=storage_options
     )
 
-    cache_options: dict = cache_options or {}
+    open_kwargs: dict = open_kwargs or {}
 
-    # Use blockcache with size 8MB by default
-    if "cache_type" not in cache_options:
-        cache_options["cache_type"] = "blockcache"
-    if (
-        cache_options["cache_type"] == "blockcache"
-        and "block_size" not in cache_options
-    ):
-        cache_options["block_size"] = 8 * 1024 * 1024
+    # Use blockcache with size 4MB by default
+    if "cache_type" not in open_kwargs:
+        open_kwargs["cache_type"] = "blockcache"
+    if open_kwargs["cache_type"] == "blockcache" and "block_size" not in open_kwargs:
+        open_kwargs["block_size"] = 4 * 1024 * 1024
 
-    return fs.open(paths[0], mode=mode, **cache_options)
+    return fs.open(paths[0], mode=mode, **open_kwargs)
 
 
 def _encode_variable_name(name):
