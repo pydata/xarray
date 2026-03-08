@@ -1609,12 +1609,8 @@ class Common2dMixin:
         self.plotmethod(add_colorbar=False)
         assert "testvar" not in text_in_fig()
         # check that error is raised
-        pytest.raises(
-            ValueError,
-            self.plotmethod,
-            add_colorbar=False,
-            cbar_kwargs={"label": "label"},
-        )
+        with pytest.raises(ValueError):
+            self.plotmethod(add_colorbar=False, cbar_kwargs={"label": "label"})
 
     def test_verbose_facetgrid(self) -> None:
         a = easy_array((10, 15, 3))
