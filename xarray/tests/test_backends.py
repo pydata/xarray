@@ -2059,7 +2059,7 @@ class NetCDF4Base(NetCDFBase):
             # first make sure netCDF4 reads the masked and scaled data
             # correctly
             with nc4.Dataset(tmp_file, mode="r") as nc:
-                expected = np.ma.array(
+                expected: Any = np.ma.array(
                     [-1, -1, 10, 10.1, 10.2], mask=[True, True, False, False, False]
                 )
                 actual = nc.variables["x"][:]
@@ -2067,8 +2067,7 @@ class NetCDF4Base(NetCDFBase):
 
             # now check xarray
             with open_dataset(tmp_file) as ds:
-                expected = create_masked_and_scaled_data(np.dtype(dtype))
-                assert_identical(expected, ds)
+                assert_identical(create_masked_and_scaled_data(np.dtype(dtype)), ds)
 
     def test_0dimensional_variable(self) -> None:
         # This fix verifies our work-around to this netCDF4-python bug:
