@@ -24,7 +24,7 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.14
+    rev: v0.15.4
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
@@ -71,11 +71,11 @@ repos:
       - id: taplo-lint
         args: ["--no-schema"]
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.24.1
+    rev: v0.25
     hooks:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.42.3
+    rev: v1.44.0
     hooks:
       - id: typos
