@@ -7538,6 +7538,54 @@ class TestDataset:
         )
         xr.testing.assert_identical(actual, expected)
 
+    @pytest.mark.parametrize(
+        ["coord_pad_mode", "coord_pad_kwargs", "coord0", "coord9"],
+        [
+            pytest.param("constant", {}, np.nan, np.nan, id="constant(default)"),
+            pytest.param(
+                "constant", {"coord_constant_values": 5}, 5, 5, id="constant(5)"
+            ),
+            pytest.param("edge", {}, 10, 50, id="edge"),
+            pytest.param(
+                "linear_ramp", {"coord_end_values": (-1, 7)}, -1, 7, id="linear_ramp"
+            ),
+            pytest.param(
+                "maximum", {"coord_stat_length": (3, 4)}, 30, 50, id="maximum"
+            ),
+            pytest.param("mean", {"coord_stat_length": (3, 4)}, 20, 35, id="mean"),
+            pytest.param("median", {"coord_stat_length": (3, 4)}, 20, 35, id="median"),
+            pytest.param(
+                "minimum", {"coord_stat_length": (3, 4)}, 10, 20, id="minimum"
+            ),
+            pytest.param(
+                "reflect", {"coord_reflect_type": "odd"}, -20, 70, id="reflect odd"
+            ),
+            pytest.param(
+                "reflect", {"coord_reflect_type": "even"}, 40, 30, id="reflect even"
+            ),
+            pytest.param("symmetric", {}, 30, 40, id="symmetric"),
+            pytest.param("wrap", {}, 30, 20, id="wrap"),
+        ],
+    )
+    def test_pad_coord_pad_mode(
+        self, coord_pad_mode, coord_pad_kwargs, coord0, coord9
+    ) -> None:
+        ds = xr.Dataset(
+            {"a": ("x", [1, 2, 3, 4, 5])}, coords={"x": [10, 20, 30, 40, 50]}
+        )
+        pad_width = {"x": (3, 2)}  # pad 5 elem array out to 10
+        padded = ds.pad(pad_width, coord_pad_mode=coord_pad_mode, **coord_pad_kwargs)
+
+        assert padded.sizes["x"] == 10
+        if np.isnan(coord0):
+            assert np.isnan(padded["x"].values[0])
+        else:
+            assert padded["x"].values[0] == coord0
+        if np.isnan(coord9):
+            assert np.isnan(padded["x"].values[-1])
+        else:
+            assert padded["x"].values[-1] == coord9
+
     def test_astype_attrs(self) -> None:
         data = create_test_data(seed=123)
         data.attrs["foo"] = "bar"
