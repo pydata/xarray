@@ -7254,7 +7254,7 @@ class Dataset(
             extension_array_df = pd.DataFrame(
                 {extension_array_column: extension_array},
                 index=pd.Index(index.array)
-                if isinstance(index, PandasExtensionArray)  # type: ignore[redundant-expr]
+                if isinstance(index, PandasExtensionArray)
                 else index,
             )
             extension_array_df.index.name = self.variables[extension_array_column].dims[

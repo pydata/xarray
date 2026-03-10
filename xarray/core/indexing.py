@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index
     from xarray.core.types import Self
     from xarray.core.variable import Variable
-    from xarray.namedarray._typing import _Shape, duckarray
+    from xarray.namedarray._typing import Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 BasicIndexerType = int | np.integer | slice
@@ -730,7 +730,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = as_indexable(array)
         self.key = key
 
-        shape: _Shape = ()
+        shape: Shape = ()
         for size, k in zip(self.array.shape, self.key.tuple, strict=True):
             if isinstance(k, slice):
                 shape += (len(range(*k.indices(size))),)
@@ -754,7 +754,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return OuterIndexer(full_key_tuple)
 
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> Shape:
         return self._shape
 
     def get_duck_array(self):
@@ -836,7 +836,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = as_indexable(array)
 
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> Shape:
         return np.broadcast(*self.key.tuple).shape
 
     def get_duck_array(self):
@@ -1025,7 +1025,7 @@ def as_indexable(array):
 
 
 def _outer_to_vectorized_indexer(
-    indexer: BasicIndexer | OuterIndexer, shape: _Shape
+    indexer: BasicIndexer | OuterIndexer, shape: Shape
 ) -> VectorizedIndexer:
     """Convert an OuterIndexer into a vectorized indexer.
 
@@ -1061,7 +1061,7 @@ def _outer_to_vectorized_indexer(
     return VectorizedIndexer(tuple(new_key))
 
 
-def _outer_to_numpy_indexer(indexer: BasicIndexer | OuterIndexer, shape: _Shape):
+def _outer_to_numpy_indexer(indexer: BasicIndexer | OuterIndexer, shape: Shape):
     """Convert an OuterIndexer into an indexer for NumPy.
 
     Parameters
@@ -1085,7 +1085,7 @@ def _outer_to_numpy_indexer(indexer: BasicIndexer | OuterIndexer, shape: _Shape)
         return _outer_to_vectorized_indexer(indexer, shape).tuple
 
 
-def _combine_indexers(old_key, shape: _Shape, new_key) -> VectorizedIndexer:
+def _combine_indexers(old_key, shape: Shape, new_key) -> VectorizedIndexer:
     """Combine two indexers.
 
     Parameters
@@ -1127,7 +1127,7 @@ class IndexingSupport(enum.Enum):
 
 def explicit_indexing_adapter(
     key: ExplicitIndexer,
-    shape: _Shape,
+    shape: Shape,
     indexing_support: IndexingSupport,
     raw_indexing_method: Callable[..., Any],
 ) -> Any:
@@ -1163,7 +1163,7 @@ def explicit_indexing_adapter(
 
 async def async_explicit_indexing_adapter(
     key: ExplicitIndexer,
-    shape: _Shape,
+    shape: Shape,
     indexing_support: IndexingSupport,
     raw_indexing_method: Callable[..., Any],
 ) -> Any:
@@ -1197,7 +1197,7 @@ def set_with_indexer(indexable, indexer: ExplicitIndexer, value: Any) -> None:
 
 
 def decompose_indexer(
-    indexer: ExplicitIndexer, shape: _Shape, indexing_support: IndexingSupport
+    indexer: ExplicitIndexer, shape: Shape, indexing_support: IndexingSupport
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
@@ -1236,7 +1236,7 @@ def _decompose_slice(key: slice, size: int) -> tuple[slice, slice]:
 
 def _decompose_vectorized_indexer(
     indexer: VectorizedIndexer,
-    shape: _Shape,
+    shape: Shape,
     indexing_support: IndexingSupport,
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
     """
@@ -1318,7 +1318,7 @@ def _decompose_vectorized_indexer(
 
 def _decompose_outer_indexer(
     indexer: BasicIndexer | OuterIndexer,
-    shape: _Shape,
+    shape: Shape,
     indexing_support: IndexingSupport,
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
     """
@@ -1500,7 +1500,7 @@ def _arrayize_outer_indexer(indexer: OuterIndexer, shape) -> OuterIndexer:
 
 
 def _arrayize_vectorized_indexer(
-    indexer: VectorizedIndexer, shape: _Shape
+    indexer: VectorizedIndexer, shape: Shape
 ) -> VectorizedIndexer:
     """Return an identical vindex but slices are replaced by arrays"""
     slices = [v for v in indexer.tuple if isinstance(v, slice)]
@@ -1564,7 +1564,7 @@ def _masked_result_drop_slice(key, data: duckarray[Any, Any] | None = None):
 
 
 def create_mask(
-    indexer: ExplicitIndexer, shape: _Shape, data: duckarray[Any, Any] | None = None
+    indexer: ExplicitIndexer, shape: Shape, data: duckarray[Any, Any] | None = None
 ):
     """Create a mask for indexing with a fill-value.
 
@@ -1975,7 +1975,7 @@ class PandasIndexingAdapter(IndexingAdapter):
         return np.asarray(self)
 
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> Shape:
         return (len(self.array),)
 
     def _convert_scalar(self, item) -> np.ndarray:
