@@ -644,8 +644,8 @@ class TestCoords:
             """\
         Coordinates:
           * x        (x) int64 16B -1 -2
-          * y        (y) int64 24B 0 1 2
             a        (x) int64 16B 4 5
+          * y        (y) int64 24B 0 1 2
             b        int64 8B -10"""
         )
         actual = repr(coords)
@@ -2422,6 +2422,46 @@ class TestOps:
         expected = tree.copy()
         expected["/foo/bar"].data = np.array([8, 10, 12])
         assert_identical(actual, expected)
+
+    def test_binary_op_compat_setting(self) -> None:
+        # Setting up a clash of non-index coordinate 'foo':
+        a = DataTree(
+            xr.Dataset(
+                data_vars={"var": (["x"], [0, 0, 0])},
+                coords={
+                    "x": [1, 2, 3],
+                    "foo": (["x"], [1.0, 2.0, np.nan]),
+                },
+            )
+        )
+        b = DataTree(
+            xr.Dataset(
+                data_vars={"var": (["x"], [0, 0, 0])},
+                coords={
+                    "x": [1, 2, 3],
+                    "foo": (["x"], [np.nan, 2.0, 3.0]),
+                },
+            )
+        )
+
+        with xr.set_options(arithmetic_compat="minimal"):
+            expected = DataTree(a.dataset.drop_vars("foo"))
+            assert_equal(a + b, expected)
+
+        with xr.set_options(arithmetic_compat="override"):
+            assert_equal(a + b, a)
+            assert_equal(b + a, b)
+
+        with xr.set_options(arithmetic_compat="no_conflicts"):
+            expected = DataTree(a.dataset.assign_coords(foo=(["x"], [1.0, 2.0, 3.0])))
+            assert_equal(a + b, expected)
+            assert_equal(b + a, expected)
+
+        with xr.set_options(arithmetic_compat="equals"):
+            with pytest.raises(xr.MergeError):
+                a + b
+            with pytest.raises(xr.MergeError):
+                b + a
 
     def test_binary_op_commutativity_with_dataset(self) -> None:
         # regression test for #9365

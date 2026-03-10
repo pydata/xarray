@@ -37,7 +37,7 @@ accel = [
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
   "netCDF4>=1.6.0",
-  "h5netcdf",
+  "h5netcdf[h5py]>=1.4.0",
   "pydap",
   "scipy>=1.13",
   "zarr>=2.18",
@@ -81,6 +81,7 @@ dev = [
   "pytest-timeout",
   "pytest-xdist",
   "pytest-asyncio",
+  "pytz",
   "ruff>=0.8.0",
   "sphinx",
   "sphinx_autosummary_accessors",
@@ -305,6 +306,7 @@ ban-relative-imports = "all"
 "pandas.api.types.is_extension_array_dtype".msg = "Use xarray.core.utils.is_allowed_extension_array{_dtype} instead.  Only use the banend API if the incoming data has already been sanitized by xarray"
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 addopts = [
   "--strict-config",
   "--strict-markers",
@@ -343,6 +345,10 @@ filterwarnings = [
   # Zarr V3 data type specifications warnings - very repetitive
   "ignore:The data type .* does not have a Zarr V3 specification",
   "ignore:Consolidated metadata is currently not part",
+  # raised by `numpy` for code in `netcdf4-python`
+  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.backends.netCDF4_",
+  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.tests.test_backends",
+  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.tests.test_backends_datatree",
   # TODO: remove once we know how to deal with a changed signature in protocols
   "default:::xarray.tests.test_strategies",
 ]

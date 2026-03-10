@@ -3282,7 +3282,7 @@ def test_groupby_dask_eager_load_warnings() -> None:
     ).chunk(z=6)
 
     with pytest.raises(ValueError, match="Please pass"):
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             ds.groupby("x", eagerly_compute_group=False)
     with pytest.raises(ValueError, match="Eagerly computing"):
         ds.groupby("x", eagerly_compute_group=True)  # type: ignore[arg-type]
@@ -3291,16 +3291,16 @@ def test_groupby_dask_eager_load_warnings() -> None:
     # will see an error, so let's warn and have them opt-in.
     ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]))
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         ds.groupby(x=UniqueGrouper(labels=[1, 2, 3]), eagerly_compute_group=False)
 
     with pytest.raises(ValueError, match="Please pass"):
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             ds.groupby_bins("x", bins=3, eagerly_compute_group=False)
     with pytest.raises(ValueError, match="Eagerly computing"):
         ds.groupby_bins("x", bins=3, eagerly_compute_group=True)  # type: ignore[arg-type]
     ds.groupby_bins("x", bins=[1, 2, 3])
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         ds.groupby_bins("x", bins=[1, 2, 3], eagerly_compute_group=False)
 
 
@@ -3845,6 +3845,20 @@ def test_groupby_bins_mean_time_series():
     assert "time" in ds_agged.data_vars
     assert "measurement" in ds_agged.data_vars
     assert ds_agged.time.dtype == np.dtype("datetime64[ns]")
+
+
+def test_groupby_multi_map():
+    # https://github.com/pydata/xarray/issues/11004
+    d = xr.DataArray(
+        [[0, 1], [2, 3]],
+        coords={
+            "lon": (["ny", "nx"], [[30, 40], [40, 50]]),
+            "lat": (["ny", "nx"], [[10, 10], [20, 20]]),
+        },
+        dims=["ny", "nx"],
+    )
+    xr.testing.assert_equal(d, d.groupby("lon").map(lambda x: x))
+    xr.testing.assert_equal(d, d.groupby(("lon", "lat")).map(lambda x: x))
 
 
 # TODO: Possible property tests to add to this module

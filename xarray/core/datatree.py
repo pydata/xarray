@@ -1237,7 +1237,7 @@ class DataTree(
         -------
         DataTree
 
-        See also
+        See Also
         --------
         Dataset
 
@@ -1428,7 +1428,7 @@ class DataTree(
         -------
         dict[str, Dataset]
 
-        See also
+        See Also
         --------
         DataTree.subtree_with_keys
         """
@@ -1695,8 +1695,9 @@ class DataTree(
         """
         non_empty_cond: Callable[[DataTree], bool]
         if drop_size_zero_vars:
-            non_empty_cond = lambda node: len(node.data_vars) > 0 and any(
-                var.size > 0 for var in node.data_vars.values()
+            non_empty_cond = lambda node: (
+                len(node.data_vars) > 0
+                and any(var.size > 0 for var in node.data_vars.values())
             )
         else:
             non_empty_cond = lambda node: len(node.data_vars) > 0
@@ -1805,7 +1806,7 @@ class DataTree(
         subtrees : DataTree, tuple of DataTrees
             One or more subtrees containing results from applying ``func`` to the data at each node.
 
-        See also
+        See Also
         --------
         map_over_datasets
         """
@@ -2052,8 +2053,8 @@ class DataTree(
             * ``dask.delayed.Delayed`` if compute is False
             * ``None`` otherwise
 
-        Note
-        ----
+        Notes
+        -----
             Due to file format specifications the on-disk root group name
             is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
@@ -2147,8 +2148,8 @@ class DataTree(
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
 
-        Note
-        ----
+        Notes
+        -----
             Due to file format specifications the on-disk root group name
             is always ``"/"`` overriding any given ``DataTree`` root node name.
         """

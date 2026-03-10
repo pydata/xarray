@@ -26,6 +26,7 @@ from numpy import (
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
+from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import dtypes, nputils
 from xarray.core.extension_array import (
     PandasExtensionArray,
@@ -126,6 +127,10 @@ masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
 )
 
+getmaskarray = _dask_or_eager_func(
+    "getmaskarray", eager_module=np.ma, dask_module="dask.array.ma"
+)
+
 
 def sliding_window_view(array, window_shape, axis=None, **kwargs):
     # TODO: some libraries (e.g. jax) don't have this, implement an alternative?
@@ -175,9 +180,15 @@ def isnull(data):
         # note: must check timedelta64 before integers, because currently
         # timedelta64 inherits from np.integer
         return isnat(data)
+    elif HAS_STRING_DTYPE and isinstance(scalar_type, np.dtypes.StringDType):
+        # na is settable, but it defaults to an empty string
+        na_object = getattr(scalar_type, "na_object", "")
+        if isna(na_object):
+            return xp.isnan(data)
+        else:
+            return data == na_object
     elif dtypes.isdtype(scalar_type, ("real floating", "complex floating"), xp=xp):
         # float types use NaN for null
-        xp = get_array_namespace(data)
         return xp.isnan(data)
     elif dtypes.isdtype(scalar_type, ("bool", "integral"), xp=xp) or (
         isinstance(scalar_type, np.dtype)
@@ -278,7 +289,7 @@ def asarray(data, xp=np, dtype=None):
 
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
-    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
+    """Cast arrays to a shared dtype using xarray's type promotion rules."""
     # Avoid calling array_type("cupy") repeatidely in the any check
     array_type_cupy = array_type("cupy")
     if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):

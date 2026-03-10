@@ -369,10 +369,10 @@ class DataArray(
            [[22.60070734, 13.78914233, 14.17424919],
             [18.28478802, 16.15234857, 26.63418806]]])
     Coordinates:
-      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
         lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
         lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-        reference_time  datetime64[ns] 8B 2014-09-05
+      * time            (time) datetime64[us] 24B 2014-09-06 2014-09-07 2014-09-08
+        reference_time  datetime64[us] 8B 2014-09-05
     Dimensions without coordinates: x, y
     Attributes:
         description:  Ambient temperature.
@@ -386,8 +386,8 @@ class DataArray(
     Coordinates:
         lon             float64 8B -99.32
         lat             float64 8B 42.21
-        time            datetime64[ns] 8B 2014-09-08
-        reference_time  datetime64[ns] 8B 2014-09-05
+        time            datetime64[us] 8B 2014-09-08
+        reference_time  datetime64[us] 8B 2014-09-05
     Attributes:
         description:  Ambient temperature.
         units:        degC
@@ -1479,7 +1479,7 @@ class DataArray(
             utils.emit_user_level_warning(
                 "Supplying chunks as dimension-order tuples is deprecated. "
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
-                category=DeprecationWarning,
+                category=FutureWarning,
             )
             if len(chunks) != len(self.dims):
                 raise ValueError(
@@ -1734,7 +1734,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the first `n`
+        """Return a new DataArray whose data is given by the first `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also
@@ -1777,7 +1777,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the last `n`
+        """Return a new DataArray whose data is given by the last `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also
@@ -2434,7 +2434,7 @@ class DataArray(
         ----------
         other : Dataset or DataArray
             Object with an 'indexes' attribute giving a mapping from dimension
-            names to an 1d array-like, which provides coordinates upon
+            names to a 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
         method : { "linear", "nearest", "zero", "slinear", "quadratic", "cubic", \
             "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima" }
@@ -2807,8 +2807,8 @@ class DataArray(
                [1., 1., 1.]])
         Coordinates:
           * x        (x) int64 16B 0 1
-          * y        (y) int64 24B 0 1 2
             a        (x) int64 16B 3 4
+          * y        (y) int64 24B 0 1 2
         >>> arr.set_index(x="a")
         <xarray.DataArray (x: 2, y: 3)> Size: 48B
         array([[1., 1., 1.],
@@ -3091,9 +3091,9 @@ class DataArray(
             b        (x) int64 16B 0 3
         >>> stacked = data.to_stacked_array("z", ["x"])
         >>> stacked.indexes["z"]
-        MultiIndex([('a',   0),
-                    ('a',   1),
-                    ('a',   2),
+        MultiIndex([('a', 0.0),
+                    ('a', 1.0),
+                    ('a', 2.0),
                     ('b', nan)],
                    name='z')
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
@@ -3199,7 +3199,7 @@ class DataArray(
             New Dataset copied from `self` with variables removed.
 
         Examples
-        -------
+        --------
         >>> data = np.arange(12).reshape(4, 3)
         >>> da = xr.DataArray(
         ...     data=data,
@@ -3985,7 +3985,7 @@ class DataArray(
         result: DataFrame
             DataArray as a pandas DataFrame.
 
-        See also
+        See Also
         --------
         DataArray.to_pandas
         DataArray.to_series
@@ -4028,7 +4028,7 @@ class DataArray(
         result : Series
             DataArray as a pandas Series.
 
-        See also
+        See Also
         --------
         DataArray.to_pandas
         DataArray.to_dataframe
@@ -4702,7 +4702,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are broadcast equal.
 
@@ -4756,7 +4756,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are equal.
 
@@ -4812,7 +4812,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are identical.
 
@@ -4906,7 +4906,9 @@ class DataArray(
             if not reflexive
             else f(other_variable_or_arraylike, self.variable)
         )
-        coords, indexes = self.coords._merge_raw(other_coords, reflexive)
+        coords, indexes = self.coords._merge_raw(
+            other_coords, reflexive, compat=OPTIONS["arithmetic_compat"]
+        )
         name = result_name([self, other])
 
         return self._replace(variable, coords, name, indexes=indexes)
@@ -4926,7 +4928,9 @@ class DataArray(
         other_coords = getattr(other, "coords", None)
         other_variable = getattr(other, "variable", other)
         try:
-            with self.coords._merge_inplace(other_coords):
+            with self.coords._merge_inplace(
+                other_coords, compat=OPTIONS["arithmetic_compat"]
+            ):
                 f(self.variable, other_variable)
         except MergeError as exc:
             raise MergeError(
@@ -5269,19 +5273,19 @@ class DataArray(
         <xarray.DataArray (time: 5)> Size: 40B
         array([5, 4, 3, 2, 1])
         Coordinates:
-          * time     (time) datetime64[ns] 40B 2000-01-01 2000-01-02 ... 2000-01-05
+          * time     (time) datetime64[us] 40B 2000-01-01 2000-01-02 ... 2000-01-05
 
         >>> da.sortby(da)
         <xarray.DataArray (time: 5)> Size: 40B
         array([1, 2, 3, 4, 5])
         Coordinates:
-          * time     (time) datetime64[ns] 40B 2000-01-05 2000-01-04 ... 2000-01-01
+          * time     (time) datetime64[us] 40B 2000-01-05 2000-01-04 ... 2000-01-01
 
         >>> da.sortby(lambda x: x)
         <xarray.DataArray (time: 5)> Size: 40B
         array([1, 2, 3, 4, 5])
         Coordinates:
-          * time     (time) datetime64[ns] 40B 2000-01-05 2000-01-04 ... 2000-01-01
+          * time     (time) datetime64[us] 40B 2000-01-05 2000-01-04 ... 2000-01-01
         """
         # We need to convert the callable here rather than pass it through to the
         # dataset method, since otherwise the dataset method would try to call the
@@ -5483,7 +5487,7 @@ class DataArray(
         -------
         differentiated: DataArray
 
-        See also
+        See Also
         --------
         numpy.gradient: corresponding numpy function
 
@@ -5541,7 +5545,7 @@ class DataArray(
         -------
         integrated : DataArray
 
-        See also
+        See Also
         --------
         Dataset.integrate
         numpy.trapz : corresponding numpy function
@@ -5598,7 +5602,7 @@ class DataArray(
         -------
         integrated : DataArray
 
-        See also
+        See Also
         --------
         Dataset.cumulative_integrate
         scipy.integrate.cumulative_trapezoid : corresponding scipy function
@@ -5960,8 +5964,8 @@ class DataArray(
                [nan, nan, nan, nan]])
         Coordinates:
           * x        (x) float64 32B nan 0.0 1.0 nan
-          * y        (y) int64 32B 10 20 30 40
             z        (x) float64 32B nan 100.0 200.0 nan
+          * y        (y) int64 32B 10 20 30 40
 
         Careful, ``constant_values`` are coerced to the data type of the array which may
         lead to a loss of precision:
@@ -5974,8 +5978,8 @@ class DataArray(
                [ 1,  1,  1,  1]])
         Coordinates:
           * x        (x) float64 32B nan 0.0 1.0 nan
-          * y        (y) int64 32B 10 20 30 40
             z        (x) float64 32B nan 100.0 200.0 nan
+          * y        (y) int64 32B 10 20 30 40
         """
         ds = self._to_temp_dataset().pad(
             pad_width=pad_width,
@@ -6742,7 +6746,7 @@ class DataArray(
         time part of the timestamps.
 
         Parameters
-        ---------
+        ----------
         calendar : str
             The target calendar name.
         dim : str
@@ -6863,8 +6867,8 @@ class DataArray(
         dim : str
             The time coordinate name.
 
-        Return
-        ------
+        Returns
+        -------
         DataArray
             The source interpolated on the decimal years of target,
         """
@@ -6920,12 +6924,12 @@ class DataArray(
         array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
                1.826e+03], shape=(1827,))
         Coordinates:
-          * time     (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
+          * time     (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
         >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
         <xarray.DataArray (time: 1827)> Size: 15kB
         array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5], shape=(1827,))
         Coordinates:
-          * time       (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
+          * time       (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
             dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
 
         Use a ``Grouper`` object to be more explicit
@@ -7196,12 +7200,12 @@ class DataArray(
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.rolling(time=3, center=True).mean()
         <xarray.DataArray (time: 12)> Size: 96B
         array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
 
         Remove the NaNs using ``dropna()``:
 
@@ -7209,7 +7213,7 @@ class DataArray(
         <xarray.DataArray (time: 10)> Size: 80B
         array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 80B 2000-01-15 2000-02-15 ... 2000-10-15
+          * time     (time) datetime64[us] 80B 2000-01-15 2000-02-15 ... 2000-10-15
 
         See Also
         --------
@@ -7263,13 +7267,13 @@ class DataArray(
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
 
         >>> da.cumulative("time").sum()
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  3.,  6., 10., 15., 21., 28., 36., 45., 55., 66.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
 
         See Also
         --------
@@ -7378,7 +7382,7 @@ class DataArray(
                356.98071625, 357.98347107, 358.9862259 , 359.98898072,
                360.99173554, 361.99449036, 362.99724518, 364.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-12-12
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-12-12
         >>> da.coarsen(time=3, boundary="trim").mean()  # +doctest: ELLIPSIS
         <xarray.DataArray (time: 121)> Size: 968B
         array([  1.00275482,   4.01101928,   7.01928375,  10.02754821,
@@ -7413,7 +7417,7 @@ class DataArray(
                349.96143251, 352.96969697, 355.97796143, 358.9862259 ,
                361.99449036])
         Coordinates:
-          * time     (time) datetime64[ns] 968B 1999-12-16 1999-12-19 ... 2000-12-10
+          * time     (time) datetime64[us] 968B 1999-12-16 1999-12-19 ... 2000-12-10
         >>>
 
         See Also
@@ -7516,12 +7520,12 @@ class DataArray(
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.resample(time="QS-DEC").mean()
         <xarray.DataArray (time: 4)> Size: 32B
         array([ 1.,  4.,  7., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 32B 1999-12-01 2000-03-01 ... 2000-09-01
+          * time     (time) datetime64[us] 32B 1999-12-01 2000-03-01 ... 2000-09-01
 
         Upsample monthly time-series data to daily data:
 
@@ -7548,7 +7552,7 @@ class DataArray(
                10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
                10.96774194, 11.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         Limit scope of upsampling method
 
@@ -7569,7 +7573,7 @@ class DataArray(
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         See Also
         --------

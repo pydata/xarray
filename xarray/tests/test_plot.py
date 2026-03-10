@@ -528,7 +528,7 @@ class TestPlot(PlotTestCase):
             [-0.5, 0.5, 5.0, 9.5, 10.5], _infer_interval_breaks([0, 1, 9, 10])
         )
         assert_array_equal(
-            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),  # type: ignore[operator]
+            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),
             _infer_interval_breaks(pd.date_range("20000101", periods=3)),
         )
 
@@ -833,6 +833,14 @@ class TestPlot1D(PlotTestCase):
         darray.plot.line(x="period")
         title = plt.gca().get_title()
         assert "d = [10.009]" == title
+
+    def test_warns_for_few_positional_args(self) -> None:
+        with pytest.warns(FutureWarning, match="Using positional arguments"):
+            self.darray.plot.scatter("period")
+
+    def test_raises_for_too_many_positional_args(self) -> None:
+        with pytest.raises(ValueError, match="Using positional arguments"):
+            self.darray.plot.scatter("period", "foo", "bar", "blue", {})
 
 
 class TestPlotStep(PlotTestCase):
@@ -1163,9 +1171,9 @@ class TestDetermineCmapParams:
 @requires_matplotlib
 class TestDiscreteColorMap:
     @pytest.fixture(autouse=True)
-    def setUp(self):
-        x = np.arange(start=0, stop=10, step=2)
-        y = np.arange(start=9, stop=-7, step=-3)
+    def setUp(self) -> Generator[None, None, None]:
+        x = np.arange(0, 10, 2)
+        y = np.arange(9, -7, -3)
         xy = np.dstack(np.meshgrid(x, y))
         distance = np.linalg.norm(xy, axis=2)
         self.darray = DataArray(distance, list(zip(("y", "x"), (y, x), strict=True)))
@@ -1601,12 +1609,8 @@ class Common2dMixin:
         self.plotmethod(add_colorbar=False)
         assert "testvar" not in text_in_fig()
         # check that error is raised
-        pytest.raises(
-            ValueError,
-            self.plotmethod,
-            add_colorbar=False,
-            cbar_kwargs={"label": "label"},
-        )
+        with pytest.raises(ValueError):
+            self.plotmethod(add_colorbar=False, cbar_kwargs={"label": "label"})
 
     def test_verbose_facetgrid(self) -> None:
         a = easy_array((10, 15, 3))
@@ -1729,6 +1733,19 @@ class Common2dMixin:
 
         with pytest.raises(ValueError):
             self.darray.plot(norm=norm, vmax=2)  # type: ignore[call-arg]
+
+    def test_plot_warns_for_2_positional_args(self) -> None:
+        da = xr.DataArray(
+            np.random.randn(2, 6, 6),
+            dims=("time", "x", "y"),
+            coords={"x": np.arange(6), "y": np.arange(6)},
+        )
+        with pytest.warns(FutureWarning, match="Using positional arguments"):
+            self.plotfunc(da, "x", "y", col="time")
+
+    def test_plot_raises_too_many_for_positional_args(self) -> None:
+        with pytest.raises(ValueError, match="Using positional arguments"):
+            self.plotmethod("x", "y", (12, 4))
 
 
 @pytest.mark.slow
@@ -2890,6 +2907,10 @@ class TestDatasetScatterPlots(PlotTestCase):
                 x=x, y=y, hue=hue, add_legend=add_legend, add_colorbar=add_colorbar
             )
 
+    def test_does_not_allow_positional_args(self) -> None:
+        with pytest.raises(TypeError, match="takes 1 positional argument"):
+            self.ds.plot.scatter("A", "B")
+
     def test_datetime_hue(self) -> None:
         ds2 = self.ds.copy()
 
@@ -3438,7 +3459,7 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 @requires_matplotlib
 def test_facetgrid_axes_raises_deprecation_warning() -> None:
     with pytest.warns(
-        DeprecationWarning,
+        FutureWarning,
         match=(
             "self.axes is deprecated since 2022.11 in order to align with "
             "matplotlibs plt.subplots, use self.axs instead."

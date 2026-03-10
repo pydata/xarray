@@ -213,17 +213,32 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
 
 .. jupyter-execute::
 
-    ds.to_netcdf("example.nc")
-    reopened = xr.open_dataset("example.nc")
+    filename = "example.nc"
+
+.. jupyter-execute::
+    :hide-code:
+
+    # Ensure the file is located in a unique temporary directory
+    # so that it doesn't conflict with parallel builds of the
+    # documentation.
+
+    import tempfile
+    import os.path
+
+    tempdir = tempfile.TemporaryDirectory()
+    filename = os.path.join(tempdir.name, filename)
+
+.. jupyter-execute::
+
+    ds.to_netcdf(filename)
+    reopened = xr.open_dataset(filename)
     reopened
 
 .. jupyter-execute::
     :hide-code:
 
-    import os
-
     reopened.close()
-    os.remove("example.nc")
+    tempdir.cleanup()
 
 
 It is common for datasets to be distributed across multiple files (commonly one file per timestep). Xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods. For more, see :ref:`io`.

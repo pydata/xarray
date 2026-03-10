@@ -471,7 +471,16 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert isinstance(out["d"].data, dask.array.Array)
         assert isinstance(out["c"].data, dask.array.Array)
 
-        out = xr.concat([ds1, ds2, ds3], dim="n", data_vars=[], coords=[])
+        with xr.set_options(use_new_combine_kwarg_defaults=True):
+            out = xr.concat([ds1, ds2, ds3], dim="n", data_vars=[], coords=[])
+            # no extra kernel calls
+            assert kernel_call_count == 6
+            assert isinstance(out["d"].data, dask.array.Array)
+            assert isinstance(out["c"].data, dask.array.Array)
+
+        out = xr.concat(
+            [ds1, ds2, ds3], dim="n", data_vars=[], coords=[], compat="equals"
+        )
         # variables are loaded once as we are validating that they're identical
         assert kernel_call_count == 12
         assert isinstance(out["d"].data, np.ndarray)

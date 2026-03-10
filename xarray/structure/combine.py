@@ -509,7 +509,7 @@ def combine_nested(
         Must be the same length as the depth of the list passed to
         ``datasets``.
     compat : {"identical", "equals", "broadcast_equals", \
-              "no_conflicts", "override"}, optional
+              "no_conflicts", "override"}, default: "no_conflicts"
         String indicating how to compare variables of the same name for
         potential merge conflicts:
 
@@ -522,7 +522,7 @@ def combine_nested(
           must be equal. The returned dataset then contains the combination
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
-    data_vars : {"minimal", "different", "all" or list of str}, optional
+    data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
             appears are included.
@@ -532,15 +532,16 @@ def combine_nested(
             load the data payload of data variables into memory if they are not
             already loaded.
           * "all": All data variables will be concatenated.
-          * None: Means ``"all"`` if ``dim`` is not present in any of the ``objs``,
-            and ``"minimal"`` if ``dim`` is present in any of ``objs``.
-          * list of dims: The listed data variables will be concatenated, in
+          * None: Means ``"all"`` if ``concat_dim`` is not present in any of
+            the ``objs``, and ``"minimal"`` if ``concat_dim`` is present
+            in any of ``objs``.
+          * list of str: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
 
-    coords : {"minimal", "different", "all" or list of str}, optional
+    coords : {"minimal", "different", "all"} or list of str, default: "different"
         These coordinate variables will be concatenated together:
-          * "minimal": Only coordinates in which the dimension already appears
-            are included. If concatenating over a dimension _not_
+          * "minimal": Only coordinates in which the dimension already
+            appears are included. If concatenating over a dimension _not_
             present in any of the objects, then all data variables will
             be concatenated along that new dimension.
           * "different": Coordinates which are not equal (ignoring attributes)
@@ -550,14 +551,14 @@ def combine_nested(
             loaded.
           * "all": All coordinate variables will be concatenated, except
             those corresponding to other dimensions.
-          * list of Hashable: The listed coordinate variables will be concatenated,
+          * list of str: The listed coordinate variables will be concatenated,
             in addition to the "minimal" coordinates.
 
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
         refer to its values.
-    join : {"outer", "inner", "left", "right", "exact"}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, default: "outer"
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
 
@@ -678,7 +679,7 @@ def combine_nested(
         temperature    (t) float64 80B -0.8878 -1.981 -0.3479 ... -0.4381 -1.253
         precipitation  (t) float64 80B 1.202 -0.3873 -0.3023 ... -0.8955 0.3869
 
-    See also
+    See Also
     --------
     concat
     merge
@@ -836,7 +837,8 @@ def combine_by_coords(
     data_objects : Iterable of Datasets or DataArrays
         Data objects to combine.
 
-    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, \
+             default: "no_conflicts"
         String indicating how to compare variables of the same name for
         potential conflicts:
 
@@ -850,7 +852,7 @@ def combine_by_coords(
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
 
-    data_vars : {"minimal", "different", "all" or list of str}, optional
+    data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
 
         - "minimal": Only data variables in which the dimension already
@@ -861,18 +863,33 @@ def combine_by_coords(
           load the data payload of data variables into memory if they are not
           already loaded.
         - "all": All data variables will be concatenated.
+        - None: Means ``"all"`` if ``concat_dim`` is not present in any of
+          the ``objs``, and ``"minimal"`` if ``concat_dim`` is present
+          in any of ``objs``.
         - list of str: The listed data variables will be concatenated, in
           addition to the "minimal" data variables.
+    coords : {"minimal", "different", "all"} or list of str, default: "different"
+        These coordinate variables will be concatenated together:
 
-        If objects are DataArrays, `data_vars` must be "all".
-    coords : {"minimal", "different", "all"} or list of str, optional
-        As per the "data_vars" kwarg, but for coordinate variables.
+        - "minimal": Only coordinates in which the dimension already
+          appears are included. If concatenating over a dimension _not_
+          present in any of the objects, then all data variables will
+          be concatenated along that new dimension.
+        - "different": Coordinates which are not equal (ignoring attributes)
+          across all datasets are also concatenated (as well as all for which
+          dimension already appears). Beware: this option may load the data
+          payload of coordinate variables into memory if they are not already
+          loaded.
+        - "all": All coordinate variables will be concatenated, except
+          those corresponding to other dimensions.
+        - list of str: The listed coordinate variables will be concatenated,
+          in addition to the "minimal" coordinates.
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
         refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
-    join : {"outer", "inner", "left", "right", "exact"}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, default: "outer"
         String indicating how to combine differing indexes in objects
 
         - "outer": use the union of object indexes
@@ -908,7 +925,7 @@ def combine_by_coords(
         Will return a Dataset unless all the inputs are unnamed DataArrays, in which case a
         DataArray will be returned.
 
-    See also
+    See Also
     --------
     concat
     merge
