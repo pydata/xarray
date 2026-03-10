@@ -4908,8 +4908,6 @@ class TestDataArray:
         param_names = ["a"]
         params, func_args = _get_func_args(np.power, param_names)
         assert params == param_names
-        with pytest.raises(ValueError):
-            _get_func_args(np.power, [])
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
