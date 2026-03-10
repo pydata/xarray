@@ -889,11 +889,20 @@ class ZarrStore(AbstractWritableDataStore):
             chunks = chunk_grid.chunk_shape
             preferred_chunks = dict(zip(dimensions, chunks, strict=True))
         elif _has_unified_chunk_grid():
-            # Rectilinear or other non-regular grids — store the full
-            # chunk_grid and skip preferred_chunks since there's no single
-            # chunk size per dimension
+            # Rectilinear or other non-regular grids — extract per-dimension
+            # edge tuples so dask can reconstruct the exact chunk layout.
+            from zarr.core.chunk_grids import FixedDimension
+
             chunks = chunk_grid
             preferred_chunks = {}
+            for dim_name, dim_grid in zip(
+                dimensions, chunk_grid.dimensions, strict=True
+            ):
+                if isinstance(dim_grid, FixedDimension):
+                    preferred_chunks[dim_name] = dim_grid.size
+                else:
+                    # VaryingDimension or TiledDimension — use full edge tuple
+                    preferred_chunks[dim_name] = dim_grid.edges
         else:
             # Fallback for older zarr-python without unified chunk grid
             chunks = tuple(zarr_array.chunks)
@@ -1286,14 +1295,20 @@ class ZarrStore(AbstractWritableDataStore):
             # parallel writes. See https://github.com/pydata/xarray/issues/10831
             effective_write_chunks = encoding.get("shards") or encoding["chunks"]
 
-            if self._align_chunks and isinstance(effective_write_chunks, tuple):
+            # Rectilinear chunks are tuples-of-tuples — align_chunks and
+            # safe_chunks validation only apply to regular (flat tuple) chunks.
+            _is_regular_chunks = isinstance(effective_write_chunks, tuple) and all(
+                isinstance(c, int) for c in effective_write_chunks
+            )
+
+            if self._align_chunks and _is_regular_chunks:
                 v = grid_rechunk(
                     v=v,
                     enc_chunks=effective_write_chunks,
                     region=region,
                 )
 
-            if self._safe_chunks and isinstance(effective_write_chunks, tuple):
+            if self._safe_chunks and _is_regular_chunks:
                 # the hard case
                 # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
                 # (or shard, when sharding is enabled)
