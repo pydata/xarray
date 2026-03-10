@@ -5998,6 +5998,23 @@ class DataArray(
           * x        (x) float64 32B nan 0.0 1.0 nan
             z        (x) float64 32B nan 100.0 200.0 nan
           * y        (y) int64 32B 10 20 30 40
+
+        Note that the default behavior of coordinate padding uses NaNs (or NaTs), which
+        requires that integer types be promoted to floats.  Providing values via
+        ``coord_constant_values`` then follows the coercion behavior mentioned above,
+        where array types are preserved:
+
+        >>> da.pad(x=1, constant_values=1.23456789, coord_constant_values=-999.9)
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
+        array([[ 1,  1,  1,  1],
+               [ 0,  1,  2,  3],
+               [10, 11, 12, 13],
+               [ 1,  1,  1,  1]])
+        Coordinates:
+          * x        (x) int64 32B -999 0 1 -999
+            z        (x) int64 32B -999 100 200 -999
+          * y        (y) int64 32B 10 20 30 40
+
         """
         ds = self._to_temp_dataset().pad(
             pad_width=pad_width,
