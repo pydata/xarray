@@ -7314,6 +7314,7 @@ class Dataset(
     ) -> None:
         from sparse import COO
 
+        coords: np.ndarray[tuple[int, int], np.dtype[np.signedinteger]]
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_monotonic_increasing

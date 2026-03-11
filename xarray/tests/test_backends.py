@@ -2067,8 +2067,8 @@ class NetCDF4Base(NetCDFBase):
 
             # now check xarray
             with open_dataset(tmp_file) as ds:
-                expected = create_masked_and_scaled_data(np.dtype(dtype))
-                assert_identical(expected, ds)
+                expected_ds = create_masked_and_scaled_data(np.dtype(dtype))
+                assert_identical(expected_ds, ds)
 
     def test_0dimensional_variable(self) -> None:
         # This fix verifies our work-around to this netCDF4-python bug:
