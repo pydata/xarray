@@ -1414,7 +1414,7 @@ def open_zarr(
     store,
     group=None,
     synchronizer=None,
-    chunks=_default,
+    chunks: int | dict[str, int] | Literal["auto"] | None | type[_default] = _default,
     decode_cf=True,
     mask_and_scale=True,
     decode_times=True,
