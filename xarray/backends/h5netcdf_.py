@@ -195,7 +195,10 @@ class H5NetCDFStore(WritableCFDataStore):
             # Use blockcache with size 4MB by default
             if "cache_type" not in open_kwargs:
                 open_kwargs["cache_type"] = "blockcache"
-            if open_kwargs["cache_type"] == "blockcache" and "block_size" not in open_kwargs:
+            if (
+                open_kwargs["cache_type"] == "blockcache"
+                and "block_size" not in open_kwargs
+            ):
                 open_kwargs["block_size"] = 4 * 1024 * 1024
 
             filename = _open_remote_file(
