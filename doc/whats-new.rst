@@ -14,6 +14,10 @@ v2026.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Adds a new option ``chunks="preserve"`` when opening a dataset. This option
+  guarantees that chunks in xarray match on-disk chunks or multiples of them.
+  No chunk splitting allowed. (:pull:`11060`).
+  By `Julia Signell <https://github.com/jsignell>`_
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
