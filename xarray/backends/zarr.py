@@ -1499,12 +1499,15 @@ def open_zarr(
         Array synchronizer provided to zarr
     group : str, optional
         Group path. (a.k.a. `path` in zarr terminology.)
-    chunks : int, dict, "auto" or None, optional
+    chunks : int, dict, "auto", "preserve", or None, optional
         Used to load the data into dask arrays. Default behavior is to use
         ``chunks={}`` if dask is available, otherwise ``chunks=None``.
 
         - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
+        - ``chunks="preserve"`` will use a chunking scheme that never splits encoded
+          chunks. If encoded chunks are small then "preserve" takes multiples of them
+          over the largest dimension.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
           :ref:`lazy indexing classes <internal design.lazy indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
