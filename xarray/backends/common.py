@@ -223,12 +223,6 @@ def _open_remote_file(file, mode, storage_options=None, open_kwargs=None):
 
     open_kwargs: dict = open_kwargs or {}
 
-    # Use blockcache with size 4MB by default
-    if "cache_type" not in open_kwargs:
-        open_kwargs["cache_type"] = "blockcache"
-    if open_kwargs["cache_type"] == "blockcache" and "block_size" not in open_kwargs:
-        open_kwargs["block_size"] = 4 * 1024 * 1024
-
     return fs.open(paths[0], mode=mode, **open_kwargs)
 
 
