@@ -175,6 +175,7 @@ module = [
 [[tool.mypy.overrides]]
 check_untyped_defs = true
 module = [
+  "xarray.backends.scipy_",
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
   "xarray.structure.alignment",
