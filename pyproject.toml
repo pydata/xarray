@@ -158,7 +158,6 @@ module = [
   "pooch.*",
   "pyarrow.*",
   "pydap.*",
-  "scipy.*",
   "seaborn.*",
   "setuptools",
   "sparse.*",
