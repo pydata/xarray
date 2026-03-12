@@ -3,8 +3,8 @@ from __future__ import annotations
 import gzip
 import io
 import os
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from collections.abc import Iterable, Mapping
+from typing import IO, TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 import numpy as np
 
@@ -26,6 +26,7 @@ from xarray.backends.netcdf3 import (
 )
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
+from xarray.core.types import Lock
 from xarray.core.utils import (
     Frozen,
     FrozenDict,
@@ -35,44 +36,55 @@ from xarray.core.utils import (
 )
 from xarray.core.variable import Variable
 
-try:
-    from scipy.io import netcdf_file as netcdf_file_base
-except ImportError:
-    netcdf_file_base = object  # type: ignore[assignment,misc,unused-ignore]  # scipy is optional
-
-
 if TYPE_CHECKING:
     import scipy.io
 
     from xarray.backends.common import AbstractDataStore
+    from xarray.backends.file_manager import FileManager
     from xarray.core.dataset import Dataset
     from xarray.core.types import ReadBuffer
 
+T = TypeVar("T")
+K = TypeVar("K")
+V = TypeVar("V")
 
 HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
 
 
-def _decode_string(s):
+@overload
+def _decode_string(s: bytes) -> str: ...
+
+
+@overload
+def _decode_string(s: T) -> T: ...
+
+
+def _decode_string(s: bytes | T) -> str | T:
     if isinstance(s, bytes):
         return s.decode("utf-8", "replace")
     return s
 
 
-def _decode_attrs(d):
+def _decode_attrs(d: Mapping[K, V]) -> dict[K, V]:
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
     return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}
 
 
 class ScipyArrayWrapper(BackendArray):
-    def __init__(self, variable_name, datastore):
+    datastore: ScipyDataStore
+    variable_name: str
+    shape: tuple[int, ...]
+    dtype: np.dtype
+
+    def __init__(self, variable_name: str, datastore: ScipyDataStore) -> None:
         self.datastore = datastore
         self.variable_name = variable_name
         array = self.get_variable().data
         self.shape = array.shape
         self.dtype = np.dtype(array.dtype.kind + str(array.dtype.itemsize))
 
-    def get_variable(self, needs_lock=True):
+    def get_variable(self, needs_lock: bool = True) -> scipy.io.netcdf_variable:
         ds = self.datastore._manager.acquire(needs_lock)
         return ds.variables[self.variable_name]
 
@@ -88,7 +100,7 @@ class ScipyArrayWrapper(BackendArray):
         # Copy data if the source file is mmapped. This makes things consistent
         # with the netCDF4 library by ensuring we can safely read arrays even
         # after closing associated files.
-        copy = self.datastore.ds.use_mmap
+        copy: bool | None = self.datastore.ds.use_mmap
 
         # adapt handling of copy-kwarg to numpy 2.0
         # see https://github.com/numpy/numpy/issues/25916
@@ -110,31 +122,36 @@ class ScipyArrayWrapper(BackendArray):
                     raise
 
 
-# TODO: Make the scipy import lazy again after upstreaming these fixes.
-class flush_only_netcdf_file(netcdf_file_base):
-    # scipy.io.netcdf_file.close() incorrectly closes file objects that
-    # were passed in as constructor arguments:
-    # https://github.com/scipy/scipy/issues/13905
-
-    # Instead of closing such files, only call flush(), which is
-    # equivalent as long as the netcdf_file object is not mmapped.
-    # This suffices to keep BytesIO objects open long enough to read
-    # their contents from to_netcdf(), but underlying files still get
-    # closed when the netcdf_file is garbage collected (via __del__),
-    # and will need to be fixed upstream in scipy.
-    def close(self):
-        if hasattr(self, "fp") and not self.fp.closed:
-            self.flush()
-            self.fp.seek(0)  # allow file to be read again
-
-    def __del__(self):
-        # Remove the __del__ method, which in scipy is aliased to close().
-        # These files need to be closed explicitly by xarray.
-        pass
-
-
-def _open_scipy_netcdf(filename, mode, mmap, version, flush_only=False):
+def _open_scipy_netcdf(
+    filename: str | os.PathLike[Any] | IO[bytes],
+    mode: Literal["r", "w", "a"],
+    mmap: bool | None,
+    version: Literal[1, 2],
+    flush_only: bool = False,
+) -> scipy.io.netcdf_file:
     import scipy.io
+
+    # TODO: Remove this after upstreaming these fixes.
+    class flush_only_netcdf_file(scipy.io.netcdf_file):
+        # scipy.io.netcdf_file.close() incorrectly closes file objects that
+        # were passed in as constructor arguments:
+        # https://github.com/scipy/scipy/issues/13905
+
+        # Instead of closing such files, only call flush(), which is
+        # equivalent as long as the netcdf_file object is not mmapped.
+        # This suffices to keep BytesIO objects open long enough to read
+        # their contents from to_netcdf(), but underlying files still get
+        # closed when the netcdf_file is garbage collected (via __del__),
+        # and will need to be fixed upstream in scipy.
+        def close(self):
+            if hasattr(self, "fp") and not self.fp.closed:
+                self.flush()
+                self.fp.seek(0)  # allow file to be read again
+
+        def __del__(self):
+            # Remove the __del__ method, which in scipy is aliased to close().
+            # These files need to be closed explicitly by xarray.
+            pass
 
     netcdf_file = flush_only_netcdf_file if flush_only else scipy.io.netcdf_file
 
@@ -142,7 +159,10 @@ def _open_scipy_netcdf(filename, mode, mmap, version, flush_only=False):
     if isinstance(filename, str) and filename.endswith(".gz"):
         try:
             return netcdf_file(
-                gzip.open(filename), mode=mode, mmap=mmap, version=version
+                gzip.open(filename),  # type: ignore[arg-type]  # not sure if gzip issue or scipy-stubs issue
+                mode=mode,
+                mmap=mmap,
+                version=version,
             )
         except TypeError as e:
             # TODO: gzipped loading only works with NetCDF3 files.
@@ -180,12 +200,22 @@ class ScipyDataStore(WritableCFDataStore):
     It only supports the NetCDF3 file-format.
     """
 
+    lock: Lock
+    _manager: FileManager[scipy.io.netcdf_file]
+
     def __init__(
-        self, filename_or_obj, mode="r", format=None, group=None, mmap=None, lock=None
-    ):
+        self,
+        filename_or_obj: T_PathFileOrDataStore,
+        mode: Literal["r", "w", "a"] = "r",
+        format: str | None = None,
+        group: str | None = None,
+        mmap: bool | None = None,
+        lock: Lock | Literal[False] | None = None,
+    ) -> None:
         if group is not None:
             raise ValueError("cannot save to a group with the scipy.io.netcdf backend")
 
+        version: Literal[1, 2]
         if format is None or format == "NETCDF3_64BIT":
             version = 2
         elif format == "NETCDF3_CLASSIC":
@@ -203,6 +233,7 @@ class ScipyDataStore(WritableCFDataStore):
             filename_or_obj = io.BytesIO()
             source.getvalue = filename_or_obj.getbuffer
 
+        manager: FileManager
         if isinstance(filename_or_obj, str):  # path
             manager = CachingFileManager(
                 _open_scipy_netcdf,
@@ -215,7 +246,7 @@ class ScipyDataStore(WritableCFDataStore):
             # Note: checking for .seek matches the check for file objects
             # in scipy.io.netcdf_file
             scipy_dataset = _open_scipy_netcdf(
-                filename_or_obj,
+                filename_or_obj,  # type: ignore[arg-type]  # unsupported cases are caught above
                 mode=mode,
                 mmap=mmap,
                 version=version,
@@ -234,53 +265,57 @@ class ScipyDataStore(WritableCFDataStore):
     def ds(self) -> scipy.io.netcdf_file:
         return self._manager.acquire()
 
-    def open_store_variable(self, name, var):
+    def open_store_variable(self, name: str, var: scipy.io.netcdf_variable) -> Variable:
         return Variable(
             var.dimensions,
             indexing.LazilyIndexedArray(ScipyArrayWrapper(name, self)),
-            _decode_attrs(var._attributes),
+            _decode_attrs(var._attributes),  # type: ignore[attr-defined]  # using private attribute
         )
 
-    def get_variables(self):
+    def get_variables(self) -> Frozen[str, Variable]:
         return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 
-    def get_attrs(self):
-        return Frozen(_decode_attrs(self.ds._attributes))
+    def get_attrs(self) -> Frozen[str, Any]:
+        return Frozen(_decode_attrs(self.ds._attributes))  # type: ignore[attr-defined]  # using private attribute
 
-    def get_dimensions(self):
+    def get_dimensions(self) -> Frozen[str, int | None]:
         return Frozen(self.ds.dimensions)
 
-    def get_encoding(self):
+    def get_encoding(self) -> dict[Literal["unlimited_dims"], set[str]]:
         return {
-            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}  # type: ignore[redundant-expr]  # scipy-stubs error
         }
 
-    def set_dimension(self, name, length, is_unlimited=False):
+    def set_dimension(self, name: str, length: int, is_unlimited: bool = False) -> None:
         if name in self.ds.dimensions:
             raise ValueError(
                 f"{type(self).__name__} does not support modifying dimensions"
             )
         dim_length = length if not is_unlimited else None
-        self.ds.createDimension(name, dim_length)
+        self.ds.createDimension(name, dim_length)  # type: ignore[arg-type]  # scipy-stubs error, None is allowed
 
-    def _validate_attr_key(self, key):
+    def _validate_attr_key(self, key: Any) -> None:
         if not is_valid_nc3_name(key):
             raise ValueError("Not a valid attribute name")
 
-    def set_attribute(self, key, value):
+    def set_attribute(self, key: str, value: Any) -> None:
         self._validate_attr_key(key)
         value = encode_nc3_attr_value(value)
         setattr(self.ds, key, value)
 
-    def encode_variable(self, variable, name=None):
+    def encode_variable(self, variable: Variable, name: str | None = None) -> Variable:
         variable = encode_nc3_variable(variable, name=name)
         return variable
 
     def prepare_variable(
-        self, name, variable, check_encoding=False, unlimited_dims=None
-    ):
+        self,
+        name: str,
+        variable: Variable,
+        check_encoding: bool = False,
+        unlimited_dims: set[str] | None = None,
+    ) -> tuple[ScipyArrayWrapper, Any]:
         if (
             check_encoding
             and variable.encoding
@@ -295,7 +330,7 @@ class ScipyDataStore(WritableCFDataStore):
         # don't write the data yet; scipy.io.netcdf does not support incremental
         # writes.
         if name not in self.ds.variables:
-            self.ds.createVariable(name, data.dtype, variable.dims)
+            self.ds.createVariable(name, data.dtype, [str(v) for v in variable.dims])
         scipy_var = self.ds.variables[name]
         for k, v in variable.attrs.items():
             self._validate_attr_key(k)
@@ -305,20 +340,15 @@ class ScipyDataStore(WritableCFDataStore):
 
         return target, data
 
-    def sync(self):
+    def sync(self) -> None:
         self.ds.sync()
 
-    def close(self):
+    def close(self) -> None:
         self._manager.close()
 
 
 def _normalize_filename_or_obj(
-    filename_or_obj: str
-    | os.PathLike[Any]
-    | ReadBuffer
-    | bytes
-    | memoryview
-    | AbstractDataStore,
+    filename_or_obj: T_PathFileOrDataStore,
 ) -> str | ReadBuffer | AbstractDataStore:
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
@@ -381,18 +411,18 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj: T_PathFileOrDataStore,
         *,
-        mask_and_scale=True,
-        decode_times=True,
-        concat_characters=True,
-        decode_coords=True,
+        mask_and_scale: bool = True,
+        decode_times: bool = True,
+        concat_characters: bool = True,
+        decode_coords: bool = True,
         drop_variables: str | Iterable[str] | None = None,
-        use_cftime=None,
-        decode_timedelta=None,
-        mode="r",
-        format=None,
-        group=None,
-        mmap=None,
-        lock=None,
+        use_cftime: bool | None = None,
+        decode_timedelta: bool | None = None,
+        mode: Literal["r", "w", "a"] = "r",
+        format: str | None = None,
+        group: str | None = None,
+        mmap: bool | None = None,
+        lock: Lock | Literal[False] | None = None,
     ) -> Dataset:
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
         store = ScipyDataStore(
