@@ -221,7 +221,7 @@ def _open_remote_file(file, mode, storage_options=None, open_kwargs=None):
         file, mode=mode, storage_options=storage_options
     )
 
-    open_kwargs: dict = open_kwargs or {}
+    open_kwargs = open_kwargs or {}
 
     return fs.open(paths[0], mode=mode, **open_kwargs)
 

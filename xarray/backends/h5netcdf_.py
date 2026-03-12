@@ -190,7 +190,7 @@ class H5NetCDFStore(WritableCFDataStore):
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
 
-            open_kwargs: dict = open_kwargs or {}
+            open_kwargs = open_kwargs or {}
 
             # Use blockcache with size 4MB by default
             if "cache_type" not in open_kwargs:
