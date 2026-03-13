@@ -592,7 +592,7 @@ class DataTree(
     def _coord_variables_all(self) -> ChainMap[Hashable, Variable]:
         return ChainMap(
             self._node_coord_variables,
-            *(p._node_coord_variables for p in self.parents),  # type: ignore[arg-type]
+            *(p._node_coord_variables for p in self.parents),
         )
 
     def _resolve_inherit(

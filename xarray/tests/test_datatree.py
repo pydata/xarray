@@ -256,7 +256,8 @@ class TestToDataset:
         mid = xr.Dataset(coords={"c": 3.0})
         leaf = xr.Dataset(coords={"d": [4]})
         deep = DataTree.from_dict({"/": base, "/mid": mid, "/mid/leaf": leaf})
-        result = deep["/mid/leaf"].to_dataset(inherit="all")
+        leaf_node = typing.cast(DataTree, deep["/mid/leaf"])
+        result = leaf_node.to_dataset(inherit="all")
         assert set(result.coords) == {"a", "b", "c", "d"}
 
     def test_to_dataset_inherit_invalid(self) -> None:
