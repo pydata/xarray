@@ -590,7 +590,6 @@ class DataTree(
 
     @property
     def _coord_variables_all(self) -> ChainMap[Hashable, Variable]:
-        """Like _coord_variables but inherits ALL parent coordinates, not just indexed ones."""
         return ChainMap(
             self._node_coord_variables,
             *(p._node_coord_variables for p in self.parents),  # type: ignore[arg-type]
@@ -1670,9 +1669,7 @@ class DataTree(
         other_keys = {key for key, _ in other.subtree_with_keys}
         return self.filter(lambda node: node.relative_to(self) in other_keys)
 
-    def prune(
-        self,
-    ) -> DataTree:
+    def prune(self, drop_size_zero_vars: bool = False) -> DataTree:
         """
         Remove empty nodes from the tree.
 
