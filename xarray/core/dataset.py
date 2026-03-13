@@ -379,16 +379,28 @@ class Dataset(
         self,
         # could make a VariableArgs to use more generally, and refine these
         # categories
-        data_vars: DataVars | None = None,
+        vars: Mapping[Any, Any] | None = None,
+        /,
         coords: Mapping[Any, Any] | None = None,
         attrs: Mapping[Any, Any] | None = None,
+        *,
+        data_vars: DataVars | None = None,
     ) -> None:
-        if data_vars is None:
-            data_vars = {}
+
+        if vars is not None and data_vars is not None:
+            raise ValueError("Cannot pass both vars and data_vars together")
+
+        if data_vars is not None:
+            # TODO deprecate the vars argument by replacing it with data_vars
+            # Passing a dimension variable to data_vars will also trigger the PendingDeprecationWarning below about promotion to coordinates
+            vars = data_vars
+
+        if vars is None:
+            vars = {}
         if coords is None:
             coords = {}
 
-        both_data_and_coords = set(data_vars) & set(coords)
+        both_data_and_coords = set(vars) & set(coords)
         if both_data_and_coords:
             raise ValueError(
                 f"variables {both_data_and_coords!r} are found in both data_vars and coords"
@@ -397,9 +409,17 @@ class Dataset(
         if isinstance(coords, Dataset):
             coords = coords._variables
 
-        variables, coord_names, dims, indexes, _ = merge_data_and_coords(
-            data_vars, coords
-        )
+        variables, coord_names, dims, indexes, _ = merge_data_and_coords(vars, coords)
+
+        vars_promoted_to_coords = [
+            var_name for var_name in vars if var_name in coord_names
+        ]
+        if vars_promoted_to_coords:
+            warnings.warn(
+                f"Variables {vars_promoted_to_coords} were automatically promoted to coordinates despite not being passed via the coords argument. "
+                f"In future this behaviour will be deprecated, so to ensure these variables are assigned as coordinates at creation, please pass them explicity via `coords={vars_promoted_to_coords}`",
+                PendingDeprecationWarning,
+            )
 
         self._attrs = dict(attrs) if attrs else None
         self._close = None
