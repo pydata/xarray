@@ -3701,6 +3701,32 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    def test_to_dataframe_create_index(self) -> None:
+        # Test create_index parameter
+        arr_np = np.arange(12).reshape(3, 4)
+        arr = DataArray(arr_np, [("x", [1, 2, 3]), ("y", list("abcd"))], name="foo")
+
+        # Default behavior: create MultiIndex
+        df_with_index = arr.to_dataframe()
+        assert isinstance(df_with_index.index, pd.MultiIndex)
+        assert df_with_index.index.names == ["x", "y"]
+        assert len(df_with_index) == 12
+
+        # With create_index=False: use RangeIndex
+        df_without_index = arr.to_dataframe(create_index=False)
+        assert isinstance(df_without_index.index, pd.RangeIndex)
+        assert len(df_without_index) == 12
+
+        # Data should be the same regardless
+        assert_array_equal(df_with_index["foo"].values, df_without_index["foo"].values)
+
+        # Test with coords that have different dimensions
+        arr.coords["z"] = ("x", [-1, -2, -3])
+        df_with_coords = arr.to_dataframe(create_index=False)
+        assert isinstance(df_with_coords.index, pd.RangeIndex)
+        assert "z" in df_with_coords.columns
+        assert len(df_with_coords) == 12
+
     @pytest.mark.parametrize(
         "x_dtype,y_dtype,v_dtype",
         [
