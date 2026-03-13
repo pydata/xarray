@@ -72,7 +72,7 @@ types = [
 dev = [
   "hypothesis",
   "jinja2",
-  "mypy==1.18.1",
+  "mypy==1.19.1",
   "pre-commit",
   "pytest",
   "pytest-cov",
@@ -158,7 +158,6 @@ module = [
   "pooch.*",
   "pyarrow.*",
   "pydap.*",
-  "scipy.*",
   "seaborn.*",
   "setuptools",
   "sparse.*",
@@ -176,6 +175,7 @@ module = [
 [[tool.mypy.overrides]]
 check_untyped_defs = true
 module = [
+  "xarray.backends.scipy_",
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
   "xarray.structure.alignment",
