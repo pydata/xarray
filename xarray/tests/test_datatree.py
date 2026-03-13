@@ -243,6 +243,27 @@ class TestToDataset:
         assert_identical(tree.to_dataset(inherit=True), base)
         assert_identical(subtree.to_dataset(inherit=True), sub_and_base)
 
+    def test_to_dataset_inherit_all(self) -> None:
+        base = xr.Dataset(coords={"a": [1], "b": 2})
+        sub = xr.Dataset(coords={"c": [3]})
+        tree = DataTree.from_dict({"/": base, "/sub": sub})
+        subtree = typing.cast(DataTree, tree["sub"])
+
+        expected = xr.Dataset(coords={"a": [1], "b": 2, "c": [3]})
+        assert_identical(subtree.to_dataset(inherit="all"), expected)
+        assert_identical(tree.to_dataset(inherit="all"), base)
+
+        mid = xr.Dataset(coords={"c": 3.0})
+        leaf = xr.Dataset(coords={"d": [4]})
+        deep = DataTree.from_dict({"/": base, "/mid": mid, "/mid/leaf": leaf})
+        result = deep["/mid/leaf"].to_dataset(inherit="all")
+        assert set(result.coords) == {"a", "b", "c", "d"}
+
+    def test_to_dataset_inherit_invalid(self) -> None:
+        tree = DataTree()
+        with pytest.raises(ValueError, match="Invalid value for inherit"):
+            tree.to_dataset(inherit="invalid")  # type: ignore[arg-type]
+
 
 class TestVariablesChildrenNameCollisions:
     def test_parent_already_has_variable_with_childs_name(self) -> None:
