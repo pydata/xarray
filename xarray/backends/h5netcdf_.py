@@ -183,13 +183,29 @@ class H5NetCDFStore(WritableCFDataStore):
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
     ):
         import h5netcdf
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
+
+            open_kwargs = open_kwargs or {}
+
+            # Use blockcache with size 4MB by default
+            if "cache_type" not in open_kwargs:
+                open_kwargs["cache_type"] = "blockcache"
+            if (
+                open_kwargs["cache_type"] == "blockcache"
+                and "block_size" not in open_kwargs
+            ):
+                open_kwargs["block_size"] = 4 * 1024 * 1024
+
             filename = _open_remote_file(
-                filename, mode=mode_, storage_options=storage_options
+                filename,
+                mode=mode_,
+                storage_options=storage_options,
+                open_kwargs=open_kwargs,
             )
 
         if isinstance(filename, BytesIOProxy):
@@ -531,6 +547,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
     ) -> Dataset:
         # Keep this message for some versions
         # remove and set phony_dims="access" above
@@ -548,6 +565,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             driver=driver,
             driver_kwds=driver_kwds,
             storage_options=storage_options,
+            open_kwargs=open_kwargs,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -633,6 +651,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        storage_options: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups
@@ -654,6 +674,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_vlen_strings=decode_vlen_strings,
             driver=driver,
             driver_kwds=driver_kwds,
+            storage_options=storage_options,
+            open_kwargs=open_kwargs,
         )
 
         # Check for a group and make it a parent if it exists
