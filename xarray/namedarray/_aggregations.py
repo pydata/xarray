@@ -5,19 +5,20 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, Generic
 
 from xarray.core import duck_array_ops
-from xarray.core.types import Dims, Self
+from xarray.core.types import Self
+from xarray.namedarray._typing import DimsLike, DimType_co
 
 
-class NamedArrayAggregations:
+class NamedArrayAggregations(Generic[DimType_co]):
     __slots__ = ()
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         axis: int | Sequence[int] | None = None,
         keepdims: bool = False,
@@ -27,7 +28,7 @@ class NamedArrayAggregations:
 
     def count(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -78,7 +79,7 @@ class NamedArrayAggregations:
 
     def all(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -131,7 +132,7 @@ class NamedArrayAggregations:
 
     def any(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         **kwargs: Any,
     ) -> Self:
         """
@@ -184,7 +185,7 @@ class NamedArrayAggregations:
 
     def max(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
@@ -249,7 +250,7 @@ class NamedArrayAggregations:
 
     def min(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
@@ -314,7 +315,7 @@ class NamedArrayAggregations:
 
     def mean(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
@@ -379,7 +380,7 @@ class NamedArrayAggregations:
 
     def prod(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -462,7 +463,7 @@ class NamedArrayAggregations:
 
     def sum(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -545,7 +546,7 @@ class NamedArrayAggregations:
 
     def std(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -625,7 +626,7 @@ class NamedArrayAggregations:
 
     def var(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -705,7 +706,7 @@ class NamedArrayAggregations:
 
     def median(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
@@ -774,7 +775,7 @@ class NamedArrayAggregations:
 
     def cumsum(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
@@ -848,7 +849,7 @@ class NamedArrayAggregations:
 
     def cumprod(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         **kwargs: Any,
