@@ -122,6 +122,18 @@ class ScipyArrayWrapper(BackendArray):
                     raise
 
 
+# This is a dirty workaround to allow pickling of the flush_only_netcdf_file class.
+# https://stackoverflow.com/questions/72766345/attributeerror-cant-pickle-local-object-in-multiprocessing
+# TODO: Remove this after upstreaming the fixes to scipy.
+class _PickleWorkaround:
+    flush_only_netcdf_file: type[scipy.io.netcdf_file]
+
+    @classmethod
+    def add_cls(cls, new_class: type[Any]) -> None:
+        setattr(cls, new_class.__name__, new_class)
+        new_class.__qualname__ = cls.__qualname__ + "." + new_class.__name__
+
+
 def _open_scipy_netcdf(
     filename: str | os.PathLike[Any] | IO[bytes],
     mode: Literal["r", "w", "a"],
@@ -153,7 +165,11 @@ def _open_scipy_netcdf(
             # These files need to be closed explicitly by xarray.
             pass
 
-    netcdf_file = flush_only_netcdf_file if flush_only else scipy.io.netcdf_file
+    _PickleWorkaround.add_cls(flush_only_netcdf_file)
+
+    netcdf_file = (
+        _PickleWorkaround.flush_only_netcdf_file if flush_only else scipy.io.netcdf_file
+    )
 
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
@@ -285,7 +301,7 @@ class ScipyDataStore(WritableCFDataStore):
 
     def get_encoding(self) -> dict[Literal["unlimited_dims"], set[str]]:
         return {
-            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}  # type: ignore[redundant-expr]  # scipy-stubs error
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}  # type: ignore[redundant-expr]  # https://github.com/scipy/scipy-stubs/issues/1423
         }
 
     def set_dimension(self, name: str, length: int, is_unlimited: bool = False) -> None:
@@ -294,7 +310,7 @@ class ScipyDataStore(WritableCFDataStore):
                 f"{type(self).__name__} does not support modifying dimensions"
             )
         dim_length = length if not is_unlimited else None
-        self.ds.createDimension(name, dim_length)  # type: ignore[arg-type]  # scipy-stubs error, None is allowed
+        self.ds.createDimension(name, dim_length)  # type: ignore[arg-type]  # https://github.com/scipy/scipy-stubs/issues/1423
 
     def _validate_attr_key(self, key: Any) -> None:
         if not is_valid_nc3_name(key):
