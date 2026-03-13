@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         "use_numbagg",
         "use_opt_einsum",
         "use_flox",
+        "facetgrid_figsize",
     ]
 
     class T_Options(TypedDict):
@@ -73,6 +74,7 @@ if TYPE_CHECKING:
         use_new_combine_kwarg_defaults: bool
         use_numbagg: bool
         use_opt_einsum: bool
+        facetgrid_figsize: Literal["computed", "rcparams"]
 
 
 OPTIONS: T_Options = {
@@ -106,8 +108,10 @@ OPTIONS: T_Options = {
     "use_new_combine_kwarg_defaults": False,
     "use_numbagg": True,
     "use_opt_einsum": True,
+    "facetgrid_figsize": "computed",
 }
 
+_FACETGRID_FIGSIZE_OPTIONS = frozenset(["computed", "rcparams"])
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 _DISPLAY_OPTIONS = frozenset(["text", "html"])
 _NETCDF_ENGINES = frozenset(["netcdf4", "h5netcdf", "scipy"])
@@ -144,6 +148,7 @@ _VALIDATORS = {
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
+    "facetgrid_figsize": _FACETGRID_FIGSIZE_OPTIONS.__contains__,
 }
 
 
@@ -222,6 +227,14 @@ class set_options:
     chunk_manager : str, default: "dask"
         Chunk manager to use for chunked array computations when multiple
         options are installed.
+    facetgrid_figsize : {"computed", "rcparams"}, default: "computed"
+        How :class:`~xarray.plot.FacetGrid` determines figure size when
+        ``figsize`` is not explicitly passed:
+
+        * ``"computed"`` : figure size is derived from ``size`` and ``aspect``
+          parameters (current default behavior).
+        * ``"rcparams"`` : use ``matplotlib.rcParams['figure.figsize']`` as the
+          total figure size.
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
@@ -357,6 +370,8 @@ class set_options:
                     expected = f"Expected one of {_JOIN_OPTIONS!r}"
                 elif k == "display_style":
                     expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
+                elif k == "facetgrid_figsize":
+                    expected = f"Expected one of {_FACETGRID_FIGSIZE_OPTIONS!r}"
                 elif k == "netcdf_engine_order":
                     expected = f"Expected a subset of {sorted(_NETCDF_ENGINES)}"
                 else:
