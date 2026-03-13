@@ -87,6 +87,9 @@ doc/videos-gallery.txt
 doc/*.zarr
 doc/*.nc
 doc/*.h5
+doc/_contents/
+.virtual_documents/
+.jupyterlite.doit.db
 
 # Until we support this properly, excluding from gitignore. (adding it to
 # gitignore to make it _easier_ to work with `uv`, not as an indication that I
@@ -98,3 +101,6 @@ xarray-docs/
 # pixi environments
 .pixi
 pixi.lock
+# recipe
+/ci/recipe/recipe.yaml
+/doc/environment.yml
