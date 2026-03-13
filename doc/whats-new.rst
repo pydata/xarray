@@ -39,6 +39,9 @@ Bug Fixes
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_
 - Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
   By `Julia Signell <https://github.com/jsignell>`_
+- Expose ``coord_pad_mode`` and associated parameters in ``Dataset.pad`` and
+  ``DataArray.pad`` (:issue:`3868` :issue:`6425` :pull:`11213`). By `Ian Cooke
+  <https://github.com/ircwaves>`_.
 
 Documentation
 ~~~~~~~~~~~~~

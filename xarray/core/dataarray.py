@@ -5840,6 +5840,19 @@ class DataArray(
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
+        coord_pad_mode: PadModeOptions | None = None,
+        coord_end_values: int
+        | tuple[int, int]
+        | Mapping[Any, tuple[int, int]]
+        | None = None,
+        coord_constant_values: float
+        | tuple[float, float]
+        | Mapping[Any, tuple[float, float]]
+        | None = None,
+        coord_stat_length: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
+        coord_reflect_type: PadReflectOptions = None,
         **pad_width_kwargs: Any,
     ) -> Self:
         """Pad this array along one or more dimensions.
@@ -5921,6 +5934,11 @@ class DataArray(
             If True, the attributes (``attrs``) will be copied from the
             original object to the new one. If False, the new object
             will be returned without attributes.
+        coord_pad_mode : see ``mode``, but this will be used to extend the coordinates
+        coord_end_values : see ``end_values``
+        coord_constant_values : see ``constant_values``
+        coord_stat_length : see ``stat_length``
+        coord_reflect_type : see ``reflect_type``
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.
             One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
@@ -5980,6 +5998,23 @@ class DataArray(
           * x        (x) float64 32B nan 0.0 1.0 nan
             z        (x) float64 32B nan 100.0 200.0 nan
           * y        (y) int64 32B 10 20 30 40
+
+        Note that the default behavior of coordinate padding uses NaNs (or NaTs), which
+        requires that integer types be promoted to floats.  Providing values via
+        ``coord_constant_values`` then follows the coercion behavior mentioned above,
+        where array types are preserved:
+
+        >>> da.pad(x=1, constant_values=1.23456789, coord_constant_values=-999.9)
+        <xarray.DataArray (x: 4, y: 4)> Size: 128B
+        array([[ 1,  1,  1,  1],
+               [ 0,  1,  2,  3],
+               [10, 11, 12, 13],
+               [ 1,  1,  1,  1]])
+        Coordinates:
+          * x        (x) int64 32B -999 0 1 -999
+            z        (x) int64 32B -999 100 200 -999
+          * y        (y) int64 32B 10 20 30 40
+
         """
         ds = self._to_temp_dataset().pad(
             pad_width=pad_width,
@@ -5989,6 +6024,11 @@ class DataArray(
             end_values=end_values,
             reflect_type=reflect_type,
             keep_attrs=keep_attrs,
+            coord_pad_mode=coord_pad_mode,
+            coord_end_values=coord_end_values,
+            coord_constant_values=coord_constant_values,
+            coord_stat_length=coord_stat_length,
+            coord_reflect_type=coord_reflect_type,
             **pad_width_kwargs,
         )
         return self._from_temp_dataset(ds)
