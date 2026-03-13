@@ -794,13 +794,36 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         typesize: int,
         previous_chunks: tuple[int, ...] | _NormalizedChunks,
     ) -> tuple[T_ChunkDim, ...]:
-        """Determine meta chunks
+        """Quickly determine optimal chunks close to target size but never splitting
+        previous_chunks.
 
-        This takes in a chunks value that contains ``"preserve"`` values in certain
-        dimensions and replaces those values with concrete dimension sizes that try
-        to get chunks to be of a certain size in bytes, provided by the ``limit=``
+        This takes in a chunks argument potentially containing ``"preserve"`` for all
+        dimensions (if scalar) or several dimensions (if tuple). This function
+        replaces ``"preserver"`` with concrete dimension sizes that try
+        to get chunks to be close to certain size in bytes, provided by the ``target=``
         keyword. Any dimensions marked as ``"preserve"`` will potentially be multiplied
-        to get close to the byte target, while never splitting ``previous_chunks``.
+        by some factor to get close to the byte target, while never splitting
+        ``previous_chunks``.
+
+        Examples
+        --------
+        >>> ChunkManagerEntrypoint.preserve_chunks(
+        ...     chunks=("preserve", "preserve", "preserve"),
+        ...     shape=(1280, 1280, 20),
+        ...     target=500 * 1024,
+        ...     typesize=8,
+        ...     previous_chunks=(128, 128, 1),
+        ... )
+        (128, 128, 2)
+
+        >>> ChunkManagerEntrypoint.preserve_chunks(
+        ...     chunks=("preserve", "preserve", 1),
+        ...     shape=(1280, 1280, 20),
+        ...     target=1 * 1024 * 1024,
+        ...     typesize=8,
+        ...     previous_chunks=(128, 128, 1),
+        ... )
+        (512, 256, 1)
 
         Parameters
         ----------
@@ -824,7 +847,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         )
 
         # "preserve" stays as "preserve"
-        # None or empty tuple means match previous chunks
+        # None or empty tuple means match preferred_chunks
         # -1 means whole dim is in one chunk
         desired_chunks = np.array(
             [
@@ -842,7 +865,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         )
 
         while True:
-            # Repeatedly loop over the ``previous_chunks``, multiplying them by 2.
+            # Repeatedly look for the dim with the most chunks and multiply it by 2.
             # Stop when:
             # 1a. we are larger than the target chunk size OR
             # 1b. we are within 50% of the target chunk size OR
