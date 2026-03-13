@@ -397,8 +397,10 @@ class DatasetView(Dataset):
             DataArray.
         keep_attrs : bool | None, optional
             If True, both the dataset's and variables' attributes (`attrs`) will be
-            copied from the original objects to the new ones. If False, the new dataset
-            and variables will be returned without copying the attributes.
+            combined from the original objects and the function results using the
+            ``drop_conflicts`` strategy: matching attrs are kept, conflicting attrs
+            are dropped. If False, the new dataset and variables will have only
+            the attributes set by the function.
         args : iterable, optional
             Positional arguments passed on to `func`.
         **kwargs : Any
@@ -438,8 +440,13 @@ class DatasetView(Dataset):
             for k, v in self.data_vars.items()
         }
         if keep_attrs:
+            # Merge attrs from function result and original, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
             for k, v in variables.items():
-                v._copy_attrs_from(self.data_vars[k])
+                v.attrs = merge_attrs(
+                    [v.attrs, self.data_vars[k].attrs], "drop_conflicts"
+                )
         attrs = self.attrs if keep_attrs else None
         # return type(self)(variables, attrs=attrs)
         return Dataset(variables, attrs=attrs)
