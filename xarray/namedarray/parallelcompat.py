@@ -20,6 +20,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        T_ChunkDim,
         T_Chunks,
         _Chunks,
         _DType,
@@ -784,3 +785,102 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError(
             "For 'auto' rechunking of cftime arrays, get_auto_chunk_size must be implemented by the chunk manager"
         )
+
+    @staticmethod
+    def preserve_chunks(
+        chunks: tuple[T_ChunkDim, ...],
+        shape: tuple[int, ...],
+        target: int,
+        typesize: int,
+        previous_chunks: tuple[int, ...] | _NormalizedChunks,
+    ) -> tuple[T_ChunkDim, ...]:
+        """Quickly determine optimal chunks close to target size but never splitting
+        previous_chunks.
+
+        This takes in a chunks argument potentially containing ``"preserve"`` for all
+        dimensions (if scalar) or several dimensions (if tuple). This function
+        replaces ``"preserver"`` with concrete dimension sizes that try
+        to get chunks to be close to certain size in bytes, provided by the ``target=``
+        keyword. Any dimensions marked as ``"preserve"`` will potentially be multiplied
+        by some factor to get close to the byte target, while never splitting
+        ``previous_chunks``.
+
+        Examples
+        --------
+        >>> ChunkManagerEntrypoint.preserve_chunks(
+        ...     chunks=("preserve", "preserve", "preserve"),
+        ...     shape=(1280, 1280, 20),
+        ...     target=500 * 1024,
+        ...     typesize=8,
+        ...     previous_chunks=(128, 128, 1),
+        ... )
+        (128, 128, 2)
+
+        >>> ChunkManagerEntrypoint.preserve_chunks(
+        ...     chunks=("preserve", "preserve", 1),
+        ...     shape=(1280, 1280, 20),
+        ...     target=1 * 1024 * 1024,
+        ...     typesize=8,
+        ...     previous_chunks=(128, 128, 1),
+        ... )
+        (512, 256, 1)
+
+        Parameters
+        ----------
+        chunks: tuple[int | str | tuple, ...]
+            A tuple of either dimensions or tuples of explicit chunk dimensions
+            Some entries should be "preserve". Any explicit dimensions must match or
+            be multiple of ``previous_chunks``
+        shape: tuple[int]
+            The shape of the array
+        target: int
+            The target size of the chunk in bytes.
+        typesize: int
+            The size, in bytes, of each element of the chunk.
+        previous_chunks: tuple[int]
+            Size of chunks being preserved. Expressed as a tuple of ints which matches
+            the way chunks are encoded in Zarr.
+        """
+        # pop the first item off in case it's a tuple of tuples
+        preferred_chunks = np.array(
+            [c if isinstance(c, int) else c[0] for c in previous_chunks]
+        )
+
+        # "preserve" stays as "preserve"
+        # None or empty tuple means match preferred_chunks
+        # -1 means whole dim is in one chunk
+        desired_chunks = np.array(
+            [
+                c or preferred_chunks[i] if c != -1 else shape[i]
+                for i, c in enumerate(chunks)
+            ]
+        )
+        preserve_chunks = desired_chunks == "preserve"
+
+        if not preserve_chunks.any():
+            return chunks
+
+        new_chunks = np.where(preserve_chunks, preferred_chunks, desired_chunks).astype(
+            int
+        )
+
+        while True:
+            # Repeatedly look for the dim with the most chunks and multiply it by 2.
+            # Stop when:
+            # 1a. we are larger than the target chunk size OR
+            # 1b. we are within 50% of the target chunk size OR
+            # 2. the chunk covers the entire array
+
+            num_chunks = np.array(shape) / new_chunks * preserve_chunks
+            idx = np.argmax(num_chunks)
+            chunk_bytes = np.prod(new_chunks) * typesize
+
+            if chunk_bytes > target or abs(chunk_bytes - target) / target < 0.5:
+                break
+
+            if (num_chunks <= 1).all():
+                break
+
+            new_chunks[idx] = min(new_chunks[idx] * 2, shape[idx])
+
+        return tuple(int(x) for x in new_chunks)
