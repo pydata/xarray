@@ -125,7 +125,7 @@ h5netcdf = "1.5.*"
 h5py = "3.13.*"
 hdf5 = "1.14.*"
 iris = "3.11.*"
-lxml = "5.3.*"            # Optional dep of pydap
+lxml = "5.3.*"             # Optional dep of pydap
 matplotlib-base = "3.10.*"
 nc-time-axis = "1.4.*"
 # netcdf follows a 1.major.minor[.patch] convention
