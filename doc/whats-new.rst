@@ -95,6 +95,15 @@ By `Joe Hamman <https://github.com/jhamman>`_.
   ``open_dataset`` and ``open_datatree`` the default behavior of fsspec is now to
   use block caching with a 4MB block size (:pull:`11216`). By `Julia Signell
   <https://github.com/jsignell>`_.
+- The minimum zarr version is now 3.0. All zarr-python 2.x compatibility code
+  has been removed from the zarr backend. The following parameters have been
+  removed:
+
+  - ``zarr_version``: Use ``zarr_format`` instead (was deprecated since 2024.9.1).
+  - ``synchronizer``: Not supported in zarr-python 3.x.
+  - ``chunk_store``: Not supported in zarr-python 3.x.
+
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Deprecations
 ~~~~~~~~~~~~
