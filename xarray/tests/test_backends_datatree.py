@@ -717,9 +717,17 @@ class TestZarrDatatreeIO:
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             compressor_key = "compressors" if has_zarr_v3 else "compressor"
-            assert (
-                roundtrip_dt["/set2/a"].encoding[compressor_key] == comp[compressor_key]
-            )
+            if zarr_format == 3:
+                # zarr v3 BloscCodec auto-tunes typesize and shuffle on write,
+                # so we only check the attributes we explicitly set
+                rt_codec = roundtrip_dt["/set2/a"].encoding[compressor_key][0]
+                assert rt_codec.cname.value == "zstd"
+                assert rt_codec.clevel == 3
+            else:
+                assert (
+                    roundtrip_dt["/set2/a"].encoding[compressor_key]
+                    == comp[compressor_key]
+                )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
             with pytest.raises(ValueError, match=r"unexpected encoding group.*"):
