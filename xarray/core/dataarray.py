@@ -2407,7 +2407,7 @@ class DataArray(
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
           * y        (y) int64 24B 11 13 15
         """
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
@@ -2548,7 +2548,7 @@ class DataArray(
           * y        (y) int64 24B 70 80 90
         """
 
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
