@@ -99,6 +99,11 @@ def decode_bytes_array(bytes_array, encoding="utf-8"):
 
 def encode_string_array(string_array, encoding="utf-8"):
     string_array = np.asarray(string_array)
+    # StringDType null values (e.g. from na_object=None) must be replaced
+    # before encoding, since None.encode() would raise AttributeError
+    if string_array.dtype.kind == "T":
+        string_array = np.asarray(string_array, dtype=object)
+        string_array[string_array == None] = ""  # noqa: E711
     encoded = [x.encode(encoding) for x in string_array.ravel()]
     return np.array(encoded, dtype=bytes).reshape(string_array.shape)
 
