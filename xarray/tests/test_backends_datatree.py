@@ -703,19 +703,27 @@ class TestZarrDatatreeIO:
             codec = Blosc(cname="zstd", clevel=3, shuffle=2)
             comp = {"compressors": (codec,)}
         elif zarr_format == 3:
-            # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
-            from zarr.registry import get_codec_class
+            import zarr
 
-            Blosc = get_codec_class("numcodecs.blosc")
-            comp = {"compressors": (Blosc(cname="zstd", clevel=3),)}  # type: ignore[call-arg]
+            comp = {
+                "compressors": (zarr.codecs.BloscCodec(cname="zstd", clevel=3),),
+            }
 
         enc = {"/set2": dict.fromkeys(original_dt["/set2"].dataset.data_vars, comp)}
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
-            assert (
-                roundtrip_dt["/set2/a"].encoding["compressors"] == comp["compressors"]
-            )
+            if zarr_format == 3:
+                # zarr v3 BloscCodec auto-tunes typesize and shuffle on write,
+                # so we only check the attributes we explicitly set
+                rt_codec = roundtrip_dt["/set2/a"].encoding["compressors"][0]
+                assert rt_codec.cname.value == "zstd"
+                assert rt_codec.clevel == 3
+            else:
+                assert (
+                    roundtrip_dt["/set2/a"].encoding["compressors"]
+                    == comp["compressors"]
+                )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
             with pytest.raises(ValueError, match=r"unexpected encoding group.*"):
