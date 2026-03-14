@@ -17,6 +17,70 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+The minimum versions of some dependencies were changed:
+By `Joe Hamman <https://github.com/jhamman>`_.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 20
+
+   * - Dependency
+     - Old Version
+     - New Version
+   * - boto3
+     - 1.34
+     - 1.37
+   * - cartopy
+     - 0.23
+     - 0.24
+   * - dask-core
+     - 2024.6
+     - 2025.2
+   * - distributed
+     - 2024.6
+     - 2025.2
+   * - flox
+     - 0.9
+     - 0.10
+   * - h5netcdf
+     - 1.4
+     - 1.5
+   * - h5py
+     - 3.11
+     - 3.13
+   * - iris
+     - 3.9
+     - 3.11
+   * - lxml
+     - 5.1
+     - 5.3
+   * - matplotlib-base
+     - 3.8
+     - 3.10
+   * - numba
+     - 0.60
+     - 0.61
+   * - numbagg
+     - 0.8
+     - 0.9
+   * - numpy
+     - 1.26
+     - 2.1
+   * - packaging
+     - 24.1
+     - 24.2
+   * - rasterio
+     - 1.3
+     - 1.4
+   * - scipy
+     - 1.13
+     - 1.15
+   * - toolz
+     - 0.12
+     - 1.0
+   * - zarr
+     - 2.18
+     - 3.0
 - Xarray will no longer by default decode a variable into a
   :py:class:`np.timedelta64` dtype based on the presence of a timedelta-like
   ``"units"`` attribute alone. Instead it will rely on the presence of a
