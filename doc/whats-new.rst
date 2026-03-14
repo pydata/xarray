@@ -81,6 +81,7 @@ By `Joe Hamman <https://github.com/jhamman>`_.
    * - zarr
      - 2.18
      - 3.0
+
 - Xarray will no longer by default decode a variable into a
   :py:class:`np.timedelta64` dtype based on the presence of a timedelta-like
   ``"units"`` attribute alone. Instead it will rely on the presence of a
