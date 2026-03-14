@@ -889,20 +889,10 @@ class ZarrStore(AbstractWritableDataStore):
             chunks = chunk_grid.chunk_shape
             preferred_chunks = dict(zip(dimensions, chunks, strict=True))
         elif _has_unified_chunk_grid():
-            # Rectilinear or other non-regular grids — extract per-dimension
-            # edge tuples so dask can reconstruct the exact chunk layout.
-            from zarr.core.chunk_grids import FixedDimension
-
-            chunks = chunk_grid
-            preferred_chunks = {}
-            for dim_name, dim_grid in zip(
-                dimensions, chunk_grid.dimensions, strict=True
-            ):
-                if isinstance(dim_grid, FixedDimension):
-                    preferred_chunks[dim_name] = dim_grid.size
-                else:
-                    # VaryingDimension or TiledDimension — use full edge tuple
-                    preferred_chunks[dim_name] = dim_grid.edges
+            # Rectilinear grids — chunk_sizes (dask convention) gives
+            # per-dimension tuples of edge lengths for the exact chunk layout.
+            chunks = chunk_grid.chunk_sizes
+            preferred_chunks = dict(zip(dimensions, chunks, strict=True))
         else:
             # Fallback for older zarr-python without unified chunk grid
             chunks = tuple(zarr_array.chunks)
