@@ -27,6 +27,10 @@ Breaking Changes
   :py:meth:`open_dataset`. This finalizes the deprecation cycle initiated in
   xarray version 2025.01.2 (:pull:`11173`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- When using ``h5netcdf`` engine and passing the path as a string to
+  ``open_dataset`` and ``open_datatree`` the default behavior of fsspec is now to
+  use block caching with a 4MB block size (:pull:`11216`). By `Julia Signell
+  <https://github.com/jsignell>`_.
 
 Deprecations
 ~~~~~~~~~~~~
