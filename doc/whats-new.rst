@@ -103,7 +103,7 @@ By `Joe Hamman <https://github.com/jhamman>`_.
   - ``synchronizer``: Not supported in zarr-python 3.x.
   - ``chunk_store``: Not supported in zarr-python 3.x.
 
-  By `Joe Hamman <https://github.com/jhamman>`_.
+  By `Joe Hamman <https://github.com/jhamman>`_ (:pull:`11232`).
 
 Deprecations
 ~~~~~~~~~~~~
@@ -114,6 +114,10 @@ Bug Fixes
 
 - Fix ``Source`` link in api docs (:pull:`11187`)
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_
+- Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
+  which caused ``AsyncMock`` objects to leak through instead of real array data
+  (:pull:`11232`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
   By `Julia Signell <https://github.com/jsignell>`_
 
