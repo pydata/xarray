@@ -141,7 +141,7 @@ seaborn = "0.13.*"
 sparse = "0.15.*"
 toolz = "1.0.*"
 zarr = "3.0.*"
-pyarrow = "*"  # required by dask.dataframe
+pyarrow = "*"        # required by dask.dataframe
 
 # TODO: Remove `target.unix` restriction once pandas nightly has win-64 wheels again.
 # Without this, `pixi lock` fails because it can't solve the nightly feature for win-64,

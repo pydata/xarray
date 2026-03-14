@@ -707,9 +707,7 @@ class TestZarrDatatreeIO:
             import zarr
 
             comp = {
-                "compressors": (
-                    zarr.codecs.BloscCodec(cname="zstd", clevel=3),
-                ),
+                "compressors": (zarr.codecs.BloscCodec(cname="zstd", clevel=3),),
             }
 
         enc = {"/set2": dict.fromkeys(original_dt["/set2"].dataset.data_vars, comp)}
