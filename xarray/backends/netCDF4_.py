@@ -668,7 +668,13 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         target = NetCDF4ArrayWrapper(name, self)
 
-        return target, variable.data
+        source = variable.data
+        # netCDF4 does not support NumPy StringDType; convert to object array
+        if getattr(source, "dtype", None) is not None and source.dtype.kind == "T":
+            source = np.asarray(source, dtype=object)
+            source[source == None] = ""  # noqa: E711
+
+        return target, source
 
     def sync(self):
         self.ds.sync()
