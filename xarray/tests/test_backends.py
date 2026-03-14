@@ -524,7 +524,7 @@ class DatasetIOBase:
 
             actual_dtype = actual.variables[k].dtype
             # TODO: check expected behavior for string dtypes more carefully
-            string_kinds = {"O", "S", "U"}
+            string_kinds = {"O", "S", "U", "T"}
             assert expected_dtype == actual_dtype or (
                 expected_dtype.kind in string_kinds
                 and actual_dtype.kind in string_kinds
