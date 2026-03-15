@@ -5,6 +5,7 @@ import datetime
 import warnings
 from collections.abc import (
     Callable,
+    Collection,
     Hashable,
     Iterable,
     Mapping,
@@ -6187,6 +6188,26 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
+    @overload  # type: ignore[overload-overlap]
+    def argmin(
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmin(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
     def argmin(
         self,
         dim: Dims = None,
@@ -6287,6 +6308,26 @@ class DataArray(
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
             return self._replace_maybe_drop_dims(result)
+
+    @overload  # type: ignore[overload-overlap]
+    def argmax(
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmax(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
 
     def argmax(
         self,

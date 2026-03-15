@@ -58,6 +58,10 @@ Internal Changes
   prevent type annotation regressions (:issue:`11086`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 
+- Add :func:`typing.overload` decorators to :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax`
+to narrow return type based on ``dim`` parameter (:issue:`10893` :pull:`11233`).
+By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+
 .. _whats-new.2026.02.0:
 
 v2026.02.0 (Feb 13, 2026)
