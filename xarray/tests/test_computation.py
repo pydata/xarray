@@ -2646,6 +2646,7 @@ def test_complex_number_reduce(compute_backend):
     da.min()
 
 
+@pytest.mark.filterwarnings("ignore:numpy.fix is deprecated.")
 def test_fix() -> None:
     val = 3.0
     val_fixed = np.fix(val)

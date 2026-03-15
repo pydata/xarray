@@ -214,13 +214,16 @@ class BytesIOProxy:
         return self.getvalue()
 
 
-def _open_remote_file(file, mode, storage_options=None):
+def _open_remote_file(file, mode, storage_options=None, open_kwargs=None):
     import fsspec
 
     fs, _, paths = fsspec.get_fs_token_paths(
         file, mode=mode, storage_options=storage_options
     )
-    return fs.open(paths[0], mode=mode)
+
+    open_kwargs = open_kwargs or {}
+
+    return fs.open(paths[0], mode=mode, **open_kwargs)
 
 
 def _encode_variable_name(name):

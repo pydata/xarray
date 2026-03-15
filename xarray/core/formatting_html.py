@@ -500,7 +500,7 @@ def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
     for node in tree.subtree:  # breadth-first
         parent = node.parent
         if parent is not None:
-            parent_display = displays.get(parent.path, None)
+            parent_display = displays.get(parent.path)
             if parent_display is not None and parent_display.disabled:
                 break  # no need to build display
 
