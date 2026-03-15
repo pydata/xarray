@@ -11,6 +11,7 @@ from collections.abc import (
     Iterable,
     Iterator,
     Mapping,
+    Sequence,
 )
 from dataclasses import dataclass, field
 from html import escape
@@ -1039,6 +1040,35 @@ class DataTree(
 
         else:
             raise KeyError(key)
+
+    def subset(
+        self, keys: str | Sequence[str], *, errors: ErrorOptions = "raise"
+    ) -> DataTree:
+        """Index DataArrays on each node
+
+        Parameters
+        ----------
+        keys : str | Sequence[str]
+            Name of the data variables to index.
+        errors : "raise", "ignore"
+            Whether to raise a key error if a data variable is missing on a node.
+
+        Returns
+        -------
+        out : DataTree
+        """
+
+        if isinstance(keys, str):
+            keys = [keys]
+
+        def getitem(ds):
+            keys_for_ds = keys
+            if errors == "ignore":
+                keys_for_ds = [key for key in keys if key in ds.data_vars]
+
+            return ds[keys_for_ds]
+
+        return map_over_datasets(getitem, self)
 
     @overload
     def update(self, other: Dataset) -> None: ...
