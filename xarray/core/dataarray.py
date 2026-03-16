@@ -6188,8 +6188,8 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    @overload  # type: ignore[overload-overlap]
-    def argmin(
+    @overload
+    def argmin(  # type: ignore[overload-overlap]
         self,
         dim: str,
         *,
@@ -6309,8 +6309,8 @@ class DataArray(
         else:
             return self._replace_maybe_drop_dims(result)
 
-    @overload  # type: ignore[overload-overlap]
-    def argmax(
+    @overload
+    def argmax(  # type: ignore[overload-overlap]
         self,
         dim: str,
         *,
