@@ -797,13 +797,13 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """Quickly determine optimal chunks close to target size but never splitting
         previous_chunks.
 
-        This takes in a chunks argument potentially containing ``"preserve"`` for all
-        dimensions (if scalar) or several dimensions (if tuple). This function
-        replaces ``"preserver"`` with concrete dimension sizes that try
-        to get chunks to be close to certain size in bytes, provided by the ``target=``
+        This takes in a chunks argument potentially containing ``"preserve"`` for several
+        dimensions. This function replaces ``"preserve"`` with concrete dimension sizes that
+        try to get chunks to be close to certain size in bytes, provided by the ``target=``
         keyword. Any dimensions marked as ``"preserve"`` will potentially be multiplied
         by some factor to get close to the byte target, while never splitting
-        ``previous_chunks``.
+        ``previous_chunks``. If chunks are non-uniform along a particular dimension
+        then that dimension will always use exactly ``previous_chunks``.
 
         Examples
         --------
@@ -825,44 +825,59 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         ... )
         (512, 256, 1)
 
+        >>> ChunkManagerEntrypoint.preserve_chunks(
+        ...     chunks=("preserve", "preserve", 1),
+        ...     shape=(1280, 1280, 20),
+        ...     target=1 * 1024 * 1024,
+        ...     typesize=8,
+        ...     previous_chunks=((128,) * 10, (128, 256, 256, 512), (1,) * 20),
+        ... )
+        (256, (128, 256, 256, 512), 1)
+
         Parameters
         ----------
-        chunks: tuple[int | str | tuple, ...]
+        chunks: tuple[int | str | tuple[int], ...]
             A tuple of either dimensions or tuples of explicit chunk dimensions
-            Some entries should be "preserve". Any explicit dimensions must match or
-            be multiple of ``previous_chunks``
+            Some entries should be "preserve".
         shape: tuple[int]
             The shape of the array
         target: int
             The target size of the chunk in bytes.
         typesize: int
             The size, in bytes, of each element of the chunk.
-        previous_chunks: tuple[int]
-            Size of chunks being preserved. Expressed as a tuple of ints which matches
-            the way chunks are encoded in Zarr.
+        previous_chunks: tuple[int | tuple[int], ...]
+            Size of chunks being preserved. Expressed as a tuple of ints or tuple
+            of tuple of ints.
         """
-        # pop the first item off in case it's a tuple of tuples
-        preferred_chunks = np.array(
-            [c if isinstance(c, int) else c[0] for c in previous_chunks]
-        )
+        new_chunks = [*previous_chunks]
+        auto_dims = [c == "preserve" for c in chunks]
+        max_chunks = np.array(shape)
+        for i, previous_chunk in enumerate(previous_chunks):
+            chunk = chunks[i]
+            if chunk == -1:
+                # -1 means whole dim is in one chunk
+                new_chunks[i] = shape[i]
+            else:
+                if isinstance(previous_chunk, tuple):
+                    # For uniform chunks just take the first item
+                    if previous_chunk[1:-1] == previous_chunk[:-2]:
+                        previous_chunk = previous_chunk[0]
+                    # For non-uniform chunks, leave them alone
+                    else:
+                        auto_dims[i] = False
+                        max_chunks[i] = max(previous_chunk)
 
-        # "preserve" stays as "preserve"
-        # None or empty tuple means match preferred_chunks
-        # -1 means whole dim is in one chunk
-        desired_chunks = np.array(
-            [
-                c or preferred_chunks[i] if c != -1 else shape[i]
-                for i, c in enumerate(chunks)
-            ]
-        )
-        preserve_chunks = desired_chunks == "preserve"
+                if isinstance(previous_chunk, int):
+                    # preserve, None or () means we want to track previous chunk
+                    if chunk == "preserve" or not chunk:
+                        max_chunks[i] = previous_chunk
+                    # otherwise use the explicitly provided chunk
+                    else:
+                        new_chunks[i] = chunk
+                        max_chunks[i] = chunk if isinstance(chunk, int) else max(chunk)
 
-        if not preserve_chunks.any():
+        if not any(auto_dims):
             return chunks
-
-        new_chunks = np.where(preserve_chunks, preferred_chunks, desired_chunks).astype(
-            int
-        )
 
         while True:
             # Repeatedly look for the dim with the most chunks and multiply it by 2.
@@ -871,9 +886,9 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
             # 1b. we are within 50% of the target chunk size OR
             # 2. the chunk covers the entire array
 
-            num_chunks = np.array(shape) / new_chunks * preserve_chunks
+            num_chunks = np.array(shape) / max_chunks * auto_dims
             idx = np.argmax(num_chunks)
-            chunk_bytes = np.prod(new_chunks) * typesize
+            chunk_bytes = np.prod(max_chunks) * typesize
 
             if chunk_bytes > target or abs(chunk_bytes - target) / target < 0.5:
                 break
@@ -882,5 +897,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
                 break
 
             new_chunks[idx] = min(new_chunks[idx] * 2, shape[idx])
+            max_chunks[idx] = new_chunks[idx]
 
-        return tuple(int(x) for x in new_chunks)
+        return tuple(new_chunks)
