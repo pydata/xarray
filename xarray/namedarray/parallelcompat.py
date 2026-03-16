@@ -823,7 +823,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         ...     typesize=8,
         ...     previous_chunks=(128, 128, 1),
         ... )
-        (512, 256, 1)
+        (128, 1024, 1)
 
         >>> ChunkManagerEntrypoint.preserve_chunks(
         ...     chunks=("preserve", "preserve", 1),
@@ -861,6 +861,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
                 if isinstance(previous_chunk, tuple):
                     # For uniform chunks just take the first item
                     if previous_chunk[1:-1] == previous_chunk[:-2]:
+                        new_chunks[i] = previous_chunk[0]
                         previous_chunk = previous_chunk[0]
                     # For non-uniform chunks, leave them alone
                     else:
@@ -880,14 +881,13 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
             return chunks
 
         while True:
-            # Repeatedly look for the dim with the most chunks and multiply it by 2.
+            # Repeatedly look for the last dim with more than one chunk and multiply it by 2.
             # Stop when:
             # 1a. we are larger than the target chunk size OR
             # 1b. we are within 50% of the target chunk size OR
             # 2. the chunk covers the entire array
 
             num_chunks = np.array(shape) / max_chunks * auto_dims
-            idx = np.argmax(num_chunks)
             chunk_bytes = np.prod(max_chunks) * typesize
 
             if chunk_bytes > target or abs(chunk_bytes - target) / target < 0.5:
@@ -895,6 +895,8 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
             if (num_chunks <= 1).all():
                 break
+
+            idx = int(np.nonzero(num_chunks > 1)[0][-1])
 
             new_chunks[idx] = min(new_chunks[idx] * 2, shape[idx])
             max_chunks[idx] = new_chunks[idx]

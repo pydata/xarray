@@ -7439,7 +7439,7 @@ def test_chunking_consistency(chunks, tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "chunks,expected",
     [
-        ("preserve", (320, 320)),
+        ("preserve", (160, 500)),
         (-1, (500, 500)),
         ({}, (10, 10)),
         ({"x": "preserve"}, (500, 10)),
