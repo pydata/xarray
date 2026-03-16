@@ -310,7 +310,7 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = [
   "--strict-config",
   "--strict-markers",
-  "--mypy-only-local-stub",
+  "--mypy-no-silence-site-packages",
   "--mypy-pyproject-toml-file=pyproject.toml",
 ]
 
