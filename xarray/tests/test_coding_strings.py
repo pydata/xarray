@@ -106,12 +106,15 @@ def test_EncodedStringCoder_encode() -> None:
 @pytest.mark.skipif(
     not hasattr(np.dtypes, "StringDType"), reason="requires StringDType"
 )
-def test_encode_string_array_stringdtype_nulls() -> None:
-    # GH11199 — encode_string_array must handle StringDType null values
-    arr = np.array(["ab", None], dtype=np.dtypes.StringDType(na_object=None))
-    result = strings.encode_string_array(arr)
-    expected = np.array([b"ab", b""], dtype=bytes)
-    assert_array_equal(result, expected)
+def test_encoded_string_coder_stringdtype_nulls() -> None:
+    # GH11199 — EncodedStringCoder normalizes StringDType nulls to empty strings
+    data = np.array(["ab", None], dtype=np.dtypes.StringDType(na_object=None))
+    var = Variable("x", data)
+    coder = strings.EncodedStringCoder(allows_unicode=True)
+    result = coder.encode(var)
+    expected = Variable("x", np.array(["ab", ""]))
+    assert_identical(result, expected)
+    assert result.dtype.kind == "U"
 
 
 @pytest.mark.parametrize(

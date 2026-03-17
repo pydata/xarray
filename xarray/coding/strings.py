@@ -56,6 +56,14 @@ class EncodedStringCoder(VariableCoder):
     def encode(self, variable: Variable, name=None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
+        # StringDType: replace nulls and convert to fixed-width unicode (U),
+        # which all backends support natively (GH11199)
+        if data.dtype.kind == "T":
+            data = np.asarray(data, dtype=object)
+            data[data == None] = ""  # noqa: E711
+            data = np.asarray(data, dtype="U")
+            variable = Variable(dims, data, attrs, encoding)
+
         contains_unicode = is_unicode_dtype(data.dtype)
         encode_as_char = encoding.get("dtype") == "S1"
         if encode_as_char:
@@ -99,11 +107,6 @@ def decode_bytes_array(bytes_array, encoding="utf-8"):
 
 def encode_string_array(string_array, encoding="utf-8"):
     string_array = np.asarray(string_array)
-    # StringDType null values (e.g. from na_object=None) must be replaced
-    # before encoding, since None.encode() would raise AttributeError
-    if string_array.dtype.kind == "T":
-        string_array = np.asarray(string_array, dtype=object)
-        string_array[string_array == None] = ""  # noqa: E711
     encoded = [x.encode(encoding) for x in string_array.ravel()]
     return np.array(encoded, dtype=bytes).reshape(string_array.shape)
 
