@@ -62,7 +62,7 @@ Internal Changes
   :py:meth:`Dataset.resample().median`. This significantly speeds up median reductions
   when flox is installed and the data chunking allows blockwise processing. For
   incompatible chunking, a fallback to the non-flox implementation ensures backward
-  compatibility. (:issue:`11238`, :pull:`TODO`). By `Samuel Le Meur-Diebolt
+  compatibility. (:issue:`11238`, :pull:`11239`). By `Samuel Le Meur-Diebolt
   <https://github.com/sdiebolt>`_.
 
 
