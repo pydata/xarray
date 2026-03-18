@@ -59,8 +59,8 @@ Internal Changes
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 
 - Add :func:`typing.overload` decorators to :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax`
-to narrow return type based on ``dim`` parameter (:issue:`10893` :pull:`11233`).
-By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+  to narrow return type based on ``dim`` parameter (:issue:`10893` :pull:`11233`).
+  By `Amartya Anand <https://github.com/SurfyPenguin>`_.
 
 .. _whats-new.2026.02.0:
 
