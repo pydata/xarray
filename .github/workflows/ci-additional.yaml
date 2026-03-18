@@ -278,7 +278,7 @@ jobs:
       - name: Upload pyright coverage to Codecov
         uses: codecov/codecov-action@v5.5.2
         with:
-          file: pyright_report/cobertura.xml
+          files: pyright_report/cobertura.xml
           flags: pyright
           env_vars: PYTHON_VERSION
           name: codecov-umbrella
