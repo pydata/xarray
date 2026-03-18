@@ -301,7 +301,7 @@ class ScipyDataStore(WritableCFDataStore):
 
     def get_encoding(self) -> dict[Literal["unlimited_dims"], set[str]]:
         return {
-            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}  # type: ignore[redundant-expr]  # https://github.com/scipy/scipy-stubs/issues/1423
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
         }
 
     def set_dimension(self, name: str, length: int, is_unlimited: bool = False) -> None:
@@ -310,7 +310,7 @@ class ScipyDataStore(WritableCFDataStore):
                 f"{type(self).__name__} does not support modifying dimensions"
             )
         dim_length = length if not is_unlimited else None
-        self.ds.createDimension(name, dim_length)  # type: ignore[arg-type]  # https://github.com/scipy/scipy-stubs/issues/1423
+        self.ds.createDimension(name, dim_length)
 
     def _validate_attr_key(self, key: Any) -> None:
         if not is_valid_nc3_name(key):
