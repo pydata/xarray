@@ -903,7 +903,8 @@ class PandasIndex(Index):
         else:
             # how = "inner"
             index = self.index.intersection(other.index)
-
+        if is_allowed_extension_array_dtype(index.dtype):
+            return type(self)(index, self.dim)
         coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
