@@ -34,7 +34,7 @@ import pandas as pd
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from xarray.compat.array_api_compat import to_like_array
-from xarray.computation import ops
+from xarray.computation import computation, ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.core import dtypes as xrdtypes
 from xarray.core import duck_array_ops, formatting, formatting_html, utils
@@ -3916,6 +3916,21 @@ class Dataset(
                 # For normal number types do the interpolation:
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
+            elif dtype_kind in "Mm" and (use_indexers.keys() & var.dims):
+                # For datetime-like types, interpolate as float64:
+                var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
+                int_data = var.astype(np.int64)
+                nat = np.iinfo(np.int64).min
+                as_float = computation.where(
+                    int_data != nat, int_data.astype(np.float64), np.nan
+                )
+                result = missing.interp(as_float, var_indexers, method, **kwargs)
+                as_int = computation.where(
+                    ~result.isnull(),
+                    result.fillna(0).round().astype(np.int64),
+                    nat,
+                )
+                variables[name] = as_int.astype(var.dtype)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
                     # Broadcastable, can be handled quickly without reindex:
