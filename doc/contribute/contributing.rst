@@ -19,7 +19,7 @@ and other ideas are welcome.
 
 If you have any questions on the process or how to fix something feel free to ask us!
 The recommended places to ask questions are `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
- or the Xarray channel in the `OSSci Zulip <https://ossci.zulipchat.com/#narrow/channel/582428-Xarray>`_. We also have a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
+or the Xarray channel in the `OSSci Zulip <https://ossci.zulipchat.com/#narrow/channel/582428-Xarray>`_. We also have a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
 `mailing list <https://groups.google.com/g/xarray>`_. There is also a
 `"python-xarray" tag on Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`_ which we monitor for questions.
 
