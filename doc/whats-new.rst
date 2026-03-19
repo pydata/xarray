@@ -17,8 +17,6 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
-The minimum versions of some dependencies were changed:
-By `Joe Hamman <https://github.com/jhamman>`_.
 - The minimum versions of some dependencies were changed (see table below).
   Notably, the minimum ``zarr`` version is now 3.0. Zarr v2 format data is
   still readable via ``zarr-python`` 3's built-in compatibility layer; however,
