@@ -1161,16 +1161,16 @@ class TestCombineDatasetsbyCoords:
     def test_combine_by_coords_extension_array(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/11235
         arrs = []
-        expected = []
+        expected_vals = []
         for i in range(2):
             t = datetime.datetime(2026, 3, 1, hour=i).astimezone(pytz.timezone("UTC"))
-            expected += [t]
+            expected_vals += [t]
             da = DataArray().expand_dims(
                 time=[t],
                 dummy=[i],
             )
             arrs.append(da)
-        expected = pd.array(expected)
+        expected = pd.array(expected_vals)
         result = combine_by_coords(arrs, join="outer")
         pd.testing.assert_extension_array_equal(result["time"].data, expected)
 
