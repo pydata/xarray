@@ -103,7 +103,7 @@ jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
 [feature.minimal.dependencies]
 # minimal versions
 python = "3.11.*"
-numpy = "2.1.*"
+numpy = "1.26.*"
 pandas = "2.2.*"
 
 [feature.minimum-scipy.dependencies]

@@ -63,9 +63,6 @@ By `Joe Hamman <https://github.com/jhamman>`_.
    * - numbagg
      - 0.8
      - 0.9
-   * - numpy
-     - 1.26
-     - 2.1
    * - packaging
      - 24.1
      - 24.2
