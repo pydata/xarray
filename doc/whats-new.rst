@@ -101,10 +101,15 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Allow writing ``StringDType`` variables to netCDF files (:issue:`11199`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 - Fix ``Source`` link in api docs (:pull:`11187`)
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_
 - Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
   By `Julia Signell <https://github.com/jsignell>`_
+- Fix :py:meth:`Dataset.interp` silently dropping datetime64 and timedelta64
+  variables, through enabling their interpolation (:issue:`10900`, :pull:`11081`).
+  By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 
 Documentation
 ~~~~~~~~~~~~~

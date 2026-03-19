@@ -39,6 +39,16 @@ def test_vlen_dtype() -> None:
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
 
+@pytest.mark.skipif(
+    not hasattr(np.dtypes, "StringDType"), reason="requires StringDType"
+)
+def test_is_unicode_dtype_stringdtype() -> None:
+    # GH11199
+    dtype = np.dtypes.StringDType()
+    assert strings.is_unicode_dtype(dtype)
+    assert not strings.is_bytes_dtype(dtype)
+
+
 @pytest.mark.parametrize("numpy_str_type", (np.str_, np.bytes_))
 def test_numpy_subclass_handling(numpy_str_type) -> None:
     with pytest.raises(TypeError, match="unsupported type for vlen_dtype"):
@@ -91,6 +101,20 @@ def test_EncodedStringCoder_encode() -> None:
 
     coder = strings.EncodedStringCoder(allows_unicode=False)
     assert_identical(coder.encode(raw), expected)
+
+
+@pytest.mark.skipif(
+    not hasattr(np.dtypes, "StringDType"), reason="requires StringDType"
+)
+def test_encoded_string_coder_stringdtype_nulls() -> None:
+    # GH11199 — EncodedStringCoder normalizes StringDType nulls to empty strings
+    data = np.array(["ab", None], dtype=np.dtypes.StringDType(na_object=None))
+    var = Variable("x", data)
+    coder = strings.EncodedStringCoder(allows_unicode=True)
+    result = coder.encode(var)
+    expected = Variable("x", np.array(["ab", ""]))
+    assert_identical(result, expected)
+    assert result.dtype.kind == "U"
 
 
 @pytest.mark.parametrize(
