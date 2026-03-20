@@ -884,14 +884,16 @@ class ZarrStore(AbstractWritableDataStore):
         )
         attributes = dict(attributes)
 
-        chunk_grid = zarr_array.metadata.chunk_grid
-        if _has_unified_chunk_grid() and chunk_grid.is_regular:
-            chunks = chunk_grid.chunk_shape
-            preferred_chunks = dict(zip(dimensions, chunks, strict=True))
-        elif _has_unified_chunk_grid():
-            # Rectilinear grids — chunk_sizes (dask convention) gives
-            # per-dimension tuples of edge lengths for the exact chunk layout.
-            chunks = chunk_grid.chunk_sizes
+        if _has_unified_chunk_grid():
+            from zarr.core.metadata.v3 import RectilinearChunkGrid, RegularChunkGrid
+
+            chunk_grid = zarr_array.metadata.chunk_grid
+            if isinstance(chunk_grid, RegularChunkGrid):
+                chunks = chunk_grid.chunk_shape
+            elif isinstance(chunk_grid, RectilinearChunkGrid):
+                chunks = chunk_grid.chunk_shapes
+            else:
+                chunks = tuple(zarr_array.chunks)
             preferred_chunks = dict(zip(dimensions, chunks, strict=True))
         else:
             # Fallback for older zarr-python without unified chunk grid
