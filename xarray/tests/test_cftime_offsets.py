@@ -1,7 +1,7 @@
-xarray/tests/test_coding_times.pyfrom __future__ import annotations
+from __future__ import annotations
 
 import warnings
-from itertools import product, starmap
+from itertools import product
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np

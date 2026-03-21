@@ -152,6 +152,11 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
 
 
 def get_date_type(self):
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
+
     if cftime is None:
         raise ModuleNotFoundError("No module named 'cftime'")
 

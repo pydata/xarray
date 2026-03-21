@@ -5,6 +5,7 @@ import platform
 import string
 import warnings
 from contextlib import contextmanager, nullcontext
+from functools import partial
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -470,7 +471,7 @@ def _all_cftime_date_types():
     import cftime
 
     return {
-        "noleap": cftime.DatetimeNoLeap,
+        "noleap": partial(cftime.datetime, calendar="noleap"),
         "365_day": cftime.DatetimeNoLeap,
         "360_day": cftime.Datetime360Day,
         "julian": cftime.DatetimeJulian,

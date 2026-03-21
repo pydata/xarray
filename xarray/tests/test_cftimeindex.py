@@ -1419,7 +1419,10 @@ def test_infer_freq_valid_types(time_unit: PDDatetimeUnitOptions) -> None:
     assert xr.infer_freq(xr.DataArray(cf_index)) == "D"
 
     cf_index = xr.date_range(
-        cftime.datetime(2000, 1, 1, calendar="noleap"), periods=3, freq="D"
+        cftime.datetime(2000, 1, 1, calendar="noleap"),
+        periods=3,
+        freq="D",
+        use_cftime=True,
     )
     assert xr.infer_freq(cf_index) == "D"
     assert xr.infer_freq(xr.DataArray(cf_index)) == "D"

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import warnings
 from datetime import datetime, timedelta
-from functools import partial
 from itertools import product, starmap
 from typing import Literal
 
@@ -96,21 +95,6 @@ _CF_DATETIME_TESTS = [
         _CF_DATETIME_NUM_DATES_UNITS, _STANDARD_CALENDAR_NAMES
     )
 ]
-
-
-def _all_cftime_date_types():
-    import cftime
-
-    return {
-        "noleap": partial(cftime.datetime, calendar="noleap"),
-        "365_day": cftime.DatetimeNoLeap,
-        "360_day": cftime.Datetime360Day,
-        "julian": cftime.DatetimeJulian,
-        "all_leap": cftime.DatetimeAllLeap,
-        "366_day": cftime.DatetimeAllLeap,
-        "gregorian": cftime.DatetimeGregorian,
-        "proleptic_gregorian": cftime.DatetimeProlepticGregorian,
-    }
 
 
 @requires_cftime
