@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
@@ -10,6 +11,10 @@ from xarray.backends.common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    T_PathFileOrDataStore,
+    _is_likely_dap_url,
+    _normalize_path,
+    datatree_from_dict_with_io_cleanup,
     robust_getitem,
 )
 from xarray.backends.store import StoreBackendEntrypoint
@@ -18,21 +23,20 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
-    is_dict_like,
-    is_remote_uri,
 )
 from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
     import os
-    from io import BufferedIOBase
 
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
+    from xarray.core.types import ReadBuffer
 
 
 class PydapArrayWrapper(BackendArray):
-    def __init__(self, array):
+    def __init__(self, array, checksums=True):
         self.array = array
 
     @property
@@ -49,36 +53,24 @@ class PydapArrayWrapper(BackendArray):
         )
 
     def _getitem(self, key):
-        # pull the data from the array attribute if possible, to avoid
-        # downloading coordinate data twice
-        array = getattr(self.array, "array", self.array)
-        result = robust_getitem(array, key, catch=ValueError)
-        result = np.asarray(result)
-        # in some cases, pydap doesn't squeeze axes automatically like numpy
+        result = robust_getitem(self.array, key, catch=ValueError)
+        result = np.asarray(result.data)
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
-        if result.ndim + len(axis) != array.ndim and axis:
+        if result.ndim + len(axis) != self.array.ndim and axis:
             result = np.squeeze(result, axis)
-
         return result
 
 
-def _fix_attributes(attributes):
-    attributes = dict(attributes)
-    for k in list(attributes):
-        if k.lower() == "global" or k.lower().endswith("_global"):
-            # move global attributes to the top level, like the netcdf-C
-            # DAP client
-            attributes.update(attributes.pop(k))
-        elif is_dict_like(attributes[k]):
-            # Make Hierarchical attributes to a single level with a
-            # dot-separated key
-            attributes.update(
-                {
-                    f"{k}.{k_child}": v_child
-                    for k_child, v_child in attributes.pop(k).items()
-                }
-            )
-    return attributes
+def get_group(ds, group):
+    if group in {None, "", "/"}:
+        # use the root group
+        return ds
+    else:
+        try:
+            return ds[group]
+        except KeyError as e:
+            # wrap error to provide slightly more helpful message
+            raise KeyError(f"group not found: {group}", e) from e
 
 
 class PydapDataStore(AbstractDataStore):
@@ -88,61 +80,154 @@ class PydapDataStore(AbstractDataStore):
     be useful if the netCDF4 library is not available.
     """
 
-    def __init__(self, ds):
+    def __init__(
+        self,
+        dataset,
+        group=None,
+        session=None,
+        protocol=None,
+        checksums=True,
+    ):
         """
         Parameters
         ----------
         ds : pydap DatasetType
+        group: str or None (default None)
+            The group to open. If None, the root group is opened.
         """
-        self.ds = ds
+        self.dataset = dataset
+        self.group = group
+        self._protocol = protocol
+        self._checksums = checksums  # true by default
 
     @classmethod
     def open(
         cls,
         url,
+        group=None,
         application=None,
         session=None,
         output_grid=None,
         timeout=None,
         verify=None,
         user_charset=None,
+        checksums=True,
     ):
-        import pydap.client
-        import pydap.lib
+        from pydap.client import open_url
+        from pydap.net import DEFAULT_TIMEOUT
 
-        if timeout is None:
-            from pydap.lib import DEFAULT_TIMEOUT
+        if output_grid is not None:
+            # output_grid is no longer passed to pydap.client.open_url
+            from xarray.core.utils import emit_user_level_warning
 
-            timeout = DEFAULT_TIMEOUT
+            emit_user_level_warning(
+                "`output_grid` is deprecated and will be removed in a future version"
+                " of xarray. Will be set to `None`, the new default. ",
+                FutureWarning,
+            )
+            output_grid = False  # new default behavior
 
         kwargs = {
             "url": url,
             "application": application,
             "session": session,
-            "output_grid": output_grid or True,
-            "timeout": timeout,
+            "output_grid": output_grid or False,
+            "timeout": timeout or DEFAULT_TIMEOUT,
+            "verify": verify or True,
+            "user_charset": user_charset,
         }
-        if verify is not None:
-            kwargs.update({"verify": verify})
-        if user_charset is not None:
-            kwargs.update({"user_charset": user_charset})
-        ds = pydap.client.open_url(**kwargs)
-        return cls(ds)
+        if isinstance(url, str):
+            # check uit begins with an acceptable scheme
+            dataset = open_url(**kwargs)
+        elif hasattr(url, "ds"):
+            # pydap dataset
+            dataset = url.ds
+        args = {"dataset": dataset, "checksums": checksums}
+        if group:
+            args["group"] = group
+        if url.startswith(("http", "dap2")):
+            args["protocol"] = "dap2"
+        elif url.startswith("dap4"):
+            args["protocol"] = "dap4"
+        return cls(**args)
 
     def open_store_variable(self, var):
-        data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
-        return Variable(var.dimensions, data, _fix_attributes(var.attributes))
+        if hasattr(var, "dims"):
+            dimensions = [
+                dim.split("/")[-1] if dim.startswith("/") else dim for dim in var.dims
+            ]
+        else:
+            # GridType does not have a dims attribute - instead get `dimensions`
+            # see https://github.com/pydap/pydap/issues/485
+            dimensions = var.dimensions
+        if (
+            self._protocol == "dap4"
+            and var.name in dimensions
+            and hasattr(var, "dataset")  # only True for pydap>3.5.5
+        ):
+            var.dataset.enable_batch_mode()
+            data_array = self._get_data_array(var)
+            data = indexing.LazilyIndexedArray(data_array)
+            var.dataset.disable_batch_mode()
+        else:
+            # all non-dimension variables
+            data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
+
+        return Variable(dimensions, data, var.attributes)
 
     def get_variables(self):
-        return FrozenDict(
-            (k, self.open_store_variable(self.ds[k])) for k in self.ds.keys()
-        )
+        # get first all variables arrays, excluding any container type like,
+        # `Groups`, `Sequence` or `Structure` types
+        try:
+            _vars = list(self.ds.variables())
+            _vars += list(self.ds.grids())  # dap2 objects
+        except AttributeError:
+            from pydap.model import GroupType
+
+            _vars = [
+                var
+                for var in self.ds.keys()
+                # check the key is not a BaseType or GridType
+                if not isinstance(self.ds[var], GroupType)
+            ]
+
+        return FrozenDict((k, self.open_store_variable(self.ds[k])) for k in _vars)
 
     def get_attrs(self):
-        return Frozen(_fix_attributes(self.ds.attributes))
+        """Remove any opendap specific attributes"""
+        opendap_attrs = (
+            "configuration",
+            "build_dmrpp",
+            "bes",
+            "libdap",
+            "invocation",
+            "dimensions",
+            "path",
+            "Maps",
+        )
+        attrs = dict(self.ds.attributes)
+        list(map(attrs.pop, opendap_attrs, [None] * len(opendap_attrs)))
+        return Frozen(attrs)
 
     def get_dimensions(self):
-        return Frozen(self.ds.dimensions)
+        return Frozen(sorted(self.ds.dimensions))
+
+    @property
+    def ds(self):
+        return get_group(self.dataset, self.group)
+
+    def _get_data_array(self, var):
+        """gets dimension data all at once, storing the numpy
+        arrays within a cached dictionary
+        """
+        from pydap.client import get_batch_data
+
+        if not var._is_data_loaded():
+            # data has not been deserialized yet
+            # runs only once per store/hierarchy
+            get_batch_data(var, checksums=self._checksums)
+
+        return self.dataset[var.id].data
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
@@ -154,7 +239,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     This backend is selected by default for urls.
 
     For more information about the underlying library, visit:
-    https://www.pydap.org
+    https://pydap.github.io/pydap/en/intro.html
 
     See Also
     --------
@@ -164,15 +249,16 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ) -> bool:
-        return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
+        if not isinstance(filename_or_obj, str):
+            return False
+        return _is_likely_dap_url(filename_or_obj)
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: (
+            str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+        ),
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -181,23 +267,26 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         drop_variables: str | Iterable[str] | None = None,
         use_cftime=None,
         decode_timedelta=None,
+        group=None,
         application=None,
         session=None,
         output_grid=None,
         timeout=None,
         verify=None,
         user_charset=None,
+        checksums=True,
     ) -> Dataset:
         store = PydapDataStore.open(
             url=filename_or_obj,
+            group=group,
             application=application,
             session=session,
             output_grid=output_grid,
             timeout=timeout,
             verify=verify,
             user_charset=user_charset,
+            checksums=checksums,
         )
-
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(
@@ -211,6 +300,145 @@ class PydapBackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
             return ds
+
+    def open_datatree(
+        self,
+        filename_or_obj: T_PathFileOrDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | None = None,
+        application=None,
+        session=None,
+        timeout=None,
+        verify=None,
+        user_charset=None,
+        checksums=True,
+    ) -> DataTree:
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            application=application,
+            session=session,
+            timeout=timeout,
+            verify=verify,
+            user_charset=user_charset,
+            checksums=checksums,
+        )
+
+        return datatree_from_dict_with_io_cleanup(groups_dict)
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: T_PathFileOrDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | None = None,
+        application=None,
+        session=None,
+        timeout=None,
+        verify=None,
+        user_charset=None,
+        checksums=True,
+    ) -> dict[str, Dataset]:
+        from xarray.core.treenode import NodePath
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = PydapDataStore.open(
+            url=filename_or_obj,
+            application=application,
+            session=session,
+            timeout=timeout,
+            verify=verify,
+            user_charset=user_charset,
+            checksums=checksums,
+        )
+
+        # Check for a group and make it a parent if it exists
+        if group:
+            parent = str(NodePath("/") / NodePath(group))
+        else:
+            parent = str(NodePath("/"))
+
+        groups_dict = {}
+        group_names = [parent]
+        # construct fully qualified path to group
+        try:
+            # this works for pydap >= 3.5.1
+            Groups = store.ds[parent].groups()
+        except AttributeError:
+            # THIS IS ONLY NEEDED FOR `pydap == 3.5.0`
+            # `pydap>= 3.5.1` has a new method `groups()`
+            # that returns a dict of group names and their paths
+            def group_fqn(store, path=None, g_fqn=None) -> dict[str, str]:
+                """To be removed for pydap > 3.5.0.
+                Derives the fully qualifying name of a Group."""
+                from pydap.model import GroupType
+
+                if not path:
+                    path = "/"  # parent
+                if not g_fqn:
+                    g_fqn = {}
+                groups = [
+                    store[key].id
+                    for key in store.keys()
+                    if isinstance(store[key], GroupType)
+                ]
+                for g in groups:
+                    g_fqn.update({g: path})
+                    subgroups = [
+                        var for var in store[g] if isinstance(store[g][var], GroupType)
+                    ]
+                    if len(subgroups) > 0:
+                        npath = path + g
+                        g_fqn = group_fqn(store[g], npath, g_fqn)
+                return g_fqn
+
+            Groups = group_fqn(store.ds)
+        group_names += [
+            str(NodePath(path_to_group) / NodePath(group))
+            for group, path_to_group in Groups.items()
+        ]
+        for path_group in group_names:
+            # get a group from the store
+            store.group = path_group
+            store_entrypoint = StoreBackendEntrypoint()
+            with close_on_error(store):
+                group_ds = store_entrypoint.open_dataset(
+                    store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
+
+        return groups_dict
 
 
 BACKEND_ENTRYPOINTS["pydap"] = ("pydap", PydapBackendEntrypoint)

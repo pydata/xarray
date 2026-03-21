@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+from functools import partial
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -9,9 +12,69 @@ from xarray.core import formatting_html as fh
 from xarray.core.coordinates import Coordinates
 
 
+def drop_fallback_text_repr(html: str) -> str:
+    pattern = (
+        re.escape("<pre class='xr-text-repr-fallback'>") + "[^<]*" + re.escape("</pre>")
+    )
+    return re.sub(pattern, "", html)
+
+
+XarrayTypes = xr.DataTree | xr.Dataset | xr.DataArray | xr.Variable
+
+
+def xarray_html_only_repr(obj: XarrayTypes) -> str:
+    return drop_fallback_text_repr(obj._repr_html_())
+
+
+def assert_consistent_text_and_html(
+    obj: XarrayTypes, section_headers: list[str]
+) -> None:
+    actual_html = xarray_html_only_repr(obj)
+    actual_text = repr(obj)
+    for section_header in section_headers:
+        assert actual_html.count(section_header) == actual_text.count(section_header), (
+            section_header
+        )
+
+
+assert_consistent_text_and_html_dataarray = partial(
+    assert_consistent_text_and_html,
+    section_headers=[
+        "Coordinates",
+        "Indexes",
+        "Attributes",
+    ],
+)
+
+
+assert_consistent_text_and_html_dataset = partial(
+    assert_consistent_text_and_html,
+    section_headers=[
+        "Dimensions",
+        "Coordinates",
+        "Data variables",
+        "Indexes",
+        "Attributes",
+    ],
+)
+
+
+assert_consistent_text_and_html_datatree = partial(
+    assert_consistent_text_and_html,
+    section_headers=[
+        "Dimensions",
+        "Coordinates",
+        "Inherited coordinates",
+        "Data variables",
+        "Indexes",
+        "Attributes",
+    ],
+)
+
+
 @pytest.fixture
 def dataarray() -> xr.DataArray:
-    return xr.DataArray(np.random.RandomState(0).randn(4, 6))
+    return xr.DataArray(np.random.default_rng(0).random((4, 6)))
 
 
 @pytest.fixture
@@ -43,7 +106,7 @@ def dataset() -> xr.Dataset:
             "tmin": (("time", "location"), tmin_values),
             "tmax": (("time", "location"), tmax_values),
         },
-        {"time": times, "location": ["<IA>", "IN", "IL"]},
+        {"location": ["<IA>", "IN", "IL"], "time": times},
         attrs={"description": "Test data."},
     )
 
@@ -99,56 +162,91 @@ def test_summarize_attrs_with_unsafe_attr_name_and_value() -> None:
     assert "<dd>&lt;pd.DataFrame&gt;</dd>" in formatted
 
 
-def test_repr_of_dataarray(dataarray: xr.DataArray) -> None:
-    formatted = fh.array_repr(dataarray)
+def test_repr_of_dataarray() -> None:
+    dataarray = xr.DataArray(np.random.default_rng(0).random((4, 6)))
+    formatted = xarray_html_only_repr(dataarray)
     assert "dim_0" in formatted
     # has an expanded data section
     assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 1
-    # coords, indexes and attrs don't have an items so they'll be be disabled and collapsed
-    assert (
-        formatted.count("class='xr-section-summary-in' type='checkbox' disabled >") == 3
-    )
+    # coords, indexes and attrs don't have an items so they'll be omitted
+    assert "Coordinates" not in formatted
+    assert "Indexes" not in formatted
+    assert "Attributes" not in formatted
+
+    assert_consistent_text_and_html_dataarray(dataarray)
 
     with xr.set_options(display_expand_data=False):
-        formatted = fh.array_repr(dataarray)
+        formatted = xarray_html_only_repr(dataarray)
         assert "dim_0" in formatted
         # has a collapsed data section
         assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 0
-        # coords, indexes and attrs don't have an items so they'll be be disabled and collapsed
-        assert (
-            formatted.count("class='xr-section-summary-in' type='checkbox' disabled >")
-            == 3
-        )
+        # coords, indexes and attrs don't have an items so they'll be omitted
+        assert "Coordinates" not in formatted
+        assert "Indexes" not in formatted
+        assert "Attributes" not in formatted
+
+
+def test_repr_coords_order_of_datarray() -> None:
+    da1 = xr.DataArray(
+        np.empty((2, 2)),
+        coords={"foo": [0, 1], "bar": [0, 1]},
+        dims=["foo", "bar"],
+    )
+    da2 = xr.DataArray(
+        np.empty((2, 2)),
+        coords={"bar": [0, 1], "foo": [0, 1]},
+        dims=["bar", "foo"],
+    )
+    ds = xr.Dataset({"da1": da1, "da2": da2})
+
+    bar_line = (
+        "<span class='xr-has-index'>bar</span></div><div class='xr-var-dims'>(bar)"
+    )
+    foo_line = (
+        "<span class='xr-has-index'>foo</span></div><div class='xr-var-dims'>(foo)"
+    )
+
+    formatted_da1 = fh.array_repr(ds.da1)
+    assert formatted_da1.index(foo_line) < formatted_da1.index(bar_line)
+
+    formatted_da2 = fh.array_repr(ds.da2)
+    assert formatted_da2.index(bar_line) < formatted_da2.index(foo_line)
 
 
 def test_repr_of_multiindex(multiindex: xr.Dataset) -> None:
     formatted = fh.dataset_repr(multiindex)
     assert "(x)" in formatted
 
+    assert_consistent_text_and_html_dataset(multiindex)
+
 
 def test_repr_of_dataset(dataset: xr.Dataset) -> None:
-    formatted = fh.dataset_repr(dataset)
+    formatted = xarray_html_only_repr(dataset)
     # coords, attrs, and data_vars are expanded
     assert (
-        formatted.count("class='xr-section-summary-in' type='checkbox'  checked>") == 3
+        formatted.count("class='xr-section-summary-in' type='checkbox' checked />") == 3
     )
-    # indexes is collapsed
-    assert formatted.count("class='xr-section-summary-in' type='checkbox'  >") == 1
+    # indexes is omitted
+    assert "Indexes" not in formatted
     assert "&lt;U4" in formatted or "&gt;U4" in formatted
     assert "&lt;IA&gt;" in formatted
+
+    assert_consistent_text_and_html_dataset(dataset)
 
     with xr.set_options(
         display_expand_coords=False,
         display_expand_data_vars=False,
         display_expand_attrs=False,
         display_expand_indexes=True,
+        display_default_indexes=True,
     ):
-        formatted = fh.dataset_repr(dataset)
-        # coords, attrs, and data_vars are collapsed, indexes is expanded
+        formatted = xarray_html_only_repr(dataset)
+        # coords, attrs, and data_vars are collapsed, indexes is shown & expanded
         assert (
-            formatted.count("class='xr-section-summary-in' type='checkbox'  checked>")
+            formatted.count("class='xr-section-summary-in' type='checkbox' checked />")
             == 1
         )
+        assert "Indexes" in formatted
         assert "&lt;U4" in formatted or "&gt;U4" in formatted
         assert "&lt;IA&gt;" in formatted
 
@@ -158,6 +256,17 @@ def test_repr_text_fallback(dataset: xr.Dataset) -> None:
 
     # Just test that the "pre" block used for fallback to plain text is present.
     assert "<pre class='xr-text-repr-fallback'>" in formatted
+
+
+def test_repr_coords_order_of_dataset() -> None:
+    ds = xr.Dataset()
+    ds.coords["as"] = 10
+    ds["var"] = xr.DataArray(np.ones((10,)), dims="x", coords={"x": np.arange(10)})
+    formatted = fh.dataset_repr(ds)
+
+    x_line = "<span class='xr-has-index'>x</span></div><div class='xr-var-dims'>(x)"
+    as_line = "<span>as</span></div><div class='xr-var-dims'>()"
+    assert formatted.index(x_line) < formatted.index(as_line)
 
 
 def test_variable_repr_html() -> None:
@@ -196,3 +305,146 @@ def test_nonstr_variable_repr_html() -> None:
         html = v._repr_html_().strip()
     assert "<dt><span>22 :</span></dt><dd>bar</dd>" in html
     assert "<li><span>10</span>: 3</li></ul>" in html
+
+
+class TestDataTreeTruncatesNodes:
+    def test_many_nodes(self) -> None:
+        number_of_files = 10
+        number_of_groups = 10
+        tree_dict = {}
+        for f in range(number_of_files):
+            for g in range(number_of_groups):
+                tree_dict[f"file_{f}/group_{g}"] = xr.Dataset({"g": f * g})
+
+        tree = xr.DataTree.from_dict(tree_dict)
+
+        with xr.set_options(display_max_html_elements=25):
+            result = xarray_html_only_repr(tree)
+        assert result.count("file_0/group_9") == 1
+        assert result.count("file_1/group_0") == 0  # disabled
+        assert result.count("Too many items to display") == 9 + 10
+
+        with xr.set_options(display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+        assert result.count("Too many items to display") == 0
+
+    def test_many_children_truncated(self) -> None:
+        # Create tree with 20 children at root level
+        tree_dict = {f"child_{i:02d}": xr.Dataset({"x": i}) for i in range(20)}
+        tree = xr.DataTree.from_dict(tree_dict)
+
+        # With max_children=5: show first 3, ellipsis, last 2
+        with xr.set_options(display_max_children=5, display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # First 3 children should appear
+        assert "/child_00" in result
+        assert "/child_01" in result
+        assert "/child_02" in result
+
+        # Middle children should NOT appear
+        assert "/child_03" not in result
+        assert "/child_10" not in result
+        assert "/child_17" not in result
+
+        # Last 2 children should appear
+        assert "/child_18" in result
+        assert "/child_19" in result
+
+        # Vertical ellipsis should appear
+        assert "⋮" in result
+
+    def test_few_children_not_truncated(self) -> None:
+        # Create tree with 5 children (at the limit)
+        tree_dict = {f"child_{i}": xr.Dataset({"x": i}) for i in range(5)}
+        tree = xr.DataTree.from_dict(tree_dict)
+
+        with xr.set_options(display_max_children=5, display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # All children should appear
+        for i in range(5):
+            assert f"/child_{i}" in result
+
+        # No ellipsis
+        assert "⋮" not in result
+
+    def test_nested_children_truncated(self) -> None:
+        # Create tree with nested children: root → 10 children → each with 2 grandchildren
+        tree_dict = {}
+        for i in range(10):
+            for j in range(2):
+                tree_dict[f"child_{i:02d}/grandchild_{j}"] = xr.Dataset({"x": i * j})
+        tree = xr.DataTree.from_dict(tree_dict)
+
+        with xr.set_options(display_max_children=5, display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # Root level: first 3 and last 2 of 10 children should appear
+        assert "/child_00" in result
+        assert "/child_01" in result
+        assert "/child_02" in result
+        assert "/child_05" not in result  # truncated
+        assert "/child_08" in result
+        assert "/child_09" in result
+
+        # Ellipsis should appear for truncated children
+        assert "⋮" in result
+
+    def test_node_item_count_displayed(self) -> None:
+        # Create tree with known item counts
+        tree = xr.DataTree.from_dict(
+            {
+                "node_a": xr.Dataset({"var1": 1, "var2": 2}),  # 2 vars
+                "node_b": xr.Dataset(
+                    {"var1": 1}, attrs={"attr1": "x", "attr2": "y"}
+                ),  # 1 var + 2 attrs
+            }
+        )
+
+        with xr.set_options(display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # Item counts should appear in parentheses
+        assert "(2)" in result  # node_a: 2 variables
+        assert "(3)" in result  # node_b: 1 variable + 2 attrs
+
+    def test_collapsible_group_checkbox(self) -> None:
+        # Create simple tree with children
+        tree = xr.DataTree.from_dict(
+            {
+                "child_a": xr.Dataset({"x": 1}),
+                "child_b": xr.Dataset({"y": 2}),
+            }
+        )
+
+        with xr.set_options(display_max_html_elements=1000):
+            result = xarray_html_only_repr(tree)
+
+        # Group nodes should have checkbox inputs for collapsing
+        assert "<input" in result
+        assert "type='checkbox'" in result
+
+
+class TestDataTreeInheritance:
+    def test_inherited_section_present(self) -> None:
+        dt = xr.DataTree.from_dict(data={"a/b/c": None}, coords={"x": [1]})
+
+        root_html = dt._repr_html_()
+        assert "Inherited coordinates" not in root_html
+
+        child_html = xarray_html_only_repr(dt["a"])
+        assert child_html.count("Inherited coordinates") == 1
+
+    def test_repr_consistency(self) -> None:
+        dt = xr.DataTree.from_dict({"/a/b/c": None})
+        assert_consistent_text_and_html_datatree(dt)
+        assert_consistent_text_and_html_datatree(dt["a"])
+        assert_consistent_text_and_html_datatree(dt["a/b"])
+        assert_consistent_text_and_html_datatree(dt["a/b/c"])
+
+    def test_no_repeated_style_or_fallback_text(self) -> None:
+        dt = xr.DataTree.from_dict({"/a/b/c": None})
+        html = dt._repr_html_()
+        assert html.count("<style>") == 1
+        assert html.count("<pre class='xr-text-repr-fallback'>") == 1

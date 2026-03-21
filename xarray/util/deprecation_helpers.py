@@ -33,9 +33,11 @@
 
 import inspect
 import warnings
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, TypeVar
+from typing import Any, Self, TypeVar
 
+from xarray.core.options import OPTIONS
 from xarray.core.utils import emit_user_level_warning
 
 T = TypeVar("T", bound=Callable)
@@ -107,8 +109,10 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
                     stacklevel=2,
                 )
 
-                zip_args = zip(kwonly_args[:n_extra_args], args[-n_extra_args:])
-                kwargs.update({name: arg for name, arg in zip_args})
+                zip_args = zip(
+                    kwonly_args[:n_extra_args], args[-n_extra_args:], strict=True
+                )
+                kwargs.update(zip_args)
 
                 return func(*args[:-n_extra_args], **kwargs)
 
@@ -119,7 +123,7 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
     return _decorator
 
 
-def deprecate_dims(func: T) -> T:
+def deprecate_dims(func: T, old_name="dims") -> T:
     """
     For functions that previously took `dims` as a kwarg, and have now transitioned to
     `dim`. This decorator will issue a warning if `dims` is passed while forwarding it
@@ -128,17 +132,90 @@ def deprecate_dims(func: T) -> T:
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if "dims" in kwargs:
+        if old_name in kwargs:
             emit_user_level_warning(
-                "The `dims` argument has been renamed to `dim`, and will be removed "
+                f"The `{old_name}` argument has been renamed to `dim`, and will be removed "
                 "in the future. This renaming is taking place throughout xarray over the "
                 "next few releases.",
-                # Upgrade to `DeprecationWarning` in the future, when the renaming is complete.
+                # Upgrade to `FutureWarning` in the future, when the renaming is complete.
                 PendingDeprecationWarning,
             )
-            kwargs["dim"] = kwargs.pop("dims")
+            kwargs["dim"] = kwargs.pop(old_name)
         return func(*args, **kwargs)
 
     # We're quite confident we're just returning `T` from this function, so it's fine to ignore typing
     # within the function.
-    return wrapper  # type: ignore
+    return wrapper  # type: ignore[return-value]
+
+
+class CombineKwargDefault:
+    """Object that handles deprecation cycle for kwarg default values.
+
+    Similar to ReprObject
+    """
+
+    _old: str
+    _new: str | None
+    _name: str
+
+    def __init__(self, *, name: str, old: str, new: str | None):
+        self._name = name
+        self._old = old
+        self._new = new
+
+    def __repr__(self) -> str:
+        return str(self._value)
+
+    def __eq__(self, other: Self | Any) -> bool:
+        return (
+            self._value == other._value
+            if isinstance(other, type(self))
+            else self._value == other
+        )
+
+    @property
+    def _value(self) -> str | None:
+        return self._new if OPTIONS["use_new_combine_kwarg_defaults"] else self._old
+
+    def __hash__(self) -> int:
+        return hash(self._value)
+
+    def __dask_tokenize__(self) -> object:
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._value))
+
+    def warning_message(self, message: str, recommend_set_options: bool = True) -> str:
+        if recommend_set_options:
+            recommendation = (
+                " To opt in to new defaults and get rid of these warnings now "
+                "use `set_options(use_new_combine_kwarg_defaults=True) or "
+                f"set {self._name} explicitly."
+            )
+        else:
+            recommendation = (
+                f" The recommendation is to set {self._name} explicitly for this case."
+            )
+
+        return (
+            f"In a future version of xarray the default value for {self._name} will "
+            f"change from {self._name}={self._old!r} to {self._name}={self._new!r}. "
+            + message
+            + recommendation
+        )
+
+    def error_message(self) -> str:
+        return (
+            f" Error might be related to new default (`{self._name}={self._new!r}`). "
+            f"Previously the default was `{self._name}={self._old!r}`. "
+            f"The recommendation is to set {self._name!r} explicitly for this case."
+        )
+
+
+_DATA_VARS_DEFAULT = CombineKwargDefault(name="data_vars", old="all", new=None)
+_COORDS_DEFAULT = CombineKwargDefault(name="coords", old="different", new="minimal")
+_COMPAT_CONCAT_DEFAULT = CombineKwargDefault(
+    name="compat", old="equals", new="override"
+)
+_COMPAT_DEFAULT = CombineKwargDefault(name="compat", old="no_conflicts", new="override")
+_JOIN_DEFAULT = CombineKwargDefault(name="join", old="outer", new="exact")

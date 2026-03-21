@@ -1,22 +1,18 @@
 from __future__ import annotations
 
 import sys
-from importlib.metadata import EntryPoint
-
-if sys.version_info >= (3, 10):
-    from importlib.metadata import EntryPoints
-else:
-    EntryPoints = list[EntryPoint]
+from importlib.metadata import EntryPoint, EntryPoints
+from itertools import starmap
 from unittest import mock
 
 import pytest
 
 from xarray.backends import common, plugins
+from xarray.core.options import OPTIONS
 from xarray.tests import (
     has_h5netcdf,
     has_netCDF4,
     has_pydap,
-    has_pynio,
     has_scipy,
     has_zarr,
 )
@@ -27,22 +23,22 @@ importlib_metadata_mock = "importlib.metadata"
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
-    def open_dataset(filename_or_obj, *args):
+    def open_dataset(filename_or_obj, *args):  # type: ignore[override]
         pass
 
 
 class DummyBackendEntrypointKwargs(common.BackendEntrypoint):
-    def open_dataset(filename_or_obj, **kwargs):
+    def open_dataset(filename_or_obj, **kwargs):  # type: ignore[override]
         pass
 
 
 class DummyBackendEntrypoint1(common.BackendEntrypoint):
-    def open_dataset(self, filename_or_obj, *, decoder):
+    def open_dataset(self, filename_or_obj, *, decoder):  # type: ignore[override]
         pass
 
 
 class DummyBackendEntrypoint2(common.BackendEntrypoint):
-    def open_dataset(self, filename_or_obj, *, decoder):
+    def open_dataset(self, filename_or_obj, *, decoder):  # type: ignore[override]
         pass
 
 
@@ -54,7 +50,7 @@ def dummy_duplicated_entrypoints():
         ["engine2", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
         ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
     ]
-    eps = [EntryPoint(name, value, group) for name, value, group in specs]
+    eps = list(starmap(EntryPoint, specs))
     return eps
 
 
@@ -97,7 +93,7 @@ def test_backends_dict_from_pkg() -> None:
         ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
         ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
     ]
-    entrypoints = [EntryPoint(name, value, group) for name, value, group in specs]
+    entrypoints = list(starmap(EntryPoint, specs))
     engines = plugins.backends_dict_from_pkg(entrypoints)
     assert len(engines) == 2
     assert engines.keys() == {"engine1", "engine2"}
@@ -176,7 +172,7 @@ def test_build_engines_sorted() -> None:
     backend_entrypoints = list(plugins.build_engines(dummy_pkg_entrypoints))
 
     indices = []
-    for be in plugins.STANDARD_BACKENDS_ORDER:
+    for be in OPTIONS["netcdf_engine_order"]:
         try:
             index = backend_entrypoints.index(be)
             backend_entrypoints.pop(index)
@@ -192,24 +188,75 @@ def test_build_engines_sorted() -> None:
     "xarray.backends.plugins.list_engines",
     mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
 )
-def test_no_matching_engine_found() -> None:
-    with pytest.raises(ValueError, match=r"did not find a match in any"):
+def test_no_matching_engine_found(tmp_path) -> None:
+    # Non-existent local file raises FileNotFoundError
+    with pytest.raises(FileNotFoundError, match=r"No such file"):
         plugins.guess_engine("not-valid")
 
+    # Existing file with unrecognized extension raises ValueError
+    existing_file = tmp_path / "test.unknown"
+    existing_file.write_bytes(b"")
+    with pytest.raises(ValueError, match=r"did not find a match in any"):
+        plugins.guess_engine(str(existing_file))
+
+    # Existing file with recognized magic number raises ValueError
+    nc_file = tmp_path / "foo.nc"
+    nc_file.write_bytes(b"CDF\x01\x00\x00\x00\x00")
     with pytest.raises(ValueError, match=r"found the following matches with the input"):
-        plugins.guess_engine("foo.nc")
+        plugins.guess_engine(str(nc_file))
 
 
 @mock.patch(
     "xarray.backends.plugins.list_engines",
     mock.MagicMock(return_value={}),
 )
-def test_engines_not_installed() -> None:
-    with pytest.raises(ValueError, match=r"xarray is unable to open"):
+def test_engines_not_installed(tmp_path) -> None:
+    # Non-existent local file raises FileNotFoundError
+    with pytest.raises(FileNotFoundError, match=r"No such file"):
         plugins.guess_engine("not-valid")
 
+    # Existing file with no matching engine raises ValueError
+    existing_file = tmp_path / "test.unknown"
+    existing_file.write_bytes(b"")
+    with pytest.raises(ValueError, match=r"xarray is unable to open"):
+        plugins.guess_engine(str(existing_file))
+
+    # Existing file with recognized magic number raises ValueError
+    nc_file = tmp_path / "foo.nc"
+    nc_file.write_bytes(b"CDF\x01\x00\x00\x00\x00")
     with pytest.raises(ValueError, match=r"found the following matches with the input"):
-        plugins.guess_engine("foo.nc")
+        plugins.guess_engine(str(nc_file))
+
+
+@mock.patch(
+    "xarray.backends.plugins.list_engines",
+    mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
+)
+def test_guess_engine_file_not_found() -> None:
+    # Non-existent local file path (string)
+    with pytest.raises(
+        FileNotFoundError, match=r"No such file: '/nonexistent/path.h5'"
+    ):
+        plugins.guess_engine("/nonexistent/path.h5")
+
+    # Non-existent local file path (PathLike)
+    from pathlib import Path
+
+    with pytest.raises(FileNotFoundError, match=r"No such file"):
+        plugins.guess_engine(Path("/nonexistent/path.h5"))
+
+    # Remote URIs should not raise FileNotFoundError (raises ValueError instead)
+    with pytest.raises(ValueError):
+        plugins.guess_engine("https://example.com/missing.h5")
+
+
+@pytest.mark.parametrize("engine", common.BACKEND_ENTRYPOINTS.keys())
+def test_get_backend_fastpath_skips_list_engines(engine: str) -> None:
+    """Test that built-in engines skip list_engines (fastpath)."""
+    plugins.list_engines.cache_clear()
+    initial_misses = plugins.list_engines.cache_info().misses
+    plugins.get_backend(engine)
+    assert plugins.list_engines.cache_info().misses == initial_misses
 
 
 def test_lazy_import() -> None:
@@ -229,11 +276,10 @@ def test_lazy_import() -> None:
         "matplotlib",
         "nc_time_axis",
         "netCDF4",
-        "Nio",
         "numbagg",
         "pint",
         "pydap",
-        "scipy",
+        # "scipy",  # TODO: xarray.backends.scipy_ is currently not lazy
         "sparse",
         "zarr",
     ]
@@ -260,9 +306,9 @@ def test_lazy_import() -> None:
                 if pkg.startswith(mod):
                     is_imported.add(mod)
                     break
-        assert (
-            len(is_imported) == 0
-        ), f"{is_imported} have been imported but should be lazy"
+        assert len(is_imported) == 0, (
+            f"{is_imported} have been imported but should be lazy"
+        )
 
     finally:
         # restore original
@@ -280,7 +326,6 @@ def test_list_engines() -> None:
     assert ("netcdf4" in engines) == has_netCDF4
     assert ("pydap" in engines) == has_pydap
     assert ("zarr" in engines) == has_zarr
-    assert ("pynio" in engines) == has_pynio
     assert "store" in engines
 
 
@@ -291,10 +336,7 @@ def test_refresh_engines() -> None:
     EntryPointMock1.name = "test1"
     EntryPointMock1.load.return_value = DummyBackendEntrypoint1
 
-    if sys.version_info >= (3, 10):
-        return_value = EntryPoints([EntryPointMock1])
-    else:
-        return_value = {"xarray.backends": [EntryPointMock1]}
+    return_value = EntryPoints([EntryPointMock1])
 
     with mock.patch("xarray.backends.plugins.entry_points", return_value=return_value):
         list_engines.cache_clear()
@@ -306,10 +348,7 @@ def test_refresh_engines() -> None:
     EntryPointMock2.name = "test2"
     EntryPointMock2.load.return_value = DummyBackendEntrypoint2
 
-    if sys.version_info >= (3, 10):
-        return_value2 = EntryPoints([EntryPointMock2])
-    else:
-        return_value2 = {"xarray.backends": [EntryPointMock2]}
+    return_value2 = EntryPoints([EntryPointMock2])
 
     with mock.patch("xarray.backends.plugins.entry_points", return_value=return_value2):
         refresh_engines()

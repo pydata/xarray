@@ -37,7 +37,9 @@
 from __future__ import annotations
 
 import contextlib
+import difflib
 import functools
+import importlib
 import inspect
 import io
 import itertools
@@ -47,6 +49,7 @@ import re
 import sys
 import warnings
 from collections.abc import (
+    Callable,
     Collection,
     Container,
     Hashable,
@@ -57,17 +60,23 @@ from collections.abc import (
     Mapping,
     MutableMapping,
     MutableSet,
+    Sequence,
     ValuesView,
+)
+from collections.abc import (
+    Set as AbstractSet,
 )
 from enum import Enum
 from pathlib import Path
+from types import EllipsisType, ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
     Literal,
+    TypeGuard,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -88,11 +97,25 @@ from xarray.namedarray.utils import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, NestedDict
 
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
+
+
+def is_allowed_extension_array_dtype(dtype: Any):
+    return pd.api.types.is_extension_array_dtype(dtype) and not isinstance(  # noqa: TID251
+        dtype, pd.StringDtype
+    )
+
+
+def is_allowed_extension_array(array: Any) -> bool:
+    return (
+        hasattr(array, "dtype")
+        and is_allowed_extension_array_dtype(array.dtype)
+        and not isinstance(array, pd.arrays.NumpyExtensionArray)  # type: ignore[attr-defined]
+    )
 
 
 def alias_message(old_name: str, new_name: str) -> str:
@@ -117,30 +140,72 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     return wrapper
 
 
-def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
+def did_you_mean(
+    word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
+) -> str:
+    """
+    Suggest a few correct words based on a list of possibilities
+
+    Parameters
+    ----------
+    word : Hashable
+        Word to compare to a list of possibilities.
+    possibilities : Iterable of Hashable
+        The iterable of Hashable that contains the correct values.
+    n : int, default: 10
+        Maximum number of suggestions to show.
+
+    Examples
+    --------
+    >>> did_you_mean("bluch", ("blech", "gray_r", 1, None, (2, 56)))
+    "Did you mean one of ('blech',)?"
+    >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
+    'Did you mean one of (None,)?'
+
+    See Also
+    --------
+    https://en.wikipedia.org/wiki/String_metric
+    """
+    # Convert all values to string, get_close_matches doesn't handle all hashables:
+    possibilities_str: dict[str, Hashable] = {str(k): k for k in possibilities}
+
+    msg = ""
+    if len(
+        best_str := difflib.get_close_matches(
+            str(word), list(possibilities_str.keys()), n=n
+        )
+    ):
+        best = tuple(possibilities_str[k] for k in best_str)
+        msg = f"Did you mean one of {best}?"
+
+    return msg
+
+
+def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
     """Return a numpy compatible dtype from either
     a numpy array or a pandas.Index.
 
-    Used for wrapping a pandas.Index as an xarray,Variable.
+    Used for wrapping a pandas.Index as an xarray.Variable.
 
     """
     if isinstance(array, pd.PeriodIndex):
-        dtype = np.dtype("O")
-    elif hasattr(array, "categories"):
+        return np.dtype("O")
+
+    if hasattr(array, "categories"):
         # category isn't a real numpy dtype
         dtype = array.categories.dtype
         if not is_valid_numpy_dtype(dtype):
             dtype = np.dtype("O")
-    elif not is_valid_numpy_dtype(array.dtype):
-        dtype = np.dtype("O")
-    else:
-        dtype = array.dtype
+        return dtype
 
-    return dtype
+    if not is_valid_numpy_dtype(array.dtype):
+        return np.dtype("O")
+
+    return array.dtype  # type: ignore[return-value]
 
 
 def maybe_coerce_to_str(index, original_coords):
-    """maybe coerce a pandas Index back to a nunpy array of type str
+    """maybe coerce a pandas Index back to a numpy array of type str
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
@@ -148,7 +213,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     try:
         result_type = dtypes.result_type(*original_coords)
-    except TypeError:
+    except (TypeError, ValueError):
         pass
     else:
         if result_type.kind in "SU":
@@ -174,27 +239,44 @@ def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray. If both objects are lists,
     equivalent is sequentially called on all the elements.
+
+    Returns False for any comparison that doesn't return a boolean,
+    making this function safer to use with objects that have non-standard
+    __eq__ implementations.
     """
     # TODO: refactor to avoid circular import
     from xarray.core import duck_array_ops
 
     if first is second:
         return True
+
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+
     if isinstance(first, list) or isinstance(second, list):
-        return list_equiv(first, second)
-    return (first == second) or (pd.isnull(first) and pd.isnull(second))
+        return list_equiv(first, second)  # type: ignore[arg-type]
+
+    # Check for NaN equivalence early (before equality comparison)
+    # This handles both Python float NaN and NumPy scalar NaN (issue #10833)
+    if pd.isnull(first) and pd.isnull(second):  # type: ignore[call-overload]
+        return True
+
+    # For non-array/list types, use == but require boolean result
+    result = first == second
+    if not isinstance(result, bool):
+        # Accept numpy bool scalars as well
+        if isinstance(result, np.bool_):
+            return bool(result)
+        # Reject any other non-boolean type (Dataset, Series, custom objects, etc.)
+        return False
+
+    return result
 
 
-def list_equiv(first, second):
-    equiv = True
+def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    else:
-        for f, s in zip(first, second):
-            equiv = equiv and equivalent(f, s)
-    return equiv
+    return all(itertools.starmap(equivalent, zip(first, second, strict=True)))
 
 
 def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
@@ -257,12 +339,31 @@ def remove_incompatible_items(
             del first_dict[k]
 
 
+def flat_items(
+    nested: Mapping[str, NestedDict[T] | T],
+    prefix: str | None = None,
+    separator: str = "/",
+) -> Iterable[tuple[str, T]]:
+    """Yields flat items from a nested dictionary of dicts.
+
+    Notes:
+    - Only dict subclasses are flattened.
+    - Duplicate items are not removed. These should be checked separately.
+    """
+    for key, value in nested.items():
+        key = prefix + separator + key if prefix is not None else key
+        if isinstance(value, dict):
+            yield from flat_items(value, key, separator)
+        else:
+            yield key, value
+
+
 def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
 def is_list_like(value: Any) -> TypeGuard[list | tuple]:
-    return isinstance(value, (list, tuple))
+    return isinstance(value, list | tuple)
 
 
 def _is_scalar(value, include_0d):
@@ -272,7 +373,7 @@ def _is_scalar(value, include_0d):
         include_0d = getattr(value, "ndim", None) == 0
     return (
         include_0d
-        or isinstance(value, (str, bytes))
+        or isinstance(value, str | bytes)
         or not (
             isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
@@ -281,34 +382,12 @@ def _is_scalar(value, include_0d):
     )
 
 
-# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
-# requiring typing_extensions as a required dependency to _run_ the code (it is required
-# to type-check).
-try:
-    if sys.version_info >= (3, 10):
-        from typing import TypeGuard
-    else:
-        from typing_extensions import TypeGuard
-except ImportError:
-    if TYPE_CHECKING:
-        raise
-    else:
+def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
+    """Whether to treat a value as a scalar.
 
-        def is_scalar(value: Any, include_0d: bool = True) -> bool:
-            """Whether to treat a value as a scalar.
-
-            Any non-iterable, string, or 0-D array
-            """
-            return _is_scalar(value, include_0d)
-
-else:
-
-    def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
-        """Whether to treat a value as a scalar.
-
-        Any non-iterable, string, or 0-D array
-        """
-        return _is_scalar(value, include_0d)
+    Any non-iterable, string, or 0-D array
+    """
+    return _is_scalar(value, include_0d)
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:
@@ -492,7 +571,7 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
         return super().values()
 
 
-class HybridMappingProxy(Mapping[K, V]):
+class FilteredMapping(Mapping[K, V]):
     """Implements the Mapping interface. Uses the wrapped mapping for item lookup
     and a separate wrapped keys collection for iteration.
 
@@ -500,25 +579,31 @@ class HybridMappingProxy(Mapping[K, V]):
     eagerly accessing its items or when a mapping object is expected but only
     iteration over keys is actually used.
 
-    Note: HybridMappingProxy does not validate consistency of the provided `keys`
-    and `mapping`. It is the caller's responsibility to ensure that they are
-    suitable for the task at hand.
+    Note: keys should be a subset of mapping, but FilteredMapping does not
+    validate consistency of the provided `keys` and `mapping`. It is the
+    caller's responsibility to ensure that they are suitable for the task at
+    hand.
     """
 
-    __slots__ = ("_keys", "mapping")
+    __slots__ = ("keys_", "mapping")
 
     def __init__(self, keys: Collection[K], mapping: Mapping[K, V]):
-        self._keys = keys
+        self.keys_ = keys  # .keys is already a property on Mapping
         self.mapping = mapping
 
     def __getitem__(self, key: K) -> V:
+        if key not in self.keys_:
+            raise KeyError(key)
         return self.mapping[key]
 
     def __iter__(self) -> Iterator[K]:
-        return iter(self._keys)
+        return iter(self.keys_)
 
     def __len__(self) -> int:
-        return len(self._keys)
+        return len(self.keys_)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(keys={self.keys_!r}, mapping={self.mapping!r})"
 
 
 class OrderedSet(MutableSet[T]):
@@ -597,8 +682,8 @@ class NdimSizeLenMixin:
     def __len__(self: Any) -> int:
         try:
             return self.shape[0]
-        except IndexError:
-            raise TypeError("len() of unsized object")
+        except IndexError as err:
+            raise TypeError("len() of unsized object") from err
 
 
 class NDArrayMixin(NdimSizeLenMixin):
@@ -644,20 +729,51 @@ def is_remote_uri(path: str) -> bool:
     This also matches for http[s]://, which were the only remote URLs
     supported in <=v0.16.2.
     """
-    return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
+    return bool(re.search(r"^[a-zA-Z][a-zA-Z0-9]*(\://|\:\:)", path))
+
+
+def strip_uri_params(uri: str) -> str:
+    """Strip query parameters and fragments from a URI.
+
+    This is useful for extracting the file extension from URLs that
+    contain query parameters (e.g., OPeNDAP constraint expressions).
+
+    Parameters
+    ----------
+    uri : str
+        The URI to strip
+
+    Returns
+    -------
+    str
+        The URI without query parameters (?) or fragments (#)
+
+    Examples
+    --------
+    >>> strip_uri_params("http://example.com/file.nc?var=temp&time=0")
+    'http://example.com/file.nc'
+    >>> strip_uri_params("http://example.com/file.nc#section")
+    'http://example.com/file.nc'
+    >>> strip_uri_params("/local/path/file.nc")
+    '/local/path/file.nc'
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    # Use urlsplit to properly parse the URI
+    # This handles both absolute URLs and relative paths
+    parsed = urlsplit(uri)
+    # Reconstruct without query and fragment using urlunsplit
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
 
 
 def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     # check byte header to determine file type
-    if isinstance(filename_or_obj, bytes):
-        magic_number = filename_or_obj[:count]
-    elif isinstance(filename_or_obj, io.IOBase):
-        if filename_or_obj.tell() != 0:
-            filename_or_obj.seek(0)
-        magic_number = filename_or_obj.read(count)
-        filename_or_obj.seek(0)
-    else:
+    if not isinstance(filename_or_obj, io.IOBase):
         raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
+    if filename_or_obj.tell() != 0:
+        filename_or_obj.seek(0)
+    magic_number = filename_or_obj.read(count)
+    filename_or_obj.seek(0)
     return magic_number
 
 
@@ -667,7 +783,7 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
         try:
             with open(path, "rb") as f:
                 return read_magic_number_from_file(f, count)
-        except (FileNotFoundError, TypeError):
+        except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
     return None
 
@@ -675,10 +791,8 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
 def try_read_magic_number_from_file_or_path(filename_or_obj, count=8) -> bytes | None:
     magic_number = try_read_magic_number_from_path(filename_or_obj, count)
     if magic_number is None:
-        try:
+        with contextlib.suppress(TypeError):
             magic_number = read_magic_number_from_file(filename_or_obj, count)
-        except TypeError:
-            pass
     return magic_number
 
 
@@ -731,7 +845,7 @@ def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
     attrs = dict(attrs)
     for k, v in attrs.items():
         if isinstance(v, np.ndarray):
-            attrs[k] = v.tolist()
+            attrs[k] = cast(V, v.tolist())
         elif isinstance(v, np.generic):
             attrs[k] = v.item()
     return attrs
@@ -786,7 +900,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
-    """Get an new dimension name based on new_dim, that is not used in dims.
+    """Get a new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 
     Example1:
@@ -834,7 +948,8 @@ def drop_dims_from_indexers(
         invalid = indexers.keys() - set(dims)
         if invalid:
             warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
+                stacklevel=2,
             )
         for key in invalid:
             indexers.pop(key)
@@ -851,7 +966,7 @@ def drop_dims_from_indexers(
 
 
 @overload
-def parse_dims(
+def parse_dims_as_tuple(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
@@ -861,22 +976,22 @@ def parse_dims(
 
 
 @overload
-def parse_dims(
+def parse_dims_as_tuple(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
-def parse_dims(
+def parse_dims_as_tuple(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | ellipsis:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -912,6 +1027,47 @@ def parse_dims(
 
 
 @overload
+def parse_dims_as_set(
+    dim: Dims,
+    all_dims: set[Hashable],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[True] = True,
+) -> set[Hashable]: ...
+
+
+@overload
+def parse_dims_as_set(
+    dim: Dims,
+    all_dims: set[Hashable],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[False],
+) -> set[Hashable] | EllipsisType | None: ...
+
+
+def parse_dims_as_set(
+    dim: Dims,
+    all_dims: set[Hashable],
+    *,
+    check_exists: bool = True,
+    replace_none: bool = True,
+) -> set[Hashable] | EllipsisType | None:
+    """Like parse_dims_as_tuple, but returning a set instead of a tuple."""
+    # TODO: Consider removing parse_dims_as_tuple?
+    if dim is None or dim is ...:
+        if replace_none:
+            return all_dims
+        return dim
+    if isinstance(dim, str):
+        dim = {dim}
+    dim = set(dim)
+    if check_exists:
+        _check_dims(dim, all_dims)
+    return dim
+
+
+@overload
 def parse_ordered_dims(
     dim: Dims,
     all_dims: tuple[Hashable, ...],
@@ -928,7 +1084,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | ellipsis: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_ordered_dims(
@@ -937,7 +1093,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | ellipsis:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -964,7 +1120,7 @@ def parse_ordered_dims(
         Input dimensions as a tuple.
     """
     if dim is not None and dim is not ... and not isinstance(dim, str) and ... in dim:
-        dims_set: set[Hashable | ellipsis] = set(dim)
+        dims_set: set[Hashable | EllipsisType] = set(dim)
         all_dims_set = set(all_dims)
         if check_exists:
             _check_dims(dims_set, all_dims_set)
@@ -978,7 +1134,7 @@ def parse_ordered_dims(
         return dims[:idx] + other_dims + dims[idx + 1 :]
     else:
         # mypy cannot resolve that the sequence cannot contain "..."
-        return parse_dims(  # type: ignore[call-overload]
+        return parse_dims_as_tuple(  # type: ignore[call-overload]
             dim=dim,
             all_dims=all_dims,
             check_exists=check_exists,
@@ -986,10 +1142,10 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: set[Hashable], all_dims: set[Hashable]) -> None:
+def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
-        wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
+        wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)
         raise ValueError(
             f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
         )
@@ -1015,11 +1171,11 @@ class UncachedAccessor(Generic[_Accessor]):
     @overload
     def __get__(self, obj: object, cls) -> _Accessor: ...
 
-    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
+    def __get__(self, obj: object | None, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
+        return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -1043,16 +1199,16 @@ def contains_only_chunked_or_numpy(obj) -> bool:
 
     Expects obj to be Dataset or DataArray"""
     from xarray.core.dataarray import DataArray
+    from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.pycompat import is_chunked_array
 
     if isinstance(obj, DataArray):
         obj = obj._to_temp_dataset()
 
     return all(
-        [
-            isinstance(var.data, np.ndarray) or is_chunked_array(var.data)
-            for var in obj.variables.values()
-        ]
+        isinstance(var._data, ExplicitlyIndexed | np.ndarray)
+        or is_chunked_array(var._data)
+        for var in obj._variables.values()
     )
 
 
@@ -1173,3 +1329,97 @@ def _resolve_doubly_passed_kwarg(
         )
 
     return kwargs_dict
+
+
+def attempt_import(module: str) -> ModuleType:
+    """Import an optional dependency, and raise an informative error on failure.
+
+    Parameters
+    ----------
+    module : str
+        Module to import. For example, ``'zarr'`` or ``'matplotlib.pyplot'``.
+
+    Returns
+    -------
+    module : ModuleType
+        The Imported module.
+
+    Raises
+    ------
+    ImportError
+        If the module could not be imported.
+
+    Notes
+    -----
+    Static type checkers will not be able to infer the type of the returned module,
+    so it is recommended to precede this function with a direct import of the module,
+    guarded by an ``if TYPE_CHECKING`` block, to preserve type checker functionality.
+    See the examples section below for a demonstration.
+
+    Examples
+    --------
+    >>> from xarray.core.utils import attempt_import
+    >>> if TYPE_CHECKING:
+    ...     import zarr
+    ... else:
+    ...     zarr = attempt_import("zarr")
+    ...
+    """
+    install_mapping = dict(nc_time_axis="nc-time-axis")
+    package_purpose = dict(
+        zarr="for working with Zarr stores",
+        cftime="for working with non-standard calendars",
+        matplotlib="for plotting",
+        hypothesis="for the `xarray.testing.strategies` submodule",
+    )
+    package_name = module.split(".", maxsplit=1)[0]  # e.g. "zarr" from "zarr.storage"
+    install_name = install_mapping.get(package_name, package_name)
+    reason = package_purpose.get(package_name, "")
+    try:
+        return importlib.import_module(module)
+    except ImportError as e:
+        raise ImportError(
+            f"The {install_name} package is required {reason}"
+            " but could not be imported."
+            " Please install it with your package manager (e.g. conda or pip)."
+        ) from e
+
+
+_DEFAULT_NAME = ReprObject("<default-name>")
+
+
+def result_name(objects: Iterable[Any]) -> Any:
+    # use the same naming heuristics as pandas:
+    # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
+    names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
+    names.discard(_DEFAULT_NAME)
+    if len(names) == 1:
+        (name,) = names
+    else:
+        name = None
+    return name
+
+
+def _get_func_args(func, param_names):
+    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    they are provided by user.
+    """
+    try:
+        func_args = inspect.signature(func).parameters
+    except ValueError as err:
+        func_args = {}
+        if not param_names:
+            raise ValueError(
+                "Unable to inspect `func` signature, and `param_names` was not provided."
+            ) from err
+    if param_names:
+        params = param_names
+    else:
+        params = list(func_args)[1:]
+        if any(
+            (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()
+        ):
+            raise ValueError(
+                "`param_names` must be provided because `func` takes variable length arguments."
+            )
+    return params, func_args

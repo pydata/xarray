@@ -1,12 +1,8 @@
+import datetime
+import warnings
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Protocol, Union, overload
-
-try:
-    import hypothesis.strategies as st
-except ImportError as e:
-    raise ImportError(
-        "`xarray.testing.strategies` requires `hypothesis` to be installed."
-    ) from e
+from itertools import compress
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 import hypothesis.extra.numpy as npst
 import numpy as np
@@ -14,20 +10,31 @@ from hypothesis.errors import InvalidArgument
 
 import xarray as xr
 from xarray.core.types import T_DuckArray
+from xarray.core.utils import attempt_import, module_available
 
 if TYPE_CHECKING:
     from xarray.core.types import _DTypeLikeNested, _ShapeLike
 
 
+if TYPE_CHECKING:
+    import hypothesis.strategies as st
+else:
+    st = attempt_import("hypothesis.strategies")
+
 __all__ = [
-    "supported_dtypes",
-    "pandas_index_dtypes",
-    "names",
+    "attrs",
+    "basic_indexers",
+    "cftime_datetimes",
+    "datetimes",
     "dimension_names",
     "dimension_sizes",
-    "attrs",
-    "variables",
+    "names",
+    "outer_array_indexers",
+    "pandas_index_dtypes",
+    "supported_dtypes",
     "unique_subset_of",
+    "variables",
+    "vectorized_indexers",
 ]
 
 
@@ -45,7 +52,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     Generates only those numpy dtypes which xarray can handle.
 
     Use instead of hypothesis.extra.numpy.scalar_dtypes in order to exclude weirder dtypes such as unicode, byte_string, array, or nested dtypes.
-    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.
+    Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.  Checks only native endianness.
 
     Requires the hypothesis package to be installed.
 
@@ -56,10 +63,10 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
     # TODO should this be exposed publicly?
     # We should at least decide what the set of numpy dtypes that xarray officially supports is.
     return (
-        npst.integer_dtypes()
-        | npst.unsigned_integer_dtypes()
-        | npst.floating_dtypes()
-        | npst.complex_number_dtypes()
+        npst.integer_dtypes(endianness="=")
+        | npst.unsigned_integer_dtypes(endianness="=")
+        | npst.floating_dtypes(endianness="=")
+        | npst.complex_number_dtypes(endianness="=")
         # | npst.datetime64_dtypes()
         # | npst.timedelta64_dtypes()
         # | npst.unicode_string_dtypes()
@@ -81,6 +88,25 @@ def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
         | npst.timedelta64_dtypes(endianness="=", max_period="ns")
         | npst.unicode_string_dtypes(endianness="=")
     )
+
+
+def datetimes() -> st.SearchStrategy:
+    """
+    Generates datetime objects including both standard library datetimes and cftime datetimes.
+
+    Returns standard library datetime.datetime objects, and if cftime is available,
+    also includes cftime datetime objects from various calendars.
+
+    Requires the hypothesis package to be installed.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
+    """
+    strategy = st.datetimes()
+    if module_available("cftime"):
+        strategy = strategy | cftime_datetimes()
+    return strategy
 
 
 # TODO Generalize to all valid unicode characters once formatting bugs in xarray's reprs are fixed + docs can handle it.
@@ -108,7 +134,7 @@ def names() -> st.SearchStrategy[str]:
 
 def dimension_names(
     *,
-    name_strategy=names(),
+    name_strategy=None,
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
@@ -126,6 +152,8 @@ def dimension_names(
     max_dims
         Maximum number of dimensions in generated list.
     """
+    if name_strategy is None:
+        name_strategy = names()
 
     return st.lists(
         elements=name_strategy,
@@ -137,11 +165,11 @@ def dimension_names(
 
 def dimension_sizes(
     *,
-    dim_names: st.SearchStrategy[Hashable] = names(),
+    dim_names: st.SearchStrategy[Hashable] = names(),  # noqa: B008
     min_dims: int = 0,
     max_dims: int = 3,
     min_side: int = 1,
-    max_side: Union[int, None] = None,
+    max_side: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
@@ -192,9 +220,13 @@ _small_arrays = npst.arrays(
         max_side=2,
         max_dims=2,
     ),
-    dtype=npst.scalar_dtypes(),
+    dtype=npst.scalar_dtypes()
+    | npst.byte_string_dtypes()
+    | npst.unicode_string_dtypes(),
 )
 _attr_values = st.none() | st.booleans() | _readable_strings | _small_arrays
+
+simple_attrs = st.dictionaries(_attr_keys, _attr_values)
 
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
@@ -216,17 +248,17 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     )
 
 
+ATTRS = attrs()
+
+
 @st.composite
 def variables(
     draw: st.DrawFn,
     *,
-    array_strategy_fn: Union[ArrayStrategyFn, None] = None,
-    dims: Union[
-        st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]],
-        None,
-    ] = None,
-    dtype: st.SearchStrategy[np.dtype] = supported_dtypes(),
-    attrs: st.SearchStrategy[Mapping] = attrs(),
+    array_strategy_fn: ArrayStrategyFn | None = None,
+    dims: st.SearchStrategy[Sequence[Hashable] | Mapping[Hashable, int]] | None = None,
+    dtype: st.SearchStrategy[np.dtype] | None = None,
+    attrs: st.SearchStrategy[Mapping] = ATTRS,
 ) -> xr.Variable:
     """
     Generates arbitrary xarray.Variable objects.
@@ -309,6 +341,8 @@ def variables(
     --------
     :ref:`testing.hypothesis`_
     """
+    if dtype is None:
+        dtype = supported_dtypes()
 
     if not isinstance(dims, st.SearchStrategy) and dims is not None:
         raise InvalidArgument(
@@ -350,7 +384,7 @@ def variables(
             valid_shapes = npst.array_shapes(min_dims=len(_dims), max_dims=len(_dims))
             _shape = draw(valid_shapes)
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
-        elif isinstance(_dims, (Mapping, dict)):
+        elif isinstance(_dims, Mapping | dict):
             # should be a mapping of form {dim_names: lengths}
             dim_names, _shape = list(_dims.keys()), tuple(_dims.values())
             array_strategy = _array_strategy_fn(shape=_shape, dtype=_dtype)
@@ -390,7 +424,7 @@ def unique_subset_of(
     objs: Sequence[Hashable],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
+    max_size: int | None = None,
 ) -> st.SearchStrategy[Sequence[Hashable]]: ...
 
 
@@ -399,18 +433,18 @@ def unique_subset_of(
     objs: Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
+    max_size: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, Any]]: ...
 
 
 @st.composite
 def unique_subset_of(
     draw: st.DrawFn,
-    objs: Union[Sequence[Hashable], Mapping[Hashable, Any]],
+    objs: Sequence[Hashable] | Mapping[Hashable, Any],
     *,
     min_size: int = 0,
-    max_size: Union[int, None] = None,
-) -> Union[Sequence[Hashable], Mapping[Hashable, Any]]:
+    max_size: int | None = None,
+) -> Sequence[Hashable] | Mapping[Hashable, Any]:
     """
     Return a strategy which generates a unique subset of the given objects.
 
@@ -466,3 +500,234 @@ def unique_subset_of(
     return (
         {k: objs[k] for k in subset_keys} if isinstance(objs, Mapping) else subset_keys
     )
+
+
+@st.composite
+def cftime_datetimes(draw: st.DrawFn):
+    """
+    Generates cftime datetime objects across various calendars.
+
+    This strategy generates cftime datetime objects from all available
+    cftime calendars with dates ranging from year -99999 to 99999.
+
+    Requires both the hypothesis and cftime packages to be installed.
+
+    Returns
+    -------
+    cftime_datetime_strategy
+        Strategy for generating cftime datetime objects.
+
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
+    """
+    from xarray.tests import _all_cftime_date_types
+
+    date_types = _all_cftime_date_types()
+    calendars = list(date_types)
+
+    calendar = draw(st.sampled_from(calendars))
+    date_type = date_types[calendar]
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*date/calendar/year zero.*")
+        daysinmonth = date_type(99999, 12, 1).daysinmonth
+        min_value = date_type(-99999, 1, 1)
+        max_value = date_type(99999, 12, daysinmonth, 23, 59, 59, 999999)
+
+        unit_microsecond = datetime.timedelta(microseconds=1)
+        timespan_microseconds = (max_value - min_value) // unit_microsecond
+        microseconds_offset = draw(st.integers(0, timespan_microseconds))
+
+        return min_value + datetime.timedelta(microseconds=microseconds_offset)
+
+
+@st.composite
+def basic_indexers(
+    draw,
+    /,
+    *,
+    sizes: dict[Hashable, int],
+    min_dims: int = 1,
+    max_dims: int | None = None,
+) -> dict[Hashable, int | slice]:
+    """Generate basic indexers using ``hypothesis.extra.numpy.basic_indices``.
+
+    Parameters
+    ----------
+    draw : callable
+    sizes : dict[Hashable, int]
+        Dictionary mapping dimension names to their sizes.
+    min_dims : int, optional
+        Minimum number of dimensions to index.
+    max_dims : int or None, optional
+        Maximum number of dimensions to index.
+
+    Returns
+    -------
+    sizes : mapping of hashable to int or slice
+        Indexers as a dict with keys randomly selected from ``sizes.keys()``.
+
+    See Also
+    --------
+    hypothesis.strategies.slices
+    """
+    selected_dims = draw(unique_subset_of(sizes, min_size=min_dims, max_size=max_dims))
+
+    # Generate one basic index (int or slice) per selected dimension
+    idxr = {
+        dim: draw(
+            st.one_of(
+                st.integers(min_value=-size, max_value=size - 1),
+                st.slices(size),
+            )
+        )
+        for dim, size in selected_dims.items()
+    }
+    return idxr
+
+
+@st.composite
+def outer_array_indexers(
+    draw,
+    /,
+    *,
+    sizes: dict[Hashable, int],
+    min_dims: int = 0,
+    max_dims: int | None = None,
+    max_size: int = 10,
+) -> dict[Hashable, np.ndarray]:
+    """Generate outer array indexers (vectorized/orthogonal indexing).
+
+    Parameters
+    ----------
+    draw : callable
+        The Hypothesis draw function (automatically provided by @st.composite).
+    sizes : dict[Hashable, int]
+        Dictionary mapping dimension names to their sizes.
+    min_dims : int, optional
+        Minimum number of dimensions to index
+    max_dims : int or None, optional
+        Maximum number of dimensions to index
+
+    Returns
+    -------
+    sizes : mapping of hashable to np.ndarray
+        Indexers as a dict with keys randomly selected from ``sizes.keys()``.
+        Values are 1D numpy arrays of integer indices for each dimension.
+
+    See Also
+    --------
+    hypothesis.extra.numpy.arrays
+    """
+    selected_dims = draw(unique_subset_of(sizes, min_size=min_dims, max_size=max_dims))
+    idxr = {
+        dim: draw(
+            npst.arrays(
+                dtype=np.int64,
+                shape=st.integers(min_value=1, max_value=min(size, max_size)),
+                elements=st.integers(min_value=-size, max_value=size - 1),
+            )
+        )
+        for dim, size in selected_dims.items()
+    }
+    return idxr
+
+
+@st.composite
+def vectorized_indexers(
+    draw,
+    /,
+    *,
+    sizes: dict[Hashable, int],
+    min_dims: int = 2,
+    max_dims: int | None = None,
+    min_ndim: int = 1,
+    max_ndim: int = 3,
+    min_size: int = 1,
+    max_size: int = 5,
+) -> dict[Hashable, xr.DataArray]:
+    """Generate vectorized (fancy) indexers where all arrays are broadcastable.
+
+    In vectorized indexing, all array indexers must have compatible shapes
+    that can be broadcast together, and the result shape is determined by
+    broadcasting the indexer arrays.
+
+    Parameters
+    ----------
+    draw : callable
+        The Hypothesis draw function (automatically provided by @st.composite).
+    sizes : dict[Hashable, int]
+        Dictionary mapping dimension names to their sizes.
+    min_dims : int, optional
+        Minimum number of dimensions to index. Default is 2, so that we always have a "trajectory".
+        Use ``outer_array_indexers`` for the ``min_dims==1`` case.
+    max_dims : int or None, optional
+        Maximum number of dimensions to index.
+    min_ndim : int, optional
+        Minimum number of dimensions for the result arrays.
+    max_ndim : int, optional
+        Maximum number of dimensions for the result arrays.
+    min_size : int, optional
+        Minimum size for each dimension in the result arrays.
+    max_size : int, optional
+        Maximum size for each dimension in the result arrays.
+
+    Returns
+    -------
+    sizes : mapping of hashable to DataArray or Variable
+        Indexers as a dict with keys randomly selected from sizes.keys().
+        Values are DataArrays of integer indices that are all broadcastable
+        to a common shape.
+
+    See Also
+    --------
+    hypothesis.extra.numpy.arrays
+    """
+    selected_dims = draw(unique_subset_of(sizes, min_size=min_dims, max_size=max_dims))
+
+    # Generate a common broadcast shape for all arrays
+    # Use min_ndim to max_ndim dimensions for the result shape
+    result_shape = draw(
+        st.lists(
+            st.integers(min_value=min_size, max_value=max_size),
+            min_size=min_ndim,
+            max_size=max_ndim,
+        )
+    )
+    result_ndim = len(result_shape)
+
+    # Create dimension names for the vectorized result
+    vec_dims = tuple(f"vec_{i}" for i in range(result_ndim))
+
+    # Generate array indexers for each selected dimension
+    # All arrays must be broadcastable to the same result_shape
+    idxr = {}
+    for dim, size in selected_dims.items():
+        array_shape = draw(
+            npst.broadcastable_shapes(
+                shape=tuple(result_shape),
+                min_dims=min_ndim,
+                max_dims=result_ndim,
+            )
+        )
+
+        # For xarray broadcasting, drop dimensions where size differs from result_shape
+        # (numpy broadcasts size-1, but xarray requires matching sizes or missing dims)
+        # Right-align array_shape with result_shape for comparison
+        aligned_dims = vec_dims[-len(array_shape) :] if array_shape else ()
+        aligned_result = result_shape[-len(array_shape) :] if array_shape else []
+        keep_mask = [s == r for s, r in zip(array_shape, aligned_result, strict=True)]
+        filtered_shape = tuple(compress(array_shape, keep_mask))
+        filtered_dims = tuple(compress(aligned_dims, keep_mask))
+
+        # Generate array of valid indices for this dimension
+        indices = draw(
+            npst.arrays(
+                dtype=np.int64,
+                shape=filtered_shape,
+                elements=st.integers(min_value=-size, max_value=size - 1),
+            )
+        )
+        idxr[dim] = xr.DataArray(indices, dims=filtered_dims)
+    return idxr

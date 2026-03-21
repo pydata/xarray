@@ -1,13 +1,35 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset
-from xarray.core.datatree import DataTree
-from xarray.tests import create_test_data, requires_dask
+from xarray import DataArray, Dataset, DataTree
+from xarray.tests import create_test_data, has_cftime, requires_dask
+
+
+@pytest.fixture(autouse=True)
+def handle_numpy_1_warnings():
+    """Handle NumPy 1.x DeprecationWarnings for out-of-bound integer conversions.
+
+    NumPy 1.x raises DeprecationWarning when converting out-of-bounds values
+    (e.g., 255 to int8), while NumPy 2.x raises OverflowError. This fixture
+    suppresses the warning in NumPy 1.x environments to allow tests to pass.
+    """
+    # Only apply for NumPy < 2.0
+    if np.__version__.startswith("1."):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                "NumPy will stop allowing conversion of out-of-bound Python integers",
+                DeprecationWarning,
+            )
+            yield
+    else:
+        yield
 
 
 @pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
@@ -98,6 +120,18 @@ def da(request, backend):
         raise ValueError
 
 
+@pytest.fixture(
+    params=[
+        False,
+        pytest.param(
+            True, marks=pytest.mark.skipif(not has_cftime, reason="no cftime")
+        ),
+    ]
+)
+def use_cftime(request):
+    return request.param
+
+
 @pytest.fixture(params=[Dataset, DataArray])
 def type(request):
     return request.param
@@ -139,33 +173,53 @@ def d(request, backend, type) -> DataArray | Dataset:
         raise ValueError
 
 
+@pytest.fixture
+def byte_attrs_dataset():
+    """For testing issue #9407"""
+    null_byte = b"\x00"
+    other_bytes = bytes(range(1, 256))
+    ds = Dataset({"x": 1}, coords={"x_coord": [1]})
+    ds["x"].attrs["null_byte"] = null_byte
+    ds["x"].attrs["other_bytes"] = other_bytes
+
+    expected = ds.copy()
+    expected["x"].attrs["null_byte"] = ""
+    expected["x"].attrs["other_bytes"] = other_bytes.decode(errors="replace")
+
+    return {
+        "input": ds,
+        "expected": expected,
+        "h5netcdf_error": r"Invalid value provided for attribute .*: .*\. Null characters .*",
+    }
+
+
 @pytest.fixture(scope="module")
 def create_test_datatree():
     """
     Create a test datatree with this structure:
 
-    <datatree.DataTree>
-    |-- set1
-    |   |-- <xarray.Dataset>
-    |   |   Dimensions:  ()
-    |   |   Data variables:
-    |   |       a        int64 0
-    |   |       b        int64 1
-    |   |-- set1
-    |   |-- set2
-    |-- set2
-    |   |-- <xarray.Dataset>
-    |   |   Dimensions:  (x: 2)
-    |   |   Data variables:
-    |   |       a        (x) int64 2, 3
-    |   |       b        (x) int64 0.1, 0.2
-    |   |-- set1
-    |-- set3
-    |-- <xarray.Dataset>
-    |   Dimensions:  (x: 2, y: 3)
-    |   Data variables:
-    |       a        (y) int64 6, 7, 8
-    |       set0     (x) int64 9, 10
+    <xarray.DataTree>
+    Group: /
+    │   Dimensions:  (y: 3, x: 2)
+    │   Dimensions without coordinates: y, x
+    │   Data variables:
+    │       a        (y) int64 24B 6 7 8
+    │       set0     (x) int64 16B 9 10
+    ├── Group: /set1
+    │   │   Dimensions:  ()
+    │   │   Data variables:
+    │   │       a        int64 8B 0
+    │   │       b        int64 8B 1
+    │   ├── Group: /set1/set1
+    │   └── Group: /set1/set2
+    ├── Group: /set2
+    │   │   Dimensions:  (x: 2)
+    │   │   Dimensions without coordinates: x
+    │   │   Data variables:
+    │   │       a        (x) int64 16B 2 3
+    │   │       b        (x) float64 16B 0.1 0.2
+    │   └── Group: /set2/set1
+    └── Group: /set3
 
     The structure has deliberately repeated names of tags, variables, and
     dimensions in order to better check for bugs caused by name conflicts.
@@ -176,14 +230,17 @@ def create_test_datatree():
         set2_data = modify(xr.Dataset({"a": ("x", [2, 3]), "b": ("x", [0.1, 0.2])}))
         root_data = modify(xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])}))
 
-        # Avoid using __init__ so we can independently test it
-        root: DataTree = DataTree(data=root_data)
-        set1: DataTree = DataTree(name="set1", parent=root, data=set1_data)
-        DataTree(name="set1", parent=set1)
-        DataTree(name="set2", parent=set1)
-        set2: DataTree = DataTree(name="set2", parent=root, data=set2_data)
-        DataTree(name="set1", parent=set2)
-        DataTree(name="set3", parent=root)
+        root = DataTree.from_dict(
+            {
+                "/": root_data,
+                "/set1": set1_data,
+                "/set1/set1": None,
+                "/set1/set2": None,
+                "/set2": set2_data,
+                "/set2/set1": None,
+                "/set3": None,
+            }
+        )
 
         return root
 
@@ -198,3 +255,8 @@ def simple_datatree(create_test_datatree):
     Returns a DataTree.
     """
     return create_test_datatree()
+
+
+@pytest.fixture(params=["s", "ms", "us", "ns"])
+def time_unit(request):
+    return request.param

@@ -94,8 +94,8 @@ def test_coder_roundtrip() -> None:
     assert_identical(original, roundtripped)
 
 
-@pytest.mark.parametrize("dtype", "u1 u2 i1 i2 f2 f4".split())
-@pytest.mark.parametrize("dtype2", "f4 f8".split())
+@pytest.mark.parametrize("dtype", ["u1", "u2", "i1", "i2", "f2", "f4"])
+@pytest.mark.parametrize("dtype2", ["f4", "f8"])
 def test_scaling_converts_to_float(dtype: str, dtype2: str) -> None:
     dt = np.dtype(dtype2)
     original = xr.Variable(
@@ -129,7 +129,7 @@ def test_decode_unsigned_from_signed(bits) -> None:
     encoded = xr.Variable(
         ("x",), original_values.astype(signed_dtype), attrs={"_Unsigned": "true"}
     )
-    coder = variables.UnsignedIntegerCoder()
+    coder = variables.CFMaskCoder()
     decoded = coder.decode(encoded)
     assert decoded.dtype == unsigned_dtype
     assert decoded.values == original_values
@@ -143,7 +143,7 @@ def test_decode_signed_from_unsigned(bits) -> None:
     encoded = xr.Variable(
         ("x",), original_values.astype(unsigned_dtype), attrs={"_Unsigned": "false"}
     )
-    coder = variables.UnsignedIntegerCoder()
+    coder = variables.CFMaskCoder()
     decoded = coder.decode(encoded)
     assert decoded.dtype == signed_dtype
     assert decoded.values == original_values

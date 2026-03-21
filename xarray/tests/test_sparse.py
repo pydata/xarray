@@ -7,8 +7,10 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
+import xarray.ufuncs as xu
 from xarray import DataArray, Variable
 from xarray.namedarray.pycompat import array_type
 from xarray.tests import assert_equal, assert_identical, requires_dask
@@ -109,11 +111,11 @@ def test_variable_property(prop):
         (do("notnull"), True),
         (do("roll"), True),
         (do("round"), True),
-        (do("set_dims", dims=("x", "y", "z")), True),
-        (do("stack", dimensions={"flat": ("x", "y")}), True),
+        (do("set_dims", dim=("x", "y", "z")), True),
+        (do("stack", dim={"flat": ("x", "y")}), True),
         (do("to_base_variable"), True),
         (do("transpose"), True),
-        (do("unstack", dimensions={"x": {"x1": 5, "x2": 2}}), True),
+        (do("unstack", dim={"x": {"x1": 5, "x2": 2}}), True),
         (do("broadcast_equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("equals", make_xrvar({"x": 10, "y": 5})), False),
         (do("identical", make_xrvar({"x": 10, "y": 5})), False),
@@ -234,15 +236,14 @@ def test_variable_method(func, sparse_output):
     if sparse_output:
         assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
+    elif func.meth != "to_dict":
+        assert np.allclose(ret_s, ret_d)
     else:
-        if func.meth != "to_dict":
-            assert np.allclose(ret_s, ret_d)
-        else:
-            # pop the arrays from the dict
-            arr_s, arr_d = ret_s.pop("data"), ret_d.pop("data")
+        # pop the arrays from the dict
+        arr_s, arr_d = ret_s.pop("data"), ret_d.pop("data")
 
-            assert np.allclose(arr_s, arr_d)
-            assert ret_s == ret_d
+        assert np.allclose(arr_s, arr_d)
+        assert ret_s == ret_d
 
 
 @pytest.mark.parametrize(
@@ -293,6 +294,13 @@ class TestSparseVariable:
     def test_bivariate_ufunc(self):
         assert_sparse_equal(np.maximum(self.data, 0), np.maximum(self.var, 0).data)
         assert_sparse_equal(np.maximum(self.data, 0), np.maximum(0, self.var).data)
+
+    def test_univariate_xufunc(self):
+        assert_sparse_equal(xu.sin(self.var).data, np.sin(self.data))
+
+    def test_bivariate_xufunc(self):
+        assert_sparse_equal(xu.multiply(self.var, 0).data, np.multiply(self.data, 0))
+        assert_sparse_equal(xu.multiply(0, self.var).data, np.multiply(0, self.data))
 
     def test_repr(self):
         expected = dedent(
@@ -653,16 +661,19 @@ class TestSparseDataArrayAndDataset:
             sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=0),
         )
 
-        out = xr.concat([self.sp_xr, self.sp_xr, self.sp_xr], dim="y")
+        out_concat = xr.concat([self.sp_xr, self.sp_xr, self.sp_xr], dim="y")
         assert_sparse_equal(
-            out.data, sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=1)
+            out_concat.data,
+            sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=1),
         )
 
     def test_stack(self):
         arr = make_xrarray({"w": 2, "x": 3, "y": 4})
         stacked = arr.stack(z=("x", "y"))
 
-        z = pd.MultiIndex.from_product([np.arange(3), np.arange(4)], names=["x", "y"])
+        z = pd.MultiIndex.from_product(
+            [list(range(3)), list(range(4))], names=["x", "y"]
+        )
 
         expected = xr.DataArray(
             arr.data.reshape((2, -1)), {"w": [0, 1], "z": z}, dims=["w", "z"]
@@ -711,13 +722,17 @@ class TestSparseDataArrayAndDataset:
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
+        if Version(sparse.__version__) >= Version("0.16.0"):
+            meta = "sparse.numba_backend._coo.core.COO"
+        else:
+            meta = "sparse.COO"
         expected = dedent(
-            """\
+            f"""\
             <xarray.Dataset> Size: 32B
             Dimensions:  (x: 4)
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 32B dask.array<chunksize=(4,), meta=sparse.COO>"""
+                a        (x) float64 32B dask.array<chunksize=(4,), meta={meta}>"""
         )
         assert expected == repr(ds)
 
@@ -741,8 +756,8 @@ class TestSparseDataArrayAndDataset:
     def test_coarsen(self):
         a1 = self.ds_xr
         a2 = self.sp_xr
-        m1 = a1.coarsen(x=2, boundary="trim").mean()
-        m2 = a2.coarsen(x=2, boundary="trim").mean()
+        m1 = a1.coarsen(x=2, boundary="trim").mean()  # type: ignore[attr-defined]
+        m2 = a2.coarsen(x=2, boundary="trim").mean()  # type: ignore[attr-defined]
 
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
@@ -769,7 +784,7 @@ class TestSparseDataArrayAndDataset:
 
     @pytest.mark.xfail(reason="No implementation of np.einsum")
     def test_dot(self):
-        a1 = self.xp_xr.dot(self.xp_xr[0])
+        a1 = self.sp_xr.dot(self.sp_xr[0])
         a2 = self.sp_ar.dot(self.sp_ar[0])
         assert_equal(a1, a2)
 
@@ -823,8 +838,8 @@ class TestSparseDataArrayAndDataset:
             {"x": [1, 100, 2, 101, 3]},
             {"x": [2.5, 3, 3.5], "y": [2, 2.5, 3]},
         ]:
-            m1 = x1.reindex(**kwargs)
-            m2 = x2.reindex(**kwargs)
+            m1 = x1.reindex(**kwargs)  # type: ignore[arg-type]
+            m2 = x2.reindex(**kwargs)  # type: ignore[arg-type]
             assert np.allclose(m1, m2, equal_nan=True)
 
     @pytest.mark.xfail
@@ -840,12 +855,12 @@ class TestSparseDataArrayAndDataset:
         xr.DataArray(a).where(cond)
 
         s = sparse.COO.from_numpy(a)
-        cond = s > 3
-        xr.DataArray(s).where(cond)
+        cond2 = s > 3
+        xr.DataArray(s).where(cond2)
 
         x = xr.DataArray(s)
-        cond = x > 3
-        x.where(cond)
+        cond3: DataArray = x > 3
+        x.where(cond3)
 
 
 class TestSparseCoords:

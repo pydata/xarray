@@ -15,17 +15,21 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_COLOR: 3
+
 jobs:
   detect-ci-trigger:
     name: detect upstream-dev ci trigger
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: |
       github.repository == 'pydata/xarray'
       && (github.event_name == 'push' || github.event_name == 'pull_request')
+      && !contains(github.event.pull_request.labels.*.name, 'skip-ci')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1
@@ -33,117 +37,128 @@ jobs:
         with:
           keyword: "[test-upstream]"
 
+  cache-pixi-lock:
+    runs-on: ubuntu-latest
+    needs: detect-ci-trigger
+    if: |
+      always()
+      && github.repository == 'pydata/xarray'
+      && (
+        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        || (
+          github.event_name == 'pull_request'
+          && (
+            needs.detect-ci-trigger.outputs.triggered == 'true'
+            || contains( github.event.pull_request.labels.*.name, 'run-upstream')
+          )
+        )
+      )
+
+    outputs:
+      cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
+      pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Parcels-code/pixi-lock/create-and-cache@a9aee67fa67426e6b0297fa5bef80600572be153
+        id: pixi-lock
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pixi-lock
+          path: pixi.lock
+
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
-    needs: detect-ci-trigger
-    env:
-      ZARR_V3_EXPERIMENTAL_API: 1
+    needs: cache-pixi-lock
     if: |
-        always()
-        && (
-            (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-            || needs.detect-ci-trigger.outputs.triggered == 'true'
-            || contains( github.event.pull_request.labels.*.name, 'run-upstream')
-        )
+      always() && needs.cache-pixi-lock.result == 'success'
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12"]
+        pixi-env: ["test-nightly"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-      - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@v1
+      - name: Restore cached pixi lockfile
+        uses: Parcels-code/pixi-lock/restore@a9aee67fa67426e6b0297fa5bef80600572be153
         with:
-          environment-file: ci/requirements/environment.yml
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{ matrix.python-version }}
-            pytest-reportlog
-            conda
-      - name: Install upstream versions
-        run: |
-          bash ci/install-upstream-wheels.sh
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
+          cache: true
+          environments: ${{ matrix.pixi-env }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
       - name: Version info
         run: |
-          conda info -a
-          conda list
-          python xarray/util/print_versions.py
+          pixi run -e ${{matrix.pixi-env}} -- python xarray/util/print_versions.py
       - name: Import xarray
         run: |
-          python -c 'import xarray'
+          pixi run -e ${{matrix.pixi-env}} -- python -c 'import xarray'
       - name: Run Tests
         if: success()
         id: status
         run: |
-          python -m pytest --timeout=60 -rf \
-            --report-log output-${{ matrix.python-version }}-log.jsonl
+          pixi run -e ${{matrix.pixi-env}} -- python -m pytest --timeout=60 -rf -nauto \
+            --report-log output-${{ matrix.pixi-env }}-log.jsonl
       - name: Generate and publish the report
         if: |
           failure()
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository_owner == 'pydata'
-        uses: xarray-contrib/issue-from-pytest-log@v1
+        uses: scientific-python/issue-from-pytest-log-action@v1
         with:
-          log-path: output-${{ matrix.python-version }}-log.jsonl
+          log-path: output-${{ matrix.pixi-env }}-log.jsonl
 
   mypy-upstream-dev:
     name: mypy-upstream-dev
     runs-on: ubuntu-latest
-    needs: detect-ci-trigger
+    needs: [detect-ci-trigger, cache-pixi-lock]
     if: |
-        always()
-        && (
-            contains( github.event.pull_request.labels.*.name, 'run-upstream')
-        )
+      always()
+      && (
+          contains( github.event.pull_request.labels.*.name, 'run-upstream')
+      )
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11"]
+        pixi-env: ["test-nightly"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-      - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@v1
+
+      - name: Restore cached pixi lockfile
+        uses: Parcels-code/pixi-lock/restore@a9aee67fa67426e6b0297fa5bef80600572be153
         with:
-          environment-file: ci/requirements/environment.yml
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{ matrix.python-version }}
-            pytest-reportlog
-            conda
-      - name: Install upstream versions
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+      - uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
+          cache: true
+          environments: ${{ matrix.pixi-env }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+
+      - name: set environment variables
         run: |
-          bash ci/install-upstream-wheels.sh
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
+          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{matrix.pixi-env}} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          conda info -a
-          conda list
-          python xarray/util/print_versions.py
-      - name: Install mypy
-        run: |
-          python -m pip install mypy --force-reinstall
+          pixi run -e ${{matrix.pixi-env}} -- python xarray/util/print_versions.py
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run -e ${{matrix.pixi-env}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v4.2.0
+        uses: codecov/codecov-action@v5.5.2
         with:
           file: mypy_report/cobertura.xml
           flags: mypy

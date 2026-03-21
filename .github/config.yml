@@ -14,7 +14,7 @@ newIssueWelcomeComment: >
 newPRWelcomeComment: >
   Thank you for opening this pull request! It may take us a few days to respond here, so thank you for being patient.
 
-  If you have questions, some answers may be found in our [contributing guidelines](http://docs.xarray.dev/en/stable/contributing.html).
+  If you have questions, some answers may be found in our [contributing guidelines](https://docs.xarray.dev/en/stable/contributing.html).
 
 # Comment to be posted to on pull requests merged by a first time user
 firstPRMergeComment: >

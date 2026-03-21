@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
-from xarray import DataArray, infer_freq
+from xarray import CFTimeIndex, DataArray, Dataset, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
 from xarray.testing import assert_identical
@@ -62,6 +63,24 @@ def test_convert_calendar(source, target, use_cftime, freq):
     np.testing.assert_array_equal(conv.time, expected_times)
 
 
+def test_convert_calendar_dataset():
+    # Check that variables without a time dimension are not modified
+    src = DataArray(
+        date_range("2004-01-01", "2004-12-31", freq="D", calendar="standard"),
+        dims=("time",),
+        name="time",
+    )
+    da_src = DataArray(
+        np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
+    ).expand_dims(lat=[0, 1])
+    ds_src = Dataset({"hastime": da_src, "notime": (("lat",), [0, 1])})
+
+    conv = convert_calendar(ds_src, "360_day", align_on="date")
+
+    assert conv.time.dt.calendar == "360_day"
+    assert_identical(ds_src.notime, conv.notime)
+
+
 @pytest.mark.parametrize(
     "source,target,freq",
     [
@@ -104,6 +123,45 @@ def test_convert_calendar_360_days(source, target, freq, align_on):
         assert conv.size == 360 if freq == "D" else 360 * 4
     else:
         assert conv.size == 359 if freq == "D" else 359 * 4
+
+
+def test_convert_calendar_360_days_random():
+    da_std = DataArray(
+        np.linspace(0, 1, 366),
+        dims=("time",),
+        coords={
+            "time": date_range(
+                "2004-01-01",
+                "2004-12-31",
+                freq="D",
+                calendar="standard",
+                use_cftime=False,
+            )
+        },
+    )
+    da_360 = DataArray(
+        np.linspace(0, 1, 360),
+        dims=("time",),
+        coords={
+            "time": date_range("2004-01-01", "2004-12-30", freq="D", calendar="360_day")
+        },
+    )
+
+    conv = convert_calendar(da_std, "360_day", align_on="random")
+    conv2 = convert_calendar(da_std, "360_day", align_on="random")
+    assert (conv != conv2).any()
+
+    conv = convert_calendar(da_360, "standard", use_cftime=False, align_on="random")
+    assert np.datetime64("2004-02-29") not in conv.time
+    conv2 = convert_calendar(da_360, "standard", use_cftime=False, align_on="random")
+    assert (conv2 != conv).any()
+
+    # Ensure that added days are evenly distributed in the 5 fifths of each year
+    conv = convert_calendar(da_360, "noleap", align_on="random", missing=np.nan)
+    conv = conv.where(conv.isnull(), drop=True)
+    nandoys = conv.time.dt.dayofyear[:366]
+    assert all(nandoys < np.array([74, 147, 220, 293, 366]))
+    assert all(nandoys > np.array([0, 73, 146, 219, 292]))
 
 
 @requires_cftime
@@ -177,8 +235,22 @@ def test_convert_calendar_errors():
 
     # Datetime objects
     da = DataArray([0, 1, 2], dims=("x",), name="x")
-    with pytest.raises(ValueError, match="Coordinate x must contain datetime objects."):
+    with pytest.raises(
+        ValueError, match=r"Coordinate x must contain datetime objects."
+    ):
         convert_calendar(da, "standard", dim="x")
+
+
+def test_convert_calendar_dimension_name():
+    src = DataArray(
+        date_range("2004-01-01", "2004-01-31", freq="D", calendar="noleap"),
+        dims=("date",),
+        name="date",
+    )
+
+    out = convert_calendar(src, "proleptic_gregorian", dim="date")
+
+    np.testing.assert_array_equal(src, out)
 
 
 def test_convert_calendar_same_calendar():
@@ -244,6 +316,28 @@ def test_interp_calendar_errors():
     da2 = da1 + 1
 
     with pytest.raises(
-        ValueError, match="Both 'source.x' and 'target' must contain datetime objects."
+        ValueError, match=r"Both 'source.x' and 'target' must contain datetime objects."
     ):
         interp_calendar(da1, da2, dim="x")
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("source_calendar", "target_calendar", "expected_index"),
+    [("standard", "noleap", CFTimeIndex), ("all_leap", "standard", pd.DatetimeIndex)],
+)
+def test_convert_calendar_produces_time_index(
+    source_calendar, target_calendar, expected_index
+):
+    # https://github.com/pydata/xarray/issues/9138
+    time = date_range("2000-01-01", "2002-01-01", freq="D", calendar=source_calendar)
+    temperature = np.ones(len(time))
+    da = DataArray(
+        data=temperature,
+        dims=["time"],
+        coords=dict(
+            time=time,
+        ),
+    )
+    converted = da.convert_calendar(target_calendar)
+    assert isinstance(converted.indexes["time"], expected_index)

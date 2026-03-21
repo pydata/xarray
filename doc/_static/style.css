@@ -1,273 +1,54 @@
-table.colwidths-given {
-    table-layout: fixed;
-    width: 100%;
-}
-table.docutils td {
-    white-space: unset;
-    word-wrap: break-word;
-}
+/* Override some aspects of the pydata-sphinx-theme */
 
-div.bd-header-announcement {
-  background-color: unset;
-  color: #000;
-}
-
-/* Reduce left and right margins */
-
-.container, .container-lg, .container-md, .container-sm, .container-xl {
-  max-width: 1350px !important;
-}
-
-
-/* Copied from
-https://github.com/bokeh/bokeh/blob/branch-2.4/sphinx/source/bokeh/static/custom.css
+/* Xarray Branding Guide:
+Primary Color palette (Hex): #17afb4 #e28126 #59c7d6 #0e4666 #4a4a4a
+Secondary Color Palette (Hex): #f58154 #e7b72d #b3dfe5 #8e8d99 #767985
+Primary Typeface: Acumin Variable Concept - Semicondensed Medium
 */
 
-:root {
-  /* Logo image height + all the paddings/margins make the navbar height. */
-  --navbar-height: calc(30px + 0.3125rem * 2 + 0.5rem * 2);
+/* Increase Xarray logo size in upper left corner */
+.navbar-brand img {
+  height: 75px;
+}
+.navbar-brand {
+  height: 75px;
 }
 
-.bd-search {
-  position: relative;
-  padding-bottom: 20px;
+/* Adjust index page overview cards, borrowed from Pandas & Numpy */
+/* Override SVG icon color */
+html[data-theme="dark"] .sd-card img[src*=".svg"] {
+  filter: invert(0.82) brightness(0.8) contrast(1.2);
+}
+/* https://github.com/executablebooks/sphinx-design/blob/main/style/_cards.scss */
+/* More space around image */
+.intro-card {
+  padding: 30px 1px 1px 1px;
+}
+/* More prominent card borders */
+.intro-card .sd-card {
+  border: 2px solid var(--pst-color-border);
+  overflow: hidden;
+}
+/* Shrink SVG icons */
+.intro-card .sd-card-img-top {
+  margin: 1px;
+  height: 100px;
+  background-color: transparent !important;
+}
+/* Color titles like links */
+.intro-card .sd-card-title {
+  color: var(--pst-color-primary);
+  font-size: var(--pst-font-size-h5);
+}
+/* Don't have 'raised' color background for card interiors in dark mode */
+.bd-content .sd-card .sd-card-body {
+  background-color: unset !important;
 }
 
-@media (min-width: 768px) {
-  .search-front-page {
-    width: 50%;
-  }
-}
-
-/* minimal copy paste from bootstrap docs css to get sidebars working */
-
-.bd-toc {
-  -ms-flex-order: 2;
-  order: 2;
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
-  /* font-size: 0.875rem; */
-  /* add scrolling sidebar */
-  height: calc(100vh - 2rem);
-  overflow-y: auto;
-}
-
-@supports ((position: -webkit-sticky) or (position: sticky)) {
-  .bd-toc {
-    position: -webkit-sticky;
-    position: sticky;
-    top: 4rem;
-    height: calc(100vh - 4rem);
-    overflow-y: auto;
-  }
-}
-
-.section-nav {
-  padding-left: 0;
-  border-left: 1px solid #eee;
-  border-bottom: none;
-}
-
-.section-nav ul {
-  padding-left: 1rem;
-}
-
-.toc-entry {
-  display: block;
-}
-
-.toc-entry a {
-  display: block;
-  padding: 0.125rem 1.5rem;
-  color: #77757a;
-}
-
-.toc-entry a:hover {
-  color: rgba(0, 0, 0, 0.85);
-  text-decoration: none;
-}
-
-.bd-sidebar {
-  -ms-flex-order: 0;
-  order: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-@media (min-width: 768px) {
-  .bd-sidebar {
-    border-right: 1px solid rgba(0, 0, 0, 0.1);
-  }
-  @supports ((position: -webkit-sticky) or (position: sticky)) {
-    .bd-sidebar {
-      position: -webkit-sticky;
-      position: sticky;
-      top: var(--navbar-height);
-      z-index: 1000;
-      height: calc(100vh - var(--navbar-height));
-    }
-  }
-}
-
-@media (min-width: 1200px) {
-  .bd-sidebar {
-    -ms-flex: 0 1 320px;
-    flex: 0 1 320px;
-  }
-}
-
-.bd-links {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  margin-right: -15px;
-  margin-left: -15px;
-}
-
-@media (min-width: 768px) {
-  @supports ((position: -webkit-sticky) or (position: sticky)) {
-    .bd-links {
-      max-height: calc(100vh - 9rem);
-      overflow-y: auto;
-    }
-  }
-}
-
-@media (min-width: 768px) {
-  .bd-links {
-    display: block !important;
-  }
-}
-
-.bd-sidenav {
-  display: none;
-}
-
-.bd-toc-link {
-  display: block;
-  padding: 0.25rem 1.5rem;
-  font-weight: 400;
-  color: rgba(0, 0, 0, 0.65);
-}
-
-.bd-toc-link:hover {
-  color: rgba(0, 0, 0, 0.85);
-  text-decoration: none;
-}
-
-.bd-toc-item.active {
-  margin-bottom: 1rem;
-}
-
-.bd-toc-item.active:not(:first-child) {
-  margin-top: 1rem;
-}
-
-.bd-toc-item.active > .bd-toc-link {
-  color: rgba(0, 0, 0, 0.85);
-}
-
-.bd-toc-item.active > .bd-toc-link:hover {
-  background-color: transparent;
-}
-
-.bd-toc-item.active > .bd-sidenav {
-  display: block;
-}
-
-.bd-sidebar .nav > li > a {
-  display: block;
-  padding: 0.25rem 1.5rem;
-  font-size: 90%;
-}
-
-.bd-sidebar .nav > li > a:hover {
-  text-decoration: none;
-  background-color: transparent;
-}
-
-.bd-sidebar .nav > .active > a,
-.bd-sidebar .nav > .active:hover > a {
-  font-weight: 400;
-  /* adjusted from original
-  color: rgba(0, 0, 0, 0.85);
-  background-color: transparent; */
-}
-
-.bd-sidebar .nav > li > ul {
-  list-style: none;
-  padding: 0.25rem 1.5rem;
-}
-
-.bd-sidebar .nav > li > ul > li > a {
-  display: block;
-  padding: 0.25rem 1.5rem;
-  font-size: 90%;
-}
-
-.bd-sidebar .nav > li > ul > .active > a,
-.bd-sidebar .nav > li > ul > .active:hover > a {
-  font-weight: 400;
-}
-
-dt:target {
-  background-color: initial;
-}
-
-/* Offsetting anchored elements within the main content to adjust for fixed header
- https://github.com/pandas-dev/pandas-sphinx-theme/issues/6 */
-main *:target::before {
-  display: block;
-  content: '';
-  height: var(--navbar-height);
-  margin-top: calc(-1 * var(--navbar-height));
-}
-
-body {
-  /* Add padding to body to avoid overlap with navbar. */
-  padding-top: var(--navbar-height);
-  width: 100%;
-}
-
-/* adjust toc font sizes to improve overview */
-.toc-h2 {
-  font-size: 0.85rem;
-}
-
-.toc-h3 {
-  font-size: 0.75rem;
-}
-
-.toc-h4 {
-  font-size: 0.65rem;
-}
-
-.toc-entry > .nav-link.active {
-  font-weight: 400;
-  color: #542437;
-  background-color: transparent;
-  border-left: 2px solid #563d7c;
-}
-
-.nav-link:hover {
-  border-style: none;
-}
-
-/* Collapsing of the TOC sidebar while scrolling */
-
-/* Nav: hide second level (shown on .active) */
-.bd-toc .nav .nav {
-  display: none;
-}
-
-.bd-toc .nav > .active > ul {
-  display: block;
-}
-
-/* Main index page overview cards */
-
-.sd-card-img-top {
-  width: 33% !important;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  margin-top: 10px;
+/* workaround Pydata Sphinx theme using light colors for widget cell outputs in dark-mode */
+/* works for many widgets but not for Xarray html reprs */
+/* https://github.com/pydata/pydata-sphinx-theme/issues/2189 */
+html[data-theme="dark"] div.cell_output .text_html:has(div.xr-wrap) {
+  background-color: var(--pst-color-on-background) !important;
+  color: var(--pst-color-text-base) !important;
 }

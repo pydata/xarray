@@ -5,22 +5,30 @@ import operator
 import os
 from collections.abc import Iterable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from io import IOBase
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 
-from xarray import coding
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
+    BytesIOProxy,
+    T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
-    _open_datatree_netcdf,
+    collect_ancestor_dimensions,
+    datatree_from_dict_with_io_cleanup,
     find_root_and_group,
     robust_getitem,
 )
-from xarray.backends.file_manager import CachingFileManager, DummyFileManager
+from xarray.backends.file_manager import (
+    CachingFileManager,
+    DummyFileManager,
+    PickleableFileManager,
+)
 from xarray.backends.locks import (
     HDF5_LOCK,
     NETCDFC_LOCK,
@@ -30,20 +38,28 @@ from xarray.backends.locks import (
 )
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
+from xarray.coding.strings import (
+    CharacterArrayCoder,
+    EncodedStringCoder,
+    create_vlen_dtype,
+    is_unicode_dtype,
+)
 from xarray.coding.variables import pop_to
 from xarray.core import indexing
 from xarray.core.utils import (
     FrozenDict,
     close_on_error,
     is_remote_uri,
+    strip_uri_params,
     try_read_magic_number_from_path,
 )
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
-    from io import BufferedIOBase
+    import netCDF4
+    from h5netcdf.core import EnumType as h5EnumType
+    from netCDF4 import EnumType as ncEnumType
 
-    from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
 
@@ -71,7 +87,7 @@ class BaseNetCDF4Array(BackendArray):
             # check vlen string dtype in further steps
             # it also prevents automatic string concatenation via
             # conventions.decode_cf_variable
-            dtype = coding.strings.create_vlen_dtype(str)
+            dtype = create_vlen_dtype(str)
         self.dtype = dtype
 
     def __setitem__(self, key, value):
@@ -112,7 +128,7 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             with self.datastore.lock:
                 original_array = self.get_array(needs_lock=False)
                 array = getitem(original_array, key)
-        except IndexError:
+        except IndexError as err:
             # Catch IndexError in netCDF4 and return a more informative
             # error message.  This is most often called when an unsorted
             # indexer is used before the data is loaded from disk.
@@ -121,16 +137,16 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
                 "is not valid on netCDF4.Variable object. Try loading "
                 "your data into memory first by calling .load()."
             )
-            raise IndexError(msg)
+            raise IndexError(msg) from err
         return array
 
 
-def _encode_nc4_variable(var):
+def _encode_nc4_variable(var, name=None):
     for coder in [
-        coding.strings.EncodedStringCoder(allows_unicode=True),
-        coding.strings.CharacterArrayCoder(),
+        EncodedStringCoder(allows_unicode=True),
+        CharacterArrayCoder(),
     ]:
-        var = coder.encode(var)
+        var = coder.encode(var, name=name)
     return var
 
 
@@ -162,7 +178,7 @@ def _nc4_dtype(var):
     if "dtype" in var.encoding:
         dtype = var.encoding.pop("dtype")
         _check_encoding_dtype_is_vlen_string(dtype)
-    elif coding.strings.is_unicode_dtype(var.dtype):
+    elif is_unicode_dtype(var.dtype):
         dtype = str
     elif var.dtype.kind in ["i", "u", "f", "c", "S"]:
         dtype = var.dtype
@@ -193,7 +209,7 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                     ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
-                    raise OSError(f"group not found: {key}", e)
+                    raise OSError(f"group not found: {key}", e) from e
         return ds
 
 
@@ -279,7 +295,9 @@ def _extract_nc4_variable_encoding(
         chunksizes = encoding["chunksizes"]
         chunks_too_big = any(
             c > d and dim not in unlimited_dims
-            for c, d, dim in zip(chunksizes, variable.shape, variable.dims)
+            for c, d, dim in zip(
+                chunksizes, variable.shape, variable.dims, strict=False
+            )
         )
         has_original_shape = "original_shape" in encoding
         changed_shape = (
@@ -316,6 +334,61 @@ def _is_list_of_strings(value) -> bool:
     return arr.dtype.kind in ["U", "S"] and arr.size > 1
 
 
+def _build_and_get_enum(
+    store, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
+) -> ncEnumType | h5EnumType:
+    """
+    Add or get the netCDF4 Enum based on the dtype in encoding.
+    The return type should be ``netCDF4.EnumType``,
+    but we avoid importing netCDF4 globally for performances.
+    """
+    if enum_name not in store.ds.enumtypes:
+        create_func = (
+            store.ds.createEnumType
+            if isinstance(store, NetCDF4DataStore)
+            else store.ds.create_enumtype
+        )
+        return create_func(
+            dtype,
+            enum_name,
+            enum_dict,
+        )
+    datatype = store.ds.enumtypes[enum_name]
+    if datatype.enum_dict != enum_dict:
+        error_msg = (
+            f"Cannot save variable `{var_name}` because an enum"
+            f" `{enum_name}` already exists in the Dataset but has"
+            " a different definition. To fix this error, make sure"
+            " all variables have a uniquely named enum in their"
+            " `encoding['dtype'].metadata` or, if they should share"
+            " the same enum type, make sure the enums are identical."
+        )
+        raise ValueError(error_msg)
+    return datatype
+
+
+@dataclass
+class _Thunk:
+    """Pickleable equivalent of `lambda: value`."""
+
+    value: Any
+
+    def __call__(self):
+        return self.value
+
+
+@dataclass
+class _CloseWithCopy:
+    """Wrapper around netCDF4's esoteric interface for writing in-memory data."""
+
+    proxy: BytesIOProxy
+    nc4_dataset: netCDF4.Dataset
+
+    def __call__(self):
+        value = self.nc4_dataset.close()
+        self.proxy.getvalue = _Thunk(value)
+
+
 class NetCDF4DataStore(WritableCFDataStore):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -323,14 +396,14 @@ class NetCDF4DataStore(WritableCFDataStore):
     """
 
     __slots__ = (
-        "autoclose",
-        "format",
-        "is_remote",
-        "lock",
         "_filename",
         "_group",
         "_manager",
         "_mode",
+        "autoclose",
+        "format",
+        "is_remote",
+        "lock",
     )
 
     def __init__(
@@ -348,7 +421,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                         "argument is provided"
                     )
                 root = manager
-            manager = DummyFileManager(root)
+            manager = DummyFileManager(root, lock=NETCDF4_PYTHON_LOCK)
 
         self._manager = manager
         self._group = group
@@ -358,6 +431,17 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
+
+    def get_child_store(self, group: str) -> Self:
+        if self._group is not None:
+            group = os.path.join(self._group, group)
+        return type(self)(
+            self._manager,
+            group=group,
+            mode=self._mode,
+            lock=self.lock,
+            autoclose=self.autoclose,
+        )
 
     @classmethod
     def open(
@@ -369,6 +453,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         clobber=True,
         diskless=False,
         persist=False,
+        auto_complex=None,
         lock=None,
         lock_maker=None,
         autoclose=False,
@@ -378,34 +463,69 @@ class NetCDF4DataStore(WritableCFDataStore):
         if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
 
-        if not isinstance(filename, str):
-            raise ValueError(
-                "can only read bytes or file-like objects "
-                "with engine='scipy' or 'h5netcdf'"
+        if isinstance(filename, IOBase):
+            raise TypeError(
+                f"file objects are not supported by the netCDF4 backend: {filename}"
             )
+
+        if not isinstance(filename, str | bytes | memoryview | BytesIOProxy):
+            raise TypeError(f"invalid filename for netCDF4 backend: {filename}")
 
         if format is None:
             format = "NETCDF4"
 
         if lock is None:
             if mode == "r":
-                if is_remote_uri(filename):
+                if isinstance(filename, str) and is_remote_uri(filename):
                     lock = NETCDFC_LOCK
                 else:
                     lock = NETCDF4_PYTHON_LOCK
             else:
                 if format is None or format.startswith("NETCDF4"):
-                    base_lock = NETCDF4_PYTHON_LOCK
+                    lock = NETCDF4_PYTHON_LOCK
                 else:
-                    base_lock = NETCDFC_LOCK
-                lock = combine_locks([base_lock, get_write_lock(filename)])
+                    lock = NETCDFC_LOCK
+
+                if isinstance(filename, str):
+                    lock = combine_locks([lock, get_write_lock(filename)])
 
         kwargs = dict(
-            clobber=clobber, diskless=diskless, persist=persist, format=format
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            format=format,
         )
-        manager = CachingFileManager(
-            netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
-        )
+        if auto_complex is not None:
+            kwargs["auto_complex"] = auto_complex
+
+        if isinstance(filename, BytesIOProxy):
+            assert mode == "w"
+            # Size hint used for creating netCDF3 files. Per the documentation
+            # for nc__create(), the special value NC_SIZEHINT_DEFAULT (which is
+            # the value 0), lets the netcdf library choose a suitable initial
+            # size.
+            memory = 0
+            kwargs["diskless"] = False
+            nc4_dataset = netCDF4.Dataset(
+                "<xarray-in-memory-write>", mode=mode, memory=memory, **kwargs
+            )
+            close = _CloseWithCopy(filename, nc4_dataset)
+            manager = DummyFileManager(nc4_dataset, close=close, lock=lock)
+
+        elif isinstance(filename, bytes | memoryview):
+            assert mode == "r"
+            kwargs["memory"] = filename
+            manager = PickleableFileManager(
+                netCDF4.Dataset,
+                "<xarray-in-memory-read>",
+                mode=mode,
+                kwargs=kwargs,
+                lock=lock,
+            )
+        else:
+            manager = CachingFileManager(
+                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs, lock=lock
+            )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
@@ -447,14 +567,16 @@ class NetCDF4DataStore(WritableCFDataStore):
             else:
                 encoding["contiguous"] = False
                 encoding["chunksizes"] = tuple(chunking)
-                encoding["preferred_chunks"] = dict(zip(var.dimensions, chunking))
+                encoding["preferred_chunks"] = dict(
+                    zip(var.dimensions, chunking, strict=True)
+                )
         # TODO: figure out how to round-trip "endian-ness" without raising
         # warnings from netCDF4
         # encoding['endian'] = var.endian()
         pop_to(attributes, encoding, "least_significant_digit")
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
-        encoding["original_shape"] = var.shape
+        encoding["original_shape"] = data.shape
 
         return Variable(dimensions, data, attributes, encoding)
 
@@ -468,6 +590,9 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
+
+    def get_parent_dimensions(self):
+        return FrozenDict(collect_ancestor_dimensions(self.ds))
 
     def get_encoding(self):
         return {
@@ -490,12 +615,12 @@ class NetCDF4DataStore(WritableCFDataStore):
         else:
             self.ds.setncattr(key, value)
 
-    def encode_variable(self, variable):
+    def encode_variable(self, variable, name=None):
         variable = _force_native_endianness(variable)
         if self.format == "NETCDF4":
-            variable = _encode_nc4_variable(variable)
+            variable = _encode_nc4_variable(variable, name=name)
         else:
-            variable = encode_nc3_variable(variable)
+            variable = encode_nc3_variable(variable, name=name)
         return variable
 
     def prepare_variable(
@@ -504,6 +629,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         _ensure_no_forward_slash_in_name(name)
         attrs = variable.attrs.copy()
         fill_value = attrs.pop("_FillValue", None)
+        datatype: np.dtype | ncEnumType | h5EnumType
         datatype = _get_datatype(
             variable, self.format, raise_on_invalid_encoding=check_encoding
         )
@@ -513,7 +639,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             and (e_name := meta.get("enum_name"))
             and (e_dict := meta.get("enum"))
         ):
-            datatype = self._build_and_get_enum(name, datatype, e_name, e_dict)
+            datatype = _build_and_get_enum(self, name, datatype, e_name, e_dict)
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding, unlimited_dims=unlimited_dims
         )
@@ -543,33 +669,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         target = NetCDF4ArrayWrapper(name, self)
 
         return target, variable.data
-
-    def _build_and_get_enum(
-        self, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
-    ) -> Any:
-        """
-        Add or get the netCDF4 Enum based on the dtype in encoding.
-        The return type should be ``netCDF4.EnumType``,
-        but we avoid importing netCDF4 globally for performances.
-        """
-        if enum_name not in self.ds.enumtypes:
-            return self.ds.createEnumType(
-                dtype,
-                enum_name,
-                enum_dict,
-            )
-        datatype = self.ds.enumtypes[enum_name]
-        if datatype.enum_dict != enum_dict:
-            error_msg = (
-                f"Cannot save variable `{var_name}` because an enum"
-                f" `{enum_name}` already exists in the Dataset but have"
-                " a different definition. To fix this error, make sure"
-                " each variable have a uniquely named enum in their"
-                " `encoding['dtype'].metadata` or, if they should share"
-                " the same enum type, make sure the enums are identical."
-            )
-            raise ValueError(error_msg)
-        return datatype
 
     def sync(self):
         self.ds.sync()
@@ -604,27 +703,52 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         "Open netCDF (.nc, .nc4 and .cdf) and most HDF5 files using netCDF4 in Xarray"
     )
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
+    supports_groups = True
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
-    ) -> bool:
-        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
-            return True
-        magic_number = try_read_magic_number_from_path(filename_or_obj)
-        if magic_number is not None:
-            # netcdf 3 or HDF5
-            return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
+        # Helper to check if magic number is netCDF or HDF5
+        def _is_netcdf_magic(magic: bytes) -> bool:
+            return magic.startswith((b"CDF", b"\211HDF\r\n\032\n"))
 
-        if isinstance(filename_or_obj, (str, os.PathLike)):
-            _, ext = os.path.splitext(filename_or_obj)
+        # Helper to check if extension is netCDF
+        def _has_netcdf_ext(path: str | os.PathLike, is_remote: bool = False) -> bool:
+            path = str(path).rstrip("/")
+            # For remote URIs, strip query parameters and fragments
+            if is_remote:
+                path = strip_uri_params(path)
+            _, ext = os.path.splitext(path)
             return ext in {".nc", ".nc4", ".cdf"}
+
+        if isinstance(filename_or_obj, str):
+            if is_remote_uri(filename_or_obj):
+                # For remote URIs, check extension (accounting for query params/fragments)
+                # Remote netcdf-c can handle both regular URLs and DAP URLs
+                if _has_netcdf_ext(filename_or_obj, is_remote=True):
+                    return True
+                elif "zarr" in filename_or_obj.lower():
+                    return False
+                # return true for non-zarr URLs so we don't have a breaking change for people relying on this
+                # netcdf backend guessing true for all remote sources.
+                # TODO: emit a warning here about deprecation of this behavior
+                # https://github.com/pydata/xarray/pull/10931
+                return True
+
+        if isinstance(filename_or_obj, str | os.PathLike):
+            # For local paths, check magic number first, then extension
+            magic_number = try_read_magic_number_from_path(filename_or_obj)
+            if magic_number is not None:
+                return _is_netcdf_magic(magic_number)
+            # No magic number available, fallback to extension
+            return _has_netcdf_ext(filename_or_obj)
+
+        if isinstance(filename_or_obj, bytes | memoryview):
+            return _is_netcdf_magic(bytes(filename_or_obj[:8]))
 
         return False
 
-    def open_dataset(  # type: ignore[override]  # allow LSP violation, not supporting **kwargs
+    def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -639,6 +763,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         clobber=True,
         diskless=False,
         persist=False,
+        auto_complex=None,
         lock=None,
         autoclose=False,
     ) -> Dataset:
@@ -651,6 +776,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             clobber=clobber,
             diskless=diskless,
             persist=persist,
+            auto_complex=auto_complex,
             lock=lock,
             autoclose=autoclose,
         )
@@ -671,12 +797,113 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | None = None,
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        auto_complex=None,
+        lock=None,
+        autoclose=False,
         **kwargs,
     ) -> DataTree:
-        from netCDF4 import Dataset as ncDataset
+        groups_dict = self.open_groups_as_dict(
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+            group=group,
+            format=format,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            auto_complex=auto_complex,
+            lock=lock,
+            autoclose=autoclose,
+            **kwargs,
+        )
 
-        return _open_datatree_netcdf(ncDataset, filename_or_obj, **kwargs)
+        return datatree_from_dict_with_io_cleanup(groups_dict)
+
+    def open_groups_as_dict(
+        self,
+        filename_or_obj: T_PathFileOrDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group: str | None = None,
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        auto_complex=None,
+        lock=None,
+        autoclose=False,
+        **kwargs,
+    ) -> dict[str, Dataset]:
+        from xarray.backends.common import _iter_nc_groups
+        from xarray.core.treenode import NodePath
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = NetCDF4DataStore.open(
+            filename_or_obj,
+            group=group,
+            format=format,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            auto_complex=auto_complex,
+            lock=lock,
+            autoclose=autoclose,
+        )
+
+        # Check for a group and make it a parent if it exists
+        if group:
+            parent = NodePath("/") / NodePath(group)
+        else:
+            parent = NodePath("/")
+
+        manager = store._manager
+        groups_dict = {}
+        for path_group in _iter_nc_groups(store.ds, parent=parent):
+            group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
+            store_entrypoint = StoreBackendEntrypoint()
+            with close_on_error(group_store):
+                group_ds = store_entrypoint.open_dataset(
+                    group_store,
+                    mask_and_scale=mask_and_scale,
+                    decode_times=decode_times,
+                    concat_characters=concat_characters,
+                    decode_coords=decode_coords,
+                    drop_variables=drop_variables,
+                    use_cftime=use_cftime,
+                    decode_timedelta=decode_timedelta,
+                )
+            if group:
+                group_name = str(NodePath(path_group).relative_to(parent))
+            else:
+                group_name = str(NodePath(path_group))
+            groups_dict[group_name] = group_ds
+
+        return groups_dict
 
 
 BACKEND_ENTRYPOINTS["netcdf4"] = ("netCDF4", NetCDF4BackendEntrypoint)

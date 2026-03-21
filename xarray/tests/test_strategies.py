@@ -1,6 +1,9 @@
+import warnings
+
 import numpy as np
 import numpy.testing as npt
 import pytest
+from packaging.version import Version
 
 pytest.importorskip("hypothesis")
 # isort: split
@@ -10,16 +13,21 @@ import hypothesis.strategies as st
 from hypothesis import given
 from hypothesis.extra.array_api import make_strategies_namespace
 
+import xarray as xr
+from xarray import broadcast
+from xarray.core.options import set_options
 from xarray.core.variable import Variable
 from xarray.testing.strategies import (
     attrs,
+    basic_indexers,
     dimension_names,
     dimension_sizes,
+    outer_array_indexers,
     supported_dtypes,
     unique_subset_of,
     variables,
+    vectorized_indexers,
 )
-from xarray.tests import requires_numpy_array_api
 
 ALLOWED_ATTRS_VALUES_TYPES = (int, bool, str, np.ndarray)
 
@@ -71,7 +79,7 @@ class TestDimensionSizesStrategy:
 
 def check_dict_values(dictionary: dict, allowed_attrs_values_types) -> bool:
     """Helper function to assert that all values in recursive dict match one of a set of types."""
-    for key, value in dictionary.items():
+    for value in dictionary.values():
         if isinstance(value, allowed_attrs_values_types) or value is None:
             continue
         elif isinstance(value, dict):
@@ -136,7 +144,7 @@ class TestVariablesStrategy:
             return st.just(arr)
 
         dim_names = data.draw(dimension_names(min_dims=arr.ndim, max_dims=arr.ndim))
-        dim_sizes = {name: size for name, size in zip(dim_names, arr.shape)}
+        dim_sizes = dict(zip(dim_names, arr.shape, strict=True))
 
         var = data.draw(
             variables(
@@ -199,7 +207,6 @@ class TestVariablesStrategy:
                 )
             )
 
-    @requires_numpy_array_api
     @given(st.data())
     def test_make_strategies_namespace(self, data):
         """
@@ -208,16 +215,24 @@ class TestVariablesStrategy:
         We still want to generate dtypes not in the array API by default, but this checks we don't accidentally override
         the user's choice of dtypes with non-API-compliant ones.
         """
-        from numpy import (
-            array_api as np_array_api,  # requires numpy>=1.26.0, and we expect a UserWarning to be raised
-        )
+        if Version(np.__version__) >= Version("2.0.0.dev0"):
+            nxp = np
+        else:
+            # requires numpy>=1.26.0, and we expect a UserWarning to be raised
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", category=UserWarning, message=".+See NEP 47."
+                )
+                from numpy import (  # type: ignore[attr-defined,no-redef,unused-ignore]
+                    array_api as nxp,
+                )
 
-        np_array_api_st = make_strategies_namespace(np_array_api)
+        nxp_st = make_strategies_namespace(nxp)
 
         data.draw(
             variables(
-                array_strategy_fn=np_array_api_st.arrays,
-                dtype=np_array_api_st.scalar_dtypes(),
+                array_strategy_fn=nxp_st.arrays,
+                dtype=nxp_st.scalar_dtypes(),
             )
         )
 
@@ -258,14 +273,83 @@ class TestReduction:
         Test that given a Variable of at least one dimension,
         the mean of the Variable is always equal to the mean of the underlying array.
         """
+        with set_options(use_numbagg=False):
+            # specify arbitrary reduction along at least one dimension
+            reduction_dims = data.draw(unique_subset_of(var.dims, min_size=1))
 
-        # specify arbitrary reduction along at least one dimension
-        reduction_dims = data.draw(unique_subset_of(var.dims, min_size=1))
+            # create expected result (using nanmean because arrays with Nans will be generated)
+            reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
+            expected = np.nanmean(var.data, axis=reduction_axes)
 
-        # create expected result (using nanmean because arrays with Nans will be generated)
-        reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
-        expected = np.nanmean(var.data, axis=reduction_axes)
+            # assert property is always satisfied
+            result = var.mean(dim=reduction_dims).data
+            npt.assert_equal(expected, result)
 
-        # assert property is always satisfied
-        result = var.mean(dim=reduction_dims).data
-        npt.assert_equal(expected, result)
+
+class TestBasicIndexers:
+    @given(st.data(), dimension_sizes(min_dims=1))
+    def test_types(self, data, sizes):
+        idxr = data.draw(basic_indexers(sizes=sizes))
+        assert idxr
+        assert isinstance(idxr, dict)
+        for key, value in idxr.items():
+            assert key in sizes
+            assert isinstance(value, (int, slice))
+
+    @given(st.data(), dimension_sizes(min_dims=2))
+    def test_min_max_dims(self, data, sizes):
+        min_dims = data.draw(st.integers(min_value=1, max_value=len(sizes)))
+        max_dims = data.draw(st.integers(min_value=min_dims, max_value=len(sizes)))
+        idxr = data.draw(
+            basic_indexers(sizes=sizes, min_dims=min_dims, max_dims=max_dims)
+        )
+        assert min_dims <= len(idxr) <= max_dims
+
+
+class TestOuterArrayIndexers:
+    @given(st.data(), dimension_sizes(min_dims=1, min_side=1))
+    def test_types(self, data, sizes):
+        idxr = data.draw(outer_array_indexers(sizes=sizes, min_dims=1))
+        assert idxr
+        assert isinstance(idxr, dict)
+        for key, value in idxr.items():
+            assert key in sizes
+            assert isinstance(value, np.ndarray)
+            assert value.dtype == np.int64
+            assert value.ndim == 1
+            # Check indices in bounds (negative indices valid)
+            assert np.all((value >= -sizes[key]) & (value < sizes[key]))
+
+    @given(st.data(), dimension_sizes(min_dims=2, min_side=1))
+    def test_min_max_dims(self, data, sizes):
+        min_dims = data.draw(st.integers(min_value=1, max_value=len(sizes)))
+        max_dims = data.draw(st.integers(min_value=min_dims, max_value=len(sizes)))
+        idxr = data.draw(
+            outer_array_indexers(sizes=sizes, min_dims=min_dims, max_dims=max_dims)
+        )
+        assert min_dims <= len(idxr) <= max_dims
+
+
+class TestVectorizedIndexers:
+    @given(st.data(), dimension_sizes(min_dims=2, min_side=1))
+    def test_types(self, data, sizes):
+        idxr = data.draw(vectorized_indexers(sizes=sizes))
+        assert isinstance(idxr, dict)
+        assert idxr  # not empty
+        # All DataArrays should be broadcastable together
+        broadcast(*idxr.values())
+        for key, value in idxr.items():
+            assert key in sizes
+            assert isinstance(value, xr.DataArray)
+            assert value.dtype == np.int64
+            # Check indices in bounds (negative indices valid)
+            assert np.all((value.values >= -sizes[key]) & (value.values < sizes[key]))
+
+    @given(st.data(), dimension_sizes(min_dims=3, min_side=1))
+    def test_min_max_dims(self, data, sizes):
+        min_dims = data.draw(st.integers(min_value=2, max_value=len(sizes)))
+        max_dims = data.draw(st.integers(min_value=min_dims, max_value=len(sizes)))
+        idxr = data.draw(
+            vectorized_indexers(sizes=sizes, min_dims=min_dims, max_dims=max_dims)
+        )
+        assert min_dims <= len(idxr) <= max_dims

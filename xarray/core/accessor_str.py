@@ -42,17 +42,16 @@ from __future__ import annotations
 import codecs
 import re
 import textwrap
-from collections.abc import Hashable, Mapping
+from collections.abc import Callable, Hashable, Mapping
 from functools import reduce
 from operator import or_ as set_union
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, Generic
+from typing import TYPE_CHECKING, Any, Generic
 from unicodedata import normalize
 
 import numpy as np
 
 from xarray.core import duck_array_ops
-from xarray.core.computation import apply_ufunc
 from xarray.core.types import T_DataArray
 
 if TYPE_CHECKING:
@@ -90,7 +89,7 @@ def _contains_obj_type(*, pat: Any, checker: Any) -> bool:
 
 def _contains_str_like(pat: Any) -> bool:
     """Determine if the object is a str-like or array of str-like."""
-    if isinstance(pat, (str, bytes)):
+    if isinstance(pat, str | bytes):
         return True
 
     if not hasattr(pat, "dtype"):
@@ -113,7 +112,7 @@ def _apply_str_ufunc(
     *,
     func: Callable,
     obj: Any,
-    dtype: DTypeLike = None,
+    dtype: DTypeLike | None = None,
     output_core_dims: list | tuple = ((),),
     output_sizes: Mapping[Any, int] | None = None,
     func_args: tuple = (),
@@ -126,6 +125,8 @@ def _apply_str_ufunc(
     dask_gufunc_kwargs = dict()
     if output_sizes is not None:
         dask_gufunc_kwargs["output_sizes"] = output_sizes
+
+    from xarray.computation.apply_ufunc import apply_ufunc
 
     return apply_ufunc(
         func,
@@ -223,7 +224,7 @@ class StringAccessor(Generic[T_DataArray]):
         self,
         *,
         func: Callable,
-        dtype: DTypeLike = None,
+        dtype: DTypeLike | None = None,
         output_core_dims: list | tuple = ((),),
         output_sizes: Mapping[Any, int] | None = None,
         func_args: tuple = (),
@@ -348,7 +349,7 @@ class StringAccessor(Generic[T_DataArray]):
             islice = slice(-1, None) if iind == -1 else slice(iind, iind + 1)
             item = x[islice]
 
-            return item if item else default
+            return item or default
 
         return self._apply(func=f, func_args=(i,))
 
@@ -661,10 +662,11 @@ class StringAccessor(Generic[T_DataArray]):
         """
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
-        func = lambda x, *args, **kwargs: self._obj.dtype.type.format(
-            x, *args, **kwargs
+        return self._apply(
+            func=self._obj.dtype.type.format,
+            func_args=args,
+            func_kwargs={"kwargs": kwargs},
         )
-        return self._apply(func=func, func_args=args, func_kwargs={"kwargs": kwargs})
 
     def capitalize(self) -> T_DataArray:
         """
@@ -847,7 +849,7 @@ class StringAccessor(Generic[T_DataArray]):
         normalized : same type as values
 
         """
-        return self._apply(func=lambda x: normalize(form, x))
+        return self._apply(func=lambda x: normalize(form, x))  # type: ignore[arg-type]
 
     def isalnum(self) -> T_DataArray:
         """
@@ -1675,7 +1677,7 @@ class StringAccessor(Generic[T_DataArray]):
         Parameters
         ----------
         table : dict-like from and to str or bytes or int
-            A a mapping of Unicode ordinals to Unicode ordinals, strings, int
+            A mapping of Unicode ordinals to Unicode ordinals, strings, int
             or None. Unmapped characters are left untouched. Characters mapped
             to None are deleted. :meth:`str.maketrans` is a helper function for
             making translation tables.
@@ -1943,7 +1945,7 @@ class StringAccessor(Generic[T_DataArray]):
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
             func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=i_n if i_n >= 0 else 0
+                repl=irepl, string=x, count=max(i_n, 0)
             )
         else:
             pat = self._stringify(pat)

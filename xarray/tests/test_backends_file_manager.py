@@ -7,7 +7,7 @@ from unittest import mock
 
 import pytest
 
-from xarray.backends.file_manager import CachingFileManager
+from xarray.backends.file_manager import CachingFileManager, PickleableFileManager
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options
 from xarray.tests import assert_no_warnings
@@ -53,7 +53,7 @@ def test_file_manager_autoclose(warn_for_unclosed_files) -> None:
     if warn_for_unclosed_files:
         ctx = pytest.warns(RuntimeWarning)
     else:
-        ctx = assert_no_warnings()  # type: ignore
+        ctx = assert_no_warnings()  # type: ignore[assignment]
 
     with set_options(warn_for_unclosed_files=warn_for_unclosed_files):
         with ctx:
@@ -262,3 +262,30 @@ def test_file_manager_acquire_context(tmpdir, file_cache) -> None:
     assert file_cache  # file *was* already open
 
     manager.close()
+
+
+def test_pickleable_file_manager_write_pickle(tmpdir) -> None:
+    path = str(tmpdir.join("testing.txt"))
+    manager = PickleableFileManager(open, path, mode="w")
+    f = manager.acquire()
+    f.write("foo")
+    f.flush()
+    manager2 = pickle.loads(pickle.dumps(manager))
+    f2 = manager2.acquire()
+    f2.write("bar")
+    manager2.close()
+    manager.close()
+
+    with open(path) as f:
+        assert f.read() == "foobar"
+
+
+def test_pickleable_file_manager_preserves_closed(tmpdir) -> None:
+    path = str(tmpdir.join("testing.txt"))
+    manager = PickleableFileManager(open, path, mode="w")
+    f = manager.acquire()
+    f.write("foo")
+    manager.close()
+    manager2 = pickle.loads(pickle.dumps(manager))
+    assert manager2._closed
+    assert repr(manager2) == "<closed PickleableFileManager>"

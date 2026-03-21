@@ -10,7 +10,7 @@ coverage:
         flags:
           - unittests
         paths:
-         - "!xarray/tests/"
+          - "!xarray/tests/"
       unittests:
         target: 90%
         flags:

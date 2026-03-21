@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Hashable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import formatting
-from xarray.core.alignment import Aligner
 from xarray.core.indexes import (
     Index,
     Indexes,
@@ -22,8 +21,14 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
 )
-from xarray.core.merge import merge_coordinates_without_align, merge_coords
-from xarray.core.types import DataVars, Self, T_DataArray, T_Xarray
+from xarray.core.types import (
+    CompatOptions,
+    DataVars,
+    ErrorOptions,
+    Self,
+    T_DataArray,
+    T_Xarray,
+)
 from xarray.core.utils import (
     Frozen,
     ReprObject,
@@ -31,11 +36,15 @@ from xarray.core.utils import (
     emit_user_level_warning,
 )
 from xarray.core.variable import Variable, as_variable, calculate_dimensions
+from xarray.structure.alignment import Aligner
+from xarray.structure.merge import merge_coordinates_without_align, merge_coords
+from xarray.util.deprecation_helpers import CombineKwargDefault
 
 if TYPE_CHECKING:
     from xarray.core.common import DataWithCoords
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
@@ -168,7 +177,8 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
 
             for i, index in enumerate(indexes):
                 if isinstance(index, pd.MultiIndex):
-                    codes, levels = index.codes, index.levels
+                    codes: list[np.ndarray] = list(index.codes)
+                    levels = index.levels
                 else:
                     code, level = pd.factorize(index)
                     codes = [code]
@@ -182,7 +192,11 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
                 level_list += levels
                 names += index.names
 
-        return pd.MultiIndex(level_list, code_list, names=names)
+        return pd.MultiIndex(
+            levels=level_list,  # type: ignore[arg-type,unused-ignore]
+            codes=[list(c) for c in code_list],
+            names=names,
+        )
 
 
 class Coordinates(AbstractCoordinates):
@@ -197,12 +211,19 @@ class Coordinates(AbstractCoordinates):
 
     Coordinates are either:
 
-    - returned via the :py:attr:`Dataset.coords` and :py:attr:`DataArray.coords`
-      properties
-    - built from Pandas or other index objects
-      (e.g., :py:meth:`Coordinates.from_pandas_multiindex`)
-    - built directly from coordinate data and Xarray ``Index`` objects (beware that
-      no consistency check is done on those inputs)
+    - returned via the :py:attr:`Dataset.coords`, :py:attr:`DataArray.coords`,
+      and :py:attr:`DataTree.coords` properties,
+    - built from Xarray or Pandas index objects
+      (e.g., :py:meth:`Coordinates.from_xindex` or
+      :py:meth:`Coordinates.from_pandas_multiindex`),
+    - built manually from input coordinate data and Xarray ``Index`` objects via
+      :py:meth:`Coordinates.__init__` (beware that no consistency check is done
+      on those inputs).
+
+    To create new coordinates from an existing Xarray ``Index`` object, use
+    :py:meth:`Coordinates.from_xindex` instead of
+    :py:meth:`Coordinates.__init__`. The latter is useful, e.g., for creating
+    coordinates with no default index.
 
     Parameters
     ----------
@@ -301,7 +322,7 @@ class Coordinates(AbstractCoordinates):
                 var = as_variable(data, name=name, auto_convert=False)
                 if var.dims == (name,) and indexes is None:
                     index, index_vars = create_default_index_implicit(var, list(coords))
-                    default_indexes.update({k: index for k in index_vars})
+                    default_indexes.update(dict.fromkeys(index_vars, index))
                     variables.update(index_vars)
                 else:
                     variables[name] = var
@@ -352,10 +373,39 @@ class Coordinates(AbstractCoordinates):
         return obj
 
     @classmethod
-    def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: str) -> Self:
+    def from_xindex(cls, index: Index) -> Self:
+        """Create Xarray coordinates from an existing Xarray index.
+
+        Parameters
+        ----------
+        index : Index
+            Xarray index object. The index must support generating new
+            coordinate variables from itself.
+
+        Returns
+        -------
+        coords : Coordinates
+            A collection of Xarray indexed coordinates created from the index.
+
+        """
+        variables = index.create_variables()
+
+        if not variables:
+            raise ValueError(
+                "`Coordinates.from_xindex()` only supports index objects that can generate "
+                "new coordinate variables from scratch. The given index (shown below) did not "
+                f"create any coordinate.\n{index!r}"
+            )
+
+        indexes = dict.fromkeys(variables, index)
+
+        return cls(coords=variables, indexes=indexes)
+
+    @classmethod
+    def from_pandas_multiindex(cls, midx: pd.MultiIndex, dim: Hashable) -> Self:
         """Wrap a pandas multi-index as Xarray coordinates (dimension + levels).
 
-        The returned coordinates can be directly assigned to a
+        The returned coordinate variables can be directly assigned to a
         :py:class:`~xarray.Dataset` or :py:class:`~xarray.DataArray` via the
         ``coords`` argument of their constructor.
 
@@ -375,7 +425,7 @@ class Coordinates(AbstractCoordinates):
         xr_idx = PandasMultiIndex(midx, dim)
 
         variables = xr_idx.create_variables()
-        indexes = {k: xr_idx for k in variables}
+        indexes = dict.fromkeys(variables, xr_idx)
 
         return cls(coords=variables, indexes=indexes)
 
@@ -449,7 +499,7 @@ class Coordinates(AbstractCoordinates):
         return self.to_dataset().identical(other.to_dataset())
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         # redirect to DatasetCoordinates._update_coords
         self._data.coords._update_coords(coords, indexes)
@@ -458,18 +508,20 @@ class Coordinates(AbstractCoordinates):
         # redirect to DatasetCoordinates._drop_coords
         self._data.coords._drop_coords(coord_names)
 
-    def _merge_raw(self, other, reflexive):
+    def _merge_raw(self, other, reflexive, compat: CompatOptions | CombineKwargDefault):
         """For use with binary arithmetic."""
         if other is None:
             variables = dict(self.variables)
             indexes = dict(self.xindexes)
         else:
             coord_list = [self, other] if not reflexive else [other, self]
-            variables, indexes = merge_coordinates_without_align(coord_list)
+            variables, indexes = merge_coordinates_without_align(
+                coord_list, compat=compat
+            )
         return variables, indexes
 
     @contextmanager
-    def _merge_inplace(self, other):
+    def _merge_inplace(self, other, compat: CompatOptions | CombineKwargDefault):
         """For use with in-place binary arithmetic."""
         if other is None:
             yield
@@ -482,13 +534,57 @@ class Coordinates(AbstractCoordinates):
                 if k not in self.xindexes
             }
             variables, indexes = merge_coordinates_without_align(
-                [self, other], prioritized
+                [self, other], prioritized, compat=compat
             )
             yield
             self._update_coords(variables, indexes)
 
-    def merge(self, other: Mapping[Any, Any] | None) -> Dataset:
+    def merge(
+        self,
+        other: Mapping[Any, Any] | None,
+        *,
+        compat: CompatOptions | CombineKwargDefault = "minimal",
+    ) -> Dataset:
         """Merge two sets of coordinates to create a new Dataset
+
+        The method implements the logic used for joining coordinates in the
+        result of a binary operation performed on xarray objects:
+
+        - If two index coordinates conflict (are not equal), an exception is
+          raised. You must align your data before passing it to this method.
+        - If an index coordinate and a non-index coordinate conflict, the non-
+          index coordinate is dropped.
+        - If two non-index coordinates conflict, both are dropped.
+
+        Parameters
+        ----------
+        other : dict-like, optional
+            A :py:class:`Coordinates` object or any mapping that can be turned
+            into coordinates.
+        compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"}, default: "minimal"
+            Compatibility checks to use between coordinate variables.
+
+        Returns
+        -------
+        merged : Dataset
+            A new Dataset with merged coordinates.
+        """
+        from xarray.core.dataset import Dataset
+
+        if other is None:
+            return self.to_dataset()
+
+        if not isinstance(other, Coordinates):
+            other = Dataset(coords=other).coords
+
+        coords, indexes = merge_coordinates_without_align([self, other], compat=compat)
+        coord_names = set(coords)
+        return Dataset._construct_direct(
+            variables=coords, coord_names=coord_names, indexes=indexes
+        )
+
+    def __or__(self, other: Mapping[Any, Any] | None) -> Coordinates:
+        """Merge two sets of coordinates to create a new Coordinates object
 
         The method implements the logic used for joining coordinates in the
         result of a binary operation performed on xarray objects:
@@ -507,22 +603,14 @@ class Coordinates(AbstractCoordinates):
 
         Returns
         -------
-        merged : Dataset
-            A new Dataset with merged coordinates.
+        merged : Coordinates
+            A new Coordinates object with merged coordinates.
+
+        See Also
+        --------
+        Coordinates.merge
         """
-        from xarray.core.dataset import Dataset
-
-        if other is None:
-            return self.to_dataset()
-
-        if not isinstance(other, Coordinates):
-            other = Dataset(coords=other).coords
-
-        coords, indexes = merge_coordinates_without_align([self, other])
-        coord_names = set(coords)
-        return Dataset._construct_direct(
-            variables=coords, coord_names=coord_names, indexes=indexes
-        )
+        return self.merge(other).coords
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
         self.update({key: value})
@@ -682,6 +770,108 @@ class Coordinates(AbstractCoordinates):
             ),
         )
 
+    def drop_vars(
+        self,
+        names: str
+        | Iterable[Hashable]
+        | Callable[
+            [Coordinates | Dataset | DataArray | DataTree],
+            str | Iterable[Hashable],
+        ],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> Self:
+        """Drop variables from this Coordinates object.
+
+        Note that indexes that depend on these variables will also be dropped.
+
+        Parameters
+        ----------
+        names : hashable or iterable or callable
+            Name(s) of variables to drop. If a callable, this is object is passed as its
+            only argument and its result is used.
+        errors : {"raise", "ignore"}, default: "raise"
+            Error treatment.
+
+            - ``'raise'``: raises a :py:class:`ValueError` error if any of the variable
+              passed are not in the dataset
+            - ``'ignore'``: any given names that are in the dataset are dropped and no
+              error is raised.
+        """
+        return cast(Self, self.to_dataset().drop_vars(names, errors=errors).coords)
+
+    def drop_dims(
+        self,
+        drop_dims: str | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> Self:
+        """Drop dimensions and associated variables from this dataset.
+
+        Parameters
+        ----------
+        drop_dims : str or Iterable of Hashable
+            Dimension or dimensions to drop.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the
+            dimensions passed are not in the dataset. If 'ignore', any given
+            dimensions that are in the dataset are dropped and no error is raised.
+
+        Returns
+        -------
+        obj : Coordinates
+            Coordinates object without the given dimensions (or any coordinates
+            containing those dimensions).
+        """
+        return cast(Self, self.to_dataset().drop_dims(drop_dims, errors=errors).coords)
+
+    def rename_dims(
+        self,
+        dims_dict: Mapping[Any, Hashable] | None = None,
+        **dims: Hashable,
+    ) -> Self:
+        """Returns a new object with renamed dimensions only.
+
+        Parameters
+        ----------
+        dims_dict : dict-like, optional
+            Dictionary whose keys are current dimension names and
+            whose values are the desired names. The desired names must
+            not be the name of an existing dimension or Variable in the Coordinates.
+        **dims : optional
+            Keyword form of ``dims_dict``.
+            One of dims_dict or dims must be provided.
+
+        Returns
+        -------
+        renamed : Coordinates
+            Coordinates object with renamed dimensions.
+        """
+        return cast(Self, self.to_dataset().rename_dims(dims_dict, **dims).coords)
+
+    def rename_vars(
+        self,
+        name_dict: Mapping[Any, Hashable] | None = None,
+        **names: Hashable,
+    ) -> Coordinates:
+        """Returns a new object with renamed variables.
+
+        Parameters
+        ----------
+        name_dict : dict-like, optional
+            Dictionary whose keys are current variable or coordinate names and
+            whose values are the desired names.
+        **names : optional
+            Keyword form of ``name_dict``.
+            One of name_dict or names must be provided.
+
+        Returns
+        -------
+        renamed : Coordinates
+            Coordinates object with renamed variables
+        """
+        return cast(Self, self.to_dataset().rename_vars(name_dict, **names).coords)
+
 
 class DatasetCoordinates(Coordinates):
     """Dictionary like container for Dataset coordinates (variables + indexes).
@@ -704,6 +894,7 @@ class DatasetCoordinates(Coordinates):
 
     @property
     def dims(self) -> Frozen[Hashable, int]:
+        # deliberately display all dims, not just those on coordinate variables - see https://github.com/pydata/xarray/issues/9466
         return self._data.dims
 
     @property
@@ -742,7 +933,7 @@ class DatasetCoordinates(Coordinates):
         return self._data._copy_listed(names)
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         variables = self._data._variables.copy()
         variables.update(coords)
@@ -750,7 +941,7 @@ class DatasetCoordinates(Coordinates):
         # check for inconsistent state *before* modifying anything in-place
         dims = calculate_dimensions(variables)
         new_coord_names = set(coords)
-        for dim, size in dims.items():
+        for dim in dims:
             if dim in variables:
                 new_coord_names.add(dim)
 
@@ -771,14 +962,6 @@ class DatasetCoordinates(Coordinates):
             del self._data._indexes[name]
         self._data._coord_names.difference_update(coord_names)
 
-    def _drop_indexed_coords(self, coords_to_drop: set[Hashable]) -> None:
-        assert self._data.xindexes is not None
-        new_coords = drop_indexed_coords(coords_to_drop, self)
-        for name in self._data._coord_names - new_coords._names:
-            del self._data._variables[name]
-        self._data._indexes = dict(new_coords.xindexes)
-        self._data._coord_names.intersection_update(new_coords._names)
-
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
             del self._data[key]
@@ -793,6 +976,105 @@ class DatasetCoordinates(Coordinates):
             key
             for key in self._data._ipython_key_completions_()
             if key not in self._data.data_vars
+        ]
+
+
+class DataTreeCoordinates(Coordinates):
+    """
+    Dictionary like container for coordinates of a DataTree node (variables + indexes).
+
+    This collection can be passed directly to the :py:class:`~xarray.Dataset`
+    and :py:class:`~xarray.DataArray` constructors via their `coords` argument.
+    This will add both the coordinates variables and their index.
+    """
+
+    # TODO: This only needs to be a separate class from `DatasetCoordinates` because DataTree nodes store their variables differently
+    # internally than how Datasets do, see https://github.com/pydata/xarray/issues/9203.
+
+    _data: DataTree  # type: ignore[assignment]  # complaining that DataTree is not a subclass of DataWithCoords - this can be fixed by refactoring, see #9203
+
+    __slots__ = ("_data",)
+
+    def __init__(self, datatree: DataTree):
+        self._data = datatree
+
+    @property
+    def _names(self) -> set[Hashable]:
+        return set(self._data._coord_variables)
+
+    @property
+    def dims(self) -> Frozen[Hashable, int]:
+        # deliberately display all dims, not just those on coordinate variables - see https://github.com/pydata/xarray/issues/9466
+        return Frozen(self._data.dims)
+
+    @property
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        """Mapping from coordinate names to dtypes.
+
+        Cannot be modified directly, but is updated when adding new variables.
+
+        See Also
+        --------
+        Dataset.dtypes
+        """
+        return Frozen({n: v.dtype for n, v in self._data._coord_variables.items()})
+
+    @property
+    def variables(self) -> Mapping[Hashable, Variable]:
+        return Frozen(self._data._coord_variables)
+
+    def __getitem__(self, key: Hashable) -> DataArray:
+        if key not in self._data._coord_variables:
+            raise KeyError(key)
+        return self._data.dataset[key]
+
+    def to_dataset(self) -> Dataset:
+        """Convert these coordinates into a new Dataset"""
+        return self._data.dataset._copy_listed(self._names)
+
+    def _update_coords(
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
+    ) -> None:
+        from xarray.core.datatree import check_alignment
+
+        # create updated node (`.to_dataset` makes a copy so this doesn't modify in-place)
+        node_ds = self._data.to_dataset(inherit=False)
+        node_ds.coords._update_coords(coords, indexes)
+
+        # check consistency *before* modifying anything in-place
+        # TODO can we clean up the signature of check_alignment to make this less awkward?
+        if self._data.parent is not None:
+            parent_ds = self._data.parent._to_dataset_view(
+                inherit=True, rebuild_dims=False
+            )
+        else:
+            parent_ds = None
+        check_alignment(self._data.path, node_ds, parent_ds, self._data.children)
+
+        # assign updated attributes
+        coord_variables = dict(node_ds.coords.variables)
+        self._data._node_coord_variables = coord_variables
+        self._data._node_dims = node_ds._dims
+        self._data._node_indexes = node_ds._indexes
+
+    def _drop_coords(self, coord_names):
+        # should drop indexed coordinates only
+        for name in coord_names:
+            del self._data._node_coord_variables[name]
+            del self._data._node_indexes[name]
+
+    def __delitem__(self, key: Hashable) -> None:
+        if key in self:
+            del self._data[key]  # type: ignore[arg-type]  # see https://github.com/pydata/xarray/issues/8836
+        else:
+            raise KeyError(key)
+
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython."""
+        return [
+            key
+            for key in self._data._ipython_key_completions_()
+            if key in self._data._coord_variables
         ]
 
 
@@ -835,22 +1117,14 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         return self._data._getitem_coord(key)
 
     def _update_coords(
-        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
-        coords_plus_data = coords.copy()
-        coords_plus_data[_THIS_ARRAY] = self._data.variable
-        dims = calculate_dimensions(coords_plus_data)
-        if not set(dims) <= set(self.dims):
-            raise ValueError(
-                "cannot add coordinates with new dimensions to a DataArray"
-            )
-        self._data._coords = coords
+        validate_dataarray_coords(
+            self._data.shape, Coordinates._construct_direct(coords, indexes), self.dims
+        )
 
-        # TODO(shoyer): once ._indexes is always populated by a dict, modify
-        # it to update inplace instead.
-        original_indexes = dict(self._data.xindexes)
-        original_indexes.update(indexes)
-        self._data._indexes = original_indexes
+        self._data._coords = coords
+        self._data._indexes = indexes
 
     def _drop_coords(self, coord_names):
         # should drop indexed coordinates only
@@ -877,7 +1151,7 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         assert_no_index_corrupted(self._data.xindexes, {key})
 
         del self._data._coords[key]
-        if self._data._indexes is not None and key in self._data._indexes:
+        if key in self._data._indexes:
             del self._data._indexes[key]
 
     def _ipython_key_completions_(self):
@@ -906,10 +1180,10 @@ def drop_indexed_coords(
         if isinstance(idx, PandasMultiIndex) and idx_drop_coords == {idx.dim}:
             idx_drop_coords.update(idx.index.names)
             emit_user_level_warning(
-                f"updating coordinate {idx.dim!r} with a PandasMultiIndex would leave "
+                f"updating coordinate {idx.dim!r}, which is a PandasMultiIndex, would leave "
                 f"the multi-index level coordinates {list(idx.index.names)!r} in an inconsistent state. "
-                f"This will raise an error in the future. Use `.drop_vars({list(idx_coords)!r})` before "
-                "assigning new coordinate values.",
+                f"This will raise an error in the future. Use `.drop_vars({list(idx_coords)!r})` "
+                "to drop the coordinates' values before assigning new coordinate values.",
                 FutureWarning,
             )
 
@@ -1005,17 +1279,17 @@ def create_coords_with_default_indexes(
             # pandas multi-index edge cases.
             variable = variable.to_index_variable()
             idx, idx_vars = create_default_index_implicit(variable, all_variables)
-            indexes.update({k: idx for k in idx_vars})
+            indexes.update(dict.fromkeys(idx_vars, idx))
             variables.update(idx_vars)
             all_variables.update(idx_vars)
         else:
-            variables[name] = variable
+            variables[name] = variable.to_base_variable()
 
     new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
 
     # extract and merge coordinates and indexes from input DataArrays
     if dataarray_coords:
-        prioritized = {k: (v, indexes.get(k, None)) for k, v in variables.items()}
+        prioritized = {k: (v, indexes.get(k)) for k, v in variables.items()}
         variables, indexes = merge_coordinates_without_align(
             dataarray_coords + [new_coords],
             prioritized=prioritized,
@@ -1023,3 +1297,63 @@ def create_coords_with_default_indexes(
         new_coords = Coordinates._construct_direct(coords=variables, indexes=indexes)
 
     return new_coords
+
+
+class CoordinateValidationError(ValueError):
+    """Error class for Xarray coordinate validation failures."""
+
+
+def validate_dataarray_coords(
+    shape: tuple[int, ...],
+    coords: Coordinates | Mapping[Hashable, Variable],
+    dim: tuple[Hashable, ...],
+):
+    """Validate coordinates ``coords`` to include in a DataArray defined by
+    ``shape`` and dimensions ``dim``.
+
+    If a coordinate is associated with an index, the validation is performed by
+    the index. By default the coordinate dimensions must match (a subset of) the
+    array dimensions (in any order) to conform to the DataArray model. The index
+    may override this behavior with other validation rules, though.
+
+    Non-index coordinates must all conform to the DataArray model. Scalar
+    coordinates are always valid.
+    """
+    sizes = dict(zip(dim, shape, strict=True))
+    dim_set = set(dim)
+
+    indexes: Mapping[Hashable, Index]
+    if isinstance(coords, Coordinates):
+        indexes = coords.xindexes
+    else:
+        indexes = {}
+
+    for k, v in coords.items():
+        if k in indexes:
+            invalid = not indexes[k].should_add_coord_to_array(k, v, dim_set)
+        else:
+            invalid = any(d not in dim for d in v.dims)
+
+        if invalid:
+            raise CoordinateValidationError(
+                f"coordinate {k} has dimensions {v.dims}, but these "
+                "are not a subset of the DataArray "
+                f"dimensions {dim}"
+            )
+
+        for d, s in v.sizes.items():
+            if d in sizes and s != sizes[d]:
+                raise CoordinateValidationError(
+                    f"conflicting sizes for dimension {d!r}: "
+                    f"length {sizes[d]} on the data but length {s} on "
+                    f"coordinate {k!r}"
+                )
+
+
+def coordinates_from_variable(variable: Variable) -> Coordinates:
+    (name,) = variable.dims
+    new_index, index_vars = create_default_index_implicit(variable)
+    indexes = dict.fromkeys(index_vars, new_index)
+    new_vars = new_index.create_variables()
+    new_vars[name].attrs = variable.attrs
+    return Coordinates(new_vars, indexes)

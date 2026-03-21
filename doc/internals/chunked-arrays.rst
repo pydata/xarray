@@ -13,7 +13,7 @@ Alternative chunked array types
 Xarray can wrap chunked dask arrays (see :ref:`dask`), but can also wrap any other chunked array type that exposes the correct interface.
 This allows us to support using other frameworks for distributed and out-of-core processing, with user code still written as xarray commands.
 In particular xarray also supports wrapping :py:class:`cubed.Array` objects
-(see `Cubed's documentation <https://tom-e-white.com/cubed/>`_ and the `cubed-xarray package <https://github.com/xarray-contrib/cubed-xarray>`_).
+(see `Cubed's documentation <https://cubed-dev.github.io/cubed/>`_ and the `cubed-xarray package <https://github.com/xarray-contrib/cubed-xarray>`_).
 
 The basic idea is that by wrapping an array that has an explicit notion of ``.chunks``, xarray can expose control over
 the choice of chunking scheme to users via methods like :py:meth:`DataArray.chunk` whilst the wrapped array actually
@@ -91,7 +91,8 @@ Once the chunkmanager subclass has been registered, xarray objects wrapping the 
 The latter two methods ultimately call the chunkmanager's implementation of ``.from_array``, to which they pass the ``from_array_kwargs`` dict.
 The ``chunked_array_type`` kwarg selects which registered chunkmanager subclass to dispatch to. It defaults to ``'dask'``
 if Dask is installed, otherwise it defaults to whichever chunkmanager is registered if only one is registered.
-If multiple chunkmanagers are registered it will raise an error by default.
+If multiple chunkmanagers are registered, the ``chunk_manager`` configuration option (which can be set using :py:func:`set_options`)
+will be used to determine which chunkmanager to use, defaulting to ``'dask'``.
 
 Parallel processing without chunks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import warnings
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
 from packaging.version import Version
 
+from xarray.compat.array_api_compat import get_array_namespace
 from xarray.core.utils import is_duck_array, module_available
 from xarray.namedarray import pycompat
 
@@ -155,7 +156,7 @@ def _advanced_indexer_subspaces(key):
 
 
 class NumpyVIndexAdapter:
-    """Object that implements indexing like vindex on a np.ndarray.
+    """Object that implements indexing like vindex on an np.ndarray.
 
     This is a pure Python implementation of (some of) the logic in this NumPy
     proposal: https://github.com/numpy/numpy/pull/6256
@@ -176,12 +177,16 @@ class NumpyVIndexAdapter:
 
 def _create_method(name, npmodule=np) -> Callable:
     def f(values, axis=None, **kwargs):
-        dtype = kwargs.get("dtype", None)
+        dtype = kwargs.get("dtype")
         bn_func = getattr(bn, name, None)
 
+        xp = get_array_namespace(values)
+        if xp is not np:
+            func = getattr(xp, name, None)
+            if func is not None:
+                return func(values, axis=axis, **kwargs)
         if (
             module_available("numbagg")
-            and pycompat.mod_version("numbagg") >= Version("0.5.0")
             and OPTIONS["use_numbagg"]
             and isinstance(values, np.ndarray)
             # numbagg<0.7.0 uses ddof=1 only, but numpy uses ddof=0 by default
@@ -191,7 +196,7 @@ def _create_method(name, npmodule=np) -> Callable:
                 or kwargs.get("ddof", 0) == 1
             )
             # TODO: bool?
-            and values.dtype.kind in "uifc"
+            and values.dtype.kind in "uif"
             # and values.dtype.isnative
             and (dtype is None or np.dtype(dtype) == values.dtype)
             # numbagg.nanquantile only available after 0.8.0 and with linear method
@@ -203,7 +208,7 @@ def _create_method(name, npmodule=np) -> Callable:
                 )
             )
         ):
-            import numbagg
+            import numbagg  # type: ignore[import-not-found, unused-ignore]
 
             nba_func = getattr(numbagg, name, None)
             if nba_func is not None:
@@ -230,6 +235,9 @@ def _create_method(name, npmodule=np) -> Callable:
             # bottleneck does not take care dtype, min_count
             kwargs.pop("dtype", None)
             result = bn_func(values, axis=axis, **kwargs)
+            # bottleneck returns python scalars for reduction over all axes
+            if isinstance(result, float):
+                result = np.float64(result)
         else:
             result = getattr(npmodule, name)(values, axis=axis, **kwargs)
 
@@ -255,6 +263,12 @@ def warn_on_deficient_rank(rank, order):
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
+    if rhs.ndim > 2:
+        out_shape = rhs.shape
+        rhs = rhs.reshape(rhs.shape[0], -1)
+    else:
+        out_shape = None
+
     if skipna:
         added_dim = rhs.ndim == 1
         if added_dim:
@@ -281,6 +295,10 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         if residuals.size == 0:
             residuals = coeffs[0] * np.nan
         warn_on_deficient_rank(rank, lhs.shape[1])
+
+    if out_shape is not None:
+        coeffs = coeffs.reshape(-1, *out_shape[1:])
+        residuals = residuals.reshape(*out_shape[1:])
     return coeffs, residuals
 
 

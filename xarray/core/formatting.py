@@ -1,30 +1,39 @@
-"""String formatting routines for __repr__.
-"""
+"""String formatting routines for __repr__."""
 
 from __future__ import annotations
 
 import contextlib
 import functools
 import math
-from collections import defaultdict
-from collections.abc import Collection, Hashable, Sequence
+from collections import ChainMap, defaultdict
+from collections.abc import Collection, Hashable, Mapping, Sequence
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
 from reprlib import recursive_repr
-from typing import TYPE_CHECKING
+from textwrap import indent
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
-from xarray.core.duck_array_ops import array_equiv, astype
-from xarray.core.indexing import MemoryCachedArray
+from xarray.core.datatree_render import RenderDataTree
+from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype, ravel
+from xarray.core.extension_array import PandasExtensionArray
+from xarray.core.indexing import (
+    BasicIndexer,
+    ExplicitlyIndexed,
+    MemoryCachedArray,
+)
 from xarray.core.options import OPTIONS, _get_boolean_with_default
+from xarray.core.treenode import group_subtrees
 from xarray.core.utils import is_duck_array
-from xarray.namedarray.pycompat import array_type, to_duck_array, to_numpy
+from xarray.namedarray.pycompat import array_type, to_duck_array
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import AbstractCoordinates
+    from xarray.core.datatree import DataTree
+    from xarray.core.variable import Variable
 
 UNITS = ("B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
 
@@ -82,6 +91,8 @@ def first_n_items(array, n_desired):
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=False)
+        if isinstance(array, ExplicitlyIndexed):
+            indexer = BasicIndexer(indexer)
         array = array[indexer]
 
     # We pass variable objects in to handle indexing
@@ -90,7 +101,7 @@ def first_n_items(array, n_desired):
     # pass Variable._data
     if isinstance(array, Variable):
         array = array._data
-    return np.ravel(to_duck_array(array))[:n_desired]
+    return ravel(to_duck_array(array))[:n_desired]
 
 
 def last_n_items(array, n_desired):
@@ -106,6 +117,8 @@ def last_n_items(array, n_desired):
 
     if n_desired < array.size:
         indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=True)
+        if isinstance(array, ExplicitlyIndexed):
+            indexer = BasicIndexer(indexer)
         array = array[indexer]
 
     # We pass variable objects in to handle indexing
@@ -114,18 +127,13 @@ def last_n_items(array, n_desired):
     # pass Variable._data
     if isinstance(array, Variable):
         array = array._data
-    return np.ravel(to_duck_array(array))[-n_desired:]
+    return ravel(to_duck_array(array))[-n_desired:]
 
 
 def last_item(array):
-    """Returns the last item of an array in a list or an empty list."""
-    if array.size == 0:
-        # work around for https://github.com/numpy/numpy/issues/5195
-        return []
-
+    """Returns the last item of an array."""
     indexer = (slice(-1, None),) * array.ndim
-    # to_numpy since dask doesn't support tolist
-    return np.ravel(to_numpy(array[indexer])).tolist()
+    return ravel(to_duck_array(array[indexer]))
 
 
 def calc_max_rows_first(max_rows: int) -> int:
@@ -177,15 +185,20 @@ def format_timedelta(t, timedelta_format=None):
 
 def format_item(x, timedelta_format=None, quote_strings=True):
     """Returns a succinct summary of an object as a string"""
-    if isinstance(x, (np.datetime64, datetime)):
+    if isinstance(x, PandasExtensionArray):
+        # We want to bypass PandasExtensionArray's repr here
+        # because its __repr__ is PandasExtensionArray(array=[...])
+        # and this function is only for single elements.
+        return str(x.array[0])
+    if isinstance(x, np.datetime64 | datetime):
         return format_timestamp(x)
-    if isinstance(x, (np.timedelta64, timedelta)):
+    if isinstance(x, np.timedelta64 | timedelta):
         return format_timedelta(x, timedelta_format=timedelta_format)
-    elif isinstance(x, (str, bytes)):
+    elif isinstance(x, str | bytes):
         if hasattr(x, "dtype"):
             x = x.item()
         return repr(x) if quote_strings else x
-    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
+    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating) and x.shape == ():
         return f"{x.item():.4}"
     else:
         return str(x)
@@ -195,14 +208,16 @@ def format_items(x):
     """Returns a succinct summaries of all items in a sequence as strings"""
     x = to_duck_array(x)
     timedelta_format = "datetime"
-    if np.issubdtype(x.dtype, np.timedelta64):
+    if not isinstance(x, PandasExtensionArray) and np.issubdtype(
+        x.dtype, np.timedelta64
+    ):
         x = astype(x, dtype="timedelta64[ns]")
         day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
         day_needed = day_part != np.timedelta64(0, "ns")
-        if np.logical_not(day_needed).all():
+        if array_all(np.logical_not(day_needed)):
             timedelta_format = "time"
-        elif np.logical_not(time_needed).all():
+        elif array_all(np.logical_not(time_needed)):
             timedelta_format = "date"
 
     formatted = [format_item(xi, timedelta_format) for xi in x]
@@ -228,7 +243,7 @@ def format_array_flat(array, max_width: int):
 
     cum_len = np.cumsum([len(s) + 1 for s in relevant_items]) - 1
     if (array.size > 2) and (
-        (max_possibly_relevant < array.size) or (cum_len > max_width).any()
+        (max_possibly_relevant < array.size) or array_any(cum_len > max_width)
     ):
         padding = " ... "
         max_len = max(int(np.argmax(cum_len + len(padding) - 1 > max_width)), 2)
@@ -289,16 +304,14 @@ def inline_sparse_repr(array):
     """Similar to sparse.COO.__repr__, but without the redundant shape/dtype."""
     sparse_array_type = array_type("sparse")
     assert isinstance(array, sparse_array_type), array
-    return (
-        f"<{type(array).__name__}: nnz={array.nnz:d}, fill_value={array.fill_value!s}>"
-    )
+    return f"<{type(array).__name__}: nnz={array.nnz:d}, fill_value={array.fill_value}>"
 
 
 def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if hasattr(var._data, "_repr_inline_"):
         return var._data._repr_inline_(max_width)
-    if var._in_memory:
+    if getattr(var, "_in_memory", False):
         return format_array_flat(var, max_width)
     dask_array_type = array_type("dask")
     if isinstance(var._data, dask_array_type):
@@ -314,8 +327,8 @@ def inline_variable_array_repr(var, max_width):
 
 def summarize_variable(
     name: Hashable,
-    var,
-    col_width: int,
+    var: Variable,
+    col_width: int | None = None,
     max_width: int | None = None,
     is_index: bool = False,
 ):
@@ -330,20 +343,22 @@ def summarize_variable(
             max_width = max_width_options
 
     marker = "*" if is_index else " "
-    first_col = pretty_print(f"  {marker} {name} ", col_width)
+    first_col = f"  {marker} {name} "
+    if col_width is not None:
+        first_col = pretty_print(first_col, col_width)
 
     if variable.dims:
-        dims_str = "({}) ".format(", ".join(map(str, variable.dims)))
+        dims_str = ", ".join(map(str, variable.dims))
+        dims_str = f"({dims_str}) "
     else:
         dims_str = ""
 
-    nbytes_str = f" {render_human_readable_nbytes(variable.nbytes)}"
-    front_str = f"{first_col}{dims_str}{variable.dtype}{nbytes_str} "
+    front_str = f"{first_col}{dims_str}{variable.dtype} {render_human_readable_nbytes(variable.nbytes)} "
 
     values_width = max_width - len(front_str)
     values_str = inline_variable_array_repr(variable, values_width)
 
-    return front_str + values_str
+    return f"{front_str}{values_str}"
 
 
 def summarize_attr(key, value, col_width=None):
@@ -428,11 +443,41 @@ attrs_repr = functools.partial(
 )
 
 
+def _coord_sort_key(coord, dims):
+    """Sort key for coordinate ordering.
+
+        Orders by:
+        1. Primary: index of the matching dimension in dataset dims.
+        2. Secondary: dimension coordinates (name == dim) come before non-dimension coordinates
+
+        This groups non-dimension coordinates right after their associated dimension
+    coordinate.
+    """
+    name, var = coord
+
+    # Dimension coordinates come first within their dim section
+    if name in dims:
+        return (dims.index(name), 0)
+
+    # Non-dimension coordinates come second within their dim section
+    # Check the var.dims list in backwards order to put (x, y) after (x) and (y)
+    for d in var.dims[::-1]:
+        if d in dims:
+            return (dims.index(d), 1)
+
+    # Scalar coords or coords with dims not in dataset dims go at the end
+    return (len(dims), 1)
+
+
 def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
+    dims = tuple(coords._data.dims)
+    dim_ordered_coords = sorted(
+        coords.items(), key=functools.partial(_coord_sort_key, dims=dims)
+    )
     return _mapping_repr(
-        coords,
+        dict(dim_ordered_coords),
         title="Coordinates",
         summarizer=summarize_variable,
         expand_option_name="display_expand_coords",
@@ -442,7 +487,22 @@ def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     )
 
 
-def inline_index_repr(index: pd.Index, max_width=None):
+def inherited_coords_repr(node: DataTree, col_width=None, max_rows=None):
+    coords = inherited_vars(node._coord_variables)
+    if col_width is None:
+        col_width = _calculate_col_width(coords)
+    return _mapping_repr(
+        coords,
+        title="Inherited coordinates",
+        summarizer=summarize_variable,
+        expand_option_name="display_expand_coords",
+        col_width=col_width,
+        indexes=node._indexes,
+        max_rows=max_rows,
+    )
+
+
+def inline_index_repr(index: pd.Index, max_width: int) -> str:
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_(max_width=max_width)
     else:
@@ -470,7 +530,7 @@ def summarize_index(
 
     preformatted = [
         pretty_print(f"  {prefix} {name}", col_width)
-        for prefix, name in zip(prefixes(len(names)), names)
+        for prefix, name in zip(prefixes(len(names)), names, strict=True)
     ]
 
     head, *tail = preformatted
@@ -494,12 +554,12 @@ def filter_nondefault_indexes(indexes, filter_indexes: bool):
     }
 
 
-def indexes_repr(indexes, max_rows: int | None = None) -> str:
+def indexes_repr(indexes, max_rows: int | None = None, title: str = "Indexes") -> str:
     col_width = _calculate_col_width(chain.from_iterable(indexes))
 
     return _mapping_repr(
         indexes,
-        "Indexes",
+        title,
         summarize_index,
         "display_expand_indexes",
         col_width=col_width,
@@ -567,8 +627,10 @@ def _element_formatter(
     return "".join(out)
 
 
-def dim_summary_limited(obj, col_width: int, max_rows: int | None = None) -> str:
-    elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
+def dim_summary_limited(
+    sizes: Mapping[Any, int], col_width: int, max_rows: int | None = None
+) -> str:
+    elements = [f"{k}: {v}" for k, v in sizes.items()]
     return _element_formatter(elements, col_width, max_rows)
 
 
@@ -610,6 +672,8 @@ def short_array_repr(array):
 
     if isinstance(array, AbstractArray):
         array = array.data
+    if isinstance(array, pd.api.extensions.ExtensionArray):
+        return repr(array)
     array = to_duck_array(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
@@ -633,6 +697,7 @@ def short_array_repr(array):
 def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
+
     if isinstance(array, np.ndarray):
         return short_array_repr(array)
     elif is_duck_array(internal_data):
@@ -672,7 +737,7 @@ def array_repr(arr):
         data_repr = inline_variable_array_repr(arr.variable, OPTIONS["display_width"])
 
     start = f"<xarray.{type(arr).__name__} {name_str}"
-    dims = dim_summary_limited(arr, col_width=len(start) + 1, max_rows=max_rows)
+    dims = dim_summary_limited(arr.sizes, col_width=len(start) + 1, max_rows=max_rows)
     nbytes_str = render_human_readable_nbytes(arr.nbytes)
     summary = [
         f"{start}({dims})> Size: {nbytes_str}",
@@ -717,7 +782,9 @@ def dataset_repr(ds):
     max_rows = OPTIONS["display_max_rows"]
 
     dims_start = pretty_print("Dimensions:", col_width)
-    dims_values = dim_summary_limited(ds, col_width=col_width + 1, max_rows=max_rows)
+    dims_values = dim_summary_limited(
+        ds.sizes, col_width=col_width + 1, max_rows=max_rows
+    )
     summary.append(f"{dims_start}({dims_values})")
 
     if ds.coords:
@@ -744,7 +811,37 @@ def dataset_repr(ds):
     return "\n".join(summary)
 
 
-def diff_dim_summary(a, b):
+def dims_and_coords_repr(ds) -> str:
+    """Partial Dataset repr for use inside DataTree inheritance errors."""
+    summary = []
+
+    col_width = _calculate_col_width(ds.coords)
+    max_rows = OPTIONS["display_max_rows"]
+
+    dims_start = pretty_print("Dimensions:", col_width)
+    dims_values = dim_summary_limited(
+        ds.sizes, col_width=col_width + 1, max_rows=max_rows
+    )
+    summary.append(f"{dims_start}({dims_values})")
+
+    if ds.coords:
+        summary.append(coords_repr(ds.coords, col_width=col_width, max_rows=max_rows))
+
+    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords, max_rows=max_rows)
+    if unindexed_dims_str:
+        summary.append(unindexed_dims_str)
+
+    return "\n".join(summary)
+
+
+def diff_name_summary(a, b) -> str:
+    if a.name != b.name:
+        return f"Differing names:\n    {a.name!r} != {b.name!r}"
+    else:
+        return ""
+
+
+def diff_dim_summary(a, b) -> str:
     if a.sizes != b.sizes:
         return f"Differing dimensions:\n    ({dim_summary(a)}) != ({dim_summary(b)})"
     else:
@@ -761,6 +858,12 @@ def _diff_mapping_repr(
     a_indexes=None,
     b_indexes=None,
 ):
+    def compare_attr(a, b):
+        if is_duck_array(a) or is_duck_array(b):
+            return array_equiv(a, b)
+        else:
+            return a == b
+
     def extra_items_repr(extra_keys, mapping, ab_side, kwargs):
         extra_repr = [
             summarizer(k, mapping[k], col_width, **kwargs[k]) for k in extra_keys
@@ -797,11 +900,7 @@ def _diff_mapping_repr(
             is_variable = True
         except AttributeError:
             # compare attribute value
-            if is_duck_array(a_mapping[k]) or is_duck_array(b_mapping[k]):
-                compatible = array_equiv(a_mapping[k], b_mapping[k])
-            else:
-                compatible = a_mapping[k] == b_mapping[k]
-
+            compatible = compare_attr(a_mapping[k], b_mapping[k])
             is_variable = False
 
         if not compatible:
@@ -817,7 +916,11 @@ def _diff_mapping_repr(
 
                 attrs_to_print = set(a_attrs) ^ set(b_attrs)
                 attrs_to_print.update(
-                    {k for k in set(a_attrs) & set(b_attrs) if a_attrs[k] != b_attrs[k]}
+                    {
+                        k
+                        for k in set(a_attrs) & set(b_attrs)
+                        if not compare_attr(a_attrs[k], b_attrs[k])
+                    }
                 )
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
@@ -830,8 +933,8 @@ def _diff_mapping_repr(
                     attrs_summary.append(attr_s)
 
                 temp = [
-                    "\n".join([var_s, attr_s]) if attr_s else var_s
-                    for var_s, attr_s in zip(temp, attrs_summary)
+                    f"{var_s}\n{attr_s}" if attr_s else var_s
+                    for var_s, attr_s in zip(temp, attrs_summary, strict=True)
                 ]
 
                 # TODO: It should be possible recursively use _diff_mapping_repr
@@ -846,7 +949,9 @@ def _diff_mapping_repr(
                 # )
                 # temp += [newdiff]
 
-            diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
+            diff_items += [
+                ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp, strict=True)
+            ]
 
     if diff_items:
         summary += [f"Differing {title.lower()}:"] + diff_items
@@ -867,8 +972,8 @@ def diff_coords_repr(a, b, compat, col_width=None):
         "Coordinates",
         summarize_variable,
         col_width=col_width,
-        a_indexes=a.indexes,
-        b_indexes=b.indexes,
+        a_indexes=a.xindexes,
+        b_indexes=b.xindexes,
     )
 
 
@@ -894,13 +999,69 @@ def _compat_to_str(compat):
         return compat
 
 
+def diff_indexes_repr(a_indexes, b_indexes, col_width: int = 20) -> str:
+    """Generate diff representation for indexes."""
+    a_keys = set(a_indexes.keys())
+    b_keys = set(b_indexes.keys())
+
+    summary = []
+
+    if only_a := a_keys - b_keys:
+        summary.append(f"Indexes only on the left object:  {sorted(only_a)}")
+
+    if only_b := b_keys - a_keys:
+        summary.append(f"Indexes only on the right object: {sorted(only_b)}")
+
+    # Check for indexes on the same coordinates but with different types or values
+    common_keys = a_keys & b_keys
+    diff_items = []
+
+    for key in sorted(common_keys):
+        a_idx = a_indexes[key]
+        b_idx = b_indexes[key]
+
+        # Check if indexes differ
+        indexes_equal = False
+        if type(a_idx) is type(b_idx):
+            try:
+                indexes_equal = a_idx.equals(b_idx)
+            except NotImplementedError:
+                # Fall back to variable comparison
+                a_var = a_indexes.variables[key]
+                b_var = b_indexes.variables[key]
+                indexes_equal = a_var.equals(b_var)
+
+        if not indexes_equal:
+            # Format the index values similar to variable diff
+            try:
+                a_repr = inline_index_repr(
+                    a_indexes.to_pandas_indexes()[key], max_width=70
+                )
+                b_repr = inline_index_repr(
+                    b_indexes.to_pandas_indexes()[key], max_width=70
+                )
+            except TypeError:
+                # Custom indexes may not support to_pandas_index()
+                a_repr = repr(a_idx)
+                b_repr = repr(b_idx)
+            diff_items.append(f"L   {key!s:<{col_width}} {a_repr}")
+            diff_items.append(f"R   {key!s:<{col_width}} {b_repr}")
+
+    if diff_items:
+        summary.append("Differing indexes:\n" + "\n".join(diff_items))
+
+    return "\n".join(summary)
+
+
 def diff_array_repr(a, b, compat):
     # used for DataArray, Variable and IndexVariable
     summary = [
         f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
     ]
 
-    summary.append(diff_dim_summary(a, b))
+    if dims_diff := diff_dim_summary(a, b):
+        summary.append(dims_diff)
+
     if callable(compat):
         equiv = compat
     else:
@@ -910,20 +1071,44 @@ def diff_array_repr(a, b, compat):
         temp = [wrap_indent(short_array_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
-            for ab_side, ab_data_repr in zip(("L", "R"), temp)
+            for ab_side, ab_data_repr in zip(("L", "R"), temp, strict=True)
         ]
         summary += ["Differing values:"] + diff_data_repr
 
     if hasattr(a, "coords"):
         col_width = _calculate_col_width(set(a.coords) | set(b.coords))
-        summary.append(
-            diff_coords_repr(a.coords, b.coords, compat, col_width=col_width)
-        )
+        if coords_diff := diff_coords_repr(
+            a.coords, b.coords, compat, col_width=col_width
+        ):
+            summary.append(coords_diff)
 
     if compat == "identical":
-        summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
+        if hasattr(a, "xindexes") and (
+            indexes_diff := diff_indexes_repr(a.xindexes, b.xindexes)
+        ):
+            summary.append(indexes_diff)
+
+        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
+            summary.append(attrs_diff)
 
     return "\n".join(summary)
+
+
+def diff_treestructure(a: DataTree, b: DataTree) -> str | None:
+    """
+    Return a summary of why two trees are not isomorphic.
+    If they are isomorphic return None.
+    """
+    # .group_subtrees walks nodes in breadth-first-order, in order to produce as
+    # shallow of a diff as possible
+    for path, (node_a, node_b) in group_subtrees(a, b):
+        if node_a.children.keys() != node_b.children.keys():
+            path_str = "root node" if path == "." else f"node {path!r}"
+            child_summary = f"{list(node_a.children)} vs {list(node_b.children)}"
+            diff = f"Children at {path_str} do not match: {child_summary}"
+            return diff
+
+    return None
 
 
 def diff_dataset_repr(a, b, compat):
@@ -933,16 +1118,168 @@ def diff_dataset_repr(a, b, compat):
 
     col_width = _calculate_col_width(set(list(a.variables) + list(b.variables)))
 
-    summary.append(diff_dim_summary(a, b))
-    summary.append(diff_coords_repr(a.coords, b.coords, compat, col_width=col_width))
-    summary.append(
-        diff_data_vars_repr(a.data_vars, b.data_vars, compat, col_width=col_width)
-    )
+    if dims_diff := diff_dim_summary(a, b):
+        summary.append(dims_diff)
+    if coords_diff := diff_coords_repr(a.coords, b.coords, compat, col_width=col_width):
+        summary.append(coords_diff)
+    if data_diff := diff_data_vars_repr(
+        a.data_vars, b.data_vars, compat, col_width=col_width
+    ):
+        summary.append(data_diff)
 
     if compat == "identical":
-        summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
+        if indexes_diff := diff_indexes_repr(a.xindexes, b.xindexes):
+            summary.append(indexes_diff)
+
+        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
+            summary.append(attrs_diff)
 
     return "\n".join(summary)
+
+
+def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
+    """Iterates over all corresponding nodes, recording differences between data at each location."""
+
+    summary = []
+    for path, (node_a, node_b) in group_subtrees(a, b):
+        a_ds, b_ds = node_a.dataset, node_b.dataset
+
+        if not a_ds._all_compat(b_ds, compat):
+            path_str = "root node" if path == "." else f"node {path!r}"
+            dataset_diff = diff_dataset_repr(a_ds, b_ds, compat)
+            data_diff = indent(
+                "\n".join(dataset_diff.split("\n", 1)[1:]), prefix="    "
+            )
+            nodediff = f"Data at {path_str} does not match:\n{data_diff}"
+            summary.append(nodediff)
+
+    return "\n\n".join(summary)
+
+
+def diff_datatree_repr(a: DataTree, b: DataTree, compat):
+    summary = [
+        f"Left and right {type(a).__name__} objects are not {_compat_to_str(compat)}"
+    ]
+
+    if compat == "identical" and (diff_name := diff_name_summary(a, b)):
+        summary.append(diff_name)
+
+    treestructure_diff = diff_treestructure(a, b)
+
+    # If the trees structures are different there is no point comparing each node,
+    # and doing so would raise an error.
+    # TODO we could show any differences in nodes up to the first place that structure differs?
+    if treestructure_diff is not None:
+        summary.append(treestructure_diff)
+    elif compat != "isomorphic":
+        nodewise_diff = diff_nodewise_summary(a, b, compat)
+        summary.append(nodewise_diff)
+
+    return "\n\n".join(summary)
+
+
+def inherited_vars(mapping: ChainMap) -> dict:
+    return {k: v for k, v in mapping.parents.items() if k not in mapping.maps[0]}
+
+
+def _datatree_node_repr(node: DataTree, root: bool) -> str:
+    summary = [f"Group: {node.path}"]
+
+    col_width = _calculate_col_width(node.variables)
+    max_rows = OPTIONS["display_max_rows"]
+
+    inherited_coords = inherited_vars(node._coord_variables)
+
+    # Only show dimensions if also showing a variable or coordinates section.
+    show_dims = (
+        node._node_coord_variables
+        or (root and inherited_coords)
+        or node._data_variables
+    )
+
+    dim_sizes = node.sizes if root else node._node_dims
+
+    if show_dims:
+        # Includes inherited dimensions.
+        dims_start = pretty_print("Dimensions:", col_width)
+        dims_values = dim_summary_limited(
+            dim_sizes, col_width=col_width + 1, max_rows=max_rows
+        )
+        summary.append(f"{dims_start}({dims_values})")
+
+    if node._node_coord_variables:
+        node_coords = node.to_dataset(inherit=False).coords
+        summary.append(coords_repr(node_coords, col_width=col_width, max_rows=max_rows))
+
+    if root and inherited_coords:
+        summary.append(
+            inherited_coords_repr(node, col_width=col_width, max_rows=max_rows)
+        )
+
+    if show_dims:
+        unindexed_dims_str = unindexed_dims_repr(
+            dim_sizes, node.coords, max_rows=max_rows
+        )
+        if unindexed_dims_str:
+            summary.append(unindexed_dims_str)
+
+    if node._data_variables:
+        summary.append(
+            data_vars_repr(node._data_variables, col_width=col_width, max_rows=max_rows)
+        )
+
+    # TODO: only show indexes defined at this node, with a separate section for
+    # inherited indexes (if root=True)
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(node.xindexes), not display_default_indexes
+    )
+    if xindexes:
+        summary.append(indexes_repr(xindexes, max_rows=max_rows))
+
+    if node.attrs:
+        summary.append(attrs_repr(node.attrs, max_rows=max_rows))
+
+    return "\n".join(summary)
+
+
+def datatree_repr(dt: DataTree) -> str:
+    """A printable representation of the structure of this entire tree."""
+    max_children = OPTIONS["display_max_children"]
+
+    renderer = RenderDataTree(dt, maxchildren=max_children)
+
+    name_info = "" if dt.name is None else f" {dt.name!r}"
+    header = f"<xarray.DataTree{name_info}>"
+
+    lines = [header]
+    root = True
+
+    for pre, fill, node in renderer:
+        if isinstance(node, str):
+            lines.append(f"{fill}{node}")
+            continue
+
+        node_repr = _datatree_node_repr(node, root=root)
+        root = False  # only the first node is the root
+
+        # TODO: figure out if we can restructure this logic to move child groups
+        # up higher in the repr, directly below the <xarray.DataTree> header.
+        # This would be more consistent with the HTML repr.
+        raw_repr_lines = node_repr.splitlines()
+
+        node_line = f"{pre}{raw_repr_lines[0]}"
+        lines.append(node_line)
+
+        for line in raw_repr_lines[1:]:
+            if len(node.children) > 0:
+                lines.append(f"{fill}{renderer.style.vertical}{line}")
+            else:
+                lines.append(f"{fill}{' ' * len(renderer.style.vertical)}{line}")
+
+    return "\n".join(lines)
 
 
 def shorten_list_repr(items: Sequence, max_items: int) -> str:

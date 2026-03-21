@@ -63,15 +63,15 @@ def test_coarsen_coords(ds, dask):
         dims="time",
         coords={"time": pd.date_range("1999-12-15", periods=364)},
     )
-    actual = da.coarsen(time=2).mean()
+    actual = da.coarsen(time=2).mean()  # type: ignore[attr-defined]
 
 
 @requires_cftime
 def test_coarsen_coords_cftime():
-    times = xr.cftime_range("2000", periods=6)
+    times = xr.date_range("2000", periods=6, use_cftime=True)
     da = xr.DataArray(range(6), [("time", times)])
-    actual = da.coarsen(time=3).mean()
-    expected_times = xr.cftime_range("2000-01-02", freq="3D", periods=2)
+    actual = da.coarsen(time=3).mean()  # type: ignore[attr-defined]
+    expected_times = xr.date_range("2000-01-02", freq="3D", periods=2, use_cftime=True)
     np.testing.assert_array_equal(actual.time, expected_times)
 
 
@@ -100,7 +100,7 @@ def test_coarsen_keep_attrs(funcname, argument) -> None:
         attrs=global_attrs,
     )
 
-    # attrs are now kept per default
+    # attrs are kept by default
     func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == global_attrs
@@ -199,18 +199,19 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
         name="name",
     )
 
-    # attrs are now kept per default
+    # attrs are kept by default
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == attrs_da
-    da.coord.attrs == attrs_coords
+    assert da.coord.attrs == attrs_coords
     assert result.name == "name"
 
     # discard attrs
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
     # test discard attrs using global option
@@ -218,7 +219,8 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     with set_options(keep_attrs=False):
         result = func(*argument)
     assert result.attrs == {}
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
     # keyword takes precedence over global option
@@ -226,14 +228,16 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     with set_options(keep_attrs=False):
         result = func(*argument, keep_attrs=True)
     assert result.attrs == attrs_da
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     with set_options(keep_attrs=True):
         result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
-    da.coord.attrs == {}
+    # XXX: no assert?
+    _ = da.coord.attrs == {}
     assert result.name == "name"
 
 
@@ -341,5 +345,5 @@ class TestCoarsenConstruct:
         assert list(da.coords) == list(result.coords)
 
         ds = da.to_dataset(name="T")
-        result = ds.coarsen(time=12).construct(time=("year", "month"))
-        assert list(da.coords) == list(result.coords)
+        ds_result = ds.coarsen(time=12).construct(time=("year", "month"))
+        assert list(da.coords) == list(ds_result.coords)

@@ -1,20 +1,24 @@
 version: 2
 
+sphinx:
+  configuration: doc/conf.py
+  fail_on_warning: true
+
 build:
-  os: ubuntu-22.04
+  os: ubuntu-lts-latest
   tools:
-    python: mambaforge-4.10
+    # just so RTD stops complaining
+    python: "latest"
   jobs:
+    create_environment:
+      - asdf plugin add pixi
+      - asdf install pixi latest
+      - asdf global pixi latest
     post_checkout:
       - (git --no-pager log --pretty="tformat:%s" -1 | grep -vqF "[skip-rtd]") || exit 183
       - git fetch --unshallow || true
-    pre_install:
-      - git update-index --assume-unchanged doc/conf.py ci/requirements/doc.yml
-
-conda:
-  environment: ci/requirements/doc.yml
-
-sphinx:
-  fail_on_warning: true
-
-formats: []
+    install:
+      - pixi install --concurrent-solves 2 -e doc
+    build:
+      html:
+        - pixi run doc BUILDDIR=$READTHEDOCS_OUTPUT

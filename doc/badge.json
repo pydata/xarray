@@ -1,0 +1,8 @@
+{
+  "label": "",
+  "message": "xarray",
+  "logoSvg": "<svg xml:space=\"preserve\" style=\"max-height: 500px\" viewBox=\"24 57.6 553.2 493.2\" y=\"0px\" x=\"0px\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/2000/svg\" id=\"Layer_1\" version=\"1.1\" width=\"553.2\" height=\"493.2\"><style type=\"text/css\">.st0{fill:#216C89;}.st1{fill:#4993AA;}.st2{fill:#0F4565;}.st3{fill:#6BE8E8;}.st4{fill:#9DEEF4;}.st5{fill:#4ACFDD;}.st6{fill:#E38017;}.st7{fill:#16AFB5;}</style><g><g><polygon points=\"266.62,546.18 356.1,454.54 356.1,271.27 266.62,362.9\" class=\"st0\"/><polygon points=\"356.1,271.45 114.48,271.45 25,362.9 266.62,362.9\" class=\"st1\"/><rect height=\"183.27\" width=\"241.62\" class=\"st2\" y=\"362.9\" x=\"25\"/></g><g><polygon points=\"266.62,328.73 356.1,237.1 356.1,53.82 266.62,145.46\" class=\"st3\"/><polygon points=\"356.1,54 114.48,54 25,145.46 266.62,145.46\" class=\"st4\"/><rect height=\"183.27\" width=\"241.62\" class=\"st5\" y=\"145.46\" x=\"25\"/></g><polygon points=\"467.47,452.33 374.48,546.18 374.48,362.9 467.47,269.05\" class=\"st6\"/><polygon points=\"575,452.33 482.01,546.18 482.01,362.9 575,269.05\" class=\"st7\"/></g></svg>",
+  "logoWidth": 14,
+  "labelColor": "#4a4a4a",
+  "color": "#0e4666"
+}

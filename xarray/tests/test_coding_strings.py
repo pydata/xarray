@@ -21,13 +21,13 @@ with suppress(ImportError):
 
 def test_vlen_dtype() -> None:
     dtype = strings.create_vlen_dtype(str)
-    assert dtype.metadata["element_type"] == str
+    assert dtype.metadata["element_type"] is str
     assert strings.is_unicode_dtype(dtype)
     assert not strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is str
 
     dtype = strings.create_vlen_dtype(bytes)
-    assert dtype.metadata["element_type"] == bytes
+    assert dtype.metadata["element_type"] is bytes
     assert not strings.is_unicode_dtype(dtype)
     assert strings.is_bytes_dtype(dtype)
     assert strings.check_vlen_dtype(dtype) is bytes
@@ -37,6 +37,16 @@ def test_vlen_dtype() -> None:
     assert strings.check_vlen_dtype(dtype) is str
 
     assert strings.check_vlen_dtype(np.dtype(object)) is None
+
+
+@pytest.mark.skipif(
+    not hasattr(np.dtypes, "StringDType"), reason="requires StringDType"
+)
+def test_is_unicode_dtype_stringdtype() -> None:
+    # GH11199
+    dtype = np.dtypes.StringDType()
+    assert strings.is_unicode_dtype(dtype)
+    assert not strings.is_bytes_dtype(dtype)
 
 
 @pytest.mark.parametrize("numpy_str_type", (np.str_, np.bytes_))
@@ -93,6 +103,20 @@ def test_EncodedStringCoder_encode() -> None:
     assert_identical(coder.encode(raw), expected)
 
 
+@pytest.mark.skipif(
+    not hasattr(np.dtypes, "StringDType"), reason="requires StringDType"
+)
+def test_encoded_string_coder_stringdtype_nulls() -> None:
+    # GH11199 — EncodedStringCoder normalizes StringDType nulls to empty strings
+    data = np.array(["ab", None], dtype=np.dtypes.StringDType(na_object=None))
+    var = Variable("x", data)
+    coder = strings.EncodedStringCoder(allows_unicode=True)
+    result = coder.encode(var)
+    expected = Variable("x", np.array(["ab", ""]))
+    assert_identical(result, expected)
+    assert result.dtype.kind == "U"
+
+
 @pytest.mark.parametrize(
     "original",
     [
@@ -135,6 +159,45 @@ def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name) -> 
     encoded = coder.encode(original)
     roundtripped = coder.decode(encoded)
     assert encoded.dims[-1] == expected_char_dim_name
+    assert roundtripped.encoding["char_dim_name"] == expected_char_dim_name
+    assert roundtripped.dims[-1] == original.dims[-1]
+
+
+@pytest.mark.parametrize(
+    [
+        "original",
+        "expected_char_dim_name",
+        "expected_char_dim_length",
+        "warning_message",
+    ],
+    [
+        (
+            Variable(("x",), [b"ab", b"cde"], encoding={"char_dim_name": "foo4"}),
+            "foo3",
+            3,
+            "String dimension naming mismatch",
+        ),
+        (
+            Variable(
+                ("x",),
+                [b"ab", b"cde"],
+                encoding={"original_shape": (2, 4), "char_dim_name": "foo"},
+            ),
+            "foo3",
+            3,
+            "String dimension length mismatch",
+        ),
+    ],
+)
+def test_CharacterArrayCoder_dim_mismatch_warnings(
+    original, expected_char_dim_name, expected_char_dim_length, warning_message
+) -> None:
+    coder = strings.CharacterArrayCoder()
+    with pytest.warns(UserWarning, match=warning_message):
+        encoded = coder.encode(original)
+    roundtripped = coder.decode(encoded)
+    assert encoded.dims[-1] == expected_char_dim_name
+    assert encoded.sizes[expected_char_dim_name] == expected_char_dim_length
     assert roundtripped.encoding["char_dim_name"] == expected_char_dim_name
     assert roundtripped.dims[-1] == original.dims[-1]
 
