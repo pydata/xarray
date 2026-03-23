@@ -85,8 +85,8 @@ class Index:
             to index.
         options : dict-like
             Keyword arguments passed to this constructor. Propagated from
-            the ``**options`` argument of :py:meth:`~xarray.DataArray.set_xindex`
-            or :py:meth:`~xarray.Dataset.set_xindex`.
+            the ``**options`` argument of :py:meth:`xarray.DataArray.set_xindex`
+            or :py:meth:`xarray.Dataset.set_xindex`.
 
         Returns
         -------
