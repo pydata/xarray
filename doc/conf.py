@@ -233,6 +233,7 @@ html_theme_options = {
     "header_links_before_dropdown": 8,
     "navbar_align": "left",
     "footer_center":["last-updated"],
+    "announcement": "Xarray now has a home in the <a href='https://ossci.zulipchat.com/'>OSSci Zulip</a>! Chat here with other devs, users, and our friends at Zarr.", # TODO: Remove a couple months'ish after 21 March 2026
     # Instead of adding these to the header bar they are linked in 'getting help' and 'contributing'
     # "icon_links": [
     # {
