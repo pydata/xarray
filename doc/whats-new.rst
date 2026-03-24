@@ -119,6 +119,8 @@ Documentation
 
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
+- Fix code blocks on "how to create custom index" doc page (:pull:`11255`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
