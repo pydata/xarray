@@ -250,14 +250,14 @@ class TestToDataset:
         subtree = typing.cast(DataTree, tree["sub"])
 
         expected = xr.Dataset(coords={"a": [1], "b": 2, "c": [3]})
-        assert_identical(subtree.to_dataset(inherit="all"), expected)
-        assert_identical(tree.to_dataset(inherit="all"), base)
+        assert_identical(subtree.to_dataset(inherit="all_coords"), expected)
+        assert_identical(tree.to_dataset(inherit="all_coords"), base)
 
         mid = xr.Dataset(coords={"c": 3.0})
         leaf = xr.Dataset(coords={"d": [4]})
         deep = DataTree.from_dict({"/": base, "/mid": mid, "/mid/leaf": leaf})
         leaf_node = typing.cast(DataTree, deep["/mid/leaf"])
-        result = leaf_node.to_dataset(inherit="all")
+        result = leaf_node.to_dataset(inherit="all_coords")
         assert set(result.coords) == {"a", "b", "c", "d"}
 
     def test_to_dataset_inherit_invalid(self) -> None:

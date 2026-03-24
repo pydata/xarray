@@ -14,7 +14,7 @@ v2026.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Added ``inherit='all'`` option to :py:meth:`DataTree.to_dataset` to inherit
+- Added ``inherit='all_coords'`` option to :py:meth:`DataTree.to_dataset` to inherit
   all parent coordinates, not just indexed ones (:issue:`10812`, :pull:`11230`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 

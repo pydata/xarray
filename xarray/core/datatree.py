@@ -596,14 +596,14 @@ class DataTree(
         )
 
     def _resolve_inherit(
-        self, inherit: bool | Literal["all", "indexes"]
+        self, inherit: bool | Literal["all_coords", "indexes"]
     ) -> tuple[Mapping[Hashable, Variable], dict[Hashable, Index]]:
         """Resolve the inherit parameter to (coord_vars, indexes)."""
         if inherit is False:
             return self._node_coord_variables, dict(self._node_indexes)
         if inherit is True or inherit == "indexes":
             return self._coord_variables, dict(self._indexes)
-        if inherit == "all":
+        if inherit == "all_coords":
             return self._coord_variables_all, dict(self._indexes)
         raise ValueError(
             f"Invalid value for inherit: {inherit!r}. "
@@ -621,7 +621,7 @@ class DataTree(
     def _to_dataset_view(
         self,
         rebuild_dims: bool,
-        inherit: bool | Literal["all", "indexes"] = True,
+        inherit: bool | Literal["all_coords", "indexes"] = True,
     ) -> DatasetView:
         coord_vars, indexes = self._resolve_inherit(inherit)
         variables = dict(self._data_variables)
@@ -695,17 +695,19 @@ class DataTree(
     # xarray-contrib/datatree
     ds = dataset
 
-    def to_dataset(self, inherit: bool | Literal["all", "indexes"] = True) -> Dataset:
+    def to_dataset(
+        self, inherit: bool | Literal["all_coords", "indexes"] = True
+    ) -> Dataset:
         """
         Return the data in this node as a new xarray.Dataset object.
 
         Parameters
         ----------
-        inherit : bool or {"all", "indexes"}, default True
+        inherit : bool or {"all_coords", "indexes"}, default True
             Controls which coordinates are inherited from parent nodes.
 
             - True or "indexes": inherit only indexed coordinates (default).
-            - "all": inherit all coordinates, including non-index coordinates.
+            - "all_coords": inherit all coordinates, including non-index coordinates.
             - False: only include coordinates defined at this node.
 
         See Also
