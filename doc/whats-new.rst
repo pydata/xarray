@@ -120,6 +120,13 @@ Documentation
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
+  as well. (:issue:`6528`, :pull:`10987`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
