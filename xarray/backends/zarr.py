@@ -2293,7 +2293,7 @@ def _build_group_members(
     group_paths: list[str],
     parent: str | None,
 ) -> dict[str, ZarrGroup]:
-    parent = parent if parent else "/"
+    parent = parent or "/"
     group_members: dict[str, ZarrGroup] = {}
 
     for path in group_paths:
