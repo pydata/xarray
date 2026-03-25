@@ -2,7 +2,7 @@
 
 # AI Usage Policy
 
-**Note:** Some Icechunk developers use AI tools as part of our development workflow.
+**Note:** Some Xarray developers use AI tools as part of our development workflow.
 We assume this is now common. Tools, patterns, and norms are evolving fast — this
 policy aims to avoid restricting contributors' choice of tooling while ensuring that:
 
@@ -74,6 +74,6 @@ that large changes be broken into smaller, reviewable pieces.
 ## Documentation
 
 The same core principles apply to both code and documentation You must review the result
-for accuracy and are ultimately responsible for all changes made. Icechunk has domain-specific
+for accuracy and are ultimately responsible for all changes made. Xarray has domain-specific
 semantics that AI tools frequently get wrong. Do not submit documentation that you
 haven't carefully read and verified.
