@@ -9,18 +9,23 @@ policy aims to avoid restricting contributors' choice of tooling while ensuring 
 - Reviewers are not overburdened
 - Contributions can be maintained
 - The submitter can vouch for and explain all changes
+- Developers can acquire new skills[^1]
 
 To that end this policy applies regardless of whether the code was written by hand, with
 AI assistance, or generated entirely by an AI tool.
 
+[^1]:
+    Over-reliance on AI tools has been shown to
+    [hinder skill formation amongst software developers](https://arxiv.org/abs/2601.20245).
+
 ## Core Principle: Changes
 
 If you submit a pull request, you are responsible for understanding and having fully reviewed
-the changes. You must be able to explain why each change is correct[^1] and how it fits into
+the changes. You must be able to explain why each change is correct[^2] and how it fits into
 the project. Strive to minimize changes to ease the burden on reviewers — avoid
 including unnecessary or loosely related changes.
 
-[^1]:
+[^2]:
     You may also open a draft PR with changes in order to discuss and receive feedback on the
     best approach if you are not sure what the best way forward is.
 
