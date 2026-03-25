@@ -18,6 +18,9 @@ New Features
   guarantees that chunks in xarray match on-disk chunks or multiples of them.
   No chunk splitting allowed. (:pull:`11060`).
   By `Julia Signell <https://github.com/jsignell>`_
+- Added ``inherit='all_coords'`` option to :py:meth:`DataTree.to_dataset` to inherit
+  all parent coordinates, not just indexed ones (:issue:`10812`, :pull:`11230`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
