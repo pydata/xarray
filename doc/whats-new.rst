@@ -129,6 +129,14 @@ Internal Changes
   runtime behavior. This enables CI integration for type stub validation and helps
   prevent type annotation regressions (:issue:`11086`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Add flox support for :py:meth:`DataArray.groupby().median`,
+  :py:meth:`Dataset.groupby().median`, :py:meth:`DataArray.resample().median`, and
+  :py:meth:`Dataset.resample().median`. This significantly speeds up median reductions
+  when flox is installed and the data chunking allows blockwise processing. For
+  incompatible chunking, a fallback to the non-flox implementation ensures backward
+  compatibility. (:issue:`11238`, :pull:`11239`). By `Samuel Le Meur-Diebolt
+  <https://github.com/sdiebolt>`_.
+
 
 .. _whats-new.2026.02.0:
 

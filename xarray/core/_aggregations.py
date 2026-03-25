@@ -4911,6 +4911,28 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 24B nan 2.0 1.5
         """
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            try:
+                return self._flox_reduce(
+                    func="median",
+                    dim=dim,
+                    skipna=skipna,
+                    numeric_only=True,
+                    # fill_value=fill_value,
+                    keep_attrs=keep_attrs,
+                    **kwargs,
+                )
+            except ValueError as e:
+                if "median is only supported for `method='blockwise'`" in str(e):
+                    # Fall back to non-flox implementation when chunking doesn't
+                    # allow blockwise processing
+                    pass
+                else:
+                    raise
         return self.reduce(
             duck_array_ops.median,
             dim=dim,
@@ -6407,6 +6429,28 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 24B 1.0 2.0 nan
         """
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            try:
+                return self._flox_reduce(
+                    func="median",
+                    dim=dim,
+                    skipna=skipna,
+                    numeric_only=True,
+                    # fill_value=fill_value,
+                    keep_attrs=keep_attrs,
+                    **kwargs,
+                )
+            except ValueError as e:
+                if "median is only supported for `method='blockwise'`" in str(e):
+                    # Fall back to non-flox implementation when chunking doesn't
+                    # allow blockwise processing
+                    pass
+                else:
+                    raise
         return self.reduce(
             duck_array_ops.median,
             dim=dim,
@@ -7804,6 +7848,27 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
         """
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            try:
+                return self._flox_reduce(
+                    func="median",
+                    dim=dim,
+                    skipna=skipna,
+                    # fill_value=fill_value,
+                    keep_attrs=keep_attrs,
+                    **kwargs,
+                )
+            except ValueError as e:
+                if "median is only supported for `method='blockwise'`" in str(e):
+                    # Fall back to non-flox implementation when chunking doesn't
+                    # allow blockwise processing
+                    pass
+                else:
+                    raise
         return self.reduce(
             duck_array_ops.median,
             dim=dim,
@@ -9192,6 +9257,27 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            try:
+                return self._flox_reduce(
+                    func="median",
+                    dim=dim,
+                    skipna=skipna,
+                    # fill_value=fill_value,
+                    keep_attrs=keep_attrs,
+                    **kwargs,
+                )
+            except ValueError as e:
+                if "median is only supported for `method='blockwise'`" in str(e):
+                    # Fall back to non-flox implementation when chunking doesn't allow
+                    # blockwise processing.
+                    pass
+                else:
+                    raise
         return self.reduce(
             duck_array_ops.median,
             dim=dim,
