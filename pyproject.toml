@@ -78,7 +78,7 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-env",
-  "pytest-mypy-plugins",
+  "pytest-mypy-plugins>=4.0.0",
   "pytest-timeout",
   "pytest-xdist",
   "pytest-asyncio",
