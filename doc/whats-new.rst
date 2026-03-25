@@ -129,6 +129,8 @@ Internal Changes
   runtime behavior. This enables CI integration for type stub validation and helps
   prevent type annotation regressions (:issue:`11086`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Remove ``setup.py`` file (:pull:`11261`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 .. _whats-new.2026.02.0:
 
