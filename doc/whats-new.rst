@@ -14,9 +14,77 @@ v2026.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added ``inherit='all_coords'`` option to :py:meth:`DataTree.to_dataset` to inherit
+  all parent coordinates, not just indexed ones (:issue:`10812`, :pull:`11230`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The minimum versions of some dependencies were changed (see table below).
+  Notably, the minimum ``zarr`` version is now 3.0. Zarr v2 format data is
+  still readable via ``zarr-python`` 3's built-in compatibility layer; however,
+  ``zarr-python`` 2 is no longer a supported dependency.
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 20
+
+   * - Dependency
+     - Old Version
+     - New Version
+   * - boto3
+     - 1.34
+     - 1.37
+   * - cartopy
+     - 0.23
+     - 0.24
+   * - dask-core
+     - 2024.6
+     - 2025.2
+   * - distributed
+     - 2024.6
+     - 2025.2
+   * - flox
+     - 0.9
+     - 0.10
+   * - h5netcdf
+     - 1.4
+     - 1.5
+   * - h5py
+     - 3.11
+     - 3.13
+   * - iris
+     - 3.9
+     - 3.11
+   * - lxml
+     - 5.1
+     - 5.3
+   * - matplotlib-base
+     - 3.8
+     - 3.10
+   * - numba
+     - 0.60
+     - 0.61
+   * - numbagg
+     - 0.8
+     - 0.9
+   * - packaging
+     - 24.1
+     - 24.2
+   * - rasterio
+     - 1.3
+     - 1.4
+   * - scipy
+     - 1.13
+     - 1.15
+   * - toolz
+     - 0.12
+     - 1.0
+   * - zarr
+     - 2.18
+     - 3.0
+
 - Xarray will no longer by default decode a variable into a
   :py:class:`np.timedelta64` dtype based on the presence of a timedelta-like
   ``"units"`` attribute alone. Instead it will rely on the presence of a
@@ -54,6 +122,8 @@ Documentation
 
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
+- Fix code blocks on "how to create custom index" doc page (:pull:`11255`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -62,6 +132,8 @@ Internal Changes
   runtime behavior. This enables CI integration for type stub validation and helps
   prevent type annotation regressions (:issue:`11086`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Remove ``setup.py`` file (:pull:`11261`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 .. _whats-new.2026.02.0:
 

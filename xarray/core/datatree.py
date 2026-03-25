@@ -589,6 +589,28 @@ class DataTree(
         )
 
     @property
+    def _coord_variables_all(self) -> ChainMap[Hashable, Variable]:
+        return ChainMap(
+            self._node_coord_variables,
+            *(p._node_coord_variables for p in self.parents),
+        )
+
+    def _resolve_inherit(
+        self, inherit: bool | Literal["all_coords", "indexes"]
+    ) -> tuple[Mapping[Hashable, Variable], dict[Hashable, Index]]:
+        """Resolve the inherit parameter to (coord_vars, indexes)."""
+        if inherit is False:
+            return self._node_coord_variables, dict(self._node_indexes)
+        if inherit is True or inherit == "indexes":
+            return self._coord_variables, dict(self._indexes)
+        if inherit == "all_coords":
+            return self._coord_variables_all, dict(self._indexes)
+        raise ValueError(
+            f"Invalid value for inherit: {inherit!r}. "
+            "Expected True, False, 'indexes', or 'all'."
+        )
+
+    @property
     def _dims(self) -> ChainMap[Hashable, int]:
         return ChainMap(self._node_dims, *(p._node_dims for p in self.parents))
 
@@ -596,8 +618,12 @@ class DataTree(
     def _indexes(self) -> ChainMap[Hashable, Index]:
         return ChainMap(self._node_indexes, *(p._node_indexes for p in self.parents))
 
-    def _to_dataset_view(self, rebuild_dims: bool, inherit: bool) -> DatasetView:
-        coord_vars = self._coord_variables if inherit else self._node_coord_variables
+    def _to_dataset_view(
+        self,
+        rebuild_dims: bool,
+        inherit: bool | Literal["all_coords", "indexes"] = True,
+    ) -> DatasetView:
+        coord_vars, indexes = self._resolve_inherit(inherit)
         variables = dict(self._data_variables)
         variables |= coord_vars
         if rebuild_dims:
@@ -636,10 +662,10 @@ class DataTree(
             dims = dict(self._node_dims)
         return DatasetView._constructor(
             variables=variables,
-            coord_names=set(self._coord_variables),
+            coord_names=set(coord_vars),
             dims=dims,
             attrs=self._attrs,
-            indexes=dict(self._indexes if inherit else self._node_indexes),
+            indexes=indexes,
             encoding=self._encoding,
             close=None,
         )
@@ -669,30 +695,39 @@ class DataTree(
     # xarray-contrib/datatree
     ds = dataset
 
-    def to_dataset(self, inherit: bool = True) -> Dataset:
+    def to_dataset(
+        self, inherit: bool | Literal["all_coords", "indexes"] = True
+    ) -> Dataset:
         """
         Return the data in this node as a new xarray.Dataset object.
 
         Parameters
         ----------
-        inherit : bool, optional
-            If False, only include coordinates and indexes defined at the level
-            of this DataTree node, excluding any inherited coordinates and indexes.
+        inherit : bool or {"all_coords", "indexes"}, default True
+            Controls which coordinates are inherited from parent nodes.
+
+            - True or "indexes": inherit only indexed coordinates (default).
+            - "all_coords": inherit all coordinates, including non-index coordinates.
+            - False: only include coordinates defined at this node.
 
         See Also
         --------
         DataTree.dataset
         """
-        coord_vars = self._coord_variables if inherit else self._node_coord_variables
+        coord_vars, indexes = self._resolve_inherit(inherit)
         variables = dict(self._data_variables)
         variables |= coord_vars
-        dims = calculate_dimensions(variables) if inherit else dict(self._node_dims)
+        dims = (
+            dict(self._node_dims)
+            if inherit is False
+            else calculate_dimensions(variables)
+        )
         return Dataset._construct_direct(
             variables,
             set(coord_vars),
             dims,
             None if self._attrs is None else dict(self._attrs),
-            dict(self._indexes if inherit else self._node_indexes),
+            indexes,
             None if self._encoding is None else dict(self._encoding),
             None,
         )
