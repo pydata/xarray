@@ -38,6 +38,8 @@ comments or review responses. Please attempt to be concise.
 Using AI to improve the language of your writing (grammar, phrasing, spelling, etc.) is
 acceptable. Be careful that it does not introduce inaccurate details in the process.
 
+Maintainers reserve the right to delete or hide comments that violate our AI policy or code of conduct.
+
 ## Code and Tests
 
 ### Review Every Line
