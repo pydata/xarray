@@ -1668,6 +1668,23 @@ class Common2dMixin:
         for ax in g.axs.flat:
             assert ax.has_data()
 
+    @pytest.mark.parametrize(
+        ["n", "ncols", "nrows"],
+        [
+            pytest.param(1, 1, 1, id="1"),
+            pytest.param(2, 2, 1, id="2"),
+            pytest.param(4, 2, 2, id="4"),
+            pytest.param(6, 3, 2, id="6"),
+            pytest.param(8, 3, 3, id="8"),
+        ],
+    )
+    def test_facetgrid_col_wrap_auto(self, n: int, ncols: int, nrows: int) -> None:
+        a = easy_array((10, 15, n))
+        d = DataArray(a, dims=["y", "x", "z"])
+        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap="auto")
+
+        assert_array_equal(g.axs.shape, [nrows, ncols])
+
     @pytest.mark.filterwarnings("ignore:This figure includes")
     def test_facetgrid_map_only_appends_mappables(self) -> None:
         a = easy_array((10, 15, 2, 3))
