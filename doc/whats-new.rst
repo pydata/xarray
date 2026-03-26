@@ -17,6 +17,9 @@ New Features
 - Added ``inherit='all_coords'`` option to :py:meth:`DataTree.to_dataset` to inherit
   all parent coordinates, not just indexed ones (:issue:`10812`, :pull:`11230`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
+- Support ``col_wrap='auto'`` in plots that will wrap the grid to be as square
+  as possible (:pull:`11266`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
