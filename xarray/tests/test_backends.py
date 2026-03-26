@@ -3570,10 +3570,6 @@ class ZarrBase(CFEncodedBase):
             {"u": (("x",), np.ones(10), {"variable": "modified"})},
             attrs={"global": "modified"},
         )
-        global_modified = Dataset(
-            {"u": (("x",), np.ones(10), {"variable": "original"})},
-            attrs={"global": "modified"},
-        )
         only_new_data = Dataset(
             {"u": (("x",), np.ones(10), {"variable": "original"})},
             attrs={"global": "original"},
@@ -3583,10 +3579,7 @@ class ZarrBase(CFEncodedBase):
             original.to_zarr(store, compute=False, **self.version_kwargs)
             both_modified.to_zarr(store, mode="a", **self.version_kwargs)
             with self.open(store) as actual:
-                # NOTE: this arguably incorrect -- we should probably be
-                # overriding the variable metadata, too. See the TODO note in
-                # ZarrStore.set_variables.
-                assert_identical(actual, global_modified)
+                assert_identical(actual, both_modified)
 
         with self.create_zarr_target() as store:
             original.to_zarr(store, compute=False, **self.version_kwargs)
@@ -3998,7 +3991,7 @@ class TestInstrumentedZarrStore:
             # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
             if has_zarr_v3:
                 expected = {
-                    "set": 4,
+                    "set": 6,
                     "get": 9,  # TODO: fixme upstream (should be 8)
                     "list_dir": 2,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
@@ -4021,7 +4014,7 @@ class TestInstrumentedZarrStore:
 
             if has_zarr_v3:
                 expected = {
-                    "set": 4,
+                    "set": 6,
                     "get": 9,  # TODO: fixme upstream (should be 8)
                     "list_dir": 2,  # TODO: fixme upstream (should be 2)
                     "list_prefix": 0,
