@@ -1045,6 +1045,14 @@ class ZarrStore(AbstractWritableDataStore):
                 )
 
         if self._mode not in ["r", "r+"]:
+            has_variable_attrs = any(v.attrs for v in variables.values())
+            if self._write_region is not None and (attributes or has_variable_attrs):
+                emit_user_level_warning(
+                    "to_zarr() with a region write is updating attrs in append mode. "
+                    "Attrs are global metadata and concurrent region writes may race; "
+                    "consider serializing metadata updates.",
+                    RuntimeWarning,
+                )
             self.set_attributes(attributes)
             self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
 

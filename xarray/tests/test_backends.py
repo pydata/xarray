@@ -3523,6 +3523,42 @@ class ZarrBase(CFEncodedBase):
             with xr.open_zarr(store, **self.version_kwargs) as actual:
                 assert_identical(actual, nonzeros)
 
+    def test_write_region_mode_a_warns_on_attr_updates(self) -> None:
+        original = Dataset({"u": (("x",), np.zeros(4))})
+        modified = Dataset(
+            {"u": (("x",), np.ones(2), {"variable": "modified"})},
+            attrs={"global": "modified"},
+        )
+
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, **self.version_kwargs)
+
+            with pytest.warns(RuntimeWarning, match="region write is updating attrs"):
+                modified.to_zarr(
+                    store,
+                    mode="a",
+                    region={"x": slice(0, 2)},
+                    **self.version_kwargs,
+                )
+
+    def test_write_region_mode_rplus_no_warning_on_attr_updates(self) -> None:
+        original = Dataset({"u": (("x",), np.zeros(4))})
+        modified = Dataset(
+            {"u": (("x",), np.ones(2), {"variable": "modified"})},
+            attrs={"global": "modified"},
+        )
+
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, **self.version_kwargs)
+
+            with assert_no_warnings():
+                modified.to_zarr(
+                    store,
+                    mode="r+",
+                    region={"x": slice(0, 2)},
+                    **self.version_kwargs,
+                )
+
     @requires_dask
     def test_write_preexisting_override_metadata(self) -> None:
         """Metadata should be overridden if mode="a" but not in mode="r+"."""
