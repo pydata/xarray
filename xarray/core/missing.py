@@ -755,6 +755,8 @@ def interp_na(
     # This was the original behaviour of interp_na and is kept for backward compatibility
     # Limit=None: Fill everything, including both boundaries
     # Limit!=None: Do forward interpolation until limit
+    # limit_use_coordinate: Always False
+    # max_gap_use_coordinate: use_coordinate, so same as interpolation.
     limit_use_coordinate = False
     limit_direction: LimitDirectionOptions = "both" if limit is None else "forward"
     limit_area = None
