@@ -1205,6 +1205,8 @@ class ZarrStore(AbstractWritableDataStore):
                 else:
                     del v.encoding["_FillValue"]
 
+            encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
+
             zarr_shape = None
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
@@ -1228,6 +1230,11 @@ class ZarrStore(AbstractWritableDataStore):
                     zarr_array.resize(new_shape)
 
                 zarr_shape = zarr_array.shape
+
+                if self._mode in ["a", "a-"]:
+                    if not is_zarr_v3_format:
+                        encoded_attrs[DIMENSION_KEY] = dims
+                    zarr_array = _put_attrs(zarr_array, encoded_attrs)
             region = tuple(write_region[dim] for dim in dims)
 
             # We need to do this for both new and existing variables to ensure we're not
@@ -1278,7 +1285,6 @@ class ZarrStore(AbstractWritableDataStore):
 
             if self._mode == "w" or name not in existing_keys:
                 # new variable
-                encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
                 # the magic for storing the hidden dimension data
                 if is_zarr_v3_format:
                     encoding["dimension_names"] = dims

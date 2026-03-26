@@ -6957,6 +6957,41 @@ class TestDataArrayToZarr:
         with open_dataarray(tmp_store, engine="zarr") as loaded_da:
             assert_identical(arr, loaded_da)
 
+    def test_dataarray_to_zarr_mode_a_updates_attrs(self, tmp_store) -> None:
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
+
+        DataArray(np.array([0]), dims=["x"]).assign_attrs(a=1).to_zarr(
+            tmp_store, mode="w"
+        )
+        open_dataarray(tmp_store, engine="zarr").assign_attrs(b=2).to_zarr(
+            tmp_store, mode="a"
+        )
+
+        with open_dataarray(tmp_store, engine="zarr") as loaded_da:
+            assert loaded_da.attrs == {"a": 1, "b": 2}
+
+    def test_dataset_and_dataarray_mode_a_attrs_are_consistent(self, tmp_store) -> None:
+        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
+
+        ds_group = "dataset"
+        da_group = "dataarray"
+
+        Dataset().assign_attrs(a=1).to_zarr(tmp_store, mode="w", group=ds_group)
+        open_dataset(tmp_store, engine="zarr", group=ds_group).assign_attrs(
+            b=2
+        ).to_zarr(tmp_store, mode="a", group=ds_group)
+
+        DataArray(np.array([0]), dims=["x"]).assign_attrs(a=1).to_zarr(
+            tmp_store, mode="w", group=da_group
+        )
+        open_dataarray(tmp_store, engine="zarr", group=da_group).assign_attrs(
+            b=2
+        ).to_zarr(tmp_store, mode="a", group=da_group)
+
+        with open_dataset(tmp_store, engine="zarr", group=ds_group) as loaded_ds:
+            with open_dataarray(tmp_store, engine="zarr", group=da_group) as loaded_da:
+                assert loaded_ds.attrs == loaded_da.attrs
+
 
 @requires_scipy_or_netCDF4
 def test_no_warning_from_dask_effective_get() -> None:
