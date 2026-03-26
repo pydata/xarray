@@ -6992,9 +6992,8 @@ class TestDataArrayToZarr:
         DataArray(np.array([0]), dims=["x"]).assign_attrs(a=1).to_zarr(
             tmp_store, mode="w"
         )
-        open_dataarray(tmp_store, engine="zarr").assign_attrs(b=2).to_zarr(
-            tmp_store, mode="a"
-        )
+        with open_dataarray(tmp_store, engine="zarr") as da:
+            da.assign_attrs(b=2).to_zarr(tmp_store, mode="a")
 
         with open_dataarray(tmp_store, engine="zarr") as loaded_da:
             assert loaded_da.attrs == {"a": 1, "b": 2}
@@ -7006,16 +7005,14 @@ class TestDataArrayToZarr:
         da_group = "dataarray"
 
         Dataset().assign_attrs(a=1).to_zarr(tmp_store, mode="w", group=ds_group)
-        open_dataset(tmp_store, engine="zarr", group=ds_group).assign_attrs(
-            b=2
-        ).to_zarr(tmp_store, mode="a", group=ds_group)
+        with open_dataset(tmp_store, engine="zarr", group=ds_group) as ds:
+            ds.assign_attrs(b=2).to_zarr(tmp_store, mode="a", group=ds_group)
 
         DataArray(np.array([0]), dims=["x"]).assign_attrs(a=1).to_zarr(
             tmp_store, mode="w", group=da_group
         )
-        open_dataarray(tmp_store, engine="zarr", group=da_group).assign_attrs(
-            b=2
-        ).to_zarr(tmp_store, mode="a", group=da_group)
+        with open_dataarray(tmp_store, engine="zarr", group=da_group) as da:
+            da.assign_attrs(b=2).to_zarr(tmp_store, mode="a", group=da_group)
 
         with open_dataset(tmp_store, engine="zarr", group=ds_group) as loaded_ds:
             with open_dataarray(tmp_store, engine="zarr", group=da_group) as loaded_da:
