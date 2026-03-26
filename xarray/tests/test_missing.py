@@ -202,6 +202,7 @@ def test_interpolate_pd_compat_polynomial():
 
 
 @requires_scipy
+@requires_bottleneck
 def test_interpolate_pd_compat_limits():
     shapes = [(7, 7)]
     method = "slinear"  # need slinear, since pandas does constant extrapolation for methods 'time', 'index', 'values'
@@ -450,7 +451,17 @@ def test_interpolate_methods():
         actual = da.interpolate_na("x", method=method, **kwargs)  # type: ignore[arg-type]
         assert actual.isnull().sum() == 0
 
-        actual = da.interpolate_na("x", method=method, limit=2, **kwargs)  # type: ignore[arg-type]
+
+@requires_bottleneck
+@requires_scipy
+def test_interpolate_methods_limit():
+    for method in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
+        kwargs: dict[str, Any] = {}
+        da = xr.DataArray(
+            np.array([0, 1, 2, np.nan, np.nan, np.nan, 6, 7, 8], dtype=np.float64),
+            dims="x",
+        )
+        actual = da.interpolate_na("x", method=method, limit=2, **kwargs)
         assert actual.isnull().sum() == 1
 
 
