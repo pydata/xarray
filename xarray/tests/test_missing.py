@@ -415,7 +415,7 @@ def test_interpolate_limits():
 @requires_bottleneck
 def test_interpolate_double_coordinate():
     # Check if max_gap is able to handle string coordinate names
-    # Limit is always refering to an index
+    # Limit is always referring to an index
     n = np.nan
     da = xr.DataArray(
         [[1, n, n, 4, n, 6, 7], [1, n, n, n, 5, n, n]],

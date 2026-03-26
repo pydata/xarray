@@ -13,7 +13,7 @@ import pandas as pd
 
 from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core import utils
-from xarray.core.common import _contains_datetime_like_objects, ones_like
+from xarray.core.common import _contains_datetime_like_objects
 from xarray.core.duck_array_ops import (
     datetime_to_numeric,
     push,

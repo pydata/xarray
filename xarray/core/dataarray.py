@@ -98,7 +98,6 @@ if TYPE_CHECKING:
     from xarray.core.groupby import DataArrayGroupBy
     from xarray.core.missing import GapMask
     from xarray.core.resample import DataArrayResample
-    from xarray.core.missing import GapMask
     from xarray.core.types import (
         CoarsenBoundaryOptions,
         DatetimeLike,
