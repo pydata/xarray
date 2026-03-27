@@ -234,7 +234,7 @@ sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-inline-tabs = "*"
 sphinx-llm = ">=0.2.1"
-sphinx = ">=6,<8"
+sphinx = ">=8,<9"
 sphinxcontrib-mermaid = "*"
 sphinxcontrib-srclinks = "*"
 sphinx-remove-toctrees = "*"
@@ -242,10 +242,19 @@ sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
 myst-parser = "*"
+jupyterlite-sphinx = ">=0.22.1"
+jupyterlite-xeus = ">=4.4.1"
 
 [feature.doc.tasks]
-doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation." }
-doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch." }
+_prepare-environment = { cmd = "python create_environment.py", cwd = "doc" }
+doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation.", depends-on = [
+  "_prepare-environment",
+] }
+doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch.", depends-on = [
+  "build",
+  "_prepare-environment",
+] }
+host-static-doc = { cmd = "python -m http.server -b 127.0.0.1 -d _build/html 5455", cwd = "doc", description = "serve the static documentation" }
 linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in documentation." }
 
 
@@ -345,6 +354,37 @@ rst-to-myst = { version = "*", extras = ["sphinx"] }
 
 [feature.tools.tasks]
 rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
+
+[feature.build-package.dependencies]
+gitpython = "*"
+cytoolz = "*"
+packaging = "*"
+rattler-build = "*"
+
+[feature.build-package.tasks.prepare-recipe]
+cmd = "python ci/recipe/prepare_recipe.py"
+cwd = "."
+
+[feature.build-package.tasks.build]
+cmd = [
+  "rattler-build",
+  "build",
+  "-c",
+  "conda-forge",
+  "--recipe",
+  "ci/recipe/recipe.yaml",
+  "--output-dir",
+  "local_channel",
+]
+cwd = "."
+depends-on = ["prepare-recipe"]
+
+[tasks]
+build-and-host-doc = [
+  { task = "build" },
+  { task = "doc" },
+  { task = "host-static-doc" },
+]
 
 [environments]
 # Testing
@@ -459,3 +499,7 @@ default = { features = [
 ] }
 policy = { features = ["policy"], no-default-feature = true }
 tools = { features = ["tools"], no-default-feature = true }
+build-package = { features = [
+  "build-package",
+  "release",
+], no-default-feature = true }
