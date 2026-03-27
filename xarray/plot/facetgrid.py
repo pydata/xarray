@@ -148,7 +148,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         col_wrap : int, None or "auto", optional
             "Wrap" the grid for the column variable after this number of columns,
             adding rows if ``col_wrap`` is less than the number of facets.
-            If "auto" make the grid as square as possible.
+            If "auto" align the grid to the figsize or keep it as square as possible.
         sharex : bool, default: True
             If true, the facets will share *x* axes.
         sharey : bool, default: True
@@ -195,11 +195,18 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         else:
             raise ValueError("Pass a coordinate name as an argument for row or col")
 
+        # exhaust generators
+        figsize = None if figsize is None else tuple(s for s in figsize)
+
         # Compute grid shape
         if single_group:
             nfacet = len(data[single_group])
             if col_wrap == "auto":
-                ncol = int(np.ceil(np.sqrt(nfacet)))
+                # try to align the grid to the figsize. If figsize is unknown it gets
+                # computed from the grid, so lets make it square in this case.
+                faspect = 1 if figsize is None else (figsize[0] / figsize[1])
+                # only wrap if > 3 images
+                ncol = int(np.ceil(np.sqrt(nfacet * faspect))) if nfacet > 3 else nfacet
             elif col_wrap is None:
                 ncol = nfacet if col else 1
             else:

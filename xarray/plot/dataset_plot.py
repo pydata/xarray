@@ -68,7 +68,7 @@ col : Hashable or None, optional
 col_wrap : int, None or "auto", optional
     "Wrap" the grid for the column variable after this number of columns,
     adding rows if ``col_wrap`` is less than the number of facets.
-    If "auto" make the grid as square as possible.
+    If "auto" align the grid to the figsize or keep it as square as possible.
 ax : matplotlib axes object or None, optional
     If ``None``, use the current axes. Not applicable when using facets.
 figsize : Iterable[float] or None, optional

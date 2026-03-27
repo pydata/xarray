@@ -258,7 +258,7 @@ def plot(
     col_wrap : int, None or "auto", optional
         "Wrap" the grid for the column variable after this number of columns,
         adding rows if ``col_wrap`` is less than the number of facets.
-        If "auto" make the grid as square as possible.
+        If "auto" align the grid to the figsize or keep it as square as possible.
     ax : matplotlib axes object, optional
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size``, ``figsize`` and facets.
@@ -745,7 +745,7 @@ col : Hashable, optional
 col_wrap : int, None or "auto", optional
     "Wrap" the grid for the column variable after this number of columns,
     adding rows if ``col_wrap`` is less than the number of facets.
-    If "auto" make the grid as square as possible.
+    If "auto" align the grid to the figsize or keep it as square as possible.
 ax : matplotlib axes object, optional
     If None, uses the current axis. Not applicable when using facets.
 figsize : Iterable[float] or None, optional
@@ -1315,7 +1315,7 @@ col : Hashable or None, optional
 col_wrap : int, None or "auto", optional
     "Wrap" the grid for the column variable after this number of columns,
     adding rows if ``col_wrap`` is less than the number of facets.
-    If "auto" make the grid as square as possible.
+    If "auto" align the grid to the figsize or keep it as square as possible.
 xincrease : None, True, or False, optional
     Should the values on the *x* axis be increasing from left to right?
     If ``None``, use the default for the Matplotlib function.
