@@ -196,7 +196,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             raise ValueError("Pass a coordinate name as an argument for row or col")
 
         # exhaust generators
-        figsize = None if figsize is None else tuple(s for s in figsize)
+        figsize = None if figsize is None else tuple(figsize)
 
         # Compute grid shape
         if single_group:
