@@ -219,7 +219,7 @@ for more.
 
 All of the above methods by default fill gaps of any size in the data. If you want fine control over the size of the gaps that are filled, you can use  :py:meth:`~xarray.DataArray.fill_gaps`. For example, consider a series of air temperature measurements with gaps:
 
-.. ipython:: python
+.. jupyter-execute::
 
     n = np.nan
     temperature = xr.DataArray(
