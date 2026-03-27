@@ -203,10 +203,14 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             nfacet = len(data[single_group])
             if col_wrap == "auto":
                 # try to align the grid to the figsize. If figsize is unknown it gets
-                # computed from the grid, so lets make it square in this case.
-                faspect = 1 if figsize is None else (figsize[0] / figsize[1])
+                # computed from the grid, so lets keep it as square as possible
+                faspect = 1 if figsize is None else figsize[0] / figsize[1]
                 # only wrap if > 3 images
-                ncol = int(np.ceil(np.sqrt(nfacet * faspect))) if nfacet > 3 else nfacet
+                ncol = (
+                    min(nfacet, int(np.ceil(np.sqrt(nfacet * faspect))))
+                    if nfacet > 3
+                    else nfacet
+                )
             elif col_wrap is None:
                 ncol = nfacet if col else 1
             else:
