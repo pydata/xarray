@@ -56,6 +56,31 @@ def _nicetitle(coord, value, maxchar, template):
     return title
 
 
+def _auto_grid(
+    nfacet: int, figsize: tuple[float, ...] | None, aspect: float
+) -> tuple[int, int]:
+
+    # Try to align the grid to the figsize. If figsize is unknown it gets
+    # computed from the grid, so lets keep it as square as possible
+    faspect = 1 if figsize is None else figsize[0] / figsize[1]
+
+    # Only wrap if > 3 images
+    if nfacet <= 3:
+        return nfacet, 1
+
+    # Geometric ideal case
+    ncol = int(np.ceil(np.sqrt(nfacet * faspect / aspect)))
+    ncol = max(1, min(ncol, nfacet))
+    nrow = int(np.ceil(nfacet / ncol))
+
+    # Reduce columns as long as we don't need more rows
+    # This eliminates empty slots in the last row if aspect < 1
+    while ncol > 1 and (ncol - 1) * nrow >= nfacet:
+        ncol -= 1
+
+    return ncol, nrow
+
+
 T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
 
 
@@ -202,20 +227,13 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         if single_group:
             nfacet = len(data[single_group])
             if col_wrap == "auto":
-                # try to align the grid to the figsize. If figsize is unknown it gets
-                # computed from the grid, so lets keep it as square as possible
-                faspect = 1 if figsize is None else figsize[0] / figsize[1]
-                # only wrap if > 3 images
-                ncol = (
-                    min(nfacet, int(np.ceil(np.sqrt(nfacet * faspect))))
-                    if nfacet > 3
-                    else nfacet
-                )
+                ncol, nrow = _auto_grid(nfacet, figsize, aspect)
             elif col_wrap is None:
                 ncol = nfacet if col else 1
+                nrow = int(np.ceil(nfacet / ncol))
             else:
                 ncol = col_wrap
-            nrow = int(np.ceil(nfacet / ncol))
+                nrow = int(np.ceil(nfacet / ncol))
 
         # Set the subplot kwargs
         subplot_kws = {} if subplot_kws is None else subplot_kws
