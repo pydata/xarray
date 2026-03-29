@@ -74,7 +74,7 @@ if TYPE_CHECKING:
         use_new_combine_kwarg_defaults: bool
         use_numbagg: bool
         use_opt_einsum: bool
-        facetgrid_figsize: Literal["computed", "rcparams"]
+        facetgrid_figsize: Literal["computed", "rcparams"] | tuple[float, float]
 
 
 OPTIONS: T_Options = {
@@ -148,7 +148,11 @@ _VALIDATORS = {
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
-    "facetgrid_figsize": _FACETGRID_FIGSIZE_OPTIONS.__contains__,
+    "facetgrid_figsize": lambda value: value in _FACETGRID_FIGSIZE_OPTIONS or (
+        isinstance(value, tuple)
+        and len(value) == 2
+        and all(isinstance(v, (int, float)) for v in value)
+    ),
 }
 
 
@@ -227,7 +231,7 @@ class set_options:
     chunk_manager : str, default: "dask"
         Chunk manager to use for chunked array computations when multiple
         options are installed.
-    facetgrid_figsize : {"computed", "rcparams"}, default: "computed"
+    facetgrid_figsize : {"computed", "rcparams"} or tuple of float, default: "computed"
         How :class:`~xarray.plot.FacetGrid` determines figure size when
         ``figsize`` is not explicitly passed:
 
@@ -235,6 +239,7 @@ class set_options:
           parameters (current default behavior).
         * ``"rcparams"`` : use ``matplotlib.rcParams['figure.figsize']`` as the
           total figure size.
+        * ``(width, height)`` : use a fixed figure size (in inches).
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
@@ -371,7 +376,10 @@ class set_options:
                 elif k == "display_style":
                     expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
                 elif k == "facetgrid_figsize":
-                    expected = f"Expected one of {_FACETGRID_FIGSIZE_OPTIONS!r}"
+                    expected = (
+                        f"Expected one of {_FACETGRID_FIGSIZE_OPTIONS!r}"
+                        " or a (width, height) tuple of floats"
+                    )
                 elif k == "netcdf_engine_order":
                     expected = f"Expected a subset of {sorted(_NETCDF_ENGINES)}"
                 else:

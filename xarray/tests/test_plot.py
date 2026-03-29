@@ -3598,6 +3598,13 @@ def test_facetgrid_figsize_rcparams() -> None:
                 np.testing.assert_allclose(actual_figsize, custom_figsize)
 
     with figure_context():
+        # Tuple mode: fixed figsize via set_options
+        with xr.set_options(facetgrid_figsize=(14.0, 5.0)):
+            g = xplt.FacetGrid(da, col="z")
+            actual_figsize = g.fig.get_size_inches()
+            np.testing.assert_allclose(actual_figsize, (14.0, 5.0))
+
+    with figure_context():
         # Explicit figsize should override the option
         with xr.set_options(facetgrid_figsize="rcparams"):
             explicit_size = (6.0, 4.0)

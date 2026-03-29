@@ -157,7 +157,8 @@ New Features
 
 - Added ``facetgrid_figsize`` option to :py:func:`~xarray.set_options` allowing
   :py:class:`~xarray.plot.FacetGrid` to use ``matplotlib.rcParams['figure.figsize']``
-  instead of computing figure size from ``size`` and ``aspect`` (:issue:`11103`).
+  or a fixed ``(width, height)`` tuple instead of computing figure size from
+  ``size`` and ``aspect`` (:issue:`11103`).
   By `Kristian Kollsga <https://github.com/kkollsga>`_.
 - :py:class:`~xarray.indexes.NDPointIndex` now supports coordinates with fewer
   dimensions than coordinate variables, enabling indexing of scattered points

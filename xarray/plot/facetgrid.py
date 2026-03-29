@@ -195,6 +195,19 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         else:
             raise ValueError("Pass a coordinate name as an argument for row or col")
 
+        # Resolve figsize from global option before computing grid shape,
+        # so that downstream heuristics (e.g. col_wrap="auto") can use it.
+        if figsize is None:
+            from xarray.core.options import OPTIONS
+
+            facetgrid_figsize = OPTIONS["facetgrid_figsize"]
+            if isinstance(facetgrid_figsize, tuple):
+                figsize = facetgrid_figsize
+            elif facetgrid_figsize == "rcparams":
+                import matplotlib as mpl
+
+                figsize = tuple(mpl.rcParams["figure.figsize"])
+
         # Compute grid shape
         if single_group:
             nfacet = len(data[single_group])
@@ -212,17 +225,10 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         subplot_kws = {} if subplot_kws is None else subplot_kws
 
         if figsize is None:
-            from xarray.core.options import OPTIONS
-
-            if OPTIONS["facetgrid_figsize"] == "rcparams":
-                import matplotlib as mpl
-
-                figsize = tuple(mpl.rcParams["figure.figsize"])
-            else:
-                # Calculate the base figure size with extra horizontal space
-                # for a colorbar
-                cbar_space = 1
-                figsize = (ncol * size * aspect + cbar_space, nrow * size)
+            # Calculate the base figure size with extra horizontal space
+            # for a colorbar
+            cbar_space = 1
+            figsize = (ncol * size * aspect + cbar_space, nrow * size)
 
         fig, axs = plt.subplots(
             nrow,
