@@ -20,7 +20,7 @@ from contextlib import ExitStack
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 from unittest.mock import patch
 
 import numpy as np
@@ -44,7 +44,7 @@ from xarray import (
     open_mfdataset,
     save_mfdataset,
 )
-from xarray.backends.common import robust_getitem
+from xarray.backends.common import _open_remote_file, robust_getitem
 from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import (
@@ -149,6 +149,12 @@ else:
     WrapperStore = object  # type: ignore[assignment,misc,unused-ignore]
     ZARR_FORMATS = []
 
+if TYPE_CHECKING:
+    from zarr.abc.store import Store as ZarrStoreABC
+
+    from xarray import Variable
+    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
+
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
 def default_zarr_format(request) -> Generator[None, None]:
@@ -235,9 +241,6 @@ def _check_compression_codec_available(codec: str | None) -> bool:
 
 
 dask_array_type = array_type("dask")
-
-if TYPE_CHECKING:
-    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
 
 
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
@@ -524,7 +527,7 @@ class DatasetIOBase:
 
             actual_dtype = actual.variables[k].dtype
             # TODO: check expected behavior for string dtypes more carefully
-            string_kinds = {"O", "S", "U"}
+            string_kinds = {"O", "S", "U", "T"}
             assert expected_dtype == actual_dtype or (
                 expected_dtype.kind in string_kinds
                 and actual_dtype.kind in string_kinds
@@ -698,6 +701,31 @@ class DatasetIOBase:
 
     def test_roundtrip_string_data(self) -> None:
         expected = Dataset({"x": ("t", ["ab", "cdef"])})
+        with self.roundtrip(expected) as actual:
+            assert_identical(expected, actual)
+
+    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+    def test_roundtrip_stringdtype_data(self) -> None:
+        # GH11199
+        data = np.array(["ab", "cdef"], dtype=np.dtypes.StringDType())
+        expected = Dataset({"x": ("t", data)})
+        with self.roundtrip(expected) as actual:
+            assert_identical(expected, actual)
+
+    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+    def test_roundtrip_stringdtype_nulls(self) -> None:
+        # GH11199 — null values in StringDType are written as empty strings
+        data = np.array(["ab", None], dtype=np.dtypes.StringDType(na_object=None))
+        ds = Dataset({"x": ("t", data)})
+        with self.roundtrip(ds) as actual:
+            expected = Dataset({"x": ("t", np.array(["ab", ""]))})
+            assert_identical(expected, actual)
+
+    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+    def test_roundtrip_stringdtype_with_na_object(self) -> None:
+        # GH11199 — StringDType(na_object="") should roundtrip correctly
+        data = np.array(["ab", "cdef"], dtype=np.dtypes.StringDType(na_object=""))
+        expected = Dataset({"x": ("t", data)})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
@@ -2067,8 +2095,8 @@ class NetCDF4Base(NetCDFBase):
 
             # now check xarray
             with open_dataset(tmp_file) as ds:
-                expected = create_masked_and_scaled_data(np.dtype(dtype))
-                assert_identical(expected, ds)
+                expected_ds = create_masked_and_scaled_data(np.dtype(dtype))
+                assert_identical(expected_ds, ds)
 
     def test_0dimensional_variable(self) -> None:
         # This fix verifies our work-around to this netCDF4-python bug:
@@ -4158,7 +4186,7 @@ class TestZarrDictStore(ZarrBase):
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     async def test_concurrent_load_multiple_objects(
         self,
-        cls_name,
+        cls_name: Literal["Variable", "DataArray", "Dataset"],
     ) -> None:
         N_OBJECTS = 5
         N_LAZY_VARS = {
@@ -4244,8 +4272,8 @@ class TestZarrDictStore(ZarrBase):
     )
     async def test_indexing(
         self,
-        cls_name,
-        method,
+        cls_name: Literal["Variable", "DataArray", "Dataset"],
+        method: Literal["sel", "isel"],
         indexer,
         target_zarr_class,
     ) -> None:
@@ -4344,9 +4372,27 @@ class TestZarrDictStore(ZarrBase):
                 await var.isel(**indexer).load_async()
 
 
+@overload
+def get_xr_obj(store: ZarrStoreABC, cls_name: Literal["Variable"]) -> Variable: ...
+
+
+@overload
+def get_xr_obj(store: ZarrStoreABC, cls_name: Literal["DataArray"]) -> DataArray: ...
+
+
+@overload
+def get_xr_obj(store: ZarrStoreABC, cls_name: Literal["Dataset"]) -> Dataset: ...
+
+
+@overload
 def get_xr_obj(
-    store: zarr.abc.store.Store, cls_name: Literal["Variable", "DataArray", "Dataset"]
-):
+    store: ZarrStoreABC, cls_name: Literal["Variable", "DataArray", "Dataset"]
+) -> Variable | DataArray | Dataset: ...
+
+
+def get_xr_obj(
+    store: ZarrStoreABC, cls_name: Literal["Variable", "DataArray", "Dataset"]
+) -> Variable | DataArray | Dataset:
     ds = xr.open_zarr(store, consolidated=False, chunks=None)
 
     match cls_name:
@@ -5296,6 +5342,62 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
         with self.roundtrip(ds) as actual:
             assert actual["x"].encoding["chunksizes"] == (50, 100)
             assert actual["y"].encoding["chunksizes"] == (100, 50)
+
+
+@requires_h5netcdf
+@requires_fsspec
+@pytest.mark.parametrize(
+    "open_kwargs, expected_cache_type, expected_block_size",
+    [
+        # Default: blockcache with 4MB block size
+        (None, "blockcache", 4 * 1024 * 1024),
+        ({}, "blockcache", 4 * 1024 * 1024),
+        # Custom block_size still uses blockcache
+        ({"block_size": 8 * 1024 * 1024}, "blockcache", 8 * 1024 * 1024),
+        # Explicit blockcache with default block_size
+        ({"cache_type": "blockcache"}, "blockcache", 4 * 1024 * 1024),
+        # Custom cache_type: no block_size default injected
+        ({"cache_type": "readahead"}, "readahead", None),
+    ],
+    ids=["default", "empty-dict", "8mb", "blockcache", "readahead"],
+)
+def test_h5netcdf_open_kwargs(
+    open_kwargs, expected_cache_type, expected_block_size
+) -> None:
+    """Test that open_kwargs are forwarded to the remote file opener."""
+    expected = create_test_data()
+    with create_tmp_file() as tmp_file:
+        expected.to_netcdf(tmp_file, engine="h5netcdf")
+
+        captured = {}
+
+        def capturing_open_remote_file(
+            file, mode, storage_options=None, open_kwargs=None
+        ):
+            captured["open_kwargs"] = open_kwargs
+            return _open_remote_file(
+                file,
+                mode=mode,
+                storage_options=storage_options,
+                open_kwargs=open_kwargs,
+            )
+
+        with patch(
+            "xarray.backends.h5netcdf_._open_remote_file",
+            side_effect=capturing_open_remote_file,
+        ):
+            # Use a file:// URI so is_remote_uri returns True and _open_remote_file is called
+            file_uri = f"file://{tmp_file}"
+            with open_dataset(
+                file_uri, engine="h5netcdf", open_kwargs=open_kwargs
+            ) as actual:
+                assert_identical(actual, expected)
+
+        assert captured["open_kwargs"]["cache_type"] == expected_cache_type
+        if expected_block_size is None:
+            assert "block_size" not in captured["open_kwargs"]
+        else:
+            assert captured["open_kwargs"]["block_size"] == expected_block_size
 
 
 @requires_netCDF4

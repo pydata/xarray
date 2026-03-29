@@ -397,7 +397,7 @@ def _check_date_for_units_since_refdate(
     delta = date * np.timedelta64(1, unit)
     if not np.isnan(delta):
         # this will raise on dtype overflow for integer dtypes
-        if date.dtype.kind in "u" and not np.int64(delta) == date:
+        if date.dtype.kind == "u" and not np.int64(delta) == date:
             raise OutOfBoundsTimedelta(
                 "DType overflow in Datetime/Timedelta calculation."
             )
@@ -421,7 +421,7 @@ def _check_timedelta_range(value, data_unit, time_unit):
         delta = value * np.timedelta64(1, data_unit)
     if not np.isnan(delta):
         # this will raise on dtype overflow for integer dtypes
-        if value.dtype.kind in "u" and not np.int64(delta) == value:
+        if value.dtype.kind == "u" and not np.int64(delta) == value:
             raise OutOfBoundsTimedelta(
                 "DType overflow in Datetime/Timedelta calculation."
             )
@@ -521,7 +521,7 @@ def _decode_datetime_with_pandas(
     # timedelta64 value, and therefore would raise an error in the lines above.
     if flat_num_dates.dtype.kind in "iu":
         flat_num_dates = flat_num_dates.astype(np.int64)
-    elif flat_num_dates.dtype.kind in "f":
+    elif flat_num_dates.dtype.kind == "f":
         flat_num_dates = flat_num_dates.astype(np.float64)
 
     timedeltas = _numbers_to_timedelta(

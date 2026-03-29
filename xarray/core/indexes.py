@@ -83,6 +83,10 @@ class Index:
         variables : dict-like
             Mapping of :py:class:`Variable` objects holding the coordinate labels
             to index.
+        options : dict-like
+            Keyword arguments passed to this constructor. Propagated from
+            the ``**options`` argument of :py:meth:`xarray.DataArray.set_xindex`
+            or :py:meth:`xarray.Dataset.set_xindex`.
 
         Returns
         -------
@@ -903,7 +907,8 @@ class PandasIndex(Index):
         else:
             # how = "inner"
             index = self.index.intersection(other.index)
-
+        if is_allowed_extension_array_dtype(index.dtype):
+            return type(self)(index, self.dim)
         coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 

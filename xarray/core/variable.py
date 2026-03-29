@@ -8,11 +8,10 @@ import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from functools import partial
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
-from numpy.typing import ArrayLike
 from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
@@ -244,7 +243,7 @@ def _possibly_convert_objects(values):
 
 
 def as_compatible_data(
-    data: T_DuckArray | ArrayLike, fastpath: bool = False
+    data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
 ) -> T_DuckArray:
     """Prepare and wrap data to put in a Variable.
 
@@ -371,7 +370,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def __init__(
         self,
         dims,
-        data: T_DuckArray | ArrayLike,
+        data: T_DuckArray | np.typing.ArrayLike,
         attrs=None,
         encoding=None,
         fastpath=False,
@@ -466,7 +465,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return duck_array
 
     @data.setter  # type: ignore[override,unused-ignore]
-    def data(self, data: T_DuckArray | ArrayLike) -> None:
+    def data(self, data: T_DuckArray | np.typing.ArrayLike) -> None:
         data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
@@ -583,7 +582,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return self.to_index_variable().to_index()
 
     def to_dict(
-        self, data: bool | str = "list", encoding: bool = False
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """Dictionary representation of variable."""
         item: dict[str, Any] = {
@@ -931,7 +930,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _copy(
         self,
         deep: bool = True,
-        data: T_DuckArray | ArrayLike | None = None,
+        data: T_DuckArray | np.typing.ArrayLike | None = None,
         memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
@@ -1914,7 +1913,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def quantile(
         self,
-        q: ArrayLike,
+        q: np.typing.ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
@@ -2872,7 +2871,9 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep: bool = True, data: T_DuckArray | ArrayLike | None = None):
+    def copy(
+        self, deep: bool = True, data: T_DuckArray | np.typing.ArrayLike | None = None
+    ):
         """Returns a copy of this object.
 
         `deep` is ignored since data is stored in the form of

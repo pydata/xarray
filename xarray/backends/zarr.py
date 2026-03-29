@@ -138,19 +138,19 @@ class FillValueCoder:
 
     @classmethod
     def encode(cls, value: int | float | str | bytes, dtype: np.dtype[Any]) -> Any:
-        if dtype.kind in "S":
+        if dtype.kind == "S":
             # byte string, this implies that 'value' must also be `bytes` dtype.
             assert isinstance(value, bytes)
             return base64.standard_b64encode(value).decode()
-        elif dtype.kind in "b":
+        elif dtype.kind == "b":
             # boolean
             return bool(value)
         elif dtype.kind in "iu":
             # todo: do we want to check for decimals?
             return int(value)
-        elif dtype.kind in "f":
+        elif dtype.kind == "f":
             return base64.standard_b64encode(struct.pack("<d", float(value))).decode()
-        elif dtype.kind in "U":
+        elif dtype.kind == "U":
             return str(value)
         else:
             raise ValueError(f"Failed to encode fill_value. Unsupported dtype {dtype}")
@@ -165,10 +165,10 @@ class FillValueCoder:
             assert isinstance(value, str | bytes)
             return base64.standard_b64decode(value)
         np_dtype = np.dtype(dtype)
-        if np_dtype.kind in "f":
+        if np_dtype.kind == "f":
             assert isinstance(value, str | bytes)
             return struct.unpack("<d", base64.standard_b64decode(value))[0]
-        elif np_dtype.kind in "b":
+        elif np_dtype.kind == "b":
             return bool(value)
         elif np_dtype.kind in "iu":
             return int(value)
@@ -1695,7 +1695,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             # allow a trailing slash to account for an autocomplete
             # adding it.
             _, ext = os.path.splitext(str(filename_or_obj).rstrip("/"))
-            return ext in [".zarr"]
+            return ext == ".zarr"
 
         return False
 
