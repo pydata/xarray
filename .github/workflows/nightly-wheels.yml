@@ -4,14 +4,17 @@ on:
   schedule:
     - cron: "0 0 * * *"
 
-permissions:
-  contents: read
-  issues: write
+permissions: {}
 
 jobs:
   cron:
     runs-on: ubuntu-latest
     if: github.repository == 'pydata/xarray'
+
+    permissions:
+      contents: read
+      issues: write
+
     steps:
       - uses: actions/checkout@v6
         with:

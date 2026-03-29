@@ -14,6 +14,8 @@ on:
 env:
   FORCE_COLOR: 3
 
+permissions: {}
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger

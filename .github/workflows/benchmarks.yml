@@ -8,6 +8,8 @@ on:
 env:
   PR_HEAD_LABEL: ${{ github.event.pull_request.head.label }}
 
+permissions: {}
+
 jobs:
   benchmark:
     if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || contains( github.event.pull_request.labels.*.name, 'topic-performance') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
