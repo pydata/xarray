@@ -31,6 +31,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
+          persist-credentials: false
 
       - uses: xarray-contrib/ci-trigger@v1
         id: detect-trigger
@@ -48,6 +49,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: Parcels-code/pixi-lock/create-and-cache@a9aee67fa67426e6b0297fa5bef80600572be153
         id: pixi-lock
       - uses: actions/upload-artifact@v7
@@ -98,6 +101,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
+          persist-credentials: false
       - name: Restore cached pixi lockfile
         uses: Parcels-code/pixi-lock/restore@a9aee67fa67426e6b0297fa5bef80600572be153
         with:
