@@ -3,7 +3,7 @@ on:
   # ignore zizmor in this case, because the only thing we execute with PR write
   # permissions is actions/labeler (this is also the recommended setup of this action).
   # Either way, we only run this on the main repository.
-  - pull_request_target  # zizmor: ignore[dangerous-triggers]
+  - pull_request_target # zizmor: ignore[dangerous-triggers]
 
 permissions: {}
 
