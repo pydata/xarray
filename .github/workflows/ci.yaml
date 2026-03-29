@@ -97,6 +97,10 @@ jobs:
           - pixi-env: "test-py313-with-typing"
             numprocesses: 1
             os: ubuntu-latest
+
+    environment:
+      name: codecov
+
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
