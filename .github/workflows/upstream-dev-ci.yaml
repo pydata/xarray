@@ -35,7 +35,7 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
-      - uses: xarray-contrib/ci-trigger@v1
+      - uses: xarray-contrib/ci-trigger@10cd2bfec3484946a4058a421ddf9cfad101e715 # v1.2.1
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
