@@ -150,7 +150,7 @@ jobs:
           pixi run -e ${{ matrix.pixi-env }} -- python -c "import xarray"
 
       - name: Restore cached hypothesis directory
-        uses: actions/cache@v5
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: .hypothesis/
           key: cache-hypothesis
