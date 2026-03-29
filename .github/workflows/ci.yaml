@@ -53,7 +53,7 @@ jobs:
           persist-credentials: false
       - uses: Parcels-code/pixi-lock/create-and-cache@a9aee67fa67426e6b0297fa5bef80600572be153
         id: pixi-lock
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: pixi-lock
           path: pixi.lock
@@ -167,7 +167,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: Test results for OS ${{ runner.os }} pixi-env ${{ matrix.pixi-env }} pytest-addopts ${{ matrix.pytest-addopts }}
           path: pytest.xml
@@ -189,7 +189,7 @@ jobs:
     if: github.repository == 'pydata/xarray'
     steps:
       - name: Upload
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: Event File
           path: ${{ github.event_path }}
