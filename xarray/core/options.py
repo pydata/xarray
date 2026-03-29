@@ -148,10 +148,13 @@ _VALIDATORS = {
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
-    "facetgrid_figsize": lambda value: value in _FACETGRID_FIGSIZE_OPTIONS or (
-        isinstance(value, tuple)
-        and len(value) == 2
-        and all(isinstance(v, (int, float)) for v in value)
+    "facetgrid_figsize": lambda value: (
+        value in _FACETGRID_FIGSIZE_OPTIONS
+        or (
+            isinstance(value, tuple)
+            and len(value) == 2
+            and all(isinstance(v, (int, float)) for v in value)
+        )
     ),
 }
 
