@@ -86,7 +86,7 @@
     # Call to pipe missing argument for kwonly parameter `kwonly`
     ds = Dataset().pipe(f, 42)
   out: |
-    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[Dataset, int, NamedArg(int, 'kwonly')], Dataset]", "int"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(ds: Dataset, arg: int, *, kwonly: int) -> Dataset", "int"  [call-overload]
     main:7: note: Possible overload variants:
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
@@ -101,7 +101,7 @@
     # Call to pipe missing keyword for kwonly parameter `kwonly`
     ds = Dataset().pipe(f, 42, 99)
   out: |
-    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[Dataset, int, NamedArg(int, 'kwonly')], Dataset]", "int", "int"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(ds: Dataset, arg: int, *, kwonly: int) -> Dataset", "int", "int"  [call-overload]
     main:7: note: Possible overload variants:
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
