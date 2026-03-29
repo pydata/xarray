@@ -58,12 +58,14 @@ jobs:
       - name: Create or update failure issue
         if: ${{ failure() }}
         shell: bash
+        env:
+          GITHUB_WORKFLOW: ${{ github.workflow }}
         run: |
           # Read the template
           template=$(cat .github/nightly-wheel-failure-template.md)
 
           # Replace placeholders
-          issue_body="${template//\{\{WORKFLOW\}\}/${{ github.workflow }}}"
+          issue_body="${template//\{\{WORKFLOW\}\}/$GITHUB_WORKFLOW}"
           issue_body="${issue_body//\{\{RUN_ID\}\}/${{ github.run_id }}}"
           issue_body="${issue_body//\{\{RUN_URL\}\}/${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}}"
           issue_body="${issue_body//\{\{DATE\}\}/$(date -u)}"

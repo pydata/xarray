@@ -50,18 +50,19 @@ jobs:
           OMP_NUM_THREADS: 1
           ASV_FACTOR: 1.5
           ASV_SKIP_SLOW: 1
+          GITHUB_TAG: ${{ steps.previoustag.outputs.tag }}
         run: |
           set -x
           # ID this runner
           asv machine --yes
-          echo "Baseline: ${{ steps.previoustag.outputs.tag }} "
+          echo "Baseline: $GITHUB_TAG"
           echo "Contender: ${{ github.sha }}"
           # Use mamba for env creation
           # export CONDA_EXE=$(which mamba)
           export CONDA_EXE=$(which conda)
           # Run benchmarks for current commit against base
           ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
-          asv continuous $ASV_OPTIONS ${{ steps.previoustag.outputs.tag }}  ${{ github.sha }} \
+          asv continuous $ASV_OPTIONS "$GITHUB_TAG"  ${{ github.sha }} \
               | sed "/Traceback \|failed$\|PERFORMANCE DECREASED/ s/^/::error::/" \
               | tee benchmarks.log
           # Report and export results for subsequent steps

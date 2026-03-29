@@ -50,11 +50,12 @@ jobs:
           OMP_NUM_THREADS: 1
           ASV_FACTOR: 1.5
           ASV_SKIP_SLOW: 1
+          GITHUB_LABEL: ${{ github.event.pull_request.base.label }}
         run: |
           set -x
           # ID this runner
           asv machine --yes
-          echo "Baseline:  ${{ github.event.pull_request.base.sha }} (${{ github.event.pull_request.base.label }})"
+          echo "Baseline:  ${{ github.event.pull_request.base.sha }} ($GITHUB_LABEL)"
           echo "Contender: ${GITHUB_SHA} ($PR_HEAD_LABEL)"
           # Run benchmarks for current commit against base
           ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
