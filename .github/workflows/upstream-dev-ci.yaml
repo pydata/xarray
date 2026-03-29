@@ -169,7 +169,7 @@ jobs:
         run: |
           pixi run -e ${{matrix.pixi-env}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v6.0.0
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         with:
           files: mypy_report/cobertura.xml
           flags: mypy
