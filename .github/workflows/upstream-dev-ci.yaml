@@ -121,7 +121,7 @@ jobs:
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository_owner == 'pydata'
-        uses: scientific-python/issue-from-pytest-log-action@v1
+        uses: scientific-python/issue-from-pytest-log-action@8e905db353437cda1d6a773de245343fbfc940dd # v1.5.0
         with:
           log-path: output-${{ matrix.pixi-env }}-log.jsonl
 
