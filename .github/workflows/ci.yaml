@@ -137,7 +137,8 @@ jobs:
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
       - name: Install error reporter
-        if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.pixi-env}} == 'test'
+        if: |
+          matrix.os == 'ubuntu-latest' && matrix.pixi-env == 'test'
         run: |
           pixi add --pypi pytest-github-actions-annotate-failures
 
