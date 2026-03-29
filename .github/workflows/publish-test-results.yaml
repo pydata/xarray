@@ -3,7 +3,8 @@
 name: Publish test results
 
 on:
-  workflow_run:
+  # we can ignore zizmor in this case, because `ci.yaml` is run on `pull_request` not `pull_request_target`, and we restrict the permissions to the default read-only.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: ["CI"]
     types:
       - completed
