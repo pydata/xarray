@@ -364,6 +364,14 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, zarr_format):
             zarr_format,
         )
 
+    # Rectilinear chunks: each element is a sequence of per-chunk edge lengths
+    if (
+        zarr_format == 3
+        and _has_unified_chunk_grid()
+        and any(not isinstance(x, int) for x in enc_chunks_tuple)
+    ):
+        return enc_chunks_tuple
+
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
             raise TypeError(

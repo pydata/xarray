@@ -7247,6 +7247,47 @@ def test_extract_zarr_variable_encoding() -> None:
         )
 
 
+@requires_zarr_v3
+@requires_dask
+def test_rectilinear_chunks_encoding_roundtrip(tmp_path: Path) -> None:
+    """Rectilinear chunk sizes in encoding are passed through to zarr v3."""
+    import zarr
+
+    chunk_sizes = [10, 20, 30]
+    data = np.arange(60, dtype="float32")
+    ds = xr.Dataset({"var": xr.Variable("x", data)}).chunk({"x": tuple(chunk_sizes)})
+
+    store_path = tmp_path / "rectilinear.zarr"
+    encoding = {"var": {"chunks": [chunk_sizes]}}
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        ds.to_zarr(store_path, zarr_format=3, mode="w", encoding=encoding)
+
+        roundtrip = xr.open_zarr(store_path, zarr_format=3)
+        assert roundtrip.chunks["x"] == tuple(chunk_sizes)
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+
+@requires_zarr_v3
+@requires_dask
+def test_rectilinear_chunks_no_encoding(tmp_path: Path) -> None:
+    """Variable dask chunks are written as rectilinear when no encoding is given."""
+    import zarr
+
+    chunk_sizes = [15, 25, 20]
+    data = np.arange(60, dtype="float32")
+    ds = xr.Dataset({"var": xr.Variable("x", data)}).chunk({"x": tuple(chunk_sizes)})
+
+    store_path = tmp_path / "rectilinear_no_enc.zarr"
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        ds.to_zarr(store_path, zarr_format=3, mode="w")
+
+        roundtrip = xr.open_zarr(store_path, zarr_format=3)
+        assert roundtrip.chunks["x"] == tuple(chunk_sizes)
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+
 @requires_zarr
 @requires_fsspec
 @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
