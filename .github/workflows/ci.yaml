@@ -98,6 +98,10 @@ jobs:
             numprocesses: 1
             os: ubuntu-latest
 
+    environment:
+      name: codecov
+      deployment: false
+
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -177,8 +181,7 @@ jobs:
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         env:
-          # we can ignore zizmor's warning here, a codecov token is not very sensible
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} # zizmor: ignore[secrets-outside-env]
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           files: ./coverage.xml
           flags: unittests
