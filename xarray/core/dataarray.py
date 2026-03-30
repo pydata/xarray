@@ -6966,21 +6966,21 @@ class DataArray(
                1.826e+03], shape=(1827,))
         Coordinates:
           * time     (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
-        >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
+        >>> da.groupby("time.day_of_year") - da.groupby("time.day_of_year").mean("time")
         <xarray.DataArray (time: 1827)> Size: 15kB
         array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5], shape=(1827,))
         Coordinates:
-          * time       (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
-            dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
+          * time         (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
+            day_of_year  (time) int64 15kB 1 2 3 4 5 6 7 ... 360 361 362 363 364 365 366
 
         Use a ``Grouper`` object to be more explicit
 
-        >>> da.coords["dayofyear"] = da.time.dt.dayofyear
-        >>> da.groupby(dayofyear=xr.groupers.UniqueGrouper()).mean()
-        <xarray.DataArray (dayofyear: 366)> Size: 3kB
+        >>> da.coords["day_of_year"] = da.time.dt.day_of_year
+        >>> da.groupby(day_of_year=xr.groupers.UniqueGrouper()).mean()
+        <xarray.DataArray (day_of_year: 366)> Size: 3kB
         array([ 730.8,  731.8,  732.8, ..., 1093.8, 1094.8, 1095.5])
         Coordinates:
-          * dayofyear  (dayofyear) int64 3kB 1 2 3 4 5 6 7 ... 361 362 363 364 365 366
+          * day_of_year  (day_of_year) int64 3kB 1 2 3 4 5 6 ... 361 362 363 364 365 366
 
         >>> da = xr.DataArray(
         ...     data=np.arange(12).reshape((4, 3)),

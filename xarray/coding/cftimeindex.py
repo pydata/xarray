@@ -127,7 +127,12 @@ def get_date_field(datetimes, field):
     return np.array([getattr(date, field) for date in datetimes], dtype=np.int64)
 
 
-def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
+def _field_accessor(
+    name: str,
+    docstring: str | None = None,
+    min_cftime_version: str = "0.0",
+    deprecation_pair: tuple[str, str] | None = None,
+):
     """Adapted from pandas.tseries.index._field_accessor"""
 
     def f(self, min_cftime_version=min_cftime_version):
@@ -135,6 +140,14 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
             import cftime
         else:
             cftime = attempt_import("cftime")
+
+        if deprecation_pair is not None:
+            original, replacement = deprecation_pair
+            emit_user_level_warning(
+                f"CFTimeIndex.{original} is deprecated and will be removed in "
+                f"a future version. Use CFTimeIndex.{replacement} instead",
+                FutureWarning,
+            )
 
         if Version(cftime.__version__) >= Version(min_cftime_version):
             return get_date_field(self._data, name)
@@ -249,9 +262,23 @@ class CFTimeIndex(pd.Index):
     second = _field_accessor("second", "The seconds of the datetime")
     microsecond = _field_accessor("microsecond", "The microseconds of the datetime")
     dayofyear = _field_accessor(
+        "dayofyr",
+        "The ordinal day of year of the datetime",
+        "1.0.2.1",
+        ("dayofyear", "day_of_year"),
+    )
+    dayofweek = _field_accessor(
+        "dayofwk",
+        "The day of week of the datetime",
+        "1.0.2.1",
+        ("dayofweek", "day_of_week"),
+    )
+    day_of_year = _field_accessor(
         "dayofyr", "The ordinal day of year of the datetime", "1.0.2.1"
     )
-    dayofweek = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
+    day_of_week = _field_accessor(
+        "dayofwk", "The day of week of the datetime", "1.0.2.1"
+    )
     days_in_month = _field_accessor(
         "daysinmonth", "The number of days in the month of the datetime", "1.1.0.0"
     )

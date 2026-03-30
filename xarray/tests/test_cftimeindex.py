@@ -315,8 +315,8 @@ def test_cftimeindex_field_accessors(index, field, expected):
         "minute",
         "second",
         "microsecond",
-        "dayofyear",
-        "dayofweek",
+        "day_of_year",
+        "day_of_week",
         "days_in_month",
     ],
 )
@@ -329,16 +329,30 @@ def test_empty_cftimeindex_field_accessors(field):
 
 
 @requires_cftime
-def test_cftimeindex_dayofyear_accessor(index):
-    result = index.dayofyear
+@pytest.mark.parametrize(
+    ("field", "replacement"), [("day_of_year", None), ("dayofyear", "day_of_year")]
+)
+def test_cftimeindex_dayofyear_accessor(index, field, replacement):
+    if replacement is not None:
+        with pytest.warns(FutureWarning, match=f"{field}.*{replacement}"):
+            result = getattr(index, field)
+    else:
+        result = getattr(index, field)
     expected = np.array([date.dayofyr for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
     assert result.dtype == expected.dtype
 
 
 @requires_cftime
-def test_cftimeindex_dayofweek_accessor(index):
-    result = index.dayofweek
+@pytest.mark.parametrize(
+    ("field", "replacement"), [("day_of_week", None), ("dayofweek", "day_of_week")]
+)
+def test_cftimeindex_dayofweek_accessor(index, field, replacement):
+    if replacement is not None:
+        with pytest.warns(FutureWarning, match=f"{field}.*{replacement}"):
+            result = getattr(index, field)
+    else:
+        result = getattr(index, field)
     expected = np.array([date.dayofwk for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
     assert result.dtype == expected.dtype

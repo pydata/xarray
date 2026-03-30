@@ -16,6 +16,7 @@ from xarray.core.common import (
     is_np_timedelta_like,
 )
 from xarray.core.types import T_DataArray
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.utils import is_duck_dask_array
 
@@ -338,8 +339,8 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
       * time     (time) datetime64[us] 80B 2000-01-01 2000-01-02 ... 2000-01-10
     >>> ts.dt  # doctest: +ELLIPSIS
     <xarray.core.accessor_dt.DatetimeAccessor object at 0x...>
-    >>> ts.dt.dayofyear
-    <xarray.DataArray 'dayofyear' (time: 10)> Size: 80B
+    >>> ts.dt.day_of_year
+    <xarray.DataArray 'day_of_year' (time: 10)> Size: 80B
     array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10])
     Coordinates:
       * time     (time) datetime64[us] 80B 2000-01-01 2000-01-02 ... 2000-01-10
@@ -466,16 +467,44 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     week = weekofyear
 
     @property
+    def day_of_week(self) -> T_DataArray:
+        """The day of the week with Monday=0, Sunday=6"""
+        return self._date_field("day_of_week", np.int64)
+
+    @property
     def dayofweek(self) -> T_DataArray:
         """The day of the week with Monday=0, Sunday=6"""
-        return self._date_field("dayofweek", np.int64)
+        emit_user_level_warning(
+            "dt.dayofweek is deprecated and will be removed in a future "
+            "version. Use dt.day_of_week instead.",
+            FutureWarning,
+        )
+        return self._date_field("day_of_week", np.int64)
 
-    weekday = dayofweek
+    @property
+    def weekday(self) -> T_DataArray:
+        """The day of the week with Monday=0, Sunday=6"""
+        emit_user_level_warning(
+            "dt.weekday is deprecated and will be removed in a "
+            "future version. Use dt.day_of_week instead.",
+            FutureWarning,
+        )
+        return self._date_field("day_of_week", np.int64)
+
+    @property
+    def day_of_year(self) -> T_DataArray:
+        """The ordinal day of the year"""
+        return self._date_field("day_of_year", np.int64)
 
     @property
     def dayofyear(self) -> T_DataArray:
         """The ordinal day of the year"""
-        return self._date_field("dayofyear", np.int64)
+        emit_user_level_warning(
+            "dt.dayofyear is deprecated and will be removed in a future "
+            "version. Use dt.day_of_year instead.",
+            FutureWarning,
+        )
+        return self._date_field("day_of_year", np.int64)
 
     @property
     def quarter(self) -> T_DataArray:
@@ -487,7 +516,15 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         """The number of days in the month"""
         return self._date_field("days_in_month", np.int64)
 
-    daysinmonth = days_in_month
+    @property
+    def daysinmonth(self) -> T_DataArray:
+        """The number of days in the month"""
+        emit_user_level_warning(
+            "dt.daysinmonth is deprecated and will be removed in a future "
+            "version. Use dt.days_in_month instead.",
+            FutureWarning,
+        )
+        return self._date_field("days_in_month", np.int64)
 
     @property
     def season(self) -> T_DataArray:

@@ -104,7 +104,25 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
-
+- Following pandas, on xarray's
+  :py:class:`~xarray.core.accessor_dt.DatetimeAccessor`,
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.daysinmonth`
+  is deprecated in favor of
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.days_in_month`;
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofweek` and
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.weekday` are deprecated
+  in favor of :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_week`;
+  and :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofyear` is
+  deprecated in favor of
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_year`
+  (:issue:`11268`, :pull:`11270`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Following pandas, on xarray's :py:class:`~xarray.CFTimeIndex`,
+  :py:attr:`~xarray.CFTimeIndex.dayofweek` and
+  :py:attr:`~xarray.CFTimeIndex.dayofyear` are deprecated in favor of
+  :py:attr:`~xarray.CFTimeIndex.day_of_week` and
+  :py:attr:`~xarray.CFTimeIndex.day_of_year`, respectively (:pull:`11270`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug Fixes
 ~~~~~~~~~

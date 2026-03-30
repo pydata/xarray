@@ -56,13 +56,11 @@ class TestDatetimeAccessor:
             "nanosecond",
             "week",
             "weekofyear",
-            "dayofweek",
-            "weekday",
-            "dayofyear",
+            "day_of_week",
+            "day_of_year",
             "quarter",
             "date",
             "time",
-            "daysinmonth",
             "days_in_month",
             "is_month_start",
             "is_month_end",
@@ -102,6 +100,21 @@ class TestDatetimeAccessor:
         assert not isinstance(actual.variable, xr.IndexVariable)
 
         assert expected.dtype == actual.dtype
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        ("field", "replacement"),
+        [
+            ("daysinmonth", "days_in_month"),
+            ("dayofweek", "day_of_week"),
+            ("weekday", "day_of_week"),
+            ("dayofyear", "day_of_year"),
+        ],
+    )
+    def test_deprecated_field_access(self, field, replacement) -> None:
+        expected = getattr(self.data.time.dt, replacement)
+        with pytest.warns(FutureWarning, match=f"{field}.*{replacement}"):
+            actual = getattr(self.data.time.dt, field)
         assert_identical(expected, actual)
 
     def test_total_seconds(self) -> None:
@@ -177,9 +190,8 @@ class TestDatetimeAccessor:
             "nanosecond",
             "week",
             "weekofyear",
-            "dayofweek",
-            "weekday",
-            "dayofyear",
+            "day_of_week",
+            "day_of_year",
             "quarter",
             "date",
             "time",
@@ -441,7 +453,7 @@ def times_3d(times):
 
 @requires_cftime
 @pytest.mark.parametrize(
-    "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
+    "field", ["year", "month", "day", "hour", "day_of_year", "day_of_week"]
 )
 def test_field_access(data, field) -> None:
     result = getattr(data.time.dt, field)
@@ -533,7 +545,7 @@ def test_cftime_strftime_access(data) -> None:
 @requires_cftime
 @requires_dask
 @pytest.mark.parametrize(
-    "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
+    "field", ["year", "month", "day", "hour", "day_of_year", "day_of_week"]
 )
 def test_dask_field_access_1d(data, field) -> None:
     import dask.array as da
@@ -553,7 +565,7 @@ def test_dask_field_access_1d(data, field) -> None:
 @requires_cftime
 @requires_dask
 @pytest.mark.parametrize(
-    "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
+    "field", ["year", "month", "day", "hour", "day_of_year", "day_of_week"]
 )
 def test_dask_field_access(times_3d, data, field) -> None:
     import dask.array as da

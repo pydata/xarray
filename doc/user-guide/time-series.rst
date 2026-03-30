@@ -150,15 +150,15 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
 .. jupyter-execute::
 
-    ds.time.dt.dayofweek
+    ds.time.dt.day_of_week
 
 The ``.dt`` accessor works on both coordinate dimensions as well as
 multi-dimensional data.
 
 Xarray also supports a notion of "virtual" or "derived" coordinates for
 `datetime components`__ implemented by pandas, including "year", "month",
-"day", "hour", "minute", "second", "dayofyear", "week", "dayofweek", "weekday"
-and "quarter":
+"day", "hour", "minute", "second", "day_of_year", "week", "day_of_week", and
+"quarter":
 
 __ https://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
 
@@ -168,7 +168,7 @@ __ https://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
 
 .. jupyter-execute::
 
-    ds["time.dayofyear"]
+    ds["time.day_of_year"]
 
 For use as a derived coordinate, xarray adds ``'season'`` to the list of
 datetime components supported by pandas:
