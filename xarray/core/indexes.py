@@ -83,6 +83,10 @@ class Index:
         variables : dict-like
             Mapping of :py:class:`Variable` objects holding the coordinate labels
             to index.
+        options : dict-like
+            Keyword arguments passed to this constructor. Propagated from
+            the ``**options`` argument of :py:meth:`xarray.DataArray.set_xindex`
+            or :py:meth:`xarray.Dataset.set_xindex`.
 
         Returns
         -------
@@ -536,7 +540,13 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 )
                 kwargs["dtype"] = "float64"
 
-        index = pd.Index(to_numpy(array), **kwargs)
+        values = to_numpy(array)
+        try:
+            index = pd.Index(values, **kwargs)
+        except UnicodeEncodeError:
+            # coerce to object if pandas fails to coerce to string
+            kwargs["dtype"] = "object"
+            index = pd.Index(values, **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
 
@@ -897,7 +907,8 @@ class PandasIndex(Index):
         else:
             # how = "inner"
             index = self.index.intersection(other.index)
-
+        if is_allowed_extension_array_dtype(index.dtype):
+            return type(self)(index, self.dim)
         coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
@@ -1301,6 +1312,16 @@ class PandasMultiIndex(PandasIndex):
                     ) from err
 
             has_slice = any(isinstance(v, slice) for v in label_values.values())
+
+            if has_slice:
+                slice_levels = [
+                    k for k, v in label_values.items() if isinstance(v, slice)
+                ]
+                raise ValueError(
+                    f"slice-based selection on multi-index level(s) {slice_levels} "
+                    f"is not supported. Use scalar values for multi-index level "
+                    f"selection instead, e.g., ``.sel({slice_levels[0]}=value)``."
+                )
 
             if len(label_values) == self.index.nlevels and not has_slice:
                 indexer = self.index.get_loc(

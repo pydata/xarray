@@ -205,15 +205,19 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
 
 
 def maybe_coerce_to_str(index, original_coords):
-    """maybe coerce a pandas Index back to a nunpy array of type str
+    """maybe coerce a pandas Index back to a numpy array of type str
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
     from xarray.core import dtypes
 
-    result_type = dtypes.result_type(*original_coords)
-    if result_type.kind in "SU":
-        index = np.asarray(index, dtype=result_type.type)
+    try:
+        result_type = dtypes.result_type(*original_coords)
+    except ValueError:
+        pass
+    else:
+        if result_type.kind in "SU":
+            index = np.asarray(index, dtype=result_type.type)
 
     return index
 

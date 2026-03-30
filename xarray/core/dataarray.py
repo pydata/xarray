@@ -5,6 +5,7 @@ import datetime
 import warnings
 from collections.abc import (
     Callable,
+    Collection,
     Hashable,
     Iterable,
     Mapping,
@@ -1734,7 +1735,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the first `n`
+        """Return a new DataArray whose data is given by the first `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also
@@ -1777,7 +1778,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the last `n`
+        """Return a new DataArray whose data is given by the last `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also
@@ -2407,7 +2408,7 @@ class DataArray(
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
           * y        (y) int64 24B 11 13 15
         """
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
@@ -2548,7 +2549,7 @@ class DataArray(
           * y        (y) int64 24B 70 80 90
         """
 
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
@@ -6187,6 +6188,26 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
+    @overload
+    def argmin(  # type: ignore[overload-overlap]
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmin(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
     def argmin(
         self,
         dim: Dims = None,
@@ -6287,6 +6308,26 @@ class DataArray(
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
             return self._replace_maybe_drop_dims(result)
+
+    @overload
+    def argmax(  # type: ignore[overload-overlap]
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmax(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
 
     def argmax(
         self,
