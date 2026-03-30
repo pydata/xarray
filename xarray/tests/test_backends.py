@@ -7251,7 +7251,11 @@ def test_extract_zarr_variable_encoding() -> None:
 @requires_dask
 def test_rectilinear_chunks_encoding_roundtrip(tmp_path: Path) -> None:
     """Rectilinear chunk sizes in encoding are passed through to zarr v3."""
+
     import zarr
+
+    if not backends.zarr._has_unified_chunk_grid():
+        pytest.skip("zarr does not have unified ChunkGrid support")
 
     chunk_sizes = [10, 20, 30]
     data = np.arange(60, dtype="float32")
@@ -7273,6 +7277,9 @@ def test_rectilinear_chunks_encoding_roundtrip(tmp_path: Path) -> None:
 def test_rectilinear_chunks_no_encoding(tmp_path: Path) -> None:
     """Variable dask chunks are written as rectilinear when no encoding is given."""
     import zarr
+
+    if not backends.zarr._has_unified_chunk_grid():
+        pytest.skip("zarr does not have unified ChunkGrid support")
 
     chunk_sizes = [15, 25, 20]
     data = np.arange(60, dtype="float32")
