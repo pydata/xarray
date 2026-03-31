@@ -120,6 +120,8 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Update documentation and team guide to promote Zulip. Remove mentions of Discord (:pull:`11246`, :pull:`11254`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 - Fix code blocks on "how to create custom index" doc page (:pull:`11255`).
