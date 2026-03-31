@@ -34,7 +34,7 @@ import pandas as pd
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from xarray.compat.array_api_compat import to_like_array
-from xarray.computation import ops
+from xarray.computation import computation, ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.core import dtypes as xrdtypes
 from xarray.core import duck_array_ops, formatting, formatting_html, utils
@@ -325,8 +325,8 @@ class Dataset(
         lon             (loc) float64 16B -99.83 -99.32
         lat             (loc) float64 16B 42.25 42.21
       * instrument      (instrument) <U8 96B 'manufac1' 'manufac2' 'manufac3'
-      * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
-        reference_time  datetime64[ns] 8B 2014-09-05
+      * time            (time) datetime64[us] 32B 2014-09-06 ... 2014-09-09
+        reference_time  datetime64[us] 8B 2014-09-05
     Dimensions without coordinates: loc
     Data variables:
         temperature     (loc, instrument, time) float64 192B 29.11 18.2 ... 9.063
@@ -344,8 +344,8 @@ class Dataset(
         lon             float64 8B -99.32
         lat             float64 8B 42.21
         instrument      <U8 32B 'manufac3'
-        time            datetime64[ns] 8B 2014-09-06
-        reference_time  datetime64[ns] 8B 2014-09-05
+        time            datetime64[us] 8B 2014-09-06
+        reference_time  datetime64[us] 8B 2014-09-05
     Data variables:
         temperature     float64 8B -5.424
         precipitation   float64 8B 9.884
@@ -1178,7 +1178,7 @@ class Dataset(
         """
         Coerces wrapped data and coordinates into numpy arrays, returning a Dataset.
 
-        See also
+        See Also
         --------
         DataArray.as_numpy
         DataArray.to_numpy : Returns only the data as a numpy.ndarray object.
@@ -1688,8 +1688,8 @@ class Dataset(
         """Like equals, but also checks all dataset attributes, the
         attributes on all variables and coordinates, and indexes.
 
-        Example
-        -------
+        Examples
+        --------
 
         >>> a = xr.Dataset(
         ...     {"Width": ("X", [1, 2, 3])},
@@ -1817,7 +1817,7 @@ class Dataset(
         <xarray.Dataset> Size: 48B
         Dimensions:   (time: 3)
         Coordinates:
-          * time      (time) datetime64[ns] 24B 2023-01-01 2023-01-02 2023-01-03
+          * time      (time) datetime64[us] 24B 2023-01-01 2023-01-02 2023-01-03
         Data variables:
             pressure  (time) float64 24B 1.013 1.2 3.5
 
@@ -1825,7 +1825,7 @@ class Dataset(
         <xarray.Dataset> Size: 48B
         Dimensions:   (time: 3)
         Coordinates:
-          * time      (time) datetime64[ns] 24B 2023-01-01 2023-01-02 2023-01-03
+          * time      (time) datetime64[us] 24B 2023-01-01 2023-01-02 2023-01-03
             pressure  (time) float64 24B 1.013 1.2 3.5
         Data variables:
             *empty*
@@ -1897,7 +1897,7 @@ class Dataset(
         <xarray.Dataset> Size: 184B
         Dimensions:        (time: 2, lat: 2, lon: 2)
         Coordinates:
-          * time           (time) datetime64[ns] 16B 2023-01-01 2023-01-02
+          * time           (time) datetime64[us] 16B 2023-01-01 2023-01-02
           * lat            (lat) int64 16B 40 41
           * lon            (lon) int64 16B -80 -79
             altitude       int64 8B 1000
@@ -1915,7 +1915,7 @@ class Dataset(
         <xarray.Dataset> Size: 184B
         Dimensions:        (time: 2, lat: 2, lon: 2)
         Coordinates:
-          * time           (time) datetime64[ns] 16B 2023-01-01 2023-01-02
+          * time           (time) datetime64[us] 16B 2023-01-01 2023-01-02
           * lat            (lat) int64 16B 40 41
           * lon            (lon) int64 16B -80 -79
         Data variables:
@@ -2561,7 +2561,7 @@ class Dataset(
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             chunks = {}
@@ -2571,7 +2571,7 @@ class Dataset(
                 utils.emit_user_level_warning(
                     "Supplying chunks as dimension-order tuples is deprecated. "
                     "It will raise an error in the future. Instead use a dict with dimensions as keys.",
-                    category=DeprecationWarning,
+                    category=FutureWarning,
                 )
             chunks_mapping = dict.fromkeys(self.dims, chunks)
         else:
@@ -3083,7 +3083,7 @@ class Dataset(
         <xarray.Dataset> Size: 120B
         Dimensions:    (date: 5)
         Coordinates:
-          * date       (date) datetime64[ns] 40B 2023-01-05 2023-01-04 ... 2023-01-03
+          * date       (date) datetime64[us] 40B 2023-01-05 2023-01-04 ... 2023-01-03
         Data variables:
             pageviews  (date) int64 40B 2000 1800 1500 1200 900
             visitors   (date) int64 40B 1500 1200 1000 800 600
@@ -3094,7 +3094,7 @@ class Dataset(
         <xarray.Dataset> Size: 72B
         Dimensions:    (date: 3)
         Coordinates:
-          * date       (date) datetime64[ns] 24B 2023-01-05 2023-01-04 2023-01-02
+          * date       (date) datetime64[us] 24B 2023-01-05 2023-01-04 2023-01-02
         Data variables:
             pageviews  (date) int64 24B 2000 1800 1500
             visitors   (date) int64 24B 1500 1200 1000
@@ -3105,7 +3105,7 @@ class Dataset(
         <xarray.Dataset> Size: 72B
         Dimensions:    (date: 3)
         Coordinates:
-          * date       (date) datetime64[ns] 24B 2023-01-05 2023-01-04 2023-01-02
+          * date       (date) datetime64[us] 24B 2023-01-05 2023-01-04 2023-01-02
         Data variables:
             pageviews  (date) int64 24B 2000 1800 1500
             visitors   (date) int64 24B 1500 1200 1000
@@ -3554,7 +3554,7 @@ class Dataset(
             pressure     (station) float64 32B 211.8 322.9 218.8 445.9
         >>> x.indexes
         Indexes:
-            station  Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
+            station  Index(['boston', 'nyc', 'seattle', 'denver'], dtype='str', name='station')
 
         Create a new index and reindex the dataset. By default values in the new index that
         do not have corresponding records in the dataset are assigned `NaN`.
@@ -3619,7 +3619,7 @@ class Dataset(
         <xarray.Dataset> Size: 144B
         Dimensions:      (time: 6)
         Coordinates:
-          * time         (time) datetime64[ns] 48B 2019-01-01 2019-01-02 ... 2019-01-06
+          * time         (time) datetime64[us] 48B 2019-01-01 2019-01-02 ... 2019-01-06
         Data variables:
             temperature  (time) float64 48B 15.57 12.77 nan 0.3081 16.59 15.12
             pressure     (time) float64 48B 481.8 191.7 395.9 264.4 284.0 462.8
@@ -3631,7 +3631,7 @@ class Dataset(
         <xarray.Dataset> Size: 240B
         Dimensions:      (time: 10)
         Coordinates:
-          * time         (time) datetime64[ns] 80B 2018-12-29 2018-12-30 ... 2019-01-07
+          * time         (time) datetime64[us] 80B 2018-12-29 2018-12-30 ... 2019-01-07
         Data variables:
             temperature  (time) float64 80B nan nan nan 15.57 ... 0.3081 16.59 15.12 nan
             pressure     (time) float64 80B nan nan nan 481.8 ... 264.4 284.0 462.8 nan
@@ -3647,7 +3647,7 @@ class Dataset(
         <xarray.Dataset> Size: 240B
         Dimensions:      (time: 10)
         Coordinates:
-          * time         (time) datetime64[ns] 80B 2018-12-29 2018-12-30 ... 2019-01-07
+          * time         (time) datetime64[us] 80B 2018-12-29 2018-12-30 ... 2019-01-07
         Data variables:
             temperature  (time) float64 80B 15.57 15.57 15.57 15.57 ... 16.59 15.12 nan
             pressure     (time) float64 80B 481.8 481.8 481.8 481.8 ... 284.0 462.8 nan
@@ -3659,7 +3659,7 @@ class Dataset(
         <xarray.Dataset> Size: 24B
         Dimensions:      (time: 1)
         Coordinates:
-          * time         (time) datetime64[ns] 8B 2019-01-03
+          * time         (time) datetime64[us] 8B 2019-01-03
         Data variables:
             temperature  (time) float64 8B nan
             pressure     (time) float64 8B 395.9
@@ -3667,7 +3667,7 @@ class Dataset(
         <xarray.Dataset> Size: 48B
         Dimensions:      (time: 2)
         Coordinates:
-          * time         (time) datetime64[ns] 16B 2019-01-03 2019-01-07
+          * time         (time) datetime64[us] 16B 2019-01-03 2019-01-07
         Data variables:
             temperature  (time) float64 16B nan nan
             pressure     (time) float64 16B 395.9 nan
@@ -3940,6 +3940,21 @@ class Dataset(
                 # For normal number types do the interpolation:
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
+            elif dtype_kind in "Mm" and (use_indexers.keys() & var.dims):
+                # For datetime-like types, interpolate as float64:
+                var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
+                int_data = var.astype(np.int64)
+                nat = np.iinfo(np.int64).min
+                as_float = computation.where(
+                    int_data != nat, int_data.astype(np.float64), np.nan
+                )
+                result = missing.interp(as_float, var_indexers, method, **kwargs)
+                as_int = computation.where(
+                    ~result.isnull(),
+                    result.fillna(0).round().astype(np.int64),
+                    nat,
+                )
+                variables[name] = as_int.astype(var.dtype)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
                     # Broadcastable, can be handled quickly without reindex:
@@ -5205,7 +5220,7 @@ class Dataset(
                 vdims = list(var.dims) + add_dims
                 shape = [self.sizes[d] for d in vdims]
                 exp_var = var.set_dims(vdims, shape)
-                stacked_var = exp_var.stack(**{new_dim: dims})
+                stacked_var = exp_var.stack({new_dim: dims})
                 new_variables[name] = stacked_var
                 stacked_var_names.append(name)
             else:
@@ -5798,7 +5813,7 @@ class Dataset(
         <xarray.Dataset> Size: 136B
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
         Coordinates:
-          * time         (time) datetime64[ns] 8B 2023-07-01
+          * time         (time) datetime64[us] 8B 2023-07-01
           * latitude     (latitude) float64 16B 40.0 40.2
           * longitude    (longitude) float64 16B -75.0 -74.8
         Data variables:
@@ -5812,7 +5827,7 @@ class Dataset(
         <xarray.Dataset> Size: 104B
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
         Coordinates:
-          * time         (time) datetime64[ns] 8B 2023-07-01
+          * time         (time) datetime64[us] 8B 2023-07-01
           * latitude     (latitude) float64 16B 40.0 40.2
           * longitude    (longitude) float64 16B -75.0 -74.8
         Data variables:
@@ -5825,7 +5840,7 @@ class Dataset(
         <xarray.Dataset> Size: 72B
         Dimensions:     (time: 1, latitude: 2, longitude: 2)
         Coordinates:
-          * time        (time) datetime64[ns] 8B 2023-07-01
+          * time        (time) datetime64[us] 8B 2023-07-01
           * latitude    (latitude) float64 16B 40.0 40.2
           * longitude   (longitude) float64 16B -75.0 -74.8
         Data variables:
@@ -5848,7 +5863,7 @@ class Dataset(
         <xarray.Dataset> Size: 136B
         Dimensions:      (time: 1, latitude: 2, longitude: 2)
         Coordinates:
-          * time         (time) datetime64[ns] 8B 2023-07-01
+          * time         (time) datetime64[us] 8B 2023-07-01
           * latitude     (latitude) float64 16B 40.0 40.2
           * longitude    (longitude) float64 16B -75.0 -74.8
         Data variables:
@@ -5899,7 +5914,7 @@ class Dataset(
             emit_user_level_warning(
                 f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
                 f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
-                DeprecationWarning,
+                FutureWarning,
             )
 
         assert_no_index_corrupted(self.xindexes, names_set)
@@ -5990,7 +6005,7 @@ class Dataset(
         if is_dict_like(labels) and not isinstance(labels, dict):
             emit_user_level_warning(
                 "dropping coordinates using `drop` is deprecated; use drop_vars.",
-                DeprecationWarning,
+                FutureWarning,
             )
             return self.drop_vars(labels, errors=errors)
 
@@ -6002,7 +6017,7 @@ class Dataset(
         if dim is None and (is_scalar(labels) or isinstance(labels, Iterable)):
             emit_user_level_warning(
                 "dropping variables using `drop` is deprecated; use drop_vars.",
-                DeprecationWarning,
+                FutureWarning,
             )
             # for mypy
             if is_scalar(labels):
@@ -6012,14 +6027,14 @@ class Dataset(
             warnings.warn(
                 "dropping labels using list-like labels is deprecated; using "
                 "dict-like arguments with `drop_sel`, e.g. `ds.drop_sel(dim=[labels]).",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
             return self.drop_sel({dim: labels}, errors=errors, **labels_kwargs)
 
         emit_user_level_warning(
             "dropping labels using `drop` is deprecated; use `drop_sel` instead.",
-            DeprecationWarning,
+            FutureWarning,
         )
         return self.drop_sel(labels, errors=errors)
 
@@ -6558,7 +6573,7 @@ class Dataset(
         interpolated: Dataset
             Filled in Dataset.
 
-        Warning
+        Warnings
         --------
         When passing fill_value as a keyword argument with method="linear", it does not use
         ``numpy.interp`` but it uses ``scipy.interpolate.interp1d``, which provides the fill_value parameter.
@@ -6653,7 +6668,7 @@ class Dataset(
         <xarray.Dataset> Size: 160B
         Dimensions:  (time: 10)
         Coordinates:
-          * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[us] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 nan nan nan 5.0 nan nan 8.0 nan 10.0
 
@@ -6663,7 +6678,7 @@ class Dataset(
         <xarray.Dataset> Size: 160B
         Dimensions:  (time: 10)
         Coordinates:
-          * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[us] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 1.0 1.0 1.0 5.0 5.0 5.0 8.0 8.0 10.0
 
@@ -6673,7 +6688,7 @@ class Dataset(
         <xarray.Dataset> Size: 160B
         Dimensions:  (time: 10)
         Coordinates:
-          * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[us] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 1.0 1.0 nan 5.0 5.0 5.0 8.0 8.0 10.0
 
@@ -6718,7 +6733,7 @@ class Dataset(
         <xarray.Dataset> Size: 160B
         Dimensions:  (time: 10)
         Coordinates:
-          * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[us] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 nan nan nan 5.0 nan nan 8.0 nan 10.0
 
@@ -6728,7 +6743,7 @@ class Dataset(
         <xarray.Dataset> Size: 160B
         Dimensions:  (time: 10)
         Coordinates:
-          * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[us] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 5.0 5.0 5.0 5.0 8.0 8.0 8.0 10.0 10.0
 
@@ -6738,7 +6753,7 @@ class Dataset(
         <xarray.Dataset> Size: 160B
         Dimensions:  (time: 10)
         Coordinates:
-          * time     (time) datetime64[ns] 80B 2023-01-01 2023-01-02 ... 2023-01-10
+          * time     (time) datetime64[us] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 nan 5.0 5.0 5.0 8.0 8.0 8.0 10.0 10.0
 
@@ -7299,6 +7314,7 @@ class Dataset(
     ) -> None:
         from sparse import COO
 
+        coords: np.ndarray[tuple[int, int], np.dtype[np.signedinteger]]
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_monotonic_increasing
@@ -7601,7 +7617,7 @@ class Dataset(
         -------
         obj : Dataset
 
-        See also
+        See Also
         --------
         Dataset.to_dict
         DataArray.from_dict
@@ -8129,8 +8145,21 @@ class Dataset(
 
         indices = {}
         for key, arrays in vars_by_dim.items():
-            order = np.lexsort(tuple(reversed(arrays)))
-            indices[key] = order if ascending else order[::-1]
+            if ascending:
+                indices[key] = np.lexsort(tuple(reversed(arrays)))
+            else:
+                # For descending order, we need to keep NaNs at the end.
+                # By adding notnull(arr) as additional sort keys, null values
+                # sort to the beginning (False=0 < True=1), then reversing
+                # puts them at the end. See https://github.com/pydata/xarray/issues/7358
+                indices[key] = np.lexsort(
+                    tuple(
+                        [
+                            *reversed(arrays),
+                            *[duck_array_ops.notnull(arr) for arr in reversed(arrays)],
+                        ]
+                    )
+                )[::-1]
         return aligned_self.isel(indices)
 
     def quantile(
@@ -8398,7 +8427,7 @@ class Dataset(
         -------
         differentiated: Dataset
 
-        See also
+        See Also
         --------
         numpy.gradient: corresponding numpy function
         """
@@ -8464,7 +8493,7 @@ class Dataset(
         -------
         integrated : Dataset
 
-        See also
+        See Also
         --------
         DataArray.integrate
         numpy.trapz : corresponding numpy function
@@ -8585,7 +8614,7 @@ class Dataset(
         -------
         integrated : Dataset
 
-        See also
+        See Also
         --------
         DataArray.cumulative_integrate
         scipy.integrate.cumulative_trapezoid : corresponding scipy function
@@ -8715,8 +8744,8 @@ class Dataset(
         Coordinates:
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
-            reference_time  datetime64[ns] 8B 2014-09-05
+          * time            (time) datetime64[us] 24B 2014-09-06 2014-09-07 2014-09-08
+            reference_time  datetime64[us] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             precipitation   (x, y, time) float64 96B 5.68 9.256 0.7104 ... 4.615 7.805
@@ -8730,8 +8759,8 @@ class Dataset(
         Coordinates:
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
-            reference_time  datetime64[ns] 8B 2014-09-05
+          * time            (time) datetime64[us] 24B 2014-09-06 2014-09-07 2014-09-08
+            reference_time  datetime64[us] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 96B 29.11 18.2 22.83 ... 16.15 26.63
@@ -9425,7 +9454,7 @@ class Dataset(
                 "dim changes to return a dict of indices of each dimension, for "
                 "consistency it will be an error to call Dataset.argmin() with no argument,"
                 "since we don't return a dict of Datasets.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
         if (
@@ -9518,7 +9547,7 @@ class Dataset(
                 "dim changes to return a dict of indices of each dimension, for "
                 "consistency it will be an error to call Dataset.argmin() with no argument,"
                 "since we don't return a dict of Datasets.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
         if (
@@ -9592,8 +9621,8 @@ class Dataset(
         result : Dataset or DataArray, depending on whether ``statement`` contains an
             assignment.
 
-        Warning
-        -------
+        Warnings
+        --------
         Like ``pd.eval()``, this method should not be used with untrusted input.
 
         Examples
@@ -9933,7 +9962,7 @@ class Dataset(
         time part of the timestamps.
 
         Parameters
-        ---------
+        ----------
         calendar : str
             The target calendar name.
         dim : Hashable, default: "time"
@@ -10054,8 +10083,8 @@ class Dataset(
         dim : Hashable, default: "time"
             The time coordinate name.
 
-        Return
-        ------
+        Returns
+        -------
         DataArray
             The source interpolated on the decimal years of target,
         """
@@ -10430,7 +10459,7 @@ class Dataset(
             User guide describing :py:func:`~xarray.Dataset.coarsen`
 
         :ref:`compute.coarsen`
-            User guide on block arrgragation :py:func:`~xarray.Dataset.coarsen`
+            User guide on block aggregation :py:func:`~xarray.Dataset.coarsen`
 
         :doc:`xarray-tutorial:fundamentals/03.3_windowed`
             Tutorial on windowed computation using :py:func:`~xarray.Dataset.coarsen`

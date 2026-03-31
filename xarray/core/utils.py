@@ -162,7 +162,7 @@ def did_you_mean(
     >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
     'Did you mean one of (None,)?'
 
-    See also
+    See Also
     --------
     https://en.wikipedia.org/wiki/String_metric
     """
@@ -205,7 +205,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
 
 
 def maybe_coerce_to_str(index, original_coords):
-    """maybe coerce a pandas Index back to a nunpy array of type str
+    """maybe coerce a pandas Index back to a numpy array of type str
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
@@ -213,7 +213,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     try:
         result_type = dtypes.result_type(*original_coords)
-    except TypeError:
+    except (TypeError, ValueError):
         pass
     else:
         if result_type.kind in "SU":

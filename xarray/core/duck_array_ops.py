@@ -127,6 +127,10 @@ masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
 )
 
+getmaskarray = _dask_or_eager_func(
+    "getmaskarray", eager_module=np.ma, dask_module="dask.array.ma"
+)
+
 
 def sliding_window_view(array, window_shape, axis=None, **kwargs):
     # TODO: some libraries (e.g. jax) don't have this, implement an alternative?
@@ -285,7 +289,7 @@ def asarray(data, xp=np, dtype=None):
 
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
-    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
+    """Cast arrays to a shared dtype using xarray's type promotion rules."""
     # Avoid calling array_type("cupy") repeatidely in the any check
     array_type_cupy = array_type("cupy")
     if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):

@@ -385,7 +385,7 @@ def get_options():
     Get options for xarray.
 
     See Also
-    ----------
+    --------
     set_options
 
     """

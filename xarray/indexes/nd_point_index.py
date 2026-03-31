@@ -244,7 +244,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
         assert isinstance(tree_obj, TreeAdapter)
         self._tree_obj = tree_obj
 
-        assert len(coord_names) == len(dims) == len(shape)
+        assert len(dims) == len(shape)
         self._coord_names = coord_names
         self._dims = dims
         self._shape = shape
@@ -263,12 +263,6 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
             )
 
         var0 = next(iter(variables.values()))
-
-        if len(variables) != len(var0.dims):
-            raise ValueError(
-                f"the number of variables {len(variables)} doesn't match "
-                f"the number of dimensions {len(var0.dims)}"
-            )
 
         opts = dict(options)
 

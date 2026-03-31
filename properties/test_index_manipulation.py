@@ -195,9 +195,9 @@ class DatasetStateMachine(RuleBasedStateMachine):
             )
         )
         note(f"> drop_dims: {dims}")
-        # TODO: dropping a multi-index dimension raises a DeprecationWarning
+        # TODO: dropping a multi-index dimension raises a FutureWarning
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=DeprecationWarning)
+            warnings.simplefilter("ignore", category=FutureWarning)
             self.dataset = self.dataset.drop_dims(dims)
 
         for dim in dims:
@@ -267,6 +267,13 @@ class DatasetStateMachine(RuleBasedStateMachine):
 
 DatasetStateMachine.TestCase.settings = settings(max_examples=300, deadline=None)
 DatasetTest = DatasetStateMachine.TestCase
+
+
+@pytest.mark.skip(reason="failure detected by hypothesis")
+def test_unstack_string():
+    ds = xr.Dataset()
+    ds["0"] = np.array(["", "0", "\x000"], dtype="<U2")
+    ds.stack({"1": ["0"]}).unstack()
 
 
 @pytest.mark.skip(reason="failure detected by hypothesis")

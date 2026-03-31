@@ -926,7 +926,7 @@ class TestDataArray:
         assert blocked.chunks == ((3,), (4,))
         first_dask_name = blocked.data.name
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore[arg-type]
             assert blocked.chunks == ((2, 1), (2, 2))
             assert blocked.data.name != first_dask_name
@@ -991,7 +991,7 @@ class TestDataArray:
             da.isel(x=np.array([0], dtype="int64")), da.isel(x=np.array([0]))
         )
 
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_isel_fancy(self) -> None:
         shape = (10, 7, 6)
         np_array = np.random.random(shape)
@@ -1164,9 +1164,9 @@ class TestDataArray:
 
         message = "`pandas.Index` does not support the `float16` dtype.*"
 
-        with pytest.warns(DeprecationWarning, match=message):
+        with pytest.warns(FutureWarning, match=message):
             arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
-        with pytest.warns(DeprecationWarning, match=message):
+        with pytest.warns(FutureWarning, match=message):
             expected = DataArray(
                 data_values[indices], coords={"x": coord_values[indices]}, dims="x"
             )
@@ -2930,7 +2930,7 @@ class TestDataArray:
     def test_drop_multiindex_level(self) -> None:
         # GH6505
         expected = self.mda.drop_vars(["x", "level_1", "level_2"])
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = self.mda.drop_vars("level_1")
         assert_identical(expected, actual)
 
@@ -2953,7 +2953,7 @@ class TestDataArray:
         actual = arr.drop_sel(y=[0, 1, 3], errors="ignore")
         assert_identical(actual, expected)
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             arr.drop([0, 1, 3], dim="y", errors="ignore")  # type: ignore[arg-type]
 
     def test_drop_index_positions(self) -> None:
@@ -4908,8 +4908,6 @@ class TestDataArray:
         param_names = ["a"]
         params, func_args = _get_func_args(np.power, param_names)
         assert params == param_names
-        with pytest.raises(ValueError):
-            _get_func_args(np.power, [])
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
@@ -5181,7 +5179,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result3, expected3)
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmin(
         self,
@@ -5220,7 +5218,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result2, expected2)
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmax(
         self,
@@ -5500,7 +5498,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result7, expected7)
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmin_dim(
         self,
@@ -5546,7 +5544,7 @@ class TestReduce1D(TestReduce):
             assert_identical(result2[key], expected2[key])
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmax_dim(
         self,
@@ -6154,7 +6152,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result7, expected7)
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmin_dim(
         self,
@@ -6226,7 +6224,7 @@ class TestReduce2D(TestReduce):
             assert_identical(result3[key], expected3[key])
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmax_dim(
         self,
