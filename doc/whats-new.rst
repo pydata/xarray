@@ -134,6 +134,8 @@ Performance
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Add script for linting of public docstrings according to numpydoc (:pull:`11121`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 - Add stubtest configuration and allowlist for validating type annotations against
   runtime behavior. This enables CI integration for type stub validation and helps
