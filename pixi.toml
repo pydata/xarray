@@ -350,7 +350,7 @@ rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
 numpydoc = "*"
 
 [feature.numpydoc-lint.tasks]
-numpydoc-lint = { cmd = "python doc/numpydoc-public-api.py" }
+numpydoc-lint = { cmd = "python ci/numpydoc-public-api.py" }
 
 [environments]
 # Testing
