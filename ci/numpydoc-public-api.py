@@ -21,10 +21,10 @@ PUBLIC_MODULES = ["xarray"]
 ROOT_PACKAGE = "xarray"
 
 # full list of numpydoc error codes: https://numpydoc.readthedocs.io/en/latest/validation.html
-SKIP_ERRORS = [ # TODO: Curate these for Xarray
+SKIP_ERRORS = [  # TODO: Curate these for Xarray
     "GL01",  # parcels is fine with the summary line starting directly after `"""`, or on the next line.
     "SA01",  # Parcels doesn't require the "See also" section
-    "SA04",  #
+    "SA04",
     "ES01",  # We don't require the extended summary for all docstrings
     "EX01",  # We don't require the "Examples" section for all docstrings
     "SS06",  # Not possible to make all summaries one line
@@ -123,8 +123,16 @@ def walk_class(module_str: str, class_: type, public_api: list[str]) -> list[str
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Validate numpydoc docstrings in the public API")
-    parser.add_argument("-v", "--verbose", action="count", default=0, help="Increase verbosity (can be repeated)")
+    parser = argparse.ArgumentParser(
+        description="Validate numpydoc docstrings in the public API"
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Increase verbosity (can be repeated)",
+    )
     args = parser.parse_args()
 
     # Set logging level based on verbosity: 0=WARNING, 1=INFO, 2+=DEBUG
@@ -147,7 +155,9 @@ def main():
         try:
             res = validate(item)
         except (AttributeError, StopIteration, ValueError) as e:
-            if isinstance(e, ValueError) and "Error parsing See Also entry" in str(e): # TODO: Fix later https://github.com/pydata/xarray/issues/8596#issuecomment-3832443795
+            if (
+                isinstance(e, ValueError) and "Error parsing See Also entry" in str(e)
+            ):  # TODO: Fix later https://github.com/pydata/xarray/issues/8596#issuecomment-3832443795
                 logger.info(f"Skipping See Also parsing error for {item!r}.")
                 continue
             logger.warning(f"Could not process {item!r}. Encountered error. {e!r}")
