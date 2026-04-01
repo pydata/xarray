@@ -5421,13 +5421,16 @@ def test_memoryview_write_netcdf4_read_h5netcdf() -> None:
 @network
 @requires_h5netcdf_ros3
 class TestH5NetCDFDataRos3Driver(TestCommon):
-    from h5py import version as h5ver
-
     engine: T_NetcdfEngine = "h5netcdf"
     test_remote_dataset: str = "https://dandiarchive.s3.amazonaws.com/ros3test.hdf5"
-    ros3_kwargs: dict = (
-        {} if h5ver.hdf5_version_tuple < (2, 0, 0) else {"aws_region": b"us-east-2"}
-    )
+
+    @property
+    def ros3_kwargs(self) -> dict:
+        from h5py import version as h5ver
+
+        return (
+            {} if h5ver.hdf5_version_tuple < (2, 0, 0) else {"aws_region": b"us-east-2"}
+        )
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
