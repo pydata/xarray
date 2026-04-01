@@ -807,7 +807,7 @@ class PandasIndex(Index):
             encoding = None
 
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
-        var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding)
+        var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding, fastpath=True)
         return {name: var}
 
     def to_pandas_index(self) -> pd.Index:
@@ -828,6 +828,9 @@ class PandasIndex(Index):
         if not isinstance(indxr, slice) and is_scalar(indxr):
             # scalar indexer: drop index
             return None
+
+        if isinstance(indxr, slice) and indxr == slice(None):
+            return self
 
         return self._replace(self.index[indxr])  # type: ignore[index,unused-ignore]
 
@@ -2164,7 +2167,10 @@ def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: 
             new_index = getattr(index, func)(index_args)
             if new_index is not None:
                 new_indexes.update(dict.fromkeys(index_vars, new_index))
-                new_index_vars = new_index.create_variables(index_vars)
+                if new_index is index:
+                    new_index_vars = index_vars
+                else:
+                    new_index_vars = new_index.create_variables(index_vars)
                 new_index_variables.update(new_index_vars)
             else:
                 for k in index_vars:
