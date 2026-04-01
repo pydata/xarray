@@ -5421,17 +5421,22 @@ def test_memoryview_write_netcdf4_read_h5netcdf() -> None:
 @network
 @requires_h5netcdf_ros3
 class TestH5NetCDFDataRos3Driver(TestCommon):
+    from h5py import version as h5ver
+
     engine: T_NetcdfEngine = "h5netcdf"
-    test_remote_dataset: str = "https://archive.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
+    test_remote_dataset: str = "https://dandiarchive.s3.amazonaws.com/ros3test.hdf5"
+    ros3_kwargs: dict = (
+        {} if h5ver.hdf5_version_tuple < (2, 0, 0) else {"aws_region": b"us-east-2"}
+    )
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
         with open_dataset(
             self.test_remote_dataset,
             engine="h5netcdf",
-            backend_kwargs={"driver": "ros3"},
+            backend_kwargs={"driver": "ros3", **self.ros3_kwargs},
         ) as actual:
-            assert "Temperature" in list(actual)
+            assert "mydataset" in list(actual)
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list_empty_driver_kwds(self) -> None:
@@ -5439,12 +5444,12 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             "secret_id": b"",
             "secret_key": b"",
         }
-        backend_kwargs = {"driver": "ros3", "driver_kwds": driver_kwds}
+        backend_kwargs = {"driver": "ros3", **driver_kwds, **self.ros3_kwargs}
 
         with open_dataset(
             self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
         ) as actual:
-            assert "Temperature" in list(actual)
+            assert "mydataset" in list(actual)
 
 
 @pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "zarr"])
