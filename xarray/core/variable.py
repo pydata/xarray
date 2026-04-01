@@ -636,9 +636,13 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         key = self._item_key_to_tuple(key)  # key is a tuple
         # Fast path: key is already a tuple of the right length with only
         # ints and slices (the common case from Variable.isel)
-        if isinstance(key, tuple) and len(key) == self.ndim and all(
-            not isinstance(k, bool) and isinstance(k, BASIC_INDEXING_TYPES)
-            for k in key
+        if (
+            isinstance(key, tuple)
+            and len(key) == self.ndim
+            and all(
+                not isinstance(k, bool) and isinstance(k, BASIC_INDEXING_TYPES)
+                for k in key
+            )
         ):
             return self._broadcast_indexes_basic(key)
 

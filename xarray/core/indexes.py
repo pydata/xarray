@@ -807,7 +807,9 @@ class PandasIndex(Index):
             encoding = None
 
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
-        var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding, fastpath=True)
+        var = IndexVariable(
+            self.dim, data, attrs=attrs, encoding=encoding, fastpath=True
+        )
         return {name: var}
 
     def to_pandas_index(self) -> pd.Index:
