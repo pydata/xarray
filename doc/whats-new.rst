@@ -116,6 +116,8 @@ Bug Fixes
 - Fix :py:meth:`Dataset.interp` silently dropping datetime64 and timedelta64
   variables, through enabling their interpolation (:issue:`10900`, :pull:`11081`).
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
+- Fix h5netcdf backend module detection and ros3 tests (:issue:`11243`, :pull:`11274`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
