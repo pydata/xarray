@@ -678,6 +678,29 @@ class TestDataset:
         # test coordinate variables copied
         assert ds.variables["x"] is not coords.variables["x"]
 
+    @pytest.mark.filterwarnings("error")
+    def test_constructor_warn_on_promotion_to_coordinates(self) -> None:
+        # see GH issue 8959
+
+        with pytest.warns(
+            PendingDeprecationWarning, match="were automatically promoted"
+        ):
+            Dataset({"x": ("x", [0, 1])})
+
+        with pytest.warns(
+            PendingDeprecationWarning, match="were automatically promoted"
+        ):
+            Dataset(data_vars={"x": ("x", [0, 1])})
+
+        with pytest.raises(
+            ValueError, match="Cannot pass both vars and data_vars together"
+        ):
+            Dataset({"x": 0}, data_vars={"y": 0})
+
+        # no warning should be raised
+        ds = Dataset(coords={"x": ("x", [0, 1])})
+        assert "x" in ds.coords
+
     @pytest.mark.filterwarnings("ignore:return type")
     def test_properties(self) -> None:
         ds = create_test_data()
