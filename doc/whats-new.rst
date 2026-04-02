@@ -116,10 +116,16 @@ Bug Fixes
 - Fix :py:meth:`Dataset.interp` silently dropping datetime64 and timedelta64
   variables, through enabling their interpolation (:issue:`10900`, :pull:`11081`).
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
+- :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
+  By `Amartya Anand <https://github.com/SurfyPenguin>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Add AI policy (:pull:`11257`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+- Update documentation and team guide to promote Zulip. Remove mentions of Discord (:pull:`11246`, :pull:`11254`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 - Fix code blocks on "how to create custom index" doc page (:pull:`11255`).
@@ -135,6 +141,8 @@ Performance
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Add script for linting of public docstrings according to numpydoc (:pull:`11121`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Add stubtest configuration and allowlist for validating type annotations against
   runtime behavior. This enables CI integration for type stub validation and helps
   prevent type annotation regressions (:issue:`11086`).
