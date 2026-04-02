@@ -120,6 +120,8 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Add AI policy (:pull:`11257`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Update documentation and team guide to promote Zulip. Remove mentions of Discord (:pull:`11246`, :pull:`11254`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
@@ -136,9 +138,9 @@ Performance
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 - Add script for linting of public docstrings according to numpydoc (:pull:`11121`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
-
 - Add stubtest configuration and allowlist for validating type annotations against
   runtime behavior. This enables CI integration for type stub validation and helps
   prevent type annotation regressions (:issue:`11086`).
