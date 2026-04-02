@@ -15,7 +15,7 @@ Overview
 We welcome your skills and enthusiasm at the xarray project!. There are numerous opportunities to
 contribute beyond just writing code.
 All contributions, including bug reports, bug fixes, documentation improvements, enhancement suggestions,
-and other ideas are welcome. LLM generated contributions are welcome, but they must follow `our AI policy <ai-policy>`_.
+and other ideas are welcome. LLM generated contributions are welcome, but they must follow :doc:`our AI policy <ai-policy>`.
 
 If you have any questions on the process or how to fix something feel free to ask us!
 The recommended places to ask questions are `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
