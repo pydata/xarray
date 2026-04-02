@@ -14,6 +14,9 @@ v2026.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added ``inherit='all_coords'`` option to :py:meth:`DataTree.to_dataset` to inherit
+  all parent coordinates, not just indexed ones (:issue:`10812`, :pull:`11230`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -117,18 +120,35 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Update documentation and team guide to promote Zulip. Remove mentions of Discord (:pull:`11246`, :pull:`11254`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 - Fix code blocks on "how to create custom index" doc page (:pull:`11255`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
+  as well. (:issue:`6528`, :pull:`10987`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Add script for linting of public docstrings according to numpydoc (:pull:`11121`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
 - Add stubtest configuration and allowlist for validating type annotations against
   runtime behavior. This enables CI integration for type stub validation and helps
   prevent type annotation regressions (:issue:`11086`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Remove ``setup.py`` file (:pull:`11261`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+
+- Add :func:`typing.overload` decorators to :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax`
+  to narrow return type based on ``dim`` parameter (:issue:`10893` :pull:`11233`).
+  By `Amartya Anand <https://github.com/SurfyPenguin>`_.
 
 .. _whats-new.2026.02.0:
 
@@ -336,6 +356,9 @@ Performance
 
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
+  as well. (:issue:`6528`, :pull:`10987`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Optimize :py:class:`~xarray.coding.variables.CFMaskCoder` decoder (:pull:`11105`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 

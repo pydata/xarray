@@ -274,7 +274,7 @@ resources such as:
 - [python-xarray](https://stackoverflow.com/questions/tagged/python-xarray) on Stack Overflow.
 - The Xarray channel in the [OSSci Zulip](https://ossci.zulipchat.com/)
 - [@xarray_dev](https://x.com/xarray_dev) on X.
-- [xarray-dev](https://discord.gg/bsSGdwBn) discord community (normally only used for remote synchronous chat during sprints).
+- **(superseded by the OSSci Zulip)** [xarray-dev](https://discord.com/invite/wEKPCt4PDu) discord community (normally only used for remote synchronous chat during sprints).
 
 You are not required to monitor any of the social resources.
 

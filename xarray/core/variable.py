@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from functools import partial
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -582,7 +582,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return self.to_index_variable().to_index()
 
     def to_dict(
-        self, data: bool | str = "list", encoding: bool = False
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """Dictionary representation of variable."""
         item: dict[str, Any] = {
