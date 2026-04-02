@@ -35,6 +35,8 @@ PR descriptions, issue comments, and review responses must be your own words. Th
 substance and reasoning must come from you. Do not paste AI-generated text as
 comments or review responses. Please attempt to be concise.
 
+PR descriptions should follow the provided template.
+
 Using AI to improve the language of your writing (grammar, phrasing, spelling, etc.) is
 acceptable. Be careful that it does not introduce inaccurate details in the process.
 
