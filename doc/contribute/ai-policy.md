@@ -80,7 +80,7 @@ that large changes be broken into smaller, reviewable pieces.
 
 ## Documentation
 
-The same core principles apply to both code and documentation You must review the result
+The same core principles apply to both code and documentation. You must review the result
 for accuracy and are ultimately responsible for all changes made. Xarray has domain-specific
 semantics that AI tools frequently get wrong. Do not submit documentation that you
 haven't carefully read and verified.
