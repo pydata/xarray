@@ -116,6 +116,8 @@ Bug Fixes
 - Fix :py:meth:`Dataset.interp` silently dropping datetime64 and timedelta64
   variables, through enabling their interpolation (:issue:`10900`, :pull:`11081`).
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
+- :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
+  By `Amartya Anand <https://github.com/SurfyPenguin>`_.
 
 Documentation
 ~~~~~~~~~~~~~
