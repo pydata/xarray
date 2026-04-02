@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: Parcels-code/pixi-lock/create-and-cache@a9aee67fa67426e6b0297fa5bef80600572be153
+      - uses: Parcels-code/pixi-lock/create-and-cache@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
         id: pixi-lock
       - uses: actions/upload-artifact@v7
         with:
@@ -96,7 +96,7 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Restore cached pixi lockfile
-        uses: Parcels-code/pixi-lock/restore@a9aee67fa67426e6b0297fa5bef80600572be153
+        uses: Parcels-code/pixi-lock/restore@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
       - uses: prefix-dev/setup-pixi@v0.9.4
@@ -166,7 +166,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v5.5.2
+        uses: codecov/codecov-action@v6.0.0
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
