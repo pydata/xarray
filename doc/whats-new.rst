@@ -136,9 +136,11 @@ Performance
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Adopt AI policy (:pull:`11257`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Add script for linting of public docstrings according to numpydoc (:pull:`11121`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
-
 - Add stubtest configuration and allowlist for validating type annotations against
   runtime behavior. This enables CI integration for type stub validation and helps
   prevent type annotation regressions (:issue:`11086`).
