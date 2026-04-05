@@ -15,6 +15,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 env:
   FORCE_COLOR: 3
 
@@ -29,10 +31,11 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1
+          persist-credentials: false
+      - uses: xarray-contrib/ci-trigger@10cd2bfec3484946a4058a421ddf9cfad101e715 # v1.2.1
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
@@ -58,10 +61,12 @@ jobs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
       pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: Parcels-code/pixi-lock/create-and-cache@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
         id: pixi-lock
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: pixi-lock
           path: pixi.lock
@@ -79,15 +84,20 @@ jobs:
       fail-fast: false
       matrix:
         pixi-env: ["test-nightly"]
+
+    permissions:
+      issues: write
+
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
+          persist-credentials: false
       - name: Restore cached pixi lockfile
         uses: Parcels-code/pixi-lock/restore@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
-      - uses: prefix-dev/setup-pixi@v0.9.4
+      - uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -111,7 +121,7 @@ jobs:
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository_owner == 'pydata'
-        uses: scientific-python/issue-from-pytest-log-action@v1
+        uses: scientific-python/issue-from-pytest-log-action@8e905db353437cda1d6a773de245343fbfc940dd # v1.5.0
         with:
           log-path: output-${{ matrix.pixi-env }}-log.jsonl
 
@@ -131,16 +141,18 @@ jobs:
       fail-fast: false
       matrix:
         pixi-env: ["test-nightly"]
+
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
+          persist-credentials: false
 
       - name: Restore cached pixi lockfile
         uses: Parcels-code/pixi-lock/restore@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
-      - uses: prefix-dev/setup-pixi@v0.9.4
+      - uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -158,7 +170,7 @@ jobs:
         run: |
           pixi run -e ${{matrix.pixi-env}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@v6.0.0
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         with:
           files: mypy_report/cobertura.xml
           flags: mypy
