@@ -108,9 +108,6 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
     return dtype_out, fill_value
 
 
-NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
-
-
 def get_fill_value(dtype):
     """Return an appropriate fill value for this dtype.
 

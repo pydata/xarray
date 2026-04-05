@@ -123,12 +123,6 @@ def test_maybe_promote(kind, expected) -> None:
     assert str(actual[1]) == expected[1]
 
 
-def test_nat_types_membership() -> None:
-    assert np.datetime64("NaT").dtype in dtypes.NAT_TYPES
-    assert np.timedelta64("NaT").dtype in dtypes.NAT_TYPES
-    assert np.float64 not in dtypes.NAT_TYPES
-
-
 @pytest.mark.parametrize(
     ["dtype", "kinds", "xp", "expected"],
     (
