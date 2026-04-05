@@ -89,7 +89,7 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
         # np.timedelta64 is a subclass of np.integer
         # Check np.timedelta64 before np.integer
         unit, _ = np.datetime_data(dtype)
-        fill_value = np.timedelta64("NaT", unit)
+        fill_value = np.timedelta64("NaT", unit)  # type: ignore[call-overload]
         dtype_ = dtype
     elif isdtype(dtype, "integral"):
         dtype_ = np.float32 if dtype.itemsize <= 2 else np.float64
@@ -100,7 +100,7 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
     elif np.issubdtype(dtype, np.datetime64):
         unit, _ = np.datetime_data(dtype)
         dtype_ = dtype
-        fill_value = np.datetime64("NaT", unit)
+        fill_value = np.datetime64("NaT", unit)  # type: ignore[call-overload]
     else:
         dtype_ = object
         fill_value = np.nan
