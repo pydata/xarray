@@ -77,6 +77,7 @@ jobs:
     needs: cache-pixi-lock
     if: |
       always() && needs.cache-pixi-lock.result == 'success'
+
     defaults:
       run:
         shell: bash -l {0}
@@ -85,8 +86,8 @@ jobs:
       matrix:
         pixi-env: ["test-nightly"]
 
-    permissions:
-      issues: write
+    outputs:
+      log-file: ${{ steps.determine-log-path.outputs.log-file }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -109,21 +110,46 @@ jobs:
       - name: Import xarray
         run: |
           pixi run -e ${{matrix.pixi-env}} -- python -c 'import xarray'
+      - name: Determine log path
+        id: determine-log-path
+        run: |
+          echo "log-file=output-${{ matrix.pixi-env }}-log.jsonl" >> $GITHUB_OUTPUT;
       - name: Run Tests
         if: success()
         id: status
+        env:
+          LOG_PATH: ${{ steps.determine-log-path.output.log-file }}
         run: |
           pixi run -e ${{matrix.pixi-env}} -- python -m pytest --timeout=60 -rf -nauto \
-            --report-log output-${{ matrix.pixi-env }}-log.jsonl
+            --report-log "$LOG_PATH"
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: log file
+          path: ${{ steps.status.output.log-file }}
+
+  create-issue:
+    needs: upstream-dev
+    runs-on: ubuntu-slim
+    if: |
+      needs.upstream-dev.result == 'failure'
+      && github.event_name == 'schedule'
+      && github.repository_owner == 'pydata'
+
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: log file
+          path: logs/
       - name: Generate and publish the report
         if: |
           failure()
           && steps.status.outcome == 'failure'
-          && github.event_name == 'schedule'
-          && github.repository_owner == 'pydata'
         uses: scientific-python/issue-from-pytest-log-action@8e905db353437cda1d6a773de245343fbfc940dd # v1.5.0
         with:
-          log-path: output-${{ matrix.pixi-env }}-log.jsonl
+          log-path: ${{ needs.upstream-dev.outputs.log-file }}
 
   mypy-upstream-dev:
     name: mypy-upstream-dev
