@@ -114,6 +114,7 @@ jobs:
         id: determine-log-path
         run: |
           echo "log-file=output-${{ matrix.pixi-env }}-log.jsonl" >> $GITHUB_OUTPUT;
+          cat $GITHUB_OUTPUT
       - name: Run Tests
         if: success()
         id: status
