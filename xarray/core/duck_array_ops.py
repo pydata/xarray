@@ -142,7 +142,7 @@ def sliding_window_view(array, window_shape, axis=None, **kwargs):
         eager_module=xp.lib.stride_tricks,
         dask_module=dask_array_compat,
         dask_only_kwargs=("automatic_rechunk",),
-        numpy_only_kwargs=("subok", "writeable"),
+        numpy_only_kwargs=("subok", "writable"),
     )
     return func(array, window_shape, axis=axis, **kwargs)
 

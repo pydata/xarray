@@ -359,8 +359,8 @@ class DataArrayRolling(Rolling["DataArray"]):
         Returns
         -------
         DataArray
-            a view of the original array. By default, the returned array is not writeable.
-            For numpy arrays, one can pass ``writeable=True`` in ``sliding_window_view_kwargs``.
+            a view of the original array. By default, the returned array is not writable.
+            For numpy arrays, one can pass ``writable=True`` in ``sliding_window_view_kwargs``.
 
         See Also
         --------
@@ -954,8 +954,8 @@ class DatasetRolling(Rolling["Dataset"]):
         Returns
         -------
         Dataset
-            Dataset with views of the original arrays. By default, the returned arrays are not writeable.
-            For numpy arrays, one can pass ``writeable=True`` in ``sliding_window_view_kwargs``.
+            Dataset with views of the original arrays. By default, the returned arrays are not writable.
+            For numpy arrays, one can pass ``writable=True`` in ``sliding_window_view_kwargs``.
 
         See Also
         --------

@@ -59,7 +59,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
-    assert_writeable,
+    assert_writable,
     create_test_data,
     has_cftime,
     has_dask,
@@ -163,9 +163,9 @@ def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
             }
         )
 
-    assert_writeable(ds)
-    assert_writeable(ds_to_append)
-    assert_writeable(ds_with_new_var)
+    assert_writable(ds)
+    assert_writable(ds_to_append)
+    assert_writable(ds_with_new_var)
     return ds, ds_to_append, ds_with_new_var
 
 
@@ -178,8 +178,8 @@ def create_append_string_length_mismatch_test_data(dtype) -> tuple[Dataset, Data
         ds_to_append = xr.Dataset(
             {"temperature": (["time"], data_to_append)}, coords={"time": [0, 1, 2]}
         )
-        assert_writeable(ds)
-        assert_writeable(ds_to_append)
+        assert_writable(ds)
+        assert_writable(ds_to_append)
         return ds, ds_to_append
 
     u2_strings = ["ab", "cd", "ef"]

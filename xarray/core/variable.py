@@ -222,10 +222,10 @@ def _possibly_convert_objects(values):
     """
     as_series = pd.Series(values.ravel(), copy=False)
     result = np.asarray(as_series).reshape(values.shape)
-    if not result.flags.writeable:
+    if not result.flags.writable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
         try:
-            result.flags.writeable = True
+            result.flags.writable = True
         except ValueError:
             result = result.copy()
     # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
@@ -1479,7 +1479,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         if self.dims == expanded_dims:
             # don't use broadcast_to unless necessary so the result remains
-            # writeable if possible
+            # writable if possible
             expanded_data = self._data
         elif shape is None or all(
             s == 1 for s, e in zip(shape, dim, strict=True) if e not in self_dims

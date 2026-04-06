@@ -73,15 +73,15 @@ def var():
         np.array(["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[ns]"),
     ],
 )
-def test_as_compatible_data_writeable(data):
+def test_as_compatible_data_writable(data):
     # In pandas 3 the mode.copy_on_write option defaults to True, so the option
     # setting logic can be removed once our minimum version of pandas is
     # greater than or equal to 3.
     if not has_pandas_3:
         pd.set_option("mode.copy_on_write", True)
-    # GH8843, ensure writeable arrays for data_vars even with
+    # GH8843, ensure writable arrays for data_vars even with
     # pandas copy-on-write mode
-    assert as_compatible_data(data).flags.writeable
+    assert as_compatible_data(data).flags.writable
     if not has_pandas_3:
         pd.reset_option("mode.copy_on_write")
 
@@ -2767,7 +2767,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         assert np.dtype(float) == actual.dtype
 
         original2: Any = np.ma.MaskedArray([1.0, 2.0], mask=[True, False])
-        original2.flags.writeable = False
+        original2.flags.writable = False
         expected2: Any = [np.nan, 2.0]
         actual = as_compatible_data(original2)
         assert_array_equal(expected2, actual)

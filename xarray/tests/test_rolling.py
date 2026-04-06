@@ -630,13 +630,13 @@ class TestDatasetRolling:
             rechunked = obj.rolling(time=100, center=True).construct(
                 "window",
                 sliding_window_view_kwargs=dict(
-                    automatic_rechunk=True, writeable=False
+                    automatic_rechunk=True, writable=False
                 ),
             )
             not_rechunked = obj.rolling(time=100, center=True).construct(
                 "window",
                 sliding_window_view_kwargs=dict(
-                    automatic_rechunk=False, writeable=True
+                    automatic_rechunk=False, writable=True
                 ),
             )
             assert rechunked.chunksizes != not_rechunked.chunksizes

@@ -1720,7 +1720,7 @@ class NumpyIndexingAdapter(IndexingAdapter):
             array[key] = value
         except ValueError as exc:
             # More informative exception if read-only view
-            if not array.flags.writeable and not array.flags.owndata:
+            if not array.flags.writable and not array.flags.owndata:
                 raise ValueError(
                     "Assignment destination is a view.  "
                     "Do you want to .copy() array first?"

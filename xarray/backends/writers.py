@@ -38,7 +38,7 @@ T_DataTreeNetcdfEngine = Literal["netcdf4", "h5netcdf", "pydap"]
 T_DataTreeNetcdfTypes = Literal["NETCDF4"]
 
 
-WRITEABLE_STORES: dict[T_NetcdfEngine, Callable] = {
+WRITABLE_STORES: dict[T_NetcdfEngine, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
     "h5netcdf": backends.H5NetCDFStore.open,
@@ -57,7 +57,7 @@ def get_writable_netcdf_store(
 ) -> AbstractWritableDataStore:
     """Create a store for writing to a netCDF file."""
     try:
-        store_open = WRITEABLE_STORES[engine]
+        store_open = WRITABLE_STORES[engine]
     except KeyError as err:
         raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}") from err
 

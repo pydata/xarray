@@ -57,7 +57,7 @@ arm_xfail = pytest.mark.xfail(
 )
 
 
-def assert_writeable(ds):
+def assert_writable(ds):
     readonly = [
         name
         for name, var in ds.variables.items()
@@ -65,7 +65,7 @@ def assert_writeable(ds):
         and not isinstance(
             var.data, PandasExtensionArray | pd.api.extensions.ExtensionArray
         )
-        and not var.data.flags.writeable
+        and not var.data.flags.writable
     ]
     assert not readonly, readonly
 
@@ -439,7 +439,7 @@ def create_test_data(
         numbers_values = rs.integers(0, 3, _dims["dim3"], dtype="int64")
     obj.coords["numbers"] = ("dim3", numbers_values)
     obj.encoding = {"foo": "bar"}
-    assert_writeable(obj)
+    assert_writable(obj)
     return obj
 
 
