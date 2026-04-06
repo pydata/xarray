@@ -123,6 +123,7 @@ jobs:
           pixi run -e ${{matrix.pixi-env}} -- python -m pytest --timeout=60 -rf -nauto \
             --report-log "$LOG_PATH"
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: failure() && steps.status.outcome == 'failure'
         with:
           name: log file
           path: ${{ steps.status.output.log-file }}
