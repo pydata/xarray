@@ -127,7 +127,7 @@ jobs:
         if: failure() && steps.status.outcome == 'failure'
         with:
           name: log file
-          path: ${{ steps.determine-log-path.output.log-file }}
+          path: ${{ steps.determine-log-path.outputs.log-file }}
 
   create-issue:
     needs: upstream-dev
