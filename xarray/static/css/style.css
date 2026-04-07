@@ -2,36 +2,54 @@
 
 :root {
   --xr-font-color0: var(
-    --jp-content-font-color0,
-    var(--pst-color-text-base rgba(0, 0, 0, 1))
+    --vscode-editor-foreground,
+    var(--jp-content-font-color0, var(--pst-color-text-base, rgba(0, 0, 0, 1)))
   );
   --xr-font-color2: var(
-    --jp-content-font-color2,
-    var(--pst-color-text-base, rgba(0, 0, 0, 0.54))
+    --vscode-descriptionForeground,
+    var(
+      --jp-content-font-color2,
+      var(--pst-color-text-base, rgba(0, 0, 0, 0.54))
+    )
   );
   --xr-font-color3: var(
-    --jp-content-font-color3,
-    var(--pst-color-text-base, rgba(0, 0, 0, 0.38))
+    --vscode-disabledForeground,
+    var(
+      --jp-content-font-color3,
+      var(--pst-color-text-base, rgba(0, 0, 0, 0.38))
+    )
   );
   --xr-border-color: var(
-    --jp-border-color2,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 10))
+    --vscode-panel-border,
+    var(
+      --jp-border-color2,
+      hsl(from var(--pst-color-on-background, white) h s calc(l - 10))
+    )
   );
   --xr-disabled-color: var(
-    --jp-layout-color3,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 40))
+    --vscode-disabledForeground,
+    var(
+      --jp-layout-color3,
+      hsl(from var(--pst-color-on-background, white) h s calc(l - 40))
+    )
   );
   --xr-background-color: var(
-    --jp-layout-color0,
-    var(--pst-color-on-background, white)
+    --vscode-editor-background,
+    var(--jp-layout-color0, var(--pst-color-on-background, white))
   );
   --xr-background-color-row-even: var(
-    --jp-layout-color1,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
+    --vscode-list-hoverBackground,
+    var(
+      --jp-layout-color1,
+      hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
+    )
   );
   --xr-background-color-row-odd: var(
-    --jp-layout-color2,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
+    --vscode-list-inactiveSelectionBackground,
+    var(
+      --jp-layout-color2,
+      hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
+    )
   );
 }
 
