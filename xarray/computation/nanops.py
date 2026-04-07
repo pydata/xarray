@@ -29,7 +29,9 @@ def _maybe_null_out(result, axis, mask, min_count=1):
         dtype, fill_value = dtypes.maybe_promote(result.dtype)
         result = where(null_mask, fill_value, astype(result, dtype))
 
-    elif hasattr(result, "dtype") and result.dtype.kind not in "mM":
+    elif (dtype := getattr(result, "dtype", None)) and getattr(
+        dtype, "kind", None
+    ) not in "mM":
         null_mask = mask.size - duck_array_ops.sum(mask)
         result = where(null_mask < min_count, np.nan, result)
 
