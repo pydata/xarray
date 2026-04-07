@@ -31,7 +31,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
 
     elif (dtype := getattr(result, "dtype", None)) and getattr(
         dtype, "kind", None
-    ) not in "mM":
+    ) not in {"m", "M"}:
         null_mask = mask.size - duck_array_ops.sum(mask)
         result = where(null_mask < min_count, np.nan, result)
 
