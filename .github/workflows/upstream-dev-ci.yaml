@@ -151,7 +151,7 @@ jobs:
           && steps.status.outcome == 'failure'
         uses: scientific-python/issue-from-pytest-log-action@8e905db353437cda1d6a773de245343fbfc940dd # v1.5.0
         with:
-          log-path: ${{ needs.upstream-dev.outputs.log-file }}
+          log-path: logs/${{ needs.upstream-dev.outputs.log-file }}
 
   mypy-upstream-dev:
     name: mypy-upstream-dev
