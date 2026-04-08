@@ -79,3 +79,7 @@ repos:
     rev: v1.44.0
     hooks:
       - id: typos
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.23.1
+    hooks:
+      - id: zizmor
