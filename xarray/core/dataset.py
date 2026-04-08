@@ -1223,7 +1223,7 @@ class Dataset(
 
             if k in self._indexes:
                 if self._indexes[k].should_add_coord_to_array(
-                    k, self._variables[k], needed_dims
+                    k, self._variables[k], set(needed_dims)
                 ):
                     variables[k] = self._variables[k]
                     coord_names.add(k)

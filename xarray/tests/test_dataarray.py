@@ -571,7 +571,7 @@ class TestDataArray:
                 "face_x": ("faces", [0.5, 1.5]),
                 "face_y": ("faces", [0.5, 0.5]),
             },
-            indexes={k: idx for k in ["node_x", "node_y", "face_x", "face_y"]},
+            indexes=dict.fromkeys(["node_x", "node_y", "face_x", "face_y"], idx),
         )
         node_da = DataArray(
             np.random.rand(3, 4), dims=("nodes", "extra"), coords=coords
@@ -583,12 +583,12 @@ class TestDataArray:
         reduced_node = node_da.mean("extra")
         reduced_face = face_da.mean("extra")
 
-        assert isinstance(
-            next(iter(reduced_node.xindexes.values())), MultiDimIndex
-        ), "Index dropped from node DataArray after reduction"
-        assert isinstance(
-            next(iter(reduced_face.xindexes.values())), MultiDimIndex
-        ), "Index dropped from face DataArray after reduction"
+        assert isinstance(next(iter(reduced_node.xindexes.values())), MultiDimIndex), (
+            "Index dropped from node DataArray after reduction"
+        )
+        assert isinstance(next(iter(reduced_face.xindexes.values())), MultiDimIndex), (
+            "Index dropped from face DataArray after reduction"
+        )
 
     def test_equals_and_identical(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")

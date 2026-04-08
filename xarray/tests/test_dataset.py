@@ -4569,7 +4569,7 @@ class TestDataset:
                 "face_x": ("faces", [0.5, 1.5]),
                 "face_y": ("faces", [0.5, 0.5]),
             },
-            indexes={k: idx for k in ["node_x", "node_y", "face_x", "face_y"]},
+            indexes=dict.fromkeys(["node_x", "node_y", "face_x", "face_y"], idx),
         )
         ds = Dataset(
             {
@@ -4582,12 +4582,12 @@ class TestDataset:
         node_subset = ds[["node_data"]]
         face_subset = ds[["face_data"]]
 
-        assert isinstance(
-            next(iter(node_subset.xindexes.values())), MultiDimIndex
-        ), "Index dropped from Dataset when subsetting to node variable"
-        assert isinstance(
-            next(iter(face_subset.xindexes.values())), MultiDimIndex
-        ), "Index dropped from Dataset when subsetting to face variable"
+        assert isinstance(next(iter(node_subset.xindexes.values())), MultiDimIndex), (
+            "Index dropped from Dataset when subsetting to node variable"
+        )
+        assert isinstance(next(iter(face_subset.xindexes.values())), MultiDimIndex), (
+            "Index dropped from Dataset when subsetting to face variable"
+        )
 
     def test_virtual_variables_default_coords(self) -> None:
         dataset = Dataset({"foo": ("x", range(10))})
