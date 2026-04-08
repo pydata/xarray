@@ -2246,6 +2246,12 @@ class TestDataset:
 
         assert_identical(mdata.sel(x={"one": "a", "two": 1}), mdata.sel(one="a", two=1))
 
+        # GH10534: slicing on multi-index levels should raise
+        with pytest.raises(ValueError, match="slice-based selection on multi-index"):
+            mdata.sel(one=slice("a", "b"))
+        with pytest.raises(ValueError, match="slice-based selection on multi-index"):
+            mdata.sel(two=slice(1, 2))
+
     def test_broadcast_like(self) -> None:
         original1 = DataArray(
             np.random.randn(5), [("x", range(5))], name="a"
@@ -6118,38 +6124,50 @@ class TestDataset:
         ):
             data.mean(dim="bad_dim")
 
-    def test_reduce_cumsum(self) -> None:
-        data = xr.Dataset(
-            {"a": 1, "b": ("x", [1, 2]), "c": (("x", "y"), [[np.nan, 3], [0, 4]])}
-        )
-        assert_identical(data.fillna(0), data.cumsum("y"))
-
-        expected = xr.Dataset(
-            {"a": 1, "b": ("x", [1, 3]), "c": (("x", "y"), [[0, 3], [0, 7]])}
-        )
-        assert_identical(expected, data.cumsum())
-
     @pytest.mark.parametrize(
-        "reduct, expected",
+        "method, dim, expected_data_vars",
         [
-            ("dim1", ["dim2", "dim3", "time", "dim1"]),
-            ("dim2", ["dim3", "time", "dim1", "dim2"]),
-            ("dim3", ["dim2", "time", "dim1", "dim3"]),
-            ("time", ["dim2", "dim3", "dim1"]),
+            (
+                "cumsum",
+                ...,
+                {"a": 1, "b": ("x", [2, 6]), "c": (("x", "y"), [[0, 3], [0, 7]])},
+            ),
+            (
+                "cumsum",
+                "y",
+                {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[0, 3], [0, 4]])},
+            ),
+            (
+                "cumsum",
+                "x",
+                {"a": 1, "b": ("x", [2, 6]), "c": (("x", "y"), [[0, 3], [0, 7]])},
+            ),
+            (
+                "cumprod",
+                ...,
+                {"a": 1, "b": ("x", [2, 8]), "c": (("x", "y"), [[1, 3], [0, 0]])},
+            ),
+            (
+                "cumprod",
+                "y",
+                {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[1, 3], [0, 0]])},
+            ),
+            (
+                "cumprod",
+                "x",
+                {"a": 1, "b": ("x", [2, 8]), "c": (("x", "y"), [[1, 3], [0, 12]])},
+            ),
         ],
     )
-    @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
-    def test_reduce_cumsum_test_dims(self, reduct, expected, func) -> None:
-        data = create_test_data()
-        with pytest.raises(
-            ValueError,
-            match=re.escape("Dimension(s) 'bad_dim' do not exist"),
-        ):
-            getattr(data, func)(dim="bad_dim")
-
-        # ensure dimensions are correct
-        actual = getattr(data, func)(dim=reduct).dims
-        assert list(actual) == expected
+    def test_scans(self, method: str, dim: str, expected_data_vars: dict) -> None:
+        coords = {"x": ("x", [0, 1]), "y": ("y", [2, 3])}
+        ds = xr.Dataset(
+            {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[np.nan, 3], [0, 4]])},
+            coords=coords,
+        )
+        expected = xr.Dataset(expected_data_vars, coords=coords)
+        actual = getattr(ds, method)(dim)
+        assert_identical(expected, actual)
 
     def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44, use_extension_array=True)

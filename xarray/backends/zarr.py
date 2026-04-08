@@ -125,21 +125,21 @@ class FillValueCoder:
     def encode(
         cls, value: int | float | complex | str | bytes, dtype: np.dtype[Any]
     ) -> Any:
-        if dtype.kind in "S":
+        if dtype.kind == "S":
             # byte string, this implies that 'value' must also be `bytes` dtype.
             assert isinstance(value, bytes)
             return base64.standard_b64encode(value).decode()
-        elif dtype.kind in "b":
+        elif dtype.kind == "b":
             # boolean
             return bool(value)
         elif dtype.kind in "iu":
             # todo: do we want to check for decimals?
             assert isinstance(value, int | float)
             return int(value)
-        elif dtype.kind in "f":
+        elif dtype.kind == "f":
             assert isinstance(value, int | float)
             return base64.standard_b64encode(struct.pack("<d", float(value))).decode()
-        elif dtype.kind in "c":
+        elif dtype.kind == "c":
             # complex - encode each component as base64, matching float encoding
             assert isinstance(value, complex) or np.issubdtype(
                 type(value), np.complexfloating
@@ -152,7 +152,7 @@ class FillValueCoder:
                     struct.pack("<d", float(value.imag))  # type: ignore[union-attr]
                 ).decode(),
             ]
-        elif dtype.kind in "U":
+        elif dtype.kind == "U":
             return str(value)
         else:
             raise ValueError(f"Failed to encode fill_value. Unsupported dtype {dtype}")
@@ -169,16 +169,16 @@ class FillValueCoder:
             assert isinstance(value, str | bytes)
             return base64.standard_b64decode(value)
         np_dtype = np.dtype(dtype)
-        if np_dtype.kind in "f":
+        if np_dtype.kind == "f":
             assert isinstance(value, str | bytes)
             return struct.unpack("<d", base64.standard_b64decode(value))[0]
-        elif np_dtype.kind in "c":
+        elif np_dtype.kind == "c":
             # complex - decode each component from base64, matching float decoding
             assert isinstance(value, list | tuple) and len(value) == 2
             real = struct.unpack("<d", base64.standard_b64decode(value[0]))[0]
             imag = struct.unpack("<d", base64.standard_b64decode(value[1]))[0]
             return complex(real, imag)
-        elif np_dtype.kind in "b":
+        elif np_dtype.kind == "b":
             return bool(value)
         elif np_dtype.kind in "iu":
             assert isinstance(value, int | float)
@@ -1445,7 +1445,7 @@ def open_zarr(
     mask_and_scale=True,
     decode_times=True,
     concat_characters=True,
-    decode_coords=True,
+    decode_coords: Literal["coordinates", "all"] | bool = True,
     drop_variables=None,
     consolidated=None,
     overwrite_encoded_chunks=False,
@@ -1513,9 +1513,17 @@ def open_zarr(
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
+    decode_coords : bool or {"coordinates", "all"}, optional
+        Controls which variables are set as coordinate variables:
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
+          as coordinate variables.
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+          other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -1668,7 +1676,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             # allow a trailing slash to account for an autocomplete
             # adding it.
             _, ext = os.path.splitext(str(filename_or_obj).rstrip("/"))
-            return ext in [".zarr"]
+            return ext == ".zarr"
 
         return False
 

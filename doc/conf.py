@@ -54,6 +54,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "jupyter_sphinx",
+    "myst_parser",
     "nbsphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",
@@ -232,6 +233,7 @@ html_theme_options = {
     "header_links_before_dropdown": 8,
     "navbar_align": "left",
     "footer_center":["last-updated"],
+    "announcement": "Xarray now has a home in the <a href='https://ossci.zulipchat.com/'>OSSci Zulip</a>! Chat here with other devs, users, and our friends at Zarr.", # TODO: Remove a couple months'ish after 21 March 2026
     # Instead of adding these to the header bar they are linked in 'getting help' and 'contributing'
     # "icon_links": [
     # {
@@ -337,6 +339,11 @@ intersphinx_mapping = {
     "xarray-lmfit": ("https://xarray-lmfit.readthedocs.io/stable", None),
 }
 
+# Resolve the git ref once at import time, not per-object.
+tag = subprocess.getoutput("git describe --tags --exact-match HEAD")
+source_ref = tag if tag.startswith("v") else "main"
+
+
 # based on numpy doc/source/conf.py
 def linkcode_resolve(domain, info):
     """
@@ -378,13 +385,7 @@ def linkcode_resolve(domain, info):
 
     fn = os.path.relpath(fn, start=os.path.dirname(xarray.__file__))
 
-    if "+" in xarray.__version__:
-        return f"https://github.com/pydata/xarray/blob/main/xarray/{fn}{linespec}"
-    else:
-        return (
-            f"https://github.com/pydata/xarray/blob/"
-            f"v{xarray.__version__}/xarray/{fn}{linespec}"
-        )
+    return f"https://github.com/pydata/xarray/blob/{source_ref}/xarray/{fn}{linespec}"
 
 
 def html_page_context(app, pagename, templatename, context, doctree):

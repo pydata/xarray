@@ -8,11 +8,10 @@ import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from functools import partial
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
-from numpy.typing import ArrayLike
 from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
@@ -50,6 +49,7 @@ from xarray.core.utils import (
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
+    array_type,
     async_to_duck_array,
     integer_types,
     is_0d_dask_array,
@@ -243,7 +243,7 @@ def _possibly_convert_objects(values):
 
 
 def as_compatible_data(
-    data: T_DuckArray | ArrayLike, fastpath: bool = False
+    data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
 ) -> T_DuckArray:
     """Prepare and wrap data to put in a Variable.
 
@@ -292,13 +292,12 @@ def as_compatible_data(
         else:
             data = pandas_data
 
-    if isinstance(data, np.ma.MaskedArray):
-        mask = np.ma.getmaskarray(data)
-        if mask.any():
-            _dtype, fill_value = dtypes.maybe_promote(data.dtype)
-            data = duck_array_ops.where_method(data, ~mask, fill_value)
-        else:
-            data = np.asarray(data)
+    if isinstance(data, np.ma.MaskedArray) or (
+        isinstance(data, array_type("dask"))
+        and isinstance(getattr(data, "_meta", None), np.ma.MaskedArray)
+    ):
+        mask = duck_array_ops.getmaskarray(data)
+        data = duck_array_ops.where_method(data, ~mask)
 
     if isinstance(data, np.matrix):
         data = np.asarray(data)
@@ -371,7 +370,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def __init__(
         self,
         dims,
-        data: T_DuckArray | ArrayLike,
+        data: T_DuckArray | np.typing.ArrayLike,
         attrs=None,
         encoding=None,
         fastpath=False,
@@ -466,7 +465,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return duck_array
 
     @data.setter  # type: ignore[override,unused-ignore]
-    def data(self, data: T_DuckArray | ArrayLike) -> None:
+    def data(self, data: T_DuckArray | np.typing.ArrayLike) -> None:
         data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
@@ -583,7 +582,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return self.to_index_variable().to_index()
 
     def to_dict(
-        self, data: bool | str = "list", encoding: bool = False
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """Dictionary representation of variable."""
         item: dict[str, Any] = {
@@ -635,6 +634,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             positions.
         """
         key = self._item_key_to_tuple(key)  # key is a tuple
+        # Fast path: key is already a tuple of the right length with only
+        # ints and slices (the common case from Variable.isel)
+        if (
+            isinstance(key, tuple)
+            and len(key) == self.ndim
+            and all(
+                not isinstance(k, bool) and isinstance(k, BASIC_INDEXING_TYPES)
+                for k in key
+            )
+        ):
+            return self._broadcast_indexes_basic(key)
+
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
         # Convert a scalar Variable to a 0d-array
@@ -773,7 +784,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 if dim in variable_dims:
                     # We only convert slice objects to variables if they share
                     # a dimension with at least one other variable. Otherwise,
-                    # we can equivalently leave them as slices aknd transpose
+                    # we can equivalently leave them as slices and transpose
                     # the result. This is significantly faster/more efficient
                     # for most array backends.
                     values = np.arange(*value.indices(self.sizes[dim]))
@@ -931,7 +942,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _copy(
         self,
         deep: bool = True,
-        data: T_DuckArray | ArrayLike | None = None,
+        data: T_DuckArray | np.typing.ArrayLike | None = None,
         memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
@@ -1355,7 +1366,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def roll(self, shifts=None, **shifts_kwargs):
         """
-        Return a new Variable with rolld data.
+        Return a new Variable with rolled data.
 
         Parameters
         ----------
@@ -1914,7 +1925,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def quantile(
         self,
-        q: ArrayLike,
+        q: np.typing.ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
@@ -2872,7 +2883,9 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep: bool = True, data: T_DuckArray | ArrayLike | None = None):
+    def copy(
+        self, deep: bool = True, data: T_DuckArray | np.typing.ArrayLike | None = None
+    ):
         """Returns a copy of this object.
 
         `deep` is ignored since data is stored in the form of

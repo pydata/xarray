@@ -173,12 +173,13 @@ def decode_cf_variable(
 
     original_dtype = var.dtype
 
-    decode_timedelta_was_none = decode_timedelta is None
     if decode_timedelta is None:
         if isinstance(decode_times, CFDatetimeCoder):
             decode_timedelta = CFTimedeltaCoder(time_unit=decode_times.time_unit)
+        elif decode_times:
+            decode_timedelta = CFTimedeltaCoder()
         else:
-            decode_timedelta = bool(decode_times)
+            decode_timedelta = False
 
     if concat_characters:
         if stack_char_dim:
@@ -208,9 +209,6 @@ def decode_cf_variable(
             decode_timedelta = CFTimedeltaCoder(
                 decode_via_units=decode_timedelta, decode_via_dtype=decode_timedelta
             )
-        decode_timedelta._emit_decode_timedelta_future_warning = (
-            decode_timedelta_was_none
-        )
         var = decode_timedelta.decode(var, name=name)
     if decode_times:
         # remove checks after end of deprecation cycle
