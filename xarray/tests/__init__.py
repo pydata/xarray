@@ -215,9 +215,13 @@ def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
             not has_h5netcdf, reason="requires h5netcdf"
         )
 
-    import h5py
+    has_h5py, _ = _importorskip("h5py")
+    if has_h5py:
+        import h5py
 
-    h5py_with_ros3 = h5py.get_config().ros3
+        h5py_with_ros3 = h5py.get_config().ros3
+    else:
+        h5py_with_ros3 = has_h5py
 
     return h5py_with_ros3, pytest.mark.skipif(
         not h5py_with_ros3,
