@@ -4553,6 +4553,42 @@ class TestDataset:
         assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
+    def test_copy_listed_preserves_multi_coord_index(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/11215
+        # Multi-coordinate indexes spanning multiple dims should be preserved
+        # when subsetting a Dataset by variable names via ds[["var"]].
+        class MultiDimIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = MultiDimIndex()
+        coords = Coordinates(
+            coords={
+                "node_x": ("nodes", [0.0, 1.0, 2.0]),
+                "node_y": ("nodes", [0.0, 0.0, 1.0]),
+                "face_x": ("faces", [0.5, 1.5]),
+                "face_y": ("faces", [0.5, 0.5]),
+            },
+            indexes={k: idx for k in ["node_x", "node_y", "face_x", "face_y"]},
+        )
+        ds = Dataset(
+            {
+                "node_data": (("nodes",), [1.0, 2.0, 3.0]),
+                "face_data": (("faces",), [10.0, 20.0]),
+            },
+            coords=coords,
+        )
+
+        node_subset = ds[["node_data"]]
+        face_subset = ds[["face_data"]]
+
+        assert isinstance(
+            next(iter(node_subset.xindexes.values())), MultiDimIndex
+        ), "Index dropped from Dataset when subsetting to node variable"
+        assert isinstance(
+            next(iter(face_subset.xindexes.values())), MultiDimIndex
+        ), "Index dropped from Dataset when subsetting to face variable"
+
     def test_virtual_variables_default_coords(self) -> None:
         dataset = Dataset({"foo": ("x", range(10))})
         expected1 = DataArray(range(10), dims="x", name="x")

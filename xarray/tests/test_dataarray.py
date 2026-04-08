@@ -555,6 +555,41 @@ class TestDataArray:
         assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
+    def test_replace_maybe_drop_dims_preserves_multi_coord_index(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/11215
+        # Multi-coordinate indexes spanning multiple dims should be preserved
+        # after reducing over an unrelated dimension.
+        class MultiDimIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = MultiDimIndex()
+        coords = Coordinates(
+            coords={
+                "node_x": ("nodes", [0.0, 1.0, 2.0]),
+                "node_y": ("nodes", [0.0, 0.0, 1.0]),
+                "face_x": ("faces", [0.5, 1.5]),
+                "face_y": ("faces", [0.5, 0.5]),
+            },
+            indexes={k: idx for k in ["node_x", "node_y", "face_x", "face_y"]},
+        )
+        node_da = DataArray(
+            np.random.rand(3, 4), dims=("nodes", "extra"), coords=coords
+        )
+        face_da = DataArray(
+            np.random.rand(2, 4), dims=("faces", "extra"), coords=coords
+        )
+
+        reduced_node = node_da.mean("extra")
+        reduced_face = face_da.mean("extra")
+
+        assert isinstance(
+            next(iter(reduced_node.xindexes.values())), MultiDimIndex
+        ), "Index dropped from node DataArray after reduction"
+        assert isinstance(
+            next(iter(reduced_face.xindexes.values())), MultiDimIndex
+        ), "Index dropped from face DataArray after reduction"
+
     def test_equals_and_identical(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
 

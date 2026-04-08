@@ -538,9 +538,13 @@ class DataArray(
             indexes = filter_indexes_from_coords(self._indexes, set(coords))
         else:
             allowed_dims = set(variable.dims)
-            coords = {
-                k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
-            }
+            coords = {}
+            for k, v in self._coords.items():
+                if k in self._indexes:
+                    if self._indexes[k].should_add_coord_to_array(k, v, allowed_dims):
+                        coords[k] = v
+                elif set(v.dims) <= allowed_dims:
+                    coords[k] = v
             indexes = filter_indexes_from_coords(self._indexes, set(coords))
         return self._replace(variable, coords, name, indexes=indexes)
 
