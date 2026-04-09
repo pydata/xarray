@@ -11,10 +11,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 _SKIP_PREFIX = "Skipped: "
 
@@ -54,7 +53,9 @@ def _skip_reason(longrepr: object) -> str | None:
     return reason
 
 
-def collect_reportlog_data(reportlogs: Iterable[Path]) -> dict[str, dict[str, set[str]]]:
+def collect_reportlog_data(
+    reportlogs: Iterable[Path],
+) -> dict[str, dict[str, set[str]]]:
     """Return per-nodeid execution and skip information."""
     data: dict[str, dict[str, set[str]]] = defaultdict(
         lambda: {"call_outcomes": set(), "skip_reasons": set()}
@@ -136,7 +137,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"- {nodeid}: {', '.join(sorted(reasons))}")
         return 1
 
-    print(f"Checked {len(reportlogs)} report-log file(s); no uncovered requires tests found.")
+    print(
+        f"Checked {len(reportlogs)} report-log file(s); no uncovered requires tests found."
+    )
     return 0
 
 
