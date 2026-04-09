@@ -333,7 +333,7 @@ class ZarrArrayWrapper(BackendArray):
         )
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, shape):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -389,6 +389,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
             var_chunks,
             ndim,
             name,
+            shape,
         )
 
     for x in enc_chunks_tuple:
@@ -399,6 +400,13 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
                 f"Instead found encoding['chunks']={enc_chunks_tuple!r} "
                 f"for variable named {name!r}."
             )
+
+    # Preserve xarray's documented convention that -1 means the full length
+    # of a dimension when encoding chunk sizes for zarr.
+    enc_chunks_tuple = tuple(
+        dim_size if chunk == -1 else chunk
+        for chunk, dim_size in zip(enc_chunks_tuple, shape, strict=True)
+    )
 
     # if there are chunks in encoding and the variable data is a numpy array,
     # we use the specified chunks
@@ -532,6 +540,7 @@ def extract_zarr_variable_encoding(
         var_chunks=variable.chunks,
         ndim=variable.ndim,
         name=name,
+        shape=variable.shape,
     )
     if _zarr_v3() and chunks is None:
         chunks = "auto"
