@@ -407,6 +407,40 @@ class TestDataArray:
         expected = DataArray([1, 2, 3], coords=[("x", [0, 1, 2])])
         assert_identical(expected, actual)
 
+    def test_constructor_tuple_coords_warn_when_dims_override_names(self) -> None:
+        data = np.random.random((2, 3))
+        coords = [("a", [0, 1]), ("b", [-1, -2, -3])]
+
+        with pytest.warns(
+            FutureWarning,
+            match="Coordinate names in tuple-style coords are ignored",
+        ):
+            actual = DataArray(data, coords=coords, dims=["x", "y"])
+
+        expected = DataArray(
+            data,
+            coords={"x": [0, 1], "y": [-1, -2, -3]},
+            dims=["x", "y"],
+        )
+        assert_identical(expected, actual)
+
+    def test_constructor_tuple_coords_no_warning_when_names_match_dims(self) -> None:
+        data = np.random.random((2, 3))
+
+        with assert_no_warnings():
+            actual = DataArray(
+                data,
+                coords=[("x", [0, 1]), ("y", [-1, -2, -3])],
+                dims=["x", "y"],
+            )
+
+        expected = DataArray(
+            data,
+            coords={"x": [0, 1], "y": [-1, -2, -3]},
+            dims=["x", "y"],
+        )
+        assert_identical(expected, actual)
+
     def test_constructor_invalid(self) -> None:
         data = np.random.randn(3, 2)
 
