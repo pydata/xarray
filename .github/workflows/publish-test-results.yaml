@@ -3,7 +3,8 @@
 name: Publish test results
 
 on:
-  workflow_run:
+  # we can ignore zizmor in this case, because `ci.yaml` is run on `pull_request` not `pull_request_target`, and we restrict the permissions to the default read-only.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: ["CI"]
     types:
       - completed
@@ -11,6 +12,8 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions: {}
 
 jobs:
   publish-test-results:
@@ -22,12 +25,11 @@ jobs:
       - name: Download and extract artifacts
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          ARTIFACTS_URL: ${{ github.event.workflow_run.artifacts_url }}
         run: |
           mkdir artifacts && cd artifacts
 
-          artifacts_url=${{ github.event.workflow_run.artifacts_url }}
-
-          gh api "$artifacts_url" -q '.artifacts[] | [.name, .archive_download_url] | @tsv' | while read artifact
+          gh api "$ARTIFACTS_URL" -q '.artifacts[] | [.name, .archive_download_url] | @tsv' | while read artifact
           do
             IFS=$'\t' read name url <<< "$artifact"
             gh api $url > "$name.zip"
@@ -35,7 +37,7 @@ jobs:
           done
 
       - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2.23.0
         with:
           commit: ${{ github.event.workflow_run.head_sha }}
           event_file: artifacts/Event File/event.json

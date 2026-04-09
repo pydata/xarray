@@ -398,7 +398,8 @@ aso = "aso"
 # Technical terms
 nd = "nd"
 nin = "nin"
-nclusive = "nclusive" # part of "inclusive" in error messages
+nclusive = "nclusive"   # part of "inclusive" in error messages
+writeable = "writeable"
 
 # Variable names
 ba = "ba"
@@ -407,6 +408,7 @@ fo = "fo"
 iy = "iy"
 vart = "vart"
 ede = "ede"
+WRITEABLE = "WRITEABLE"
 
 # Organization/Institution names
 Stichting = "Stichting"
