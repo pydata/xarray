@@ -3202,6 +3202,20 @@ def test_groupby_transpose() -> None:
     assert_identical(first, second.transpose(*first.dims))
 
 
+def test_groupby_non_leading_dim_preserves_coords() -> None:
+    data = xr.DataArray(
+        np.empty((0, 2)),
+        dims=["x", "y"],
+        coords={"x": [], "y": [1, 1]},
+    )
+
+    with xr.set_options(use_flox=False):
+        actual = data.groupby("y").sum()
+
+    assert "x" in actual.coords
+    assert actual.sizes == {"x": 0, "y": 1}
+
+
 @requires_dask
 @pytest.mark.parametrize(
     "grouper, expect_index",
