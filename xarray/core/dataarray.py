@@ -177,7 +177,7 @@ def _infer_coords_and_dims(
         if any(
             isinstance(coord, tuple)
             and len(coord) >= 2
-            and isinstance(coord[0], str)
+            and hashable(coord[0])
             and coord[0] != dim
             for dim, coord in zip(dims_tuple, coords, strict=True)
         ):
@@ -185,7 +185,7 @@ def _infer_coords_and_dims(
                 "Coordinate names in tuple-style coords are ignored when `dims` "
                 "are provided. Use a mapping for `coords` if you need named "
                 "coordinates.",
-                FutureWarning,
+                UserWarning,
             )
 
     new_coords: Mapping[Hashable, Any]

@@ -412,7 +412,7 @@ class TestDataArray:
         coords = [("a", [0, 1]), ("b", [-1, -2, -3])]
 
         with pytest.warns(
-            FutureWarning,
+            UserWarning,
             match="Coordinate names in tuple-style coords are ignored",
         ):
             actual = DataArray(data, coords=coords, dims=["x", "y"])
