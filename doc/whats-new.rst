@@ -14,9 +14,79 @@ v2026.03.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added ``inherit='all_coords'`` option to :py:meth:`DataTree.to_dataset` to inherit
+  all parent coordinates, not just indexed ones (:issue:`10812`, :pull:`11230`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+- Added complex dtype support to FillValueCoder for the Zarr backend. (:pull:`11151`)
+  By `Max Jones <https://github.com/maxrjones>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The minimum versions of some dependencies were changed (see table below).
+  Notably, the minimum ``zarr`` version is now 3.0. Zarr v2 format data is
+  still readable via ``zarr-python`` 3's built-in compatibility layer; however,
+  ``zarr-python`` 2 is no longer a supported dependency.
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 20
+
+   * - Dependency
+     - Old Version
+     - New Version
+   * - boto3
+     - 1.34
+     - 1.37
+   * - cartopy
+     - 0.23
+     - 0.24
+   * - dask-core
+     - 2024.6
+     - 2025.2
+   * - distributed
+     - 2024.6
+     - 2025.2
+   * - flox
+     - 0.9
+     - 0.10
+   * - h5netcdf
+     - 1.4
+     - 1.5
+   * - h5py
+     - 3.11
+     - 3.13
+   * - iris
+     - 3.9
+     - 3.11
+   * - lxml
+     - 5.1
+     - 5.3
+   * - matplotlib-base
+     - 3.8
+     - 3.10
+   * - numba
+     - 0.60
+     - 0.61
+   * - numbagg
+     - 0.8
+     - 0.9
+   * - packaging
+     - 24.1
+     - 24.2
+   * - rasterio
+     - 1.3
+     - 1.4
+   * - scipy
+     - 1.13
+     - 1.15
+   * - toolz
+     - 0.12
+     - 1.0
+   * - zarr
+     - 2.18
+     - 3.0
+
 - Xarray will no longer by default decode a variable into a
   :py:class:`np.timedelta64` dtype based on the presence of a timedelta-like
   ``"units"`` attribute alone. Instead it will rely on the presence of a
@@ -39,24 +109,54 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Allow writing ``StringDType`` variables to netCDF files (:issue:`11199`).
+  By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 - Fix ``Source`` link in api docs (:pull:`11187`)
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_
 - Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
   By `Julia Signell <https://github.com/jsignell>`_
+- Fix :py:meth:`Dataset.interp` silently dropping datetime64 and timedelta64
+  variables, through enabling their interpolation (:issue:`10900`, :pull:`11081`).
+  By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
+- :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
+  By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+- Fix h5netcdf backend module detection and ros3 tests (:issue:`11243`, :pull:`11274`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Add AI policy (:pull:`11257`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+- Update documentation and team guide to promote Zulip. Remove mentions of Discord (:pull:`11246`, :pull:`11254`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
+- Fix code blocks on "how to create custom index" doc page (:pull:`11255`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+
+Performance
+~~~~~~~~~~~
+
+- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
+  as well. (:issue:`6528`, :pull:`10987`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Add script for linting of public docstrings according to numpydoc (:pull:`11121`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Add stubtest configuration and allowlist for validating type annotations against
   runtime behavior. This enables CI integration for type stub validation and helps
   prevent type annotation regressions (:issue:`11086`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
+- Remove ``setup.py`` file (:pull:`11261`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+
+- Add :func:`typing.overload` decorators to :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax`
+  to narrow return type based on ``dim`` parameter (:issue:`10893` :pull:`11233`).
+  By `Amartya Anand <https://github.com/SurfyPenguin>`_.
 
 .. _whats-new.2026.02.0:
 
@@ -88,6 +188,11 @@ Breaking Changes
   not intended to be visible to end-users so this version of xarray
   switches to using ``FutureWarning`` everywhere (:pull:`11112`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- Passing a :py:class:`Dataset` as ``data_vars`` to the :py:class:`Dataset`
+  constructor now raises :py:class:`TypeError`. This was never intended behavior
+  and silently dropped ``attrs``. Use :py:meth:`Dataset.copy` instead
+  (:issue:`11095`).
+  By `Kristian Kollsga <https://github.com/kkollsga>`_.
 
 Bug Fixes
 ~~~~~~~~~
@@ -264,6 +369,9 @@ Performance
 
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
+  as well. (:issue:`6528`, :pull:`10987`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Optimize :py:class:`~xarray.coding.variables.CFMaskCoder` decoder (:pull:`11105`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 

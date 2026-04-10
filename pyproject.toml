@@ -18,7 +18,7 @@ name = "xarray"
 readme = "README.md"
 requires-python = ">=3.11"
 
-dependencies = ["numpy>=1.26", "packaging>=24.1", "pandas>=2.2"]
+dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -27,62 +27,63 @@ dependencies = ["numpy>=1.26", "packaging>=24.1", "pandas>=2.2"]
 
 [project.optional-dependencies]
 accel = [
-  "scipy>=1.13",
+  "scipy>=1.15",
   "bottleneck",
-  "numbagg>=0.8",
+  "numbagg>=0.9",
   "numba>=0.62",  # numba 0.62 added support for numpy 2.3
-  "flox>=0.9",
+  "flox>=0.10",
   "opt_einsum",
 ]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
   "netCDF4>=1.6.0",
-  "h5netcdf[h5py]>=1.4.0",
+  "h5netcdf[h5py]>=1.5.0",
   "pydap",
-  "scipy>=1.13",
-  "zarr>=2.18",
+  "scipy>=1.15",
+  "zarr>=3.0",
   "fsspec",
   "cftime",
   "pooch",
 ]
 etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
-viz = ["cartopy>=0.23", "matplotlib>=3.8", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.24", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
-  "types-PyYAML",
-  "types-Pygments",
   "types-colorama",
   "types-decorator",
   "types-defusedxml",
   "types-docutils",
   "types-networkx",
+  "types-openpyxl",
   "types-pexpect",
   "types-psutil",
   "types-pycurl",
-  "types-openpyxl",
+  "types-Pygments",
   "types-python-dateutil",
   "types-pytz",
+  "types-PyYAML",
   "types-requests",
   "types-setuptools",
+  "types-xlrd",
 ]
 
 [dependency-groups]
 dev = [
   "hypothesis",
   "jinja2",
-  "mypy==1.18.1",
+  "mypy==1.19.1",
   "pre-commit",
   "pytest",
   "pytest-cov",
   "pytest-env",
-  "pytest-mypy-plugins",
+  "pytest-mypy-plugins>=4.0.0",
   "pytest-timeout",
   "pytest-xdist",
   "pytest-asyncio",
   "pytz",
-  "ruff>=0.8.0",
+  "ruff>=0.15.0",
   "sphinx",
   "sphinx_autosummary_accessors",
   "xarray[complete,types]",
@@ -158,7 +159,6 @@ module = [
   "pooch.*",
   "pyarrow.*",
   "pydap.*",
-  "scipy.*",
   "seaborn.*",
   "setuptools",
   "sparse.*",
@@ -176,6 +176,7 @@ module = [
 [[tool.mypy.overrides]]
 check_untyped_defs = true
 module = [
+  "xarray.backends.scipy_",
   "xarray.core.accessor_dt",
   "xarray.core.accessor_str",
   "xarray.structure.alignment",
@@ -310,7 +311,6 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = [
   "--strict-config",
   "--strict-markers",
-  "--mypy-only-local-stub",
   "--mypy-pyproject-toml-file=pyproject.toml",
 ]
 
@@ -398,7 +398,8 @@ aso = "aso"
 # Technical terms
 nd = "nd"
 nin = "nin"
-nclusive = "nclusive" # part of "inclusive" in error messages
+nclusive = "nclusive"   # part of "inclusive" in error messages
+writeable = "writeable"
 
 # Variable names
 ba = "ba"
@@ -407,6 +408,7 @@ fo = "fo"
 iy = "iy"
 vart = "vart"
 ede = "ede"
+WRITEABLE = "WRITEABLE"
 
 # Organization/Institution names
 Stichting = "Stichting"

@@ -494,6 +494,14 @@ class TestDataset:
         actual = Dataset({"z": expected["z"]})
         assert_identical(expected, actual)
 
+    def test_constructor_dataset_as_data_vars_raises(self) -> None:
+        ds = Dataset({"x": ("x", [1, 2, 3])}, attrs={"key": "value"})
+        with pytest.raises(
+            TypeError,
+            match=r"Passing a Dataset as `data_vars`.*Use `ds\.copy\(\)`",
+        ):
+            Dataset(ds)
+
     def test_constructor_1d(self) -> None:
         expected = Dataset({"x": (["x"], 5.0 + np.arange(5))})
         actual = Dataset({"x": 5.0 + np.arange(5)})
@@ -6124,38 +6132,50 @@ class TestDataset:
         ):
             data.mean(dim="bad_dim")
 
-    def test_reduce_cumsum(self) -> None:
-        data = xr.Dataset(
-            {"a": 1, "b": ("x", [1, 2]), "c": (("x", "y"), [[np.nan, 3], [0, 4]])}
-        )
-        assert_identical(data.fillna(0), data.cumsum("y"))
-
-        expected = xr.Dataset(
-            {"a": 1, "b": ("x", [1, 3]), "c": (("x", "y"), [[0, 3], [0, 7]])}
-        )
-        assert_identical(expected, data.cumsum())
-
     @pytest.mark.parametrize(
-        "reduct, expected",
+        "method, dim, expected_data_vars",
         [
-            ("dim1", ["dim2", "dim3", "time", "dim1"]),
-            ("dim2", ["dim3", "time", "dim1", "dim2"]),
-            ("dim3", ["dim2", "time", "dim1", "dim3"]),
-            ("time", ["dim2", "dim3", "dim1"]),
+            (
+                "cumsum",
+                ...,
+                {"a": 1, "b": ("x", [2, 6]), "c": (("x", "y"), [[0, 3], [0, 7]])},
+            ),
+            (
+                "cumsum",
+                "y",
+                {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[0, 3], [0, 4]])},
+            ),
+            (
+                "cumsum",
+                "x",
+                {"a": 1, "b": ("x", [2, 6]), "c": (("x", "y"), [[0, 3], [0, 7]])},
+            ),
+            (
+                "cumprod",
+                ...,
+                {"a": 1, "b": ("x", [2, 8]), "c": (("x", "y"), [[1, 3], [0, 0]])},
+            ),
+            (
+                "cumprod",
+                "y",
+                {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[1, 3], [0, 0]])},
+            ),
+            (
+                "cumprod",
+                "x",
+                {"a": 1, "b": ("x", [2, 8]), "c": (("x", "y"), [[1, 3], [0, 12]])},
+            ),
         ],
     )
-    @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
-    def test_reduce_cumsum_test_dims(self, reduct, expected, func) -> None:
-        data = create_test_data()
-        with pytest.raises(
-            ValueError,
-            match=re.escape("Dimension(s) 'bad_dim' do not exist"),
-        ):
-            getattr(data, func)(dim="bad_dim")
-
-        # ensure dimensions are correct
-        actual = getattr(data, func)(dim=reduct).dims
-        assert list(actual) == expected
+    def test_scans(self, method: str, dim: str, expected_data_vars: dict) -> None:
+        coords = {"x": ("x", [0, 1]), "y": ("y", [2, 3])}
+        ds = xr.Dataset(
+            {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[np.nan, 3], [0, 4]])},
+            coords=coords,
+        )
+        expected = xr.Dataset(expected_data_vars, coords=coords)
+        actual = getattr(ds, method)(dim)
+        assert_identical(expected, actual)
 
     def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44, use_extension_array=True)
