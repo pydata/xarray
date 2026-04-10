@@ -4582,12 +4582,41 @@ class TestDataset:
         node_subset = ds[["node_data"]]
         face_subset = ds[["face_data"]]
 
-        assert isinstance(next(iter(node_subset.xindexes.values())), MultiDimIndex), (
-            "Index dropped from Dataset when subsetting to node variable"
+        for ds_sub in [node_subset, face_subset]:
+            for name in ["node_x", "node_y", "face_x", "face_y"]:
+                assert name in ds_sub.coords
+                assert isinstance(ds_sub.xindexes[name], MultiDimIndex)
+
+    def test_to_dataarray_preserves_multi_coord_index(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/11215
+        # Multi-coordinate indexes spanning multiple dims should be preserved
+        # when converting a Dataset to a DataArray via to_dataarray().
+        class MultiDimIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = MultiDimIndex()
+        coords = Coordinates(
+            coords={
+                "node_x": ("nodes", [0.0, 1.0, 2.0]),
+                "node_y": ("nodes", [0.0, 0.0, 1.0]),
+                "face_x": ("faces", [0.5, 1.5]),
+                "face_y": ("faces", [0.5, 0.5]),
+            },
+            indexes=dict.fromkeys(["node_x", "node_y", "face_x", "face_y"], idx),
         )
-        assert isinstance(next(iter(face_subset.xindexes.values())), MultiDimIndex), (
-            "Index dropped from Dataset when subsetting to face variable"
+        ds = Dataset(
+            {
+                "node_data": (("nodes",), [1.0, 2.0, 3.0]),
+            },
+            coords=coords,
         )
+
+        da = ds.to_dataarray()
+
+        for name in ["node_x", "node_y", "face_x", "face_y"]:
+            assert name in da.coords
+            assert isinstance(da.xindexes[name], MultiDimIndex)
 
     def test_virtual_variables_default_coords(self) -> None:
         dataset = Dataset({"foo": ("x", range(10))})
