@@ -2123,11 +2123,13 @@ class DataTree(
             Store or path to directory in file system
         mode : {{"w", "w-", "a", "r+", None}, default: "w-"
             Persistence mode:
-            "w" means create (remove old if exists and write new);
-            "w-" means create (fail if exists);
-            "a" means override all existing variables including dimension coordinates (create if does not exist);
-            "r+" means modify existing array *values* only (raise an error if
-            any metadata or shapes would change).
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
             The default mode is “w-”.
 
             .. note::
