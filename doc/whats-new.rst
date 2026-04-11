@@ -19,6 +19,16 @@ New Features
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Added complex dtype support to FillValueCoder for the Zarr backend. (:pull:`11151`)
   By `Max Jones <https://github.com/maxrjones>`_.
+- Following pandas, xarray's
+  :py:class:`~xarray.core.accessor_dt.DatetimeAccessor` now supports
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_week` and
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_year` attributes,
+  which are alternative names for the existing
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofweek` and
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofyear` attributes.
+  These alternative attributes have similarly been added to
+  :py:class:`~xarray.CFTimeIndex` (:pull:`11270`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -104,25 +114,7 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
-- Following pandas, on xarray's
-  :py:class:`~xarray.core.accessor_dt.DatetimeAccessor`,
-  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.daysinmonth`
-  is deprecated in favor of
-  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.days_in_month`;
-  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofweek` and
-  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.weekday` are deprecated
-  in favor of :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_week`;
-  and :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofyear` is
-  deprecated in favor of
-  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_year`
-  (:issue:`11268`, :pull:`11270`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-- Following pandas, on xarray's :py:class:`~xarray.CFTimeIndex`,
-  :py:attr:`~xarray.CFTimeIndex.dayofweek` and
-  :py:attr:`~xarray.CFTimeIndex.dayofyear` are deprecated in favor of
-  :py:attr:`~xarray.CFTimeIndex.day_of_week` and
-  :py:attr:`~xarray.CFTimeIndex.day_of_year`, respectively (:pull:`11270`).
-  By `Spencer Clark <https://github.com/spencerkclark>`_.
+-
 
 Bug Fixes
 ~~~~~~~~~

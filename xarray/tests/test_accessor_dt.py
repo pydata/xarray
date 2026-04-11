@@ -102,21 +102,6 @@ class TestDatetimeAccessor:
         assert expected.dtype == actual.dtype
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize(
-        ("field", "replacement"),
-        [
-            ("daysinmonth", "days_in_month"),
-            ("dayofweek", "day_of_week"),
-            ("weekday", "day_of_week"),
-            ("dayofyear", "day_of_year"),
-        ],
-    )
-    def test_deprecated_field_access(self, field, replacement) -> None:
-        expected = getattr(self.data.time.dt, replacement)
-        with pytest.warns(FutureWarning, match=f"{field}.*{replacement}"):
-            actual = getattr(self.data.time.dt, field)
-        assert_identical(expected, actual)
-
     def test_total_seconds(self) -> None:
         # Subtract a value in the middle of the range to ensure that some values
         # are negative
