@@ -385,6 +385,11 @@ class Dataset(
     ) -> None:
         if data_vars is None:
             data_vars = {}
+        if isinstance(data_vars, Dataset):
+            raise TypeError(
+                "Passing a Dataset as `data_vars` to the Dataset constructor is"
+                " not supported. Use `ds.copy()` to create a copy of a Dataset."
+            )
         if coords is None:
             coords = {}
 

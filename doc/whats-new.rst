@@ -17,6 +17,8 @@ New Features
 - Added ``inherit='all_coords'`` option to :py:meth:`DataTree.to_dataset` to inherit
   all parent coordinates, not just indexed ones (:issue:`10812`, :pull:`11230`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
+- Added complex dtype support to FillValueCoder for the Zarr backend. (:pull:`11151`)
+  By `Max Jones <https://github.com/maxrjones>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -118,6 +120,8 @@ Bug Fixes
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 - :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
   By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+- Fix h5netcdf backend module detection and ros3 tests (:issue:`11243`, :pull:`11274`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -184,6 +188,11 @@ Breaking Changes
   not intended to be visible to end-users so this version of xarray
   switches to using ``FutureWarning`` everywhere (:pull:`11112`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- Passing a :py:class:`Dataset` as ``data_vars`` to the :py:class:`Dataset`
+  constructor now raises :py:class:`TypeError`. This was never intended behavior
+  and silently dropped ``attrs``. Use :py:meth:`Dataset.copy` instead
+  (:issue:`11095`).
+  By `Kristian Kollsga <https://github.com/kkollsga>`_.
 
 Bug Fixes
 ~~~~~~~~~
