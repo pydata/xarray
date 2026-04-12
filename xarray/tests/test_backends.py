@@ -2908,6 +2908,7 @@ class ZarrBase(CFEncodedBase):
 
         with self.roundtrip(data) as actual:
             assert actual["var2"].encoding["chunks"] == (5, data["var2"].shape[1])
+        assert data["var2"].encoding["chunks"] == (5, -1)
 
     def test_shard_encoding(self) -> None:
         # These datasets have no dask chunks. All chunking/sharding specified in
