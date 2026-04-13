@@ -1226,7 +1226,13 @@ class Dataset(
             if k not in self._coord_names:
                 continue
 
-            if set(self.variables[k].dims) <= needed_dims:
+            if k in self._indexes:
+                if self._indexes[k].should_add_coord_to_array(
+                    k, self._variables[k], set(needed_dims)
+                ):
+                    variables[k] = self._variables[k]
+                    coord_names.add(k)
+            elif set(self.variables[k].dims) <= needed_dims:
                 variables[k] = self._variables[k]
                 coord_names.add(k)
 
@@ -7168,7 +7174,7 @@ class Dataset(
         variable = Variable(dims, data, self.attrs, fastpath=True)
 
         coords = {k: v.variable for k, v in self.coords.items()}
-        indexes = filter_indexes_from_coords(self._indexes, set(coords))
+        indexes = dict(self._indexes)
         new_dim_index = PandasIndex(list(self.data_vars), dim)
         indexes[dim] = new_dim_index
         coords.update(new_dim_index.create_variables())

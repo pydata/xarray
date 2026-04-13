@@ -112,6 +112,14 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix multi-coordinate indexes being dropped in :py:meth:`DataArray._replace_maybe_drop_dims`
+  (e.g. after reducing over an unrelated dimension) and in :py:meth:`Dataset._copy_listed`
+  (e.g. when subsetting a Dataset by variable names). Both paths now consult
+  :py:meth:`Index.should_add_coord_to_array`, consistent with
+  :py:meth:`Dataset._construct_dataarray`. Also simplify :py:meth:`Dataset.to_dataarray`
+  to keep all coordinates and indexes directly, since variables are broadcast and all
+  coords are retained (:issue:`11215`, :pull:`11286`).
+  By `Rich Signell <https://github.com/rsignell>`_.
 - Allow writing ``StringDType`` variables to netCDF files (:issue:`11199`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 - Fix ``Source`` link in api docs (:pull:`11187`)
