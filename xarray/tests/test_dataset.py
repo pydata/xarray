@@ -1335,7 +1335,7 @@ class TestDataset:
         ).to_numpy(copy=True)
         if add_gap:
             # introduce an empty bin
-            time[31 : 31 + ΔN] = np.datetime64("NaT")
+            time[31 : 31 + ΔN] = np.datetime64("NaT", "us")
             time = time[~np.isnat(time)]
         else:
             time = time[:N]
