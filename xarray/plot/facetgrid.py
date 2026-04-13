@@ -232,6 +232,9 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 import matplotlib as mpl
 
                 figsize = tuple(mpl.rcParams["figure.figsize"])
+        else:
+            # exhaust generators
+            figsize = tuple(figsize)
 
         # Compute grid shape
         if single_group:
