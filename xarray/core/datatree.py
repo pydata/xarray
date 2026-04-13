@@ -2157,10 +2157,20 @@ class DataTree(
         store : zarr.storage.StoreLike
             Store or path to directory in file system
         mode : {{"w", "w-", "a", "r+", None}, default: "w-"
-            Persistence mode: “w” means create (overwrite if exists); “w-” means create (fail if exists);
-            “a” means override existing variables (create if does not exist); “r+” means modify existing
-            array values only (raise an error if any metadata or shapes would change). The default mode
-            is “w-”.
+            Persistence mode:
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
+            The default mode is “w-”.
+
+            .. note::
+                When modifying an existing Zarr array that is lazily opened, the "w"
+                behavior can be surprising since the underlying file that is being
+                lazily read from might get deleted before the data is computed.
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
