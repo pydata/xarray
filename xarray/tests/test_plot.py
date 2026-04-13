@@ -1668,6 +1668,34 @@ class Common2dMixin:
         for ax in g.axs.flat:
             assert ax.has_data()
 
+    @pytest.mark.parametrize(
+        ["n", "figsize", "aspect", "expected_shape"],
+        [
+            pytest.param(1, None, 1, [1, 1], id="1"),
+            pytest.param(3, None, 1, [1, 3], id="3"),  # <4 should not be wrapped
+            pytest.param(6, None, 1, [2, 3], id="6"),
+            pytest.param(8, None, 1, [3, 3], id="8"),
+            pytest.param(8, [10, 5], 1, [2, 4], id="8-figaspect=2"),
+            pytest.param(8, [5, 10], 1, [4, 2], id="8-figaspect=0.5"),
+            pytest.param(8, None, 4, [4, 2], id="8-aspect=4"),
+            pytest.param(8, None, 0.25, [2, 4], id="8-aspect=0.25"),
+        ],
+    )
+    def test_facetgrid_col_wrap_auto(
+        self,
+        n: int,
+        figsize: None | tuple[int, int],
+        aspect: int,
+        expected_shape: tuple[int, int],
+    ) -> None:
+        a = easy_array((10, 15, n))
+        d = DataArray(a, dims=["y", "x", "z"])
+        g = self.plotfunc(
+            d, x="x", y="y", col="z", col_wrap="auto", figsize=figsize, aspect=aspect
+        )
+
+        assert_array_equal(g.axs.shape, expected_shape)
+
     @pytest.mark.filterwarnings("ignore:This figure includes")
     def test_facetgrid_map_only_appends_mappables(self) -> None:
         a = easy_array((10, 15, 2, 3))
