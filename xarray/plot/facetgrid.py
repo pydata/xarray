@@ -220,7 +220,6 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         else:
             raise ValueError("Pass a coordinate name as an argument for row or col")
 
-<<<<<<< fix-11103-facetgrid-figsize-option
         # Resolve figsize from global option before computing grid shape,
         # so that downstream heuristics (e.g. col_wrap="auto") can use it.
         if figsize is None:
@@ -233,10 +232,6 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 import matplotlib as mpl
 
                 figsize = tuple(mpl.rcParams["figure.figsize"])
-=======
-        # exhaust generators
-        figsize = None if figsize is None else tuple(figsize)
->>>>>>> main
 
         # Compute grid shape
         if single_group:
