@@ -8,8 +8,19 @@ What's New
 
 .. _whats-new.2026.04.0:
 
-v2026.04.0 (unreleased)
+v2026.04.0 (Apr 13, 2026)
 -----------------------
+
+This release bumps the minimum supported ``zarr`` version to 3.0, finalizes the
+deprecation of timedelta decoding via units, adds ``col_wrap='auto'`` for plots,
+a new ``inherit='all_coords'`` option for :py:meth:`DataTree.to_dataset`, and a
+``facetgrid_figsize`` option for :py:func:`~xarray.set_options`.
+
+Thanks to the 20 contributors to this release:
+Adam Newgas, Alfonso Ladino, Deepak Cherian, Emmanuel Ferdman, Ian Hunt-Isaak,
+Ilan Gold, Illviljan, Jakob Harteg, Joe Hamman, Julia Signell, Justus Magin,
+Kai Mühlbauer, Max Jones, Michael Niklas, Nick Hodgskin, Pieter Eendebak,
+Spencer Clark, frostByte, kkollsga and yaochengchen
 
 New Features
 ~~~~~~~~~~~~
@@ -44,7 +55,7 @@ Breaking Changes
      - Old Version
      - New Version
    * - boto3
-     - 1.3411158
+     - 1.34
      - 1.37
    * - cartopy
      - 0.23
