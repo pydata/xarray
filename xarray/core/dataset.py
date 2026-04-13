@@ -2233,14 +2233,22 @@ class Dataset(
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "a-", r+", None}, optional
-            Persistence mode: "w" means create (overwrite if exists);
-            "w-" means create (fail if exists);
-            "a" means override all existing variables including dimension coordinates (create if does not exist);
-            "a-" means only append those variables that have ``append_dim``.
-            "r+" means modify existing array *values* only (raise an error if
-            any metadata or shapes would change).
+            Persistence mode:
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "a-" means only append those variables that have ``append_dim``.
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
             "r+" if ``region`` is set and ``w-`` otherwise.
+
+            .. note::
+                When modifying an existing Zarr array that is lazily opened, the "w"
+                behavior can be surprising since the underlying file that is being
+                lazily read from might get deleted before the data is computed.
         synchronizer : object, optional
             Zarr array synchronizer.
         group : str, optional
