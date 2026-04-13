@@ -6,9 +6,9 @@
 What's New
 ==========
 
-.. _whats-new.2026.03.0:
+.. _whats-new.2026.04.0:
 
-v2026.03.0 (unreleased)
+v2026.04.0 (unreleased)
 -----------------------
 
 New Features
@@ -22,6 +22,11 @@ New Features
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Added complex dtype support to FillValueCoder for the Zarr backend. (:pull:`11151`)
   By `Max Jones <https://github.com/maxrjones>`_.
+- Added ``facetgrid_figsize`` option to :py:func:`~xarray.set_options` allowing
+  :py:class:`~xarray.plot.FacetGrid` to use ``matplotlib.rcParams['figure.figsize']``
+  or a fixed ``(width, height)`` tuple instead of computing figure size from
+  ``size`` and ``aspect`` (:issue:`11103`).
+  By `Kristian Kollsga <https://github.com/kkollsga>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -39,7 +44,7 @@ Breaking Changes
      - Old Version
      - New Version
    * - boto3
-     - 1.34
+     - 1.3411158
      - 1.37
    * - cartopy
      - 0.23
@@ -385,9 +390,6 @@ Performance
 
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
-- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
-  as well. (:issue:`6528`, :pull:`10987`)
-  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Optimize :py:class:`~xarray.coding.variables.CFMaskCoder` decoder (:pull:`11105`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -1852,9 +1854,6 @@ Bug fixes
 - Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
-- Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
-  (:issue:`9427`, :pull:`9428`).
-  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Fix support for using ``pandas.DateOffset``, ``pandas.Timedelta``, and
   ``datetime.timedelta`` objects as ``resample`` frequencies
   (:issue:`9408`, :pull:`9413`).
@@ -2951,9 +2950,6 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
-  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`, :py:meth:`Dataset.drop_vars`
-  (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
 - Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
   (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Expanded the page on wrapping numpy-like "duck" arrays.
