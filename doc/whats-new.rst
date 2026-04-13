@@ -71,6 +71,9 @@ Breaking Changes
    * - numbagg
      - 0.8
      - 0.9
+   * - numpy
+     - 1.26
+     - 2.1
    * - packaging
      - 24.1
      - 24.2
@@ -101,6 +104,15 @@ Breaking Changes
   ``open_dataset`` and ``open_datatree`` the default behavior of fsspec is now to
   use block caching with a 4MB block size (:pull:`11216`). By `Julia Signell
   <https://github.com/jsignell>`_.
+- The minimum zarr version is now 3.0. All zarr-python 2.x compatibility code
+  has been removed from the zarr backend. The following parameters have been
+  removed:
+
+  - ``zarr_version``: Use ``zarr_format`` instead (was deprecated since 2024.9.1).
+  - ``synchronizer``: Not supported in zarr-python 3.x.
+  - ``chunk_store``: Not supported in zarr-python 3.x.
+
+  By `Joe Hamman <https://github.com/jhamman>`_ (:pull:`11232`).
 
 Deprecations
 ~~~~~~~~~~~~
@@ -113,6 +125,10 @@ Bug Fixes
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 - Fix ``Source`` link in api docs (:pull:`11187`)
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_
+- Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
+  which caused ``AsyncMock`` objects to leak through instead of real array data
+  (:pull:`11232`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Coerce masked dask arrays to filled (:issue:`9374` :pull:`11157`).
   By `Julia Signell <https://github.com/jsignell>`_
 - Fix :py:meth:`Dataset.interp` silently dropping datetime64 and timedelta64

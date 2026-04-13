@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import io
 import os
-from collections.abc import Callable, Hashable, Iterable, Mapping, MutableMapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from io import IOBase
 from itertools import starmap
 from numbers import Number
@@ -634,9 +634,7 @@ def save_mfdataset(
 def get_writable_zarr_store(
     store: ZarrStoreLike | None = None,
     *,
-    chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
-    synchronizer=None,
     group: str | None = None,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
@@ -644,16 +642,13 @@ def get_writable_zarr_store(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     zarr_format: int | None = None,
     write_empty_chunks: bool | None = None,
 ) -> backends.ZarrStore:
     """Create a store for writing to Zarr."""
     from xarray.backends.zarr import _choose_default_mode, _get_mappers
 
-    kwargs, mapper, chunk_mapper = _get_mappers(
-        storage_options=storage_options, store=store, chunk_store=chunk_store
-    )
+    kwargs, mapper = _get_mappers(storage_options=storage_options, store=store)
     mode = _choose_default_mode(mode=mode, append_dim=append_dim, region=region)
 
     if mode == "r+":
@@ -666,16 +661,13 @@ def get_writable_zarr_store(
     return backends.ZarrStore.open_group(
         store=mapper,
         mode=mode,
-        synchronizer=synchronizer,
         group=group,
         consolidated=already_consolidated,
         consolidate_on_close=consolidate_on_close,
-        chunk_store=chunk_mapper,
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
         align_chunks=align_chunks,
-        zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty=write_empty_chunks,
         **kwargs,
@@ -687,9 +679,7 @@ def get_writable_zarr_store(
 def to_zarr(
     dataset: Dataset,
     store: ZarrStoreLike | None = None,
-    chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
-    synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
     *,
@@ -700,7 +690,6 @@ def to_zarr(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore: ...
@@ -711,9 +700,7 @@ def to_zarr(
 def to_zarr(
     dataset: Dataset,
     store: ZarrStoreLike | None = None,
-    chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
-    synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
     *,
@@ -724,7 +711,6 @@ def to_zarr(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> Delayed: ...
@@ -733,9 +719,7 @@ def to_zarr(
 def to_zarr(
     dataset: Dataset,
     store: ZarrStoreLike | None = None,
-    chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
-    synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
     *,
@@ -746,7 +730,6 @@ def to_zarr(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     zarr_format: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -772,9 +755,7 @@ def to_zarr(
 
     zstore = get_writable_zarr_store(
         store,
-        chunk_store=chunk_store,
         mode=mode,
-        synchronizer=synchronizer,
         group=group,
         consolidated=consolidated,
         append_dim=append_dim,
@@ -782,7 +763,6 @@ def to_zarr(
         safe_chunks=safe_chunks,
         align_chunks=align_chunks,
         storage_options=storage_options,
-        zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty_chunks=write_empty_chunks,
     )
@@ -930,11 +910,9 @@ def _datatree_to_zarr(
     store: ZarrStoreLike,
     mode: ZarrWriteModes = "w-",
     encoding: Mapping[str, Any] | None = None,
-    synchronizer=None,
     group: str | None = None,
     write_inherited_coords: bool = False,
     *,
-    chunk_store: MutableMapping | str | PathLike | None = None,
     compute: bool = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
@@ -942,7 +920,6 @@ def _datatree_to_zarr(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     zarr_format: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -972,9 +949,7 @@ def _datatree_to_zarr(
 
     root_store = get_writable_zarr_store(
         store,
-        chunk_store=chunk_store,
         mode=mode,
-        synchronizer=synchronizer,
         group=group,
         consolidated=consolidated,
         append_dim=append_dim,
@@ -982,7 +957,6 @@ def _datatree_to_zarr(
         safe_chunks=safe_chunks,
         align_chunks=align_chunks,
         storage_options=storage_options,
-        zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty_chunks=write_empty_chunks,
     )
