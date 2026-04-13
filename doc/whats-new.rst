@@ -16,11 +16,11 @@ deprecation of timedelta decoding via units, adds ``col_wrap='auto'`` for plots,
 a new ``inherit='all_coords'`` option for :py:meth:`DataTree.to_dataset`, and a
 ``facetgrid_figsize`` option for :py:func:`~xarray.set_options`.
 
-Thanks to the 20 contributors to this release:
-Adam Newgas, Alfonso Ladino, Deepak Cherian, Emmanuel Ferdman, Ian Hunt-Isaak,
+Thanks to the 22 contributors to this release:
+Adam Newgas, Alfonso Ladino, Copilot, Deepak Cherian, Emmanuel Ferdman, Ian Hunt-Isaak,
 Ilan Gold, Illviljan, Jakob Harteg, Joe Hamman, Julia Signell, Justus Magin,
 Kai Mühlbauer, Max Jones, Michael Niklas, Nick Hodgskin, Pieter Eendebak,
-Spencer Clark, frostByte, kkollsga and yaochengchen
+Spencer Clark, frostByte, kkollsga, rsignell and yaochengchen
 
 New Features
 ~~~~~~~~~~~~
