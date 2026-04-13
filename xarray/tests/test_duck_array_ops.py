@@ -723,11 +723,11 @@ def test_argmin_max_error():
     ["array", "expected"],
     [
         (
-            np.array([np.datetime64("2000-01-01"), np.datetime64("NaT")]),
+            np.array([np.datetime64("2000-01-01"), np.datetime64("NaT", "D")]),
             np.array([False, True]),
         ),
         (
-            np.array([np.timedelta64(1, "h"), np.timedelta64("NaT")]),
+            np.array([np.timedelta64(1, "h"), np.timedelta64("NaT", "h")]),
             np.array([False, True]),
         ),
         (

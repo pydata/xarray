@@ -5422,16 +5422,28 @@ def test_memoryview_write_netcdf4_read_h5netcdf() -> None:
 @requires_h5netcdf_ros3
 class TestH5NetCDFDataRos3Driver(TestCommon):
     engine: T_NetcdfEngine = "h5netcdf"
-    test_remote_dataset: str = "https://archive.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
+    test_remote_dataset: str = "https://dandiarchive.s3.amazonaws.com/ros3test.hdf5"
+
+    @property
+    def ros3_kwargs(self) -> dict:
+        from h5py import version as h5ver
+
+        return (
+            {} if h5ver.hdf5_version_tuple < (2, 0, 0) else {"aws_region": b"us-east-2"}
+        )
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
         with open_dataset(
             self.test_remote_dataset,
             engine="h5netcdf",
-            backend_kwargs={"driver": "ros3"},
+            backend_kwargs={
+                "driver": "ros3",
+                "driver_kwds": self.ros3_kwargs,
+                "phony_dims": "access",
+            },
         ) as actual:
-            assert "Temperature" in list(actual)
+            assert "mydataset" in list(actual)
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list_empty_driver_kwds(self) -> None:
@@ -5439,12 +5451,17 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             "secret_id": b"",
             "secret_key": b"",
         }
-        backend_kwargs = {"driver": "ros3", "driver_kwds": driver_kwds}
+        driver_kwds.update(self.ros3_kwargs)
+        backend_kwargs = {
+            "driver": "ros3",
+            "driver_kwds": driver_kwds,
+            "phony_dims": "access",
+        }
 
         with open_dataset(
             self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
         ) as actual:
-            assert "Temperature" in list(actual)
+            assert "mydataset" in list(actual)
 
 
 @pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "zarr"])
@@ -7222,6 +7239,41 @@ def test_encode_zarr_attr_value() -> None:
     actual3 = backends.zarr.encode_zarr_attr_value(expected3)
     assert isinstance(actual3, str)
     assert actual3 == expected3
+
+
+@requires_zarr
+@pytest.mark.parametrize("dtype", [complex, np.complex64, np.complex128])
+def test_fill_value_coder_complex(dtype) -> None:
+    """Test that FillValueCoder round-trips complex fill values."""
+    from xarray.backends.zarr import FillValueCoder
+
+    for value in [dtype(1 + 2j), dtype(-3.5 + 4.5j), dtype(complex("nan+nanj"))]:
+        encoded = FillValueCoder.encode(value, np.dtype(dtype))
+        decoded = FillValueCoder.decode(encoded, np.dtype(dtype))
+        np.testing.assert_equal(np.array(decoded, dtype=dtype), np.array(value))
+
+
+@requires_zarr
+@pytest.mark.parametrize(
+    "value,dtype",
+    [
+        (np.float32(np.inf), np.float32),
+        (np.float32(-np.inf), np.float32),
+        (np.float64(np.inf), np.float64),
+        (np.float64(-np.inf), np.float64),
+        (np.float32(np.nan), np.float32),
+        (np.float64(np.nan), np.float64),
+    ],
+)
+def test_fill_value_coder_inf_nan(value, dtype) -> None:
+    """Test that FillValueCoder round-trips inf and nan fill values."""
+    from xarray.backends.zarr import FillValueCoder
+
+    encoded = FillValueCoder.encode(value, np.dtype(dtype))
+    decoded = FillValueCoder.decode(encoded, np.dtype(dtype))
+    np.testing.assert_equal(
+        np.array(decoded, dtype=dtype), np.array(value, dtype=dtype)
+    )
 
 
 @requires_zarr

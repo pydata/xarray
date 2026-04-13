@@ -20,6 +20,8 @@ New Features
 - Support ``col_wrap='auto'`` in plots that will wrap the grid to be as square
   as possible (:pull:`11266`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Added complex dtype support to FillValueCoder for the Zarr backend. (:pull:`11151`)
+  By `Max Jones <https://github.com/maxrjones>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -119,18 +121,35 @@ Bug Fixes
 - Fix :py:meth:`Dataset.interp` silently dropping datetime64 and timedelta64
   variables, through enabling their interpolation (:issue:`10900`, :pull:`11081`).
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
+- :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
+  By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+- Fix h5netcdf backend module detection and ros3 tests (:issue:`11243`, :pull:`11274`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Add AI policy (:pull:`11257`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+- Update documentation and team guide to promote Zulip. Remove mentions of Discord (:pull:`11246`, :pull:`11254`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Fix typos (:pull:`11180`, :pull:`11181`, :pull:`11182`, :pull:`11185`, :pull:`11186`).
   By `Yaocheng Chen <https://github.com/yaochengchen>`_.
 - Fix code blocks on "how to create custom index" doc page (:pull:`11255`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
+Performance
+~~~~~~~~~~~
+
+- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
+  as well. (:issue:`6528`, :pull:`10987`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Add script for linting of public docstrings according to numpydoc (:pull:`11121`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Add stubtest configuration and allowlist for validating type annotations against
   runtime behavior. This enables CI integration for type stub validation and helps
   prevent type annotation regressions (:issue:`11086`).
@@ -172,6 +191,11 @@ Breaking Changes
   not intended to be visible to end-users so this version of xarray
   switches to using ``FutureWarning`` everywhere (:pull:`11112`).
   By `Julia Signell <https://github.com/jsignell>`_.
+- Passing a :py:class:`Dataset` as ``data_vars`` to the :py:class:`Dataset`
+  constructor now raises :py:class:`TypeError`. This was never intended behavior
+  and silently dropped ``attrs``. Use :py:meth:`Dataset.copy` instead
+  (:issue:`11095`).
+  By `Kristian Kollsga <https://github.com/kkollsga>`_.
 
 Bug Fixes
 ~~~~~~~~~
@@ -348,6 +372,9 @@ Performance
 
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
+- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
+  as well. (:issue:`6528`, :pull:`10987`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Optimize :py:class:`~xarray.coding.variables.CFMaskCoder` decoder (:pull:`11105`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
