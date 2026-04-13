@@ -9,7 +9,7 @@ What's New
 .. _whats-new.2026.04.0:
 
 v2026.04.0 (Apr 13, 2026)
------------------------
+-------------------------
 
 This release bumps the minimum supported ``zarr`` version to 3.0, finalizes the
 deprecation of timedelta decoding via units, adds ``col_wrap='auto'`` for plots,
