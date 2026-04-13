@@ -7160,15 +7160,8 @@ class Dataset(
         dims = (dim,) + broadcast_vars[0].dims
         variable = Variable(dims, data, self.attrs, fastpath=True)
 
-        broadcast_dims = set(broadcast_vars[0].dims)
-        coords = {}
-        for k, v in self.coords.items():
-            if k in self._indexes:
-                if self._indexes[k].should_add_coord_to_array(k, v.variable, broadcast_dims):
-                    coords[k] = v.variable
-            elif set(v.dims) <= broadcast_dims:
-                coords[k] = v.variable
-        indexes = filter_indexes_from_coords(self._indexes, set(coords))
+        coords = {k: v.variable for k, v in self.coords.items()}
+        indexes = dict(self._indexes)
         new_dim_index = PandasIndex(list(self.data_vars), dim)
         indexes[dim] = new_dim_index
         coords.update(new_dim_index.create_variables())
