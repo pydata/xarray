@@ -109,6 +109,8 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix dark mode detection in VS Code by adding VS Code CSS variable support to the HTML representation CSS. (:pull:`11284`).
+  By `Maksymilian Wasilewski <https://github.com/maksmondeo>`_.
 - Allow writing ``StringDType`` variables to netCDF files (:issue:`11199`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 - Fix ``Source`` link in api docs (:pull:`11187`)
