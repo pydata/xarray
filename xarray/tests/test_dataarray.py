@@ -555,6 +555,18 @@ class TestDataArray:
         assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
+    def test_replace_maybe_drop_dims_keeps_reordered_coords(self) -> None:
+        array = DataArray(
+            np.empty((0, 2)),
+            dims=("x", "y"),
+            coords={"x": [], "y": [1, 1]},
+        )
+
+        actual = array._replace_maybe_drop_dims(Variable(("y", "x"), np.empty((1, 0))))
+
+        assert "x" in actual.coords
+        assert actual.sizes == {"y": 1, "x": 0}
+
     def test_equals_and_identical(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
 
