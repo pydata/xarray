@@ -26,6 +26,7 @@ policy:
     - hypothesis
     - pytz
     - pytest-reportlog
+    - pyarrow # transitive dependency of dask.dataframe, not an xarray dependency
   # these packages don't fail the CI, but will be printed in the report
   ignored_violations:
     - array-api-strict

@@ -6,6 +6,8 @@ on:
       - main
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   benchmark:
     name: Linux
@@ -17,12 +19,13 @@ jobs:
     steps:
       # We need the full repo to avoid this issue
       # https://github.com/actions/checkout/issues/23
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@v2
+        uses: mamba-org/setup-micromamba@d7c9bd84e824b79d2af72a2d4196c7f4300d3476 # v3.0.0
         with:
           micromamba-version: "1.5.10-0"
           environment-file: ${{env.CONDA_ENV_FILE}}
@@ -34,7 +37,7 @@ jobs:
 
       - name: "Get Previous tag"
         id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        uses: WyriHaximus/github-action-get-previous-tag@61819f33034117e6c686e6a31dba995a85afc9de # v2.0.0
         # with:
         #   fallback: 1.0.0 # Optional fallback tag to use when no tag can be found
 
@@ -47,18 +50,19 @@ jobs:
           OMP_NUM_THREADS: 1
           ASV_FACTOR: 1.5
           ASV_SKIP_SLOW: 1
+          GITHUB_TAG: ${{ steps.previoustag.outputs.tag }}
         run: |
           set -x
           # ID this runner
           asv machine --yes
-          echo "Baseline: ${{ steps.previoustag.outputs.tag }} "
+          echo "Baseline: $GITHUB_TAG"
           echo "Contender: ${{ github.sha }}"
           # Use mamba for env creation
           # export CONDA_EXE=$(which mamba)
           export CONDA_EXE=$(which conda)
           # Run benchmarks for current commit against base
           ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
-          asv continuous $ASV_OPTIONS ${{ steps.previoustag.outputs.tag }}  ${{ github.sha }} \
+          asv continuous $ASV_OPTIONS "$GITHUB_TAG"  ${{ github.sha }} \
               | sed "/Traceback \|failed$\|PERFORMANCE DECREASED/ s/^/::error::/" \
               | tee benchmarks.log
           # Report and export results for subsequent steps
@@ -73,7 +77,7 @@ jobs:
           cp benchmarks/README_CI.md benchmarks.log .asv/results/
         working-directory: ${{ env.ASV_DIR }}
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: always()
         with:
           name: asv-benchmark-results-${{ runner.os }}

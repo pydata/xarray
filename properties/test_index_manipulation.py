@@ -270,6 +270,13 @@ DatasetTest = DatasetStateMachine.TestCase
 
 
 @pytest.mark.skip(reason="failure detected by hypothesis")
+def test_unstack_string():
+    ds = xr.Dataset()
+    ds["0"] = np.array(["", "0", "\x000"], dtype="<U2")
+    ds.stack({"1": ["0"]}).unstack()
+
+
+@pytest.mark.skip(reason="failure detected by hypothesis")
 def test_unstack_object():
     ds = xr.Dataset()
     ds["0"] = np.array(["", "\x000"], dtype=object)

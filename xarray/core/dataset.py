@@ -34,7 +34,7 @@ import pandas as pd
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from xarray.compat.array_api_compat import to_like_array
-from xarray.computation import ops
+from xarray.computation import computation, ops
 from xarray.computation.arithmetic import DatasetArithmetic
 from xarray.core import dtypes as xrdtypes
 from xarray.core import duck_array_ops, formatting, formatting_html, utils
@@ -385,6 +385,11 @@ class Dataset(
     ) -> None:
         if data_vars is None:
             data_vars = {}
+        if isinstance(data_vars, Dataset):
+            raise TypeError(
+                "Passing a Dataset as `data_vars` to the Dataset constructor is"
+                " not supported. Use `ds.copy()` to create a copy of a Dataset."
+            )
         if coords is None:
             coords = {}
 
@@ -1221,7 +1226,13 @@ class Dataset(
             if k not in self._coord_names:
                 continue
 
-            if set(self.variables[k].dims) <= needed_dims:
+            if k in self._indexes:
+                if self._indexes[k].should_add_coord_to_array(
+                    k, self._variables[k], set(needed_dims)
+                ):
+                    variables[k] = self._variables[k]
+                    coord_names.add(k)
+            elif set(self.variables[k].dims) <= needed_dims:
                 variables[k] = self._variables[k]
                 coord_names.add(k)
 
@@ -2228,14 +2239,22 @@ class Dataset(
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "a-", r+", None}, optional
-            Persistence mode: "w" means create (overwrite if exists);
-            "w-" means create (fail if exists);
-            "a" means override all existing variables including dimension coordinates (create if does not exist);
-            "a-" means only append those variables that have ``append_dim``.
-            "r+" means modify existing array *values* only (raise an error if
-            any metadata or shapes would change).
+            Persistence mode:
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "a-" means only append those variables that have ``append_dim``.
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
             "r+" if ``region`` is set and ``w-`` otherwise.
+
+            .. note::
+                When modifying an existing Zarr array that is lazily opened, the "w"
+                behavior can be surprising since the underlying file that is being
+                lazily read from might get deleted before the data is computed.
         synchronizer : object, optional
             Zarr array synchronizer.
         group : str, optional
@@ -3940,6 +3959,21 @@ class Dataset(
                 # For normal number types do the interpolation:
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
+            elif dtype_kind in "Mm" and (use_indexers.keys() & var.dims):
+                # For datetime-like types, interpolate as float64:
+                var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
+                int_data = var.astype(np.int64)
+                nat = np.iinfo(np.int64).min
+                as_float = computation.where(
+                    int_data != nat, int_data.astype(np.float64), np.nan
+                )
+                result = missing.interp(as_float, var_indexers, method, **kwargs)
+                as_int = computation.where(
+                    ~result.isnull(),
+                    result.fillna(0).round().astype(np.int64),
+                    nat,
+                )
+                variables[name] = as_int.astype(var.dtype)
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 if all(var.sizes[d] == 1 for d in (use_indexers.keys() & var.dims)):
                     # Broadcastable, can be handled quickly without reindex:
@@ -5205,7 +5239,7 @@ class Dataset(
                 vdims = list(var.dims) + add_dims
                 shape = [self.sizes[d] for d in vdims]
                 exp_var = var.set_dims(vdims, shape)
-                stacked_var = exp_var.stack(**{new_dim: dims})
+                stacked_var = exp_var.stack({new_dim: dims})
                 new_variables[name] = stacked_var
                 stacked_var_names.append(name)
             else:
@@ -7140,7 +7174,7 @@ class Dataset(
         variable = Variable(dims, data, self.attrs, fastpath=True)
 
         coords = {k: v.variable for k, v in self.coords.items()}
-        indexes = filter_indexes_from_coords(self._indexes, set(coords))
+        indexes = dict(self._indexes)
         new_dim_index = PandasIndex(list(self.data_vars), dim)
         indexes[dim] = new_dim_index
         coords.update(new_dim_index.create_variables())
@@ -7299,6 +7333,7 @@ class Dataset(
     ) -> None:
         from sparse import COO
 
+        coords: np.ndarray[tuple[int, int], np.dtype[np.signedinteger]]
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_monotonic_increasing
@@ -10443,7 +10478,7 @@ class Dataset(
             User guide describing :py:func:`~xarray.Dataset.coarsen`
 
         :ref:`compute.coarsen`
-            User guide on block arrgragation :py:func:`~xarray.Dataset.coarsen`
+            User guide on block aggregation :py:func:`~xarray.Dataset.coarsen`
 
         :doc:`xarray-tutorial:fundamentals/03.3_windowed`
             Tutorial on windowed computation using :py:func:`~xarray.Dataset.coarsen`
