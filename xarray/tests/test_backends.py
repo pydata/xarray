@@ -7347,6 +7347,232 @@ def test_rectilinear_chunks_no_encoding(tmp_path: Path) -> None:
         np.testing.assert_array_equal(roundtrip["var"].values, data)
 
 
+@requires_zarr_v3
+@requires_dask
+def test_rectilinear_chunks_multidim(tmp_path: Path) -> None:
+    """Rectilinear chunks on a multi-dimensional array."""
+    import zarr
+
+    if not backends.zarr._has_unified_chunk_grid():
+        pytest.skip("zarr does not have unified ChunkGrid support")
+
+    data = np.arange(120, dtype="float64").reshape(6, 20)
+    ds = xr.Dataset({"var": xr.Variable(("x", "y"), data)}).chunk(
+        {"x": (2, 4), "y": (5, 10, 5)}
+    )
+
+    store_path = tmp_path / "rectilinear_2d.zarr"
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        ds.to_zarr(store_path, zarr_format=3, mode="w")
+
+        roundtrip = xr.open_zarr(store_path, zarr_format=3)
+        assert roundtrip.chunks["x"] == (2, 4)
+        assert roundtrip.chunks["y"] == (5, 10, 5)
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+
+@requires_zarr_v3
+@requires_dask
+def test_rectilinear_chunks_mixed_dims(tmp_path: Path) -> None:
+    """One dimension regular, another rectilinear."""
+    import zarr
+
+    if not backends.zarr._has_unified_chunk_grid():
+        pytest.skip("zarr does not have unified ChunkGrid support")
+
+    data = np.arange(60, dtype="float32").reshape(3, 20)
+    ds = xr.Dataset({"var": xr.Variable(("x", "y"), data)}).chunk(
+        {"x": 3, "y": (5, 10, 5)}
+    )
+
+    store_path = tmp_path / "mixed_chunks.zarr"
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        ds.to_zarr(store_path, zarr_format=3, mode="w")
+
+        roundtrip = xr.open_zarr(store_path, zarr_format=3)
+        assert roundtrip.chunks["x"] == (3,)
+        assert roundtrip.chunks["y"] == (5, 10, 5)
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+
+@requires_zarr_v3
+@requires_dask
+def test_rectilinear_chunks_interop(tmp_path: Path) -> None:
+    """Read rectilinear array created directly by zarr."""
+    import zarr
+
+    if not backends.zarr._has_unified_chunk_grid():
+        pytest.skip("zarr does not have unified ChunkGrid support")
+
+    store_path = tmp_path / "zarr_native.zarr"
+    data = np.arange(60, dtype="float32")
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        root = zarr.open_group(store_path, mode="w", zarr_format=3)
+        arr = root.create(
+            "var",
+            shape=(60,),
+            chunks=((10, 20, 30),),
+            dtype="float32",
+            dimension_names=("x",),
+        )
+        arr[:] = data
+
+        roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+        assert roundtrip.chunks["x"] == (10, 20, 30)
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+
+@requires_zarr_v3
+@requires_dask
+def test_rectilinear_chunks_safe_chunks_fail(tmp_path: Path) -> None:
+    """Misaligned dask chunks should raise when safe_chunks=True."""
+    import zarr
+
+    if not backends.zarr._has_unified_chunk_grid():
+        pytest.skip("zarr does not have unified ChunkGrid support")
+
+    data = np.arange(60, dtype="float32")
+    ds = xr.Dataset({"var": xr.Variable("x", data)}).chunk({"x": (15, 15, 30)})
+
+    store_path = tmp_path / "safe_chunks_fail.zarr"
+    encoding = {"var": {"chunks": [(10, 20, 30)]}}
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        with pytest.raises(ValueError, match=r"rectilinear.*overlap"):
+            ds.to_zarr(
+                store_path,
+                zarr_format=3,
+                mode="w",
+                encoding=encoding,
+                safe_chunks=True,
+            )
+
+
+@requires_zarr_v3
+@requires_dask
+def test_rectilinear_chunks_region_write(tmp_path: Path) -> None:
+    """Write to a region of a rectilinear chunked array."""
+    import zarr
+
+    if not backends.zarr._has_unified_chunk_grid():
+        pytest.skip("zarr does not have unified ChunkGrid support")
+
+    chunk_sizes = (10, 20, 30)
+    data = np.zeros(60, dtype="float32")
+    ds = xr.Dataset({"var": xr.Variable("x", data)}).chunk({"x": chunk_sizes})
+
+    store_path = tmp_path / "region.zarr"
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        ds.to_zarr(store_path, zarr_format=3, mode="w")
+
+        # Overwrite just the second chunk (positions 10..30)
+        update = np.arange(20, dtype="float32") + 100
+        ds_update = xr.Dataset({"var": xr.Variable("x", update)}).chunk({"x": (20,)})
+        ds_update.to_zarr(
+            store_path, zarr_format=3, region={"x": slice(10, 30)}, mode="r+"
+        )
+
+        roundtrip = xr.open_zarr(store_path, zarr_format=3)
+        expected = data.copy()
+        expected[10:30] = update
+        np.testing.assert_array_equal(roundtrip["var"].values, expected)
+        assert roundtrip.chunks["x"] == chunk_sizes
+
+
+@requires_zarr_v3
+@requires_dask
+def test_rectilinear_chunks_encoding_roundtrip_rewrite(tmp_path: Path) -> None:
+    """Read a rectilinear array and write it back preserving chunks."""
+    import zarr
+
+    if not backends.zarr._has_unified_chunk_grid():
+        pytest.skip("zarr does not have unified ChunkGrid support")
+
+    chunk_sizes = (10, 20, 30)
+    data = np.arange(60, dtype="float32")
+    ds = xr.Dataset({"var": xr.Variable("x", data)}).chunk({"x": chunk_sizes})
+
+    path1 = tmp_path / "source.zarr"
+    path2 = tmp_path / "dest.zarr"
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        ds.to_zarr(path1, zarr_format=3, mode="w")
+
+        loaded = xr.open_zarr(path1, zarr_format=3)
+        loaded.to_zarr(path2, zarr_format=3, mode="w")
+
+        roundtrip = xr.open_zarr(path2, zarr_format=3)
+        assert roundtrip.chunks["x"] == chunk_sizes
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+
+def test_validate_grid_chunks_alignment_rectilinear_pass() -> None:
+    """Dask chunks that align with rectilinear zarr boundaries should pass."""
+    from xarray.backends.chunks import validate_grid_chunks_alignment
+
+    validate_grid_chunks_alignment(
+        nd_v_chunks=((10, 20, 30),),
+        enc_chunks=((10, 20, 30),),
+        region=(slice(None),),
+        allow_partial_chunks=True,
+        name="var",
+        backend_shape=(60,),
+    )
+
+    # Dask chunks are coarser (merging zarr chunks is fine)
+    validate_grid_chunks_alignment(
+        nd_v_chunks=((30, 30),),
+        enc_chunks=((10, 20, 30),),
+        region=(slice(None),),
+        allow_partial_chunks=True,
+        name="var",
+        backend_shape=(60,),
+    )
+
+
+def test_validate_grid_chunks_alignment_rectilinear_fail() -> None:
+    """Dask chunks that split a rectilinear zarr chunk should raise."""
+    from xarray.backends.chunks import validate_grid_chunks_alignment
+
+    with pytest.raises(ValueError, match=r"rectilinear.*overlap"):
+        validate_grid_chunks_alignment(
+            nd_v_chunks=((15, 15, 30),),
+            enc_chunks=((10, 20, 30),),
+            region=(slice(None),),
+            allow_partial_chunks=True,
+            name="var",
+            backend_shape=(60,),
+        )
+
+
+def test_build_grid_chunks_rectilinear_full() -> None:
+    """build_grid_chunks with rectilinear spec and no region returns the spec."""
+    from xarray.backends.chunks import build_grid_chunks
+
+    result = build_grid_chunks(size=60, chunk_size=(10, 20, 30))
+    assert result == (10, 20, 30)
+
+
+def test_build_grid_chunks_rectilinear_region() -> None:
+    """build_grid_chunks with rectilinear spec and a region clips to region."""
+    from xarray.backends.chunks import build_grid_chunks
+
+    result = build_grid_chunks(size=45, chunk_size=(10, 20, 30), region=slice(15, 60))
+    assert result == (15, 30)
+
+
+def test_build_grid_chunks_rectilinear_region_mid() -> None:
+    """Region that starts and ends mid-chunk."""
+    from xarray.backends.chunks import build_grid_chunks
+
+    result = build_grid_chunks(size=40, chunk_size=(10, 20, 30), region=slice(5, 45))
+    assert result == (5, 20, 15)
+
+
 @requires_zarr
 @requires_fsspec
 @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
