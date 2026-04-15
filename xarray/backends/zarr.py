@@ -67,7 +67,7 @@ def _is_regular_chunk_spec(chunks: tuple) -> bool:
     Returns False for rectilinear specs where at least one element is a
     sequence of per-chunk edge lengths.
     """
-    return isinstance(chunks, tuple) and all(isinstance(c, int) for c in chunks)
+    return all(isinstance(c, int) for c in chunks)
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -380,7 +380,17 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, zarr_format):
     # https://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
         if zarr_format == 3 and _has_unified_chunk_grid():
-            return tuple(var_chunks)
+            # Check if dask chunks are regular (uniform except for last chunk)
+            has_varying_interior = any(
+                len(set(chunks[:-1])) > 1 for chunks in var_chunks
+            )
+            has_larger_final = any(chunks[0] < chunks[-1] for chunks in var_chunks)
+            if has_varying_interior or has_larger_final:
+                # Truly rectilinear — return dask-style tuples of per-chunk sizes.
+                # Requires zarr config: array.rectilinear_chunks = True
+                return tuple(var_chunks)
+            # Regular chunks — return the first chunk size per dimension
+            return tuple(chunk[0] for chunk in var_chunks)
 
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
@@ -950,7 +960,7 @@ class ZarrStore(AbstractWritableDataStore):
         )
         attributes = dict(attributes)
 
-        if _has_unified_chunk_grid():
+        if _has_unified_chunk_grid() and zarr_array.metadata.zarr_format == 3:
             from zarr.core.metadata.v3 import (
                 RectilinearChunkGridMetadata,
                 RegularChunkGridMetadata,
@@ -965,7 +975,6 @@ class ZarrStore(AbstractWritableDataStore):
                 chunks = tuple(zarr_array.chunks)
             preferred_chunks = dict(zip(dimensions, chunks, strict=True))
         else:
-            # Fallback for older zarr-python without unified chunk grid
             chunks = tuple(zarr_array.chunks)
             preferred_chunks = dict(zip(dimensions, chunks, strict=True))
 

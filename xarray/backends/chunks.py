@@ -245,7 +245,7 @@ def _validate_rectilinear_chunk_alignment(
 
 def validate_grid_chunks_alignment(
     nd_v_chunks: tuple[tuple[int, ...], ...] | None,
-    enc_chunks: tuple[int, ...],
+    enc_chunks: tuple[int | tuple[int, ...], ...],
     backend_shape: tuple[int, ...],
     region: tuple[slice, ...],
     allow_partial_chunks: bool,

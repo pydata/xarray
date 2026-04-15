@@ -2973,9 +2973,18 @@ class ZarrBase(CFEncodedBase):
 
         # should fail if dask_chunks are irregular...
         ds_chunk_irreg = ds.chunk({"x": (5, 4, 3)})
-        with pytest.raises(ValueError, match=r"uniform chunk sizes."):
-            with self.roundtrip(ds_chunk_irreg) as actual:
-                pass
+        if (
+            backends.zarr._has_unified_chunk_grid()
+            and zarr.config.config["default_zarr_format"] == 3
+        ):
+            # zarr v3 with unified chunk grid supports rectilinear chunks
+            with zarr.config.set({"array.rectilinear_chunks": True}):
+                with self.roundtrip(ds_chunk_irreg) as actual:
+                    pass
+        else:
+            with pytest.raises(ValueError, match=r"uniform chunk sizes."):
+                with self.roundtrip(ds_chunk_irreg) as actual:
+                    pass
 
         # should fail if encoding["chunks"] clashes with dask_chunks
         badenc = ds.chunk({"x": 4})
@@ -7414,7 +7423,8 @@ def test_rectilinear_chunks_interop(tmp_path: Path) -> None:
         arr = root.create(
             "var",
             shape=(60,),
-            chunks=((10, 20, 30),),
+            # zarr stubs don't include rectilinear chunk types yet
+            chunks=((10, 20, 30),),  # type: ignore[arg-type]
             dtype="float32",
             dimension_names=("x",),
         )
