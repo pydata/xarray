@@ -430,14 +430,12 @@ def open_dataset(
         "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
-    chunks : int, dict, 'auto', 'dask-auto' or None, default: None
+    chunks : int, dict, 'auto', or None, default: None
         If provided, used to load the data into dask arrays.
 
         - ``chunks="auto"`` will use a chunking scheme that never splits encoded
           chunks. If encoded chunks are small then "auto" takes multiples of them
           over the largest dimension.
-        - ``chunks="dask-auto"`` will use dask ``auto`` chunking taking into account the
-          engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
           :ref:`lazy indexing classes <internal design.lazy indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
@@ -677,14 +675,12 @@ def open_dataarray(
         "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
-    chunks : int, dict, 'auto', 'dask-auto', or None, default: None
+    chunks : int, dict, 'auto', or None, default: None
         If provided, used to load the data into dask arrays.
 
         - ``chunks="auto"`` will use a chunking scheme that never splits encoded
           chunks. If encoded chunks are small then "auto" takes multiples of them
           over the largest dimension.
-        - ``chunks='dask-auto'`` will use dask ``auto`` chunking taking into account the
-          engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
           :ref:`lazy indexing classes <internal design.lazy indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
@@ -906,11 +902,9 @@ def open_datatree(
         "h5netcdf" over "netcdf4" (customizable via ``netcdf_engine_order`` in
         ``xarray.set_options()``). A custom backend class (a subclass of
         ``BackendEntrypoint``) can also be used.
-    chunks : int, dict, 'auto', 'dask-auto', or None, default: None
+    chunks : int, dict, 'auto', or None, default: None
         If provided, used to load the data into dask arrays.
 
-        - ``chunks="dask-auto"`` will use dask ``auto`` chunking taking into account the
-          engine preferred chunks.
         - ``chunks="auto"`` will use a chunking scheme that never splits encoded
           chunks. If encoded chunks are small then "auto" takes multiples of them
           over the largest dimension.
@@ -1155,14 +1149,12 @@ def open_groups(
         ``xarray.set_options()``). A custom backend class (a subclass of
         ``BackendEntrypoint``) can also be used.
         can also be used.
-    chunks : int, dict, 'auto', 'dask-auto', or None, default: None
+    chunks : int, dict, 'auto', or None, default: None
         If provided, used to load the data into dask arrays.
 
         - ``chunks="auto"`` will use a chunking scheme that never splits encoded
           chunks. If encoded chunks are small then "auto" takes multiples of them
           over the largest dimension.
-        - ``chunks="dask-auto"`` will use dask ``auto`` chunking taking into account the
-          engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
           :ref:`lazy indexing classes <internal design.lazy indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
@@ -1430,7 +1422,7 @@ def open_mfdataset(
         concatenation along more than one dimension is desired, then ``paths`` must be a
         nested list-of-lists (see ``combine_nested`` for details). (A string glob will
         be expanded to a 1-dimensional list.)
-    chunks : int, dict, 'auto', 'dask-auto', or None, optional
+    chunks : int, dict, 'auto', or None, optional
         Dictionary with keys given by dimension names and values given by chunk sizes.
         In general, these should divide the dimensions of each dataset. If int, chunk
         each dimension by ``chunks``. By default, chunks will be chosen to match the

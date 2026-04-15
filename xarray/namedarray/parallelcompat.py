@@ -797,10 +797,10 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """Quickly determine optimal chunks close to target size but never splitting
         previous_chunks.
 
-        This takes in a chunks argument potentially containing ``"preserve"`` for several
-        dimensions. This function replaces ``"preserve"`` with concrete dimension sizes that
+        This takes in a chunks argument potentially containing ``"auto"`` for several
+        dimensions. This function replaces ``"auto"`` with concrete dimension sizes that
         try to get chunks to be close to certain size in bytes, provided by the ``target=``
-        keyword. Any dimensions marked as ``"preserve"`` will potentially be multiplied
+        keyword. Any dimensions marked as ``"auto"`` will potentially be multiplied
         by some factor to get close to the byte target, while never splitting
         ``previous_chunks``. If chunks are non-uniform along a particular dimension
         then that dimension will always use exactly ``previous_chunks``.
@@ -808,7 +808,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         Examples
         --------
         >>> ChunkManagerEntrypoint.preserve_chunks(
-        ...     chunks=("preserve", "preserve", "preserve"),
+        ...     chunks=("auto", "auto", "auto"),
         ...     shape=(1280, 1280, 20),
         ...     target=500 * 1024,
         ...     typesize=8,
@@ -817,7 +817,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         (128, 128, 2)
 
         >>> ChunkManagerEntrypoint.preserve_chunks(
-        ...     chunks=("preserve", "preserve", 1),
+        ...     chunks=("auto", "auto", 1),
         ...     shape=(1280, 1280, 20),
         ...     target=1 * 1024 * 1024,
         ...     typesize=8,
@@ -826,7 +826,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         (128, 1024, 1)
 
         >>> ChunkManagerEntrypoint.preserve_chunks(
-        ...     chunks=("preserve", "preserve", 1),
+        ...     chunks=("auto", "auto", 1),
         ...     shape=(1280, 1280, 20),
         ...     target=1 * 1024 * 1024,
         ...     typesize=8,
@@ -838,7 +838,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         ----------
         chunks: tuple[int | str | tuple[int], ...]
             A tuple of either dimensions or tuples of explicit chunk dimensions
-            Some entries should be "preserve".
+            Some entries should be "auto".
         shape: tuple[int]
             The shape of the array
         target: int
