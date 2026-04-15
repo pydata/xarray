@@ -162,6 +162,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix :py:meth:`DataArray.sortby` and :py:meth:`Dataset.sortby` raising ``KeyError``
+  when passing a tuple of dimension names, e.g. ``da.sortby(da.dims)`` (:issue:`4821`).
+  By `Timothy Hodson <https://github.com/thodson-usgs>`_.
 - Fix multi-coordinate indexes being dropped in :py:meth:`DataArray._replace_maybe_drop_dims`
   (e.g. after reducing over an unrelated dimension) and in :py:meth:`Dataset._copy_listed`
   (e.g. when subsetting a Dataset by variable names). Both paths now consult

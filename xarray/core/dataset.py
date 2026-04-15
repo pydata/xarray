@@ -8149,8 +8149,12 @@ class Dataset(
 
         if callable(variables):
             variables = variables(self)
-        if not isinstance(variables, list):
+        if isinstance(variables, (str, DataArray)) or not isinstance(
+            variables, Iterable
+        ):
             variables = [variables]
+        else:
+            variables = list(variables)
         arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
         aligned_vars = align(self, *arrays, join="left")
         aligned_self = cast("Self", aligned_vars[0])
