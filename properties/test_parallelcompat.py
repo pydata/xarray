@@ -20,7 +20,7 @@ class TestPreserveChunks:
         target = 1024 * 1024
 
         actual = ChunkManagerEntrypoint.preserve_chunks(
-            chunks=("preserve",) * len(shape),
+            chunks=("auto",) * len(shape),
             shape=shape,
             target=target,
             typesize=typesize,
@@ -47,7 +47,7 @@ class TestPreserveChunks:
         target = 2 * 1024 * 1024
 
         actual = ChunkManagerEntrypoint.preserve_chunks(
-            chunks=(first_chunk, *["preserve" for _ in range(len(shape) - 1)]),
+            chunks=(first_chunk, *["auto" for _ in range(len(shape) - 1)]),
             shape=shape,
             target=target,
             typesize=typesize,

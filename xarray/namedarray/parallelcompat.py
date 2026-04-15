@@ -850,7 +850,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
             of tuple of ints.
         """
         new_chunks = [*previous_chunks]
-        auto_dims = [c == "preserve" for c in chunks]
+        auto_dims = [c == "auto" for c in chunks]
         max_chunks = np.array(shape)
         for i, previous_chunk in enumerate(previous_chunks):
             chunk = chunks[i]
@@ -869,8 +869,8 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
                         max_chunks[i] = max(previous_chunk)
 
                 if isinstance(previous_chunk, int):
-                    # preserve, None or () means we want to track previous chunk
-                    if chunk == "preserve" or not chunk:
+                    # auto, None or () means we want to track previous chunk
+                    if chunk == "auto" or not chunk:
                         max_chunks[i] = previous_chunk
                     # otherwise use the explicitly provided chunk
                     else:
