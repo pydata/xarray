@@ -6,10 +6,50 @@
 What's New
 ==========
 
-.. _whats-new.2026.03.0:
+.. _whats-new.2026.05.0:
 
-v2026.03.0 (unreleased)
+v2026.05.0 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2026.04.0:
+
+v2026.04.0 (Apr 13, 2026)
+-------------------------
+
+This release bumps the minimum supported ``zarr`` version to 3.0, finalizes the
+deprecation of timedelta decoding via units, adds ``col_wrap='auto'`` for plots,
+a new ``inherit='all_coords'`` option for :py:meth:`DataTree.to_dataset`, and a
+``facetgrid_figsize`` option for :py:func:`~xarray.set_options`.
+
+Thanks to the 22 contributors to this release:
+Adam Newgas, Alfonso Ladino, Copilot, Deepak Cherian, Emmanuel Ferdman, Ian Hunt-Isaak,
+Ilan Gold, Illviljan, Jakob Harteg, Joe Hamman, Julia Signell, Justus Magin,
+Kai Mühlbauer, Max Jones, Michael Niklas, Nick Hodgskin, Pieter Eendebak,
+Spencer Clark, frostByte, kkollsga, rsignell and yaochengchen
 
 New Features
 ~~~~~~~~~~~~
@@ -20,6 +60,16 @@ New Features
   the maximum number of concurrent I/O operations when opening groups in parallel
   with the Zarr backend (:pull:`10742`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
+- Support ``col_wrap='auto'`` in plots that will wrap the grid to be as square
+  as possible (:pull:`11266`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Added complex dtype support to FillValueCoder for the Zarr backend. (:pull:`11151`)
+  By `Max Jones <https://github.com/maxrjones>`_.
+- Added ``facetgrid_figsize`` option to :py:func:`~xarray.set_options` allowing
+  :py:class:`~xarray.plot.FacetGrid` to use ``matplotlib.rcParams['figure.figsize']``
+  or a fixed ``(width, height)`` tuple instead of computing figure size from
+  ``size`` and ``aspect`` (:issue:`11103`).
+  By `Kristian Kollsga <https://github.com/kkollsga>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -102,6 +152,11 @@ Breaking Changes
   ``open_dataset`` and ``open_datatree`` the default behavior of fsspec is now to
   use block caching with a 4MB block size (:pull:`11216`). By `Julia Signell
   <https://github.com/jsignell>`_.
+- Passing a :py:class:`Dataset` as ``data_vars`` to the :py:class:`Dataset`
+  constructor now raises :py:class:`TypeError`. This was never intended behavior
+  and silently dropped ``attrs``. Use :py:meth:`Dataset.copy` instead
+  (:issue:`11095`).
+  By `Kristian Kollsga <https://github.com/kkollsga>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -110,6 +165,14 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix multi-coordinate indexes being dropped in :py:meth:`DataArray._replace_maybe_drop_dims`
+  (e.g. after reducing over an unrelated dimension) and in :py:meth:`Dataset._copy_listed`
+  (e.g. when subsetting a Dataset by variable names). Both paths now consult
+  :py:meth:`Index.should_add_coord_to_array`, consistent with
+  :py:meth:`Dataset._construct_dataarray`. Also simplify :py:meth:`Dataset.to_dataarray`
+  to keep all coordinates and indexes directly, since variables are broadcast and all
+  coords are retained (:issue:`11215`, :pull:`11286`).
+  By `Rich Signell <https://github.com/rsignell>`_.
 - Allow writing ``StringDType`` variables to netCDF files (:issue:`11199`).
   By `Kristian Kollsgård <https://github.com/kkollsga>`_.
 - Fix ``Source`` link in api docs (:pull:`11187`)
@@ -121,6 +184,8 @@ Bug Fixes
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 - :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
   By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+- Fix h5netcdf backend module detection and ros3 tests (:issue:`11243`, :pull:`11274`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -366,9 +431,6 @@ Performance
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
-- Groupby cumsum can now be accelerated with flox. Coordinates are now retained
-  as well. (:issue:`6528`, :pull:`10987`)
-  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Optimize :py:class:`~xarray.coding.variables.CFMaskCoder` decoder (:pull:`11105`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
@@ -1833,9 +1895,6 @@ Bug fixes
 - Fix deprecation warning that was raised when calling ``np.array`` on an ``xr.DataArray``
   in NumPy 2.0 (:issue:`9312`, :pull:`9393`)
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
-- Fix passing missing arguments to when opening hdf5 and netCDF4 datatrees
-  (:issue:`9427`, :pull:`9428`).
-  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Fix support for using ``pandas.DateOffset``, ``pandas.Timedelta``, and
   ``datetime.timedelta`` objects as ``resample`` frequencies
   (:issue:`9408`, :pull:`9413`).
@@ -2932,9 +2991,6 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Added examples to docstrings of :py:meth:`Dataset.assign_attrs`, :py:meth:`Dataset.broadcast_equals`,
-  :py:meth:`Dataset.equals`, :py:meth:`Dataset.identical`, :py:meth:`Dataset.expand_dims`, :py:meth:`Dataset.drop_vars`
-  (:issue:`6793`, :pull:`7937`) By `Harshitha <https://github.com/harshitha1201>`_.
 - Added page on wrapping chunked numpy-like arrays as alternatives to dask arrays.
   (:pull:`7951`) By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Expanded the page on wrapping numpy-like "duck" arrays.
