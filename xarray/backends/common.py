@@ -261,10 +261,7 @@ def _filter_group_paths(group_paths: Iterable[str], pattern: str) -> list[str]:
         np_ = NodePath(path)
         if np_.match(pattern):
             matched.add(path)
-            for parent in np_.parents:
-                p = str(parent)
-                if p:
-                    matched.add(p)
+            matched.update(str(p) for p in np_.parents if str(p))
 
     return [p for p in group_paths if p in matched]
 
