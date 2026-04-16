@@ -1021,8 +1021,12 @@ def open_datatree(
         Additional keyword arguments passed on to the engine open function.
         For example:
 
-        - 'group': path to the group in the given file to open as the root group as
-          a str.
+        - 'group': path to the group in the given file to open as the root
+          group as a str.  If the string contains glob metacharacters
+          (``*``, ``?``, ``[``), it is interpreted as a pattern and only
+          groups whose paths match are loaded (along with their ancestors).
+          For example, ``group="*/sweep_0"`` loads every ``sweep_0`` one
+          level deep while skipping sibling groups.
         - 'lock': resource lock to use when reading data from disk. Only
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
@@ -1265,8 +1269,12 @@ def open_groups(
         Additional keyword arguments passed on to the engine open function.
         For example:
 
-        - 'group': path to the group in the given file to open as the root group as
-          a str.
+        - 'group': path to the group in the given file to open as the root
+          group as a str.  If the string contains glob metacharacters
+          (``*``, ``?``, ``[``), it is interpreted as a pattern and only
+          groups whose paths match are loaded (along with their ancestors).
+          For example, ``group="*/sweep_0"`` loads every ``sweep_0`` one
+          level deep while skipping sibling groups.
         - 'lock': resource lock to use when reading data from disk. Only
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
