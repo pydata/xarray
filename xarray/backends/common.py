@@ -12,6 +12,7 @@ from typing import (
     Any,
     ClassVar,
     Self,
+    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -412,7 +413,7 @@ class AbstractDataStore:
         self.close()
 
 
-T_PathFileOrDataStore = (
+T_PathFileOrDataStore: TypeAlias = (
     str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
 )
 
@@ -807,12 +808,7 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
@@ -824,12 +820,7 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -839,12 +830,7 @@ class BackendEntrypoint:
 
     def open_datatree(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
@@ -858,12 +844,7 @@ class BackendEntrypoint:
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:
