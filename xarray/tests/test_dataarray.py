@@ -417,11 +417,10 @@ class TestDataArray:
         ):
             actual = DataArray(data, coords=coords, dims=["x", "y"])
 
-        expected = DataArray(
-            data,
+        expected = Dataset(
+            {None: (["x", "y"], data)},
             coords={"x": [0, 1], "y": [-1, -2, -3]},
-            dims=["x", "y"],
-        )
+        )[None]
         assert_identical(expected, actual)
 
     def test_constructor_tuple_coords_no_warning_when_names_match_dims(self) -> None:
@@ -434,11 +433,10 @@ class TestDataArray:
                 dims=["x", "y"],
             )
 
-        expected = DataArray(
-            data,
+        expected = Dataset(
+            {None: (["x", "y"], data)},
             coords={"x": [0, 1], "y": [-1, -2, -3]},
-            dims=["x", "y"],
-        )
+        )[None]
         assert_identical(expected, actual)
 
     def test_constructor_invalid(self) -> None:
