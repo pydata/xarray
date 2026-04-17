@@ -20,6 +20,7 @@ from xarray import (
 )
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.times import (
+    _decode_cf_datetime_dtype,
     _encode_datetime_with_cftime,
     _netcdf_to_numpy_timeunit,
     _numpy_to_netcdf_timeunit,
@@ -46,6 +47,7 @@ from xarray.tests import (
     _STANDARD_CALENDARS,
     DuckArrayWrapper,
     FirstElementAccessibleArray,
+    InaccessibleArray,
     _all_cftime_date_types,
     arm_xfail,
     assert_array_equal,
@@ -2213,3 +2215,150 @@ def test_roundtrip_empty_datetime64_array(time_unit: PDDatetimeUnitOptions) -> N
     )
     assert_identical(variable, roundtripped)
     assert roundtripped.dtype == variable.dtype
+
+
+class TestDecodeCFDatetimeDtype:
+    """Metadata-first dtype inference skips store reads when safe."""
+
+    @staticmethod
+    def _inaccessible(dtype: str = "int64", shape: tuple[int, ...] = (3,)):
+        """An array-like that raises UnexpectedDataAccess on any read.
+
+        Used to prove ``_decode_cf_datetime_dtype`` does not touch data
+        when metadata alone is sufficient.
+        """
+        return InaccessibleArray(np.zeros(shape, dtype=dtype))
+
+    @pytest.mark.parametrize(
+        "use_cftime, expected_kind",
+        [(True, "O"), (False, "M")],
+        ids=["use_cftime=True", "use_cftime=False"],
+    )
+    def test_explicit_use_cftime_no_reads(self, use_cftime, expected_kind):
+        data = self._inaccessible()
+        dtype = _decode_cf_datetime_dtype(
+            data, "days since 2000-01-01", "standard", use_cftime
+        )
+        assert dtype.kind == expected_kind
+
+    @requires_cftime
+    def test_nonstandard_calendar_no_reads(self):
+        data = self._inaccessible()
+        dtype = _decode_cf_datetime_dtype(
+            data, "days since 2000-01-01", "noleap", use_cftime=None
+        )
+        assert dtype == np.dtype("object")
+
+    @pytest.mark.parametrize("time_unit", ["s", "ms", "us"])
+    def test_wide_time_unit_no_reads(self, time_unit):
+        data = self._inaccessible()
+        dtype = _decode_cf_datetime_dtype(
+            data,
+            "days since 2000-01-01",
+            "standard",
+            use_cftime=None,
+            time_unit=time_unit,
+        )
+        assert dtype.kind == "M"
+
+    def test_unchunked_data_no_reads(self):
+        # With use_cftime=None + ns + non-chunked, dtype mismatch at access
+        # time is harmless (sync path reconciles), so no reads needed.
+        data = self._inaccessible(dtype="int64")
+        dtype = _decode_cf_datetime_dtype(
+            data,
+            "days since 2000-01-01",
+            "standard",
+            use_cftime=None,
+            time_unit="ns",
+        )
+        assert dtype == np.dtype("datetime64[ns]")
+
+    def test_bounded_storage_dtype_no_reads(self):
+        # Chunked int32 seconds from 2000 cannot overflow datetime64[ns],
+        # so the bounds check lets us skip reads without falling through
+        # to the unchunked shortcut.
+        dask = pytest.importorskip("dask.array")
+        chunked = dask.from_array(np.zeros(3, dtype="int32"))
+        dtype = _decode_cf_datetime_dtype(
+            chunked, "seconds since 2000-01-01", "standard", use_cftime=None
+        )
+        assert dtype == np.dtype("datetime64[ns]")
+
+    @requires_dask
+    def test_valid_max_attr_no_reads(self):
+        import dask.array as da
+
+        # int64 storage would normally trigger a read, but valid_max
+        # proves no overflow is possible.
+        chunked = da.from_array(np.zeros(3, dtype="int64"))
+        chunked_inacc = InaccessibleArray(chunked)
+        attrs = {"valid_max": 3650}  # ~10 years, well within range
+        dtype = _decode_cf_datetime_dtype(
+            chunked_inacc,
+            "days since 2000-01-01",
+            "standard",
+            use_cftime=None,
+            attrs=attrs,
+        )
+        assert dtype == np.dtype("datetime64[ns]")
+
+    @requires_dask
+    def test_time_coverage_end_attr_no_reads(self):
+        import dask.array as da
+
+        chunked = da.from_array(np.zeros(3, dtype="int64"))
+        chunked_inacc = InaccessibleArray(chunked)
+        attrs = {"time_coverage_end": "2025-12-31T23:59:59Z"}
+        dtype = _decode_cf_datetime_dtype(
+            chunked_inacc,
+            "days since 2000-01-01",
+            "standard",
+            use_cftime=None,
+            attrs=attrs,
+        )
+        assert dtype == np.dtype("datetime64[ns]")
+
+    @requires_dask
+    def test_chunked_int64_falls_back_to_reads(self):
+        # Chunked + ns + use_cftime=None + int64 + no bounds: metadata
+        # cannot prove anything, so we fall back to reading first/last.
+        import dask.array as da
+
+        chunked = da.from_array(np.array([0, 1, 2], dtype="int64"), chunks=3)
+        dtype = _decode_cf_datetime_dtype(
+            chunked,
+            "days since 2000-01-01",
+            "standard",
+            use_cftime=None,
+        )
+        assert dtype == np.dtype("datetime64[ns]")
+
+    def test_invalid_units_raises_value_error(self):
+        data = self._inaccessible()
+        with pytest.raises(ValueError, match="unable to decode time units"):
+            _decode_cf_datetime_dtype(data, "not a valid unit string", None, None)
+
+    def test_verification_wrapper_raises_on_datetime_vs_object_mismatch(self):
+        # Metadata predicts datetime64[ns] but the decoder returns cftime
+        # objects (the overflow case). The wrapper must raise TypeError.
+        from xarray.coding.times import _verify_decoded_dtype
+
+        def fake_decoder(values):
+            return np.array([object()], dtype="object")  # cftime-like object output
+
+        guarded = _verify_decoded_dtype(fake_decoder, np.dtype("datetime64[ns]"))
+        with pytest.raises(TypeError, match="does not match declared dtype"):
+            guarded(np.array([0, 1]))
+
+    def test_verification_wrapper_accepts_different_datetime64_resolutions(self):
+        # Declared datetime64[ns] but decoder returns datetime64[us] — both
+        # are datetime64, so the wrapper should pass them through.
+        from xarray.coding.times import _verify_decoded_dtype
+
+        def fake_decoder(values):
+            return np.array([0, 1], dtype="datetime64[us]")
+
+        guarded = _verify_decoded_dtype(fake_decoder, np.dtype("datetime64[ns]"))
+        result = guarded(np.array([0, 1]))
+        assert result.dtype == np.dtype("datetime64[us]")
