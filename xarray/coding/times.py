@@ -415,10 +415,10 @@ def _is_overflow_safe_from_metadata(
 ) -> bool:
     """Whether decode_cf_datetime's output dtype is knowable from metadata.
 
-    Output dtype depends on data values only when all of the following
-    hold: ``use_cftime=None``, standard calendar, ``time_unit="ns"``, data
-    is chunked (so dask enforces the declared dtype), and we have no
-    explicit bound that proves values fit the datetime64[ns] range.
+    Output dtype depends on data values only for ``use_cftime=None`` +
+    standard calendar + ``time_unit="ns"`` with a backend-lazy source
+    (where reads are expensive) and no attr/dtype bound that proves
+    values fit the datetime64[ns] range.
     """
     if use_cftime is not None:
         return True
