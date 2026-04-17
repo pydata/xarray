@@ -367,6 +367,25 @@ def _bound_fits_datetime64_ns(max_value: float | int, units: str) -> bool:
     return _DATETIME64_NS_LOWER <= lower and upper <= _DATETIME64_NS_UPPER
 
 
+def _is_backed_by_lazy_backend(data) -> bool:
+    """Walk intermediate coder wrappers to find a backend-lazy array.
+
+    Returns True when some level of the wrapper chain is a
+    ``LazilyIndexedArray`` (zarr/netcdf/DAP backends). Returns False for
+    in-memory data (plain numpy, ``PandasIndexingAdapter``) where reads
+    are essentially free and we want to keep the fail-fast semantics.
+    """
+    # Guard against cycles; bound the depth to a small number.
+    for _ in range(16):
+        if isinstance(data, indexing.LazilyIndexedArray):
+            return True
+        inner = getattr(data, "array", None)
+        if inner is None or inner is data:
+            return False
+        data = inner
+    return False
+
+
 def _bound_from_attrs(attrs: dict, units: str) -> bool:
     """True if ``valid_max`` or ``time_coverage_end`` in attrs proves the
     decoded values fit in datetime64[ns]."""
@@ -379,6 +398,9 @@ def _bound_from_attrs(attrs: dict, units: str) -> bool:
             ts = pd.Timestamp(end)
         except (ValueError, TypeError):
             return False
+        # Strip any timezone for comparison with tz-naive ns bounds.
+        if ts.tzinfo is not None:
+            ts = ts.tz_convert(None) if ts.tz is not None else ts.tz_localize(None)
         return bool(_DATETIME64_NS_LOWER <= ts <= _DATETIME64_NS_UPPER)
     return False
 
@@ -407,9 +429,13 @@ def _is_overflow_safe_from_metadata(
     # is unreachable in practice.
     if time_unit != "ns":
         return True
-    # Non-chunked data: sync decode (_ElementwiseFunctionArray) returns the
-    # function's actual output dtype and xarray reconciles at access time.
-    if not is_chunked_array(data):
+    # Backend-lazy arrays: reads go through the backend's indexing
+    # pipeline (zarr sync/async, DAP, etc.) and can be expensive even
+    # when values are cached. We walk through intermediate coder wrappers
+    # (_ElementwiseFunctionArray) to find the backing array. In-memory
+    # wrappers like PandasIndexingAdapter are not covered here — reading
+    # them is free and preserves fail-fast on invalid values.
+    if _is_backed_by_lazy_backend(data):
         return True
     # Chunked + ns + auto: need a proven bound.
     if attrs is not None and _bound_from_attrs(attrs, units):
@@ -433,12 +459,19 @@ def _infer_dtype_from_metadata(
     """Infer the decoded dtype from metadata alone, without reading data.
 
     Raises ``_CannotInferFromMetadata`` when the dtype depends on values
-    that must be read. Otherwise runs ``decode_cf_datetime`` on a
-    synthetic ``[0, 1]`` array so the same resolution-selection logic
-    that runs on real data also produces the declared dtype.
+    that must be read. For deterministic cases (``use_cftime`` explicit,
+    non-standard calendar) returns the dtype directly so ``cftime`` does
+    not need to be importable. Otherwise runs ``decode_cf_datetime`` on
+    a synthetic ``[0, 1]`` array so resolution-selection logic matches
+    real-data output.
     """
     # Validate units — raises ValueError on malformed strings.
     _unpack_time_unit_and_ref_date(units)
+
+    if use_cftime is True:
+        return np.dtype("object")
+    if calendar is not None and not _is_standard_calendar(calendar):
+        return np.dtype("object")
 
     if not _is_overflow_safe_from_metadata(
         data, units, calendar, use_cftime, time_unit, attrs
@@ -507,35 +540,6 @@ def _decode_cf_datetime_dtype(
         )
     except Exception as err:
         raise _wrap_decode_error(err, units, calendar) from err
-
-
-def _verify_decoded_dtype(func: Callable, expected_dtype: np.dtype) -> Callable:
-    """Wrap ``func`` to raise on datetime64/object dtype mismatches.
-
-    The lazy decode pipeline advertises ``expected_dtype`` upfront; when
-    data is chunked, dask.map_blocks uses it to cast the function's
-    output. If decoded values land on the wrong side of the
-    datetime64/object boundary (e.g. overflow forces a cftime fallback),
-    this wrapper raises ``TypeError`` instead of silently casting.
-    Different datetime64 resolutions are allowed — only the
-    datetime64/object boundary matters.
-    """
-    expected_is_datetime = expected_dtype.kind == "M"
-
-    def wrapper(values):
-        result = func(values)
-        result_dtype = getattr(result, "dtype", np.dtype("object"))
-        if (result_dtype.kind == "M") != expected_is_datetime:
-            raise TypeError(
-                f"decoded datetime dtype {result_dtype!r} does not match "
-                f"declared dtype {expected_dtype!r}. Values likely fall "
-                f"outside the representable range of {expected_dtype!r}; "
-                "pass use_cftime=True or a coarser time_unit "
-                "(e.g. 'us' or 's') to decode_times."
-            )
-        return result
-
-    return wrapper
 
 
 def _decode_datetime_with_cftime(
@@ -1593,10 +1597,6 @@ class CFDatetimeCoder(VariableCoder):
                 use_cftime=self.use_cftime,
                 time_unit=self.time_unit,
             )
-            # Guard against dtype mismatches (e.g. overflow values that would
-            # cause dask map_blocks to silently cast cftime output to
-            # datetime64 garbage).
-            transform = _verify_decoded_dtype(transform, dtype)
             data = lazy_elemwise_func(data, transform, dtype)
 
             return Variable(dims, data, attrs, encoding, fastpath=True)
