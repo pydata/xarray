@@ -1393,7 +1393,11 @@ def test_roundtrip_datetime64_nanosecond_precision(
 ) -> None:
     # test for GH7817
     time = np.datetime64(timestr, format)
-    times = [np.datetime64("1970-01-01T00:00:00", format), np.datetime64("NaT"), time]
+    times = [
+        np.datetime64("1970-01-01T00:00:00", format),
+        np.datetime64("NaT", format),
+        time,
+    ]
 
     if use_encoding:
         encoding = dict(dtype=dtype, _FillValue=fill_value)

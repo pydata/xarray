@@ -997,7 +997,7 @@ def cftime_to_nptime(
                     f"standard calendar.  Reason: {e}."
                 ) from e
             else:
-                dt = np.datetime64("NaT")
+                dt = np.datetime64("NaT", time_unit)
         new.append(dt)
     return np.asarray(new).reshape(times.shape)
 
