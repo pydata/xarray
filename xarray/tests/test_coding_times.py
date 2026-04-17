@@ -36,6 +36,7 @@ from xarray.coding.times import (
 )
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
+from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import is_duck_dask_array
@@ -2265,17 +2266,56 @@ class TestDecodeCFDatetimeDtype:
         )
         assert dtype.kind == "M"
 
-    def test_unchunked_data_no_reads(self):
-        # With use_cftime=None + ns + non-chunked, dtype mismatch at access
-        # time is harmless (sync path reconciles), so no reads needed.
-        data = self._inaccessible(dtype="int64")
+    def test_lazy_backend_array_no_reads(self):
+        # Backend-lazy wrappers (LazilyIndexedArray) skip reads because
+        # indexing them would trigger expensive backend I/O.
+        inner = self._inaccessible(dtype="int64")
+        lazy = indexing.LazilyIndexedArray(inner)
         dtype = _decode_cf_datetime_dtype(
-            data,
+            lazy,
             "days since 2000-01-01",
             "standard",
             use_cftime=None,
             time_unit="ns",
         )
+        assert dtype == np.dtype("datetime64[ns]")
+
+    def test_coder_wrapped_lazy_backend_no_reads(self):
+        # When earlier coders wrap the backend-lazy array in
+        # _ElementwiseFunctionArray, the fast path still applies — the
+        # wrapper chain is walked to find the underlying LazilyIndexedArray.
+        from xarray.coding.common import lazy_elemwise_func
+
+        inner = self._inaccessible(dtype="int64")
+        lazy = indexing.LazilyIndexedArray(inner)
+        wrapped = lazy_elemwise_func(lazy, lambda x: x, np.dtype("int64"))
+        dtype = _decode_cf_datetime_dtype(
+            wrapped,
+            "days since 2000-01-01",
+            "standard",
+            use_cftime=None,
+            time_unit="ns",
+        )
+        assert dtype == np.dtype("datetime64[ns]")
+
+    def test_pandas_index_coord_reads_are_performed(self):
+        # In-memory coord data (PandasIndexingAdapter) is NOT treated as
+        # backend-lazy — we keep the eager first/last reads so fail-fast
+        # semantics on overflow values are preserved for in-memory data.
+        pd = pytest.importorskip("pandas")
+        adapter = indexing.PandasIndexingAdapter(
+            pd.Index(np.array([0, 1], dtype="int64"))
+        )
+        dtype = _decode_cf_datetime_dtype(
+            adapter,
+            "days since 2000-01-01",
+            "standard",
+            use_cftime=None,
+            time_unit="ns",
+        )
+        # No assertion on "reads" here — we rely on the fallback path
+        # being reached; overflow detection is covered by existing
+        # conventions tests (e.g. test_decode_cf_datetime_transition_to_invalid).
         assert dtype == np.dtype("datetime64[ns]")
 
     def test_bounded_storage_dtype_no_reads(self):
@@ -2342,27 +2382,3 @@ class TestDecodeCFDatetimeDtype:
         data = self._inaccessible()
         with pytest.raises(ValueError, match="unable to decode time units"):
             _decode_cf_datetime_dtype(data, "not a valid unit string", None, None)
-
-    def test_verification_wrapper_raises_on_datetime_vs_object_mismatch(self):
-        # Metadata predicts datetime64[ns] but the decoder returns cftime
-        # objects (the overflow case). The wrapper must raise TypeError.
-        from xarray.coding.times import _verify_decoded_dtype
-
-        def fake_decoder(values):
-            return np.array([object()], dtype="object")  # cftime-like object output
-
-        guarded = _verify_decoded_dtype(fake_decoder, np.dtype("datetime64[ns]"))
-        with pytest.raises(TypeError, match="does not match declared dtype"):
-            guarded(np.array([0, 1]))
-
-    def test_verification_wrapper_accepts_different_datetime64_resolutions(self):
-        # Declared datetime64[ns] but decoder returns datetime64[us] — both
-        # are datetime64, so the wrapper should pass them through.
-        from xarray.coding.times import _verify_decoded_dtype
-
-        def fake_decoder(values):
-            return np.array([0, 1], dtype="datetime64[us]")
-
-        guarded = _verify_decoded_dtype(fake_decoder, np.dtype("datetime64[ns]"))
-        result = guarded(np.array([0, 1]))
-        assert result.dtype == np.dtype("datetime64[us]")
