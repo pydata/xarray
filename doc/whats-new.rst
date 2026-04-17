@@ -164,13 +164,11 @@ Performance
 
 - Skip data reads during CF datetime dtype inference when the output dtype is
   determinable from metadata alone (``use_cftime`` explicitly set, non-standard
-  calendar, non-nanosecond ``time_unit``, non-chunked data, or when
+  calendar, non-nanosecond ``time_unit``, lazy backend arrays, or when
   ``valid_max`` / ``time_coverage_end`` / a narrow storage dtype bounds the
   possible values). This can significantly speed up
   :py:func:`open_dataset` / :py:func:`open_datatree` on remote-backed stores
-  (zarr on S3, icechunk) with many time-encoded variables. A runtime
-  dtype-mismatch guard on the lazy decode wrapper prevents the rare overflow
-  case from being silently cast by dask.
+  (zarr on S3, icechunk) with many time-encoded variables (:issue:`11303`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Bug Fixes
