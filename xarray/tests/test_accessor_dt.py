@@ -56,11 +56,14 @@ class TestDatetimeAccessor:
             "nanosecond",
             "week",
             "weekofyear",
+            "weekday",
+            "dayofweek",
             "day_of_week",
             "day_of_year",
             "quarter",
             "date",
             "time",
+            "daysinmonth",
             "days_in_month",
             "is_month_start",
             "is_month_end",
@@ -75,20 +78,19 @@ class TestDatetimeAccessor:
         if field in ["week", "weekofyear"]:
             data = self.times.isocalendar()["week"]
         else:
-            data = getattr(self.times, field)
+            pandas_translations = {
+                "weekday": "day_of_week",
+                "dayofweek": "day_of_week",
+                "daysinmonth": "days_in_month",
+            }
+            pandas_name = pandas_translations.get(field, field)
+            data = getattr(self.times, pandas_name)
 
         if data.dtype.kind != "b" and field not in ("date", "time"):
             # pandas 2.0 returns int32 for integer fields now
             data = data.astype("int64")
 
-        translations = {
-            "weekday": "dayofweek",
-            "daysinmonth": "days_in_month",
-            "weekofyear": "week",
-        }
-        name = translations.get(field, field)
-
-        expected = xr.DataArray(data, name=name, coords=[self.times], dims=["time"])
+        expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
 
         if field in ["week", "weekofyear"]:
             with pytest.warns(

@@ -459,26 +459,45 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
             stacklevel=2,
         )
 
-        weekofyear = self.isocalendar().week
+        return self.isocalendar().week.rename("weekofyear")
 
-        return weekofyear
+    @property
+    def week(self) -> DataArray:
+        "The week ordinal of the year"
 
-    week = weekofyear
+        warnings.warn(
+            "dt.weekofyear and dt.week have been deprecated. Please use "
+            "dt.isocalendar().week instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
+        return self.isocalendar().week
 
     @property
     def day_of_week(self) -> T_DataArray:
         """The day of the week with Monday=0, Sunday=6"""
         return self._date_field("day_of_week", np.int64)
 
-    dayofweek = day_of_week
-    weekday = day_of_week
+    @property
+    def dayofweek(self) -> T_DataArray:
+        """The day of the week with Monday=0, Sunday=6"""
+        return self._date_field("day_of_week", np.int64).rename("dayofweek")
+
+    @property
+    def weekday(self) -> T_DataArray:
+        """The day of the week with Monday=0, Sunday=6"""
+        return self._date_field("day_of_week", np.int64).rename("weekday")
 
     @property
     def day_of_year(self) -> T_DataArray:
         """The ordinal day of the year"""
         return self._date_field("day_of_year", np.int64)
 
-    dayofyear = day_of_year
+    @property
+    def dayofyear(self) -> T_DataArray:
+        """The ordinal day of the year"""
+        return self._date_field("day_of_year", np.int64).rename("dayofyear")
 
     @property
     def quarter(self) -> T_DataArray:
@@ -490,7 +509,10 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         """The number of days in the month"""
         return self._date_field("days_in_month", np.int64)
 
-    daysinmonth = days_in_month
+    @property
+    def daysinmonth(self) -> T_DataArray:
+        """The number of days in the month"""
+        return self._date_field("days_in_month", np.int64).rename("daysinmonth")
 
     @property
     def season(self) -> T_DataArray:
