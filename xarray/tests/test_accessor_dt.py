@@ -83,6 +83,7 @@ class TestDatetimeAccessor:
                 "weekday": "day_of_week",
                 "dayofweek": "day_of_week",
                 "daysinmonth": "days_in_month",
+                "dayofyear": "day_of_year",
             }
             pandas_name = pandas_translations.get(field, field)
             data = getattr(self.times, pandas_name)
