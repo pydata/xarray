@@ -5,6 +5,7 @@ import datetime
 import warnings
 from collections.abc import (
     Callable,
+    Collection,
     Hashable,
     Iterable,
     Mapping,
@@ -537,9 +538,13 @@ class DataArray(
             indexes = filter_indexes_from_coords(self._indexes, set(coords))
         else:
             allowed_dims = set(variable.dims)
-            coords = {
-                k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
-            }
+            coords = {}
+            for k, v in self._coords.items():
+                if k in self._indexes:
+                    if self._indexes[k].should_add_coord_to_array(k, v, allowed_dims):
+                        coords[k] = v
+                elif set(v.dims) <= allowed_dims:
+                    coords[k] = v
             indexes = filter_indexes_from_coords(self._indexes, set(coords))
         return self._replace(variable, coords, name, indexes=indexes)
 
@@ -2407,7 +2412,7 @@ class DataArray(
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
           * y        (y) int64 24B 11 13 15
         """
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
@@ -2548,7 +2553,7 @@ class DataArray(
           * y        (y) int64 24B 70 80 90
         """
 
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
@@ -4343,14 +4348,22 @@ class DataArray(
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "a-", r+", None}, optional
-            Persistence mode: "w" means create (overwrite if exists);
-            "w-" means create (fail if exists);
-            "a" means override all existing variables including dimension coordinates (create if does not exist);
-            "a-" means only append those variables that have ``append_dim``.
-            "r+" means modify existing array *values* only (raise an error if
-            any metadata or shapes would change).
+            Persistence mode:
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "a-" means only append those variables that have ``append_dim``.
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
             "r+" if ``region`` is set and ``w-`` otherwise.
+
+            .. note::
+                When modifying an existing Zarr array that is lazily opened, the "w"
+                behavior can be surprising since the underlying file that is being
+                lazily read from might get deleted before the data is computed.
         synchronizer : object, optional
             Zarr array synchronizer.
         group : str, optional
@@ -6227,6 +6240,26 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
+    @overload
+    def argmin(  # type: ignore[overload-overlap]
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmin(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
     def argmin(
         self,
         dim: Dims = None,
@@ -6327,6 +6360,26 @@ class DataArray(
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
             return self._replace_maybe_drop_dims(result)
+
+    @overload
+    def argmax(  # type: ignore[overload-overlap]
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmax(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
 
     def argmax(
         self,

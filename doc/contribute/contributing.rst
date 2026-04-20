@@ -15,13 +15,14 @@ Overview
 We welcome your skills and enthusiasm at the xarray project!. There are numerous opportunities to
 contribute beyond just writing code.
 All contributions, including bug reports, bug fixes, documentation improvements, enhancement suggestions,
-and other ideas are welcome.
+and other ideas are welcome. LLM generated contributions are welcome, but they must follow :doc:`our AI policy <ai-policy>`.
 
 If you have any questions on the process or how to fix something feel free to ask us!
-The recommended place to ask a question is  on `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
-, but we also have a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
-`mailing list <https://groups.google.com/g/xarray>`_. There is also a
-`"python-xarray" tag on Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`_ which we monitor for questions.
+The recommended places to ask questions are `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
+or the Xarray channel in the `OSSci Zulip <https://ossci.zulipchat.com/#narrow/channel/582428-Xarray>`_.
+
+In the past, we had a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
+`mailing list <https://groups.google.com/g/xarray>`_. Feel free to browse historical conversations there.
 
 We also have a biweekly community call, details of which are announced on the
 `Developers meeting <https://docs.xarray.dev/en/stable/developers-meeting.html>`_.
@@ -241,7 +242,7 @@ You can either run pre-commit manually via Pixi as described above, or set up gi
 
 This is done by:
 
-.. code-block:: sh
+.. code-block:: shell
 
     pixi shell -e pre-commit # enter the pre-commit environment
     pre-commit install # install the git hooks

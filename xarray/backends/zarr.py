@@ -122,40 +122,89 @@ class FillValueCoder:
     """
 
     @classmethod
-    def encode(cls, value: int | float | str | bytes, dtype: np.dtype[Any]) -> Any:
+    def encode(
+        cls, value: int | float | complex | str | bytes, dtype: np.dtype[Any]
+    ) -> Any:
         if dtype.kind == "S":
             # byte string, this implies that 'value' must also be `bytes` dtype.
-            assert isinstance(value, bytes)
+            if not isinstance(value, bytes):
+                raise TypeError(
+                    f"Failed to encode fill_value: expected bytes for dtype {dtype}, got {type(value).__name__}"
+                )
             return base64.standard_b64encode(value).decode()
         elif dtype.kind == "b":
             # boolean
             return bool(value)
         elif dtype.kind in "iu":
-            # todo: do we want to check for decimals?
+            if not isinstance(value, int | float | np.integer | np.floating):
+                raise TypeError(
+                    f"Failed to encode fill_value: expected int or float for dtype {dtype}, got {type(value).__name__}"
+                )
             return int(value)
         elif dtype.kind == "f":
+            if not isinstance(value, int | float | np.integer | np.floating):
+                raise TypeError(
+                    f"Failed to encode fill_value: expected int or float for dtype {dtype}, got {type(value).__name__}"
+                )
             return base64.standard_b64encode(struct.pack("<d", float(value))).decode()
+        elif dtype.kind == "c":
+            # complex - encode each component as base64, matching float encoding
+            if not isinstance(value, complex) and not np.issubdtype(
+                type(value), np.complexfloating
+            ):
+                raise TypeError(
+                    f"Failed to encode fill_value: expected complex for dtype {dtype}, got {type(value).__name__}"
+                )
+            return [
+                base64.standard_b64encode(
+                    struct.pack("<d", float(value.real))  # type: ignore[union-attr]
+                ).decode(),
+                base64.standard_b64encode(
+                    struct.pack("<d", float(value.imag))  # type: ignore[union-attr]
+                ).decode(),
+            ]
         elif dtype.kind == "U":
             return str(value)
         else:
             raise ValueError(f"Failed to encode fill_value. Unsupported dtype {dtype}")
 
     @classmethod
-    def decode(cls, value: int | float | str | bytes, dtype: str | np.dtype[Any]):
+    def decode(
+        cls, value: int | float | str | bytes | list, dtype: str | np.dtype[Any]
+    ):
         if dtype == "string":
             # zarr V3 string type
             return str(value)
         elif dtype == "bytes":
             # zarr V3 bytes type
-            assert isinstance(value, str | bytes)
+            if not isinstance(value, str | bytes):
+                raise TypeError(
+                    f"Failed to decode fill_value: expected str or bytes for dtype {dtype}, got {type(value).__name__}"
+                )
             return base64.standard_b64decode(value)
         np_dtype = np.dtype(dtype)
         if np_dtype.kind == "f":
-            assert isinstance(value, str | bytes)
+            if not isinstance(value, str | bytes):
+                raise TypeError(
+                    f"Failed to decode fill_value: expected str or bytes for dtype {np_dtype}, got {type(value).__name__}"
+                )
             return struct.unpack("<d", base64.standard_b64decode(value))[0]
+        elif np_dtype.kind == "c":
+            # complex - decode each component from base64, matching float decoding
+            if not (isinstance(value, list | tuple) and len(value) == 2):
+                raise TypeError(
+                    f"Failed to decode fill_value: expected a 2-element list for dtype {np_dtype}, got {type(value).__name__}"
+                )
+            real = struct.unpack("<d", base64.standard_b64decode(value[0]))[0]
+            imag = struct.unpack("<d", base64.standard_b64decode(value[1]))[0]
+            return complex(real, imag)
         elif np_dtype.kind == "b":
             return bool(value)
         elif np_dtype.kind in "iu":
+            if not isinstance(value, int | float | np.integer | np.floating):
+                raise TypeError(
+                    f"Failed to decode fill_value: expected int or float for dtype {np_dtype}, got {type(value).__name__}"
+                )
             return int(value)
         else:
             raise ValueError(f"Failed to decode fill_value. Unsupported dtype {dtype}")
