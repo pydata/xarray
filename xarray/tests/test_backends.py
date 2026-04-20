@@ -20,7 +20,7 @@ from contextlib import ExitStack
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 from unittest.mock import patch
 
 import numpy as np
@@ -44,7 +44,7 @@ from xarray import (
     open_mfdataset,
     save_mfdataset,
 )
-from xarray.backends.common import robust_getitem
+from xarray.backends.common import _open_remote_file, robust_getitem
 from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import (
@@ -58,6 +58,7 @@ from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.cftime_offsets import date_range
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
+from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.common import _contains_cftime_datetimes
@@ -74,7 +75,6 @@ from xarray.tests import (
     assert_identical,
     assert_no_warnings,
     has_dask,
-    has_h5netcdf_1_4_0_or_above,
     has_netCDF4,
     has_numpy_2,
     has_scipy,
@@ -85,11 +85,11 @@ from xarray.tests import (
     mock,
     network,
     parametrize_zarr_format,
+    raise_if_dask_computes,
     requires_cftime,
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
-    requires_h5netcdf_1_4_0_or_above,
     requires_h5netcdf_1_7_0_or_above,
     requires_h5netcdf_or_netCDF4,
     requires_h5netcdf_ros3,
@@ -148,6 +148,12 @@ else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
     WrapperStore = object  # type: ignore[assignment,misc,unused-ignore]
     ZARR_FORMATS = []
+
+if TYPE_CHECKING:
+    from zarr.abc.store import Store as ZarrStoreABC
+
+    from xarray import Variable
+    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
 
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
@@ -235,9 +241,6 @@ def _check_compression_codec_available(codec: str | None) -> bool:
 
 
 dask_array_type = array_type("dask")
-
-if TYPE_CHECKING:
-    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
 
 
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
@@ -524,7 +527,7 @@ class DatasetIOBase:
 
             actual_dtype = actual.variables[k].dtype
             # TODO: check expected behavior for string dtypes more carefully
-            string_kinds = {"O", "S", "U"}
+            string_kinds = {"O", "S", "U", "T"}
             assert expected_dtype == actual_dtype or (
                 expected_dtype.kind in string_kinds
                 and actual_dtype.kind in string_kinds
@@ -698,6 +701,31 @@ class DatasetIOBase:
 
     def test_roundtrip_string_data(self) -> None:
         expected = Dataset({"x": ("t", ["ab", "cdef"])})
+        with self.roundtrip(expected) as actual:
+            assert_identical(expected, actual)
+
+    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+    def test_roundtrip_stringdtype_data(self) -> None:
+        # GH11199
+        data = np.array(["ab", "cdef"], dtype=np.dtypes.StringDType())
+        expected = Dataset({"x": ("t", data)})
+        with self.roundtrip(expected) as actual:
+            assert_identical(expected, actual)
+
+    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+    def test_roundtrip_stringdtype_nulls(self) -> None:
+        # GH11199 — null values in StringDType are written as empty strings
+        data = np.array(["ab", None], dtype=np.dtypes.StringDType(na_object=None))
+        ds = Dataset({"x": ("t", data)})
+        with self.roundtrip(ds) as actual:
+            expected = Dataset({"x": ("t", np.array(["ab", ""]))})
+            assert_identical(expected, actual)
+
+    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+    def test_roundtrip_stringdtype_with_na_object(self) -> None:
+        # GH11199 — StringDType(na_object="") should roundtrip correctly
+        data = np.array(["ab", "cdef"], dtype=np.dtypes.StringDType(na_object=""))
+        expected = Dataset({"x": ("t", data)})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
@@ -1090,8 +1118,9 @@ class CFEncodedBase(DatasetIOBase):
                 # eg. NETCDF3 based backends do not roundtrip metadata
                 if actual["a"].dtype.metadata is not None:
                     assert check_vlen_dtype(actual["a"].dtype) is str
+            elif HAS_STRING_DTYPE:
+                assert np.issubdtype(actual["a"].dtype, np.dtypes.StringDType())
             else:
-                # zarr v3 sends back "<U1"
                 assert np.issubdtype(actual["a"].dtype, np.dtype("=U1"))
 
     @pytest.mark.parametrize(
@@ -2066,8 +2095,8 @@ class NetCDF4Base(NetCDFBase):
 
             # now check xarray
             with open_dataset(tmp_file) as ds:
-                expected = create_masked_and_scaled_data(np.dtype(dtype))
-                assert_identical(expected, ds)
+                expected_ds = create_masked_and_scaled_data(np.dtype(dtype))
+                assert_identical(expected_ds, ds)
 
     def test_0dimensional_variable(self) -> None:
         # This fix verifies our work-around to this netCDF4-python bug:
@@ -2124,20 +2153,14 @@ class NetCDF4Base(NetCDFBase):
                 )
                 v[:] = 1
             with open_dataset(tmp_file, engine="netcdf4") as original:
-                save_kwargs = {}
                 # We don't expect any errors.
                 # This is effectively a void context manager
                 expected_warnings = 0
                 if self.engine == "h5netcdf":
-                    if not has_h5netcdf_1_4_0_or_above:
-                        save_kwargs["invalid_netcdf"] = True
-                        expected_warnings = 1
-                        expected_msg = "You are writing invalid netcdf features to file"
-                    else:
-                        expected_warnings = 1
-                        expected_msg = "Creating variable with default fill_value 0 which IS defined in enum type"
+                    expected_warnings = 1
+                    expected_msg = "Creating variable with default fill_value 0 which IS defined in enum type"
 
-                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                with self.roundtrip(original) as actual:
                     assert len(recwarn) == expected_warnings
                     if expected_warnings:
                         assert issubclass(recwarn[0].category, UserWarning)
@@ -2147,14 +2170,6 @@ class NetCDF4Base(NetCDFBase):
                         actual.clouds.encoding["dtype"].metadata["enum"]
                         == cloud_type_dict
                     )
-                    if not (
-                        self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above
-                    ):
-                        # not implemented in h5netcdf yet
-                        assert (
-                            actual.clouds.encoding["dtype"].metadata["enum_name"]
-                            == "cloud_type"
-                        )
 
     @requires_netCDF4
     def test_encoding_enum__multiple_variable_with_enum(self):
@@ -2176,10 +2191,7 @@ class NetCDF4Base(NetCDFBase):
                     fill_value=255,
                 )
             with open_dataset(tmp_file, engine="netcdf4") as original:
-                save_kwargs = {}
-                if self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above:
-                    save_kwargs["invalid_netcdf"] = True
-                with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+                with self.roundtrip(original) as actual:
                     assert_equal(original, actual)
                     assert (
                         actual.clouds.encoding["dtype"] == actual.tifa.encoding["dtype"]
@@ -2192,14 +2204,6 @@ class NetCDF4Base(NetCDFBase):
                         actual.clouds.encoding["dtype"].metadata["enum"]
                         == cloud_type_dict
                     )
-                    if not (
-                        self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above
-                    ):
-                        # not implemented in h5netcdf yet
-                        assert (
-                            actual.clouds.encoding["dtype"].metadata["enum_name"]
-                            == "cloud_type"
-                        )
 
     @requires_netCDF4
     def test_encoding_enum__error_multiple_variable_with_changing_enum(self):
@@ -2235,17 +2239,6 @@ class NetCDF4Base(NetCDFBase):
                     "u1",
                     metadata={"enum": modified_enum, "enum_name": "cloud_type"},
                 )
-                if not (self.engine == "h5netcdf" and not has_h5netcdf_1_4_0_or_above):
-                    # not implemented yet in h5netcdf
-                    with pytest.raises(
-                        ValueError,
-                        match=(
-                            r"Cannot save variable .*"
-                            r" because an enum `cloud_type` already exists in the Dataset .*"
-                        ),
-                    ):
-                        with self.roundtrip(original):
-                            pass
 
     @pytest.mark.parametrize("create_default_indexes", [True, False])
     def test_create_default_indexes(self, tmp_path, create_default_indexes) -> None:
@@ -2266,6 +2259,28 @@ class NetCDF4Base(NetCDFBase):
                 )
             else:
                 assert len(loaded_ds.xindexes) == 0
+
+    @requires_dask
+    def test_encoding_masked_arrays(self, tmp_path) -> None:
+        store_path = tmp_path / "tmp.nc"
+
+        with raise_if_dask_computes():
+            ds = xr.DataArray(
+                dask.array.from_array(
+                    np.ma.masked_array(
+                        np.array([[np.nan, np.nan], [np.nan, 2]]),
+                        np.array([[True, True], [True, False]]),
+                    )
+                ).astype("float32"),
+                dims=("x", "y"),
+            ).to_dataset(name="mydata")
+
+        expected = ds.mean("x")
+        expected.to_netcdf(
+            store_path, encoding=dict(mydata=dict(_FillValue=np.float32(1e20)))
+        )
+        with open_dataset(store_path, engine=self.engine) as actual:
+            assert_identical(expected.compute(), actual.compute())
 
 
 @requires_netCDF4
@@ -2904,6 +2919,41 @@ class ZarrBase(CFEncodedBase):
             with pytest.raises(ValueError):
                 with self.roundtrip(data) as actual:
                     pass
+
+    @requires_dask
+    def test_shard_encoding_with_dask(self) -> None:
+        # Test that dask chunks must align with shard boundaries.
+        # See https://github.com/pydata/xarray/issues/10831
+        if not (has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3):
+            pytest.skip("sharding requires zarr v3 format")
+
+        ds = xr.DataArray(np.arange(12), dims="x", name="var1").to_dataset()
+
+        # Case 1: Dask chunks equal to shards should work
+        # (zarr chunk=3, shard=6, dask chunk=6)
+        ds1 = ds.chunk({"x": 6})
+        ds1["var1"].encoding = {"chunks": (3,), "shards": (6,)}
+        with self.roundtrip(ds1) as actual:
+            assert_identical(ds, actual)
+
+        # Case 2: Dask chunks that are multiples of shards should work
+        # (zarr chunk=1, shard=3, dask chunk=6)
+        ds2 = ds.chunk({"x": 6})
+        ds2["var1"].encoding = {"chunks": (1,), "shards": (3,)}
+        with self.roundtrip(ds2) as actual:
+            assert_identical(ds, actual)
+
+        # Case 3: Dask chunks smaller than shards should fail
+        # (zarr chunk=2, shard=4, dask chunk=3) - dask chunk doesn't align with shard
+        ds3 = ds.chunk({"x": 3})
+        ds3["var1"].encoding = {"chunks": (2,), "shards": (4,)}
+        with pytest.raises(ValueError, match=r"would overlap"):
+            with self.roundtrip(ds3) as actual:
+                pass
+
+        # Case 4: Can bypass with safe_chunks=False (but data may be corrupted)
+        with self.roundtrip(ds3, save_kwargs={"safe_chunks": False}) as actual:
+            pass
 
     @requires_dask
     @pytest.mark.skipif(
@@ -3637,6 +3687,18 @@ class ZarrBase(CFEncodedBase):
         ) as ds1:
             assert_equal(ds1, original)
 
+    @requires_dask
+    def test_chunk_auto_with_small_dask_chunks(self) -> None:
+        original = Dataset({"u": (("x",), np.zeros(10))}).chunk({"x": 2})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, **self.version_kwargs)
+            with xr.open_zarr(store, **self.version_kwargs) as default:
+                assert default.chunks == {"x": (2, 2, 2, 2, 2)}
+                with xr.open_zarr(store, chunks="auto", **self.version_kwargs) as auto:
+                    assert_identical(auto, original)
+                    assert auto.chunks == {"x": (10,)}
+                    assert auto.chunks != default.chunks
+
     @requires_cftime
     def test_open_zarr_use_cftime(self) -> None:
         ds = create_test_data()
@@ -4124,7 +4186,7 @@ class TestZarrDictStore(ZarrBase):
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     async def test_concurrent_load_multiple_objects(
         self,
-        cls_name,
+        cls_name: Literal["Variable", "DataArray", "Dataset"],
     ) -> None:
         N_OBJECTS = 5
         N_LAZY_VARS = {
@@ -4210,8 +4272,8 @@ class TestZarrDictStore(ZarrBase):
     )
     async def test_indexing(
         self,
-        cls_name,
-        method,
+        cls_name: Literal["Variable", "DataArray", "Dataset"],
+        method: Literal["sel", "isel"],
         indexer,
         target_zarr_class,
     ) -> None:
@@ -4310,9 +4372,27 @@ class TestZarrDictStore(ZarrBase):
                 await var.isel(**indexer).load_async()
 
 
+@overload
+def get_xr_obj(store: ZarrStoreABC, cls_name: Literal["Variable"]) -> Variable: ...
+
+
+@overload
+def get_xr_obj(store: ZarrStoreABC, cls_name: Literal["DataArray"]) -> DataArray: ...
+
+
+@overload
+def get_xr_obj(store: ZarrStoreABC, cls_name: Literal["Dataset"]) -> Dataset: ...
+
+
+@overload
 def get_xr_obj(
-    store: zarr.abc.store.Store, cls_name: Literal["Variable", "DataArray", "Dataset"]
-):
+    store: ZarrStoreABC, cls_name: Literal["Variable", "DataArray", "Dataset"]
+) -> Variable | DataArray | Dataset: ...
+
+
+def get_xr_obj(
+    store: ZarrStoreABC, cls_name: Literal["Variable", "DataArray", "Dataset"]
+) -> Variable | DataArray | Dataset:
     ds = xr.open_zarr(store, consolidated=False, chunks=None)
 
     match cls_name:
@@ -4915,31 +4995,6 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore.open(tmp_file, "w")
 
-    @pytest.mark.skipif(
-        has_h5netcdf_1_4_0_or_above, reason="only valid for h5netcdf < 1.4.0"
-    )
-    def test_complex(self) -> None:
-        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
-        save_kwargs = {"invalid_netcdf": True}
-        with pytest.warns(UserWarning, match="You are writing invalid netcdf features"):
-            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-                assert_equal(expected, actual)
-
-    @pytest.mark.skipif(
-        has_h5netcdf_1_4_0_or_above, reason="only valid for h5netcdf < 1.4.0"
-    )
-    @pytest.mark.parametrize("invalid_netcdf", [None, False])
-    def test_complex_error(self, invalid_netcdf) -> None:
-        import h5netcdf
-
-        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
-        save_kwargs = {"invalid_netcdf": invalid_netcdf}
-        with pytest.raises(
-            h5netcdf.CompatibilityError, match="are not a supported NetCDF feature"
-        ):
-            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-                assert_equal(expected, actual)
-
     def test_numpy_bool_(self) -> None:
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
         # when writing invalid_netcdf datasets in order to support a roundtrip
@@ -5093,7 +5148,6 @@ class TestH5NetCDFData(NetCDF4Base):
         with pytest.raises(ValueError, match=byte_attrs_dataset["h5netcdf_error"]):
             super().test_byte_attrs(byte_attrs_dataset)
 
-    @requires_h5netcdf_1_4_0_or_above
     def test_roundtrip_complex(self):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         with self.roundtrip(expected) as actual:
@@ -5290,6 +5344,62 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
 
+@requires_h5netcdf
+@requires_fsspec
+@pytest.mark.parametrize(
+    "open_kwargs, expected_cache_type, expected_block_size",
+    [
+        # Default: blockcache with 4MB block size
+        (None, "blockcache", 4 * 1024 * 1024),
+        ({}, "blockcache", 4 * 1024 * 1024),
+        # Custom block_size still uses blockcache
+        ({"block_size": 8 * 1024 * 1024}, "blockcache", 8 * 1024 * 1024),
+        # Explicit blockcache with default block_size
+        ({"cache_type": "blockcache"}, "blockcache", 4 * 1024 * 1024),
+        # Custom cache_type: no block_size default injected
+        ({"cache_type": "readahead"}, "readahead", None),
+    ],
+    ids=["default", "empty-dict", "8mb", "blockcache", "readahead"],
+)
+def test_h5netcdf_open_kwargs(
+    open_kwargs, expected_cache_type, expected_block_size
+) -> None:
+    """Test that open_kwargs are forwarded to the remote file opener."""
+    expected = create_test_data()
+    with create_tmp_file() as tmp_file:
+        expected.to_netcdf(tmp_file, engine="h5netcdf")
+
+        captured = {}
+
+        def capturing_open_remote_file(
+            file, mode, storage_options=None, open_kwargs=None
+        ):
+            captured["open_kwargs"] = open_kwargs
+            return _open_remote_file(
+                file,
+                mode=mode,
+                storage_options=storage_options,
+                open_kwargs=open_kwargs,
+            )
+
+        with patch(
+            "xarray.backends.h5netcdf_._open_remote_file",
+            side_effect=capturing_open_remote_file,
+        ):
+            # Use a file:// URI so is_remote_uri returns True and _open_remote_file is called
+            file_uri = f"file://{tmp_file}"
+            with open_dataset(
+                file_uri, engine="h5netcdf", open_kwargs=open_kwargs
+            ) as actual:
+                assert_identical(actual, expected)
+
+        assert captured["open_kwargs"]["cache_type"] == expected_cache_type
+        if expected_block_size is None:
+            assert "block_size" not in captured["open_kwargs"]
+        else:
+            assert captured["open_kwargs"]["block_size"] == expected_block_size
+
+
 @requires_netCDF4
 @requires_h5netcdf
 def test_memoryview_write_h5netcdf_read_netcdf4() -> None:
@@ -5312,16 +5422,28 @@ def test_memoryview_write_netcdf4_read_h5netcdf() -> None:
 @requires_h5netcdf_ros3
 class TestH5NetCDFDataRos3Driver(TestCommon):
     engine: T_NetcdfEngine = "h5netcdf"
-    test_remote_dataset: str = "https://archive.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
+    test_remote_dataset: str = "https://dandiarchive.s3.amazonaws.com/ros3test.hdf5"
+
+    @property
+    def ros3_kwargs(self) -> dict:
+        from h5py import version as h5ver
+
+        return (
+            {} if h5ver.hdf5_version_tuple < (2, 0, 0) else {"aws_region": b"us-east-2"}
+        )
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
         with open_dataset(
             self.test_remote_dataset,
             engine="h5netcdf",
-            backend_kwargs={"driver": "ros3"},
+            backend_kwargs={
+                "driver": "ros3",
+                "driver_kwds": self.ros3_kwargs,
+                "phony_dims": "access",
+            },
         ) as actual:
-            assert "Temperature" in list(actual)
+            assert "mydataset" in list(actual)
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list_empty_driver_kwds(self) -> None:
@@ -5329,12 +5451,17 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             "secret_id": b"",
             "secret_key": b"",
         }
-        backend_kwargs = {"driver": "ros3", "driver_kwds": driver_kwds}
+        driver_kwds.update(self.ros3_kwargs)
+        backend_kwargs = {
+            "driver": "ros3",
+            "driver_kwds": driver_kwds,
+            "phony_dims": "access",
+        }
 
         with open_dataset(
             self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
         ) as actual:
-            assert "Temperature" in list(actual)
+            assert "mydataset" in list(actual)
 
 
 @pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "zarr"])
@@ -6529,7 +6656,7 @@ class TestPydapOnline(TestPydap):
             yield actual, expected
 
     def output_grid_deprecation_warning_dap2dataset(self):
-        with pytest.warns(DeprecationWarning, match="`output_grid` is deprecated"):
+        with pytest.warns(FutureWarning, match="`output_grid` is deprecated"):
             with self.create_dap2_datasets(output_grid=True) as (actual, expected):
                 assert_equal(actual, expected)
 
@@ -7115,6 +7242,41 @@ def test_encode_zarr_attr_value() -> None:
 
 
 @requires_zarr
+@pytest.mark.parametrize("dtype", [complex, np.complex64, np.complex128])
+def test_fill_value_coder_complex(dtype) -> None:
+    """Test that FillValueCoder round-trips complex fill values."""
+    from xarray.backends.zarr import FillValueCoder
+
+    for value in [dtype(1 + 2j), dtype(-3.5 + 4.5j), dtype(complex("nan+nanj"))]:
+        encoded = FillValueCoder.encode(value, np.dtype(dtype))
+        decoded = FillValueCoder.decode(encoded, np.dtype(dtype))
+        np.testing.assert_equal(np.array(decoded, dtype=dtype), np.array(value))
+
+
+@requires_zarr
+@pytest.mark.parametrize(
+    "value,dtype",
+    [
+        (np.float32(np.inf), np.float32),
+        (np.float32(-np.inf), np.float32),
+        (np.float64(np.inf), np.float64),
+        (np.float64(-np.inf), np.float64),
+        (np.float32(np.nan), np.float32),
+        (np.float64(np.nan), np.float64),
+    ],
+)
+def test_fill_value_coder_inf_nan(value, dtype) -> None:
+    """Test that FillValueCoder round-trips inf and nan fill values."""
+    from xarray.backends.zarr import FillValueCoder
+
+    encoded = FillValueCoder.encode(value, np.dtype(dtype))
+    decoded = FillValueCoder.decode(encoded, np.dtype(dtype))
+    np.testing.assert_equal(
+        np.array(decoded, dtype=dtype), np.array(value, dtype=dtype)
+    )
+
+
+@requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
     var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
@@ -7244,7 +7406,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
     "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
 @pytest.mark.filterwarnings("ignore:The specified chunks separate")
-def test_chunking_consintency(chunks, tmp_path: Path) -> None:
+def test_chunking_consistency(chunks, tmp_path: Path) -> None:
     encoded_chunks: dict[str, Any] = {}
     dask_arr = da.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
@@ -7488,10 +7650,10 @@ def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> N
     )
     tdf.index.name = "scenario"
     tdf.columns.name = "year"
-    tdf = cast(pd.DataFrame, tdf.stack())
-    tdf.name = "tas"
+    tdf_series = tdf.stack()
+    tdf_series.name = "tas"  # type: ignore[union-attr]
 
-    txr = tdf.to_xarray()
+    txr = tdf_series.to_xarray()
 
     txr.to_netcdf(tmpdir.join("test.nc"))
 

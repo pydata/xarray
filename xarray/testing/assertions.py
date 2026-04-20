@@ -45,7 +45,7 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
     if any(arr.dtype.kind == "S" for arr in [arr1, arr2]) and decode_bytes:
         arr1 = _decode_string_data(arr1)
         arr2 = _decode_string_data(arr2)
-    exact_dtypes = ["M", "m", "O", "S", "U"]
+    exact_dtypes = ["M", "m", "O", "S", "U", "T"]
     if any(arr.dtype.kind in exact_dtypes for arr in [arr1, arr2]):
         return duck_array_ops.array_equiv(arr1, arr2)
     else:

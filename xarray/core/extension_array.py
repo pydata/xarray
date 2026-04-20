@@ -104,7 +104,9 @@ def as_extension_array(
             [array_or_scalar], dtype=dtype
         )
     else:
-        return array_or_scalar.astype(dtype, copy=copy)  # type: ignore[union-attr]
+        # pandas-stubs is overly strict about astype's dtype parameter and return type;
+        # ExtensionArray.astype accepts ExtensionDtype and returns ExtensionArray
+        return array_or_scalar.astype(dtype, copy=copy)  # type: ignore[union-attr,return-value,arg-type]
 
 
 @implements(np.result_type)
@@ -192,10 +194,11 @@ def __extension_duck_array__where(
     # pd.where won't broadcast 0-dim arrays across a scalar-like series; scalar y's must be preserved
     if hasattr(y, "shape") and len(y.shape) == 1 and y.shape[0] == 1:
         y = y[0]  # type: ignore[index]
-    return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[arg-type]
+    # pandas-stubs has strict overloads for Series.where that don't cover all valid arg types
+    return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[call-overload]
 
 
-def _replace_duck(args, replacer: Callable[[PandasExtensionArray], list]) -> list:
+def _replace_duck(args, replacer: Callable[[PandasExtensionArray], Any]) -> list:
     args_as_list = list(args)
     for index, value in enumerate(args_as_list):
         if isinstance(value, PandasExtensionArray):

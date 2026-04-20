@@ -36,6 +36,7 @@ pip-log.txt
 # Unit test / coverage reports
 .coverage
 .coverage.*
+coverage.xml
 .tox
 nosetests.xml
 .cache
@@ -47,6 +48,7 @@ nosetests.xml
 .testmon*
 .tmontmp/
 .pytest_cache
+pytest.xml
 dask-worker-space/
 
 # asv environments
@@ -84,6 +86,9 @@ doc/team-panel.txt
 doc/external-examples-gallery.txt
 doc/notebooks-examples-gallery.txt
 doc/videos-gallery.txt
+doc/*.zarr
+doc/*.nc
+doc/*.h5
 
 # Until we support this properly, excluding from gitignore. (adding it to
 # gitignore to make it _easier_ to work with `uv`, not as an indication that I

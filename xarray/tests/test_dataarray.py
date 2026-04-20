@@ -25,6 +25,7 @@ from xarray import (
     DataArray,
     Dataset,
     IndexVariable,
+    MergeError,
     Variable,
     align,
     broadcast,
@@ -554,6 +555,39 @@ class TestDataArray:
         assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
+    def test_replace_maybe_drop_dims_preserves_multi_coord_index(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/11215
+        # Multi-coordinate indexes spanning multiple dims should be preserved
+        # after reducing over an unrelated dimension.
+        class MultiDimIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = MultiDimIndex()
+        coords = Coordinates(
+            coords={
+                "node_x": ("nodes", [0.0, 1.0, 2.0]),
+                "node_y": ("nodes", [0.0, 0.0, 1.0]),
+                "face_x": ("faces", [0.5, 1.5]),
+                "face_y": ("faces", [0.5, 0.5]),
+            },
+            indexes=dict.fromkeys(["node_x", "node_y", "face_x", "face_y"], idx),
+        )
+        node_da = DataArray(
+            np.random.rand(3, 4), dims=("nodes", "extra"), coords=coords
+        )
+        face_da = DataArray(
+            np.random.rand(2, 4), dims=("faces", "extra"), coords=coords
+        )
+
+        reduced_node = node_da.mean("extra")
+        reduced_face = face_da.mean("extra")
+
+        for da in [reduced_node, reduced_face]:
+            for name in ["node_x", "node_y", "face_x", "face_y"]:
+                assert name in da.coords
+                assert isinstance(da.xindexes[name], MultiDimIndex)
+
     def test_equals_and_identical(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
 
@@ -925,7 +959,7 @@ class TestDataArray:
         assert blocked.chunks == ((3,), (4,))
         first_dask_name = blocked.data.name
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore[arg-type]
             assert blocked.chunks == ((2, 1), (2, 2))
             assert blocked.data.name != first_dask_name
@@ -990,7 +1024,7 @@ class TestDataArray:
             da.isel(x=np.array([0], dtype="int64")), da.isel(x=np.array([0]))
         )
 
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_isel_fancy(self) -> None:
         shape = (10, 7, 6)
         np_array = np.random.random(shape)
@@ -1163,9 +1197,9 @@ class TestDataArray:
 
         message = "`pandas.Index` does not support the `float16` dtype.*"
 
-        with pytest.warns(DeprecationWarning, match=message):
+        with pytest.warns(FutureWarning, match=message):
             arr = DataArray(data_values, coords={"x": coord_values}, dims="x")
-        with pytest.warns(DeprecationWarning, match=message):
+        with pytest.warns(FutureWarning, match=message):
             expected = DataArray(
                 data_values[indices], coords={"x": coord_values[indices]}, dims="x"
             )
@@ -2626,6 +2660,43 @@ class TestDataArray:
         actual = alt + orig
         assert_identical(expected, actual)
 
+    def test_math_with_arithmetic_compat_options(self) -> None:
+        # Setting up a clash of non-index coordinate 'foo':
+        a = xr.DataArray(
+            data=[0, 0, 0],
+            dims=["x"],
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [1.0, 2.0, np.nan]),
+            },
+        )
+        b = xr.DataArray(
+            data=[0, 0, 0],
+            dims=["x"],
+            coords={
+                "x": [1, 2, 3],
+                "foo": (["x"], [np.nan, 2.0, 3.0]),
+            },
+        )
+
+        with xr.set_options(arithmetic_compat="minimal"):
+            assert_equal(a + b, a.drop_vars("foo"))
+
+        with xr.set_options(arithmetic_compat="override"):
+            assert_equal(a + b, a)
+            assert_equal(b + a, b)
+
+        with xr.set_options(arithmetic_compat="no_conflicts"):
+            expected = a.assign_coords(foo=(["x"], [1.0, 2.0, 3.0]))
+            assert_equal(a + b, expected)
+            assert_equal(b + a, expected)
+
+        with xr.set_options(arithmetic_compat="equals"):
+            with pytest.raises(MergeError):
+                a + b
+            with pytest.raises(MergeError):
+                b + a
+
     def test_index_math(self) -> None:
         orig = DataArray(range(3), dims="x", name="x")
         actual = orig + 1
@@ -2892,7 +2963,7 @@ class TestDataArray:
     def test_drop_multiindex_level(self) -> None:
         # GH6505
         expected = self.mda.drop_vars(["x", "level_1", "level_2"])
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             actual = self.mda.drop_vars("level_1")
         assert_identical(expected, actual)
 
@@ -2915,7 +2986,7 @@ class TestDataArray:
         actual = arr.drop_sel(y=[0, 1, 3], errors="ignore")
         assert_identical(actual, expected)
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             arr.drop([0, 1, 3], dim="y", errors="ignore")  # type: ignore[arg-type]
 
     def test_drop_index_positions(self) -> None:
@@ -3931,7 +4002,8 @@ class TestDataArray:
         y = np.random.randn(10, 3)
         y[2] = np.nan
         t = pd.Series(pd.date_range("20130101", periods=10))
-        t[2] = np.nan
+        # pandas-stubs doesn't allow np.nan for datetime Series, but it converts to NaT
+        t[2] = np.nan  # type: ignore[call-overload]
         lat = [77.7, 83.2, 76]
         da = DataArray(y, {"t": t, "lat": lat}, dims=["t", "lat"])
         roundtripped = DataArray.from_dict(da.to_dict())
@@ -4869,8 +4941,6 @@ class TestDataArray:
         param_names = ["a"]
         params, func_args = _get_func_args(np.power, param_names)
         assert params == param_names
-        with pytest.raises(ValueError):
-            _get_func_args(np.power, [])
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
@@ -5142,7 +5212,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result3, expected3)
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmin(
         self,
@@ -5181,7 +5251,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result2, expected2)
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmax(
         self,
@@ -5461,7 +5531,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result7, expected7)
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmin_dim(
         self,
@@ -5507,7 +5577,7 @@ class TestReduce1D(TestReduce):
             assert_identical(result2[key], expected2[key])
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmax_dim(
         self,
@@ -6115,7 +6185,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result7, expected7)
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmin_dim(
         self,
@@ -6187,7 +6257,7 @@ class TestReduce2D(TestReduce):
             assert_identical(result3[key], expected3[key])
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_argmax_dim(
         self,
