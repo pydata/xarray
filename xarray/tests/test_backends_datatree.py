@@ -450,6 +450,45 @@ class NetCDFIOBase:
             for ds in groups.values():
                 ds.close()
 
+    def test_open_datatree_glob_char_class_escape_literal_metachar(
+        self, tmpdir
+    ) -> None:
+        # Groups whose names contain glob metacharacters (*, ?, [) are
+        # reachable by character-class escaping (e.g. "[*]" matches a
+        # literal "*"), mirroring fnmatch / PurePath.match semantics.
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/group_*_01": xr.Dataset({"data": ("x", [1, 2])}),
+                "/group_*_02": xr.Dataset({"data": ("x", [3, 4])}),
+                "/group_?_01": xr.Dataset({"data": ("x", [5, 6])}),
+                "/plain_01": xr.Dataset({"data": ("x", [7, 8])}),
+            }
+        )
+        filepath = tmpdir / "glob_escape.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        # Escape `*` as `[*]` — match only the literal-star group ending in _01.
+        with open_datatree(filepath, group="group_[*]_01", engine=self.engine) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_*_01" in paths
+            assert "/group_*_02" not in paths
+            assert "/group_?_01" not in paths
+
+        # Escape `*` as `[*]` + `*` — match both literal-star groups.
+        with open_datatree(filepath, group="group_[*]_*", engine=self.engine) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_*_01" in paths
+            assert "/group_*_02" in paths
+            assert "/group_?_01" not in paths
+            assert "/plain_01" not in paths
+
+        # Escape `?` as `[?]` — match only the literal-? group.
+        with open_datatree(filepath, group="group_[?]_01", engine=self.engine) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_?_01" in paths
+            assert "/group_*_01" not in paths
+
 
 @requires_h5netcdf_or_netCDF4
 class TestGenericNetCDFIO(NetCDFIOBase):
@@ -1154,6 +1193,40 @@ class TestZarrDatatreeIO:
             for ds in groups.values():
                 ds.close()
 
+    def test_open_datatree_glob_char_class_escape_literal_metachar(
+        self, tmpdir, zarr_format
+    ) -> None:
+        # Zarr variant of the NetCDF escape test: groups whose names
+        # contain literal glob metacharacters are reachable via
+        # character-class escaping.
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/group_*_01": xr.Dataset({"data": ("x", [1, 2])}),
+                "/group_*_02": xr.Dataset({"data": ("x", [3, 4])}),
+                "/group_?_01": xr.Dataset({"data": ("x", [5, 6])}),
+            }
+        )
+        filepath = str(tmpdir / "glob_escape.zarr")
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
+
+        with open_datatree(filepath, group="group_[*]_01", engine=self.engine) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_*_01" in paths
+            assert "/group_*_02" not in paths
+            assert "/group_?_01" not in paths
+
+        with open_datatree(filepath, group="group_[*]_*", engine=self.engine) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_*_01" in paths
+            assert "/group_*_02" in paths
+            assert "/group_?_01" not in paths
+
+        with open_datatree(filepath, group="group_[?]_01", engine=self.engine) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_?_01" in paths
+            assert "/group_*_01" not in paths
+
     @requires_dask
     def test_open_groups_chunks(self, tmpdir, zarr_format) -> None:
         """Test `open_groups` with chunks on a zarr store."""
@@ -1310,6 +1383,30 @@ class TestGlobPatternUtilities:
         paths = ["/", "/A", "/A/sweep_0", "/A/sweep_1", "/A/sweep_2"]
         result = _filter_group_paths(paths, "*/sweep_[01]")
         assert result == ["/", "/A", "/A/sweep_0", "/A/sweep_1"]
+
+    def test_filter_group_paths_literal_metachar_via_char_class(self) -> None:
+        from xarray.backends.common import _filter_group_paths
+
+        # Groups whose names literally contain glob metacharacters are
+        # reachable via character-class escaping (inherited from
+        # fnmatch / PurePath.match semantics).
+        paths = ["/", "/group_*_01", "/group_*_02", "/group_?_01", "/plain_01"]
+
+        # "[*]" matches a literal "*"
+        assert _filter_group_paths(paths, "group_[*]_01") == [
+            "/",
+            "/group_*_01",
+        ]
+        assert _filter_group_paths(paths, "group_[*]_*") == [
+            "/",
+            "/group_*_01",
+            "/group_*_02",
+        ]
+        # "[?]" matches a literal "?"
+        assert _filter_group_paths(paths, "group_[?]_01") == [
+            "/",
+            "/group_?_01",
+        ]
 
     def test_resolve_group_and_filter_none(self) -> None:
         from xarray.backends.common import _resolve_group_and_filter
