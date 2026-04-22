@@ -1026,7 +1026,13 @@ def open_datatree(
           (``*``, ``?``, ``[``), it is interpreted as a pattern and only
           groups whose paths match are loaded (along with their ancestors).
           For example, ``group="*/sweep_0"`` loads every ``sweep_0`` one
-          level deep while skipping sibling groups.
+          level deep while skipping sibling groups. Matching follows
+          ``fnmatch`` / :py:meth:`pathlib.PurePath.match` semantics, so
+          group names that contain literal glob metacharacters can be
+          targeted with character-class escapes: ``[*]`` matches a
+          literal ``*``, ``[?]`` a literal ``?``, and ``[[]`` a literal
+          ``[``. For example, ``group="group_[*]_01"`` matches a group
+          literally named ``group_*_01``.
         - 'lock': resource lock to use when reading data from disk. Only
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
@@ -1274,7 +1280,13 @@ def open_groups(
           (``*``, ``?``, ``[``), it is interpreted as a pattern and only
           groups whose paths match are loaded (along with their ancestors).
           For example, ``group="*/sweep_0"`` loads every ``sweep_0`` one
-          level deep while skipping sibling groups.
+          level deep while skipping sibling groups. Matching follows
+          ``fnmatch`` / :py:meth:`pathlib.PurePath.match` semantics, so
+          group names that contain literal glob metacharacters can be
+          targeted with character-class escapes: ``[*]`` matches a
+          literal ``*``, ``[?]`` a literal ``?``, and ``[[]`` a literal
+          ``[``. For example, ``group="group_[*]_01"`` matches a group
+          literally named ``group_*_01``.
         - 'lock': resource lock to use when reading data from disk. Only
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
