@@ -1193,6 +1193,11 @@ class TestZarrDatatreeIO:
             for ds in groups.values():
                 ds.close()
 
+    @pytest.mark.skipif(
+        ON_WINDOWS,
+        reason="Windows filesystem rejects '*' and '?' in directory names, "
+        "which zarr uses for group storage.",
+    )
     def test_open_datatree_glob_char_class_escape_literal_metachar(
         self, tmpdir, zarr_format
     ) -> None:
