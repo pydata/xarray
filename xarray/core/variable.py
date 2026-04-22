@@ -1489,12 +1489,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # than the full "broadcast_to" semantics
             indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
             # TODO: switch this to ._data once we teach ExplicitlyIndexed arrays to handle indexers with None.
-            try:
-                expanded_data = self.data[indexer]
-            except IndexError:
-                # Some pandas ExtensionArray backends (notably ArrowExtensionArray)
-                # don't support tuple indexers containing `None`.
-                expanded_data = np.asarray(self.data, dtype=object)[indexer]
+            expanded_data = self.data[indexer]
         else:  # elif shape is not None:
             dims_map = dict(zip(dim, shape, strict=True))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)

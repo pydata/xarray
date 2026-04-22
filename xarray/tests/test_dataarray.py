@@ -2022,26 +2022,6 @@ class TestDataArray:
         assert_array_equal(actual.isnull(), [True, False, True])
         assert actual.fillna(0).astype("int64").data.tolist() == [0, 2, 0]
 
-    @pytest.mark.parametrize(
-        "dtype",
-        [
-            pytest.param("Int64", id="Int64"),
-            pytest.param("int64[pyarrow]", id="int64[pyarrow]", marks=requires_pyarrow),
-        ],
-    )
-    def test_concat_nullable_int_no_float_promotion(self, dtype) -> None:
-        srs = pd.Series([1, 2, None], dtype=dtype, name="v")
-        da = srs.to_xarray()
-        actual = xr.concat([da, da], dim="rep")
-
-        assert actual.dtype != np.dtype(np.float64)
-        assert_array_equal(actual.isnull(), [[False, False, True], [False, False, True]])
-        actual_values = actual.data.tolist()
-        assert actual_values[0][:2] == [1, 2]
-        assert actual_values[1][:2] == [1, 2]
-        assert pd.isna(actual_values[0][2])
-        assert pd.isna(actual_values[1][2])
-
     @requires_pyarrow
     def test_date32_pyarrow_coord_align(self) -> None:
         dates = pd.date_range("2024-01-01", periods=3, freq="D")
