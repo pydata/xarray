@@ -2029,7 +2029,9 @@ class TestDataArray:
             pd.Series(dates, name="date").astype("date32[pyarrow]"), name="time"
         )
 
-        da1 = xr.DataArray([10.0, 20.0, 30.0], dims="time", coords={"time": date32_index})
+        da1 = xr.DataArray(
+            [10.0, 20.0, 30.0], dims="time", coords={"time": date32_index}
+        )
         da2 = xr.DataArray(
             [1.0, 2.0, 3.0],
             dims="time",
