@@ -914,7 +914,13 @@ class PandasIndex(Index):
             index = self.index.intersection(other.index)
         if is_allowed_extension_array_dtype(index.dtype):
             return type(self)(index, self.dim)
-        coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
+        try:
+            coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
+        except TypeError:
+            # pandas extension dtypes (e.g., CategoricalDtype) are not always
+            # compatible with numpy's type promotion even when the resulting
+            # index dtype is a regular NumPy dtype.
+            coord_dtype = get_valid_numpy_dtype(index)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
     def reindex_like(
