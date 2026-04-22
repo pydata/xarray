@@ -1212,7 +1212,7 @@ class TestZarrDatatreeIO:
         original_dt.to_zarr(store, zarr_format=zarr_format)
 
         with open_datatree(
-            store,
+            store,  # type: ignore[arg-type]
             group="group_[*]_01",
             engine=self.engine,
             zarr_format=zarr_format,
@@ -1223,7 +1223,7 @@ class TestZarrDatatreeIO:
             assert "/group_?_01" not in paths
 
         with open_datatree(
-            store,
+            store,  # type: ignore[arg-type]
             group="group_[*]_*",
             engine=self.engine,
             zarr_format=zarr_format,
@@ -1235,7 +1235,7 @@ class TestZarrDatatreeIO:
             assert "/plain_01" not in paths
 
         with open_datatree(
-            store,
+            store,  # type: ignore[arg-type]
             group="group_[?]_01",
             engine=self.engine,
             zarr_format=zarr_format,
