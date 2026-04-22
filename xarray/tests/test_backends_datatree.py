@@ -1193,17 +1193,12 @@ class TestZarrDatatreeIO:
             for ds in groups.values():
                 ds.close()
 
-    @pytest.mark.skipif(
-        ON_WINDOWS,
-        reason="Windows filesystem rejects '*' and '?' in directory names, "
-        "which zarr uses for group storage.",
-    )
     def test_open_datatree_glob_char_class_escape_literal_metachar(
-        self, tmpdir, zarr_format
+        self, zarr_format
     ) -> None:
-        # Zarr variant of the NetCDF escape test: groups whose names
-        # contain literal glob metacharacters are reachable via
-        # character-class escaping.
+        # In-memory store: Windows disallows "*" and "?" in directory names.
+        from zarr.storage import MemoryStore
+
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset({"root_var": 1}),
@@ -1213,23 +1208,38 @@ class TestZarrDatatreeIO:
                 "/plain_01": xr.Dataset({"data": ("x", [7, 8])}),
             }
         )
-        filepath = str(tmpdir / "glob_escape.zarr")
-        original_dt.to_zarr(filepath, zarr_format=zarr_format)
+        store = MemoryStore()
+        original_dt.to_zarr(store, zarr_format=zarr_format)
 
-        with open_datatree(filepath, group="group_[*]_01", engine=self.engine) as tree:
+        with open_datatree(
+            store,
+            group="group_[*]_01",
+            engine=self.engine,
+            zarr_format=zarr_format,
+        ) as tree:
             paths = {node.path for node in tree.subtree}
             assert "/group_*_01" in paths
             assert "/group_*_02" not in paths
             assert "/group_?_01" not in paths
 
-        with open_datatree(filepath, group="group_[*]_*", engine=self.engine) as tree:
+        with open_datatree(
+            store,
+            group="group_[*]_*",
+            engine=self.engine,
+            zarr_format=zarr_format,
+        ) as tree:
             paths = {node.path for node in tree.subtree}
             assert "/group_*_01" in paths
             assert "/group_*_02" in paths
             assert "/group_?_01" not in paths
             assert "/plain_01" not in paths
 
-        with open_datatree(filepath, group="group_[?]_01", engine=self.engine) as tree:
+        with open_datatree(
+            store,
+            group="group_[?]_01",
+            engine=self.engine,
+            zarr_format=zarr_format,
+        ) as tree:
             paths = {node.path for node in tree.subtree}
             assert "/group_?_01" in paths
             assert "/group_*_01" not in paths
