@@ -1205,6 +1205,7 @@ class TestZarrDatatreeIO:
                 "/group_*_01": xr.Dataset({"data": ("x", [1, 2])}),
                 "/group_*_02": xr.Dataset({"data": ("x", [3, 4])}),
                 "/group_?_01": xr.Dataset({"data": ("x", [5, 6])}),
+                "/plain_01": xr.Dataset({"data": ("x", [7, 8])}),
             }
         )
         filepath = str(tmpdir / "glob_escape.zarr")
@@ -1221,6 +1222,7 @@ class TestZarrDatatreeIO:
             assert "/group_*_01" in paths
             assert "/group_*_02" in paths
             assert "/group_?_01" not in paths
+            assert "/plain_01" not in paths
 
         with open_datatree(filepath, group="group_[?]_01", engine=self.engine) as tree:
             paths = {node.path for node in tree.subtree}
