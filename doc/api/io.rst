@@ -30,6 +30,7 @@ Dataset methods
    Dataset.filter_by_attrs
    Dataset.info
    Dataset.load
+   Dataset.load_async
    Dataset.persist
    Dataset.unify_chunks
 
@@ -62,6 +63,7 @@ DataArray methods
    DataArray.compute
    DataArray.persist
    DataArray.load
+   DataArray.load_async
    DataArray.unify_chunks
 
 DataTree methods
