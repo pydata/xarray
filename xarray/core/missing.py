@@ -7,7 +7,7 @@ from collections import ChainMap
 from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, TypeVar, get_args
+from typing import TYPE_CHECKING, Any, TypeVar, cast, get_args
 
 import numpy as np
 import pandas as pd
@@ -699,6 +699,16 @@ def interpolate_variable(
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
+    # Fast path for 1D separable interp on a dask-chunked core dim. Avoids
+    # apply_ufunc(allow_rechunk=True), which concatenates the full interp
+    # axis per task (pydata/xarray#9907, #10130).
+    if len(indexes_coords) == 1 and method in ("linear", "nearest", "slinear"):
+        dim = next(iter(indexes_coords))
+        in_coord, new_coord = indexes_coords[dim]
+        fast = _interp1d_dask_chunked(var, dim, in_coord, new_coord, func, kwargs)
+        if fast is not None:
+            return fast
+
     in_coords, result_coords = zip(*(v for v in indexes_coords.values()), strict=True)
 
     # input coordinates along which we are interpolation are core dimensions
@@ -763,6 +773,109 @@ def interpolate_variable(
         keep_attrs=True,
     )
     return result
+
+
+def _interp1d_dask_chunked(
+    var: Variable,
+    dim: Hashable,
+    in_coord: Variable,
+    new_coord: Variable,
+    func,
+    kwargs: dict[str, Any],
+) -> Variable | None:
+    """Per-chunk 1D interp for a dask-chunked core dim.
+
+    Routes each target point to the source chunk containing it (plus a
+    size-1 halo), keeping per-task memory bounded to source_chunk + halo
+    instead of the full interp axis. Returns ``None`` to fall back to the
+    apply_ufunc path for cases we don't handle (non-chunked source,
+    multi-dim or non-numeric coord, non-monotonic source, single-chunk
+    source, empty input).
+    """
+    if (
+        not is_chunked_array(var._data)
+        or dim not in var.dims
+        or in_coord.ndim != 1
+        or new_coord.ndim != 1
+    ):
+        return None
+
+    import dask.array as da
+
+    # Materialize 1D coords up front — routing targets to source chunks
+    # needs their values. Cheap for 1D arrays, but it does trip
+    # raise_if_dask_computes.
+    in_np = np.asarray(in_coord)
+    new_np = np.asarray(new_coord)
+
+    if in_np.size == 0 or new_np.size == 0:
+        return None
+    # Datetime/timedelta/object dtypes need _floatize_x; let the fallback handle them.
+    if in_np.dtype.kind not in "fiu" or new_np.dtype.kind not in "fiu":
+        return None
+
+    diffs = np.diff(in_np)
+    ascending = bool(np.all(diffs > 0)) if diffs.size else True
+    if not (ascending or bool(np.all(diffs < 0))):
+        return None  # non-monotonic source coord
+
+    src = cast("da.Array", var._data)
+    axis = var.dims.index(dim)
+
+    # Flip to ascending; downstream searchsorted and slicing assume it.
+    if not ascending:
+        in_np = in_np[::-1]
+        src = da.flip(src, axis=axis)
+
+    chunks_along = src.chunks[axis]
+    if len(chunks_along) == 1:
+        return None  # single-chunk source already takes the existing path
+
+    boundaries = np.concatenate(([0], np.cumsum(chunks_along)))
+    # Assign each target to the first chunk whose last source value >= target.
+    chunk_of_target = np.searchsorted(
+        in_np[boundaries[1:] - 1], new_np, side="left"
+    ).clip(0, len(chunks_along) - 1)
+
+    blocks: list[tuple[np.ndarray, Any]] = []
+    for ci in range(len(chunks_along)):
+        tgt_idx = np.flatnonzero(chunk_of_target == ci)
+        if tgt_idx.size == 0:
+            continue
+        tgt_vals = new_np[tgt_idx]
+
+        start = max(0, boundaries[ci] - 1)
+        stop = min(src.shape[axis], boundaries[ci + 1] + 1)
+        slicer = [slice(None)] * src.ndim
+        slicer[axis] = slice(start, stop)
+        # Rechunk the halo slice to a single block along the interp axis —
+        # the map_overlap-like step that keeps per-task memory bounded.
+        sub_src = cast("da.Array", src[tuple(slicer)]).rechunk({axis: -1})
+        sub_coord = in_np[start:stop]
+
+        def _kernel(block, sub_coord=sub_coord, tgt_vals=tgt_vals):
+            return func(sub_coord, block, **kwargs)(tgt_vals)
+
+        out_chunks = tuple(
+            (tgt_idx.size,) if i == axis else c for i, c in enumerate(sub_src.chunks)
+        )
+        blocks.append(
+            (tgt_idx, sub_src.map_blocks(_kernel, dtype=float, chunks=out_chunks))
+        )
+
+    order = np.concatenate([idx for idx, _ in blocks])
+    combined = da.concatenate([arr for _, arr in blocks], axis=axis)
+
+    # Permute back to target order if processing-chunk order didn't match it.
+    if not np.array_equal(order, np.arange(len(new_np))):
+        combined = da.take(combined, np.argsort(order), axis=axis)
+
+    # Coalesce the per-source-chunk slices so the downstream graph stays small.
+    out_chunk_target = max(chunks_along)
+    if min(combined.chunks[axis]) < out_chunk_target:
+        combined = combined.rechunk({axis: out_chunk_target})
+
+    return Variable(var.dims, combined, attrs=var.attrs, fastpath=True)
 
 
 def _interp1d(

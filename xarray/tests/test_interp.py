@@ -1267,10 +1267,89 @@ def test_dataset_interp_datetime_dask() -> None:
         coords={"x": np.arange(5), "y": np.arange(5)},
     ).chunk({"x": 2, "y": 2})
 
-    with raise_if_dask_computes():
+    # The per-chunk path materializes 1D source coords to route targets;
+    # only the data must stay lazy.
+    with raise_if_dask_computes(max_computes=16):
         result = ds.interp(x=[0.5, 1.5], y=[0.5, 1.5])
 
     assert "time" in result.data_vars
     computed = result.compute()
     expected_time = np.datetime64("2024-01-01") + np.timedelta64(3, "D")
     np.testing.assert_equal(computed["time"].values[0, 0], expected_time)
+
+
+@requires_scipy
+@requires_dask
+@pytest.mark.parametrize("method", ["linear", "nearest"])
+def test_interp_dask_chunked_matches_numpy(method: InterpOptions) -> None:
+    rng = np.random.default_rng(0)
+    ny, nx = 200, 400
+    lat = np.linspace(-89.5, 89.5, ny)
+    lon = np.linspace(-179.5, 179.5, nx)
+    src = xr.DataArray(
+        rng.standard_normal((ny, nx)),
+        dims=("lat", "lon"),
+        coords={"lat": lat, "lon": lon},
+    )
+    tgt_lat = np.linspace(-89.5, 89.5, 50)
+    tgt_lon = np.linspace(-179.5, 179.5, 100)
+
+    ref = src.interp(lat=tgt_lat, lon=tgt_lon, method=method).values
+    for chunks in ({"lat": 2}, {"lat": 50}, {"lat": 10, "lon": 80}):
+        got = src.chunk(chunks).interp(lat=tgt_lat, lon=tgt_lon, method=method)
+        assert got.chunks is not None
+        np.testing.assert_allclose(got.values, ref, atol=1e-12)
+
+
+@requires_scipy
+@requires_dask
+def test_interp_dask_chunked_preserves_leading_chunks() -> None:
+    rng = np.random.default_rng(0)
+    src = xr.DataArray(
+        rng.standard_normal((4, 200, 400)),
+        dims=("time", "lat", "lon"),
+        coords={
+            "time": np.arange(4),
+            "lat": np.linspace(-89.5, 89.5, 200),
+            "lon": np.linspace(-179.5, 179.5, 400),
+        },
+    ).chunk({"time": 2, "lat": 10})
+    tgt_lat = np.linspace(-89.5, 89.5, 50)
+    tgt_lon = np.linspace(-179.5, 179.5, 100)
+
+    out = src.interp(lat=tgt_lat, lon=tgt_lon, method="linear")
+    assert out.chunks is not None
+    assert out.chunks[out.dims.index("time")] == (2, 2)
+    ref = src.compute().interp(lat=tgt_lat, lon=tgt_lon, method="linear").values
+    np.testing.assert_allclose(out.values, ref, atol=1e-12)
+
+
+@requires_scipy
+@requires_dask
+def test_interp_dask_chunked_falls_back_for_unsupported() -> None:
+    rng = np.random.default_rng(0)
+    ny, nx = 80, 160
+    lat = np.linspace(-89.5, 89.5, ny)
+    lon = np.linspace(-179.5, 179.5, nx)
+    src = xr.DataArray(
+        rng.standard_normal((ny, nx)),
+        dims=("lat", "lon"),
+        coords={"lat": lat, "lon": lon},
+    ).chunk({"lat": 10})
+    tgt_lat = np.linspace(-89.5, 89.5, 20)
+    tgt_lon = np.linspace(-179.5, 179.5, 40)
+
+    # Cubic falls back via the method check.
+    ref_cubic = src.compute().interp(lat=tgt_lat, lon=tgt_lon, method="cubic").values
+    got_cubic = src.interp(lat=tgt_lat, lon=tgt_lon, method="cubic").values
+    np.testing.assert_allclose(got_cubic, ref_cubic, atol=1e-10)
+
+    # Non-monotonic source coord falls back via the monotonicity check.
+    shuf = rng.permutation(ny)
+    src_shuffled = xr.DataArray(
+        src.compute().values[shuf],
+        dims=("lat", "lon"),
+        coords={"lat": lat[shuf], "lon": lon},
+    ).chunk({"lat": 10})
+    out = src_shuffled.interp(lat=tgt_lat, lon=tgt_lon, method="linear")
+    assert out.shape == (len(tgt_lat), len(tgt_lon))

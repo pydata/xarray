@@ -29,6 +29,11 @@ Bug Fixes
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
   code ndarrays into Python lists (:issue:`11305`).
+- Route 1D linear/nearest interpolation on a dask-chunked core dimension
+  through a per-chunk path instead of ``apply_ufunc(allow_rechunk=True)``
+  (:issue:`9907`, :issue:`10130`). Each target point is routed to the source
+  chunk that contains it (plus a size-1 halo), so per-task memory scales
+  with the source chunk size rather than the full interp axis.
 
 
 Documentation
