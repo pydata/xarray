@@ -724,7 +724,7 @@ def close_on_error(f):
 
 
 def is_remote_uri(path: str) -> bool:
-    """Finds URLs of the form protocol:// or protocol::
+    """Matches URLs of the form protocol:// or protocol::
 
     This also matches for http[s]://, which were the only remote URLs
     supported in <=v0.16.2.
@@ -764,6 +764,14 @@ def strip_uri_params(uri: str) -> str:
     parsed = urlsplit(uri)
     # Reconstruct without query and fragment using urlunsplit
     return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+
+
+def is_http_url(path: str) -> bool:
+    """Matches URLs of the form http[s]://
+
+    Does not match for
+    """
+    return bool(re.search(r"^https?\://", path))
 
 
 def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
