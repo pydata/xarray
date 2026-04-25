@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import math
 from datetime import timedelta
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -151,8 +152,20 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
 
 
 def get_date_type(self):
+    if TYPE_CHECKING:
+        import cftime
+    else:
+        cftime = attempt_import("cftime")
+
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
+
     if self._data.size:
-        return type(self._data[0])
+        sample = self._data[0]
+        if type(sample) is cftime.datetime:
+            return partial(cftime.datetime, calendar=sample.calendar)
+        else:
+            return type(sample)
     else:
         return None
 
@@ -171,10 +184,13 @@ def assert_all_valid_date_type(data):
                 "CFTimeIndex requires cftime.datetime "
                 f"objects. Got object of {date_type}."
             )
-        if not all(isinstance(value, date_type) for value in data):
+        calendar = sample.calendar
+        if not all(
+            hasattr(value, "calendar") and value.calendar == calendar for value in data
+        ):
             raise TypeError(
                 "CFTimeIndex requires using datetime "
-                f"objects of all the same type.  Got\n{data}."
+                f"objects with the same calendar. Got\n{data}."
             )
 
 
@@ -674,17 +690,12 @@ class CFTimeIndex(pd.Index):
     @property
     def asi8(self):
         """Convert to integers with units of microseconds since 1970-01-01."""
-        from xarray.core.resample_cftime import exact_cftime_datetime_difference
-
         if not self._data.size:
             return np.array([], dtype=np.int64)
 
         epoch = self.date_type(1970, 1, 1)
         return np.array(
-            [
-                _total_microseconds(exact_cftime_datetime_difference(epoch, date))
-                for date in self.values
-            ],
+            [_total_microseconds(date - epoch) for date in self.values],
             dtype=np.int64,
         )
 

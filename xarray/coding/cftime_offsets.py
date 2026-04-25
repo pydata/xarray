@@ -81,7 +81,7 @@ DayOption: TypeAlias = Literal["start", "end"]
 T_FreqStr = TypeVar("T_FreqStr", str, None)
 
 
-def get_date_type(calendar, use_cftime=True):
+def get_date_type(calendar, use_cftime=True, legacy=True):
     """Return the cftime date type for a given calendar name."""
     if TYPE_CHECKING:
         import cftime
@@ -102,7 +102,10 @@ def get_date_type(calendar, use_cftime=True):
         "all_leap": cftime.DatetimeAllLeap,
         "standard": cftime.DatetimeGregorian,
     }
-    return calendars[calendar]
+    if legacy:
+        return calendars[calendar]
+    else:
+        return partial(cftime.datetime, calendar=calendar)
 
 
 class BaseCFTimeOffset:
