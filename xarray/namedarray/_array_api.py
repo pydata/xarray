@@ -1,28 +1,28 @@
 from __future__ import annotations
 
 from types import ModuleType
-from typing import Any
+from typing import Any, overload
 
 import numpy as np
 
 from xarray.namedarray._typing import (
+    Axes,
+    Axis,
     Default,
-    _arrayapi,
-    _Axes,
-    _Axis,
+    DimType,
+    DType,
+    ScalarType,
+    ShapeType,
+    SupportsImag,
+    SupportsReal,
     _default,
-    _Dim,
-    _DType,
-    _ScalarType,
-    _ShapeType,
-    _SupportsImag,
-    _SupportsReal,
+    arrayapi,
 )
 from xarray.namedarray.core import NamedArray
 
 
-def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
-    if isinstance(x._data, _arrayapi):
+def _get_data_namespace(x: NamedArray[Any, Any, Any]) -> ModuleType:
+    if isinstance(x._data, arrayapi):
         return x._data.__array_namespace__()
 
     return np
@@ -32,8 +32,8 @@ def _get_data_namespace(x: NamedArray[Any, Any]) -> ModuleType:
 
 
 def astype(
-    x: NamedArray[_ShapeType, Any], dtype: _DType, /, *, copy: bool = True
-) -> NamedArray[_ShapeType, _DType]:
+    x: NamedArray[ShapeType, Any, DimType], dtype: DType, /, *, copy: bool = True
+) -> NamedArray[ShapeType, DType, DimType]:
     """
     Copies an array to a specified data type irrespective of Type Promotion Rules rules.
 
@@ -67,7 +67,7 @@ def astype(
     <xarray.NamedArray (x: 2)> Size: 8B
     array([1, 2], dtype=int32)
     """
-    if isinstance(x._data, _arrayapi):
+    if isinstance(x._data, arrayapi):
         xp = x._data.__array_namespace__()
         return x._new(data=xp.astype(x._data, dtype, copy=copy))
 
@@ -79,9 +79,9 @@ def astype(
 
 
 def imag(
-    x: NamedArray[_ShapeType, np.dtype[_SupportsImag[_ScalarType]]],  # type: ignore[type-var]
+    x: NamedArray[ShapeType, np.dtype[SupportsImag[ScalarType]], DimType],  # type: ignore[type-var]
     /,
-) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
+) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType]:
     """
     Returns the imaginary component of a complex number for each element x_i of the
     input array x.
@@ -112,9 +112,9 @@ def imag(
 
 
 def real(
-    x: NamedArray[_ShapeType, np.dtype[_SupportsReal[_ScalarType]]],  # type: ignore[type-var]
+    x: NamedArray[ShapeType, np.dtype[SupportsReal[ScalarType]], DimType],  # type: ignore[type-var]
     /,
-) -> NamedArray[_ShapeType, np.dtype[_ScalarType]]:
+) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType]:
     """
     Returns the real component of a complex number for each element x_i of the
     input array x.
@@ -145,13 +145,35 @@ def real(
 
 
 # %% Manipulation functions
+
+
+@overload
 def expand_dims(
-    x: NamedArray[Any, _DType],
+    x: NamedArray[Any, DType, DimType],
     /,
     *,
-    dim: _Dim | Default = _default,
-    axis: _Axis = 0,
-) -> NamedArray[Any, _DType]:
+    dim: DimType,
+    axis: Axis = ...,
+) -> NamedArray[Any, DType, DimType]: ...
+
+
+@overload
+def expand_dims(
+    x: NamedArray[Any, DType, DimType],
+    /,
+    *,
+    dim: Default = ...,
+    axis: Axis = ...,
+) -> NamedArray[Any, DType, DimType | str]: ...
+
+
+def expand_dims(
+    x: NamedArray[Any, DType, DimType],
+    /,
+    *,
+    dim: DimType | Default = _default,
+    axis: Axis = 0,
+) -> NamedArray[Any, DType, DimType] | NamedArray[Any, DType, DimType | str]:
     """
     Expands the shape of an array by inserting a new dimension of size one at the
     position specified by dims.
@@ -184,15 +206,16 @@ def expand_dims(
     """
     xp = _get_data_namespace(x)
     dims = x.dims
-    if dim is _default:
-        dim = f"dim_{len(dims)}"
-    d = list(dims)
-    d.insert(axis, dim)
+    actual_dim: DimType | str = f"dim_{len(dims)}" if dim is _default else dim
+    d: list[DimType | str] = list(dims)
+    d.insert(axis, actual_dim)
     out = x._new(dims=tuple(d), data=xp.expand_dims(x._data, axis=axis))
     return out
 
 
-def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DType]:
+def permute_dims(
+    x: NamedArray[Any, DType, DimType], axes: Axes
+) -> NamedArray[Any, DType, DimType]:
     """
     Permutes the dimensions of an array.
 
@@ -213,7 +236,7 @@ def permute_dims(x: NamedArray[Any, _DType], axes: _Axes) -> NamedArray[Any, _DT
 
     dims = x.dims
     new_dims = tuple(dims[i] for i in axes)
-    if isinstance(x._data, _arrayapi):
+    if isinstance(x._data, arrayapi):
         xp = _get_data_namespace(x)
         out = x._new(dims=new_dims, data=xp.permute_dims(x._data, axes))
     else:
