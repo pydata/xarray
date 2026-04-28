@@ -415,9 +415,6 @@ class RangeIndex(CoordinateTransformIndex):
     ) -> IndexSelResult:
         label = labels[self.dim]
 
-        if method != "nearest":
-            raise ValueError("RangeIndex only supports selection with method='nearest'")
-
         # TODO: for RangeIndex it might not be too hard to support tolerance
         if tolerance is not None:
             raise ValueError(
@@ -430,9 +427,20 @@ class RangeIndex(CoordinateTransformIndex):
                 positions = self.transform.reverse(
                     {self.coord_name: np.array([label.start, label.stop])}
                 )
-                pos = np.round(positions[self.dim]).astype("int")
+                pos = positions[self.dim]
+                # Small tolerance for floating point noise
+                # e.g., (0.7 - 0.1) / 0.1 = 5.999999999999999 instead of 6.0
+                eps = np.finfo(float).eps * 1000
+                if method == "nearest":
+                    pos = np.round(pos).astype("int")
+                else:
+                    pos = (
+                        int(np.ceil(pos[0] - eps)),
+                        int(np.floor(pos[1] + eps)),
+                    )
                 new_start = max(pos[0], 0)
-                new_stop = min(pos[1], self.size)
+                # +1 to be endpoint inclusive like pandas is
+                new_stop = min(pos[1] + 1, self.size)
                 return IndexSelResult({self.dim: slice(new_start, new_stop)})
             else:
                 # otherwise convert to basic (array) indexing
