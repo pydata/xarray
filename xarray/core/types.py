@@ -281,6 +281,17 @@ CFCalendar = Literal[
     "366_day",
 ]
 
+# Used by open_dataset to set the cf time decoding options
+"raise", "warn", "ignore"
+DECODE_TIMES_OPTIONS = {
+    None: "ignore",
+    True: "raise",
+    False: "ignore",
+    "error": "raise",
+    "warn": "warn",
+    "ignore":"ignore"
+}
+
 CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
 InclusiveOptions = Literal["both", "neither", "left", "right"]

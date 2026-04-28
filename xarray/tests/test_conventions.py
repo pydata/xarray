@@ -269,6 +269,40 @@ class TestEncodeCFVariable:
 
 @requires_cftime
 class TestDecodeCF:
+    ## tests for the decode_times flags
+    dataset_with_one_good_one_bad_time = Dataset(
+            {
+                "good_time": ("good_time", [0, 1, 2], {"units": "days since 2000-01-01"}),
+                "bad_time": ("bad_time", [1.0, 2.0, 3.0], {"units": "mdays since 2000-01-01"}),
+            }
+        )
+    def test_decode_times_default(self) -> None:
+        # should raise
+        with pytest.raises(ValueError):
+            result = decode_cf(self.dataset_with_one_good_one_bad_time)
+
+    def test_decode_times_bad_flag(self) -> None:
+        # should raise
+        with pytest.raises(ValueError) as err:
+            result = decode_cf(self.dataset_with_one_good_one_bad_time,
+                               decode_times="bad_flag")
+        print(err.value)
+        assert str(err.value).startswith("`decode_times` must be one of")
+
+    @pytest.mark.parametrize("flag", ["true", "error"])
+    def test_decode_times_error(self, flag) -> None:
+        # should raise
+        with pytest.raises(ValueError):
+            result = decode_cf(self.dataset_with_one_good_one_bad_time,
+                               decode_times=flag)
+
+\
+    def test_decode_times_default(self) -> None:
+        # should raise
+        with pytest.raises(ValueError):
+            result = decode_cf(self.dataset_with_one_good_one_bad_time)
+
+
     def test_dataset(self) -> None:
         original = Dataset(
             {
