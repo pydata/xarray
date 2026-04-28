@@ -280,6 +280,24 @@ class TestPandasIndex:
         assert actual.equals(expected)
         assert actual.coord_dtype == "=U4"
 
+    def test_join_categorical_and_object(self) -> None:
+        index1 = PandasIndex(pd.Index(["A", "B"], dtype=object), "x")
+        index2 = PandasIndex(
+            pd.CategoricalIndex(["B", "C"], categories=["A", "B", "C"], name="x"),
+            "x",
+        )
+
+        expected = PandasIndex(pd.Index(["B"], dtype=object), "x")
+        actual = index1.join(index2)
+
+        assert actual.equals(expected)
+        assert actual.coord_dtype == np.dtype(object)
+
+        expected = PandasIndex(pd.Index(["A", "B", "C"], dtype=object), "x")
+        actual = index1.join(index2, how="outer")
+        assert actual.equals(expected)
+        assert actual.coord_dtype == np.dtype(object)
+
     def test_reindex_like(self) -> None:
         index1 = PandasIndex([0, 1, 2], "x")
         index2 = PandasIndex([1, 2, 3, 4], "x")
