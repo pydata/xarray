@@ -14,7 +14,6 @@ from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
     get_chunked_array_type,
-    guess_chunkmanager,
 )
 
 if TYPE_CHECKING:
@@ -65,12 +64,12 @@ def _maybe_chunk(
     name: Hashable,
     var: Variable,
     chunks: Mapping[Any, T_ChunkDim] | None,
+    chunkmanager: ChunkManagerEntrypoint,
     token=None,
     lock=None,
     name_prefix: str = "xarray-",
     overwrite_encoded_chunks: bool = False,
     inline_array: bool = False,
-    chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
     just_use_token=False,
 ) -> Variable:
@@ -80,10 +79,24 @@ def _maybe_chunk(
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
     if var.ndim:
-        chunked_array_type = guess_chunkmanager(
-            chunked_array_type
-        )  # coerce string to ChunkManagerEntrypoint type
-        if isinstance(chunked_array_type, DaskManager):
+        if (
+            var.shape
+            and var.chunks
+            and chunks
+            and any(c == "auto" for c in chunks.values())
+        ):
+            chunk_shape = chunkmanager.preserve_chunks(
+                tuple(chunks.get(dim, ()) for dim in var.dims),
+                shape=var.shape,
+                target=chunkmanager.get_auto_chunk_size(),
+                typesize=getattr(var.dtype, "itemsize", 8),
+                previous_chunks=var.chunks,
+            )
+            chunks = {
+                dim: chunk_shape[i] for i, dim in enumerate(var.dims) if dim in chunks
+            }
+
+        if isinstance(chunkmanager, DaskManager):
             if not just_use_token:
                 from dask.base import tokenize
 
@@ -104,7 +117,7 @@ def _maybe_chunk(
 
         var = var.chunk(
             chunks,
-            chunked_array_type=chunked_array_type,
+            chunked_array_type=chunkmanager,
             from_array_kwargs=from_array_kwargs,
         )
 

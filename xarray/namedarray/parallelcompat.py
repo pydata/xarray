@@ -20,6 +20,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        T_ChunkDim,
         T_Chunks,
         _Chunks,
         _DType,
@@ -784,3 +785,120 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError(
             "For 'auto' rechunking of cftime arrays, get_auto_chunk_size must be implemented by the chunk manager"
         )
+
+    @staticmethod
+    def preserve_chunks(
+        chunks: tuple[T_ChunkDim, ...],
+        shape: tuple[int, ...],
+        target: int,
+        typesize: int,
+        previous_chunks: tuple[int, ...] | _NormalizedChunks,
+    ) -> tuple[T_ChunkDim, ...]:
+        """Quickly determine optimal chunks close to target size but never splitting
+        previous_chunks.
+
+        This takes in a chunks argument potentially containing ``"auto"`` for several
+        dimensions. This function replaces ``"auto"`` with concrete dimension sizes that
+        try to get chunks to be close to certain size in bytes, provided by the ``target=``
+        keyword. Any dimensions marked as ``"auto"`` will potentially be multiplied
+        by some factor to get close to the byte target, while never splitting
+        ``previous_chunks``. If chunks are non-uniform along a particular dimension
+        then that dimension will always use exactly ``previous_chunks``.
+
+        Examples
+        --------
+        >>> ChunkManagerEntrypoint.preserve_chunks(
+        ...     chunks=("auto", "auto", "auto"),
+        ...     shape=(1280, 1280, 20),
+        ...     target=500 * 1024,
+        ...     typesize=8,
+        ...     previous_chunks=(128, 128, 1),
+        ... )
+        (128, 128, 2)
+
+        >>> ChunkManagerEntrypoint.preserve_chunks(
+        ...     chunks=("auto", "auto", 1),
+        ...     shape=(1280, 1280, 20),
+        ...     target=1 * 1024 * 1024,
+        ...     typesize=8,
+        ...     previous_chunks=(128, 128, 1),
+        ... )
+        (128, 1024, 1)
+
+        >>> ChunkManagerEntrypoint.preserve_chunks(
+        ...     chunks=("auto", "auto", 1),
+        ...     shape=(1280, 1280, 20),
+        ...     target=1 * 1024 * 1024,
+        ...     typesize=8,
+        ...     previous_chunks=((128,) * 10, (128, 256, 256, 512), (1,) * 20),
+        ... )
+        (256, (128, 256, 256, 512), 1)
+
+        Parameters
+        ----------
+        chunks: tuple[int | str | tuple[int], ...]
+            A tuple of either dimensions or tuples of explicit chunk dimensions
+            Some entries should be "auto".
+        shape: tuple[int]
+            The shape of the array
+        target: int
+            The target size of the chunk in bytes.
+        typesize: int
+            The size, in bytes, of each element of the chunk.
+        previous_chunks: tuple[int | tuple[int], ...]
+            Size of chunks being preserved. Expressed as a tuple of ints or tuple
+            of tuple of ints.
+        """
+        new_chunks = [*previous_chunks]
+        auto_dims = [c == "auto" for c in chunks]
+        max_chunks = np.array(shape)
+        for i, previous_chunk in enumerate(previous_chunks):
+            chunk = chunks[i]
+            if chunk == -1:
+                # -1 means whole dim is in one chunk
+                new_chunks[i] = shape[i]
+            else:
+                if isinstance(previous_chunk, tuple):
+                    # For uniform chunks just take the first item
+                    if previous_chunk[1:-1] == previous_chunk[:-2]:
+                        new_chunks[i] = previous_chunk[0]
+                        previous_chunk = previous_chunk[0]
+                    # For non-uniform chunks, leave them alone
+                    else:
+                        auto_dims[i] = False
+                        max_chunks[i] = max(previous_chunk)
+
+                if isinstance(previous_chunk, int):
+                    # auto, None or () means we want to track previous chunk
+                    if chunk == "auto" or not chunk:
+                        max_chunks[i] = previous_chunk
+                    # otherwise use the explicitly provided chunk
+                    else:
+                        new_chunks[i] = chunk
+                        max_chunks[i] = chunk if isinstance(chunk, int) else max(chunk)
+
+        if not any(auto_dims):
+            return chunks
+
+        while True:
+            # Repeatedly look for the last dim with more than one chunk and multiply it by 2.
+            # Stop when:
+            # 1a. we are larger than the target chunk size OR
+            # 1b. we are within 50% of the target chunk size OR
+            # 2. the chunk covers the entire array
+
+            num_chunks = np.array(shape) / max_chunks * auto_dims
+            chunk_bytes = np.prod(max_chunks) * typesize
+
+            if chunk_bytes > target or abs(chunk_bytes - target) / target < 0.5:
+                break
+
+            if (num_chunks <= 1).all():
+                break
+
+            idx = int(np.nonzero(num_chunks > 1)[0][-1])
+
+            new_chunks[idx] = min(new_chunks[idx] * 2, shape[idx])
+            max_chunks[idx] = new_chunks[idx]
+
+        return tuple(new_chunks)
