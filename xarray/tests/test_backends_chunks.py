@@ -110,7 +110,7 @@ def test_grid_rechunk(enc_chunks, region, nd_v_chunks, expected_chunks):
 
     result = grid_rechunk(
         arr.variable,
-        enc_chunks=enc_chunks,
+        encoding_chunks=enc_chunks,
         region=region,
     )
     assert result.chunks == expected_chunks

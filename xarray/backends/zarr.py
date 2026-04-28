@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import functools
+import importlib.util
 import json
 import os
 import struct
@@ -44,6 +46,28 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
     from xarray.core.types import ZarrArray, ZarrGroup
+
+
+@functools.cache
+def _has_unified_chunk_grid() -> bool:
+    """Check if zarr has the unified ChunkGrid with is_regular support.
+
+    Defers the actual import so zarr stays lazy at module load time.
+    """
+    if importlib.util.find_spec("zarr.core.chunk_grids") is None:
+        return False
+    from zarr.core.chunk_grids import ChunkGrid
+
+    return hasattr(ChunkGrid, "is_regular")
+
+
+def _is_regular_chunk_spec(chunks: tuple) -> bool:
+    """True when *chunks* is a flat tuple of ints (regular chunk grid).
+
+    Returns False for rectilinear specs where at least one element is a
+    sequence of per-chunk edge lengths.
+    """
+    return all(isinstance(c, int) for c in chunks)
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -333,7 +357,7 @@ class ZarrArrayWrapper(BackendArray):
         )
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, zarr_format):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -355,18 +379,34 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     # while dask chunks can be variable sized
     # https://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
+        if zarr_format == 3 and _has_unified_chunk_grid():
+            # Check if dask chunks are regular (uniform except for last chunk)
+            has_varying_interior = any(
+                len(set(chunks[:-1])) > 1 for chunks in var_chunks
+            )
+            has_larger_final = any(chunks[0] < chunks[-1] for chunks in var_chunks)
+            if has_varying_interior or has_larger_final:
+                # Truly rectilinear — return dask-style tuples of per-chunk sizes.
+                # Requires zarr config: array.rectilinear_chunks = True
+                return tuple(var_chunks)
+            # Regular chunks — return the first chunk size per dimension
+            return tuple(chunk[0] for chunk in var_chunks)
+
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
-                "Zarr requires uniform chunk sizes except for final chunk. "
+                "Zarr v2 requires uniform chunk sizes except for the final chunk. "
                 f"Variable named {name!r} has incompatible dask chunks: {var_chunks!r}. "
-                "Consider rechunking using `chunk()`."
+                "Consider rechunking using `chunk()`, or switching to the "
+                "zarr v3 format with zarr-python>=3.2."
             )
         if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
             raise ValueError(
-                "Final chunk of Zarr array must be the same size or smaller "
-                f"than the first. Variable named {name!r} has incompatible Dask chunks {var_chunks!r}."
-                "Consider either rechunking using `chunk()` or instead deleting "
-                "or modifying `encoding['chunks']`."
+                "The final chunk of a Zarr v2 array or a Zarr v3 array without the "
+                "rectilinear chunks extension must be the same size or smaller "
+                f"than the first. Variable named {name!r} has incompatible Dask "
+                f"chunks {var_chunks!r}. "
+                "Consider switching to Zarr v3 with the rectilinear chunks extension, "
+                "rechunking using `chunk()` or deleting or modifying `encoding['chunks']`."
             )
         # return the first chunk for each dimension
         return tuple(chunk[0] for chunk in var_chunks)
@@ -389,7 +429,16 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
             var_chunks,
             ndim,
             name,
+            zarr_format,
         )
+
+    # Rectilinear chunks: each element is a sequence of per-chunk edge lengths
+    if (
+        zarr_format == 3
+        and _has_unified_chunk_grid()
+        and any(not isinstance(x, int) for x in enc_chunks_tuple)
+    ):
+        return enc_chunks_tuple
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
@@ -532,6 +581,7 @@ def extract_zarr_variable_encoding(
         var_chunks=variable.chunks,
         ndim=variable.ndim,
         name=name,
+        zarr_format=zarr_format,
     )
     if _zarr_v3() and chunks is None:
         chunks = "auto"
@@ -910,9 +960,27 @@ class ZarrStore(AbstractWritableDataStore):
         )
         attributes = dict(attributes)
 
+        if _has_unified_chunk_grid() and zarr_array.metadata.zarr_format == 3:
+            from zarr.core.metadata.v3 import (
+                RectilinearChunkGridMetadata,
+                RegularChunkGridMetadata,
+            )
+
+            chunk_grid = zarr_array.metadata.chunk_grid
+            if isinstance(chunk_grid, RegularChunkGridMetadata):
+                chunks = chunk_grid.chunk_shape
+            elif isinstance(chunk_grid, RectilinearChunkGridMetadata):
+                chunks = chunk_grid.chunk_shapes
+            else:
+                chunks = tuple(zarr_array.chunks)
+            preferred_chunks = dict(zip(dimensions, chunks, strict=True))
+        else:
+            chunks = tuple(zarr_array.chunks)
+            preferred_chunks = dict(zip(dimensions, chunks, strict=True))
+
         encoding = {
-            "chunks": zarr_array.chunks,
-            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
+            "chunks": chunks,
+            "preferred_chunks": preferred_chunks,
         }
 
         if _zarr_v3():
@@ -1300,7 +1368,7 @@ class ZarrStore(AbstractWritableDataStore):
             if self._align_chunks and isinstance(effective_write_chunks, tuple):
                 v = grid_rechunk(
                     v=v,
-                    enc_chunks=effective_write_chunks,
+                    encoding_chunks=effective_write_chunks,
                     region=region,
                 )
 

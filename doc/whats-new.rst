@@ -14,6 +14,10 @@ v2026.05.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Support reading and writing Zarr V3 arrays with rectilinear (variable-sized)
+  chunk grids. Requires zarr-python >= 3.2 with
+  ``zarr.config.set({"array.rectilinear_chunks": True})``. (:pull:`11279`).
+  By `Max Jones <https://github.com/maxrjones>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
