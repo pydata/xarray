@@ -4,7 +4,7 @@ import base64
 import json
 import os
 import struct
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import numpy as np
@@ -28,6 +28,7 @@ from xarray.core import indexing
 from xarray.core.treenode import NodePath
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
+    Default,
     FrozenDict,
     HiddenKeyDict,
     _default,
@@ -43,7 +44,7 @@ from xarray.namedarray.utils import module_available
 if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ZarrArray, ZarrGroup
+    from xarray.core.types import T_Chunks, ZarrArray, ZarrGroup
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -1460,30 +1461,30 @@ class ZarrStore(AbstractWritableDataStore):
 
 
 def open_zarr(
-    store,
-    group=None,
-    synchronizer=None,
-    chunks=_default,
-    decode_cf=True,
-    mask_and_scale=True,
-    decode_times=True,
-    concat_characters=True,
+    store: str | os.PathLike[Any] | MutableMapping | None,
+    group: str | None = None,
+    synchronizer: object | None = None,
+    chunks: T_Chunks | Default = _default,
+    decode_cf: bool = True,
+    mask_and_scale: bool = True,
+    decode_times: bool = True,
+    concat_characters: bool = True,
     decode_coords: Literal["coordinates", "all"] | bool = True,
-    drop_variables=None,
-    consolidated=None,
-    overwrite_encoded_chunks=False,
-    chunk_store=None,
-    storage_options=None,
-    decode_timedelta=None,
-    use_cftime=None,
-    zarr_version=None,
-    zarr_format=None,
-    use_zarr_fill_value_as_mask=None,
+    drop_variables: str | Iterable[str] | None = None,
+    consolidated: bool | None = None,
+    overwrite_encoded_chunks: bool = False,
+    chunk_store: MutableMapping | None = None,
+    storage_options: dict[str, Any] | None = None,
+    decode_timedelta: bool | None = None,
+    use_cftime: bool | None = None,
+    zarr_version: int | None = None,
+    zarr_format: int | None = None,
+    use_zarr_fill_value_as_mask: bool | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-    create_default_indexes=True,
-    **kwargs,
-):
+    create_default_indexes: bool = True,
+    **kwargs: Any,
+) -> Dataset:
     """Load and decode a dataset from a Zarr store.
 
     The `store` object should be a valid store for a Zarr group. `store`
