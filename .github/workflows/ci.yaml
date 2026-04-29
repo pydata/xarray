@@ -169,7 +169,8 @@ jobs:
             --timeout 180 \
             --cov=xarray \
             --cov-report=xml \
-            --junitxml=pytest.xml
+            --junitxml=pytest.xml \
+            --report-log=reportlog.jsonl
 
       - name: Upload test results
         if: always()
@@ -177,6 +178,13 @@ jobs:
         with:
           name: Test results for OS ${{ runner.os }} pixi-env ${{ matrix.pixi-env }} pytest-addopts ${{ matrix.pytest-addopts }}
           path: pytest.xml
+
+      - name: Upload report log
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-log-${{ runner.os }}-${{ matrix.pixi-env }}-${{ matrix.pytest-addopts || 'default' }}
+          path: reportlog.jsonl
 
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
@@ -188,6 +196,29 @@ jobs:
           env_vars: RUNNER_OS,PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
+
+  requires-coverage:
+    name: Requires marker coverage
+    runs-on: ubuntu-latest
+    needs: test
+    if: needs.test.result == 'success'
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Download report logs
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          pattern: report-log-*
+          path: report-logs
+
+      - name: Check requires marker coverage
+        run: |
+          python3 ci/check_requires_coverage.py \
+            report-logs \
+            --allowlist ci/requires_coverage_allowlist.txt
 
   event_file:
     name: "Event File"
