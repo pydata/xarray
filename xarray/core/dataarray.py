@@ -5230,10 +5230,10 @@ class DataArray(
     def sortby(
         self,
         variables: (
-            Hashable
+            str
             | DataArray
-            | Sequence[Hashable | DataArray]
-            | Callable[[Self], Hashable | DataArray | Sequence[Hashable | DataArray]]
+            | Iterable[Hashable | DataArray]
+            | Callable[[Self], str | DataArray | Iterable[Hashable | DataArray]]
         ),
         ascending: bool = True,
     ) -> Self:
@@ -5255,7 +5255,7 @@ class DataArray(
 
         Parameters
         ----------
-        variables : Hashable, DataArray, sequence of Hashable or DataArray, or Callable
+        variables : str, DataArray, iterable of Hashable or DataArray, or Callable
             1D DataArray objects or name(s) of 1D variable(s) in coords whose values are
             used to sort this array. If a callable, the callable is passed this object,
             and the result is used as the value for cond.

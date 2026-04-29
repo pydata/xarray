@@ -7323,6 +7323,11 @@ class TestDataset:
         actual = ds.sortby(["x", "y"], ascending=False)
         assert_equal(actual, ds)
 
+        # test tuple of dimension names (GH4821)
+        expected = sorted2d
+        actual = ds.sortby(("x", "y"))
+        assert_equal(actual, expected)
+
     def test_sortby_descending_nans(self) -> None:
         # Regression test for https://github.com/pydata/xarray/issues/7358
         # NaN values should remain at the end when sorting in descending order
