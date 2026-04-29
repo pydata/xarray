@@ -278,17 +278,11 @@ def should_promote_to_object(
     """
     np_result_types = set()
     for arr_or_dtype in arrays_and_dtypes:
-        try:
-            result_type = array_api_compat.result_type(
-                maybe_promote_to_variable_width(arr_or_dtype), xp=xp
-            )
-            if isinstance(result_type, np.dtype):
-                np_result_types.add(result_type)
-        except TypeError:
-            # passing individual objects to xp.result_type (i.e., what `array_api_compat.result_type` calls) means NEP-18 implementations won't have
-            # a chance to intercept special values (such as NA) that numpy core cannot handle.
-            # Thus they are considered as types that don't need promotion i.e., the `arr_or_dtype` that rose the `TypeError` will not contribute to `np_result_types`.
-            pass
+        result_type = array_api_compat.result_type(
+            maybe_promote_to_variable_width(arr_or_dtype), xp=xp
+        )
+        if isinstance(result_type, np.dtype):
+            np_result_types.add(result_type)
 
     if np_result_types:
         for left, right in PROMOTE_TO_OBJECT:
@@ -328,6 +322,7 @@ def result_type(
 
     if should_promote_to_object(arrays_and_dtypes, xp):
         return np.dtype(object)
+
     maybe_promote = functools.partial(
         maybe_promote_to_variable_width,
         # let extension arrays handle their own str/bytes
