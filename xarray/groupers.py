@@ -497,6 +497,11 @@ class TimeResampler(Resampler):
         - 'end_day': `origin` is the ceiling midnight of the last day
     offset : pd.Timedelta, datetime.timedelta, or str, default is None
         An offset timedelta added to the origin.
+    boundaries : {"exact", "trim"}, optional
+        How to handle boundaries when the data doesn't evenly fit the resampling
+        frequency. If 'exact', a ValueError will be raised if the data doesn't
+        evenly fit. If 'trim', incomplete periods are dropped. If None (default),
+        uses the current behavior (includes incomplete periods).
     """
 
     freq: ResampleCompatible
@@ -504,6 +509,7 @@ class TimeResampler(Resampler):
     label: SideOptions | None = field(default=None)
     origin: str | DatetimeLike = field(default="start_day")
     offset: pd.Timedelta | datetime.timedelta | str | None = field(default=None)
+    boundaries: Literal["exact", "trim"] | None = field(default=None, kw_only=True)
 
     index_grouper: CFTimeGrouper | pd.Grouper = field(init=False, repr=False)
     group_as_index: pd.Index = field(init=False, repr=False)
@@ -515,6 +521,7 @@ class TimeResampler(Resampler):
             label=self.label,
             origin=self.origin,
             offset=self.offset,
+            boundaries=self.boundaries,
         )
 
     def _init_properties(self, group: T_Group) -> None:
@@ -579,6 +586,39 @@ class TimeResampler(Resampler):
         self._init_properties(group)
         full_index, first_items, codes_ = self._get_index_and_items()
         sbins = first_items.values.astype(np.int64)
+
+        # Handle boundaries parameter for exact checking and trim logic
+        if self.boundaries == "exact":
+            # Check if data evenly fits the resampling frequency
+            counts = np.bincount(codes_)
+            expected_points = len(group) // len(first_items)
+            incomplete_periods = counts < expected_points
+
+            if np.any(incomplete_periods):
+                raise ValueError(
+                    f"Data does not evenly fit the resampling frequency. "
+                    f"Expected {expected_points} points per period, but found periods with "
+                    f"{counts[incomplete_periods]} points. Use boundaries='trim' "
+                    f"to handle incomplete periods."
+                )
+        elif self.boundaries == "trim":
+            # Apply trim logic: set codes to -1 for incomplete periods
+            counts = np.bincount(codes_)
+
+            if len(counts) > 0:
+                # Find the most common count (expected points per period)
+                unique_counts, count_frequencies = np.unique(counts, return_counts=True)
+                most_common_count = unique_counts[np.argmax(count_frequencies)]
+
+                # Identify incomplete periods
+                incomplete_periods = counts < most_common_count
+
+                if np.any(incomplete_periods):
+                    # Find which data points belong to incomplete periods
+                    incomplete_codes = np.where(incomplete_periods)[0]
+                    # Set codes to -1 for points in incomplete periods
+                    codes_[np.isin(codes_, incomplete_codes)] = -1
+
         group_indices: GroupIndices = tuple(
             list(itertools.starmap(slice, pairwise(sbins))) + [slice(sbins[-1], None)]
         )
