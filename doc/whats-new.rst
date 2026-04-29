@@ -25,6 +25,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Expose ``coord_pad_mode`` and associated parameters in ``Dataset.pad`` and
+  ``DataArray.pad`` (:issue:`3868` :issue:`6425` :pull:`11213`). By `Ian Cooke
+  <https://github.com/ircwaves>`_.
 
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
