@@ -31,6 +31,7 @@ See also: :ref:`public-api` and :ref:`api-stability`.
    api/rolling-exp
    api/weighted
    api/resample
+   api/gap
    api/accessors
    api/tutorial
    api/testing
