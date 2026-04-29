@@ -60,6 +60,9 @@ New Features
 
 - Added ``inherit='all_coords'`` option to :py:meth:`DataTree.to_dataset` to inherit
   all parent coordinates, not just indexed ones (:issue:`10812`, :pull:`11230`).
+- Added ``max_concurrency`` parameter to :py:func:`open_datatree` to control
+  the maximum number of concurrent I/O operations when opening groups in parallel
+  with the Zarr backend (:pull:`10742`).
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Support ``col_wrap='auto'`` in plots that will wrap the grid to be as square
   as possible (:pull:`11266`).
@@ -427,6 +430,9 @@ Documentation
 Performance
 ~~~~~~~~~~~
 
+- Improve performance of :py:func:`open_datatree` for zarr stores by using async/concurrent
+  loading of groups and indexes (:pull:`10742`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Add a fastpath to the backend plugin system for standard engines (:issue:`10178`, :pull:`10937`).
   By `Sam Levang <https://github.com/slevang>`_.
 - Optimize :py:class:`~xarray.coding.variables.CFMaskCoder` decoder (:pull:`11105`).
