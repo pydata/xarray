@@ -71,6 +71,10 @@ New Features
   or a fixed ``(width, height)`` tuple instead of computing figure size from
   ``size`` and ``aspect`` (:issue:`11103`).
   By `Kristian Kollsga <https://github.com/kkollsga>`_.
+- Added glob pattern support to the ``group`` parameter of :py:func:`open_datatree`
+  and :py:func:`open_groups`, allowing patterns like ``"*/sweep_0"`` to selectively
+  open matching groups (:issue:`11196`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

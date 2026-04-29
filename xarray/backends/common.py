@@ -249,6 +249,34 @@ def _iter_nc_groups(root, parent="/"):
         yield from _iter_nc_groups(group, parent=gpath)
 
 
+def _is_glob_pattern(pattern: str) -> bool:
+    return any(c in pattern for c in "*?[")
+
+
+def _filter_group_paths(group_paths: Iterable[str], pattern: str) -> list[str]:
+    from xarray.core.treenode import NodePath
+
+    matched: set[str] = {"/"}
+    for path in group_paths:
+        np_ = NodePath(path)
+        if np_.match(pattern):
+            matched.add(path)
+            matched.update(str(p) for p in np_.parents if str(p))
+
+    return [p for p in group_paths if p in matched]
+
+
+def _resolve_group_and_filter(
+    group: str | None,
+    all_group_paths: list[str],
+) -> tuple[str | None, list[str]]:
+    if group is None:
+        return None, all_group_paths
+    if _is_glob_pattern(group):
+        return None, _filter_group_paths(all_group_paths, group)
+    return group, all_group_paths
+
+
 def find_root_and_group(ds):
     """Find the root and group name of a netCDF4/h5netcdf dataset."""
     hierarchy = ()

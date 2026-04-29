@@ -1820,11 +1820,13 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         zarr_format=None,
     ) -> dict[str, Dataset]:
+        from xarray.backends.common import _is_glob_pattern, _resolve_group_and_filter
+
         filename_or_obj = _normalize_path(filename_or_obj)
 
-        # Check for a group and make it a parent if it exists
-        if group:
-            parent = str(NodePath("/") / NodePath(group))
+        effective_group = None if (group and _is_glob_pattern(group)) else group
+        if effective_group:
+            parent = str(NodePath("/") / NodePath(effective_group))
         else:
             parent = str(NodePath("/"))
 
@@ -1841,8 +1843,11 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
         )
 
+        _, filtered_paths = _resolve_group_and_filter(group, list(stores.keys()))
+
         groups_dict = {}
-        for path_group, store in stores.items():
+        for path_group in filtered_paths:
+            store = stores[path_group]
             store_entrypoint = StoreBackendEntrypoint()
 
             with close_on_error(store):
@@ -1856,7 +1861,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            if group:
+            if effective_group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
