@@ -1514,8 +1514,8 @@ class TestDataArray:
         dates = pd.date_range("2000-01-01", periods=10)
         da = DataArray(np.arange(1, 11), [("time", dates)])
 
-        assert_array_equal(da["time.dayofyear"], da.values)
-        assert_array_equal(da.coords["time.dayofyear"], da.values)
+        assert_array_equal(da["time.day_of_year"], da.values)
+        assert_array_equal(da.coords["time.day_of_year"], da.values)
 
     def test_coords(self) -> None:
         # use int64 to ensure repr() consistency on windows

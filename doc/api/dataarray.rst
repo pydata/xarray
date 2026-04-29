@@ -272,8 +272,10 @@ Datetimelike properties
    DataArray.dt.second
    DataArray.dt.microsecond
    DataArray.dt.nanosecond
+   DataArray.dt.day_of_week
    DataArray.dt.dayofweek
    DataArray.dt.weekday
+   DataArray.dt.day_of_year
    DataArray.dt.dayofyear
    DataArray.dt.quarter
    DataArray.dt.days_in_month

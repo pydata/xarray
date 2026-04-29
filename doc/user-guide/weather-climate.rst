@@ -184,8 +184,8 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
   just "year", "month", "day", "hour", "minute", "second", "microsecond",
-  "season", "dayofyear", "dayofweek", and "days_in_month") with the addition
-  of "calendar", absent from pandas:
+  "season", "day_of_year", "day_of_week", and "days_in_month") with the
+  addition of "calendar", absent from pandas:
 
 .. jupyter-execute::
 
@@ -201,11 +201,11 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 .. jupyter-execute::
 
-    da.time.dt.dayofyear
+    da.time.dt.day_of_year
 
 .. jupyter-execute::
 
-    da.time.dt.dayofweek
+    da.time.dt.day_of_week
 
 .. jupyter-execute::
 

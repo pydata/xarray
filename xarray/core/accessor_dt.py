@@ -338,8 +338,8 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
       * time     (time) datetime64[us] 80B 2000-01-01 2000-01-02 ... 2000-01-10
     >>> ts.dt  # doctest: +ELLIPSIS
     <xarray.core.accessor_dt.DatetimeAccessor object at 0x...>
-    >>> ts.dt.dayofyear
-    <xarray.DataArray 'dayofyear' (time: 10)> Size: 80B
+    >>> ts.dt.day_of_year
+    <xarray.DataArray 'day_of_year' (time: 10)> Size: 80B
     array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10])
     Coordinates:
       * time     (time) datetime64[us] 80B 2000-01-01 2000-01-02 ... 2000-01-10
@@ -459,23 +459,45 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
             stacklevel=2,
         )
 
-        weekofyear = self.isocalendar().week
+        return self.isocalendar().week.rename("weekofyear")
 
-        return weekofyear
+    @property
+    def week(self) -> DataArray:
+        "The week ordinal of the year"
 
-    week = weekofyear
+        warnings.warn(
+            "dt.weekofyear and dt.week have been deprecated. Please use "
+            "dt.isocalendar().week instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
+        return self.isocalendar().week
+
+    @property
+    def day_of_week(self) -> T_DataArray:
+        """The day of the week with Monday=0, Sunday=6"""
+        return self._date_field("day_of_week", np.int64)
 
     @property
     def dayofweek(self) -> T_DataArray:
         """The day of the week with Monday=0, Sunday=6"""
-        return self._date_field("dayofweek", np.int64)
+        return self._date_field("day_of_week", np.int64).rename("dayofweek")
 
-    weekday = dayofweek
+    @property
+    def weekday(self) -> T_DataArray:
+        """The day of the week with Monday=0, Sunday=6"""
+        return self._date_field("day_of_week", np.int64).rename("weekday")
+
+    @property
+    def day_of_year(self) -> T_DataArray:
+        """The ordinal day of the year"""
+        return self._date_field("day_of_year", np.int64)
 
     @property
     def dayofyear(self) -> T_DataArray:
         """The ordinal day of the year"""
-        return self._date_field("dayofyear", np.int64)
+        return self._date_field("day_of_year", np.int64).rename("dayofyear")
 
     @property
     def quarter(self) -> T_DataArray:
@@ -487,7 +509,10 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         """The number of days in the month"""
         return self._date_field("days_in_month", np.int64)
 
-    daysinmonth = days_in_month
+    @property
+    def daysinmonth(self) -> T_DataArray:
+        """The number of days in the month"""
+        return self._date_field("days_in_month", np.int64).rename("daysinmonth")
 
     @property
     def season(self) -> T_DataArray:

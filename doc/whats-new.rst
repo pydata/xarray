@@ -66,6 +66,16 @@ New Features
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Added complex dtype support to FillValueCoder for the Zarr backend. (:pull:`11151`)
   By `Max Jones <https://github.com/maxrjones>`_.
+- Following pandas, xarray's
+  :py:class:`~xarray.core.accessor_dt.DatetimeAccessor` now supports
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_week` and
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_year` attributes,
+  which are alternative names for the existing
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofweek` and
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofyear` attributes.
+  These alternative attributes have similarly been added to
+  :py:class:`~xarray.CFTimeIndex` (:pull:`11270`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Added ``facetgrid_figsize`` option to :py:func:`~xarray.set_options` allowing
   :py:class:`~xarray.plot.FacetGrid` to use ``matplotlib.rcParams['figure.figsize']``
   or a fixed ``(width, height)`` tuple instead of computing figure size from
@@ -187,6 +197,16 @@ Bug Fixes
   By `Amartya Anand <https://github.com/SurfyPenguin>`_.
 - Fix h5netcdf backend module detection and ros3 tests (:issue:`11243`, :pull:`11274`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- The names of :py:class:`~xarray.DataArray` objects returned by properties of
+  the :py:class:`~xarray.core.accessor_dt.DatetimeAccessor` now always match
+  the property names. Previously properties like
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.days_in_month`,
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.weekday`, and
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.weekofyear` would return
+  :py:class:`~xarray.DataArray` objects named ``"daysinmonth"``,
+  ``"dayofweek"``, and ``"week"``, respectively; now they return objects named
+  ``"days_in_month"``, ``"weekday"``, and ``"weekofyear"`` (:pull:`11270`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~

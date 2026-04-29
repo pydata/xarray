@@ -58,7 +58,9 @@ class TestDatetimeAccessor:
             "weekofyear",
             "dayofweek",
             "weekday",
+            "day_of_week",
             "dayofyear",
+            "day_of_year",
             "quarter",
             "date",
             "time",
@@ -77,20 +79,20 @@ class TestDatetimeAccessor:
         if field in ["week", "weekofyear"]:
             data = self.times.isocalendar()["week"]
         else:
-            data = getattr(self.times, field)
+            pandas_translations = {
+                "weekday": "day_of_week",
+                "dayofweek": "day_of_week",
+                "daysinmonth": "days_in_month",
+                "dayofyear": "day_of_year",
+            }
+            pandas_name = pandas_translations.get(field, field)
+            data = getattr(self.times, pandas_name)
 
         if data.dtype.kind != "b" and field not in ("date", "time"):
             # pandas 2.0 returns int32 for integer fields now
             data = data.astype("int64")
 
-        translations = {
-            "weekday": "dayofweek",
-            "daysinmonth": "days_in_month",
-            "weekofyear": "week",
-        }
-        name = translations.get(field, field)
-
-        expected = xr.DataArray(data, name=name, coords=[self.times], dims=["time"])
+        expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
 
         if field in ["week", "weekofyear"]:
             with pytest.warns(
@@ -179,7 +181,9 @@ class TestDatetimeAccessor:
             "weekofyear",
             "dayofweek",
             "weekday",
+            "day_of_week",
             "dayofyear",
+            "day_of_year",
             "quarter",
             "date",
             "time",
@@ -441,7 +445,7 @@ def times_3d(times):
 
 @requires_cftime
 @pytest.mark.parametrize(
-    "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
+    "field", ["year", "month", "day", "hour", "day_of_year", "day_of_week"]
 )
 def test_field_access(data, field) -> None:
     result = getattr(data.time.dt, field)
@@ -533,7 +537,7 @@ def test_cftime_strftime_access(data) -> None:
 @requires_cftime
 @requires_dask
 @pytest.mark.parametrize(
-    "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
+    "field", ["year", "month", "day", "hour", "day_of_year", "day_of_week"]
 )
 def test_dask_field_access_1d(data, field) -> None:
     import dask.array as da
@@ -553,7 +557,7 @@ def test_dask_field_access_1d(data, field) -> None:
 @requires_cftime
 @requires_dask
 @pytest.mark.parametrize(
-    "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
+    "field", ["year", "month", "day", "hour", "day_of_year", "day_of_week"]
 )
 def test_dask_field_access(times_3d, data, field) -> None:
     import dask.array as da
