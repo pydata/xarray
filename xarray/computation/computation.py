@@ -24,7 +24,6 @@ from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import (
-    is_allowed_extension_array,
     is_scalar,
     parse_dims_as_set,
 )
@@ -1009,11 +1008,6 @@ def _calc_idxminmax(
             array[dim].data, chunks=((array.sizes[dim],),)
         )
         coord = coord.copy(data=coord_array)
-    elif is_allowed_extension_array(array[dim].data):
-        # Keep pandas-backed extension coordinates on their original indexing
-        # adapter so scalar lookups return a 0d array rather than a malformed
-        # ExtensionArray scalar wrapper.
-        pass
     else:
         coord = coord.copy(data=to_like_array(array[dim].data, array.data))
 

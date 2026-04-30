@@ -1,5 +1,6 @@
 import numpy as np
 
+from xarray.core.utils import is_allowed_extension_array
 from xarray.namedarray.pycompat import array_type
 
 
@@ -78,5 +79,7 @@ def to_like_array(array, like):
     xp = get_array_namespace(like)
     if xp is not np:
         return xp.asarray(array)
+    if is_allowed_extension_array(array):
+        return np.asarray(array)
     # avoid casting things like pint quantities to numpy arrays
     return array
