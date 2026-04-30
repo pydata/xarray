@@ -2734,10 +2734,15 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             zg = zarr.open_group(store_target, mode="w")
             data_int8 = original["x"].values.astype("i1")
-            create_kwargs = {"fill_value": -1}
+            create_kwargs = {
+                "shape": data_int8.shape,
+                "dtype": data_int8.dtype,
+                "fill_value": -1,
+            }
             if has_zarr_v3 and zg.metadata.zarr_format == 3:
                 create_kwargs["dimension_names"] = ("t", "x")
-            arr = zg.create_array("x", data=data_int8, **create_kwargs)
+            arr = zg.create_array("x", **create_kwargs)
+            arr[:] = data_int8
             arr.attrs["dtype"] = "bool"
             arr.attrs["units"] = "-"
             if not (has_zarr_v3 and zg.metadata.zarr_format == 3):
