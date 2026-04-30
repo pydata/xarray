@@ -562,7 +562,12 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
         A variable which has been encoded as described above.
     """
 
-    var = conventions.encode_cf_variable(var, name=name)
+    coders = [
+        c
+        for c in conventions._default_encode_cf_coders()
+        if not isinstance(c, coding.variables.BooleanCoder)
+    ]
+    var = conventions.encode_cf_variable(var, name=name, coders=coders)
     var = ensure_dtype_not_object(var, name=name)
 
     # zarr allows unicode, but not variable-length strings, so it's both
