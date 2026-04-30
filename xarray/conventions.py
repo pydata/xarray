@@ -65,8 +65,22 @@ def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
             )
 
 
+def _default_encode_cf_coders():
+    """Return the default list of coders used by encode_cf_variable."""
+    return [
+        CFDatetimeCoder(),
+        CFTimedeltaCoder(),
+        variables.CFScaleOffsetCoder(),
+        variables.CFMaskCoder(),
+        variables.NativeEnumCoder(),
+        variables.NonStringCoder(),
+        variables.DefaultFillvalueCoder(),
+        variables.BooleanCoder(),
+    ]
+
+
 def encode_cf_variable(
-    var: Variable, needs_copy: bool = True, name: T_Name = None
+    var: Variable, needs_copy: bool = True, name: T_Name = None, coders=None
 ) -> Variable:
     """
     Converts a Variable into a Variable which follows some
@@ -81,6 +95,8 @@ def encode_cf_variable(
     ----------
     var : Variable
         A variable holding un-encoded data.
+    coders : list of VariableCoder, optional
+        List of coders to apply. If None, uses the default CF coder chain.
 
     Returns
     -------
@@ -89,16 +105,10 @@ def encode_cf_variable(
     """
     ensure_not_multiindex(var, name=name)
 
-    for coder in [
-        CFDatetimeCoder(),
-        CFTimedeltaCoder(),
-        variables.CFScaleOffsetCoder(),
-        variables.CFMaskCoder(),
-        variables.NativeEnumCoder(),
-        variables.NonStringCoder(),
-        variables.DefaultFillvalueCoder(),
-        variables.BooleanCoder(),
-    ]:
+    if coders is None:
+        coders = _default_encode_cf_coders()
+
+    for coder in coders:
         var = coder.encode(var, name=name)
 
     for attr_name in CF_RELATED_DATA:
