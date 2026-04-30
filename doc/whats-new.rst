@@ -26,6 +26,12 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- The zarr backend now writes boolean arrays with native ``bool`` dtype instead
+  of converting them to ``int8``. Zarr supports ``bool`` natively, so the
+  ``BooleanCoder`` (which was designed for NetCDF compatibility) is now skipped
+  for zarr writes. Existing zarr stores written with the old ``int8`` encoding
+  are still read correctly. (:issue:`2937`, :pull:`11318`)
+  By `Evan Lyall <https://github.com/elyall>`_.
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
   code ndarrays into Python lists (:issue:`11305`).
