@@ -2709,6 +2709,45 @@ class ZarrBase(CFEncodedBase):
     async def test_load_async(self) -> None:
         await super().test_load_async()
 
+    def test_roundtrip_boolean_dtype(self) -> None:
+        original = create_boolean_data()
+        assert original["x"].dtype == "bool"
+        with self.create_zarr_target() as store_target:
+            self.save(original, store_target, consolidated=False)
+            # Verify on-disk zarr array uses native bool dtype (not int8)
+            zg = zarr.open_group(store_target, mode="r")
+            assert zg["x"].dtype == np.dtype("bool")
+            assert "dtype" not in zg["x"].attrs
+            with self.open(
+                store_target, backend_kwargs={"consolidated": False}
+            ) as actual:
+                assert_identical(original, actual)
+                assert actual["x"].dtype == "bool"
+                # Verify second roundtrip also preserves bool
+                with self.roundtrip(actual) as actual2:
+                    assert_identical(original, actual2)
+                    assert actual2["x"].dtype == "bool"
+
+    def test_roundtrip_boolean_dtype_legacy_int8(self) -> None:
+        """Verify backward compat: old-style int8 + attrs['dtype']='bool' decodes to bool."""
+        original = create_boolean_data()
+        with self.create_zarr_target() as store_target:
+            zg = zarr.open_group(store_target, mode="w")
+            data_int8 = original["x"].values.astype("i1")
+            create_kwargs = {"fill_value": -1}
+            if has_zarr_v3 and zg.metadata.zarr_format == 3:
+                create_kwargs["dimension_names"] = ("t", "x")
+            arr = zg.create_array("x", data=data_int8, **create_kwargs)
+            arr.attrs["dtype"] = "bool"
+            arr.attrs["units"] = "-"
+            if not (has_zarr_v3 and zg.metadata.zarr_format == 3):
+                arr.attrs["_ARRAY_DIMENSIONS"] = ["t", "x"]
+            with self.open(
+                store_target, backend_kwargs={"consolidated": False}
+            ) as actual:
+                assert actual["x"].dtype == "bool"
+                np.testing.assert_array_equal(actual["x"].values, original["x"].values)
+
     def test_roundtrip_bytes_with_fill_value(self):
         pytest.xfail("Broken by Zarr 3.0.7")
 

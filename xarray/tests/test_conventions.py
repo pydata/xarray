@@ -42,6 +42,31 @@ class TestBoolTypeArray:
         assert_array_equal(bx.transpose((1, 0)), x.transpose((1, 0)))
 
 
+class TestEncodeCfVariableCoders:
+    def test_empty_coders_is_identity(self) -> None:
+        var = Variable(["x"], np.array([True, False, True]), {"units": "test"})
+        result = conventions.encode_cf_variable(var, coders=[])
+        assert result.dtype == bool
+        assert_array_equal(result.values, var.values)
+
+    def test_custom_coders_excludes_boolean_coder(self) -> None:
+        var = Variable(["x"], np.array([True, False, True]))
+        coders = [
+            c
+            for c in conventions._default_encode_cf_coders()
+            if not isinstance(c, coding.variables.BooleanCoder)
+        ]
+        result = conventions.encode_cf_variable(var, coders=coders)
+        assert result.dtype == bool
+        assert "dtype" not in result.attrs
+
+    def test_default_coders_encodes_bool_to_int8(self) -> None:
+        var = Variable(["x"], np.array([True, False, True]))
+        result = conventions.encode_cf_variable(var)
+        assert result.dtype == np.int8
+        assert result.attrs.get("dtype") == "bool"
+
+
 class TestNativeEndiannessArray:
     def test(self) -> None:
         x = np.arange(5, dtype=">i8")
