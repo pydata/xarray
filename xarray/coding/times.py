@@ -364,7 +364,7 @@ def _decode_cf_datetime_dtype(
             "opening your dataset with decode_times=False or 'warn' or 'ignore'."
         )
         if cftime is None:
-            msg += " Install cftime if your variable uses a cf calendar."
+            msg += " Install cftime if your variable uses a cf-specific calendar."
         raise ValueError(msg) from err
     else:
         dtype = getattr(result, "dtype", np.dtype("object"))
