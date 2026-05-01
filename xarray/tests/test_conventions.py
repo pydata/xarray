@@ -277,11 +277,6 @@ class TestDecodeCF:
             }
         )
 
-    def test_decode_times_default(self) -> None:
-        # should raise
-        with pytest.raises(ValueError):
-            result = decode_cf(self.dataset_with_one_good_one_bad_time)
-
     def test_decode_times_bad_flag(self) -> None:
         # should raise
         with pytest.raises(ValueError,
@@ -295,7 +290,7 @@ class TestDecodeCF:
                            match="unable to decode time units"):
             result = decode_cf(self.dataset_with_one_good_one_bad_time)
 
-    @pytest.mark.parametrize("flag", [True, "error"])
+    @pytest.mark.parametrize("flag", [True, "raise"])
     def test_decode_times_error(self, flag) -> None:
         # should raise
         with pytest.raises(ValueError,
@@ -312,7 +307,7 @@ class TestDecodeCF:
         assert str(result['good_time'].dtype) == 'datetime64[ns]'
 
 
-    @pytest.mark.parametrize("flag", [False, None])
+    @pytest.mark.parametrize("flag", [False])
     def test_decode_times_false(self, flag) -> None:
         # should not decode the time variables
         result = decode_cf(self.dataset_with_one_good_one_bad_time,

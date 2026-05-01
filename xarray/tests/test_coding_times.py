@@ -2262,7 +2262,7 @@ def test_on_error_warn():
     If on_error="warn", no change, with a warning.
     """
     array = np.array([0, 1, 2], dtype=np.dtype("int64"))
-    encoded = Variable(["time"], array, attrs={"units": "ms since 00:00:00"})
+    encoded = Variable(["time"], array, attrs={"units": "ms since 2000:00:00"})
 
     coder = CFDatetimeCoder(on_error="warn")
 

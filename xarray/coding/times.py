@@ -361,9 +361,10 @@ def _decode_cf_datetime_dtype(
         )
         msg = (
             f"unable to decode time units {units!r} with {calendar_msg!r}. Try "
-            "opening your dataset with decode_times=False or installing cftime "
-            "if it is not installed."
+            "opening your dataset with decode_times=False or 'warn' or 'ignore'."
         )
+        if cftime is None:
+            msg += " Install cftime if your variable uses a cf calendar."
         raise ValueError(msg) from err
     else:
         dtype = getattr(result, "dtype", np.dtype("object"))

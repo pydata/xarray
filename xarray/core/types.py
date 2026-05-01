@@ -284,10 +284,9 @@ CFCalendar = Literal[
 # Used by open_dataset to set the cf time decoding options
 "raise", "warn", "ignore"
 DECODE_TIMES_OPTIONS = {
-    None: "ignore",
     True: "raise",
-    False: "ignore",
-    "error": "raise",
+    False: False,
+    "raise": "raise",
     "warn": "warn",
     "ignore":"ignore"
 }
