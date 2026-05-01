@@ -142,7 +142,7 @@ def decode_cf_variable(
         One of "error", "ignore", "warn", False, or a CFDatetimeCoder
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
         If not False, then non-decodable time units will raise an
-        exception, a warning, or ignore the error. 
+        exception, a warning, or ignore the error.
     decode_endianness : bool
         Decode arrays from non-native to native endianness.
     stack_char_dim : bool
