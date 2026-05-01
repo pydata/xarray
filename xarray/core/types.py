@@ -288,7 +288,7 @@ DECODE_TIMES_OPTIONS = {
     False: False,
     "raise": "raise",
     "warn": "warn",
-    "ignore":"ignore"
+    "ignore": "ignore",
 }
 
 CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]

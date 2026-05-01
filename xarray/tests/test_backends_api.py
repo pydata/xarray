@@ -3,9 +3,9 @@ from __future__ import annotations
 import io
 import re
 import sys
-from numbers import Number
 import tempfile
 import warnings
+from numbers import Number
 
 import numpy as np
 import pytest
@@ -327,6 +327,7 @@ class TestPreferredChunks:
 
         assert initial.coords.equals(final.coords)
 
+
 @pytest.fixture(scope="module")
 def wonky_time_file():
     """
@@ -337,14 +338,20 @@ def wonky_time_file():
     ds = xr.Dataset(
         {
             "good_time": ("good_time", [0, 1, 2], {"units": "days since 2000-01-01"}),
-            "bad_time": ("bad_time", [1.0, 2.0, 3.0], {"units": "mdays since 2000-01-01"}),
+            "bad_time": (
+                "bad_time",
+                [1.0, 2.0, 3.0],
+                {"units": "mdays since 2000-01-01"},
+            ),
         }
     )
-    with tempfile.NamedTemporaryFile(suffix=".nc",
-                                     delete=False,
-                                     ) as tmp:
+    with tempfile.NamedTemporaryFile(
+        suffix=".nc",
+        delete=False,
+    ) as tmp:
         ds.to_netcdf(tmp.name)
         yield tmp.name
+
 
 @requires_cftime
 @requires_netCDF4
@@ -354,7 +361,7 @@ class Test_decode_times_options:
     #       this in.
     # also -- this only tests netCDF4, perhaps it could be
     # paramatrized for all supported backends?
-    # or maybe that's not neccessary -- same code paths.
+    # or maybe that's not necessary -- same code paths.
 
     # Also -- this duplicates the tests in test_conventions.py
     #    I suppose it could just test one flag to make sure it
@@ -363,56 +370,47 @@ class Test_decode_times_options:
     Tests for passing decode_times flags into open_dataset
     with netCDF files
     """
+
     def test_decode_times_default(self, wonky_time_file) -> None:
         # should raise
-        with pytest.raises(ValueError,
-                           match="unable to decode time units") as err:
+        with pytest.raises(ValueError, match="unable to decode time units") as err:
             ds = xr.open_dataset(wonky_time_file)
             ds.close()
         print(err.value)
 
     def test_decode_times_bad_flag(self, wonky_time_file) -> None:
         # should raise
-        with pytest.raises(ValueError,
-                           match="`decode_times` must be one of") as err:
-            ds = xr.open_dataset(wonky_time_file,
-                                 decode_times='bad_flag')
+        with pytest.raises(ValueError, match="`decode_times` must be one of") as err:
+            ds = xr.open_dataset(wonky_time_file, decode_times="bad_flag")
             ds.close()
         print(err.value)
 
     @pytest.mark.parametrize("flag", [True, "raise"])
     def test_decode_times_error(self, flag, wonky_time_file) -> None:
         # should raise
-        with pytest.raises(ValueError,
-                           match="unable to decode time units"):
-            ds = xr.open_dataset(wonky_time_file,
-                                 decode_times=flag)
+        with pytest.raises(ValueError, match="unable to decode time units"):
+            ds = xr.open_dataset(wonky_time_file, decode_times=flag)
             ds.close()
 
     def test_decode_times_warn(self, wonky_time_file) -> None:
         # should warn
-        with pytest.warns(UserWarning,
-                          match="unable to decode time units"):
-            ds = xr.open_dataset(wonky_time_file,
-                                 decode_times='warn')
+        with pytest.warns(UserWarning, match="unable to decode time units"):
+            ds = xr.open_dataset(wonky_time_file, decode_times="warn")
             ds.close()
-        assert str(ds['good_time'].dtype) == 'datetime64[ns]'
-        assert str(ds['bad_time'].dtype) == 'float64'
-
+        assert str(ds["good_time"].dtype) == "datetime64[ns]"
+        assert str(ds["bad_time"].dtype) == "float64"
 
     def test_decode_times_false(self, wonky_time_file) -> None:
         # should not decode the time variables
-        ds = xr.open_dataset(wonky_time_file,
-                             decode_times=False)
-        assert str(ds['good_time'].dtype) == 'int64'
-        assert str(ds['bad_time'].dtype) == 'float64'
+        ds = xr.open_dataset(wonky_time_file, decode_times=False)
+        assert str(ds["good_time"].dtype) == "int64"
+        assert str(ds["bad_time"].dtype) == "float64"
         ds.close()
 
     def test_decode_times_ignore(self, wonky_time_file) -> None:
         # should decode the one good time unit
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            ds = xr.open_dataset(wonky_time_file,
-                                 decode_times='ignore')
+            ds = xr.open_dataset(wonky_time_file, decode_times="ignore")
             ds.close()
-        assert str(ds['good_time'].dtype) == 'datetime64[ns]'
+        assert str(ds["good_time"].dtype) == "datetime64[ns]"
