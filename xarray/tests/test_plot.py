@@ -1668,6 +1668,34 @@ class Common2dMixin:
         for ax in g.axs.flat:
             assert ax.has_data()
 
+    @pytest.mark.parametrize(
+        ["n", "figsize", "aspect", "expected_shape"],
+        [
+            pytest.param(1, None, 1, [1, 1], id="1"),
+            pytest.param(3, None, 1, [1, 3], id="3"),  # <4 should not be wrapped
+            pytest.param(6, None, 1, [2, 3], id="6"),
+            pytest.param(8, None, 1, [3, 3], id="8"),
+            pytest.param(8, [10, 5], 1, [2, 4], id="8-figaspect=2"),
+            pytest.param(8, [5, 10], 1, [4, 2], id="8-figaspect=0.5"),
+            pytest.param(8, None, 4, [4, 2], id="8-aspect=4"),
+            pytest.param(8, None, 0.25, [2, 4], id="8-aspect=0.25"),
+        ],
+    )
+    def test_facetgrid_col_wrap_auto(
+        self,
+        n: int,
+        figsize: None | tuple[int, int],
+        aspect: int,
+        expected_shape: tuple[int, int],
+    ) -> None:
+        a = easy_array((10, 15, n))
+        d = DataArray(a, dims=["y", "x", "z"])
+        g = self.plotfunc(
+            d, x="x", y="y", col="z", col_wrap="auto", figsize=figsize, aspect=aspect
+        )
+
+        assert_array_equal(g.axs.shape, expected_shape)
+
     @pytest.mark.filterwarnings("ignore:This figure includes")
     def test_facetgrid_map_only_appends_mappables(self) -> None:
         a = easy_array((10, 15, 2, 3))
@@ -3567,3 +3595,47 @@ def test_temp_dataarray() -> None:
     locals_ = dict(x="x", extend="var2")
     da = _temp_dataarray(ds, y_, locals_)
     assert da.shape == (3,)
+
+
+@requires_matplotlib
+def test_facetgrid_figsize_rcparams() -> None:
+    """Test that facetgrid_figsize='rcparams' uses matplotlib rcParams."""
+    import matplotlib as mpl
+
+    da = DataArray(
+        np.random.randn(10, 15, 3),
+        dims=["y", "x", "z"],
+        coords={"z": ["a", "b", "c"]},
+    )
+    custom_figsize = (12.0, 8.0)
+
+    with figure_context():
+        # Default behavior: computed from size and aspect
+        g = xplt.FacetGrid(da, col="z")
+        default_figsize = g.fig.get_size_inches()
+        # Default should be (ncol * size * aspect + cbar_space, nrow * size)
+        # = (3 * 3 * 1 + 1, 1 * 3) = (10, 3)
+        np.testing.assert_allclose(default_figsize, (10.0, 3.0))
+
+    with figure_context():
+        # rcparams mode: should use mpl.rcParams['figure.figsize']
+        with mpl.rc_context({"figure.figsize": custom_figsize}):
+            with xr.set_options(facetgrid_figsize="rcparams"):
+                g = xplt.FacetGrid(da, col="z")
+                actual_figsize = g.fig.get_size_inches()
+                np.testing.assert_allclose(actual_figsize, custom_figsize)
+
+    with figure_context():
+        # Tuple mode: fixed figsize via set_options
+        with xr.set_options(facetgrid_figsize=(14.0, 5.0)):
+            g = xplt.FacetGrid(da, col="z")
+            actual_figsize = g.fig.get_size_inches()
+            np.testing.assert_allclose(actual_figsize, (14.0, 5.0))
+
+    with figure_context():
+        # Explicit figsize should override the option
+        with xr.set_options(facetgrid_figsize="rcparams"):
+            explicit_size = (6.0, 4.0)
+            g = xplt.FacetGrid(da, col="z", figsize=explicit_size)
+            actual_figsize = g.fig.get_size_inches()
+            np.testing.assert_allclose(actual_figsize, explicit_size)

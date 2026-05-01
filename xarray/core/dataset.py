@@ -385,6 +385,11 @@ class Dataset(
     ) -> None:
         if data_vars is None:
             data_vars = {}
+        if isinstance(data_vars, Dataset):
+            raise TypeError(
+                "Passing a Dataset as `data_vars` to the Dataset constructor is"
+                " not supported. Use `ds.copy()` to create a copy of a Dataset."
+            )
         if coords is None:
             coords = {}
 
@@ -1221,7 +1226,13 @@ class Dataset(
             if k not in self._coord_names:
                 continue
 
-            if set(self.variables[k].dims) <= needed_dims:
+            if k in self._indexes:
+                if self._indexes[k].should_add_coord_to_array(
+                    k, self._variables[k], set(needed_dims)
+                ):
+                    variables[k] = self._variables[k]
+                    coord_names.add(k)
+            elif set(self.variables[k].dims) <= needed_dims:
                 variables[k] = self._variables[k]
                 coord_names.add(k)
 
@@ -2228,14 +2239,22 @@ class Dataset(
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "a-", r+", None}, optional
-            Persistence mode: "w" means create (overwrite if exists);
-            "w-" means create (fail if exists);
-            "a" means override all existing variables including dimension coordinates (create if does not exist);
-            "a-" means only append those variables that have ``append_dim``.
-            "r+" means modify existing array *values* only (raise an error if
-            any metadata or shapes would change).
+            Persistence mode:
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "a-" means only append those variables that have ``append_dim``.
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
             "r+" if ``region`` is set and ``w-`` otherwise.
+
+            .. note::
+                When modifying an existing Zarr array that is lazily opened, the "w"
+                behavior can be surprising since the underlying file that is being
+                lazily read from might get deleted before the data is computed.
         synchronizer : object, optional
             Zarr array synchronizer.
         group : str, optional
@@ -7155,7 +7174,7 @@ class Dataset(
         variable = Variable(dims, data, self.attrs, fastpath=True)
 
         coords = {k: v.variable for k, v in self.coords.items()}
-        indexes = filter_indexes_from_coords(self._indexes, set(coords))
+        indexes = dict(self._indexes)
         new_dim_index = PandasIndex(list(self.data_vars), dim)
         indexes[dim] = new_dim_index
         coords.update(new_dim_index.create_variables())

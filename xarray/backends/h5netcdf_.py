@@ -277,7 +277,6 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def open_store_variable(self, name, var):
         import h5netcdf.core
-        import h5py
 
         dimensions = var.dimensions
         data = indexing.LazilyIndexedArray(H5NetCDFArrayWrapper(name, self))
@@ -306,6 +305,7 @@ class H5NetCDFStore(WritableCFDataStore):
         encoding["source"] = self._filename
         encoding["original_shape"] = data.shape
 
+        h5py = var._root._h5py
         vlen_dtype = h5py.check_dtype(vlen=var.dtype)
         if vlen_dtype is str:
             encoding["dtype"] = str

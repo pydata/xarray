@@ -56,6 +56,31 @@ def _nicetitle(coord, value, maxchar, template):
     return title
 
 
+def _auto_grid(
+    nfacet: int, figsize: tuple[float, ...] | None, aspect: float
+) -> tuple[int, int]:
+
+    # Try to align the grid to the figsize. If figsize is unknown it gets
+    # computed from the grid, so lets keep it as square as possible
+    faspect = 1 if figsize is None else figsize[0] / figsize[1]
+
+    # Only wrap if > 3 images
+    if nfacet <= 3:
+        return nfacet, 1
+
+    # Geometric ideal case
+    ncol = int(np.ceil(np.sqrt(nfacet * faspect / aspect)))
+    ncol = max(1, min(ncol, nfacet))
+    nrow = int(np.ceil(nfacet / ncol))
+
+    # Reduce columns as long as we don't need more rows
+    # This eliminates empty slots in the last row if aspect < 1
+    while ncol > 1 and (ncol - 1) * nrow >= nfacet:
+        ncol -= 1
+
+    return ncol, nrow
+
+
 T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
 
 
@@ -114,7 +139,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
     _row_var: Hashable | None
     _ncol: int
     _col_var: Hashable | None
-    _col_wrap: int | None
+    _col_wrap: int | Literal["auto"] | None
     row_labels: list[Annotation | None]
     col_labels: list[Annotation | None]
     _x_var: None
@@ -129,7 +154,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         data: T_DataArrayOrSet,
         col: Hashable | None = None,
         row: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         sharex: bool = True,
         sharey: bool = True,
         figsize: Iterable[float] | None = None,
@@ -142,15 +167,16 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         ----------
         data : DataArray or Dataset
             DataArray or Dataset to be plotted.
-        row, col : str
+        row, col : hashable or None, optional
             Dimension names that define subsets of the data, which will be drawn
             on separate facets in the grid.
-        col_wrap : int, optional
-            "Wrap" the grid the for the column variable after this number of columns,
+        col_wrap : int, None or "auto", optional
+            "Wrap" the grid for the column variable after this number of columns,
             adding rows if ``col_wrap`` is less than the number of facets.
-        sharex : bool, optional
+            If "auto" align the grid to the figsize or keep it as square as possible.
+        sharex : bool, default: True
             If true, the facets will share *x* axes.
-        sharey : bool, optional
+        sharey : bool, default: True
             If true, the facets will share *y* axes.
         figsize : Iterable of float or None, optional
             A tuple (width, height) of the figure in inches.
@@ -163,7 +189,6 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         subplot_kws : dict, optional
             Dictionary of keyword arguments for Matplotlib subplots
             (:py:func:`matplotlib.pyplot.subplots`).
-
         """
 
         import matplotlib.pyplot as plt
@@ -195,25 +220,40 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         else:
             raise ValueError("Pass a coordinate name as an argument for row or col")
 
+        # Resolve figsize from global option before computing grid shape,
+        # so that downstream heuristics (e.g. col_wrap="auto") can use it.
+        if figsize is None:
+            from xarray.core.options import OPTIONS
+
+            facetgrid_figsize = OPTIONS["facetgrid_figsize"]
+            if isinstance(facetgrid_figsize, tuple):
+                figsize = facetgrid_figsize
+            elif facetgrid_figsize == "rcparams":
+                import matplotlib as mpl
+
+                figsize = tuple(mpl.rcParams["figure.figsize"])
+        else:
+            # exhaust generators
+            figsize = tuple(figsize)
+
         # Compute grid shape
         if single_group:
             nfacet = len(data[single_group])
-            if col:
-                # idea - could add heuristic for nice shapes like 3x4
-                ncol = nfacet
-            if row:
-                ncol = 1
-            if col_wrap is not None:
-                # Overrides previous settings
+            if col_wrap == "auto":
+                ncol, nrow = _auto_grid(nfacet, figsize, aspect)
+            elif col_wrap is None:
+                ncol = nfacet if col else 1
+                nrow = int(np.ceil(nfacet / ncol))
+            else:
                 ncol = col_wrap
-            nrow = int(np.ceil(nfacet / ncol))
+                nrow = int(np.ceil(nfacet / ncol))
 
         # Set the subplot kwargs
         subplot_kws = {} if subplot_kws is None else subplot_kws
 
         if figsize is None:
-            # Calculate the base figure size with extra horizontal space for a
-            # colorbar
+            # Calculate the base figure size with extra horizontal space
+            # for a colorbar
             cbar_space = 1
             figsize = (ncol * size * aspect + cbar_space, nrow * size)
 

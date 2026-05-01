@@ -346,6 +346,12 @@ rst-to-myst = { version = "*", extras = ["sphinx"] }
 [feature.tools.tasks]
 rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
 
+[feature.numpydoc-lint.dependencies]
+numpydoc = "*"
+
+[feature.numpydoc-lint.tasks]
+numpydoc-lint = { cmd = "python ci/numpydoc-public-api.py" }
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -458,4 +464,5 @@ default = { features = [
   "dev",
 ] }
 policy = { features = ["policy"], no-default-feature = true }
+numpydoc-lint = { features = ["numpydoc-lint"] }
 tools = { features = ["tools"], no-default-feature = true }
