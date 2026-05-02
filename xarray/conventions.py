@@ -363,7 +363,7 @@ def decode_cf_variables(
     attributes: T_Attrs,
     concat_characters: bool | Mapping[str, bool] = True,
     mask_and_scale: bool | Mapping[str, bool] = True,
-    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
+    decode_times: bool | str | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
@@ -424,7 +424,7 @@ def decode_cf_variables(
                 concat_characters=_item_or_default(concat_characters, k, True),
                 mask_and_scale=_item_or_default(mask_and_scale, k, True),
                 decode_times=cast(
-                    bool | CFDatetimeCoder, _item_or_default(decode_times, k, True)
+                    bool | str | CFDatetimeCoder, _item_or_default(decode_times, k, True)
                 ),
                 stack_char_dim=stack_char_dim,
                 use_cftime=_item_or_default(use_cftime, k, None),
@@ -510,7 +510,7 @@ def decode_cf(
     obj: T_DatasetOrAbstractstore,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
+    decode_times: bool | str | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
