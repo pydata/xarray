@@ -26,6 +26,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
+  consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
+  code ndarrays into Python lists (:issue:`11305`).
+
 
 Documentation
 ~~~~~~~~~~~~~
