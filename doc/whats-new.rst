@@ -64,6 +64,11 @@ Bug Fixes
   ``"dayofweek"``, and ``"week"``, respectively; now they return objects named
   ``"days_in_month"``, ``"weekday"``, and ``"weekofyear"`` (:pull:`11270`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix :py:func:`concat` failing with ``TypeError: Cannot interpret
+  '<StringDtype...>' as a data type`` when a ``pandas.Index`` with a
+  ``StringDtype`` is used as the new concat dimension and another input has a
+  numpy string-dtype coord (:issue:`11317`).
+
 
 Documentation
 ~~~~~~~~~~~~~
