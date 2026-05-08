@@ -726,7 +726,7 @@ def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None
         [
             np.datetime64("2001-01-01"),
             np.datetime64("2001-01-01"),
-            np.datetime64("NaT"),
+            np.datetime64("NaT", "D"),
         ],
     )
     expected5 = xr.DataArray(3, [("t", [np.datetime64("2001-01-01")])])
@@ -2018,7 +2018,7 @@ class TestDataArrayResample:
         # missing periods, GH10169
         actual = array.isel(time=[0, 1, 2, 3, 8, 9]).resample(time="1D").last()
         expected = DataArray(
-            np.array([times[3], np.datetime64("NaT"), times[9]]),
+            np.array([times[3], np.datetime64("NaT", "us"), times[9]]),
             dims="time",
             coords={"time": times[::4]},
             name="time",
@@ -3836,7 +3836,7 @@ def test_mean_datetime_edge_cases():
     # Test with NaT values
     dates_with_nat = pd.date_range("2021-01-01", periods=4, freq="D")
     dates_with_nat_array = dates_with_nat.values.copy()
-    dates_with_nat_array[1] = np.datetime64("NaT")
+    dates_with_nat_array[1] = np.datetime64("NaT", "us")
 
     ds = xr.Dataset(
         {

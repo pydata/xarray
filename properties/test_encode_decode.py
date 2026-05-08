@@ -15,6 +15,7 @@ pytest.importorskip("hypothesis")
 import hypothesis.extra.numpy as npst
 import numpy as np
 from hypothesis import given
+from hypothesis import strategies as st
 
 import xarray as xr
 from xarray.coding.times import _parse_iso8601
@@ -46,6 +47,22 @@ def test_CFScaleOffset_coder_roundtrip(original) -> None:
     coder = xr.coding.variables.CFScaleOffsetCoder()
     roundtripped = coder.decode(coder.encode(original))
     xr.testing.assert_identical(original, roundtripped)
+
+
+@given(
+    real=st.floats(allow_nan=True, allow_infinity=True),
+    imag=st.floats(allow_nan=True, allow_infinity=True),
+    dtype=st.sampled_from([np.complex64, np.complex128]),
+)
+def test_FillValueCoder_complex_roundtrip(real, imag, dtype) -> None:
+    from xarray.backends.zarr import FillValueCoder
+
+    value = dtype(complex(real, imag))
+    encoded = FillValueCoder.encode(value, np.dtype(dtype))
+    decoded = FillValueCoder.decode(encoded, np.dtype(dtype))
+    np.testing.assert_equal(
+        np.array(decoded, dtype=dtype), np.array(value, dtype=dtype)
+    )
 
 
 @given(dt=datetimes())

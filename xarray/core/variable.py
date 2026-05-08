@@ -238,7 +238,7 @@ def _possibly_convert_objects(values):
         and values.dtype.kind == "O"
         and Version(pd.__version__) >= Version("3.0.0dev0")
     ):
-        result.dtype = values.dtype
+        result = result.view(values.dtype)
     return result
 
 

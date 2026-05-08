@@ -266,7 +266,7 @@ class TestDatetimeAccessor:
         dates = xr.date_range(
             start="2000/01/01", freq="ME", periods=12, use_cftime=False
         )
-        dates = dates.append(pd.Index([np.datetime64("NaT")]))
+        dates = dates.append(pd.Index([np.datetime64("NaT", "us")]))
         dates = xr.DataArray(dates)
         seasons = xr.DataArray(
             [
