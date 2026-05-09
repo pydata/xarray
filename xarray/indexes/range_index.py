@@ -132,9 +132,9 @@ class RangeCoordinateTransform(CoordinateTransform):
             self.dim,
             dtype=self.dtype,
         )
-        if new_size == 0:
-            # For empty slices, preserve step from parent
-            result._step = self.step
+        # Preserve the logical slice spacing without carrying small binary
+        # multiplication artifacts into materialized coordinates.
+        result._step = round(self.step * new_range.step, 15)
         return result
 
 
@@ -281,6 +281,7 @@ class RangeIndex(CoordinateTransformIndex):
         transform = RangeCoordinateTransform(
             start, stop, size, coord_name, dim, dtype=dtype
         )
+        transform._step = step
 
         return cls(transform)
 

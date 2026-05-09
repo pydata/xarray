@@ -30,6 +30,7 @@ def create_dataset_arange(
         ((), {"start": 2.0, "stop": 10.0}),
         ((2.0, 10.0, 2.0), {}),
         ((), {"start": 2.0, "stop": 10.0, "step": 2.0}),
+        ((0.0, 1.0, 0.3), {}),
     ],
 )
 def test_range_index_arange(args, kwargs) -> None:

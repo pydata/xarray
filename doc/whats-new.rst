@@ -33,6 +33,8 @@ Bug Fixes
   a ``zarr_format=3`` store with ``use_zarr_fill_value_as_mask=False``, so it is no
   longer silently lost on round-trip (:issue:`10269`).
   By `Davis Bennett <https://github.com/d-v-b>`_.
+- Preserve the requested spacing when :py:meth:`xarray.indexes.RangeIndex.arange`
+  is called with a step that does not evenly divide the interval (:issue:`11325`).
 
 
 Documentation
