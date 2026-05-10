@@ -1074,6 +1074,8 @@ def combine_by_coords(
     Finally, if you attempt to combine a mix of unnamed DataArrays with either named
     DataArrays or Datasets, a ValueError will be raised (as this is an ambiguous operation).
     """
+    data_objects = list(data_objects)
+
     if any(isinstance(data_object, DataTree) for data_object in data_objects):
         raise NotImplementedError(
             "combine_by_coords() does not yet support DataTree objects."

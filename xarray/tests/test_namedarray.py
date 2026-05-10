@@ -239,14 +239,14 @@ class TestNamedArray(NamedArraySubclassobjects):
 
     def test_from_array_with_masked_array(self) -> None:
         masked_array: np.ndarray[Any, np.dtype[np.generic]]
-        masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
+        masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])
         with pytest.raises(NotImplementedError):
             from_array(("x",), masked_array)
 
     def test_from_array_with_0d_object(self) -> None:
         data = np.empty((), dtype=object)
         data[()] = (10, 12, 12)
-        narr = from_array((), data)
+        narr: NamedArray[Any, Any] = from_array((), data)
         np.array_equal(np.asarray(narr.data), data)
 
     # TODO: Make xr.core.indexing.ExplicitlyIndexed pass as a subclass of_arrayfunction_or_api
@@ -376,8 +376,8 @@ class TestNamedArray(NamedArraySubclassobjects):
         check_duck_array_typevar(numpy_a)
 
         masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
-        masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))  # type: ignore[no-untyped-call]
-        check_duck_array_typevar(masked_a)  # type: ignore[arg-type]  # MaskedArray not in duckarray union
+        masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))
+        check_duck_array_typevar(masked_a)
 
         custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]]
         custom_a = CustomArrayIndexable(numpy_a)

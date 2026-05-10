@@ -621,8 +621,8 @@ class DataWithCoords(AttrAccessMixin):
         Coordinates:
             lon             (x, y) float64 32B 260.2 260.7 260.2 260.8
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
-            reference_time  datetime64[ns] 8B 2014-09-05
+          * time            (time) datetime64[us] 32B 2014-09-06 ... 2014-09-09
+            reference_time  datetime64[us] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
@@ -635,8 +635,8 @@ class DataWithCoords(AttrAccessMixin):
         Coordinates:
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
-            reference_time  datetime64[ns] 8B 2014-09-05
+          * time            (time) datetime64[us] 32B 2014-09-06 ... 2014-09-09
+            reference_time  datetime64[us] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
@@ -988,12 +988,12 @@ class DataWithCoords(AttrAccessMixin):
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.resample(time="QS-DEC").mean()
         <xarray.DataArray (time: 4)> Size: 32B
         array([ 1.,  4.,  7., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 32B 1999-12-01 2000-03-01 ... 2000-09-01
+          * time     (time) datetime64[us] 32B 1999-12-01 2000-03-01 ... 2000-09-01
 
         Upsample monthly time-series data to daily data:
 
@@ -1041,7 +1041,7 @@ class DataWithCoords(AttrAccessMixin):
                10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
                10.96774194, 11.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         Limit scope of upsampling method
 
@@ -1074,7 +1074,7 @@ class DataWithCoords(AttrAccessMixin):
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         See Also
         --------

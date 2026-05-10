@@ -707,7 +707,7 @@ class DataArrayRolling(Rolling["DataArray"]):
                 f"Reductions are applied along the rolling dimension(s) "
                 f"'{self.dim}'. Passing the 'dim' kwarg to reduction "
                 f"operations has no effect.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=3,
             )
             del kwargs["dim"]

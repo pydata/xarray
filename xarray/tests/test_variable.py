@@ -2757,7 +2757,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         expected = np.arange(5)
         actual: Any = as_compatible_data(original)
         assert_array_equal(expected, actual)
-        assert np.dtype(int) == actual.dtype
+        assert np.dtype(float) == actual.dtype
 
         original1: Any = np.ma.MaskedArray(np.arange(5), mask=4 * [False] + [True])
         expected1: Any = np.arange(5.0)
