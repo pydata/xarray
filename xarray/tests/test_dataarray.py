@@ -7720,7 +7720,7 @@ class TestArrowPyCapsule:
         )
 
     @requires_pyarrow
-    def test_data_array_unamed_variable(self):
+    def test_data_array_unnamed_variable(self):
         import pyarrow as pa
 
         da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [0, 1, 2]})
