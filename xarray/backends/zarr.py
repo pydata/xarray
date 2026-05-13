@@ -366,10 +366,10 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, zarr_format):
             )
             has_larger_final = any(chunks[0] < chunks[-1] for chunks in var_chunks)
             if has_varying_interior or has_larger_final:
-                # Truly rectilinear — return dask-style tuples of per-chunk sizes.
+                # Truly rectilinear: return dask-style tuples of per-chunk sizes.
                 # Requires zarr config: array.rectilinear_chunks = True
                 return tuple(var_chunks)
-            # Regular chunks — return the first chunk size per dimension
+            # Regular chunks: return the first chunk size per dimension
             return tuple(chunk[0] for chunk in var_chunks)
 
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):

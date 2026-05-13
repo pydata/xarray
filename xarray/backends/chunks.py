@@ -169,14 +169,10 @@ def _build_rectilinear_grid_chunks(
     region_start = region.start or 0
     region_stop = region.stop or sum(chunk_sizes)
 
-    boundaries = [0]
-    for cs in chunk_sizes:
-        boundaries.append(boundaries[-1] + cs)
+    boundaries = [0, *itertools.accumulate(chunk_sizes, initial=0)]
 
     result = []
-    for i in range(len(chunk_sizes)):
-        chunk_start = boundaries[i]
-        chunk_end = boundaries[i + 1]
+    for chunk_start, chunk_end in itertools.pairwise(boundaries):
 
         if chunk_end <= region_start or chunk_start >= region_stop:
             continue
@@ -227,7 +223,7 @@ def _validate_rectilinear_chunk_alignment(
     enc_stops = set(itertools.accumulate(enc_chunks))
     region_start = region.start or 0
     dask_stops = {region_start + s for s in itertools.accumulate(dask_chunks)}
-    # The final stop (total size) always matches — exclude it
+    # The final stop (total size) always matches. Exclude it.
     total = sum(enc_chunks)
     enc_stops.discard(total)
     dask_stops.discard(total)
@@ -276,7 +272,7 @@ def validate_grid_chunks_alignment(
         strict=True,
     ):
         if isinstance(chunk_size, (list, tuple)):
-            # Rectilinear dimension — use boundary-based validation
+            # Rectilinear dimension: use boundary-based validation
             _validate_rectilinear_chunk_alignment(
                 dask_chunks=v_chunks,
                 enc_chunks=chunk_size,
@@ -286,7 +282,7 @@ def validate_grid_chunks_alignment(
             )
             continue
 
-        # Regular dimension — existing validation logic
+        # Regular dimension: use existing validation logic
         for i, chunk in enumerate(v_chunks[1:-1]):
             if chunk % chunk_size:
                 raise ValueError(
