@@ -482,8 +482,7 @@ class DataArray(
             import pyarrow as pa
         except ImportError:
             raise ImportError(
-                "pyarrow is required to export via the Arrow PyCapsule Interface. "
-                "Install it with: pip install pyarrow"
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
             ) from None
 
         values = self._variable.data
