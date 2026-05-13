@@ -336,16 +336,11 @@ def _unpack_time_units_and_ref_date_cftime(units: str, calendar: str):
     return time_units, ref_date
 
 
-def _wrap_decode_error(err: Exception, units: str, calendar: str | None) -> ValueError:
-    calendar_msg = (
-        "the default calendar" if calendar is None else f"calendar {calendar!r}"
-    )
-    msg = (
-        f"unable to decode time units {units!r} with {calendar_msg!r}. Try "
-        "opening your dataset with decode_times=False or installing cftime "
-        "if it is not installed."
-    )
-    return ValueError(msg)
+_DECODE_TIME_ERROR_MSG = (
+    "unable to decode time units {units!r} with {calendar_msg}. Try opening "
+    "your dataset with decode_times=False or installing cftime if it is not "
+    "installed."
+)
 
 
 def _decode_cf_datetime_dtype(
@@ -371,7 +366,12 @@ def _decode_cf_datetime_dtype(
             example_value, units, calendar, use_cftime, time_unit
         )
     except Exception as err:
-        raise _wrap_decode_error(err, units, calendar) from err
+        calendar_msg = (
+            "the default calendar" if calendar is None else f"calendar {calendar!r}"
+        )
+        raise ValueError(
+            _DECODE_TIME_ERROR_MSG.format(units=units, calendar_msg=calendar_msg)
+        ) from err
     return getattr(result, "dtype", np.dtype("object"))
 
 
@@ -391,12 +391,17 @@ def _decode_cf_datetime_dtype_from_metadata(
     this path, the dtype no longer depends on the actual values in the
     store — out-of-range values may produce a dask cast mismatch.
     """
+    calendar_msg = (
+        "the default calendar" if calendar is None else f"calendar {calendar!r}"
+    )
     # Validate units up front so every metadata path fails fast on
     # malformed strings (parity with the data-reading path).
     try:
         _unpack_time_unit_and_ref_date(units)
     except Exception as err:
-        raise _wrap_decode_error(err, units, calendar) from err
+        raise ValueError(
+            _DECODE_TIME_ERROR_MSG.format(units=units, calendar_msg=calendar_msg)
+        ) from err
 
     if use_cftime is True:
         return np.dtype("object")
@@ -409,7 +414,9 @@ def _decode_cf_datetime_dtype_from_metadata(
             np.array([0, 1]), units, calendar, use_cftime, time_unit
         )
     except Exception as err:
-        raise _wrap_decode_error(err, units, calendar) from err
+        raise ValueError(
+            _DECODE_TIME_ERROR_MSG.format(units=units, calendar_msg=calendar_msg)
+        ) from err
     return getattr(result, "dtype", np.dtype("object"))
 
 
