@@ -494,10 +494,9 @@ class DataArray(
 
         # Expand coords to match the full flattened length
         coord_arrays = (self.coords[dim].values for dim in dims)
-        # one grid per dim
         grids = np.meshgrid(*coord_arrays, indexing="ij", copy=False)
 
-        columns = {}
+        columns: dict[str, pa.Array] = {}
         for dim, grid in zip(dims, grids, strict=True):
             columns[dim] = pa.array(grid.ravel())
 
