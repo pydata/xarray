@@ -173,7 +173,6 @@ def _build_rectilinear_grid_chunks(
 
     result = []
     for chunk_start, chunk_end in itertools.pairwise(boundaries):
-
         if chunk_end <= region_start or chunk_start >= region_stop:
             continue
 
