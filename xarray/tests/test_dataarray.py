@@ -7676,7 +7676,7 @@ def test_unstack_index_var() -> None:
     assert_identical(actual, expected)
 
 
-class TestArrow:
+class TestArrowPyCapsule:
     @requires_pyarrow
     def test_pyarrow_table_1d(self):
         import pyarrow as pa
