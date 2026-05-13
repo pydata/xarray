@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Union, cast
+from typing import TYPE_CHECKING, Literal, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -336,175 +336,6 @@ def _unpack_time_units_and_ref_date_cftime(units: str, calendar: str):
     return time_units, ref_date
 
 
-class _CannotInferFromMetadata(Exception):
-    """Raised by _infer_dtype_from_metadata when data reads are required."""
-
-
-# Edges of the datetime64[ns] representable range (the value range of a
-# pandas.Timestamp at nanosecond resolution).
-_DATETIME64_NS_LOWER = pd.Timestamp("1677-09-21 00:12:43.145224193")
-_DATETIME64_NS_UPPER = pd.Timestamp("2262-04-11 23:47:16.854775807")
-
-
-def _max_for_storage_dtype(dtype: np.dtype) -> int | None:
-    """Maximum absolute value representable in ``dtype``, or None if the
-    bound is too loose to be useful (int64, floats)."""
-    if dtype.kind in "iu" and dtype.itemsize <= 4:
-        info = np.iinfo(dtype)
-        return int(max(abs(info.min), info.max))
-    return None
-
-
-def _bound_fits_datetime64_ns(max_value: float | int, units: str) -> bool:
-    """True if ``ref_date ± max_value * unit_seconds`` fits in datetime64[ns]."""
-    time_unit, ref_date = _unpack_time_unit_and_ref_date(units)
-    try:
-        delta = pd.Timedelta(int(max_value), unit=time_unit)
-        upper = ref_date + delta
-        lower = ref_date - delta
-    except (OutOfBoundsDatetime, OutOfBoundsTimedelta, OverflowError, ValueError):
-        return False
-    return _DATETIME64_NS_LOWER <= lower and upper <= _DATETIME64_NS_UPPER
-
-
-def _is_backed_by_lazy_backend(data) -> bool:
-    """Walk intermediate coder wrappers to find a backend-lazy array.
-
-    Returns True when some level of the wrapper chain is a
-    ``LazilyIndexedArray`` (zarr/netcdf/DAP backends). Returns False for
-    in-memory data (plain numpy, ``PandasIndexingAdapter``) where reads
-    are essentially free and we want to keep the fail-fast semantics.
-    """
-    # Guard against cycles; bound the depth to a small number.
-    for _ in range(16):
-        if isinstance(data, indexing.LazilyIndexedArray):
-            return True
-        inner = getattr(data, "array", None)
-        if inner is None or inner is data:
-            return False
-        data = inner
-    return False
-
-
-def _bound_from_attrs(attrs: dict, units: str) -> bool:
-    """True if ``valid_max`` or ``time_coverage_end`` in attrs proves the
-    decoded values fit in datetime64[ns]."""
-    bound = attrs.get("valid_max")
-    if bound is not None and _bound_fits_datetime64_ns(bound, units):
-        return True
-    end = attrs.get("time_coverage_end")
-    if end is not None:
-        try:
-            ts = pd.Timestamp(end)
-        except (ValueError, TypeError):
-            return False
-        # Strip any timezone for comparison with tz-naive ns bounds.
-        if ts.tzinfo is not None:
-            ts = ts.tz_convert(None) if ts.tz is not None else ts.tz_localize(None)
-        return bool(_DATETIME64_NS_LOWER <= ts <= _DATETIME64_NS_UPPER)
-    return False
-
-
-def _is_overflow_safe_from_metadata(
-    data,
-    units: str,
-    calendar: str | None,
-    use_cftime: bool | None,
-    time_unit: PDDatetimeUnitOptions,
-    attrs: dict | None,
-) -> bool:
-    """Whether decode_cf_datetime's output dtype is knowable from metadata.
-
-    Output dtype depends on data values only for ``use_cftime=None`` +
-    standard calendar + ``time_unit="ns"`` with a backend-lazy source
-    (where reads are expensive) and no attr/dtype bound that proves
-    values fit the datetime64[ns] range.
-    """
-    if use_cftime is not None:
-        return True
-    # Non-standard calendars always decode to cftime (object dtype).
-    if calendar is not None and not _is_standard_calendar(calendar):
-        return True
-    # Non-"ns" datetime64 resolutions have ranges ~±10¹¹ years — overflow
-    # is unreachable in practice.
-    if time_unit != "ns":
-        return True
-    # Backend-lazy arrays: reads go through the backend's indexing
-    # pipeline (zarr sync/async, DAP, etc.) and can be expensive even
-    # when values are cached. We walk through intermediate coder wrappers
-    # (_ElementwiseFunctionArray) to find the backing array. In-memory
-    # wrappers like PandasIndexingAdapter are not covered here — reading
-    # them is free and preserves fail-fast on invalid values.
-    if _is_backed_by_lazy_backend(data):
-        return True
-    # Chunked + ns + auto: need a proven bound.
-    if attrs is not None and _bound_from_attrs(attrs, units):
-        return True
-    storage_dtype = getattr(data, "dtype", None)
-    if storage_dtype is not None:
-        max_val = _max_for_storage_dtype(storage_dtype)
-        if max_val is not None and _bound_fits_datetime64_ns(max_val, units):
-            return True
-    return False
-
-
-def _infer_dtype_from_metadata(
-    data,
-    units: str,
-    calendar: str | None,
-    use_cftime: bool | None,
-    time_unit: PDDatetimeUnitOptions,
-    attrs: dict | None,
-) -> np.dtype:
-    """Infer the decoded dtype from metadata alone, without reading data.
-
-    Raises ``_CannotInferFromMetadata`` when the dtype depends on values
-    that must be read. For deterministic cases (``use_cftime`` explicit,
-    non-standard calendar) returns the dtype directly so ``cftime`` does
-    not need to be importable. Otherwise runs ``decode_cf_datetime`` on
-    a synthetic ``[0, 1]`` array so resolution-selection logic matches
-    real-data output.
-    """
-    # Validate units — raises ValueError on malformed strings.
-    _unpack_time_unit_and_ref_date(units)
-
-    if use_cftime is True:
-        return np.dtype("object")
-    if calendar is not None and not _is_standard_calendar(calendar):
-        return np.dtype("object")
-
-    if not _is_overflow_safe_from_metadata(
-        data, units, calendar, use_cftime, time_unit, attrs
-    ):
-        raise _CannotInferFromMetadata
-
-    result = decode_cf_datetime(
-        np.array([0, 1]), units, calendar, use_cftime, time_unit
-    )
-    return getattr(result, "dtype", np.dtype("object"))
-
-
-def _infer_dtype_from_first_last(
-    data,
-    units: str,
-    calendar: str | None,
-    use_cftime: bool | None,
-    time_unit: PDDatetimeUnitOptions,
-) -> np.dtype:
-    """Fallback dtype inference that reads the first and last data values.
-
-    Used only when metadata cannot prove the dtype (chunked int64/float64
-    arrays with ``use_cftime=None`` and no value bounds). Reads are
-    expensive on remote-backed stores but unavoidable in this case.
-    """
-    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
-    example_value = np.concatenate(
-        [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
-    )
-    result = decode_cf_datetime(example_value, units, calendar, use_cftime, time_unit)
-    return getattr(result, "dtype", np.dtype("object"))
-
-
 def _wrap_decode_error(err: Exception, units: str, calendar: str | None) -> ValueError:
     calendar_msg = (
         "the default calendar" if calendar is None else f"calendar {calendar!r}"
@@ -523,23 +354,63 @@ def _decode_cf_datetime_dtype(
     calendar: str | None,
     use_cftime: bool | None,
     time_unit: PDDatetimeUnitOptions = "ns",
-    attrs: dict | None = None,
 ) -> np.dtype:
+    """Infer the decoded dtype by reading the first and last data values.
+
+    This is the default ``infer_dtype="data"`` path: it verifies that the
+    first and last dates can actually be decoded, so any overflow
+    surfaces at open time (rather than producing wrong-dtype lazy
+    wrappers).
+    """
+    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
+    example_value = np.concatenate(
+        [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
+    )
     try:
-        return _infer_dtype_from_metadata(
-            data, units, calendar, use_cftime, time_unit, attrs
+        result = decode_cf_datetime(
+            example_value, units, calendar, use_cftime, time_unit
         )
-    except _CannotInferFromMetadata:
-        pass
+    except Exception as err:
+        raise _wrap_decode_error(err, units, calendar) from err
+    return getattr(result, "dtype", np.dtype("object"))
+
+
+def _decode_cf_datetime_dtype_from_metadata(
+    units: str,
+    calendar: str | None,
+    use_cftime: bool | None,
+    time_unit: PDDatetimeUnitOptions = "ns",
+) -> np.dtype:
+    """Infer the decoded dtype from metadata alone, without reading data.
+
+    This is the opt-in ``infer_dtype="metadata"`` path. Short-circuits to
+    a deterministic dtype when ``use_cftime`` is set or the calendar is
+    non-standard (so ``cftime`` does not need to be importable);
+    otherwise runs ``decode_cf_datetime`` on a synthetic ``[0, 1]`` array
+    so the resolution-selection logic matches real-data output. With
+    this path, the dtype no longer depends on the actual values in the
+    store — out-of-range values may produce a dask cast mismatch.
+    """
+    # Validate units up front so every metadata path fails fast on
+    # malformed strings (parity with the data-reading path).
+    try:
+        _unpack_time_unit_and_ref_date(units)
     except Exception as err:
         raise _wrap_decode_error(err, units, calendar) from err
 
+    if use_cftime is True:
+        return np.dtype("object")
+    if use_cftime is False:
+        return np.dtype(f"datetime64[{time_unit}]")
+    if calendar is not None and not _is_standard_calendar(calendar):
+        return np.dtype("object")
     try:
-        return _infer_dtype_from_first_last(
-            data, units, calendar, use_cftime, time_unit
+        result = decode_cf_datetime(
+            np.array([0, 1]), units, calendar, use_cftime, time_unit
         )
     except Exception as err:
         raise _wrap_decode_error(err, units, calendar) from err
+    return getattr(result, "dtype", np.dtype("object"))
 
 
 def _decode_datetime_with_cftime(
@@ -1541,15 +1412,37 @@ class CFDatetimeCoder(VariableCoder):
         May not be supported by all the backends.
     time_unit : PDDatetimeUnitOptions
           Target resolution when decoding dates. Defaults to "ns".
+    infer_dtype : {"data", "metadata"}, default: "data"
+        How to infer the dtype of the decoded variable:
+
+        - ``"data"`` (default): read the first and last values from the
+          store to verify they decode successfully. Preserves
+          backwards-compatible behavior, including the auto-fallback to
+          ``cftime.datetime`` for values outside the
+          ``np.datetime64[ns]`` range.
+        - ``"metadata"``: infer the dtype from ``units``, ``calendar``,
+          ``use_cftime`` and ``time_unit`` alone, with no reads from the
+          store. Significantly speeds up ``open_dataset`` /
+          ``open_datatree`` on remote stores (zarr on S3, icechunk) with
+          many time-encoded variables, but does not verify that all
+          values are in range — if you have dates outside
+          ``np.datetime64[ns]`` (before 1677 or after 2262), pass
+          ``use_cftime=True`` as well.
     """
 
     def __init__(
         self,
         use_cftime: bool | None = None,
         time_unit: PDDatetimeUnitOptions = "ns",
+        infer_dtype: Literal["data", "metadata"] = "data",
     ) -> None:
+        if infer_dtype not in ("data", "metadata"):
+            raise ValueError(
+                f"infer_dtype must be 'data' or 'metadata', got {infer_dtype!r}"
+            )
         self.use_cftime = use_cftime
         self.time_unit = time_unit
+        self.infer_dtype = infer_dtype
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
@@ -1582,14 +1475,14 @@ class CFDatetimeCoder(VariableCoder):
 
             units = pop_to(attrs, encoding, "units")
             calendar = pop_to(attrs, encoding, "calendar")
-            dtype = _decode_cf_datetime_dtype(
-                data,
-                units,
-                calendar,
-                self.use_cftime,
-                self.time_unit,
-                attrs=attrs,
-            )
+            if self.infer_dtype == "metadata":
+                dtype = _decode_cf_datetime_dtype_from_metadata(
+                    units, calendar, self.use_cftime, self.time_unit
+                )
+            else:
+                dtype = _decode_cf_datetime_dtype(
+                    data, units, calendar, self.use_cftime, self.time_unit
+                )
             transform = partial(
                 decode_cf_datetime,
                 units=units,
