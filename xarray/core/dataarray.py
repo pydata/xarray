@@ -477,6 +477,35 @@ class DataArray(
 
         self._close = None
 
+    def __arrow_c_stream__(self, requested_schema: Any = None) -> Any:
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface. "
+                "Install it with: pip install pyarrow"
+            ) from None
+
+        values = self._variable.data
+        dims = self._variable.dims
+
+        if not values.flags["C_CONTIGUOUS"]:
+            values = np.ascontiguousarray(values)
+
+        # Expand coords to match the full flattened length
+        coord_arrays = (self.coords[dim].values for dim in dims)
+        # one grid per dim
+        grids = np.meshgrid(*coord_arrays, indexing="ij", copy=False)
+
+        columns = {}
+        for dim, grid in zip(dims, grids, strict=True):
+            columns[dim] = pa.array(grid.ravel())
+
+        columns[self.name or "values"] = pa.array(values.ravel())
+
+        table = pa.table(columns)
+        return table.__arrow_c_stream__(requested_schema)
+
     @classmethod
     def _construct_direct(
         cls,

@@ -59,6 +59,7 @@ from xarray.tests import (
     requires_iris,
     requires_numexpr,
     requires_pint,
+    requires_polars,
     requires_pyarrow,
     requires_scipy,
     requires_sparse,
@@ -7673,3 +7674,117 @@ def test_unstack_index_var() -> None:
         name="x",
     )
     assert_identical(actual, expected)
+
+
+class TestArrow:
+    @requires_pyarrow
+    def test_pyarrow_table_1d(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords={"x": [10, 20, 30]},
+            name="temperature",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"x", "temperature"}
+        assert table.num_rows == 3
+        assert table.schema.field("x").type == pa.int64()
+        assert table.schema.field("temperature").type == pa.float64()
+        np.testing.assert_array_equal(table["x"].to_pylist(), [10, 20, 30])
+        np.testing.assert_array_equal(table["temperature"].to_pylist(), [1.0, 2.0, 3.0])
+
+    @requires_pyarrow
+    def test_pyarrow_table_2d(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"x", "y", "data"}
+        assert table.num_rows == 6
+        assert table.schema.field("x").type == pa.int64()
+        assert table.schema.field("y").type == pa.int64()
+        assert table.schema.field("data").type == pa.float64()
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), list(np.arange(6, dtype=float))
+        )
+
+    @requires_pyarrow
+    def test_data_array_unamed_variable(self):
+        import pyarrow as pa
+
+        da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [0, 1, 2]})
+        table = pa.table(da)
+
+        assert "values" in table.column_names
+
+    @requires_polars
+    def test_polars_dataframe_1d(self):
+        import polars as pl
+
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords={"x": [10, 20, 30]},
+            name="temperature",
+        )
+        df = pl.from_arrow(da)
+
+        assert isinstance(df, pl.DataFrame)
+        assert set(df.columns) == {"x", "temperature"}
+        assert len(df) == 3
+        np.testing.assert_array_equal(df["x"].to_list(), [10, 20, 30])
+        np.testing.assert_array_equal(df["temperature"].to_list(), [1.0, 2.0, 3.0])
+
+    @requires_polars
+    def test_polars_dataframe_2d(self):
+        import polars as pl
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        df = pl.from_arrow(da)
+
+        assert isinstance(df, pl.DataFrame)
+        assert set(df.columns) == {"x", "y", "data"}
+        assert len(df) == 6
+        np.testing.assert_array_equal(
+            df["data"].to_list(), list(np.arange(6, dtype=float))
+        )
+        # x repeats for each y: [0,0,0,1,1,1]
+        np.testing.assert_array_equal(df["x"].to_list(), [0, 0, 0, 1, 1, 1])
+        # y cycles for each x: [10,20,30,10,20,30]
+        np.testing.assert_array_equal(df["y"].to_list(), [10, 20, 30, 10, 20, 30])
+
+    @requires_polars
+    @requires_pyarrow
+    def test_polars_pyarrow_consistent(self):
+        import polars as pl
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        pa_table = pa.table(da)
+        pl_df = pl.from_arrow(da)
+
+        for col in pa_table.column_names:
+            np.testing.assert_array_equal(
+                pa_table[col].to_pylist(), pl_df[col].to_list()
+            )
