@@ -495,7 +495,7 @@ class DataArray(
         coord_arrays = (self.coords[dim].values for dim in dims)
         grids = np.meshgrid(*coord_arrays, indexing="ij", copy=False)
 
-        columns: dict[str, pa.Array] = {}
+        columns: dict[Hashable, pa.Array] = {}
         for dim, grid in zip(dims, grids, strict=True):
             columns[dim] = pa.array(grid.ravel())
 
