@@ -143,33 +143,35 @@ def _open_scipy_netcdf(
 ) -> scipy.io.netcdf_file:
     import scipy.io
 
-    # TODO: Remove this after upstreaming these fixes.
-    class flush_only_netcdf_file(scipy.io.netcdf_file):
-        # scipy.io.netcdf_file.close() incorrectly closes file objects that
-        # were passed in as constructor arguments:
-        # https://github.com/scipy/scipy/issues/13905
+    if flush_only:
+        if not hasattr(_PickleWorkaround, "flush_only_netcdf_file"):
+            # TODO: Remove this after upstreaming these fixes.
+            class flush_only_netcdf_file(scipy.io.netcdf_file):
+                # scipy.io.netcdf_file.close() incorrectly closes file objects that
+                # were passed in as constructor arguments:
+                # https://github.com/scipy/scipy/issues/13905
 
-        # Instead of closing such files, only call flush(), which is
-        # equivalent as long as the netcdf_file object is not mmapped.
-        # This suffices to keep BytesIO objects open long enough to read
-        # their contents from to_netcdf(), but underlying files still get
-        # closed when the netcdf_file is garbage collected (via __del__),
-        # and will need to be fixed upstream in scipy.
-        def close(self):
-            if hasattr(self, "fp") and not self.fp.closed:
-                self.flush()
-                self.fp.seek(0)  # allow file to be read again
+                # Instead of closing such files, only call flush(), which is
+                # equivalent as long as the netcdf_file object is not mmapped.
+                # This suffices to keep BytesIO objects open long enough to read
+                # their contents from to_netcdf(), but underlying files still get
+                # closed when the netcdf_file is garbage collected (via __del__),
+                # and will need to be fixed upstream in scipy.
+                def close(self):
+                    if hasattr(self, "fp") and not self.fp.closed:
+                        self.flush()
+                        self.fp.seek(0)  # allow file to be read again
 
-        def __del__(self):
-            # Remove the __del__ method, which in scipy is aliased to close().
-            # These files need to be closed explicitly by xarray.
-            pass
+                def __del__(self):
+                    # Remove the __del__ method, which in scipy is aliased to close().
+                    # These files need to be closed explicitly by xarray.
+                    pass
 
-    _PickleWorkaround.add_cls(flush_only_netcdf_file)
+            _PickleWorkaround.add_cls(flush_only_netcdf_file)
 
-    netcdf_file = (
-        _PickleWorkaround.flush_only_netcdf_file if flush_only else scipy.io.netcdf_file
-    )
+        netcdf_file = _PickleWorkaround.flush_only_netcdf_file
+    else:
+        netcdf_file = scipy.io.netcdf_file
 
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
