@@ -7769,6 +7769,25 @@ class TestArrowPyCapsule:
         # y cycles for each x: [10,20,30,10,20,30]
         np.testing.assert_array_equal(df["y"].to_list(), [10, 20, 30, 10, 20, 30])
 
+    @requires_dask
+    @requires_pyarrow
+    def test_dask_dataarray(self):
+        import dask.array as da
+        import pyarrow as pa
+
+        dask_da = xr.DataArray(
+            da.from_array(np.arange(6, dtype=float).reshape(2, 3)),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+
+        table = pa.table(dask_da)
+        assert isinstance(table, pa.Table)
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), list(np.arange(6, dtype=float))
+        )
+
     @requires_polars
     @requires_pyarrow
     def test_polars_pyarrow_consistent(self):
