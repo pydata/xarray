@@ -158,6 +158,7 @@ module = [
   "opt_einsum.*",
   "pint.*",
   "pooch.*",
+  "polars.*",
   "pyarrow.*",
   "pydap.*",
   "seaborn.*",
