@@ -485,10 +485,10 @@ class DataArray(
                 "pyarrow is required to export via the Arrow PyCapsule Interface."
             ) from None
 
-        values = self._variable.data
+        values = self._variable.values
         dims = self._variable.dims
 
-        if not values.flags["C_CONTIGUOUS"]:
+        if not values.flags.c_contiguous:
             values = np.ascontiguousarray(values)
 
         # Expand coords to match the full flattened length
