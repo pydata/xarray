@@ -29,6 +29,8 @@ Bug Fixes
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
   code ndarrays into Python lists (:issue:`11305`).
+- Fixed pickling of datasets opened from file-like objects with the scipy
+  backend after multiple opens (:issue:`11323`).
 
 
 Documentation

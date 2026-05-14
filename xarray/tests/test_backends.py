@@ -4735,6 +4735,24 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
     def test_pickle_dataarray(self) -> None:
         super().test_pickle_dataarray()
 
+    def test_pickle_open_dataset_from_separate_file_objects(self) -> None:
+        original = Dataset({"foo": ("x", [1, 2, 3])})
+        fobj = BytesIO()
+        original.to_netcdf(fobj, engine="scipy")
+        payload = fobj.getvalue()
+
+        ds1 = ds2 = None
+        try:
+            ds1 = open_dataset(BytesIO(payload), engine="scipy")
+            ds2 = open_dataset(BytesIO(payload), engine="scipy")
+            with pickle.loads(pickle.dumps(ds1)) as unpickled:
+                assert_identical(unpickled, original)
+        finally:
+            if ds1 is not None:
+                ds1.close()
+            if ds2 is not None:
+                ds2.close()
+
     @pytest.mark.parametrize("create_default_indexes", [True, False])
     def test_create_default_indexes(self, tmp_path, create_default_indexes) -> None:
         store_path = tmp_path / "tmp.nc"
