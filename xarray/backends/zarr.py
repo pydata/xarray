@@ -938,10 +938,19 @@ class ZarrStore(AbstractWritableDataStore):
             # by interpreting Zarr's fill_value to mean the same as netCDF's _FillValue
             if zarr_array.fill_value is not None:
                 attributes["_FillValue"] = zarr_array.fill_value
-        elif "_FillValue" in attributes:
-            attributes["_FillValue"] = FillValueCoder.decode(
-                attributes["_FillValue"], zarr_array.dtype
-            )
+        else:
+            # Preserve the Zarr array fill_value in the encoding so it is not
+            # lost on round-trip. The write path reads it back from here.
+            # Only zarr_format 3 supports `fill_value` as an encoding key
+            # (in zarr_format 2 the fill_value is set via `_FillValue`).
+            # See https://github.com/pydata/xarray/issues/10269
+            zarr_format_3 = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
+            if zarr_format_3 and zarr_array.fill_value is not None:
+                encoding["fill_value"] = zarr_array.fill_value
+            if "_FillValue" in attributes:
+                attributes["_FillValue"] = FillValueCoder.decode(
+                    attributes["_FillValue"], zarr_array.dtype
+                )
 
         return Variable(dimensions, data, attributes, encoding)
 
