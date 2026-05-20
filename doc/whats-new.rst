@@ -29,6 +29,9 @@ Bug Fixes
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
   code ndarrays into Python lists (:issue:`11305`).
+- Fix :py:meth:`DataArray.idxmax` and :py:meth:`DataArray.idxmin` for interval
+  coordinates by preserving pandas extension index adapters during label lookup
+  (:issue:`11300`).
 
 
 Documentation

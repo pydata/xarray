@@ -5530,6 +5530,30 @@ class TestReduce1D(TestReduce):
         result7 = ar0.idxmax(fill_value=-1j)
         assert_identical(result7, expected7)
 
+    @pytest.mark.parametrize(
+        ("func_name", "values"),
+        [
+            pytest.param("idxmax", [False, True, True], id="idxmax"),
+            pytest.param("idxmin", [True, False, True], id="idxmin"),
+        ],
+    )
+    def test_idxminmax_interval_coords(
+        self,
+        x: np.ndarray,
+        minindex: int | float,
+        maxindex: int | float,
+        nanindex: int | None,
+        func_name: Literal["idxmax", "idxmin"],
+        values: list[bool],
+    ) -> None:
+        interval_index = pd.IntervalIndex.from_breaks([0, 1, 2, 3])
+        array = xr.DataArray(values, dims=["z"], coords={"z": interval_index})
+
+        result = getattr(array, func_name)()
+
+        expected = xr.DataArray(pd.Interval(1, 2, closed="right"), name="z")
+        assert_identical(result, expected)
+
     @pytest.mark.filterwarnings(
         "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
