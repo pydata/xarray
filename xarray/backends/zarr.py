@@ -945,7 +945,7 @@ class ZarrStore(AbstractWritableDataStore):
             # (in zarr_format 2 the fill_value is set via `_FillValue`).
             # See https://github.com/pydata/xarray/issues/10269
             zarr_format_3 = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
-            if zarr_format_3 and zarr_array.fill_value is not None:
+            if zarr_format_3:
                 encoding["fill_value"] = zarr_array.fill_value
             if "_FillValue" in attributes:
                 attributes["_FillValue"] = FillValueCoder.decode(
