@@ -3880,6 +3880,27 @@ class ZarrBase(CFEncodedBase):
             # ``raise_on_invalid=vn in check_encoding_set`` line in zarr.py
             # ds.foo.encoding["fill_value"] = fv
 
+    def test_zarr_fill_value_in_encoding_on_read(self) -> None:
+        # GH #10269: the Zarr array fill_value should be preserved in the
+        # variable encoding on read, so that it is not lost on round-trip.
+        # `fill_value` is an independent encoding key only for zarr_format 3;
+        # for zarr_format 2 the fill_value is set via `_FillValue`.
+        if not has_zarr_v3 or zarr.config.get("default_zarr_format") != 3:
+            pytest.skip("fill_value is only an encoding key for zarr_format 3")
+
+        ds = xr.Dataset({"foo": ("x", [1, 2, 3])})
+        ds.foo.encoding = {"fill_value": -99}
+
+        open_kwargs = {"consolidated": False, "use_zarr_fill_value_as_mask": False}
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as actual:
+            assert actual.foo.encoding["fill_value"] == -99
+
+        # the fill_value must survive an open -> write -> open round-trip even
+        # when the user never touches the encoding explicitly
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as opened:
+            with self.roundtrip(opened, open_kwargs=open_kwargs) as actual:
+                assert actual.foo.encoding["fill_value"] == -99
+
 
 @requires_zarr
 @pytest.mark.skipif(
