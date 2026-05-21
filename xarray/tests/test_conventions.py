@@ -51,12 +51,7 @@ class TestEncodeCfVariableCoders:
 
     def test_custom_coders_excludes_boolean_coder(self) -> None:
         var = Variable(["x"], np.array([True, False, True]))
-        coders = [
-            c
-            for c in conventions._default_encode_cf_coders()
-            if not isinstance(c, coding.variables.BooleanCoder)
-        ]
-        result = conventions.encode_cf_variable(var, coders=coders)
+        result = conventions.encode_cf_variable(var, coders=conventions.ZARR_CODERS)
         assert result.dtype == bool
         assert "dtype" not in result.attrs
 
