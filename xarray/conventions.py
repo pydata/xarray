@@ -37,7 +37,18 @@ CF_RELATED_DATA_NEEDS_PARSING = (
     "cell_measures",
     "formula_terms",
 )
-
+ZARR_CODERS = (
+    CFDatetimeCoder(),
+    CFTimedeltaCoder(),
+    variables.CFScaleOffsetCoder(),
+    variables.CFMaskCoder(),
+    variables.NativeEnumCoder(),
+    variables.NonStringCoder(),
+    variables.DefaultFillvalueCoder(),
+)
+DEFAULT_CODERS = ZARR_CODERS + (
+    variables.BooleanCoder(),
+)
 
 if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
@@ -63,20 +74,6 @@ def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
                 "to convert MultiIndex levels into coordinate variables instead "
                 "or use https://cf-xarray.readthedocs.io/en/latest/coding.html."
             )
-
-
-def _default_encode_cf_coders():
-    """Return the default list of coders used by encode_cf_variable."""
-    return [
-        CFDatetimeCoder(),
-        CFTimedeltaCoder(),
-        variables.CFScaleOffsetCoder(),
-        variables.CFMaskCoder(),
-        variables.NativeEnumCoder(),
-        variables.NonStringCoder(),
-        variables.DefaultFillvalueCoder(),
-        variables.BooleanCoder(),
-    ]
 
 
 def encode_cf_variable(
@@ -106,7 +103,7 @@ def encode_cf_variable(
     ensure_not_multiindex(var, name=name)
 
     if coders is None:
-        coders = _default_encode_cf_coders()
+        coders = DEFAULT_CODERS
 
     for coder in coders:
         var = coder.encode(var, name=name)
