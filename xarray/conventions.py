@@ -46,9 +46,7 @@ ZARR_CODERS = (
     variables.NonStringCoder(),
     variables.DefaultFillvalueCoder(),
 )
-DEFAULT_CODERS = ZARR_CODERS + (
-    variables.BooleanCoder(),
-)
+DEFAULT_CODERS = ZARR_CODERS + (variables.BooleanCoder(),)
 
 if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
