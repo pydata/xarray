@@ -1366,10 +1366,15 @@ class PandasMultiIndex(PandasIndex):
                 indexer = _query_slice(self.index, label, coord_name)
 
             elif isinstance(label, tuple):
-                if _is_nested_tuple(label):
+                if len(label) == self.index.nlevels:
+                    try:
+                        indexer = self.index.get_loc(label)
+                    except (KeyError, TypeError, pd.errors.InvalidIndexError):
+                        if not _is_nested_tuple(label):
+                            raise
+                        indexer = self.index.get_locs(label)
+                elif _is_nested_tuple(label):
                     indexer = self.index.get_locs(label)
-                elif len(label) == self.index.nlevels:
-                    indexer = self.index.get_loc(label)
                 else:
                     levels = [self.index.names[i] for i in range(len(label))]
                     indexer, new_index = self.index.get_loc_level(label, level=levels)
