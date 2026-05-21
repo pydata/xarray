@@ -8,6 +8,11 @@ from typing import IO, TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 import numpy as np
 
+try:
+    from scipy.io import netcdf_file as netcdf_file_base
+except ImportError:
+    netcdf_file_base = object  # type: ignore[assignment,misc,unused-ignore]  # scipy is optional
+
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
@@ -122,16 +127,27 @@ class ScipyArrayWrapper(BackendArray):
                     raise
 
 
-# This is a dirty workaround to allow pickling of the flush_only_netcdf_file class.
-# https://stackoverflow.com/questions/72766345/attributeerror-cant-pickle-local-object-in-multiprocessing
-# TODO: Remove this after upstreaming the fixes to scipy.
-class _PickleWorkaround:
-    flush_only_netcdf_file: type[scipy.io.netcdf_file]
+# TODO: Make the scipy import lazy again after upstreaming these fixes.
+class flush_only_netcdf_file(netcdf_file_base):
+    # scipy.io.netcdf_file.close() incorrectly closes file objects that
+    # were passed in as constructor arguments:
+    # https://github.com/scipy/scipy/issues/13905
 
-    @classmethod
-    def add_cls(cls, new_class: type[Any]) -> None:
-        setattr(cls, new_class.__name__, new_class)
-        new_class.__qualname__ = cls.__qualname__ + "." + new_class.__name__
+    # Instead of closing such files, only call flush(), which is
+    # equivalent as long as the netcdf_file object is not mmapped.
+    # This suffices to keep BytesIO objects open long enough to read
+    # their contents from to_netcdf(), but underlying files still get
+    # closed when the netcdf_file is garbage collected (via __del__),
+    # and will need to be fixed upstream in scipy.
+    def close(self):
+        if hasattr(self, "fp") and not self.fp.closed:
+            self.flush()
+            self.fp.seek(0)  # allow file to be read again
+
+    def __del__(self):
+        # Remove the __del__ method, which in scipy is aliased to close().
+        # These files need to be closed explicitly by xarray.
+        pass
 
 
 def _open_scipy_netcdf(
@@ -143,33 +159,7 @@ def _open_scipy_netcdf(
 ) -> scipy.io.netcdf_file:
     import scipy.io
 
-    # TODO: Remove this after upstreaming these fixes.
-    class flush_only_netcdf_file(scipy.io.netcdf_file):
-        # scipy.io.netcdf_file.close() incorrectly closes file objects that
-        # were passed in as constructor arguments:
-        # https://github.com/scipy/scipy/issues/13905
-
-        # Instead of closing such files, only call flush(), which is
-        # equivalent as long as the netcdf_file object is not mmapped.
-        # This suffices to keep BytesIO objects open long enough to read
-        # their contents from to_netcdf(), but underlying files still get
-        # closed when the netcdf_file is garbage collected (via __del__),
-        # and will need to be fixed upstream in scipy.
-        def close(self):
-            if hasattr(self, "fp") and not self.fp.closed:
-                self.flush()
-                self.fp.seek(0)  # allow file to be read again
-
-        def __del__(self):
-            # Remove the __del__ method, which in scipy is aliased to close().
-            # These files need to be closed explicitly by xarray.
-            pass
-
-    _PickleWorkaround.add_cls(flush_only_netcdf_file)
-
-    netcdf_file = (
-        _PickleWorkaround.flush_only_netcdf_file if flush_only else scipy.io.netcdf_file
-    )
+    netcdf_file = flush_only_netcdf_file if flush_only else scipy.io.netcdf_file
 
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
