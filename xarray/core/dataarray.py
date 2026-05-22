@@ -544,7 +544,7 @@ class DataArray(
         if not values.flags.c_contiguous:
             values = np.ascontiguousarray(values)
 
-        coord_arrays = [self.coords[dim].values for dim in dims]
+        coord_arrays = [coord.values for coord in self._coords.values()]
         grids = np.meshgrid(*coord_arrays, indexing="ij", copy=False)
 
         values_column = self.name or "values"
