@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import datetime
+import json
 import warnings
 from collections.abc import (
     Callable,
@@ -255,6 +256,21 @@ class _LocIndexer(Generic[T_DataArray]):
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
+class _NumpyEncoder(json.JSONEncoder):
+    """Encode numpy value in Arrow schema metadata"""
+
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
+
 class DataArray(
     AbstractArray,
     DataWithCoords,
@@ -477,6 +493,43 @@ class DataArray(
 
         self._close = None
 
+    def __arrow_c_schema__(self):
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        dims = self._variable.dims
+        values_column = self.name or "values"
+
+        fields = []
+        for dim in dims:
+            arrow_dtype = pa.from_numpy_dtype(self.coords[dim].dtype)
+            fields.append(pa.field(str(dim), arrow_dtype))
+
+        fields.append(
+            pa.field(str(values_column), pa.from_numpy_dtype(self._variable.dtype))
+        )
+
+        xarray_metadata = {
+            "name": self.name,
+            "dims": list(self._variable.dims),
+            "attrs": self.attrs,
+            "coords": {
+                str(name): variable.to_dict(data=False)
+                for name, variable in self._coords.items()
+            },
+        }
+        schema_metadata = {
+            b"xarray:arrow_version": b"v1",
+            b"xarray": json.dumps(xarray_metadata, cls=_NumpyEncoder).encode(),
+        }
+
+        schema = pa.schema(fields, metadata=schema_metadata)
+        return schema.__arrow_c_schema__()
+
     def __arrow_c_stream__(self, requested_schema: Any = None) -> Any:
         try:
             import pyarrow as pa
@@ -491,17 +544,18 @@ class DataArray(
         if not values.flags.c_contiguous:
             values = np.ascontiguousarray(values)
 
-        # Expand coords to match the full flattened length
-        coord_arrays = (self.coords[dim].values for dim in dims)
+        coord_arrays = [self.coords[dim].values for dim in dims]
         grids = np.meshgrid(*coord_arrays, indexing="ij", copy=False)
+
+        values_column = self.name or "values"
 
         columns: dict[Hashable, pa.Array] = {}
         for dim, grid in zip(dims, grids, strict=True):
             columns[dim] = pa.array(grid.ravel())
 
-        columns[self.name or "values"] = pa.array(values.ravel())
+        columns[values_column] = pa.array(values.ravel())
 
-        table = pa.table(columns)
+        table = pa.table(columns, schema=pa.schema(self))
         return table.__arrow_c_stream__(requested_schema)
 
     @classmethod
