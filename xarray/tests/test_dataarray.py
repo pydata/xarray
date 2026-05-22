@@ -7807,3 +7807,44 @@ class TestArrowPyCapsule:
             np.testing.assert_array_equal(
                 pa_table[col].to_pylist(), pl_df[col].to_list()
             )
+
+    @requires_pyarrow
+    def test_arrow_schema_fields(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        schema = pa.schema(da)
+
+        assert isinstance(schema, pa.Schema)
+        assert schema.names == ["x", "y", "data"]
+        assert schema.field("x").type == pa.int64()
+        assert schema.field("y").type == pa.int64()
+        assert schema.field("data").type == pa.float64()
+
+    @requires_pyarrow
+    def test_arrow_schema_metadata(self):
+        import json
+
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords={"x": [10, 20, 30]},
+            name="temperature",
+            attrs={"units": "K", "long_name": "temperature"},
+        )
+        schema = pa.schema(da)
+
+        assert schema.metadata[b"xarray:arrow_version"] == b"v1"
+
+        xarray_meta = json.loads(schema.metadata[b"xarray"])
+        assert xarray_meta["name"] == "temperature"
+        assert xarray_meta["dims"] == ["x"]
+        assert xarray_meta["attrs"] == {"units": "K", "long_name": "temperature"}
+        assert "x" in xarray_meta["coords"]
