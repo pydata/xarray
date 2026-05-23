@@ -1019,6 +1019,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         DataArray.load
         Dataset.load
         """
+        # Fast path: an in-memory numpy array has nothing to load. The full
+        # to_duck_array dispatch otherwise walks is_chunked_array, the
+        # ExplicitlyIndexed isinstance check, and is_duck_array only to return
+        # self._data unchanged.
+        if isinstance(self._data, np.ndarray):
+            return self
         self._data = to_duck_array(self._data, **kwargs)
         return self
 
@@ -1052,6 +1058,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         DataArray.load_async
         Dataset.load_async
         """
+        if isinstance(self._data, np.ndarray):
+            return self
         self._data = await async_to_duck_array(self._data, **kwargs)
         return self
 
