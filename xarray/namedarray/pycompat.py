@@ -8,7 +8,7 @@ import numpy as np
 from packaging.version import Version
 
 from xarray.core.utils import is_scalar
-from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
+from xarray.namedarray.utils import is_dask_collection, is_duck_array, is_duck_dask_array
 
 integer_types = (int, np.integer)
 
@@ -89,7 +89,16 @@ def mod_version(mod: ModType) -> Version:
 
 
 def is_chunked_array(x: duckarray[Any, Any]) -> bool:
-    return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
+    # Fast path: numpy arrays are the dominant case in non-dask datasets and
+    # never expose a `chunks` attribute, so we can skip all the duck-array
+    # protocol work. Avoiding this dispatch matters for ``Dataset.load()`` on
+    # datasets with many variables — each variable was previously paying for
+    # two ``is_duck_array`` calls plus a dask-collection check.
+    if isinstance(x, np.ndarray):
+        return False
+    if not is_duck_array(x):
+        return False
+    return is_dask_collection(x) or hasattr(x, "chunks")
 
 
 def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:

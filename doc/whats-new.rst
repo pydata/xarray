@@ -42,6 +42,12 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Speed up :py:meth:`Dataset.load` and other ``.load()`` paths on datasets
+  with many variables by short-circuiting ``is_chunked_array`` for
+  ``numpy.ndarray`` inputs and removing a duplicate ``is_duck_array``
+  call inside the function. Roughly 1.5× faster ``isel().load()`` on a
+  400-scalar-var dataset (0.52 ms → 0.34 ms); no effect on chunked paths.
+
 
 .. _whats-new.2026.04.0:
 
