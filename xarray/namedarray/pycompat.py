@@ -8,7 +8,11 @@ import numpy as np
 from packaging.version import Version
 
 from xarray.core.utils import is_scalar
-from xarray.namedarray.utils import is_dask_collection, is_duck_array, is_duck_dask_array
+from xarray.namedarray.utils import (
+    is_dask_collection,
+    is_duck_array,
+    is_duck_dask_array,
+)
 
 integer_types = (int, np.integer)
 
