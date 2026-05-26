@@ -54,6 +54,9 @@ def module_available(module: str, minversion: str | None = None) -> bool:
     available : bool
         Whether the module is installed.
     """
+    if module is None:
+        return False
+
     if importlib.util.find_spec(module) is None:
         return False
 

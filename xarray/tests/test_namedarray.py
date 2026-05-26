@@ -666,3 +666,17 @@ def test_fake_target_chunksize_cftime() -> None:
 
     assert faked_chunksize == 73
     assert dtype == np.float64
+
+
+def test_module_available() -> None:
+    """Test that module_available handles None input gracefully."""
+    from xarray.namedarray.utils import module_available
+
+    # Existing behavior: valid module names work
+    assert module_available("numpy") is True
+    assert module_available("nonexistent_module_xyz") is False
+    assert module_available("numpy", minversion="1.0.0") is True
+    assert module_available("numpy", minversion="999.0.0") is False
+
+    # Bug fix: None input should return False, not crash
+    assert module_available(None) is False
