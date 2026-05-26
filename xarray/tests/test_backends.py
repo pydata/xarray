@@ -8275,3 +8275,40 @@ def test_h5netcdf_storage_options() -> None:
             storage_options={"skip_instance_cache": False},
         ) as ds:
             assert_identical(xr.concat([ds1, ds2], dim="time", data_vars="all"), ds)
+
+
+@requires_zarr
+def test_zarr_backend_apply_mask_with_fill_value() -> None:
+    """Test for segfault when using FillValue in Zarr."""
+    from xarray.backends.zarr import FillValueCoder
+
+    store = zarr.storage.MemoryStore()
+    root = zarr.create_group(store=store, zarr_format=3)
+    arr = root.create_array(
+        "data",
+        shape=(100, 100),
+        chunks=(10, 10),
+        dtype="float32",
+        fill_value=-9999.0,
+        dimension_names=("y", "x"),
+        attributes={"_FillValue": FillValueCoder.encode(-9999.0, np.dtype("float32"))},
+    )
+    arr[:] = np.arange(0.0, 100 * 100, dtype="float32").reshape(100, 100)
+    arr[0:5, 0:5] = -9999.0
+    zarr.consolidate_metadata(root.store)
+
+    with xr.open_zarr(
+        store,
+        consolidated=True,
+        zarr_format=3,
+        use_zarr_fill_value_as_mask=True,
+    ) as ds:
+        da = ds["data"]
+
+        # Triggers _ElementwiseFunctionArray.get_duck_array -> _apply_mask -> np.where
+        # Segfaults on CPython 3.14 + zarr v3
+        loaded = da.to_masked_array()
+        assert loaded.shape == (100, 100)
+        assert np.ma.is_masked(loaded)
+        assert loaded.mask[0, 0]
+        assert not loaded.mask[0, -1, -1]
