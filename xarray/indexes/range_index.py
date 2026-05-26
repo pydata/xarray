@@ -278,10 +278,13 @@ class RangeIndex(CoordinateTransformIndex):
 
         size = math.ceil((stop - start) / step)
 
+        # Compute stop so the step property naturally returns the requested step
+        # instead of overriding the property cache. The step property formula is
+        # (stop - start) / size when _step is None.
+        canonical_stop = start + size * step
         transform = RangeCoordinateTransform(
-            start, stop, size, coord_name, dim, dtype=dtype
+            start, canonical_stop, size, coord_name, dim, dtype=dtype
         )
-        transform._step = step
 
         return cls(transform)
 
