@@ -330,6 +330,7 @@ from xarray.namedarray._array_api._set_functions import (
     unique_counts,
     unique_inverse,
     unique_values,
+    isin,
 )
 
 __all__ += [
@@ -337,6 +338,7 @@ __all__ += [
     "unique_counts",
     "unique_inverse",
     "unique_values",
+    "isin",
 ]
 
 
