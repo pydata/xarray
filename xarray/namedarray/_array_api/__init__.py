@@ -326,19 +326,19 @@ __all__ += [
 ]
 
 from xarray.namedarray._array_api._set_functions import (
+    isin,
     unique_all,
     unique_counts,
     unique_inverse,
     unique_values,
-    isin,
 )
 
 __all__ += [
+    "isin",
     "unique_all",
     "unique_counts",
     "unique_inverse",
     "unique_values",
-    "isin",
 ]
 
 
