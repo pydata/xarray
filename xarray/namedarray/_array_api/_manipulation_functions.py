@@ -34,7 +34,7 @@ from xarray.namedarray._typing import (
 from xarray.namedarray.core import NamedArray
 
 
-def broadcast_arrays(*arrays: NamedArray[Any, Any]) -> list[NamedArray[Any, Any]]:
+def broadcast_arrays(*arrays: NamedArray[Any, Any]) -> tuple[NamedArray[Any, Any], ...]:
     """
     Broadcasts one or more arrays against one another.
 

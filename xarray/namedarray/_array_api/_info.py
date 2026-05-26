@@ -179,16 +179,16 @@ class __array_namespace_info__:
             return res
         raise ValueError(f"unsupported kind: {kind!r}")
 
-    def devices(self) -> list[_Device]:
+    def devices(self) -> tuple[_Device, ...]:
         """
         Returns a list of supported devices which are available at runtime.
 
         Examples
         --------
         >>> __array_namespace_info__().devices()
-        ['cpu']
+        ('cpu',)
         """
-        return [self.default_device()]
+        return (self.default_device(),)
 
 
 if __name__ == "__main__":

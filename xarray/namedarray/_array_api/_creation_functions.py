@@ -408,7 +408,7 @@ def linspace(
 
 def meshgrid(
     *arrays: NamedArray[Any, Any], indexing: str = "xy"
-) -> list[NamedArray[Any, Any]]:
+) -> tuple[NamedArray[Any, Any], ...]:
     """
     Returns coordinate matrices from coordinate vectors.
 
@@ -467,24 +467,24 @@ def meshgrid(
 
     >>> x0, x1, x2 = ones(()), ones((2,), dims=("x",)), ones((3,), dims=("y",))
     >>> meshgrid()
-    []
+    ()
     >>> meshgrid(x0)
-    [<xarray.NamedArray (dim_0: 1)> Size: 8B
-    array([1.])]
+    (<xarray.NamedArray (dim_0: 1)> Size: 8B
+    array([1.]),)
     >>> meshgrid(x0, x1)
-    [<xarray.NamedArray (x: 2, dim_0: 1)> Size: 16B
+    (<xarray.NamedArray (x: 2, dim_0: 1)> Size: 16B
     array([[1.],
            [1.]]), <xarray.NamedArray (x: 2, dim_0: 1)> Size: 16B
     array([[1.],
-           [1.]])]
+           [1.]]))
     >>> meshgrid(x0, x1, x2, indexing="ij")
-    [<xarray.NamedArray (dim_0: 1, x: 2, y: 3)> Size: 48B
+    (<xarray.NamedArray (dim_0: 1, x: 2, y: 3)> Size: 48B
     array([[[1., 1., 1.],
             [1., 1., 1.]]]), <xarray.NamedArray (dim_0: 1, x: 2, y: 3)> Size: 48B
     array([[[1., 1., 1.],
             [1., 1., 1.]]]), <xarray.NamedArray (dim_0: 1, x: 2, y: 3)> Size: 48B
     array([[[1., 1., 1.],
-            [1., 1., 1.]]])]
+            [1., 1., 1.]]]))
 
     TODO: Problems with meshgrid:
 
