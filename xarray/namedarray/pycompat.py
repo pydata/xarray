@@ -93,12 +93,12 @@ def mod_version(mod: ModType) -> Version:
 
 
 def is_chunked_array(x: duckarray[Any, Any]) -> bool:
-    # Fast path: numpy arrays are the dominant case in non-dask datasets and
-    # never expose a `chunks` attribute, so we can skip all the duck-array
-    # protocol work. Avoiding this dispatch matters for ``Dataset.load()`` on
-    # datasets with many variables — each variable was previously paying for
-    # two ``is_duck_array`` calls plus a dask-collection check.
-    if isinstance(x, np.ndarray):
+    # Fast path: ndarrays (and ndarray subclasses without a `chunks` attribute,
+    # e.g. MaskedArray) are the dominant non-dask case and skip the duck-array
+    # protocol work entirely. Subclasses that *do* expose `chunks` — test fakes
+    # like DummyChunkedArray, or third-party chunked-array impls — fall through
+    # to the full check below.
+    if isinstance(x, np.ndarray) and not hasattr(x, "chunks"):
         return False
     if not is_duck_array(x):
         return False
