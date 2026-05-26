@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import datetime
+import re
 from itertools import product
 
 import numpy as np
+import pandas as pd
 import pytest
+import pytz
 
 from xarray import (
     DataArray,
     Dataset,
+    DataTree,
     MergeError,
     combine_by_coords,
     combine_nested,
@@ -624,8 +629,8 @@ class TestNestedCombine:
                 datasets,
                 concat_dim=["dim1", "dim2"],
                 data_vars="all",
-                combine_attrs=combine_attrs,  # type: ignore[arg-type]
-            )
+                combine_attrs=combine_attrs,
+            )  # type: ignore[call-overload]
             assert_identical(result, expected)
 
     def test_combine_nested_missing_data_new_dim(self):
@@ -764,7 +769,21 @@ class TestNestedCombine:
         with pytest.raises(
             ValueError, match=r"Can't combine datasets with unnamed arrays."
         ):
-            combine_nested(objs, "x")
+            combine_nested(objs, "x")  # type: ignore[arg-type]
+
+    def test_nested_combine_mixed_datatrees_and_datasets(self):
+        objs = [DataTree.from_dict({"foo": 0}), Dataset({"foo": 1})]
+        with pytest.raises(
+            ValueError,
+            match=r"Can't combine a mix of DataTree and non-DataTree objects.",
+        ):
+            combine_nested(objs, concat_dim="x")  # type: ignore[arg-type]
+
+    def test_datatree(self):
+        objs = [DataTree.from_dict({"foo": 0}), DataTree.from_dict({"foo": 1})]
+        expected = DataTree.from_dict({"foo": ("x", [0, 1])})
+        actual = combine_nested(objs, concat_dim="x")
+        assert expected.identical(actual)
 
 
 class TestCombineDatasetsbyCoords:
@@ -1139,6 +1158,22 @@ class TestCombineDatasetsbyCoords:
         actual = combine_by_coords([x2, x1], compat="override")
         assert_equal(actual["a"], x2["a"])
 
+    def test_combine_by_coords_extension_array(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/11235
+        arrs = []
+        expected_vals = []
+        for i in range(2):
+            t = datetime.datetime(2026, 3, 1, hour=i).astimezone(pytz.timezone("UTC"))
+            expected_vals += [t]
+            da = DataArray().expand_dims(
+                time=[t],
+                dummy=[i],
+            )
+            arrs.append(da)
+        expected = pd.array(expected_vals)
+        result = combine_by_coords(arrs, join="outer")
+        pd.testing.assert_extension_array_equal(result["time"].data, expected)
+
 
 class TestCombineMixedObjectsbyCoords:
     def test_combine_by_coords_mixed_unnamed_dataarrays(self):
@@ -1209,6 +1244,16 @@ class TestCombineMixedObjectsbyCoords:
         actual = combine_by_coords([named_da1, named_da2], join="outer")
         expected = merge([named_da1, named_da2], compat="no_conflicts", join="outer")
         assert_identical(expected, actual)
+
+    def test_combine_by_coords_datatree(self):
+        tree = DataTree.from_dict({"/nested/foo": ("x", [10])}, coords={"x": [1]})
+        with pytest.raises(
+            NotImplementedError,
+            match=re.escape(
+                "combine_by_coords() does not yet support DataTree objects."
+            ),
+        ):
+            combine_by_coords([tree])  # type: ignore[list-item]
 
 
 class TestNewDefaults:

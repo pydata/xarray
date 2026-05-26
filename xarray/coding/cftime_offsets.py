@@ -1126,7 +1126,7 @@ def cftime_range(
     """
     emit_user_level_warning(
         "cftime_range() is deprecated, please use xarray.date_range(..., use_cftime=True) instead.",
-        DeprecationWarning,
+        FutureWarning,
     )
 
     return date_range(
@@ -1415,7 +1415,7 @@ def date_range(
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
                 dtype='object', length=6, calendar='noleap', freq='2MS')
 
-    See also
+    See Also
     --------
     pandas.date_range
     cftime_range

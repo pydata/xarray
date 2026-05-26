@@ -75,14 +75,45 @@ class RangeCoordinateTransform(CoordinateTransform):
         return {self.dim: positions}
 
     def equals(
-        self, other: CoordinateTransform, exclude: frozenset[Hashable] | None = None
+        self,
+        other: CoordinateTransform,
+        exclude: frozenset[Hashable] | None = None,
+        *,
+        exact: bool = False,
     ) -> bool:
+        """Check equality with another RangeCoordinateTransform.
+
+        Parameters
+        ----------
+        other : CoordinateTransform
+            The other transform to compare with.
+        exclude : frozenset of hashable, optional
+            Dimensions excluded from checking (unused for 1D RangeIndex).
+        exact : bool, default False
+            If False (default), use np.isclose() for floating point comparisons
+            to handle accumulated floating point errors from slicing operations.
+            If True, require exact equality of start and stop values.
+
+        Returns
+        -------
+        bool
+            True if the transforms are equal, False otherwise.
+        """
         if not isinstance(other, RangeCoordinateTransform):
             return False
 
-        return (
-            self.start == other.start
-            and self.stop == other.stop
+        if exact:
+            return (
+                self.start == other.start
+                and self.stop == other.stop
+                and self.size == other.size
+            )
+
+        # Use np.isclose for floating point comparisons to handle accumulated
+        # floating point errors (e.g., from slicing operations)
+        return bool(
+            np.isclose(self.start, other.start)
+            and np.isclose(self.stop, other.stop)
             and self.size == other.size
         )
 
@@ -129,6 +160,35 @@ class RangeIndex(CoordinateTransformIndex):
 
     def __init__(self, transform: RangeCoordinateTransform):
         super().__init__(transform)
+
+    def equals(
+        self,
+        other: "Index",
+        *,
+        exclude: frozenset[Hashable] | None = None,
+        exact: bool = False,
+    ) -> bool:
+        """Check equality with another RangeIndex.
+
+        Parameters
+        ----------
+        other : Index
+            The other index to compare with.
+        exclude : frozenset of hashable, optional
+            Dimensions excluded from checking (unused for 1D RangeIndex).
+        exact : bool, default False
+            If False (default), use np.isclose() for floating point comparisons
+            to handle accumulated floating point errors from slicing operations.
+            If True, require exact equality of start and stop values.
+
+        Returns
+        -------
+        bool
+            True if the indexes are equal, False otherwise.
+        """
+        if not isinstance(other, RangeIndex):
+            return False
+        return self.transform.equals(other.transform, exclude=exclude, exact=exact)
 
     @classmethod
     def arange(

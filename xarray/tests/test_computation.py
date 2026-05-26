@@ -2245,6 +2245,11 @@ def test_where_attrs() -> None:
     expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
     assert_identical(expected, actual)
 
+    # x and y as a scalar, takes no attrs
+    actual = xr.where(cond, 1, 0, keep_attrs=False)
+    expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
+    assert_identical(expected, actual)
+
     # cond and y as a scalar, takes attrs from x
     actual = xr.where(True, x, y, keep_attrs=True)
     expected = xr.DataArray([1, 1], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
@@ -2641,6 +2646,7 @@ def test_complex_number_reduce(compute_backend):
     da.min()
 
 
+@pytest.mark.filterwarnings("ignore:numpy.fix is deprecated.")
 def test_fix() -> None:
     val = 3.0
     val_fixed = np.fix(val)

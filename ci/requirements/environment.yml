@@ -4,7 +4,7 @@ channels:
   - nodefaults
 dependencies:
   - aiobotocore
-  - array-api-strict<2.4
+  - array-api-strict
   - boto3
   - bottleneck
   - cartopy
@@ -37,7 +37,6 @@ dependencies:
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
-  - pydap-server
   - pytest
   - pytest-asyncio
   - pytest-cov

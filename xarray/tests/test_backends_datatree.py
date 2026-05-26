@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray import DataTree, load_datatree, open_datatree, open_groups
@@ -569,8 +570,6 @@ class TestH5NetCDFDatatreeIO(NetCDFIOBase):
 class TestPyDAPDatatreeIO:
     """Test PyDAP backend for DataTree."""
 
-    pytestmark = pytest.mark.xfail(reason="test.opendap.org reports a 404 error")
-
     engine: T_DataTreeNetcdfEngine | None = "pydap"
     # you can check these by adding a .dmr to urls, and replacing dap4 with http
     unaligned_datatree_url = (
@@ -582,7 +581,8 @@ class TestPyDAPDatatreeIO:
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
 
     def test_open_datatree_unaligned_hierarchy(
-        self, url=unaligned_datatree_url
+        self,
+        url=unaligned_datatree_url,
     ) -> None:
         with pytest.raises(
             ValueError,
@@ -615,7 +615,7 @@ class TestPyDAPDatatreeIO:
         ) as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
 
-    def test_inherited_coords(self, url=simplegroup_datatree_url) -> None:
+    def test_inherited_coords(self, tmpdir, url=simplegroup_datatree_url) -> None:
         """Test that `open_datatree` inherits coordinates from root tree.
 
         This particular h5 file is a test file that inherits the time coordinate from the root
@@ -641,7 +641,19 @@ class TestPyDAPDatatreeIO:
             │       Temperature  (time, Z, Y, X) float32 ...
             |       Salinity     (time, Z, Y, X) float32 ...
         """
-        tree = open_datatree(url, engine=self.engine)
+        import pydap
+        from pydap.net import create_session
+
+        # Create a session with pre-set retry params in pydap backend, to cache urls
+        cache_name = tmpdir / "debug"
+        session = create_session(
+            use_cache=True, cache_kwargs={"cache_name": cache_name}
+        )
+        session.cache.clear()
+
+        _version_ = Version(pydap.__version__)
+
+        tree = open_datatree(url, engine=self.engine, session=session)
         assert set(tree.dims) == {"time", "Z", "nv"}
         assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
         assert tree["/SimpleGroup"].coords["Z"].dims == ("Z",)
@@ -651,6 +663,13 @@ class TestPyDAPDatatreeIO:
             assert set(tree["/SimpleGroup"].dims) == set(
                 list(expected.dims) + ["Z", "nv"]
             )
+
+        if _version_ > Version("3.5.5"):
+            # Total downloads are: 1 dmr, + 1 dap url for all dimensions for each group
+            assert len(session.cache.urls()) == 3
+        else:
+            # 1 dmr + 1 dap url per dimension (total there are 4 dimension arrays)
+            assert len(session.cache.urls()) == 5
 
     def test_open_groups_to_dict(self, url=all_aligned_child_nodes_url) -> None:
         aligned_dict_of_datasets = open_groups(url, engine=self.engine)
@@ -685,20 +704,28 @@ class TestZarrDatatreeIO:
             codec = Blosc(cname="zstd", clevel=3, shuffle=2)
             comp = {"compressors": (codec,)} if has_zarr_v3 else {"compressor": codec}
         elif zarr_format == 3:
-            # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
-            from zarr.registry import get_codec_class
+            import zarr
 
-            Blosc = get_codec_class("numcodecs.blosc")
-            comp = {"compressors": (Blosc(cname="zstd", clevel=3),)}  # type: ignore[call-arg]
+            comp = {
+                "compressors": (zarr.codecs.BloscCodec(cname="zstd", clevel=3),),
+            }
 
         enc = {"/set2": dict.fromkeys(original_dt["/set2"].dataset.data_vars, comp)}
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
             compressor_key = "compressors" if has_zarr_v3 else "compressor"
-            assert (
-                roundtrip_dt["/set2/a"].encoding[compressor_key] == comp[compressor_key]
-            )
+            if zarr_format == 3:
+                # zarr v3 BloscCodec auto-tunes typesize and shuffle on write,
+                # so we only check the attributes we explicitly set
+                rt_codec = roundtrip_dt["/set2/a"].encoding[compressor_key][0]
+                assert rt_codec.cname.value == "zstd"
+                assert rt_codec.clevel == 3
+            else:
+                assert (
+                    roundtrip_dt["/set2/a"].encoding[compressor_key]
+                    == comp[compressor_key]
+                )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
             with pytest.raises(ValueError, match=r"unexpected encoding group.*"):

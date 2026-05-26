@@ -103,45 +103,45 @@ def test_range_index_isel() -> None:
 
     # slicing
     actual = ds.isel(x=slice(None))
-    assert_identical(actual, ds, check_default_indexes=False)
+    assert_identical(actual, ds, check_default_indexes=False, check_indexes=True)
 
     actual = ds.isel(x=slice(1, None))
     expected = create_dataset_arange(0.1, 1.0, 0.1)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     actual = ds.isel(x=slice(None, 2))
     expected = create_dataset_arange(0.0, 0.2, 0.1)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     actual = ds.isel(x=slice(1, 3))
     expected = create_dataset_arange(0.1, 0.3, 0.1)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     actual = ds.isel(x=slice(None, None, 2))
     expected = create_dataset_arange(0.0, 1.0, 0.2)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     actual = ds.isel(x=slice(None, None, -1))
     expected = create_dataset_arange(0.9, -0.1, -0.1)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     actual = ds.isel(x=slice(None, 4, -1))
     expected = create_dataset_arange(0.9, 0.4, -0.1)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     actual = ds.isel(x=slice(8, 4, -1))
     expected = create_dataset_arange(0.8, 0.4, -0.1)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     actual = ds.isel(x=slice(8, None, -1))
     expected = create_dataset_arange(0.8, -0.1, -0.1)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     # https://github.com/pydata/xarray/issues/10441
     ds2 = create_dataset_arange(0.0, 3.0, 0.1)
     actual = ds2.isel(x=slice(4, None, 3))
     expected = create_dataset_arange(0.4, 3.0, 0.3)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     # scalar
     actual = ds.isel(x=0)
@@ -157,7 +157,7 @@ def test_range_index_isel() -> None:
     # fancy indexing with 1-d Variable
     actual = ds.isel(x=xr.Variable("y", [0, 2]))
     expected = xr.Dataset(coords={"x": ("y", [0.0, 0.2])}).set_xindex("x")
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
     assert isinstance(actual.xindexes["x"], PandasIndex)
 
     # fancy indexing with n-d Variable
@@ -228,12 +228,12 @@ def test_range_index_sel() -> None:
     # start-stop slice
     actual = ds.sel(x=slice(0.12, 0.28), method="nearest")
     expected = create_dataset_arange(0.1, 0.3, 0.1)
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     # start-stop-step slice
     actual = ds.sel(x=slice(0.0, 1.0, 0.2), method="nearest")
     expected = ds.isel(x=range(0, 10, 2))
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     # basic indexing
     actual = ds.sel(x=0.52, method="nearest")
@@ -279,12 +279,12 @@ def test_range_index_rename() -> None:
     actual = ds.rename_vars(x="y")
     idx = RangeIndex.arange(0.0, 1.0, 0.1, coord_name="y", dim="x")
     expected = xr.Dataset(coords=xr.Coordinates.from_xindex(idx))
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
     actual = ds.rename_dims(x="y")
     idx = RangeIndex.arange(0.0, 1.0, 0.1, coord_name="x", dim="y")
     expected = xr.Dataset(coords=xr.Coordinates.from_xindex(idx))
-    assert_identical(actual, expected, check_default_indexes=False)
+    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
 
 
 def test_range_index_repr() -> None:
@@ -301,3 +301,89 @@ def test_range_index_repr_inline() -> None:
     actual = index._repr_inline_(max_width=70)
     expected = "RangeIndex (start=0, stop=1, step=0.1)"
     assert actual == expected
+
+
+def test_range_index_equals_floating_point_tolerance() -> None:
+    """Test that equals() handles floating point precision errors correctly.
+
+    When slicing a RangeIndex, floating point errors can accumulate in the
+    internal state (e.g., stop=0.30000000000000004 vs stop=0.3), but the
+    indexes should still be considered equal if they represent the same values.
+    """
+    # Create an index directly
+    index1 = RangeIndex.arange(0.0, 0.3, 0.1, dim="x")
+
+    # Create the same index by slicing a larger one
+    # This will accumulate floating point error: stop = 0.0 + 3 * 0.1 = 0.30000000000000004
+    index_large = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
+    ds_large = xr.Dataset(coords=xr.Coordinates.from_xindex(index_large))
+    ds_sliced = ds_large.isel(x=slice(3))
+    index2 = ds_sliced.xindexes["x"]
+
+    # They should be equal despite tiny floating point differences
+    assert index1.equals(index2)
+    assert index2.equals(index1)
+
+    # Verify they represent the same values
+    ds1 = xr.Dataset(coords=xr.Coordinates.from_xindex(index1))
+    ds2 = xr.Dataset(coords=xr.Coordinates.from_xindex(index2))
+    assert np.allclose(ds1["x"].values, ds2["x"].values)
+
+
+def test_range_index_equals_different_sizes() -> None:
+    """Test that equals() returns False for indexes with different sizes."""
+    index1 = RangeIndex.arange(0.0, 0.3, 0.1, dim="x")
+    index2 = RangeIndex.arange(0.0, 0.4, 0.1, dim="x")
+
+    assert not index1.equals(index2)
+    assert not index2.equals(index1)
+
+
+def test_range_index_equals_different_start() -> None:
+    """Test that equals() returns False for indexes with significantly different start values."""
+    index1 = RangeIndex.arange(0.0, 0.3, 0.1, dim="x")
+    index2 = RangeIndex.arange(0.1, 0.4, 0.1, dim="x")
+
+    assert not index1.equals(index2)
+    assert not index2.equals(index1)
+
+
+def test_range_index_equals_different_stop() -> None:
+    """Test that equals() returns False for indexes with significantly different stop values."""
+    index1 = RangeIndex.arange(0.0, 0.3, 0.1, dim="x")
+    index2 = RangeIndex.arange(0.0, 0.5, 0.1, dim="x")
+
+    assert not index1.equals(index2)
+    assert not index2.equals(index1)
+
+
+def test_range_index_equals_different_type() -> None:
+    """Test that equals() returns False when comparing with a different index type."""
+    index1 = RangeIndex.arange(0.0, 0.3, 0.1, dim="x")
+    index2 = PandasIndex(pd.Index([0.0, 0.1, 0.2]), dim="x")
+
+    assert not index1.equals(index2)
+    # Note: we don't test index2.equals(index1) because PandasIndex.equals()
+    # has its own logic
+
+
+def test_range_index_equals_exact() -> None:
+    """Test that equals(exact=True) requires exact floating point match."""
+    # Create an index directly
+    index1 = RangeIndex.arange(0.0, 0.3, 0.1, dim="x")
+
+    # Create the same index by slicing - this accumulates floating point error
+    index_large = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
+    ds_large = xr.Dataset(coords=xr.Coordinates.from_xindex(index_large))
+    ds_sliced = ds_large.isel(x=slice(3))
+    index2 = ds_sliced.xindexes["x"]
+
+    # Default (exact=False) should be equal due to np.isclose tolerance
+    assert index1.equals(index2)
+
+    # With exact=True, tiny floating point differences cause inequality
+    assert not index1.equals(index2, exact=True)
+
+    # But identical indexes should still be equal with exact=True
+    index3 = RangeIndex.arange(0.0, 0.3, 0.1, dim="x")
+    assert index1.equals(index3, exact=True)

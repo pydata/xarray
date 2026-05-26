@@ -14,75 +14,99 @@ on:
 env:
   FORCE_COLOR: 3
 
+permissions: {}
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
     runs-on: ubuntu-latest
     if: |
       github.repository == 'pydata/xarray'
-      && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'schedule')
+      && github.event_name == 'pull_request'
       && !contains(github.event.pull_request.labels.*.name, 'skip-ci')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1
+          persist-credentials: false
+      - uses: xarray-contrib/ci-trigger@10cd2bfec3484946a4058a421ddf9cfad101e715 # v1.2.1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
 
-  hypothesis:
-    name: Slow Hypothesis Tests
-    runs-on: "ubuntu-latest"
+  cache-pixi-lock:
     needs: detect-ci-trigger
     if: |
       always()
       && (
-          needs.detect-ci-trigger.outputs.triggered == 'false'
-          && ( (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-              || contains( github.event.pull_request.labels.*.name, 'run-slow-hypothesis'))
+        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        || (
+          github.event_name == 'pull_request'
+          && needs.detect-ci-trigger.outputs.triggered == 'false'
+          && contains(github.event.pull_request.labels.*.name, 'run-slow-hypothesis')
+        )
       )
+
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
+      pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: Parcels-code/pixi-lock/create-and-cache@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
+        id: pixi-lock
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pixi-lock
+          path: pixi.lock
+
+  hypothesis:
+    name: Slow Hypothesis Tests
+    runs-on: "ubuntu-latest"
+
+    needs: cache-pixi-lock
+
     defaults:
       run:
         shell: bash -l {0}
 
     env:
-      CONDA_ENV_FILE: ci/requirements/environment.yml
-      PYTHON_VERSION: "3.12"
+      PIXI_ENV: "test-py313"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
+          persist-credentials: false
+
+      - name: Restore cached pixi lockfile
+        uses: Parcels-code/pixi-lock/restore@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
+        with:
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+      - uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
+          cache: true
+          environments: ${{ env.PIXI_ENV }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: set environment variables
         run: |
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
 
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: ci/requirements/environment.yml
-          environment-name: xarray-tests
-          create-args: >-
-            python=${{env.PYTHON_VERSION}}
-            pytest-reportlog
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          python xarray/util/print_versions.py
+          pixi run -e ${{ env.PIXI_ENV }} python xarray/util/print_versions.py
 
       # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
       - name: Restore cached hypothesis directory
         id: restore-hypothesis-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: .hypothesis/
           key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
@@ -93,14 +117,14 @@ jobs:
         if: success()
         id: status
         run: |
-          python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
-            --report-log output-${{ matrix.python-version }}-log.jsonl
+          pixi run -e ${{ env.PIXI_ENV }} python -m pytest --hypothesis-show-statistics --run-slow-hypothesis properties/*.py \
+            --report-log output-${{ env.PIXI_ENV }}-log.jsonl
 
       # explicitly save the cache so it gets updated, also do this even if it fails.
       - name: Save cached hypothesis directory
         id: save-hypothesis-cache
         if: always() && steps.status.outcome != 'skipped'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: .hypothesis/
           key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}
@@ -111,8 +135,8 @@ jobs:
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository_owner == 'pydata'
-        uses: scientific-python/issue-from-pytest-log-action@v1
+        uses: scientific-python/issue-from-pytest-log-action@8e905db353437cda1d6a773de245343fbfc940dd # v1.5.0
         with:
-          log-path: output-${{ matrix.python-version }}-log.jsonl
+          log-path: output-${{ env.PIXI_ENV }}-log.jsonl
           issue-title: "Nightly Hypothesis tests failed"
           issue-label: "topic-hypothesis"

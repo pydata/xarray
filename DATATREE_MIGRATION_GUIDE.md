@@ -42,7 +42,7 @@ A number of other API changes have been made, which should only require minor mo
 - Similarly the `ds` kwarg in the `DataTree.__init__` constructor has been replaced by `dataset`, i.e. use `DataTree(dataset=)` instead of `DataTree(ds=...)`.
 - The method `DataTree.to_dataset()` still exists but now has different options for controlling which variables are present on the resulting `Dataset`, e.g. `inherit=True/False`.
 - `DataTree.copy()` also has a new `inherit` keyword argument for controlling whether or not coordinates defined on parents are copied (only relevant when copying a non-root node).
-- The `DataTree.parent` property is now read-only. To assign a ancestral relationships directly you must instead use the `.children` property on the parent node, which remains settable.
+- The `DataTree.parent` property is now read-only. To assign an ancestral relationship directly you must instead use the `.children` property on the parent node, which remains settable.
 - Similarly the `parent` kwarg has been removed from the `DataTree.__init__` constructor.
 - DataTree objects passed to the `children` kwarg in `DataTree.__init__` are now shallow-copied.
 - `DataTree.map_over_subtree` has been renamed to `DataTree.map_over_datasets`, and changed to no longer work like a decorator. Instead you use it to apply the function and arguments directly, more like how `xarray.apply_ufunc` works.

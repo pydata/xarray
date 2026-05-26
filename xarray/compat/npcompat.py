@@ -51,7 +51,7 @@ except ImportError:
         "numeric": np.number,
     }
 
-    def isdtype(
+    def isdtype(  # type: ignore[misc]
         dtype: np.dtype[Any] | type[Any], kind: DTypeLike | tuple[DTypeLike, ...]
     ) -> bool:
         kinds = kind if isinstance(kind, tuple) else (kind,)
@@ -64,7 +64,7 @@ except ImportError:
             )
         if unknown_kinds := {k for k in str_kinds if k not in kind_mapping}:
             raise ValueError(
-                f"unknown kind: {unknown_kinds}, must be a np.dtype or one of {list(kind_mapping)}"
+                f"unknown kind: {unknown_kinds}, must be an np.dtype or one of {list(kind_mapping)}"
             )
 
         # verified the dtypes already, no need to check again

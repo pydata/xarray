@@ -1,0 +1,170 @@
+# Stubtest Allowlist for xarray
+# ================================
+# This file contains patterns for symbols that stubtest reports as errors
+# but are working correctly at runtime.
+#
+# Format: Each line is a regex pattern matching fully qualified names to ignore.
+# See: https://mypy.readthedocs.io/en/stable/stubtest.html#allowlist
+
+# =============================================================================
+# typing module re-exports (metaclass/signature differences)
+# =============================================================================
+
+# Any has metaclass differences between stub and runtime
+xarray\.core\.(dataarray|dataset|variable)\.Any$
+xarray\.core\.(dataarray|dataset|variable)\.Any\.__new__$
+
+# Callable also has metaclass differences
+xarray\.core\.(dataarray|dataset|variable)\.Callable$
+
+# Self is a TYPE_CHECKING import
+xarray\.core\.(dataarray|variable)\.Self$
+
+# TypeVar has __mro_entries__ at runtime but not in stubs
+xarray\.core\.dataarray\.TypeVar\.__mro_entries__$
+
+# =============================================================================
+# TYPE_CHECKING imports - not present at runtime
+# =============================================================================
+
+# Type aliases from xarray.core.types
+xarray\.core\.(dataarray|dataset|variable)\.Dims$
+xarray\.core\.(dataarray|dataset)\.DatetimeLike$
+xarray\.core\.(dataarray|dataset)\.DatetimeUnitOptions$
+xarray\.core\.(dataarray|dataset)\.ErrorOptions$
+xarray\.core\.(dataarray|dataset|variable)\.ErrorOptionsWithWarn$
+xarray\.core\.(dataarray|dataset)\.GroupIndices$
+xarray\.core\.(dataarray|dataset)\.GroupInput$
+xarray\.core\.(dataarray|dataset)\.Grouper$
+xarray\.core\.(dataarray|dataset)\.InterpOptions$
+xarray\.core\.(dataarray|dataset)\.NetcdfWriteModes$
+xarray\.core\.(dataarray|dataset|variable)\.PadModeOptions$
+xarray\.core\.(dataarray|dataset|variable)\.PadReflectOptions$
+xarray\.core\.(dataarray|dataset|variable)\.QuantileMethods$
+xarray\.core\.(dataarray|dataset)\.QueryEngineOptions$
+xarray\.core\.(dataarray|dataset)\.QueryParserOptions$
+xarray\.core\.(dataarray|dataset)\.ReindexMethodOptions$
+xarray\.core\.(dataarray|dataset)\.ResampleCompatible$
+xarray\.core\.(dataarray|dataset)\.Resampler$
+xarray\.core\.(dataarray|dataset)\.SideOptions$
+xarray\.core\.(dataarray|dataset)\.CoarsenBoundaryOptions$
+xarray\.core\.(dataarray|dataset)\.ZarrWriteModes$
+xarray\.core\.(dataarray|dataset)\.ZarrStore$
+xarray\.core\.(dataarray|dataset)\.ZarrStoreLike$
+xarray\.core\.(dataarray|dataset)\.ArrayLike$
+xarray\.core\.dataset\.CFCalendar$
+xarray\.core\.dataset\.CombineAttrsOptions$
+xarray\.core\.dataset\.CompatOptions$
+xarray\.core\.dataset\.JoinOptions$
+xarray\.core\.dataset\.CoercibleMapping$
+xarray\.core\.dataset\.CoercibleValue$
+xarray\.core\.dataset\.DataVars$
+xarray\.core\.dataset\.DsCompatible$
+
+# TypeVars
+xarray\.core\.(dataarray|dataset)\.T_ChunkDimFreq$
+xarray\.core\.(dataarray|dataset)\.T_ChunksFreq$
+xarray\.core\.(dataarray|dataset|variable)\.T_Chunks$
+xarray\.core\.(dataarray|dataset)\.T_NetcdfEngine$
+xarray\.core\.(dataarray|dataset)\.T_NetcdfTypes$
+xarray\.core\.(dataarray|dataset)\.T_Xarray$
+xarray\.core\.dataarray\.T_XarrayOther$
+xarray\.core\.dataset\.T_DatasetPadConstantValues$
+xarray\.core\.variable\.T_DuckArray$
+xarray\.core\.variable\.T_VarPadConstantValues$
+
+# External library types (dask, delayed, etc.)
+xarray\.core\.(dataarray|dataset|variable)\.ChunkManagerEntrypoint$
+xarray\.core\.(dataarray|dataset)\.DaskDataFrame$
+xarray\.core\.(dataarray|dataset)\.Delayed$
+xarray\.core\.dataset\.AbstractDataStore$
+xarray\.core\.dataarray\.iris_Cube$
+
+# DataArray TYPE_CHECKING import in dataset module
+xarray\.core\.dataset\.DataArray$
+
+# NamedArray TYPE_CHECKING import
+xarray\.core\.variable\.NamedArray$
+
+# =============================================================================
+# GroupBy/Rolling/Coarsen/Weighted/Resample classes (TYPE_CHECKING imports)
+# =============================================================================
+
+xarray\.core\.dataarray\.DataArrayGroupBy$
+xarray\.core\.dataarray\.DataArrayCoarsen$
+xarray\.core\.dataarray\.DataArrayRolling$
+xarray\.core\.dataarray\.DataArrayWeighted$
+xarray\.core\.dataarray\.DataArrayResample$
+xarray\.core\.dataset\.DatasetGroupBy$
+xarray\.core\.dataset\.DatasetCoarsen$
+xarray\.core\.dataset\.DatasetRolling$
+xarray\.core\.dataset\.DatasetWeighted$
+xarray\.core\.dataset\.DatasetResample$
+
+# =============================================================================
+# CFTimeIndex properties - read-only at runtime
+# =============================================================================
+
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.date_type$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.day$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.dayofweek$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.dayofyear$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.days_in_month$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.hour$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.microsecond$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.minute$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.month$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.second$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.year$
+
+# =============================================================================
+# Plot accessors and methods
+# =============================================================================
+
+xarray\.core\.dataarray\.DataArray\.plot$
+xarray\.core\.(dataarray|dataset)\.Dataset\.plot$
+xarray\.core\.dataarray\.DataArrayPlotAccessor\.(contour|contourf|imshow|line|pcolormesh|scatter|step|surface)$
+xarray\.core\.dataset\.DatasetPlotAccessor\.(quiver|scatter|streamplot)$
+
+# =============================================================================
+# __array__ method - complex numpy protocol
+# =============================================================================
+
+xarray\.core\.(dataarray|dataset)\.Dataset\.__array__$
+
+# =============================================================================
+# Mapping/MutableMapping/Sequence/Iterable protocol methods
+# =============================================================================
+
+xarray\.core\.(dataarray|dataset|variable)\.Mapping\.get$
+xarray\.core\.(dataarray|dataset|variable)\.Mapping\.__reversed__$
+xarray\.core\.(dataarray|dataset|variable)\.Sequence\.index$
+xarray\.core\.(dataarray|dataset)\.Iterable\.__class_getitem__$
+xarray\.core\.(dataarray|dataset)\.MutableMapping\.(pop|setdefault)$
+xarray\.core\.(dataarray|dataset)\.PathLike\.__class_getitem__$
+xarray\.core\.dataset\.FrozenMappingWarningOnValuesAccess\.get$
+
+# Number.__hash__
+xarray\.core\.dataset\.Number\.__hash__$
+
+# =============================================================================
+# IO protocol (typing.IO)
+# =============================================================================
+
+xarray\.core\.dataset\.IO\.(closed|mode|name|read|readline|readlines|seek|truncate|write|writelines|__iter__|__next__)$
+
+# =============================================================================
+# Variable/IndexVariable methods inherited from numpy-like interface
+# =============================================================================
+
+xarray\.core\.(dataarray|dataset|variable)\.Variable\.(item|searchsorted)$
+xarray\.core\.(dataarray|dataset|variable)\.IndexVariable\.(item|searchsorted)$
+xarray\.core\.dataarray\.DataArray\.(item|searchsorted)$
+xarray\.core\.dataarray\.DataArrayArithmetic\.(item|searchsorted)$
+xarray\.core\.variable\.VariableArithmetic\.(item|searchsorted)$
+
+# =============================================================================
+# Subclass pattern for Variable
+# =============================================================================
+
+xarray\.core\.variable\.<subclass.*

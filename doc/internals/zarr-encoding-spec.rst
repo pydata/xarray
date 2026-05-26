@@ -43,9 +43,9 @@ When accessing arrays with zarr-python, this information is available in the arr
 metadata but not in the attributes dictionary.
 
 When reading a Zarr group, Xarray looks for dimension information in the appropriate
-location based on the format version, raising an error if it can't be found. The
+location based on the inferred format version, raising an error if it can't be found. The
 dimension information is used to define the variable dimension names and then
-(for Zarr V2) removed from the attributes dictionary returned to the user.
+(for Zarr V2) is removed from the attributes dictionary returned to the user.
 
 CF Conventions
 --------------
@@ -59,17 +59,14 @@ used to describe metadata in NetCDF and Zarr.
 Compatibility and Reading
 -------------------------
 
-Because of these encoding choices, Xarray cannot read arbitrary Zarr arrays, but only
-Zarr data with valid dimension metadata. Xarray supports:
+Because of these encoding choices, Xarray cannot read arbitrary Zarr groups, but only
+Zarr groups containing arrays with valid dimension metadata. Xarray supports:
 
-- Zarr V2 arrays with ``_ARRAY_DIMENSIONS`` attributes
-- Zarr V3 arrays with ``dimension_names`` metadata
-- `NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ format
-  (dimension names are defined in the ``.zarray`` file)
+1. Zarr V3 arrays with ``dimension_names`` metadata
+2. Zarr V2 arrays with ``_ARRAY_DIMENSIONS`` attributes
+3. `NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ format (dimension names are defined in the ``dimrefs`` field in the custom ``.zarray`` file)
 
-After decoding the dimension information and assigning the variable dimensions,
-Xarray proceeds to [optionally] decode each variable using its standard CF decoding
-machinery used for NetCDF data.
+Xarray checks each of these three conventions, in the order given above, when looking for dimension name metadata. Note that while Xarray can read NCZarr groups, it currently does not write NCZarr groups. After decoding the dimension information and assigning the variable dimensions, Xarray proceeds to [optionally] decode each variable using its standard CF decoding machinery used for NetCDF data.
 
 Finally, it's worth noting that Xarray writes (and attempts to read)
 "consolidated metadata" by default (the ``.zmetadata`` file), which is another
@@ -92,36 +89,51 @@ with zarr-python.
 
 .. jupyter-execute::
 
+    zarr_v2_filename = "example_v2.zarr"
+
+.. jupyter-execute::
+    :hide-code:
+
+    import tempfile
+    import os.path
+    tempdir = tempfile.TemporaryDirectory()
+    zarr_v2_filename = os.path.join(tempdir.name, zarr_v2_filename)
+
+.. jupyter-execute::
+
     import os
     import xarray as xr
     import zarr
 
     # Load tutorial dataset and write as Zarr V2
     ds = xr.tutorial.load_dataset("rasm")
-    ds.to_zarr("rasm_v2.zarr", mode="w", consolidated=False, zarr_format=2)
+    ds.to_zarr(zarr_v2_filename, mode="w", consolidated=False, zarr_format=2)
 
     # Open with zarr-python and examine attributes
-    zgroup = zarr.open("rasm_v2.zarr")
+    zgroup = zarr.open(zarr_v2_filename)
     print("Zarr V2 - Tair attributes:")
     tair_attrs = dict(zgroup["Tair"].attrs)
     for key, value in tair_attrs.items():
         print(f"  '{key}': {repr(value)}")
 
-.. jupyter-execute::
-    :hide-code:
-
-    import shutil
-    shutil.rmtree("rasm_v2.zarr")
-
 **Example 2: Zarr V3 Format**
 
 .. jupyter-execute::
 
+    zarr_v3_filename = "example_v3.zarr"
+
+.. jupyter-execute::
+    :hide-code:
+
+    zarr_v3_filename = os.path.join(tempdir.name, zarr_v3_filename)
+
+.. jupyter-execute::
+
     # Write the same dataset as Zarr V3
-    ds.to_zarr("rasm_v3.zarr", mode="w", consolidated=False, zarr_format=3)
+    ds.to_zarr(zarr_v3_filename, mode="w", consolidated=False, zarr_format=3)
 
     # Open with zarr-python and examine attributes
-    zgroup = zarr.open("rasm_v3.zarr")
+    zgroup = zarr.open(zarr_v3_filename)
     print("Zarr V3 - Tair attributes:")
     tair_attrs = dict(zgroup["Tair"].attrs)
     for key, value in tair_attrs.items():
@@ -130,12 +142,6 @@ with zarr-python.
     # For Zarr V3, dimension information is in metadata
     tair_array = zgroup["Tair"]
     print(f"\nZarr V3 - dimension_names in metadata: {tair_array.metadata.dimension_names}")
-
-.. jupyter-execute::
-    :hide-code:
-
-    import shutil
-    shutil.rmtree("rasm_v3.zarr")
 
 
 Chunk Key Encoding
@@ -147,6 +153,16 @@ is particularly useful when working with Zarr V2 arrays and you need to control 
 dimension separator in chunk keys.
 
 For example, to specify a custom separator for chunk keys:
+
+
+.. jupyter-execute::
+
+    example_filename = "example.zarr"
+
+.. jupyter-execute::
+    :hide-code:
+
+    example_filename = os.path.join(tempdir.name, example_filename)
 
 .. jupyter-execute::
 
@@ -161,7 +177,7 @@ For example, to specify a custom separator for chunk keys:
     arr = np.ones((42, 100))
     ds = xr.DataArray(arr, name="var1").to_dataset()
     ds.to_zarr(
-        "example.zarr",
+        example_filename,
         zarr_format=2,
         mode="w",
         encoding={"var1": {"chunks": (42, 50), "chunk_key_encoding": enc}},
@@ -181,6 +197,4 @@ when working with tools that expect a particular chunk key format.
 .. jupyter-execute::
     :hide-code:
 
-    import shutil
-
-    shutil.rmtree("example.zarr")
+    tempdir.cleanup()

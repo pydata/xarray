@@ -27,6 +27,7 @@ from xarray.tests import (
     assert_array_equal,
     assert_identical,
     has_cftime,
+    has_pandas_3,
     requires_cftime,
 )
 
@@ -960,8 +961,17 @@ def test_cftime_datetime_sub_cftimeindex(calendar):
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_distant_cftime_datetime_sub_cftimeindex(calendar):
     a = xr.date_range("2000", periods=5, calendar=calendar, use_cftime=True)
-    with pytest.raises(ValueError, match="difference exceeds"):
-        a.date_type(1, 1, 1) - a
+    if not has_pandas_3:
+        with pytest.raises(ValueError, match="difference exceeds"):
+            a.date_type(1, 1, 1) - a
+    else:
+        result = a.date_type(1, 1, 1) - a
+        assert isinstance(result, pd.TimedeltaIndex)
+        assert result.unit == "us"
+
+        # Check that we can recover original index from subtracting timedeltas
+        roundtrip = CFTimeIndex(a.date_type(1, 1, 1) - result.to_pytimedelta())
+        assert roundtrip.equals(a)
 
 
 @requires_cftime

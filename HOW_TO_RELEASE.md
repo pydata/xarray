@@ -28,10 +28,8 @@ upstream        https://github.com/pydata/xarray (push)
     Then run
 
     ```sh
-    python ci/release_contributors.py
+    pixi run release-contributors
     ```
-
-    (needs `gitpython` and `toolz` / `cytoolz`)
 
     and copy the output.
 

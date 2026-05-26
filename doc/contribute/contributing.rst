@@ -15,13 +15,14 @@ Overview
 We welcome your skills and enthusiasm at the xarray project!. There are numerous opportunities to
 contribute beyond just writing code.
 All contributions, including bug reports, bug fixes, documentation improvements, enhancement suggestions,
-and other ideas are welcome.
+and other ideas are welcome. LLM generated contributions are welcome, but they must follow :doc:`our AI policy <ai-policy>`.
 
 If you have any questions on the process or how to fix something feel free to ask us!
-The recommended place to ask a question is  on `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
-, but we also have a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
-`mailing list <https://groups.google.com/g/xarray>`_. There is also a
-`"python-xarray" tag on Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`_ which we monitor for questions.
+The recommended places to ask questions are `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
+or the Xarray channel in the `OSSci Zulip <https://ossci.zulipchat.com/#narrow/channel/582428-Xarray>`_.
+
+In the past, we had a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
+`mailing list <https://groups.google.com/g/xarray>`_. Feel free to browse historical conversations there.
 
 We also have a biweekly community call, details of which are announced on the
 `Developers meeting <https://docs.xarray.dev/en/stable/developers-meeting.html>`_.
@@ -186,77 +187,76 @@ documentation locally before pushing your changes.
 Creating a Python Environment
 -----------------------------
 
+.. attention::
+
+   Xarray recently switched development workflows to
+   use `Pixi <https://pixi.sh/latest/>`_ instead of
+   Conda (PR https://github.com/pydata/xarray/pull/10888 ).
+   If there are any edits to the contributing instructions
+   that would improve clarity, please open a PR!
+
+Xarray uses `Pixi <https://pixi.sh/latest/>`_ to manage development environments.
 Before starting any development, you'll need to create an isolated xarray
 development environment:
 
-- Install either `Anaconda <https://www.anaconda.com/download/>`_ or `miniconda
-  <https://conda.io/miniconda.html>`_
-- Make sure your conda is up to date (``conda update conda``)
+- `Install Pixi <https://pixi.sh/latest/installation/>`_
+  - Xarray uses some Pixi features that are in active development. You might be prompted to upgrade your Pixi version to contribute to Xarray (this is controlled by the ``requires-pixi`` field in ``pixi.toml``)
 - Make sure that you have :ref:`cloned the repository <contributing.dev_workflow>`
 - ``cd`` to the *xarray* source directory
 
-We'll now kick off a two-step process:
+That's it! Now you're ready to contribute to Xarray.
 
-1. Install the build dependencies
-2. Build and install xarray
+Pixi defines multiple environments as well as tasks to help you with development (view these by running ``pixi task list``). These include tasks for:
 
-.. code-block:: sh
+- running the test suite
+- building the documentation
+- running the static type checker
+- running code formatters and linters
 
-   # Create and activate the build environment
-   conda create -c conda-forge -n xarray-tests python=3.11
+Some of these tasks can be run in several environments (e.g., the test suite is run in environments with different,
+dependencies as well as different Python versions to make sure we have wide support for Xarray). Some of these tasks
+are only run in a single environment (e.g., building the documentation or running pre-commit hooks).
 
-   # This is for Linux and MacOS
-   conda env update -f ci/requirements/environment.yml
+You can see all available environments and tasks by running::
 
-   # On windows, use environment-windows.yml instead
-   conda env update -f ci/requirements/environment-windows.yml
+    pixi info
 
-   conda activate xarray-tests
 
-   # or with older versions of Anaconda:
-   source activate xarray-tests
+When running a test you may be prompted to select which environment you want to use. You can specify the environment
+directly by providing the ``-e`` flag, e.g., ``pixi run -e my_environment test`` . Our CI setup uses Pixi as well - you can easily
+reproduce CI tests by running the same tasks in the same environments as defined in the CI.
 
-   # Build and install xarray
-   pip install -e .
+You can enter any of the defined environments with::
 
-At this point you should be able to import *xarray* from your locally
-built version:
+    pixi shell -e my_environment
 
-.. code-block:: sh
+This is similar to "activating" an environment in Conda. To exit this shell type ``exit`` or press ``Ctrl-D``.
 
-   $ python  # start an interpreter
-   >>> import xarray
-   >>> xarray.__version__
-   '2025.7.2.dev14+g5ce69b2b.d20250725'
+All these Pixi environments and tasks are defined in the ``pixi.toml`` file in the root of the repository.
 
-This will create the new environment, and not touch any of your existing environments,
-nor any existing Python installation.
-
-To view your environments::
-
-      conda info -e
-
-To return to your root environment::
-
-      conda deactivate
-
-See the full `conda docs here <https://conda.pydata.org/docs>`__.
 
 Install pre-commit hooks
-------------------------
+-------------------------
 
-We highly recommend that you setup `pre-commit <https://pre-commit.com/>`_ hooks to automatically
-run all the above tools every time you make a git commit. To install the hooks::
+You can either run pre-commit manually via Pixi as described above, or set up git hooks to run pre-commit automatically.
 
-    python -m pip install pre-commit
-    pre-commit install
+This is done by:
 
-This can be done by running: ::
+.. code-block:: shell
 
-    pre-commit run
+    pixi shell -e pre-commit # enter the pre-commit environment
+    pre-commit install # install the git hooks
 
-from the root of the xarray repository. You can skip the pre-commit checks with
-``git commit --no-verify``.
+    # or
+
+    pre-commit uninstall # uninstall the git hooks
+
+Now, every time you make a git commit, all the pre-commit hooks will be run automatically using the pre-commit that comes
+with Pixi.
+
+Alternatively you can use a separate installation of ``pre-commit`` (e.g., install globally using Pixi (``pixi install -g pre_commit``), or via `Homebrew <https://formulae.brew.sh/formula/pre-commit>`_ ).
+
+If you want to commit without running ``pre-commit`` hooks, you can use ``git commit --no-verify``.
 
 
 Update the ``main`` branch
@@ -276,11 +276,6 @@ request.  If you have uncommitted changes, you will need to ``git stash`` them
 prior to updating.  This will effectively store your changes, which can be
 reapplied after updating.
 
-If the *xarray* ``main`` branch version has updated since you last fetched changes,
-you may also wish to reinstall xarray so that the pip version reflects the *xarray*
-version::
-
-    pip install -e .
 
 Create a new feature branch
 ---------------------------
@@ -433,29 +428,10 @@ How to build the *xarray* documentation
 
 Requirements
 ~~~~~~~~~~~~
-Make sure to follow the instructions on :ref:`creating a development environment<contributing.dev_env>` above, but
-to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
-You should also use this environment and these steps if you want to view changes you've made to the docstrings.
+Make sure to follow the instructions on :ref:`creating a development environment<contributing.dev_env>` above. Once you
+have Pixi installed - you can build the documentation using the command::
 
-.. code-block:: sh
-
-    # Create and activate the docs environment
-    conda env create -f ci/requirements/doc.yml
-    conda activate xarray-docs
-
-    # or with older versions of Anaconda:
-    source activate xarray-docs
-
-    # Build and install a local, editable version of xarray
-    pip install -e .
-
-Building the documentation
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To build the documentation run::
-
-    cd doc/
-    make html
+    pixi run doc
 
 Then you can find the HTML output files in the folder ``xarray/doc/_build/html/``.
 
@@ -475,8 +451,7 @@ evocations, Sphinx will try to only build the pages that have been modified.
 
 If you want to do a full clean build, do::
 
-    make clean
-    make html
+    pixi run doc-clean
 
 Writing ReST pages
 ------------------
@@ -594,7 +569,7 @@ a user passes ``old_arg``, we would instead catch it:
             emit_user_level_warning(
                 "`old_arg` has been deprecated, and in the future will raise an error."
                 "Please use `new_arg` from now on.",
-                DeprecationWarning,
+                FutureWarning,
             )
 
             # Still do what the user intended here
@@ -1074,7 +1049,7 @@ PR checklist
   - Test the code using `Pytest <https://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
   - By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior per commit by adding a ``[test-upstream]`` tag to the first line of the commit message. For documentation-only commits, you can skip the CI per commit by adding a ``[skip-ci]`` tag to the first line of the commit message.
 
-- **Properly format your code** and verify that it passes the formatting guidelines set by `ruff <https://github.com/astral-sh/ruff>`_. See `"Code formatting" <https://docs.xarray.dev/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
+- **Properly format your code** and verify that it passes the formatting guidelines set by `ruff <https://github.com/astral-sh/ruff>`_. See `"Code formatting" <https://docs.xarray.dev/en/stable/contributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
 
   - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
 

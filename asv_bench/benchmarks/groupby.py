@@ -28,7 +28,8 @@ class GroupBy:
         getattr(self, f"ds{ndim}d").groupby("b")
 
     @parameterized(
-        ["method", "ndim", "use_flox"], [("sum", "mean"), (1, 2), (True, False)]
+        ["method", "ndim", "use_flox"],
+        [("sum", "mean", "cumsum"), (1, 2), (True, False)],
     )
     def time_agg_small_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
@@ -36,7 +37,8 @@ class GroupBy:
             getattr(ds.groupby("a"), method)().compute()
 
     @parameterized(
-        ["method", "ndim", "use_flox"], [("sum", "mean"), (1, 2), (True, False)]
+        ["method", "ndim", "use_flox"],
+        [("sum", "mean", "cumsum"), (1, 2), (True, False)],
     )
     def time_agg_large_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
