@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, NamedTuple
-
+from xarray.namedarray._array_api._data_type_functions import promote_scalars
 from xarray.namedarray._array_api._utils import (
     _atleast1d_dims,
     _flatten_dims,
@@ -138,6 +138,22 @@ def unique_values(x: NamedArray[Any, Any], /) -> NamedArray[Any, Any]:
     return x._new(_dims, _data)
 
 
+def isin(x1: NamedArray[Any, Any] | int, x2: NamedArray[Any, Any] | int, /, *, invert: bool = False) -> NamedArray[Any, Any]:
+    """
+    Tests for each element in x1 whether the element is in x2.
+
+    Examples
+    --------
+    >>> 1
+    """
+    x1_arr, x2_arr = _promote_scalars(x1, x2, "integer", "isin")
+
+    xp = _get_data_namespace(x1_arr)
+    _data = xp.isin(x1_arr._data, x2_arr._data, invert=invert)
+    _dims = x1_arr.dims
+    return x1_arr._new(_dims, _data)
+    
+    
 if __name__ == "__main__":
     import doctest
 
