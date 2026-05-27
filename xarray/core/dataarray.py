@@ -3165,6 +3165,16 @@ class DataArray(
         --------
         DataArray.stack
 
+        Notes
+        -----
+        The order of the new dimension coordinates follows the levels of the
+        ``MultiIndex``. A ``MultiIndex`` created by pandas (e.g. when converting
+        a ``pd.Series`` with a ``MultiIndex``) usually has sorted levels, so the
+        resulting coordinates will be sorted. A ``MultiIndex`` created by
+        :py:meth:`DataArray.stack` preserves the original order. Use
+        :py:meth:`DataArray.sel` after unstacking to select a specific order if
+        needed.
+
         Examples
         --------
         >>> arr = xr.DataArray(
