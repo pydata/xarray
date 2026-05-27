@@ -2820,7 +2820,10 @@ class TestDataArray:
         #
         # This is distinct from xarray's own stack(), which preserves
         # insertion order via factorize() for non-monotonic inputs.
-        arrays = [["c", "a", "b"], [1, 0, 0]]
+        arrays: list[np.ndarray] = [
+            np.array(["c", "a", "b"]),
+            np.array([1, 0, 0]),
+        ]
         midx = pd.MultiIndex.from_arrays(arrays, names=["x", "y"])
         s = pd.Series([10, 20, 30], index=midx, name="val")
 
