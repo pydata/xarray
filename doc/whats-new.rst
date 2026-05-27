@@ -42,12 +42,12 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- Skip the ``to_duck_array`` dispatch in :py:meth:`Variable.load` and
-  :py:meth:`Variable.load_async` when the underlying data is already a
-  ``numpy.ndarray``. The dispatch was a no-op for that case but added
-  noticeable per-variable overhead to :py:meth:`Dataset.load` /
-  :py:meth:`DataArray.load` on datasets with many in-memory variables
-  (:issue:`11352`).
+- Short-circuit ``to_duck_array``, ``async_to_duck_array``, and ``to_numpy``
+  when the input is already a plain ``numpy.ndarray``. The dispatch was a no-op
+  for that case but added noticeable per-call overhead in :py:meth:`Dataset.load`,
+  :py:meth:`DataArray.load`, :py:meth:`DataArray.to_numpy`,
+  :py:meth:`Variable.to_numpy`, and the in-memory paths of ``to_pandas`` /
+  ``to_dataframe`` / plotting (:issue:`11352`).
 
 
 .. _whats-new.2026.04.0:

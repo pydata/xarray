@@ -102,6 +102,12 @@ def to_numpy(
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
+    # Fast path: a plain numpy ndarray is already the target type, so skip
+    # the .to_numpy() / ExplicitlyIndexed / chunked / cupy / pint / sparse
+    # dispatch. ndarray subclasses fall through to keep their behavior.
+    if type(data) is np.ndarray:
+        return data
+
     try:
         # for tests only at the moment
         return data.to_numpy()  # type: ignore[no-any-return,union-attr]
@@ -134,6 +140,12 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
     )
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
+    # Fast path: a plain numpy ndarray is already an in-memory duck array,
+    # so skip the chunked/ExplicitlyIndexed/duck-array dispatch. ndarray
+    # subclasses fall through to the normal path so they keep their behavior.
+    if type(data) is np.ndarray:
+        return data  # type: ignore[return-value]
+
     if is_chunked_array(data):
         chunkmanager = get_chunked_array_type(data)
         loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
@@ -154,6 +166,9 @@ async def async_to_duck_array(
         ExplicitlyIndexed,
         ImplicitToExplicitIndexingAdapter,
     )
+
+    if type(data) is np.ndarray:
+        return data  # type: ignore[return-value]
 
     if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
         return await data.async_get_duck_array()  # type: ignore[union-attr, no-any-return]

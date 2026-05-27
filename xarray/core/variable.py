@@ -1019,11 +1019,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         DataArray.load
         Dataset.load
         """
-        # Fast path: an in-memory numpy ndarray has nothing to load. Subclasses
-        # that advertise a `chunks` attribute (test fakes, third-party chunked
-        # ndarray subclasses) must still go through to_duck_array.
-        if isinstance(self._data, np.ndarray) and not hasattr(self._data, "chunks"):
-            return self
         self._data = to_duck_array(self._data, **kwargs)
         return self
 
@@ -1057,8 +1052,6 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         DataArray.load_async
         Dataset.load_async
         """
-        if isinstance(self._data, np.ndarray) and not hasattr(self._data, "chunks"):
-            return self
         self._data = await async_to_duck_array(self._data, **kwargs)
         return self
 
