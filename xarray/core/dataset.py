@@ -5624,6 +5624,19 @@ class Dataset(
         unstacked : Dataset
             Dataset with unstacked data.
 
+        Notes
+        -----
+        **Sort order**
+
+        When the stacked dimension's ``MultiIndex`` was created by pandas (for
+        example, by wrapping a ``pd.DataFrame`` or ``pd.Series`` with a
+        ``pd.MultiIndex``), pandas stores ``MultiIndex.levels`` in **sorted
+        order** regardless of insertion order.  In that case the coordinates
+        of the new dimensions after unstacking will also be sorted.  When the
+        ``MultiIndex`` was created by :py:meth:`Dataset.stack`, xarray
+        preserves insertion order instead.  Use :py:meth:`Dataset.sel` after
+        unstacking to select a specific order if needed.
+
         See Also
         --------
         Dataset.stack

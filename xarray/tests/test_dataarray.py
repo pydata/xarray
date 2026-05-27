@@ -2811,6 +2811,29 @@ class TestDataArray:
         actual = stacked.unstack("allpoints")
         assert_identical(orig, actual)
 
+    def test_unstack_coords_are_sorted(self) -> None:
+        # When a DataArray is built from a pandas MultiIndex (e.g. from a
+        # pandas Series), pandas always stores MultiIndex.levels in sorted
+        # order regardless of insertion order.  Consequently, the coordinates
+        # of the new dimensions after unstack() are sorted, not in the
+        # original insertion order.
+        #
+        # This is distinct from xarray's own stack(), which preserves
+        # insertion order via factorize() for non-monotonic inputs.
+        arrays = [["c", "a", "b"], [1, 0, 0]]
+        midx = pd.MultiIndex.from_arrays(arrays, names=["x", "y"])
+        s = pd.Series([10, 20, 30], index=midx, name="val")
+
+        da = DataArray(s, dims="z")
+        unstacked = da.unstack("z")
+
+        # pandas sorted the MultiIndex levels, so unstacked coords are sorted
+        assert list(unstacked["x"].values) == ["a", "b", "c"]
+        assert list(unstacked["y"].values) == [0, 1]
+
+        # use .sel() to restore a specific order
+        assert list(unstacked.sel(x=["c", "a", "b"])["x"].values) == ["c", "a", "b"]
+
     def test_unstack_pandas_consistency(self) -> None:
         df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
         s = df.set_index(["x", "y"])["foo"]
