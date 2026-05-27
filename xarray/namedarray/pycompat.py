@@ -8,7 +8,7 @@ import numpy as np
 from packaging.version import Version
 
 from xarray.core.utils import is_scalar
-from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
+from xarray.namedarray.utils import is_dask_collection, is_duck_array, is_duck_dask_array
 
 integer_types = (int, np.integer)
 
@@ -102,17 +102,17 @@ def to_numpy(
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
-    # Fast path: a plain numpy ndarray is already the target type, so skip
-    # the .to_numpy() / ExplicitlyIndexed / chunked / cupy / pint / sparse
-    # dispatch. ndarray subclasses fall through to keep their behavior.
+    # Fast path: a plain numpy ndarray is the dispatch target, so skip the
+    # whole ExplicitlyIndexed / chunked / cupy / pint / sparse / np.asarray
+    # chain in one pointer compare. ndarray subclasses fall through.
     if type(data) is np.ndarray:
         return data
 
-    try:
-        # for tests only at the moment
+    # `hasattr` avoids the AttributeError that `try: data.to_numpy()` raises
+    # on every non-ndarray that lacks `to_numpy` — exception machinery is
+    # measurably more expensive than the attribute lookup.
+    if hasattr(data, "to_numpy"):
         return data.to_numpy()  # type: ignore[no-any-return,union-attr]
-    except AttributeError:
-        pass
 
     if isinstance(data, ExplicitlyIndexed):
         data = data.get_duck_array()  # type: ignore[no-untyped-call]
@@ -140,23 +140,26 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
     )
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
-    # Fast path: a plain numpy ndarray is already an in-memory duck array,
-    # so skip the chunked/ExplicitlyIndexed/duck-array dispatch. ndarray
-    # subclasses fall through to the normal path so they keep their behavior.
+    # Fast path: a plain numpy ndarray is already an in-memory duck array, so
+    # skip the chunked / ExplicitlyIndexed / duck-array dispatch entirely.
+    # ndarray subclasses fall through to the normal path.
     if type(data) is np.ndarray:
         return data  # type: ignore[return-value]
 
-    if is_chunked_array(data):
+    if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
+        return data.get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
+
+    # Single `is_duck_array` call: the previous form invoked it once via
+    # `is_chunked_array` and once again in the duck-array branch.
+    if not is_duck_array(data):
+        return np.asarray(data)  # type: ignore[return-value]
+
+    if hasattr(data, "chunks") or is_dask_collection(data):
         chunkmanager = get_chunked_array_type(data)
         loaded_data, *_ = chunkmanager.compute(data, **kwargs)  # type: ignore[var-annotated]
         return loaded_data
 
-    if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
-        return data.get_duck_array()  # type: ignore[no-untyped-call, no-any-return]
-    elif is_duck_array(data):
-        return data
-    else:
-        return np.asarray(data)  # type: ignore[return-value]
+    return data
 
 
 async def async_to_duck_array(
