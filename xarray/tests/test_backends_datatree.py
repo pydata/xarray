@@ -1590,18 +1590,12 @@ class TestGroupFilterHelpers:
     def test_filter_group_paths_match_is_right_anchored(self) -> None:
         # ``NodePath.match`` is anchored on the right, so ``*/leaf_0``
         # matches a ``leaf_0`` at any depth as long as the parent
-        # segment matches ``*``. The root-level ``/leaf_0`` (no parent
-        # segment to consume the ``*``) is the only path skipped.
+        # segment matches ``*``. (The root-level ``/leaf_0`` is omitted
+        # because :py:meth:`pathlib.PurePath.match` semantics for that
+        # corner case differ between Python 3.11 and 3.13.)
         from xarray.backends.common import _filter_group_paths
 
-        paths = [
-            "/",
-            "/leaf_0",
-            "/a",
-            "/a/leaf_0",
-            "/a/b",
-            "/a/b/leaf_0",
-        ]
+        paths = ["/", "/a", "/a/leaf_0", "/a/b", "/a/b/leaf_0"]
         assert _filter_group_paths(paths, "*/leaf_0") == [
             "/",
             "/a",
