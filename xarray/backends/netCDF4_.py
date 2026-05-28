@@ -807,6 +807,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         group: str | None = None,
+        group_filter: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,
@@ -826,6 +827,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
             group=group,
+            group_filter=group_filter,
             format=format,
             clobber=clobber,
             diskless=diskless,
@@ -873,7 +875,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         store = NetCDF4DataStore.open(
             filename_or_obj,
-            group=None if group_filter else group,
+            group=group,
             format=format,
             clobber=clobber,
             diskless=diskless,
