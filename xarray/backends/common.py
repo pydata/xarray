@@ -250,19 +250,27 @@ def _iter_nc_groups(root, parent="/"):
 
 
 def _check_group_filter_mutex(group: str | None, group_filter: str | None) -> None:
-    """Raise ``ValueError`` if both ``group`` and ``group_filter`` are set."""
+    """Validate ``group`` / ``group_filter`` are not both set, and ``group_filter``
+    is non-empty when provided.
+    """
     if group is not None and group_filter is not None:
         raise ValueError(
             "group and group_filter are mutually exclusive: "
             "group selects an exact group path while group_filter "
             "is a glob pattern over all group paths."
         )
+    if group_filter == "":
+        raise ValueError("group_filter must be a non-empty glob pattern")
 
 
-def _filter_group_paths(group_paths: Iterable[str], pattern: str) -> list[str]:
+def _filter_group_paths(group_paths: Sequence[str], pattern: str) -> list[str]:
     """Return the subset of ``group_paths`` whose paths match ``pattern``,
     plus every ancestor of a match (so the resulting tree stays
     connected). The root path ``"/"`` is always included.
+
+    ``pattern`` is matched with :py:meth:`pathlib.PurePath.match` semantics,
+    so it is anchored on the right: ``"*/leaf_0"`` matches a group whose
+    path ends in any single segment followed by ``leaf_0`` at any depth.
     """
     from xarray.core.treenode import NodePath
 
@@ -271,7 +279,7 @@ def _filter_group_paths(group_paths: Iterable[str], pattern: str) -> list[str]:
         np_ = NodePath(path)
         if np_.match(pattern):
             matched.add(path)
-            matched.update(str(p) for p in np_.parents if str(p))
+            matched.update(str(p) for p in np_.parents)
 
     return [p for p in group_paths if p in matched]
 
