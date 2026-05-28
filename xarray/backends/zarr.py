@@ -1770,6 +1770,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         group: str | None = None,
+        group_filter: str | None = None,
         mode="r",
         synchronizer=None,
         consolidated=None,
@@ -1789,6 +1790,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
             group=group,
+            group_filter=group_filter,
             mode=mode,
             synchronizer=synchronizer,
             consolidated=consolidated,
@@ -1812,6 +1814,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         group: str | None = None,
+        group_filter: str | None = None,
         mode="r",
         synchronizer=None,
         consolidated=None,
@@ -1820,13 +1823,17 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         zarr_format=None,
     ) -> dict[str, Dataset]:
-        from xarray.backends.common import _is_glob_pattern, _resolve_group_and_filter
+        from xarray.backends.common import (
+            _check_group_filter_mutex,
+            _filter_group_paths,
+        )
+
+        _check_group_filter_mutex(group, group_filter)
 
         filename_or_obj = _normalize_path(filename_or_obj)
 
-        effective_group = None if (group and _is_glob_pattern(group)) else group
-        if effective_group:
-            parent = str(NodePath("/") / NodePath(effective_group))
+        if group is not None:
+            parent = str(NodePath("/") / NodePath(group))
         else:
             parent = str(NodePath("/"))
 
@@ -1843,10 +1850,12 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
         )
 
-        _, filtered_paths = _resolve_group_and_filter(group, list(stores.keys()))
+        group_paths = list(stores.keys())
+        if group_filter is not None:
+            group_paths = _filter_group_paths(group_paths, group_filter)
 
         groups_dict = {}
-        for path_group in filtered_paths:
+        for path_group in group_paths:
             store = stores[path_group]
             store_entrypoint = StoreBackendEntrypoint()
 
@@ -1861,7 +1870,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            if effective_group:
+            if group is not None:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
