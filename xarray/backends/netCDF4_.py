@@ -850,6 +850,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         group: str | None = None,
+        group_filter: str | None = None,
         format="NETCDF4",
         clobber=True,
         diskless=False,
@@ -860,18 +861,19 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import (
-            _is_glob_pattern,
+            _check_group_filter_mutex,
+            _filter_group_paths,
             _iter_nc_groups,
-            _resolve_group_and_filter,
         )
         from xarray.core.treenode import NodePath
 
+        _check_group_filter_mutex(group, group_filter)
+
         filename_or_obj = _normalize_path(filename_or_obj)
 
-        effective_group = None if (group and _is_glob_pattern(group)) else group
         store = NetCDF4DataStore.open(
             filename_or_obj,
-            group=effective_group,
+            group=None if group_filter else group,
             format=format,
             clobber=clobber,
             diskless=diskless,
@@ -881,17 +883,18 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             autoclose=autoclose,
         )
 
-        if effective_group:
-            parent = NodePath("/") / NodePath(effective_group)
+        if group is not None:
+            parent = NodePath("/") / NodePath(group)
         else:
             parent = NodePath("/")
 
         manager = store._manager
-        all_group_paths = list(_iter_nc_groups(store.ds, parent=parent))
-        _, filtered_paths = _resolve_group_and_filter(group, all_group_paths)
+        group_paths = list(_iter_nc_groups(store.ds, parent=parent))
+        if group_filter is not None:
+            group_paths = _filter_group_paths(group_paths, group_filter)
 
         groups_dict = {}
-        for path_group in filtered_paths:
+        for path_group in group_paths:
             group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(group_store):
@@ -905,7 +908,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            if effective_group:
+            if group is not None:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
