@@ -382,22 +382,20 @@ class NetCDFIOBase:
             {
                 "/": xr.Dataset({"root_var": 1}),
                 "/A": xr.Dataset({"a_var": 2}),
-                "/A/sweep_0": xr.Dataset({"data": ("x", [1, 2])}),
-                "/A/sweep_1": xr.Dataset({"data": ("x", [3, 4])}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/A/leaf_1": xr.Dataset({"data": ("x", [3, 4])}),
                 "/B": xr.Dataset({"b_var": 3}),
-                "/B/sweep_0": xr.Dataset({"data": ("x", [5, 6])}),
+                "/B/leaf_0": xr.Dataset({"data": ("x", [5, 6])}),
             }
         )
         filepath = tmpdir / "filter.nc"
         original_dt.to_netcdf(filepath, engine=self.engine)
 
         with open_datatree(
-            filepath, group_filter="*/sweep_0", engine=self.engine
+            filepath, group_filter="*/leaf_0", engine=self.engine
         ) as tree:
             paths = {node.path for node in tree.subtree}
-            assert "/A/sweep_0" in paths
-            assert "/B/sweep_0" in paths
-            assert "/A/sweep_1" not in paths
+            assert paths == {"/", "/A", "/A/leaf_0", "/B", "/B/leaf_0"}
 
     def test_open_datatree_group_filter_no_match(self, tmpdir) -> None:
         original_dt = DataTree.from_dict(
@@ -420,18 +418,18 @@ class NetCDFIOBase:
             {
                 "/": xr.Dataset({"root_var": 1}),
                 "/A": xr.Dataset({"a_var": 2}),
-                "/A/sweep_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
             }
         )
         filepath = tmpdir / "filter_data.nc"
         original_dt.to_netcdf(filepath, engine=self.engine)
 
         with open_datatree(
-            filepath, group_filter="*/sweep_0", engine=self.engine
+            filepath, group_filter="*/leaf_0", engine=self.engine
         ) as tree:
             assert tree["/A"].dataset["a_var"].item() == 2
             np.testing.assert_array_equal(
-                tree["/A/sweep_0"].dataset["data"].values, [1, 2]
+                tree["/A/leaf_0"].dataset["data"].values, [1, 2]
             )
 
     def test_open_groups_group_filter(self, tmpdir) -> None:
@@ -439,19 +437,16 @@ class NetCDFIOBase:
             {
                 "/": xr.Dataset({"root_var": 1}),
                 "/A": xr.Dataset({"a_var": 2}),
-                "/A/sweep_0": xr.Dataset({"data": ("x", [1, 2])}),
-                "/A/sweep_1": xr.Dataset({"data": ("x", [3, 4])}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/A/leaf_1": xr.Dataset({"data": ("x", [3, 4])}),
             }
         )
         filepath = tmpdir / "filter_groups.nc"
         original_dt.to_netcdf(filepath, engine=self.engine)
 
-        groups = open_groups(filepath, group_filter="*/sweep_0", engine=self.engine)
+        groups = open_groups(filepath, group_filter="*/leaf_0", engine=self.engine)
         try:
-            assert "/" in groups
-            assert "/A" in groups
-            assert "/A/sweep_0" in groups
-            assert "/A/sweep_1" not in groups
+            assert set(groups.keys()) == {"/", "/A", "/A/leaf_0"}
         finally:
             for ds in groups.values():
                 ds.close()
@@ -534,6 +529,38 @@ class NetCDFIOBase:
             open_datatree(filepath, group="A", group_filter="*/A", engine=self.engine)
         with pytest.raises(ValueError, match="mutually exclusive"):
             open_groups(filepath, group="A", group_filter="*/A", engine=self.engine)
+
+    def test_open_datatree_group_filter_match_is_right_anchored(self, tmpdir) -> None:
+        # ``NodePath.match`` is anchored on the right, so ``*/leaf_0``
+        # matches a ``leaf_0`` at any depth as long as the parent
+        # segment matches ``*``. This pins the documented semantics.
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/x": xr.Dataset({"v": 0}),
+                "/x/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/x/y": xr.Dataset({"v": 0}),
+                "/x/y/leaf_0": xr.Dataset({"data": ("x", [3, 4])}),
+                "/x/y/z": xr.Dataset({"v": 0}),
+                "/x/y/z/leaf_0": xr.Dataset({"data": ("x", [5, 6])}),
+            }
+        )
+        filepath = tmpdir / "anchor.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        with open_datatree(
+            filepath, group_filter="*/leaf_0", engine=self.engine
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert paths == {
+                "/",
+                "/x",
+                "/x/leaf_0",
+                "/x/y",
+                "/x/y/leaf_0",
+                "/x/y/z",
+                "/x/y/z/leaf_0",
+            }
 
 
 @requires_h5netcdf_or_netCDF4
@@ -1188,22 +1215,20 @@ class TestZarrDatatreeIO:
             {
                 "/": xr.Dataset({"root_var": 1}),
                 "/A": xr.Dataset({"a_var": 2}),
-                "/A/sweep_0": xr.Dataset({"data": ("x", [1, 2])}),
-                "/A/sweep_1": xr.Dataset({"data": ("x", [3, 4])}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/A/leaf_1": xr.Dataset({"data": ("x", [3, 4])}),
                 "/B": xr.Dataset({"b_var": 3}),
-                "/B/sweep_0": xr.Dataset({"data": ("x", [5, 6])}),
+                "/B/leaf_0": xr.Dataset({"data": ("x", [5, 6])}),
             }
         )
         filepath = str(tmpdir / "filter.zarr")
         original_dt.to_zarr(filepath, zarr_format=zarr_format)
 
         with open_datatree(
-            filepath, group_filter="*/sweep_0", engine=self.engine
+            filepath, group_filter="*/leaf_0", engine=self.engine
         ) as tree:
             paths = {node.path for node in tree.subtree}
-            assert "/A/sweep_0" in paths
-            assert "/B/sweep_0" in paths
-            assert "/A/sweep_1" not in paths
+            assert paths == {"/", "/A", "/A/leaf_0", "/B", "/B/leaf_0"}
 
     def test_open_datatree_group_filter_no_match(self, tmpdir, zarr_format) -> None:
         original_dt = DataTree.from_dict(
@@ -1226,19 +1251,16 @@ class TestZarrDatatreeIO:
             {
                 "/": xr.Dataset({"root_var": 1}),
                 "/A": xr.Dataset({"a_var": 2}),
-                "/A/sweep_0": xr.Dataset({"data": ("x", [1, 2])}),
-                "/A/sweep_1": xr.Dataset({"data": ("x", [3, 4])}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/A/leaf_1": xr.Dataset({"data": ("x", [3, 4])}),
             }
         )
         filepath = str(tmpdir / "filter_groups.zarr")
         original_dt.to_zarr(filepath, zarr_format=zarr_format)
 
-        groups = open_groups(filepath, group_filter="*/sweep_0", engine=self.engine)
+        groups = open_groups(filepath, group_filter="*/leaf_0", engine=self.engine)
         try:
-            assert "/" in groups
-            assert "/A" in groups
-            assert "/A/sweep_0" in groups
-            assert "/A/sweep_1" not in groups
+            assert set(groups.keys()) == {"/", "/A", "/A/leaf_0"}
         finally:
             for ds in groups.values():
                 ds.close()
@@ -1291,6 +1313,66 @@ class TestZarrDatatreeIO:
             paths = {node.path for node in tree.subtree}
             assert "/group_?_01" in paths
             assert "/group_*_01" not in paths
+
+    def test_open_datatree_group_filter_preserves_data(
+        self, tmpdir, zarr_format
+    ) -> None:
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/A": xr.Dataset({"a_var": 2}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+            }
+        )
+        filepath = str(tmpdir / "filter_data.zarr")
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
+
+        with open_datatree(
+            filepath, group_filter="*/leaf_0", engine=self.engine
+        ) as tree:
+            assert tree["/A"].dataset["a_var"].item() == 2
+            np.testing.assert_array_equal(
+                tree["/A/leaf_0"].dataset["data"].values, [1, 2]
+            )
+
+    def test_open_datatree_group_with_literal_metachar(self, zarr_format) -> None:
+        # MemoryStore: Windows disallows ``*``/``?`` in directory names.
+        from zarr.storage import MemoryStore
+
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/weird_*_name": xr.Dataset({"data": ("x", [1, 2])}),
+                "/weird_X_name": xr.Dataset({"data": ("x", [3, 4])}),
+                "/weird_Y_name": xr.Dataset({"data": ("x", [5, 6])}),
+            }
+        )
+        store = MemoryStore()
+        original_dt.to_zarr(store, zarr_format=zarr_format)
+
+        with open_datatree(
+            store,  # type: ignore[arg-type]
+            group="weird_*_name",
+            engine=self.engine,
+            zarr_format=zarr_format,
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert paths == {"/"}
+            np.testing.assert_array_equal(tree.dataset["data"].values, [1, 2])
+
+    def test_open_datatree_group_and_group_filter_mutually_exclusive(
+        self, tmpdir, zarr_format
+    ) -> None:
+        original_dt = DataTree.from_dict(
+            {"/": xr.Dataset({"root_var": 1}), "/A": xr.Dataset({"a_var": 2})}
+        )
+        filepath = str(tmpdir / "mutex.zarr")
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            open_datatree(filepath, group="A", group_filter="*/A", engine=self.engine)
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            open_groups(filepath, group="A", group_filter="*/A", engine=self.engine)
 
     @requires_dask
     def test_open_groups_chunks(self, tmpdir, zarr_format) -> None:
@@ -1417,9 +1499,9 @@ class TestGroupFilterHelpers:
     def test_filter_group_paths(self) -> None:
         from xarray.backends.common import _filter_group_paths
 
-        paths = ["/", "/A", "/A/sweep_0", "/A/sweep_1", "/B", "/B/sweep_0"]
-        result = _filter_group_paths(paths, "*/sweep_0")
-        assert result == ["/", "/A", "/A/sweep_0", "/B", "/B/sweep_0"]
+        paths = ["/", "/A", "/A/leaf_0", "/A/leaf_1", "/B", "/B/leaf_0"]
+        result = _filter_group_paths(paths, "*/leaf_0")
+        assert result == ["/", "/A", "/A/leaf_0", "/B", "/B/leaf_0"]
 
     def test_filter_group_paths_no_match(self) -> None:
         from xarray.backends.common import _filter_group_paths
@@ -1438,9 +1520,9 @@ class TestGroupFilterHelpers:
     def test_filter_group_paths_bracket(self) -> None:
         from xarray.backends.common import _filter_group_paths
 
-        paths = ["/", "/A", "/A/sweep_0", "/A/sweep_1", "/A/sweep_2"]
-        result = _filter_group_paths(paths, "*/sweep_[01]")
-        assert result == ["/", "/A", "/A/sweep_0", "/A/sweep_1"]
+        paths = ["/", "/A", "/A/leaf_0", "/A/leaf_1", "/A/leaf_2"]
+        result = _filter_group_paths(paths, "*/leaf_[01]")
+        assert result == ["/", "/A", "/A/leaf_0", "/A/leaf_1"]
 
     def test_filter_group_paths_literal_metachar_via_char_class(self) -> None:
         from xarray.backends.common import _filter_group_paths
@@ -1469,11 +1551,10 @@ class TestGroupFilterHelpers:
         [
             (None, None),
             ("A", None),
-            (None, "*/sweep_0"),
-            # Empty string is not None — pins the ``is not None`` check
-            # and guards against a refactor to plain truthiness.
+            (None, "*/leaf_0"),
+            # Empty ``group`` is not None — pins the ``is not None`` check
+            # for ``group`` against a refactor to plain truthiness.
             ("", None),
-            (None, ""),
         ],
     )
     def test_check_group_filter_mutex_passes(self, group, group_filter) -> None:
@@ -1484,12 +1565,12 @@ class TestGroupFilterHelpers:
     @pytest.mark.parametrize(
         "group, group_filter",
         [
-            ("A", "*/sweep_0"),
+            ("A", "*/leaf_0"),
             # Empty strings still count as "set" — exclusivity is by
             # ``is not None``, not truthiness.
             ("", ""),
             ("A", ""),
-            ("", "*/sweep_0"),
+            ("", "*/leaf_0"),
         ],
     )
     def test_check_group_filter_mutex_raises_when_both_set(
@@ -1499,3 +1580,51 @@ class TestGroupFilterHelpers:
 
         with pytest.raises(ValueError, match="mutually exclusive"):
             _check_group_filter_mutex(group, group_filter)
+
+    def test_check_group_filter_mutex_rejects_empty_pattern(self) -> None:
+        from xarray.backends.common import _check_group_filter_mutex
+
+        with pytest.raises(ValueError, match="non-empty"):
+            _check_group_filter_mutex(None, "")
+
+    def test_filter_group_paths_match_is_right_anchored(self) -> None:
+        # ``NodePath.match`` is anchored on the right, so ``*/leaf_0``
+        # matches a ``leaf_0`` at any depth as long as the parent
+        # segment matches ``*``. The root-level ``/leaf_0`` (no parent
+        # segment to consume the ``*``) is the only path skipped.
+        from xarray.backends.common import _filter_group_paths
+
+        paths = [
+            "/",
+            "/leaf_0",
+            "/a",
+            "/a/leaf_0",
+            "/a/b",
+            "/a/b/leaf_0",
+        ]
+        assert _filter_group_paths(paths, "*/leaf_0") == [
+            "/",
+            "/a",
+            "/a/leaf_0",
+            "/a/b",
+            "/a/b/leaf_0",
+        ]
+
+    def test_filter_group_paths_leading_slash_pattern(self) -> None:
+        # Patterns starting with ``/`` are fully anchored — they match
+        # the exact absolute path and nothing else.
+        from xarray.backends.common import _filter_group_paths
+
+        paths = ["/", "/A", "/A/leaf_0", "/B", "/B/leaf_0"]
+        assert _filter_group_paths(paths, "/A/leaf_0") == [
+            "/",
+            "/A",
+            "/A/leaf_0",
+        ]
+
+    def test_filter_group_paths_recursive_glob(self) -> None:
+        # ``**`` selects every path (pinning ``NodePath.match`` behavior).
+        from xarray.backends.common import _filter_group_paths
+
+        paths = ["/", "/A", "/A/leaf_0", "/B/leaf_1"]
+        assert _filter_group_paths(paths, "**") == paths
