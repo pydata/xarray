@@ -645,6 +645,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_timedelta=None,
         format="NETCDF4",
         group: str | None = None,
+        group_filter: str | None = None,
         lock=None,
         invalid_netcdf=None,
         phony_dims=None,
@@ -656,12 +657,14 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import (
-            _is_glob_pattern,
+            _check_group_filter_mutex,
+            _filter_group_paths,
             _iter_nc_groups,
-            _resolve_group_and_filter,
         )
         from xarray.core.treenode import NodePath
         from xarray.core.utils import close_on_error
+
+        _check_group_filter_mutex(group, group_filter)
 
         # Keep this message for some versions
         # remove and set phony_dims="access" above
@@ -669,11 +672,10 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
 
-        effective_group = None if (group and _is_glob_pattern(group)) else group
         store = H5NetCDFStore.open(
             filename_or_obj,
             format=format,
-            group=effective_group,
+            group=None if group_filter else group,
             lock=lock,
             invalid_netcdf=invalid_netcdf,
             phony_dims=phony_dims,
@@ -684,17 +686,18 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             open_kwargs=open_kwargs,
         )
 
-        if effective_group:
-            parent = NodePath("/") / NodePath(effective_group)
+        if group is not None:
+            parent = NodePath("/") / NodePath(group)
         else:
             parent = NodePath("/")
 
         manager = store._manager
-        all_group_paths = list(_iter_nc_groups(store.ds, parent=parent))
-        _, filtered_paths = _resolve_group_and_filter(group, all_group_paths)
+        group_paths = list(_iter_nc_groups(store.ds, parent=parent))
+        if group_filter is not None:
+            group_paths = _filter_group_paths(group_paths, group_filter)
 
         groups_dict = {}
-        for path_group in filtered_paths:
+        for path_group in group_paths:
             group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(group_store):
@@ -709,7 +712,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
 
-            if effective_group:
+            if group is not None:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
