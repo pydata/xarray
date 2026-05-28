@@ -249,11 +249,21 @@ def _iter_nc_groups(root, parent="/"):
         yield from _iter_nc_groups(group, parent=gpath)
 
 
-def _is_glob_pattern(pattern: str) -> bool:
-    return any(c in pattern for c in "*?[")
+def _check_group_filter_mutex(group: str | None, group_filter: str | None) -> None:
+    """Raise ``ValueError`` if both ``group`` and ``group_filter`` are set."""
+    if group is not None and group_filter is not None:
+        raise ValueError(
+            "group and group_filter are mutually exclusive: "
+            "group selects an exact group path while group_filter "
+            "is a glob pattern over all group paths."
+        )
 
 
 def _filter_group_paths(group_paths: Iterable[str], pattern: str) -> list[str]:
+    """Return the subset of ``group_paths`` whose paths match ``pattern``,
+    plus every ancestor of a match (so the resulting tree stays
+    connected). The root path ``"/"`` is always included.
+    """
     from xarray.core.treenode import NodePath
 
     matched: set[str] = {"/"}
@@ -264,17 +274,6 @@ def _filter_group_paths(group_paths: Iterable[str], pattern: str) -> list[str]:
             matched.update(str(p) for p in np_.parents if str(p))
 
     return [p for p in group_paths if p in matched]
-
-
-def _resolve_group_and_filter(
-    group: str | None,
-    all_group_paths: list[str],
-) -> tuple[str | None, list[str]]:
-    if group is None:
-        return None, all_group_paths
-    if _is_glob_pattern(group):
-        return None, _filter_group_paths(all_group_paths, group)
-    return group, all_group_paths
 
 
 def find_root_and_group(ds):
