@@ -29,6 +29,10 @@ Bug Fixes
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
   code ndarrays into Python lists (:issue:`11305`).
+- Preserve the Zarr array ``fill_value`` in the variable ``encoding`` when reading
+  a ``zarr_format=3`` store with ``use_zarr_fill_value_as_mask=False``, so it is no
+  longer silently lost on round-trip (:issue:`10269`).
+  By `Davis Bennett <https://github.com/d-v-b>`_.
 
 
 Documentation
