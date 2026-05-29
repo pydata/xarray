@@ -282,16 +282,38 @@ class H5NetCDFStore(WritableCFDataStore):
         data = indexing.LazilyIndexedArray(H5NetCDFArrayWrapper(name, self))
         attrs = _read_attributes(var)
 
-        # netCDF4 specific encoding
-        encoding = {
-            "chunksizes": var.chunks,
-            "fletcher32": var.fletcher32,
-            "shuffle": var.shuffle,
-        }
+        h5py = var._root._h5py
+
+        encoding = {}
+        if (datatype := var.datatype) and isinstance(datatype, h5netcdf.core.EnumType):
+            encoding["dtype"] = np.dtype(
+                data.dtype,
+                metadata={
+                    "enum": datatype.enum_dict,
+                    "enum_name": datatype.name,
+                },
+            )
+        else:
+            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
+            if vlen_dtype is str:
+                encoding["dtype"] = str
+            else:
+                # xarray doesn't support writing arbitrary vlen dtypes yet, so
+                # they fall back to the variable's dtype here.
+                encoding["dtype"] = var.dtype
+
         if var.chunks:
+            encoding["contiguous"] = False
+            encoding["chunksizes"] = var.chunks
             encoding["preferred_chunks"] = dict(
                 zip(var.dimensions, var.chunks, strict=True)
             )
+        else:
+            encoding["contiguous"] = True
+            encoding["chunksizes"] = None
+
+        encoding.update(var.filters())
+
         # Convert h5py-style compression options to NetCDF4-Python
         # style, if possible
         if var.compression == "gzip":
@@ -304,28 +326,6 @@ class H5NetCDFStore(WritableCFDataStore):
         # save source so __repr__ can detect if it's local or not
         encoding["source"] = self._filename
         encoding["original_shape"] = data.shape
-
-        h5py = var._root._h5py
-        vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-        if vlen_dtype is str:
-            encoding["dtype"] = str
-        elif vlen_dtype is not None:  # pragma: no cover
-            # xarray doesn't support writing arbitrary vlen dtypes yet.
-            pass
-        # just check if datatype is available and create dtype
-        # this check can be removed if h5netcdf >= 1.4.0 for any environment
-        elif (datatype := getattr(var, "datatype", None)) and isinstance(
-            datatype, h5netcdf.core.EnumType
-        ):
-            encoding["dtype"] = np.dtype(
-                data.dtype,
-                metadata={
-                    "enum": datatype.enum_dict,
-                    "enum_name": datatype.name,
-                },
-            )
-        else:
-            encoding["dtype"] = var.dtype
 
         return Variable(dimensions, data, attrs, encoding)
 
