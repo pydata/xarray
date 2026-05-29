@@ -89,7 +89,6 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
-    requires_h5netcdf_1_7_0_or_above,
     requires_h5netcdf_or_netCDF4,
     requires_h5netcdf_ros3,
     requires_iris,
@@ -4728,7 +4727,6 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
             assert ds._h5file.attrs["foo"].dtype == np.dtype("S3")
 
 
-@requires_h5netcdf_1_7_0_or_above
 class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
     engine: T_NetcdfEngine = "h5netcdf"
     file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
@@ -4980,17 +4978,6 @@ class TestH5NetCDFData(NetCDF4Base):
             with open_dataset(tmp_file, engine="h5netcdf") as actual:
                 assert actual.x.encoding["zlib"] is True
                 assert actual.x.encoding["complevel"] == 6
-
-        # Incompatible encodings cause a crash
-        with create_tmp_file() as tmp_file:
-            with pytest.raises(
-                ValueError, match=r"'zlib' and 'compression' encodings mismatch"
-            ):
-                data.to_netcdf(
-                    tmp_file,
-                    engine="h5netcdf",
-                    encoding={"x": {"compression": "lzf", "zlib": True}},
-                )
 
         with create_tmp_file() as tmp_file:
             with pytest.raises(

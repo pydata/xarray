@@ -268,6 +268,10 @@ def _extract_nc4_variable_encoding(
     safe_to_drop = {"source", "original_shape"}
     valid_encodings = {
         "zlib",
+        "szip",
+        "bzip2",
+        "blosc",
+        "zstd",
         "complevel",
         "fletcher32",
         "contiguous",
@@ -313,6 +317,27 @@ def _extract_nc4_variable_encoding(
     for k in safe_to_drop:
         if k in encoding:
             del encoding[k]
+
+    # Translate the boolean netCDF4-Python style compression flags (as produced
+    # by h5netcdf's ``variable.filters()``) into a single h5py-style
+    # ``compression`` string. At most one of these is ever true for a given
+    # variable; if several were set we keep the last one.
+    compression = None
+    if encoding.pop("zlib", False):
+        compression = "zlib"
+    if encoding.pop("szip", False):
+        compression = "szip"
+    if encoding.pop("bzip2", False):
+        compression = "bzip2"
+    if encoding.pop("blosc", False):
+        compression = "blosc"
+    if encoding.pop("zstd", False):
+        compression = "zstd"
+
+    # If both styles are used together, the explicit h5py-style ``compression``
+    # takes precedence over the translated netCDF4-Python style flag.
+    if compression is not None and encoding.get("compression") is None:
+        encoding["compression"] = compression
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
