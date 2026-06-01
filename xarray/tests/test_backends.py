@@ -8034,10 +8034,7 @@ def test_zarr_create_default_indexes(tmp_path, create_default_indexes) -> None:
 @pytest.mark.usefixtures("default_zarr_format")
 def test_raises_key_error_on_invalid_zarr_store(tmp_path):
     root = zarr.open_group(tmp_path / "tmp.zarr")
-    if Version(zarr.__version__) < Version("3.0.0"):
-        root.create_dataset("bar", shape=(3, 5), dtype=np.float32)
-    else:
-        root.create_array("bar", shape=(3, 5), dtype=np.float32)
+    root.create_array("bar", shape=(3, 5), dtype=np.float32)
     with pytest.raises(KeyError, match=r"xarray to determine variable dimensions"):
         xr.open_zarr(tmp_path / "tmp.zarr", consolidated=False)
 
