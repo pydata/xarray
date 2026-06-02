@@ -200,6 +200,11 @@ pydap = "*"
 cartopy = "*"
 seaborn = "*"
 
+# Sourced from PyPI here (rather than via the conda `typing-stubs` feature) so
+# they don't pull conda numpy/scipy and clash with the PyPI overrides above.
+pandas-stubs = "<=2.3.3.251219"
+scipy-stubs = ">=1.17.1.2"
+
 [feature.test.dependencies]
 pytest = "*"
 pytest-asyncio = "*"
@@ -270,14 +275,18 @@ typing_extensions = "*"
 pip = "*"
 
 [feature.typing.pypi-dependencies]
-# Declared as PyPI deps (not conda) so they don't pull conda numpy/scipy. As
-# conda deps they would conflict with the `nightly` feature's PyPI numpy/scipy
-# overrides (pixi cannot override a conda dep with a PyPI one), which is why the
-# `typing` feature was previously excluded from the `test-nightly` environment.
-pandas-stubs = "<=2.3.3.251219"
-scipy-stubs = ">=1.17.1.2"
 types-defusedxml = "*"
 types-pexpect = "*"
+
+# pandas-stubs / scipy-stubs live in their own feature, rather than in `typing`,
+# so that `test-nightly` can source them from PyPI (see the `nightly` feature)
+# while every other typing env keeps the conda builds. As conda deps they pull in
+# conda numpy/scipy, which conflicts with the `nightly` feature's PyPI numpy/scipy
+# overrides (pixi cannot override a conda dep with a PyPI one) — that conflict is
+# why the `typing` feature used to be excluded from `test-nightly` entirely.
+[feature.typing-stubs.dependencies]
+pandas-stubs = "<=2.3.3.251219"
+scipy-stubs = ">=1.17.1.2"
 
 [feature.typing.tasks]
 mypy = { cmd = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report", description = "Run mypy type checking and generate a Cobertura XML report." }
@@ -416,6 +425,7 @@ test-py311-with-typing = { features = [
   "viz",
   "extras",
   "typing",
+  "typing-stubs",
 ] }
 
 test-py313-with-typing = { features = [
@@ -428,6 +438,7 @@ test-py313-with-typing = { features = [
   "viz",
   "extras",
   "typing",
+  "typing-stubs",
 ] }
 
 test-py311-bare-minimum = { features = ["test", "minimal"] }
@@ -445,7 +456,7 @@ test-py311-min-versions = { features = [
 
 
 # Extra
-typing = { features = ["typing"] }
+typing = { features = ["typing", "typing-stubs"] }
 doc = { features = [
   "doc",
   "backends",
