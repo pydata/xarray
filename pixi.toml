@@ -254,8 +254,6 @@ mypy = "==1.19.1"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"
-pandas-stubs = "<=2.3.3.251219"
-scipy-stubs = ">=1.17.1.2"
 types-colorama = "*"
 types-docutils = "*"
 types-decorator = "*"
@@ -272,6 +270,12 @@ typing_extensions = "*"
 pip = "*"
 
 [feature.typing.pypi-dependencies]
+# Declared as PyPI deps (not conda) so they don't pull conda numpy/scipy. As
+# conda deps they would conflict with the `nightly` feature's PyPI numpy/scipy
+# overrides (pixi cannot override a conda dep with a PyPI one), which is why the
+# `typing` feature was previously excluded from the `test-nightly` environment.
+pandas-stubs = "<=2.3.3.251219"
+scipy-stubs = ">=1.17.1.2"
 types-defusedxml = "*"
 types-pexpect = "*"
 
@@ -387,7 +391,7 @@ test-nightly = { features = [
   "py313",
   "nightly",
   "test",
-  # "typing",
+  "typing",
 ], no-default-feature = true }
 
 
