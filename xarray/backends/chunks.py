@@ -135,7 +135,7 @@ def align_nd_chunks(
 
 def build_grid_chunks(
     size: int,
-    chunk_size: int | tuple[int, ...],
+    chunk_size: int | tuple[int, ...] | list[int],
     region: slice | None = None,
 ) -> tuple[int, ...]:
     if isinstance(chunk_size, (list, tuple)):
@@ -159,7 +159,7 @@ def build_grid_chunks(
 
 
 def _build_rectilinear_grid_chunks(
-    chunk_sizes: tuple[int, ...],
+    chunk_sizes: tuple[int, ...] | list[int],
     region: slice | None = None,
 ) -> tuple[int, ...]:
     """Build grid chunks for a rectilinear dimension within a region."""
