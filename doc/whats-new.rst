@@ -120,6 +120,9 @@ Bug Fixes
 - Fixed a bug that caused rechunking a multi-dimensional cftime array along a
   subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Allow non-mapping arguments such as ``"auto"`` or an integer to
+  :py:meth:`DataTree.chunk`, matching :py:meth:`Dataset.chunk` (:issue:`11315`).
+  By `Sai Asish Y <https://github.com/SAY-5>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
