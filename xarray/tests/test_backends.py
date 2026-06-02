@@ -7431,8 +7431,8 @@ def test_rectilinear_chunks_interop(tmp_path: Path) -> None:
         arr = root.create(
             "var",
             shape=(60,),
-            # zarr stubs don't include rectilinear chunk types yet
-            chunks=((10, 20, 30),),  # type: ignore[arg-type]
+            # older zarr stubs (<3.2) don't include rectilinear chunk types
+            chunks=((10, 20, 30),),  # type: ignore[arg-type, unused-ignore]
             dtype="float32",
             dimension_names=("x",),
         )
