@@ -433,6 +433,19 @@ class TestDataArrayRolling:
         chunked_result = data.chunk({"x": 1}).rolling(x=3, min_periods=1).mean()
         assert chunked_result.dtype == unchunked_result.dtype
 
+    @requires_dask
+    @pytest.mark.parametrize("chunk_size", [1, 2])
+    def test_rolling_dask_chunk_smaller_than_window(self, chunk_size: int) -> None:
+        # GH:10115 — ``dask_rolling_wrapper`` called ``map_overlap`` directly,
+        # which errors with "Moving window must between 1 and Cmax" whenever a
+        # chunk along the rolling axis is smaller than the window. Reductions
+        # using the bottleneck path (e.g. ``mean``) must rechunk first.
+        values = np.arange(10.0)
+        expected = DataArray(values, dims=["time"]).rolling(time=3).mean()
+        chunked = DataArray(values, dims=["time"]).chunk({"time": chunk_size})
+        actual = chunked.rolling(time=3).mean().compute()
+        assert_allclose(actual, expected)
+
     def test_rolling_mean_bool(self) -> None:
         bool_raster = DataArray(
             data=[0, 1, 1, 0, 1, 0],

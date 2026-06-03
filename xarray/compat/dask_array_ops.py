@@ -9,7 +9,15 @@ from xarray.core import dtypes, nputils
 def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
     """Wrapper to apply bottleneck moving window funcs on dask arrays"""
     dtype, _ = dtypes.maybe_promote(a.dtype)
-    return a.data.map_overlap(
+    data = a.data
+    # ``map_overlap`` requires depth <= chunk size along the rolling axis.
+    # If any chunk is smaller than ``window``, rechunk along that axis so the
+    # window fits. This restores the behavior that regressed for small chunks
+    # after the ``map_overlap`` migration in #9770. See #10115 (and #9862).
+    if any(size < window for size in data.chunks[axis]):
+        max_chunk = max(data.chunks[axis])
+        data = data.rechunk({axis: max(window, max_chunk)})
+    return data.map_overlap(
         moving_func,
         depth={axis: (window - 1, 0)},
         axis=axis,

@@ -33,6 +33,11 @@ Bug Fixes
   a ``zarr_format=3`` store with ``use_zarr_fill_value_as_mask=False``, so it is no
   longer silently lost on round-trip (:issue:`10269`).
   By `Davis Bennett <https://github.com/d-v-b>`_.
+- Fix :py:meth:`DataArray.rolling` reductions (``mean``, ``sum``, ``std``, ...)
+  raising ``ValueError`` on Dask-backed arrays whose chunks along the rolling
+  axis are smaller than the window. Rechunk along that axis before delegating
+  to ``map_overlap`` so the window fits (:issue:`10115`, regression of
+  :issue:`9862`).
 
 
 Documentation
