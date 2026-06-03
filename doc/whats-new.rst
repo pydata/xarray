@@ -38,6 +38,9 @@ Bug Fixes
   a ``zarr_format=3`` store with ``use_zarr_fill_value_as_mask=False``, so it is no
   longer silently lost on round-trip (:issue:`10269`).
   By `Davis Bennett <https://github.com/d-v-b>`_.
+- Fix :py:func:`decode_cf` failing on integer-encoded time arrays that contain
+  NaT when running against numpy 2.5+.
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 
 Documentation
