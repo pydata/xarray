@@ -353,10 +353,10 @@ class TestArrayNotNullEquiv:
         "val1, val2, val3, null",
         [
             (
-                np.datetime64("2000"),
-                np.datetime64("2001"),
-                np.datetime64("2002"),
-                np.datetime64("NaT"),
+                np.datetime64("2000", "ns"),
+                np.datetime64("2001", "ns"),
+                np.datetime64("2002", "ns"),
+                np.datetime64("NaT", "ns"),
             ),
             (1.0, 2.0, 3.0, np.nan),
             ("foo", "bar", "baz", None),
