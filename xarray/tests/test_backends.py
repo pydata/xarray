@@ -3869,6 +3869,27 @@ class ZarrBase(CFEncodedBase):
             # ``raise_on_invalid=vn in check_encoding_set`` line in zarr.py
             # ds.foo.encoding["fill_value"] = fv
 
+    def test_zarr_fill_value_in_encoding_on_read(self) -> None:
+        # GH #10269: the Zarr array fill_value should be preserved in the
+        # variable encoding on read, so that it is not lost on round-trip.
+        # `fill_value` is an independent encoding key only for zarr_format 3;
+        # for zarr_format 2 the fill_value is set via `_FillValue`.
+        if not has_zarr_v3 or zarr.config.get("default_zarr_format") != 3:
+            pytest.skip("fill_value is only an encoding key for zarr_format 3")
+
+        ds = xr.Dataset({"foo": ("x", [1, 2, 3])})
+        ds.foo.encoding = {"fill_value": -99}
+
+        open_kwargs = {"consolidated": False, "use_zarr_fill_value_as_mask": False}
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as actual:
+            assert actual.foo.encoding["fill_value"] == -99
+
+        # the fill_value must survive an open -> write -> open round-trip even
+        # when the user never touches the encoding explicitly
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as opened:
+            with self.roundtrip(opened, open_kwargs=open_kwargs) as actual:
+                assert actual.foo.encoding["fill_value"] == -99
+
 
 @requires_zarr
 @pytest.mark.skipif(
@@ -7751,10 +7772,7 @@ def test_zarr_create_default_indexes(tmp_path, create_default_indexes) -> None:
 @pytest.mark.usefixtures("default_zarr_format")
 def test_raises_key_error_on_invalid_zarr_store(tmp_path):
     root = zarr.open_group(tmp_path / "tmp.zarr")
-    if Version(zarr.__version__) < Version("3.0.0"):
-        root.create_dataset("bar", shape=(3, 5), dtype=np.float32)
-    else:
-        root.create_array("bar", shape=(3, 5), dtype=np.float32)
+    root.create_array("bar", shape=(3, 5), dtype=np.float32)
     with pytest.raises(KeyError, match=r"xarray to determine variable dimensions"):
         xr.open_zarr(tmp_path / "tmp.zarr", consolidated=False)
 
