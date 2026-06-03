@@ -254,8 +254,6 @@ mypy = "==1.19.1"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"
-pandas-stubs = "<=2.3.3.251219"
-scipy-stubs = ">=1.17.1.2"
 types-colorama = "*"
 types-docutils = "*"
 types-decorator = "*"
@@ -274,6 +272,32 @@ pip = "*"
 [feature.typing.pypi-dependencies]
 types-defusedxml = "*"
 types-pexpect = "*"
+
+# pandas-stubs / scipy-stubs live in their own feature, rather than in `typing`,
+# so that `test-nightly` can source them from PyPI (see the `nightly` feature)
+# while every other typing env keeps the conda builds. As conda deps they pull in
+# conda numpy/scipy, which conflicts with the `nightly` feature's PyPI numpy/scipy
+# overrides (pixi cannot override a conda dep with a PyPI one) — that conflict is
+# why the `typing` feature used to be excluded from `test-nightly` entirely.
+[feature.typing-stubs.dependencies]
+pandas-stubs = "<=2.3.3.251219"
+scipy-stubs = ">=1.17.1.2"
+
+# Stubs sourced from PyPI rather than conda, used only by the `mypy-upstream`
+# environment. That env pairs the `nightly` feature (which overrides numpy/scipy
+# to PyPI nightly wheels) with type stubs; conda stubs would pull conda
+# numpy/scipy that pixi cannot reconcile with those PyPI overrides, so they must
+# come from PyPI here.
+#
+# NOTE: these stubs cap numpy below the nightly wheel (scipy-stubs via optype ->
+# numpy-typing-compat needs numpy<2.5; pandas-stubs needs numpy<=2.3.5), so numpy
+# in `mypy-upstream` resolves to the latest release. We accept that: dropping the
+# stubs to free up numpy would leave pandas/scipy untyped and flood mypy with
+# import-untyped errors. The upstream *test* job (`test-nightly`) is kept separate
+# precisely so it still gets the genuine nightly numpy.
+[feature.typing-stubs-nightly.pypi-dependencies]
+pandas-stubs = "<=2.3.3.251219"
+scipy-stubs = ">=1.17.1.2"
 
 [feature.typing.tasks]
 mypy = { cmd = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report", description = "Run mypy type checking and generate a Cobertura XML report." }
@@ -387,7 +411,22 @@ test-nightly = { features = [
   "py313",
   "nightly",
   "test",
-  # "typing",
+  # Deliberately no "typing": type stubs cap numpy<2.5 and would displace the
+  # nightly numpy wheel this env's pytest job needs. Type checking against the
+  # dev stack lives in the separate `mypy-upstream` environment below.
+], no-default-feature = true }
+
+# Type-checking against the development stack (used by the `mypy-upstream-dev` CI
+# job). Same as `test-nightly` plus the typing toolchain and PyPI-sourced stubs.
+# numpy resolves to the latest release here (the stubs cap it below the nightly
+# wheel); every other dependency still comes from the nightly wheels / git, so
+# this catches typing breakage from upstream development versions.
+mypy-upstream = { features = [
+  "py313",
+  "nightly",
+  "test",
+  "typing",
+  "typing-stubs-nightly",
 ], no-default-feature = true }
 
 
@@ -412,6 +451,7 @@ test-py311-with-typing = { features = [
   "viz",
   "extras",
   "typing",
+  "typing-stubs",
 ] }
 
 test-py313-with-typing = { features = [
@@ -424,6 +464,7 @@ test-py313-with-typing = { features = [
   "viz",
   "extras",
   "typing",
+  "typing-stubs",
 ] }
 
 test-py311-bare-minimum = { features = ["test", "minimal"] }
@@ -441,7 +482,7 @@ test-py311-min-versions = { features = [
 
 
 # Extra
-typing = { features = ["typing"] }
+typing = { features = ["typing", "typing-stubs"] }
 doc = { features = [
   "doc",
   "backends",
