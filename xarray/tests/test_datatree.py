@@ -2766,11 +2766,28 @@ class TestDask:
         assert_identical(actual, expected)
         assert actual.chunksizes == expected.chunksizes
 
-        with pytest.raises(TypeError, match="invalid type"):
+        with pytest.warns(FutureWarning, match="None value for 'chunks'"):
             tree.chunk(None)
-
-        with pytest.raises(TypeError, match="invalid type"):
-            tree.chunk((1, 2))
 
         with pytest.raises(ValueError, match="not found in data dimensions"):
             tree.chunk({"u": 2})
+
+    @requires_dask
+    def test_chunk_non_mapping(self):
+        # GH11315: DataTree.chunk should accept non-mapping inputs like
+        # Dataset.chunk does (e.g. "auto" or an int that broadcasts to all dims).
+        ds1 = xr.Dataset({"a": (("x", "y"), np.zeros((10, 5)))})
+        ds2 = xr.Dataset({"b": ("z", np.arange(4))})
+        tree = xr.DataTree.from_dict({"/": ds1, "/group": ds2})
+
+        actual = tree.chunk("auto")
+        expected = xr.DataTree.from_dict(
+            {"/": ds1.chunk("auto"), "/group": ds2.chunk("auto")}
+        )
+        assert_identical(actual, expected)
+
+        actual_int = tree.chunk(3)
+        for node in actual_int.subtree:
+            for v in node.dataset.variables.values():
+                if v.ndim:
+                    assert v.chunks is not None
