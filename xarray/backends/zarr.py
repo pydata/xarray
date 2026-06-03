@@ -400,7 +400,12 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, zarr_format):
     if isinstance(enc_chunks, integer_types):
         enc_chunks_tuple = ndim * (enc_chunks,)
     else:
-        enc_chunks_tuple = tuple(enc_chunks)
+        # Normalize per-dimension rectilinear specs (possibly lists, e.g.
+        # encoding={"chunks": [[10, 20, 30], 25]}) to tuples, so downstream
+        # code only deals with elements of type int | tuple[int, ...]
+        enc_chunks_tuple = tuple(
+            tuple(x) if isinstance(x, (list, tuple)) else x for x in enc_chunks
+        )
 
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over

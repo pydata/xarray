@@ -135,10 +135,10 @@ def align_nd_chunks(
 
 def build_grid_chunks(
     size: int,
-    chunk_size: int | tuple[int, ...] | list[int],
+    chunk_size: int | tuple[int, ...],
     region: slice | None = None,
 ) -> tuple[int, ...]:
-    if isinstance(chunk_size, (list, tuple)):
+    if isinstance(chunk_size, tuple):
         return _build_rectilinear_grid_chunks(chunk_size, region)
 
     if region is None:
@@ -159,7 +159,7 @@ def build_grid_chunks(
 
 
 def _build_rectilinear_grid_chunks(
-    chunk_sizes: tuple[int, ...] | list[int],
+    chunk_sizes: tuple[int, ...],
     region: slice | None = None,
 ) -> tuple[int, ...]:
     """Build grid chunks for a rectilinear dimension within a region."""
@@ -185,7 +185,7 @@ def _build_rectilinear_grid_chunks(
 
 def grid_rechunk(
     v: Variable,
-    enc_chunks: tuple[int, ...] | tuple[int | tuple[int, ...], ...],
+    enc_chunks: tuple[int | tuple[int, ...], ...],
     region: tuple[slice, ...],
 ) -> Variable:
     nd_v_chunks = v.chunks
@@ -270,7 +270,7 @@ def validate_grid_chunks_alignment(
         backend_shape,
         strict=True,
     ):
-        if isinstance(chunk_size, (list, tuple)):
+        if isinstance(chunk_size, tuple):
             # Rectilinear dimension: use boundary-based validation
             _validate_rectilinear_chunk_alignment(
                 dask_chunks=v_chunks,
