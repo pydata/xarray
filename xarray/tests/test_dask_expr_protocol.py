@@ -132,7 +132,7 @@ def test_standalone_dask_array_mixed_legacy_falls_back_from_composite_expr():
     assert ds.__dask_exprs__() is None
 
 
-def test_standalone_dask_array_mixed_legacy_map_blocks_fallback_computes():
+def test_standalone_dask_array_mixed_legacy_map_blocks_raises():
     dask_array = pytest.importorskip("dask_array")
 
     ds = Dataset(
@@ -142,16 +142,22 @@ def test_standalone_dask_array_mixed_legacy_map_blocks_fallback_computes():
         }
     )
 
-    out = xr.map_blocks(lambda block: block + 1, ds)
+    with pytest.raises(TypeError, match=r"cannot mix dask_array\.Array"):
+        xr.map_blocks(lambda block: block + 1, ds)
 
-    expected = Dataset(
-        {"expr": ("i", np.arange(6) + 1), "legacy": ("i", np.arange(6) + 1)}
-    )
-    assert_identical(out.compute(scheduler="single-threaded"), expected)
+
+def test_standalone_dask_array_mixed_legacy_map_blocks_arg_raises():
+    dask_array = pytest.importorskip("dask_array")
+
+    arr = DataArray(dask_array.arange(6, chunks=(3,)), dims="i")
+    other = DataArray(da.arange(6, chunks=(3,)), dims="i")
+
+    with pytest.raises(TypeError, match=r"cannot mix dask_array\.Array"):
+        xr.map_blocks(lambda a, b: a + b, arr, args=[other])
 
 
 def test_standalone_dask_array_open_mfdataset_uses_expressions(tmp_path):
-    pytest.importorskip("dask_array")
+    dask_array = pytest.importorskip("dask_array")
     from dask._expr import CompositeExpr
 
     paths = []
@@ -167,7 +173,7 @@ def test_standalone_dask_array_open_mfdataset_uses_expressions(tmp_path):
     try:
         expr = dask.base.collections_to_expr(ds)
 
-        assert type(ds["x"].data).__module__.startswith("dask_array")
+        assert isinstance(ds["x"].data, dask_array.Array)
         assert isinstance(expr, CompositeExpr)
 
         expected = Dataset({"x": ("t", np.arange(6))}, coords={"t": np.arange(6)})
@@ -181,6 +187,14 @@ def test_standalone_dask_array_open_mfdataset_uses_expressions(tmp_path):
         )
         assert_identical(
             dask.optimize(ds)[0].compute(scheduler="single-threaded"), expected
+        )
+
+        mapped = xr.map_blocks(lambda block: block + 1, ds)
+        assert isinstance(mapped["x"].data, dask_array.Array)
+        assert isinstance(dask.base.collections_to_expr(mapped), CompositeExpr)
+        assert_identical(
+            mapped.compute(scheduler="single-threaded"),
+            Dataset({"x": ("t", np.arange(6) + 1)}, coords={"t": np.arange(6)}),
         )
     finally:
         ds.close()
@@ -253,18 +267,98 @@ def test_standalone_dask_array_groupby_sum():
     assert_equal(dask.optimize(out)[0].compute(scheduler="single-threaded"), expected)
 
 
-def test_standalone_dask_array_map_blocks_fallback_computes():
+def test_standalone_dask_array_map_blocks_uses_expressions():
     dask_array = pytest.importorskip("dask_array")
+    from dask._expr import CompositeExpr
 
     x = dask_array.arange(6, chunks=(3,))
     arr = DataArray(x, dims="t", name="x")
     out = xr.map_blocks(lambda block: block + 1, arr)
 
+    assert isinstance(out.data, dask_array.Array)
+    assert isinstance(dask.base.collections_to_expr(out), CompositeExpr)
+
     expected = DataArray(np.arange(6) + 1, dims="t", name="x")
     assert_identical(out.compute(scheduler="single-threaded"), expected)
     assert_identical(
+        out.persist(scheduler="single-threaded").compute(scheduler="single-threaded"),
+        expected,
+    )
+    assert_identical(
         dask.optimize(out)[0].compute(scheduler="single-threaded"), expected
     )
+
+
+def test_standalone_dask_array_map_blocks_preserves_scalar_coords():
+    dask_array = pytest.importorskip("dask_array")
+    from dask._expr import CompositeExpr
+
+    x = dask_array.arange(6, chunks=(3,)).reshape((3, 2))
+    arr = DataArray(
+        x,
+        dims=("x", "y"),
+        coords={"label": ("x", ["a", "b", "c"]), "scale": 2},
+        name="z",
+    )
+
+    out = xr.map_blocks(lambda block: block + block.scale, arr)
+
+    assert isinstance(dask.base.collections_to_expr(out), CompositeExpr)
+    expected = DataArray(
+        np.arange(6).reshape((3, 2)) + 2,
+        dims=("x", "y"),
+        coords={"label": ("x", ["a", "b", "c"]), "scale": 2},
+    )
+    assert_identical(out.compute(scheduler="single-threaded"), expected)
+
+
+def test_standalone_dask_array_map_blocks_dataset_outputs_share_block_calls():
+    dask_array = pytest.importorskip("dask_array")
+    from dask._expr import CompositeExpr
+
+    calls = []
+    x = dask_array.arange(6, chunks=(3,))
+    ds = Dataset({"x": ("t", x)}, coords={"qc": ("t", x + 10)})
+    template = Dataset(
+        {"a": ("t", x), "b": ("t", x)},
+        coords={"qc": ("t", x + 10)},
+        attrs={"kind": "mapped"},
+    )
+
+    def func(block):
+        calls.append(block.sizes["t"])
+        return Dataset(
+            {"a": block["x"] + 1, "b": block["x"] + 2},
+            coords={"qc": block["qc"]},
+            attrs={"kind": "mapped"},
+        )
+
+    out = xr.map_blocks(func, ds, template=template)
+
+    assert isinstance(dask.base.collections_to_expr(out), CompositeExpr)
+    assert all(isinstance(out[name].data, dask_array.Array) for name in out)
+
+    expected = Dataset(
+        {"a": ("t", np.arange(6) + 1), "b": ("t", np.arange(6) + 2)},
+        coords={"qc": ("t", np.arange(6) + 10)},
+        attrs={"kind": "mapped"},
+    )
+    assert_identical(out.compute(scheduler="single-threaded"), expected)
+    assert sorted(calls) == [3, 3]
+
+
+def test_standalone_dask_array_map_blocks_reduces_single_chunk_dimension():
+    dask_array = pytest.importorskip("dask_array")
+    from dask._expr import CompositeExpr
+
+    x = dask_array.arange(12, chunks=(12,)).reshape((3, 4)).rechunk((3, 2))
+    arr = DataArray(x, dims=("x", "y"), name="z")
+
+    out = xr.map_blocks(lambda block: block.sum("x"), arr)
+
+    assert isinstance(dask.base.collections_to_expr(out), CompositeExpr)
+    expected = DataArray(np.arange(12).reshape(3, 4).sum(axis=0), dims="y", name="z")
+    assert_identical(out.compute(scheduler="single-threaded"), expected)
 
 
 def test_standalone_dask_array_apply_ufunc_parallelized():
