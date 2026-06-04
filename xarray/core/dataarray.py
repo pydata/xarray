@@ -5905,7 +5905,7 @@ class DataArray(
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple or mapping of Hashable to tuple, default: 0
+        constant_values : scalar, tuple or mapping of Hashable to tuple, default: None
             Used in 'constant'.  The values to set the padded values for each
             axis.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -5914,7 +5914,7 @@ class DataArray(
             dimension.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
-            Default is 0.
+            Default is ``None``, pads with ``np.nan``.
         end_values : scalar, tuple or mapping of Hashable to tuple, default: 0
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
