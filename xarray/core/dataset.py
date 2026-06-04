@@ -651,11 +651,17 @@ class Dataset(
             try:
                 from dask.highlevelgraph import HighLevelGraph
 
-                return HighLevelGraph.merge(*graphs.values())
+                if all(isinstance(graph, HighLevelGraph) for graph in graphs.values()):
+                    return HighLevelGraph.merge(*graphs.values())
             except ImportError:
-                from dask import sharedict
+                pass
 
-                return sharedict.merge(*graphs.values())
+            from dask.utils import ensure_dict
+
+            merged = {}
+            for graph in graphs.values():
+                merged.update(ensure_dict(graph))
+            return merged
 
     def __dask_keys__(self):
         import dask
@@ -665,6 +671,53 @@ class Dataset(
             for v in self.variables.values()
             if dask.is_dask_collection(v)
         ]
+
+    def __dask_exprs__(self):
+        import dask
+
+        exprs = []
+        for v in self.variables.values():
+            if dask.is_dask_collection(v):
+                if not hasattr(v._data, "expr"):
+                    return None
+                exprs.append(v._data.expr)
+        return exprs or None
+
+    def __dask_rebuild_from_exprs__(self, exprs):
+        import dask
+        from dask._collections import new_collection
+
+        exprs_iter = iter(exprs)
+        variables = {}
+
+        for k, v in self._variables.items():
+            if dask.is_dask_collection(v):
+                try:
+                    expr = next(exprs_iter)
+                except StopIteration as err:
+                    raise ValueError(
+                        "Not enough expressions to rebuild Dataset"
+                    ) from err
+                variables[k] = v._replace(data=new_collection(expr))
+            else:
+                variables[k] = v
+
+        try:
+            next(exprs_iter)
+        except StopIteration:
+            pass
+        else:
+            raise ValueError("Too many expressions to rebuild Dataset")
+
+        return type(self)._construct_direct(
+            variables,
+            self._coord_names,
+            self._dims,
+            self._attrs,
+            self._indexes,
+            self._encoding,
+            self._close,
+        )
 
     def __dask_layers__(self):
         import dask

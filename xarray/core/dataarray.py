@@ -1113,6 +1113,13 @@ class DataArray(
     def __dask_keys__(self):
         return self._to_temp_dataset().__dask_keys__()
 
+    def __dask_exprs__(self):
+        return self._to_temp_dataset().__dask_exprs__()
+
+    def __dask_rebuild_from_exprs__(self, exprs):
+        ds = self._to_temp_dataset().__dask_rebuild_from_exprs__(exprs)
+        return self._from_temp_dataset(ds)
+
     def __dask_layers__(self):
         return self._to_temp_dataset().__dask_layers__()
 
