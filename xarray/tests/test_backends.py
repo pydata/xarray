@@ -145,17 +145,20 @@ if TYPE_CHECKING:
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
 def default_zarr_format(request) -> Generator[None, None]:
-    with zarr.config.set(default_zarr_format=request.param):
+    if has_zarr:
+        with zarr.config.set(default_zarr_format=request.param):
+            yield
+    else:
         yield
 
 
 def skip_if_zarr_format_3(reason: str):
-    if zarr.config["default_zarr_format"] == 3:
+    if has_zarr and zarr.config["default_zarr_format"] == 3:
         pytest.skip(reason=f"Unsupported with zarr_format=3: {reason}")
 
 
 def skip_if_zarr_format_2(reason: str):
-    if zarr.config["default_zarr_format"] == 2:
+    if has_zarr and zarr.config["default_zarr_format"] == 2:
         pytest.skip(reason=f"Unsupported with zarr_format=2: {reason}")
 
 
