@@ -38,6 +38,9 @@ python = "3.12.*"
 [feature.py313.dependencies]
 python = "3.13.*"
 
+[feature.py314.dependencies]
+python = "3.14.*"
+
 [feature.backends.dependencies]
 # files
 h5netcdf = "*"
@@ -407,6 +410,34 @@ test-py313 = { features = [
   "viz",
   "extras",
 ] }
+test-py314-no-numba = { features = [
+  "py314",
+  "test",
+  "backends",
+  "accel",
+  "dask",
+  "viz",
+  "extras",
+] }
+test-py314-no-dask = { features = [
+  "py314",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "viz",
+  "extras",
+] }
+test-py314 = { features = [
+  "py314",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
 test-nightly = { features = [
   "py313",
   "nightly",
@@ -456,6 +487,19 @@ test-py311-with-typing = { features = [
 
 test-py313-with-typing = { features = [
   "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+  "typing",
+  "typing-stubs",
+] }
+
+test-py314-with-typing = { features = [
+  "py314",
   "test",
   "backends",
   "accel",

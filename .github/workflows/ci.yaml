@@ -71,8 +71,8 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        # Bookend python versions
-        pixi-env: ["test-py311", "test-py313"]
+        # Main python versions
+        pixi-env: ["test-py311", "test-py313", "test-py314"]
         pytest-addopts: [""]
         include:
           # Minimum python version:
@@ -82,12 +82,19 @@ jobs:
             os: ubuntu-latest
           - pixi-env: "test-py311-min-versions"
             os: ubuntu-latest
-          # Latest python version:
+          # Recent python version variants:
           - pixi-env: "test-py313-no-numba"
             os: ubuntu-latest
           - pixi-env: "test-py313-no-dask"
             os: ubuntu-latest
           - pixi-env: "test-py313"
+            pytest-addopts: "flaky"
+            os: ubuntu-latest
+          - pixi-env: "test-py314-no-numba"
+            os: ubuntu-latest
+          - pixi-env: "test-py314-no-dask"
+            os: ubuntu-latest
+          - pixi-env: "test-py314"
             pytest-addopts: "flaky"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
@@ -97,6 +104,9 @@ jobs:
             numprocesses: 1
             os: ubuntu-latest
           - pixi-env: "test-py313-with-typing"
+            numprocesses: 1
+            os: ubuntu-latest
+          - pixi-env: "test-py314-with-typing"
             numprocesses: 1
             os: ubuntu-latest
 
