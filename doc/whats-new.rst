@@ -39,6 +39,9 @@ Bug Fixes
   the interval. Strided slicing of a :py:class:`~xarray.indexes.RangeIndex` now
   preserves the step as well (:issue:`11325`).
   By `mokashang <https://github.com/mokashang>`_.
+- Fix :py:func:`decode_cf` failing on integer-encoded time arrays that contain
+  NaT when running against numpy 2.5+.
+  By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
 
 
 Documentation
