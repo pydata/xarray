@@ -285,7 +285,7 @@ class RangeIndex(CoordinateTransformIndex):
         # that the materialized values match ``numpy.arange`` even when ``step``
         # does not evenly divide ``stop - start``. See GH11325.
         stop = start + size * step
-
+        # Snap `stop` to `start + size * step`
         transform = RangeCoordinateTransform(
             start, stop, size, coord_name, dim, dtype=dtype, step=step
         )
