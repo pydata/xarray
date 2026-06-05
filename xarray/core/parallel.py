@@ -149,37 +149,6 @@ def make_dict(x: DataArray | Dataset) -> dict[Hashable, Any]:
     return {k: v.data for k, v in x.variables.items()}
 
 
-def _execute_map_blocks_multi_output(block_spec, *blocks):
-    args = []
-    for arg_spec in block_spec["args"]:
-        if arg_spec[0] == "literal":
-            args.append(arg_spec[1])
-            continue
-
-        _, data_vars, coords, attrs = arg_spec
-
-        def build_variables(variable_specs):
-            variables = []
-            for name, dims, data, var_attrs in variable_specs:
-                if data[0] == "block":
-                    data = blocks[data[1]]
-                else:
-                    data = data[1]
-                variables.append((name, (dims, data, var_attrs)))
-            return dict(variables)
-
-        args.append(Dataset(build_variables(data_vars), build_variables(coords), attrs))
-
-    return block_spec["wrapper"](
-        block_spec["func"],
-        args,
-        block_spec["kwargs"],
-        block_spec["arg_is_array"],
-        block_spec["expected"],
-        block_spec["expected_indexes"],
-    )
-
-
 def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping):
     if dim in chunk_index:
         which_chunk = chunk_index[dim]
@@ -472,32 +441,16 @@ def map_blocks(
         for arg in aligned
     )
 
-    try:
-        from dask_array import Array as DaskArrayExprArray
-    except ImportError:
-        DaskArrayExprArray = ()
+    from xarray.core.dask_array_expr import collect_dask_array_expr_chunked_data
 
-    chunked_data = [
-        variable.data
-        for arg in xarray_objs
-        for variable in arg.variables.values()
-        if is_dask_collection(variable.data)
-    ]
-    has_dask_array_expr = any(
-        isinstance(data, DaskArrayExprArray) for data in chunked_data
+    has_dask_array_expr, chunked_data = collect_dask_array_expr_chunked_data(
+        xarray_objs
     )
-    has_other_chunked = any(
-        not isinstance(data, DaskArrayExprArray) for data in chunked_data
-    )
-
-    if has_dask_array_expr and has_other_chunked:
-        raise TypeError(
-            "xarray.map_blocks cannot mix dask_array.Array with legacy or other "
-            "Dask-backed arrays. Convert inputs to one array backend first."
-        )
 
     # rechunk any numpy variables appropriately
     xarray_objs = tuple(arg.chunk(arg.chunksizes) for arg in xarray_objs)
+    if has_dask_array_expr:
+        _, chunked_data = collect_dask_array_expr_chunked_data(xarray_objs)
 
     merged_coordinates = merge(
         [arg.coords for arg in aligned],
@@ -577,6 +530,7 @@ def map_blocks(
         template = template._to_temp_dataset()
     elif isinstance(template, Dataset):
         result_is_array = False
+        template_name = None
     else:
         raise TypeError(
             f"func output must be DataArray or Dataset; got {type(template)}"
@@ -606,185 +560,33 @@ def map_blocks(
         name for name in template.variables if name not in coordinates.indexes
     ]
 
-    chunked_data = [
-        variable.data
-        for arg in xarray_objs
-        for variable in arg.variables.values()
-        if is_dask_collection(variable.data)
-    ]
-
     if has_dask_array_expr:
-        missing_chunked_dims = {
-            dim
-            for dim, chunks in input_chunks.items()
-            if len(chunks) > 1 and dim not in output_chunks
-        }
-        if missing_chunked_dims:
-            raise NotImplementedError(
-                "dask_array-backed xarray.map_blocks does not yet support "
-                "dropping multi-chunk dimensions. Rechunk these dimensions to "
-                f"one chunk first: {sorted(missing_chunked_dims)!r}."
-            )
+        from xarray.core.dask_array_expr import map_blocks_with_dask_array_expr
 
-        from xarray.namedarray.parallelcompat import get_chunked_array_type
-
-        chunkmanager = get_chunked_array_type(*chunked_data)
-
-        input_exprs = []
-        input_indices = []
-        arg_templates = []
-        for isxr, arg in zip(is_xarray, npargs, strict=True):
-            if not isxr:
-                if is_dask_collection(arg):
-                    raise TypeError(
-                        "dask_array-backed xarray.map_blocks only supports Dask "
-                        "collections inside xarray arguments."
-                    )
-                arg_templates.append(("literal", arg))
-                continue
-
-            variable_templates = []
-            for name, variable in arg.variables.items():
-                is_coord = name in arg._coord_names
-                if is_dask_collection(variable.data):
-                    input_exprs.append(variable.data.expr)
-                    input_indices.append(variable.dims)
-                    variable_templates.append(
-                        (
-                            "chunked",
-                            name,
-                            variable.dims,
-                            variable.attrs,
-                            len(input_exprs) - 1,
-                            is_coord,
-                            None,
-                        )
-                    )
-                else:
-                    variable_templates.append(
-                        (
-                            "static",
-                            name,
-                            variable.dims,
-                            variable.attrs,
-                            None,
-                            is_coord,
-                            variable,
-                        )
-                    )
-            arg_templates.append(("xarray", arg.attrs, variable_templates))
-
-        def build_block_specs():
-            specs = {}
-            for chunk_tuple in itertools.product(*ichunk.values()):
-                chunk_index = dict(zip(ichunk.keys(), chunk_tuple, strict=True))
-                arg_specs = []
-                for arg_template in arg_templates:
-                    if arg_template[0] == "literal":
-                        arg_specs.append(arg_template)
-                        continue
-
-                    _, attrs, variable_templates = arg_template
-                    data_vars = []
-                    coords = []
-                    for (
-                        kind,
-                        name,
-                        dims,
-                        attrs,
-                        input_position,
-                        is_coord,
-                        variable,
-                    ) in variable_templates:
-                        if kind == "chunked":
-                            data = ("block", input_position)
-                        else:
-                            assert variable is not None
-                            subsetter = {
-                                dim: _get_chunk_slicer(
-                                    dim, chunk_index, input_chunk_bounds
-                                )
-                                for dim in variable.dims
-                            }
-                            data = ("static", variable.isel(subsetter)._data)
-
-                        target = coords if is_coord else data_vars
-                        target.append((name, dims, data, attrs))
-
-                    arg_specs.append(("xarray", data_vars, coords, attrs))
-
-                indexes = {
-                    dim: coordinates.xindexes[dim][
-                        _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
-                    ]
-                    for dim in (new_indexes | modified_indexes)
-                }
-                expected: ExpectedDict = {
-                    "shapes": {
-                        k: output_chunks[k][v]
-                        for k, v in chunk_index.items()
-                        if k in output_chunks
-                    },
-                    "data_vars": set(template.data_vars.keys()),
-                    "coords": set(template.coords.keys()),
-                }
-                specs[chunk_tuple] = {
-                    "wrapper": _wrapper,
-                    "func": func,
-                    "args": arg_specs,
-                    "kwargs": kwargs,
-                    "arg_is_array": is_array,
-                    "expected": expected,
-                    "expected_indexes": indexes,
-                }
-            return specs
-
-        outputs = []
-        for name in computed_variables:
-            variable = template.variables[name]
-            var_chunks = []
-            for dim in variable.dims:
-                if dim in output_chunks:
-                    var_chunks.append(output_chunks[dim])
-                elif dim in template.dims:
-                    var_chunks.append((template.sizes[dim],))
-
-            outputs.append(
-                {
-                    "key": name,
-                    "indices": variable.dims,
-                    "chunks": tuple(var_chunks),
-                    "dtype": variable.dtype,
-                    "name": f"{name}-{gname}",
-                }
-            )
-
-        mapped_arrays = chunkmanager.map_blocks_multi_output(
-            _execute_map_blocks_multi_output,
-            input_exprs,
-            input_indices,
-            tuple(input_chunks),
-            build_block_specs(),
-            outputs,
-            token=gname,
-        )
-
-        result = Dataset(coords=coordinates, attrs=template.attrs)
-        for index in result._indexes:
-            result[index].attrs = template[index].attrs
-            result[index].encoding = template[index].encoding
-
-        for name, data in zip(computed_variables, mapped_arrays, strict=True):
-            result[name] = (template[name].dims, data, template[name].attrs)
-            result[name].encoding = template[name].encoding
-
-        result = result.set_coords(template._coord_names)
-
-        if result_is_array:
-            da = dataset_to_dataarray(result)
-            da.name = template_name
-            return da  # type: ignore[return-value]
-        return result  # type: ignore[return-value]
+        return map_blocks_with_dask_array_expr(
+            func=func,
+            npargs=npargs,
+            kwargs=kwargs,
+            is_xarray=is_xarray,
+            is_array=is_array,
+            input_chunks=input_chunks,
+            output_chunks=output_chunks,
+            coordinates=coordinates,
+            template=template,
+            result_is_array=result_is_array,
+            template_name=template_name,
+            gname=gname,
+            ichunk=ichunk,
+            input_chunk_bounds=input_chunk_bounds,
+            output_chunk_bounds=output_chunk_bounds,
+            computed_variables=computed_variables,
+            new_indexes=new_indexes,
+            modified_indexes=modified_indexes,
+            chunked_data=chunked_data,
+            wrapper=_wrapper,
+            get_chunk_slicer=_get_chunk_slicer,
+            dataset_to_dataarray=dataset_to_dataarray,
+        )  # type: ignore[return-value]
 
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):

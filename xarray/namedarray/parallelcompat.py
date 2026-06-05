@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import functools
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
@@ -653,19 +653,6 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         dask.array.map_blocks
         cubed.map_blocks
         """
-        raise NotImplementedError()
-
-    def map_blocks_multi_output(
-        self,
-        func: Callable[..., Any],
-        input_exprs: Sequence[Any],
-        input_indices: Sequence[Iterable[Any]],
-        shared_indices: Iterable[Any],
-        block_specs: Mapping[tuple[int, ...], Any],
-        outputs: Sequence[Mapping[str, Any]],
-        *,
-        token: str,
-    ) -> list[Any]:
         raise NotImplementedError()
 
     def blockwise(

@@ -675,10 +675,12 @@ class Dataset(
     def __dask_exprs__(self):
         import dask
 
+        from xarray.core.dask_array_expr import is_dask_array_expr_array
+
         exprs = []
         for v in self.variables.values():
             if dask.is_dask_collection(v):
-                if not hasattr(v._data, "expr"):
+                if not is_dask_array_expr_array(v._data):
                     return None
                 exprs.append(v._data.expr)
         return exprs or None
