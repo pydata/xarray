@@ -41,11 +41,6 @@ class RangeCoordinateTransform(CoordinateTransform):
 
         self.start = start
         self.stop = stop
-        # When ``step`` is not given it is derived from ``(stop - start) / size``
-        # by the ``step`` property. That derivation is only correct when
-        # ``(stop - start)`` is an exact multiple of the spacing, so callers that
-        # know the exact spacing (e.g. ``arange`` and ``slice``) pass it here to
-        # avoid silently changing it. See GH11325.
         self._step = step
 
     @property
