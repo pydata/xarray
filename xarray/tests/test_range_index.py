@@ -154,11 +154,6 @@ def test_range_index_isel() -> None:
     ds2 = create_dataset_arange(0.0, 3.0, 0.1)
     actual = ds2.isel(x=slice(4, None, 3))
     expected = create_dataset_arange(0.4, 3.0, 0.3)
-    # The strided slice now preserves the step (0.3), so its values match
-    # ``np.arange``. The index ``equals`` check (isclose-based) is used rather
-    # than ``assert_identical`` because the slice computes its step as ``0.1 * 3``
-    # while ``arange`` uses the literal ``0.3``; these agree up to floating point
-    # round-off (GH11325).
     assert actual.xindexes["x"].equals(expected.xindexes["x"])
     np.testing.assert_allclose(actual["x"].values, np.arange(0.0, 3.0, 0.1)[4::3])
 
