@@ -71,8 +71,8 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        # Main python versions
-        pixi-env: ["test-py311", "test-py313", "test-py314"]
+        # Bookend python versions
+        pixi-env: ["test-py311", "test-py314"]
         pytest-addopts: [""]
         include:
           # Minimum python version:
@@ -82,14 +82,7 @@ jobs:
             os: ubuntu-latest
           - pixi-env: "test-py311-min-versions"
             os: ubuntu-latest
-          # Recent python version variants:
-          - pixi-env: "test-py313-no-numba"
-            os: ubuntu-latest
-          - pixi-env: "test-py313-no-dask"
-            os: ubuntu-latest
-          - pixi-env: "test-py313"
-            pytest-addopts: "flaky"
-            os: ubuntu-latest
+          # Latest python version:
           - pixi-env: "test-py314-no-numba"
             os: ubuntu-latest
           - pixi-env: "test-py314-no-dask"
@@ -101,9 +94,6 @@ jobs:
           # predictable mypy output messages for comparison to expectations.
           - pixi-env: "test-py311-with-typing"
             pytest-addopts: "mypy"
-            numprocesses: 1
-            os: ubuntu-latest
-          - pixi-env: "test-py313-with-typing"
             numprocesses: 1
             os: ubuntu-latest
           - pixi-env: "test-py314-with-typing"
