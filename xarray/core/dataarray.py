@@ -530,6 +530,10 @@ class DataArray(
         return schema.__arrow_c_schema__()
 
     def __arrow_c_stream__(self, requested_schema: Any = None) -> Any:
+        """Export the DataArray through the Arrow PyCapsule Interface.
+
+        https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
+        """
         try:
             import pyarrow as pa
         except ImportError:
