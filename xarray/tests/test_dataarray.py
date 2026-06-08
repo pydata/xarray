@@ -7848,3 +7848,55 @@ class TestArrowPyCapsule:
         assert xarray_meta["dims"] == ["x"]
         assert xarray_meta["attrs"] == {"units": "K", "long_name": "temperature"}
         assert "x" in xarray_meta["coords"]
+
+    @requires_pyarrow
+    def test_pyarrow_table_curvilinear_coords(self):
+        import pyarrow as pa
+
+        # non-dimension coordinates spanning multiple dims (e.g. a curvilinear
+        # grid with 2D lat/lon) should be supported
+        lat = np.array([[10.0, 11.0, 12.0], [13.0, 14.0, 15.0]])
+        lon = np.array([[20.0, 21.0, 22.0], [23.0, 24.0, 25.0]])
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"lat": (["x", "y"], lat), "lon": (["x", "y"], lon)},
+            name="data",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"lat", "lon", "data"}
+        assert table.num_rows == 6
+        assert table.schema.field("lat").type == pa.float64()
+        assert table.schema.field("lon").type == pa.float64()
+        assert table.schema.field("data").type == pa.float64()
+        np.testing.assert_array_equal(table["lat"].to_pylist(), lat.ravel())
+        np.testing.assert_array_equal(table["lon"].to_pylist(), lon.ravel())
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), np.arange(6, dtype=float)
+        )
+
+    @requires_pyarrow
+    def test_pyarrow_table_transposed_coords(self):
+        import pyarrow as pa
+
+        lat = np.array([[10.0, 11.0], [12.0, 13.0], [14.0, 15.0]])
+
+        # Array with swapped dims order
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"lat": (["y", "x"], lat)},
+            name="data",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"lat", "data"}
+        assert table.num_rows == 6
+        assert table.schema.field("lat").type == pa.float64()
+        np.testing.assert_array_equal(table["lat"].to_pylist(), lat.T.ravel())
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), np.arange(6, dtype=float)
+        )
