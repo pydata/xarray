@@ -501,13 +501,12 @@ class DataArray(
                 "pyarrow is required to export via the Arrow PyCapsule Interface."
             ) from None
 
-        dims = self._variable.dims
         values_column = self.name or "values"
 
         fields = []
-        for dim in dims:
-            arrow_dtype = pa.from_numpy_dtype(self.coords[dim].dtype)
-            fields.append(pa.field(str(dim), arrow_dtype))
+        for name, coord in self._coords.items():
+            arrow_dtype = pa.from_numpy_dtype(coord.dtype)
+            fields.append(pa.field(str(name), arrow_dtype))
 
         fields.append(
             pa.field(str(values_column), pa.from_numpy_dtype(self._variable.dtype))
@@ -540,20 +539,39 @@ class DataArray(
 
         values = self._variable.values
         dims = self._variable.dims
+        shape = self._variable.shape
+
+        values_column = self.name or "values"
 
         if not values.flags.c_contiguous:
             values = np.ascontiguousarray(values)
 
-        coord_arrays = [coord.values for coord in self._coords.values()]
-        grids = np.meshgrid(*coord_arrays, indexing="ij", copy=False)
-
-        values_column = self.name or "values"
-
         columns: dict[Hashable, pa.Array] = {}
-        for dim, grid in zip(dims, grids, strict=True):
-            columns[dim] = pa.array(grid.ravel())
+        for name, coord in self._coords.items():
+            # Broadcast each coordinate up to the full data shape so that 1D
+            # dimension coordinates and N-D (e.g. curvilinear) coordinates
+            # flatten consistently with the data values.
 
-        columns[values_column] = pa.array(values.ravel())
+            # Order axes based on Variable dims
+            dim_order = [coord.dims.index(dim) for dim in dims if dim in coord.dims]
+
+            # Reorder coords values to variable dim order
+            ordered_coords = coord.values.transpose(dim_order)
+
+            # Expand coord dims
+            # coord dims (x, y) variable dims (x,y,z) -> (x, y, 1)
+            # NOTE: Insert a length-1 axis for each data dim missing for coordinates
+            # (slice(None) keeps an existing axis, np.newaxis adds one)
+            indexer = tuple(
+                slice(None) if dim in coord.dims else np.newaxis for dim in dims
+            )
+            expanded_coords = ordered_coords[indexer]
+
+            # Broadcast to full flattened shape (x, y, 1) -> (x, y, z)
+            broadcasted = np.broadcast_to(expanded_coords, shape)
+            columns[name] = pa.array(np.ravel(broadcasted))
+
+        columns[values_column] = pa.array(np.ravel(values))
 
         table = pa.table(columns, schema=pa.schema(self))
         return table.__arrow_c_stream__(requested_schema)
