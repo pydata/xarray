@@ -515,6 +515,7 @@ class DataArray(
         xarray_metadata = {
             "name": self.name,
             "dims": list(self._variable.dims),
+            "shape": list(self._variable.shape),
             "attrs": self.attrs,
             "coords": {
                 str(name): variable.to_dict(data=False)
