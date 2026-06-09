@@ -18,7 +18,7 @@ from xarray.namedarray._typing import (
     _ShapeType_co,
 )
 from xarray.namedarray.core import NamedArray, from_array
-from xarray.namedarray.utils import fake_target_chunksize
+from xarray.namedarray.utils import fake_target_chunksize, module_available
 from xarray.tests import requires_cftime
 
 if TYPE_CHECKING:
@@ -666,3 +666,26 @@ def test_fake_target_chunksize_cftime() -> None:
 
     assert faked_chunksize == 73
     assert dtype == np.float64
+
+
+def test_module_available_version_none() -> None:
+    """module_available should return False gracefully when metadata.version returns None."""
+    import importlib.metadata as _metadata
+
+    original_version = _metadata.version
+
+    def mock_version(name: str) -> str | None:
+        if name == "pip":
+            return None
+        return original_version(name)
+
+    _metadata.version = mock_version
+    try:
+        assert module_available("pip", minversion="1.0.0") is False
+    finally:
+        _metadata.version = original_version
+
+
+def test_module_available_valid() -> None:
+    """module_available should return True for an installed module with version check."""
+    assert module_available("pip", minversion="0.0.1") is True
