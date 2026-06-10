@@ -386,45 +386,45 @@ def _decode_datetime_with_cftime(
         return np.array([], dtype=object)
 
 
+def _decode_to_timedelta(value, unit: NPDatetimeUnitOptions) -> np.timedelta64:
+    """Decode a single CF-encoded scalar to ``np.timedelta64``.
+
+    Returns NaT for encoded NaT inputs. Raises ``OutOfBoundsTimedelta`` if the
+    value is not representable.
+    """
+    # Integer arrays encode NaT as int64.min (numpy/pandas's NaT bit pattern);
+    # float arrays encode it as NaN. Detect both before the multiplication
+    # below. In numpy >= 2.5 (numpy/numpy#31378) int64.min * timedelta64
+    # raises OverflowError instead of silently producing NaT.
+    if (value.dtype.kind == "i" and int(value) == np.iinfo("int64").min) or (
+        value.dtype.kind == "f" and np.isnan(value)
+    ):
+        return np.timedelta64("NaT", unit)
+    if value > np.iinfo("int64").max or value < np.iinfo("int64").min:
+        raise OutOfBoundsTimedelta(
+            f"Value {value} can't be represented as Datetime/Timedelta."
+        )
+    delta = value * np.timedelta64(1, unit)
+    # uint overflow during the multiplication above
+    if value.dtype.kind == "u" and not np.int64(delta) == value:
+        raise OutOfBoundsTimedelta("DType overflow in Datetime/Timedelta calculation.")
+    return delta
+
+
 def _check_date_for_units_since_refdate(
     date, unit: NPDatetimeUnitOptions, ref_date: pd.Timestamp
 ) -> pd.Timestamp:
-    # check for out-of-bounds floats and raise
-    if date > np.iinfo("int64").max or date < np.iinfo("int64").min:
-        raise OutOfBoundsTimedelta(
-            f"Value {date} can't be represented as Datetime/Timedelta."
-        )
-    delta = date * np.timedelta64(1, unit)
-    if not np.isnan(delta):
-        # this will raise on dtype overflow for integer dtypes
-        if date.dtype.kind == "u" and not np.int64(delta) == date:
-            raise OutOfBoundsTimedelta(
-                "DType overflow in Datetime/Timedelta calculation."
-            )
-        # this will raise on overflow if ref_date + delta
-        # can't be represented in the current ref_date resolution
-        return timestamp_as_unit(ref_date + delta, ref_date.unit)
-    else:
-        # if date is exactly NaT (np.iinfo("int64").min) return NaT
-        # to make follow-up checks work
+    delta = _decode_to_timedelta(date, unit)
+    if np.isnat(delta):
         return pd.Timestamp("NaT")
+    # this will raise on overflow if ref_date + delta can't be represented in
+    # the current ref_date resolution
+    return timestamp_as_unit(ref_date + delta, ref_date.unit)
 
 
 def _check_timedelta_range(value, data_unit, time_unit):
-    if value > np.iinfo("int64").max or value < np.iinfo("int64").min:
-        OutOfBoundsTimedelta(f"Value {value} can't be represented as Timedelta.")
-    # on windows multiplying nan leads to RuntimeWarning
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", "invalid value encountered in multiply", RuntimeWarning
-        )
-        delta = value * np.timedelta64(1, data_unit)
-    if not np.isnan(delta):
-        # this will raise on dtype overflow for integer dtypes
-        if value.dtype.kind == "u" and not np.int64(delta) == value:
-            raise OutOfBoundsTimedelta(
-                "DType overflow in Datetime/Timedelta calculation."
-            )
+    delta = _decode_to_timedelta(value, data_unit)
+    if not np.isnat(delta):
         # this will raise on overflow if delta cannot be represented with the
         # resolutions supported by pandas.
         pd.to_timedelta(delta)
