@@ -675,17 +675,17 @@ def test_module_available_version_none() -> None:
     original_version = _metadata.version
 
     def mock_version(name: str) -> str | None:
-        if name == "pip":
+        if name == "packaging":
             return None
         return original_version(name)
 
     _metadata.version = mock_version
     try:
-        assert module_available("pip", minversion="1.0.0") is False
+        assert module_available("packaging", minversion="1.0.0") is False
     finally:
         _metadata.version = original_version
 
 
 def test_module_available_valid() -> None:
     """module_available should return True for an installed module with version check."""
-    assert module_available("pip", minversion="0.0.1") is True
+    assert module_available("packaging", minversion="0.0.1") is True
