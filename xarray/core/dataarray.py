@@ -523,7 +523,7 @@ class DataArray(
             },
         }
         schema_metadata = {
-            b"xarray:arrow_version": b"v1",
+            b"xarray:arrow_schema_version": b"v1",
             b"xarray": json.dumps(xarray_metadata, cls=_NumpyEncoder).encode(),
         }
 
