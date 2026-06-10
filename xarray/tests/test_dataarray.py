@@ -7841,7 +7841,7 @@ class TestArrowPyCapsule:
         )
         schema = pa.schema(da)
 
-        assert schema.metadata[b"xarray:arrow_version"] == b"v1"
+        assert schema.metadata[b"xarray:arrow_schema_version"] == b"v1"
 
         xarray_meta = json.loads(schema.metadata[b"xarray"])
         assert xarray_meta["name"] == "temperature"
