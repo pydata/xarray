@@ -35,7 +35,12 @@ from xarray.core.utils import (
     to_0d_array,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
+from xarray.namedarray.pycompat import (
+    array_type,
+    integer_types,
+    is_chunked_array,
+    to_numpy,
+)
 
 if TYPE_CHECKING:
     from xarray.core.extension_array import PandasExtensionArray
@@ -683,9 +688,9 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+            return to_numpy(self.get_duck_array(), dtype=dtype, copy=copy)
         else:
-            return np.asarray(self.get_duck_array(), dtype=dtype)
+            return to_numpy(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         return self.array.get_duck_array()
