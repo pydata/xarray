@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 from collections.abc import Callable, Hashable, Mapping, Sequence
+from importlib import import_module
 from typing import Any
 
 from xarray.core.coordinates import Coordinates
@@ -12,11 +13,12 @@ from xarray.core.utils import is_dask_collection
 
 def is_dask_array_expr_array(data: Any) -> bool:
     try:
-        from dask_array import Array
+        dask_array = import_module("dask_array")
     except ImportError:
         return False
 
-    return isinstance(data, Array)
+    array_type = getattr(dask_array, "Array", None)
+    return array_type is not None and isinstance(data, array_type)
 
 
 def collect_dask_array_expr_chunked_data(
@@ -105,7 +107,7 @@ def map_blocks_with_dask_array_expr(
         raise NotImplementedError(
             "dask_array-backed xarray.map_blocks does not yet support "
             "dropping multi-chunk dimensions. Rechunk these dimensions to "
-            f"one chunk first: {sorted(missing_chunked_dims)!r}."
+            f"one chunk first: {sorted(missing_chunked_dims, key=repr)!r}."
         )
 
     from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -117,9 +119,9 @@ def map_blocks_with_dask_array_expr(
             "The dask_array chunk manager does not support map_blocks_multi_output."
         )
 
-    input_exprs = []
-    input_indices = []
-    arg_templates = []
+    input_exprs: list[Any] = []
+    input_indices: list[Any] = []
+    arg_templates: list[Any] = []
     for isxr, arg in zip(is_xarray, npargs, strict=True):
         if not isxr:
             if is_dask_collection(arg):
@@ -130,11 +132,12 @@ def map_blocks_with_dask_array_expr(
             arg_templates.append(("literal", arg))
             continue
 
-        variable_templates = []
+        variable_templates: list[Any] = []
         for name, variable in arg.variables.items():
             is_coord = name in arg._coord_names
             if is_dask_collection(variable.data):
-                input_exprs.append(variable.data.expr)
+                data: Any = variable.data
+                input_exprs.append(data.expr)
                 input_indices.append(variable.dims)
                 variable_templates.append(
                     (
@@ -161,19 +164,19 @@ def map_blocks_with_dask_array_expr(
                 )
         arg_templates.append(("xarray", arg.attrs, variable_templates))
 
-    def build_block_specs():
-        specs = {}
+    def build_block_specs() -> dict[tuple[Any, ...], dict[str, Any]]:
+        specs: dict[tuple[Any, ...], dict[str, Any]] = {}
         for chunk_tuple in itertools.product(*ichunk.values()):
             chunk_index = dict(zip(ichunk.keys(), chunk_tuple, strict=True))
-            arg_specs = []
+            arg_specs: list[Any] = []
             for arg_template in arg_templates:
                 if arg_template[0] == "literal":
                     arg_specs.append(arg_template)
                     continue
 
                 _, attrs, variable_templates = arg_template
-                data_vars = []
-                coords = []
+                data_vars: list[Any] = []
+                coords: list[Any] = []
                 for (
                     kind,
                     name,

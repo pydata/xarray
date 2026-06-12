@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from importlib import import_module
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -12,9 +15,10 @@ dask = pytest.importorskip("dask")
 da = pytest.importorskip("dask.array")
 dask_array = pytest.importorskip("dask_array")
 
-try:
-    from dask._expr import CompositeExpr, HLGExpr
-except ImportError:
+dask_expr = pytest.importorskip("dask._expr")
+CompositeExpr: Any = getattr(dask_expr, "CompositeExpr", None)
+HLGExpr: Any = getattr(dask_expr, "HLGExpr", None)
+if CompositeExpr is None or HLGExpr is None:
     pytest.skip("requires Dask composite expressions", allow_module_level=True)
 
 
@@ -120,7 +124,7 @@ def test_open_mfdataset_map_blocks_end_to_end(tmp_path):
 
 @requires_scipy_or_netCDF4
 def test_open_dataset_rechunk_optimization_crosses_composite_expr(tmp_path):
-    from dask_array._rechunk import Rechunk
+    Rechunk = import_module("dask_array._rechunk").Rechunk
 
     path = tmp_path / "data.nc"
     Dataset({"x": ("t", np.arange(12))}, coords={"t": np.arange(12)}).to_netcdf(path)
