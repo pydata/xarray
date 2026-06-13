@@ -687,7 +687,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         else:
             return np.asarray(self.get_duck_array(), dtype=dtype)
 
-    def get_duck_array(self):
+    def get_duck_array(self) -> duckarray:
         return self.array.get_duck_array()
 
     def __getitem__(self, key: Any):
