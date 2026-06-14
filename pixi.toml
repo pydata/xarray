@@ -376,6 +376,9 @@ numpydoc = "*"
 [feature.numpydoc-lint.tasks]
 numpydoc-lint = { cmd = "python ci/numpydoc-public-api.py" }
 
+[feature.nodask.constraints]
+dask-core = "<0.0a0"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -390,6 +393,7 @@ test-py313-no-numba = { features = [
 ] }
 test-py313-no-dask = { features = [
   "py312",
+  "nodask",
   "test",
   "backends",
   "accel",
