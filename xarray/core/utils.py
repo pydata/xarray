@@ -704,6 +704,11 @@ class NDArrayMixin(NdimSizeLenMixin):
     def shape(self: Any) -> tuple[int, ...]:
         return self.array.shape
 
+    def __array_namespace__(self: Any) -> ModuleType:
+        from xarray.compat.array_api_compat import get_array_namespace
+
+        return get_array_namespace(self.array)
+
     def __getitem__(self: Any, key):
         return self.array[key]
 

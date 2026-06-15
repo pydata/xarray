@@ -1,4 +1,4 @@
-from typing import Any
+from types import ModuleType
 
 import numpy as np
 
@@ -48,7 +48,7 @@ def result_type(*arrays_and_dtypes, xp) -> np.dtype:
         return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)
 
 
-def get_array_namespace(*values) -> Any:
+def get_array_namespace(*values) -> ModuleType:
     def _get_single_namespace(x):
         if hasattr(x, "__array_namespace__"):
             return x.__array_namespace__()

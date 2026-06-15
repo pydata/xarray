@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from xarray.compat.array_api_compat import get_array_namespace
 from xarray.core.indexing import ImplicitToExplicitIndexingAdapter
 from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint, T_ChunkedArray
 from xarray.namedarray.utils import is_duck_dask_array, module_available
@@ -70,7 +69,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         if isinstance(data, ImplicitToExplicitIndexingAdapter):
             # lazily loaded backend array classes should use NumPy or CuPy array operations.
-            xp = get_array_namespace(data.get_duck_array())
+            xp = data.__array_namespace__()
             kwargs["meta"] = xp.ndarray
 
         return da.from_array(
