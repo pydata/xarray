@@ -74,6 +74,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.namedarray.pycompat import is_chunked_array
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.structure import alignment
@@ -542,6 +543,11 @@ class DataArray(
                 "pyarrow is required to export via the Arrow PyCapsule Interface."
             ) from None
 
+        if is_chunked_array(self._variable._data):
+            raise ValueError(
+                "Chunked DataArray must be computed first, use: DataArray.compute()"
+            )
+
         values = self._variable.values
         dims = self._variable.dims
         shape = self._variable.shape
@@ -558,7 +564,9 @@ class DataArray(
             # flatten consistently with the data values.
 
             # Order axes based on Variable dims
-            dim_order = [coord.dims.index(dim) for dim in dims if dim in coord.dims]
+            dim_order = tuple(
+                coord.dims.index(dim) for dim in dims if dim in coord.dims
+            )
 
             # Reorder coords values to variable dim order
             ordered_coords = coord.values.transpose(dim_order)
@@ -573,12 +581,13 @@ class DataArray(
             expanded_coords = ordered_coords[indexer]
 
             # Broadcast to full flattened shape (x, y, 1) -> (x, y, z)
-            broadcasted = np.broadcast_to(expanded_coords, shape)
-            columns[name] = pa.array(np.ravel(broadcasted))
+            columns[name] = pa.array(np.broadcast_to(expanded_coords, shape).ravel())
 
         columns[values_column] = pa.array(np.ravel(values))
 
-        table = pa.table(columns, schema=pa.schema(self))
+        schema = pa.schema(self)
+
+        table = pa.table(columns, schema=schema)
         return table.__arrow_c_stream__(requested_schema)
 
     @classmethod

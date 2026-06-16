@@ -7781,12 +7781,8 @@ class TestArrowPyCapsule:
             coords={"x": [0, 1], "y": [10, 20, 30]},
             name="data",
         )
-
-        table = pa.table(dask_da)
-        assert isinstance(table, pa.Table)
-        np.testing.assert_array_equal(
-            table["data"].to_pylist(), list(np.arange(6, dtype=float))
-        )
+        with pytest.raises(ValueError):
+            pa.table(dask_da)
 
     @requires_polars
     @requires_pyarrow
