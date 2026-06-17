@@ -8140,3 +8140,14 @@ def test_h5netcdf_storage_options() -> None:
             storage_options={"skip_instance_cache": False},
         ) as ds:
             assert_identical(xr.concat([ds1, ds2], dim="time", data_vars="all"), ds)
+
+
+def test_get_mtime_non_file_paths() -> None:
+    """_get_mtime should not raise on non-file paths (gh#11386)."""
+    from xarray.backends.api import _get_mtime
+
+    # Non-existent local path should return None, not crash
+    assert _get_mtime("/nonexistent/path.nc") is None
+
+    # GDAL virtual filesystem paths are not real files
+    assert _get_mtime("/vsicurl/https://example.com/file.nc") is None
