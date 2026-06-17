@@ -1,3 +1,23 @@
+"""Optional xarray integration for ``dask_array`` expression-backed arrays.
+
+xarray stays expression-free.  ``dask_array`` owns the lazy array expression
+objects, while xarray owns Dataset/DataArray semantics such as coordinates,
+indexes, attrs, template validation, and rebuilding final xarray objects.
+
+Most xarray operations only need the normal chunk-manager methods.  The special
+case here is ``xarray.map_blocks``: it can return multiple output variables from
+one user function call per input block.  The helper below converts xarray's block
+metadata into a private ``dask_array`` multi-output map expression.  Each output
+variable is still a normal ``dask_array.Array`` child expression, so Dask can
+group the children with the composite-collection protocol and ``dask_array`` can
+optimize, cull, persist, and compute those arrays.
+
+If a Dataset mixes ``dask_array.Array`` with legacy ``dask.array.Array`` objects,
+this path raises before constructing a graph.  The generic Dataset expression
+protocol instead returns ``None`` for mixed datasets so Dask can use xarray's
+existing HighLevelGraph fallback.
+"""
+
 from __future__ import annotations
 
 import itertools

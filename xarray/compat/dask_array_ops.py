@@ -101,10 +101,8 @@ def push(array, n, axis, method="blelloch"):
     from xarray.core.nputils import nanlast
     from xarray.namedarray.parallelcompat import get_chunked_array_type
 
-    da = get_chunked_array_type(array).array_api
-    cumreduction = getattr(da, "cumreduction", None)
-    if cumreduction is None:
-        cumreduction = da.reductions.cumreduction
+    chunkmanager = get_chunked_array_type(array)
+    da = chunkmanager.array_api
 
     if n is not None and all(n <= size for size in array.chunks[axis]):
         return array.map_overlap(_push, depth={axis: (n, 0)}, n=n, axis=axis)
@@ -112,11 +110,11 @@ def push(array, n, axis, method="blelloch"):
     # TODO: Replace all this function
     #  once https://github.com/pydata/xarray/issues/9229 being implemented
 
-    pushed_array = cumreduction(
+    pushed_array = chunkmanager.scan(
         func=_dtype_push,
         binop=_fill_with_last_one,
         ident=np.nan,
-        x=array,
+        arr=array,
         axis=axis,
         dtype=array.dtype,
         method=method,

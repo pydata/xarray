@@ -648,13 +648,10 @@ class Dataset(
         if not graphs:
             return None
         else:
-            try:
-                from dask.highlevelgraph import HighLevelGraph
+            from dask.highlevelgraph import HighLevelGraph
 
-                if all(isinstance(graph, HighLevelGraph) for graph in graphs.values()):
-                    return HighLevelGraph.merge(*graphs.values())
-            except ImportError:
-                pass
+            if all(isinstance(graph, HighLevelGraph) for graph in graphs.values()):
+                return HighLevelGraph.merge(*graphs.values())
 
             from dask.utils import ensure_dict
 
@@ -681,6 +678,10 @@ class Dataset(
         for v in self.variables.values():
             if dask.is_dask_collection(v):
                 if not is_dask_array_expr_array(v._data):
+                    # Composite expressions must account for every Dask-backed
+                    # variable.  Returning None lets Dask fall back to the
+                    # existing HighLevelGraph path for mixed legacy/expression
+                    # datasets rather than failing during protocol discovery.
                     return None
                 exprs.append(v._data.expr)
         return exprs or None
@@ -689,27 +690,19 @@ class Dataset(
         import dask
         from dask._collections import new_collection
 
-        exprs_iter = iter(exprs)
-        variables = {}
+        dask_variables = [
+            (k, v) for k, v in self._variables.items() if dask.is_dask_collection(v)
+        ]
+        exprs = list(exprs)
+        if len(exprs) != len(dask_variables):
+            raise ValueError(
+                f"Expected {len(dask_variables)} expressions to rebuild Dataset, "
+                f"got {len(exprs)}"
+            )
 
-        for k, v in self._variables.items():
-            if dask.is_dask_collection(v):
-                try:
-                    expr = next(exprs_iter)
-                except StopIteration as err:
-                    raise ValueError(
-                        "Not enough expressions to rebuild Dataset"
-                    ) from err
-                variables[k] = v._replace(data=new_collection(expr))
-            else:
-                variables[k] = v
-
-        try:
-            next(exprs_iter)
-        except StopIteration:
-            pass
-        else:
-            raise ValueError("Too many expressions to rebuild Dataset")
+        variables = dict(self._variables)
+        for (k, v), expr in zip(dask_variables, exprs, strict=True):
+            variables[k] = v._replace(data=new_collection(expr))
 
         return type(self)._construct_direct(
             variables,
