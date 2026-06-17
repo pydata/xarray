@@ -441,16 +441,8 @@ def map_blocks(
         for arg in aligned
     )
 
-    from xarray.core.dask_array_expr import collect_dask_array_expr_chunked_data
-
-    has_dask_array_expr, chunked_data = collect_dask_array_expr_chunked_data(
-        xarray_objs
-    )
-
     # rechunk any numpy variables appropriately
     xarray_objs = tuple(arg.chunk(arg.chunksizes) for arg in xarray_objs)
-    if has_dask_array_expr:
-        _, chunked_data = collect_dask_array_expr_chunked_data(xarray_objs)
 
     merged_coordinates = merge(
         [arg.coords for arg in aligned],
@@ -530,7 +522,6 @@ def map_blocks(
         template = template._to_temp_dataset()
     elif isinstance(template, Dataset):
         result_is_array = False
-        template_name = None
     else:
         raise TypeError(
             f"func output must be DataArray or Dataset; got {type(template)}"
@@ -556,38 +547,7 @@ def map_blocks(
         dim: np.cumsum((0,) + chunks_v) for dim, chunks_v in output_chunks.items()
     }
 
-    computed_variables = [
-        name for name in template.variables if name not in coordinates.indexes
-    ]
-
-    if has_dask_array_expr:
-        from xarray.core.dask_array_expr import map_blocks_with_dask_array_expr
-
-        return map_blocks_with_dask_array_expr(
-            func=func,
-            npargs=npargs,
-            kwargs=kwargs,
-            is_xarray=is_xarray,
-            is_array=is_array,
-            input_chunks=input_chunks,
-            output_chunks=output_chunks,
-            coordinates=coordinates,
-            template=template,
-            result_is_array=result_is_array,
-            template_name=template_name,
-            gname=gname,
-            ichunk=ichunk,
-            input_chunk_bounds=input_chunk_bounds,
-            output_chunk_bounds=output_chunk_bounds,
-            computed_variables=computed_variables,
-            new_indexes=new_indexes,
-            modified_indexes=modified_indexes,
-            chunked_data=chunked_data,
-            wrapper=_wrapper,
-            get_chunk_slicer=_get_chunk_slicer,
-            dataset_to_dataarray=dataset_to_dataarray,
-        )  # type: ignore[return-value]
-
+    computed_variables = set(template.variables) - set(coordinates.indexes)
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
         # mapping from dimension name to chunk index
