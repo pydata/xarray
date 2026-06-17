@@ -533,7 +533,7 @@ class Dataset(
 
         Data will be computed and/or loaded from disk or a remote source.
 
-        Unlike ``.compute``, the original dataset is modified and returned.
+        Unlike ``.compute``, the original dataset is modified in-place and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
