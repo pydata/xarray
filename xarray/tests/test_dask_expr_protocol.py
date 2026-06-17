@@ -220,7 +220,7 @@ def test_apply_ufunc_parallelized_uses_composite_expr():
     )
 
 
-def test_groupby_sum_currently_falls_back_after_legacy_conversion():
+def test_groupby_sum_uses_composite_expr():
     x = dask_array.arange(6, chunks=(3,))
     arr = DataArray(
         x,
@@ -229,8 +229,11 @@ def test_groupby_sum_currently_falls_back_after_legacy_conversion():
         name="x",
     )
 
-    with pytest.warns(UserWarning, match="already a Dask collection"):
-        out = arr.groupby("label").sum()
+    out = arr.groupby("label").sum()
 
-    assert not isinstance(out.data, dask_array.Array)
-    assert isinstance(dask.base.collections_to_expr(out), HLGExpr)
+    assert isinstance(out.data, dask_array.Array)
+    assert isinstance(dask.base.collections_to_expr(out), CompositeExpr)
+    assert_identical(
+        out.compute(scheduler="single-threaded"),
+        DataArray([5, 10], dims="label", coords={"label": ["a", "b"]}, name="x"),
+    )

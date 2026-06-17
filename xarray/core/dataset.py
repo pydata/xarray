@@ -670,10 +670,12 @@ class Dataset(
         ]
 
     def __dask_exprs__(self):
+        from importlib import import_module
+
         import dask
 
         try:
-            from dask_array import Array as DaskArray
+            DaskArray = import_module("dask_array").Array
         except ImportError:
             return None
 

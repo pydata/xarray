@@ -64,9 +64,6 @@ numbagg = "*"
 dask = "*"
 distributed = "*"
 
-[feature.dask.pypi-dependencies]
-dask-array = { git = "https://github.com/mrocklin/dask-array" }
-
 [feature.accel.dependencies]
 flox = "*"
 bottleneck = "*"

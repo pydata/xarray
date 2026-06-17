@@ -99,7 +99,6 @@ def push(array, n, axis, method="blelloch"):
 
     from xarray.core.duck_array_ops import _push
     from xarray.core.nputils import nanlast
-    from xarray.namedarray.parallelcompat import get_chunked_array_type
 
     chunkmanager = get_chunked_array_type(array)
     da = chunkmanager.array_api
