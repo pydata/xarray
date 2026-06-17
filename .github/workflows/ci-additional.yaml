@@ -141,7 +141,7 @@ jobs:
           pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: mypy_report/cobertura.xml
           flags: mypy
@@ -187,7 +187,7 @@ jobs:
           pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: mypy_report/cobertura.xml
           flags: mypy-min
@@ -288,7 +288,7 @@ jobs:
           pixi run -e ${{ matrix.pixi-env }} -- python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: pyright_report/cobertura.xml
           flags: pyright
