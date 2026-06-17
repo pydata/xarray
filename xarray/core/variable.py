@@ -937,7 +937,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def drop_encoding(self) -> Self:
         """Return a new Variable without encoding."""
-        return self._replace(encoding={})
+        return self._replace(encoding={}, data=self._data)
 
     def _copy(
         self,
