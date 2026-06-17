@@ -42,7 +42,9 @@ Bug Fixes
 - Fix :py:func:`decode_cf` failing on integer-encoded time arrays that contain
   NaT when running against numpy 2.5+.
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
-
+- Fix ``TypeError: Implicit conversion to a NumPy array is not allowed`` when trying to
+  use :py:func:`open_mfdataset` with a backend engine reading to CuPy arrays.
+  By `Wei Ji Leong <https://github.com/weiji14>`_.
 
 Documentation
 ~~~~~~~~~~~~~

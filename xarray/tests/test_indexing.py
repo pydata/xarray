@@ -902,6 +902,14 @@ def test_implicit_indexing_adapter_copy_on_write() -> None:
     assert isinstance(implicit[:], indexing.ImplicitToExplicitIndexingAdapter)
 
 
+def test_implicit_indexing_adapter_duck_array() -> None:
+    array = DuckArrayWrapper(array=np.arange(10))
+    implicit = indexing.ImplicitToExplicitIndexingAdapter(
+        indexing.ArrayApiIndexingAdapter(array), indexing.BasicIndexer
+    )
+    np.testing.assert_array_equal(np.asarray(implicit), np.arange(10))
+
+
 def test_outer_indexer_consistency_with_broadcast_indexes_vectorized() -> None:
     def nonzero(x):
         if isinstance(x, np.ndarray) and x.dtype.kind == "b":
