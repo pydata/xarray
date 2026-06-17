@@ -38,6 +38,12 @@ Bug Fixes
   a ``zarr_format=3`` store with ``use_zarr_fill_value_as_mask=False``, so it is no
   longer silently lost on round-trip (:issue:`10269`).
   By `Davis Bennett <https://github.com/d-v-b>`_.
+- :py:meth:`~xarray.indexes.RangeIndex.arange` now preserves the requested
+  ``step`` instead of silently re-deriving it from ``(stop - start) / size``, so
+  its values match :py:func:`numpy.arange` when ``step`` does not evenly divide
+  the interval. Strided slicing of a :py:class:`~xarray.indexes.RangeIndex` now
+  preserves the step as well (:issue:`11325`).
+  By `mokashang <https://github.com/mokashang>`_.
 - Fix :py:func:`decode_cf` failing on integer-encoded time arrays that contain
   NaT when running against numpy 2.5+.
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.

@@ -131,29 +131,12 @@ else:
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
-has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
+requires_zarr_v3 = requires_zarr
 has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
 has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", "3.1.2")
 has_zarr_rectilinear_chunks, requires_zarr_rectilinear_chunks = _importorskip(
     "zarr", "3.2.0"
 )
-if has_zarr_v3:
-    import zarr
-
-    # manual update by checking attrs for now
-    # TODO: use version specifier
-    # installing from git main is giving me a lower version than the
-    # most recently released zarr
-    has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
-    has_zarr_v3_async_oindex = hasattr(zarr.AsyncArray, "oindex")
-
-    requires_zarr_v3_dtypes = pytest.mark.skipif(
-        not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
-    )
-    requires_zarr_v3_async_oindex = pytest.mark.skipif(
-        not has_zarr_v3_async_oindex, reason="requires zarr>3.1.1"
-    )
-
 
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
@@ -200,14 +183,7 @@ parametrize_zarr_format = pytest.mark.parametrize(
     "zarr_format",
     [
         pytest.param(2, id="zarr_format=2"),
-        pytest.param(
-            3,
-            marks=pytest.mark.skipif(
-                not has_zarr_v3,
-                reason="zarr-python v2 cannot understand the zarr v3 format",
-            ),
-            id="zarr_format=3",
-        ),
+        pytest.param(3, id="zarr_format=3"),
     ],
 )
 
