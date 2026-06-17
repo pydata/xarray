@@ -672,16 +672,19 @@ class Dataset(
     def __dask_exprs__(self):
         import dask
 
-        from xarray.core.dask_array_expr import is_dask_array_expr_array
+        try:
+            from dask_array import Array as DaskArray
+        except ImportError:
+            return None
 
         exprs = []
         for v in self.variables.values():
             if dask.is_dask_collection(v):
-                if not is_dask_array_expr_array(v._data):
+                if not isinstance(v._data, DaskArray):
                     # Composite expressions must account for every Dask-backed
-                    # variable.  Returning None lets Dask fall back to the
-                    # existing HighLevelGraph path for mixed legacy/expression
-                    # datasets rather than failing during protocol discovery.
+                    # variable.  Returning None keeps Dask's collection APIs on
+                    # the existing HighLevelGraph path for mixed
+                    # legacy/expression datasets.
                     return None
                 exprs.append(v._data.expr)
         return exprs or None

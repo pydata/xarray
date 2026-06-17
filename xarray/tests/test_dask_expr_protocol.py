@@ -154,9 +154,29 @@ def test_mixed_legacy_inputs_do_not_use_composite_path():
             "legacy": ("i", da.arange(3, chunks=(1,))),
         }
     )
+    expected = Dataset(
+        {"x": ("i", np.arange(3)), "legacy": ("i", np.arange(3))},
+    )
 
     assert ds.__dask_exprs__() is None
     assert isinstance(dask.base.collections_to_expr(ds), HLGExpr)
+    assert_identical(dask.compute(ds, scheduler="single-threaded")[0], expected)
+
+    persisted = dask.persist(ds, scheduler="single-threaded")[0]
+    assert isinstance(persisted["x"].data, dask_array.Array)
+    assert isinstance(persisted["legacy"].data, da.Array)
+    assert_identical(
+        dask.compute(persisted, scheduler="single-threaded")[0],
+        expected,
+    )
+
+    optimized = dask.optimize(ds)[0]
+    assert isinstance(optimized["x"].data, dask_array.Array)
+    assert isinstance(optimized["legacy"].data, da.Array)
+    assert_identical(
+        dask.compute(optimized, scheduler="single-threaded")[0],
+        expected,
+    )
 
 
 def test_shared_subexpressions_optimize_without_cross_contamination():
