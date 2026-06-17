@@ -259,11 +259,11 @@ def _chunk_ds(
             name,
             var,
             var_chunks,
+            chunkmanager,
             overwrite_encoded_chunks=overwrite_encoded_chunks,
             name_prefix=name_prefix,
             token=token,
             inline_array=inline_array,
-            chunked_array_type=chunkmanager,
             from_array_kwargs=from_array_kwargs.copy(),
             just_use_token=True,
         )
@@ -294,7 +294,7 @@ def _dataset_from_backend_dataset(
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
         raise ValueError(
-            f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
+            f"chunks must be an int, dict, 'auto' or None. Instead found {chunks}."
         )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
@@ -344,7 +344,7 @@ def _datatree_from_backend_datatree(
 ):
     if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
         raise ValueError(
-            f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
+            f"chunks must be an int, dict, 'auto' or None. Instead found {chunks}."
         )
 
     _protect_datatree_variables_inplace(backend_tree, cache)
@@ -433,8 +433,9 @@ def open_dataset(
     chunks : int, dict, 'auto' or None, default: None
         If provided, used to load the data into dask arrays.
 
-        - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
-          engine preferred chunks.
+        - ``chunks="auto"`` will use a chunking scheme that never splits encoded
+          chunks. If encoded chunks are small then "auto" takes multiples of them
+          over the largest dimension.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
           :ref:`lazy indexing classes <internal design.lazy indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
@@ -677,8 +678,9 @@ def open_dataarray(
     chunks : int, dict, 'auto' or None, default: None
         If provided, used to load the data into dask arrays.
 
-        - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
-          engine preferred chunks.
+        - ``chunks="auto"`` will use a chunking scheme that never splits encoded
+          chunks. If encoded chunks are small then "auto" takes multiples of them
+          over the largest dimension.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
           :ref:`lazy indexing classes <internal design.lazy indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
@@ -903,8 +905,9 @@ def open_datatree(
     chunks : int, dict, 'auto' or None, default: None
         If provided, used to load the data into dask arrays.
 
-        - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
-          engine preferred chunks.
+        - ``chunks="auto"`` will use a chunking scheme that never splits encoded
+          chunks. If encoded chunks are small then "auto" takes multiples of them
+          over the largest dimension.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
           :ref:`lazy indexing classes <internal design.lazy indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
@@ -1149,8 +1152,9 @@ def open_groups(
     chunks : int, dict, 'auto' or None, default: None
         If provided, used to load the data into dask arrays.
 
-        - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
-          engine preferred chunks.
+        - ``chunks="auto"`` will use a chunking scheme that never splits encoded
+          chunks. If encoded chunks are small then "auto" takes multiples of them
+          over the largest dimension.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
           :ref:`lazy indexing classes <internal design.lazy indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.

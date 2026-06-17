@@ -14,6 +14,10 @@ v2026.05.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Change behavior of ``chunks="auto"`` to guarantee that chunks in xarray
+  match on-disk chunks or multiples of them. No automatic chunk splitting allowed.
+  (:pull:`11060`).
+  By `Julia Signell <https://github.com/jsignell>`_
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
