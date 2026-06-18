@@ -63,6 +63,7 @@ numbagg = "*"
 [feature.dask.dependencies]
 dask = "*"
 distributed = "*"
+iris = "*"        # depends on dask
 
 [feature.accel.dependencies]
 flox = "*"
@@ -92,9 +93,6 @@ pooch = "*"
 
 # calendar
 cftime = "*"
-
-# other
-iris = "*"
 
 [feature.extras.pypi-dependencies]
 # array
