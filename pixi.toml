@@ -39,7 +39,7 @@ python = "3.12.*"
 python = "3.13.*"
 
 [feature.py314.dependencies]
-python = "3.14.*"
+python-gil = "3.14.*"
 
 [feature.backends.dependencies]
 # files
