@@ -382,24 +382,6 @@ numpydoc-lint = { cmd = "python ci/numpydoc-public-api.py" }
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
-test-py313-no-numba = { features = [
-  "py313",
-  "test",
-  "backends",
-  "accel",
-  "dask",
-  "viz",
-  "extras",
-] }
-test-py313-no-dask = { features = [
-  "py312",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "viz",
-  "extras",
-] }
 test-py313 = { features = [
   "py313",
   "test",
@@ -474,19 +456,6 @@ test-py311 = { features = [
 
 test-py311-with-typing = { features = [
   "py311",
-  "test",
-  "backends",
-  "accel",
-  "numba",
-  "dask",
-  "viz",
-  "extras",
-  "typing",
-  "typing-stubs",
-] }
-
-test-py313-with-typing = { features = [
-  "py313",
   "test",
   "backends",
   "accel",
