@@ -93,6 +93,9 @@ pooch = "*"
 # calendar
 cftime = "*"
 
+# other
+iris = "*"
+
 [feature.extras.pypi-dependencies]
 # array
 jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
