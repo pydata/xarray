@@ -218,6 +218,7 @@ test = { cmd = "pytest", description = "Run the test suite with pytest." }
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
+iris = "*"
 ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
