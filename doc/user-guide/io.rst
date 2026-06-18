@@ -1241,6 +1241,33 @@ shape of each coordinate array in the ``encoding`` argument:
 The number of chunks on Tair matches our dask chunks, while there is now only a single
 chunk in the directory stores of each coordinate.
 
+.. _io.zarr.rectilinear_chunks:
+
+Variable-sized (rectilinear) chunks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Zarr v3 supports *rectilinear* chunk grids, where chunk sizes vary along one
+or more dimensions. This is useful when natural data boundaries (yearly chunks
+of a daily time series, per-tile spatial extents) don't align to a regular
+grid. Requires ``zarr-python >= 3.2``, and the experimental feature must be
+enabled for both reading and writing:
+
+.. code-block:: python
+
+    import zarr
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        ds = xr.Dataset({"var": ("x", np.arange(60))}).chunk({"x": (10, 20, 30)})
+        ds.to_zarr("rectilinear.zarr", zarr_format=3, mode="w")
+
+        roundtrip = xr.open_zarr("rectilinear.zarr", zarr_format=3)
+        roundtrip.chunks["x"]  # (10, 20, 30)
+
+Rectilinear chunks can also be specified through the ``encoding`` argument
+(one sequence per dimension), e.g. ``encoding={"var": {"chunks": ((10, 20, 30),)}}``.
+Writing non-uniform chunks to a zarr v2 store raises ``ValueError`` because the
+feature is Zarr Format 3-only.
+
 Groups
 ~~~~~~
 

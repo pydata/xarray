@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 
 from xarray.core.datatree import Variable
@@ -133,9 +135,12 @@ def align_nd_chunks(
 
 def build_grid_chunks(
     size: int,
-    chunk_size: int,
+    chunk_size: int | tuple[int, ...],
     region: slice | None = None,
 ) -> tuple[int, ...]:
+    if isinstance(chunk_size, tuple):
+        return _build_rectilinear_grid_chunks(chunk_size, region)
+
     if region is None:
         region = slice(0, size)
 
@@ -153,9 +158,34 @@ def build_grid_chunks(
     return tuple(chunks_on_region)
 
 
+def _build_rectilinear_grid_chunks(
+    chunk_sizes: tuple[int, ...],
+    region: slice | None = None,
+) -> tuple[int, ...]:
+    """Build grid chunks for a rectilinear dimension within a region."""
+    if region is None or region == slice(None):
+        return tuple(chunk_sizes)
+
+    region_start = region.start or 0
+    region_stop = region.stop or sum(chunk_sizes)
+
+    boundaries = [0, *itertools.accumulate(chunk_sizes, initial=0)]
+
+    result = []
+    for chunk_start, chunk_end in itertools.pairwise(boundaries):
+        if chunk_end <= region_start or chunk_start >= region_stop:
+            continue
+
+        effective_start = max(chunk_start, region_start)
+        effective_end = min(chunk_end, region_stop)
+        result.append(effective_end - effective_start)
+
+    return tuple(result)
+
+
 def grid_rechunk(
     v: Variable,
-    enc_chunks: tuple[int, ...],
+    enc_chunks: tuple[int | tuple[int, ...], ...],
     region: tuple[slice, ...],
 ) -> Variable:
     nd_v_chunks = v.chunks
@@ -181,9 +211,36 @@ def grid_rechunk(
     return v
 
 
+def _validate_rectilinear_chunk_alignment(
+    dask_chunks: tuple[int, ...],
+    enc_chunks: tuple[int, ...],
+    axis: int,
+    name: str,
+    region: slice = slice(None),
+) -> None:
+    """Validate dask chunks align with rectilinear encoding chunk boundaries."""
+    enc_stops = set(itertools.accumulate(enc_chunks))
+    region_start = region.start or 0
+    dask_stops = {region_start + s for s in itertools.accumulate(dask_chunks)}
+    # The final stop (total size) always matches. Exclude it.
+    total = sum(enc_chunks)
+    enc_stops.discard(total)
+    dask_stops.discard(total)
+    bad = dask_stops - enc_stops
+    if bad:
+        raise ValueError(
+            f"Specified rectilinear encoding chunks {enc_chunks!r} for variable "
+            f"named {name!r} would overlap multiple Dask chunks on axis {axis}. "
+            f"Dask chunk boundaries at positions {sorted(bad)} do not align with "
+            f"encoding chunk boundaries at {sorted(enc_stops)}. "
+            "Writing this array in parallel with Dask could lead to corrupted data. "
+            "Consider rechunking using `chunk()` or setting `safe_chunks=False`."
+        )
+
+
 def validate_grid_chunks_alignment(
     nd_v_chunks: tuple[tuple[int, ...], ...] | None,
-    enc_chunks: tuple[int, ...],
+    enc_chunks: tuple[int | tuple[int, ...], ...],
     backend_shape: tuple[int, ...],
     region: tuple[slice, ...],
     allow_partial_chunks: bool,
@@ -213,6 +270,18 @@ def validate_grid_chunks_alignment(
         backend_shape,
         strict=True,
     ):
+        if isinstance(chunk_size, tuple):
+            # Rectilinear dimension: use boundary-based validation
+            _validate_rectilinear_chunk_alignment(
+                dask_chunks=v_chunks,
+                enc_chunks=chunk_size,
+                axis=axis,
+                name=name,
+                region=interval,
+            )
+            continue
+
+        # Regular dimension: use existing validation logic
         for i, chunk in enumerate(v_chunks[1:-1]):
             if chunk % chunk_size:
                 raise ValueError(

@@ -46,6 +46,10 @@ if TYPE_CHECKING:
     from xarray.core.types import ZarrArray, ZarrGroup
 
 
+def _has_rectilinear_chunks() -> bool:
+    return module_available("zarr", minversion="3.2")
+
+
 def _get_mappers(*, storage_options, store, chunk_store):
     # expand str and path-like arguments
     store = _normalize_path(store)
@@ -333,7 +337,7 @@ class ZarrArrayWrapper(BackendArray):
         )
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, zarr_format):
     """
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -355,18 +359,34 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     # while dask chunks can be variable sized
     # https://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and not enc_chunks:
+        if zarr_format == 3 and _has_rectilinear_chunks():
+            # Check if dask chunks are regular (uniform except for last chunk)
+            has_varying_interior = any(
+                len(set(chunks[:-1])) > 1 for chunks in var_chunks
+            )
+            has_larger_final = any(chunks[0] < chunks[-1] for chunks in var_chunks)
+            if has_varying_interior or has_larger_final:
+                # Truly rectilinear: return dask-style tuples of per-chunk sizes.
+                # Requires zarr config: array.rectilinear_chunks = True
+                return tuple(var_chunks)
+            # Regular chunks: return the first chunk size per dimension
+            return tuple(chunk[0] for chunk in var_chunks)
+
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
-                "Zarr requires uniform chunk sizes except for final chunk. "
+                "Zarr v2 requires uniform chunk sizes except for the final chunk. "
                 f"Variable named {name!r} has incompatible dask chunks: {var_chunks!r}. "
-                "Consider rechunking using `chunk()`."
+                "Consider rechunking using `chunk()`, or switching to the "
+                "zarr v3 format with zarr-python>=3.2."
             )
         if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
             raise ValueError(
-                "Final chunk of Zarr array must be the same size or smaller "
-                f"than the first. Variable named {name!r} has incompatible Dask chunks {var_chunks!r}."
-                "Consider either rechunking using `chunk()` or instead deleting "
-                "or modifying `encoding['chunks']`."
+                "The final chunk of a Zarr v2 array or a Zarr v3 array without the "
+                "rectilinear chunks extension must be the same size or smaller "
+                f"than the first. Variable named {name!r} has incompatible Dask "
+                f"chunks {var_chunks!r}. "
+                "Consider switching to Zarr v3 with the rectilinear chunks extension, "
+                "rechunking using `chunk()` or deleting or modifying `encoding['chunks']`."
             )
         # return the first chunk for each dimension
         return tuple(chunk[0] for chunk in var_chunks)
@@ -380,7 +400,12 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     if isinstance(enc_chunks, integer_types):
         enc_chunks_tuple = ndim * (enc_chunks,)
     else:
-        enc_chunks_tuple = tuple(enc_chunks)
+        # Normalize per-dimension rectilinear specs (possibly lists, e.g.
+        # encoding={"chunks": [[10, 20, 30], 25]}) to tuples, so downstream
+        # code only deals with elements of type int | tuple[int, ...]
+        enc_chunks_tuple = tuple(
+            tuple(x) if isinstance(x, (list, tuple)) else x for x in enc_chunks
+        )
 
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
@@ -389,7 +414,16 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
             var_chunks,
             ndim,
             name,
+            zarr_format,
         )
+
+    # Rectilinear chunks: each element is a sequence of per-chunk edge lengths
+    if (
+        zarr_format == 3
+        and _has_rectilinear_chunks()
+        and any(not isinstance(x, int) for x in enc_chunks_tuple)
+    ):
+        return enc_chunks_tuple
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
@@ -532,6 +566,7 @@ def extract_zarr_variable_encoding(
         var_chunks=variable.chunks,
         ndim=variable.ndim,
         name=name,
+        zarr_format=zarr_format,
     )
     if _zarr_v3() and chunks is None:
         chunks = "auto"
@@ -910,9 +945,20 @@ class ZarrStore(AbstractWritableDataStore):
         )
         attributes = dict(attributes)
 
+        try:
+            # Regular chunk grid: a single uniform chunk size per dimension,
+            # e.g. (10,) for a 60-element axis chunked into 10s.
+            chunks = tuple(zarr_array.chunks)
+        except NotImplementedError:
+            # Rectilinear chunk grid (zarr >= 3.2): chunk sizes vary along an
+            # axis, so there is no single chunk size. `.chunks` raises and we
+            # instead read the explicit per-chunk listing, e.g. ((10, 20, 30),).
+            chunks = zarr_array.write_chunk_sizes
+        preferred_chunks = dict(zip(dimensions, chunks, strict=True))
+
         encoding = {
-            "chunks": zarr_array.chunks,
-            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
+            "chunks": chunks,
+            "preferred_chunks": preferred_chunks,
         }
 
         if _zarr_v3():

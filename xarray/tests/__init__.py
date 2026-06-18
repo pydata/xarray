@@ -134,23 +134,9 @@ has_zarr, requires_zarr = _importorskip("zarr")
 requires_zarr_v3 = requires_zarr
 has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
 has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", "3.1.2")
-if has_zarr:
-    import zarr
-
-    # manual update by checking attrs for now
-    # TODO: use version specifier
-    # installing from git main is giving me a lower version than the
-    # most recently released zarr
-    has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
-    has_zarr_v3_async_oindex = hasattr(zarr.AsyncArray, "oindex")
-
-    requires_zarr_v3_dtypes = pytest.mark.skipif(
-        not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
-    )
-    requires_zarr_v3_async_oindex = pytest.mark.skipif(
-        not has_zarr_v3_async_oindex, reason="requires zarr>3.1.1"
-    )
-
+has_zarr_rectilinear_chunks, requires_zarr_rectilinear_chunks = _importorskip(
+    "zarr", "3.2.0"
+)
 
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
