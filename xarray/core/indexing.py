@@ -9,6 +9,7 @@ from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast, overload
 
 import numpy as np
@@ -16,6 +17,7 @@ import pandas as pd
 from numpy.typing import DTypeLike
 from packaging.version import Version
 
+from xarray.compat.array_api_compat import get_array_namespace
 from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
@@ -692,6 +694,9 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 
         else:
             return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype)
+
+    def __array_namespace__(self: Any) -> ModuleType:
+        return get_array_namespace(self.array)
 
     def get_duck_array(self) -> duckarray:
         return self.array.get_duck_array()

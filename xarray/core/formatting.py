@@ -23,8 +23,6 @@ from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     BasicIndexer,
     ExplicitlyIndexed,
-    IndexingAdapter,
-    LazilyIndexedArray,
     MemoryCachedArray,
 )
 from xarray.core.options import OPTIONS, _get_boolean_with_default
@@ -702,9 +700,7 @@ def short_data_repr(array):
 
     if isinstance(array, np.ndarray):
         return short_array_repr(array)
-    elif not isinstance(
-        internal_data, (LazilyIndexedArray, MemoryCachedArray, IndexingAdapter)
-    ) and is_duck_array(internal_data):
+    elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
     elif getattr(array, "_in_memory", None):
         return short_array_repr(array)
