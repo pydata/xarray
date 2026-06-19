@@ -1380,19 +1380,19 @@ def test_calendar_year_length(
 
 @pytest.mark.parametrize("freq", ["YE", "ME", "D"])
 def test_dayofweek_after_cftime(freq: str) -> None:
-    result = date_range("2000-02-01", periods=3, freq=freq, use_cftime=True).dayofweek
+    result = date_range("2000-02-01", periods=3, freq=freq, use_cftime=True).day_of_week
     # TODO: remove once requiring pandas 2.2+
     freq = _new_to_legacy_freq(freq)
-    expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofweek
+    expected = pd.date_range("2000-02-01", periods=3, freq=freq).day_of_week
     np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.parametrize("freq", ["YE", "ME", "D"])
 def test_dayofyear_after_cftime(freq: str) -> None:
-    result = date_range("2000-02-01", periods=3, freq=freq, use_cftime=True).dayofyear
+    result = date_range("2000-02-01", periods=3, freq=freq, use_cftime=True).day_of_year
     # TODO: remove once requiring pandas 2.2+
     freq = _new_to_legacy_freq(freq)
-    expected = pd.date_range("2000-02-01", periods=3, freq=freq).dayofyear
+    expected = pd.date_range("2000-02-01", periods=3, freq=freq).day_of_year
     np.testing.assert_array_equal(result, expected)
 
 

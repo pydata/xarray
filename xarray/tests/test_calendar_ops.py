@@ -159,7 +159,7 @@ def test_convert_calendar_360_days_random():
     # Ensure that added days are evenly distributed in the 5 fifths of each year
     conv = convert_calendar(da_360, "noleap", align_on="random", missing=np.nan)
     conv = conv.where(conv.isnull(), drop=True)
-    nandoys = conv.time.dt.dayofyear[:366]
+    nandoys = conv.time.dt.day_of_year[:366]
     assert all(nandoys < np.array([74, 147, 220, 293, 366]))
     assert all(nandoys > np.array([0, 73, 146, 219, 292]))
 

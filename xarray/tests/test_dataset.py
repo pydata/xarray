@@ -1737,7 +1737,7 @@ class TestDataset:
         times = pd.date_range("2000-01-01", periods=3)
         assert_equal(data.isel(time=slice(3)), data.sel(time=times))
         assert_equal(
-            data.isel(time=slice(3)), data.sel(time=(data["time.dayofyear"] <= 3))
+            data.isel(time=slice(3)), data.sel(time=(data["time.day_of_year"] <= 3))
         )
 
         td = pd.to_timedelta(np.arange(3), unit="days")
@@ -4645,11 +4645,11 @@ class TestDataset:
         assert_array_equal(data["time.month"].values, index.month)
         assert_array_equal(data["time.season"].values, "DJF")
         # test virtual variable math
-        assert_array_equal(data["time.dayofyear"] + 1, 2 + np.arange(20))
-        assert_array_equal(np.sin(data["time.dayofyear"]), np.sin(1 + np.arange(20)))
+        assert_array_equal(data["time.day_of_year"] + 1, 2 + np.arange(20))
+        assert_array_equal(np.sin(data["time.day_of_year"]), np.sin(1 + np.arange(20)))
         # ensure they become coordinates
-        expected = Dataset({}, {"dayofyear": data["time.dayofyear"]})
-        actual = data[["time.dayofyear"]]
+        expected = Dataset({}, {"day_of_year": data["time.day_of_year"]})
+        actual = data[["time.day_of_year"]]
         assert_equal(expected, actual)
         # non-coordinate variables
         ds = Dataset({"t": ("x", pd.date_range("2000-01-01", periods=3))})
@@ -4672,9 +4672,10 @@ class TestDataset:
     def test_slice_virtual_variable(self) -> None:
         data = create_test_data()
         assert_equal(
-            data["time.dayofyear"][:10].variable, Variable(["time"], 1 + np.arange(10))
+            data["time.day_of_year"][:10].variable,
+            Variable(["time"], 1 + np.arange(10)),
         )
-        assert_equal(data["time.dayofyear"][0].variable, Variable([], 1))
+        assert_equal(data["time.day_of_year"][0].variable, Variable([], 1))
 
     def test_setitem(self) -> None:
         # assign a variable
