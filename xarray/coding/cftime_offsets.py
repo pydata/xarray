@@ -1623,10 +1623,18 @@ def date_range_like(source, calendar, use_cftime=None):
     end = convert_time_or_go_back(source_end, date_type)
 
     # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
-    if source_end.day == source_end.daysinmonth and isinstance(
+    if isinstance(source_end, pd.Timestamp):
+        source_end_days_in_month = source_end.days_in_month
+    else:
+        source_end_days_in_month = source_end.daysinmonth
+    if isinstance(end, pd.Timestamp):
+        end_days_in_month = end.days_in_month
+    else:
+        end_days_in_month = end.daysinmonth
+    if source_end.day == source_end_days_in_month and isinstance(
         freq_as_offset, YearEnd | QuarterEnd | MonthEnd | Day
     ):
-        end = end.replace(day=end.daysinmonth)
+        end = end.replace(day=end_days_in_month)
 
     return date_range(
         start=start.isoformat(),
