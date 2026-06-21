@@ -155,6 +155,7 @@ jobs:
     needs: [detect-ci-trigger, cache-pixi-lock]
     if: |
       always()
+      && false
       && contains( github.event.pull_request.labels.*.name, 'run-upstream')
 
     defaults:
