@@ -136,6 +136,7 @@ jobs:
     if: |
       always()
       && needs.upstream-dev.result == 'failure'
+      && github.event_name == 'schedule'
       && github.repository_owner == 'pydata'
 
     steps:
@@ -144,7 +145,6 @@ jobs:
           name: log file
           path: logs/
       - name: Generate and publish the report
-        if: false
         uses: scientific-python/issue-from-pytest-log-action@8e905db353437cda1d6a773de245343fbfc940dd # v1.5.0
         with:
           log-path: logs/${{ needs.upstream-dev.outputs.log-file }}
@@ -155,7 +155,6 @@ jobs:
     needs: [detect-ci-trigger, cache-pixi-lock]
     if: |
       always()
-      && false
       && contains( github.event.pull_request.labels.*.name, 'run-upstream')
 
     defaults:
