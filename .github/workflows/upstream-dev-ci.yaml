@@ -121,8 +121,9 @@ jobs:
         env:
           LOG_PATH: ${{ steps.determine-log-path.output.log-file }}
         run: |
-          pixi run -e ${{matrix.pixi-env}} -- python -m pytest --timeout=60 -rf -nauto \
-            --report-log "$LOG_PATH"
+          # pixi run -e ${{matrix.pixi-env}} -- python -m pytest --timeout=60 -rf -nauto \
+          #   --report-log "$LOG_PATH"
+          echo "[{}]" > "$LOG_PATH" && false
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure() && steps.status.outcome == 'failure'
         with:
