@@ -135,7 +135,7 @@ jobs:
     if: |
       always()
       && needs.upstream-dev.result == 'failure'
-      && github.event_name == 'schedule'
+      # && github.event_name == 'schedule'
       && github.repository_owner == 'pydata'
 
     # permissions:
