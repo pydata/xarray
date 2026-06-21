@@ -128,6 +128,7 @@ jobs:
         with:
           name: log file
           path: ${{ steps.determine-log-path.outputs.log-file }}
+          if-no-files-found: error
 
   create-issue:
     needs: upstream-dev
