@@ -119,7 +119,7 @@ jobs:
         if: success()
         id: status
         env:
-          LOG_PATH: ${{ steps.determine-log-path.output.log-file }}
+          LOG_PATH: ${{ steps.determine-log-path.outputs.log-file }}
         run: |
           pixi run -e ${{matrix.pixi-env}} -- python -m pytest --timeout=60 -rf -nauto \
             --report-log "$LOG_PATH"
