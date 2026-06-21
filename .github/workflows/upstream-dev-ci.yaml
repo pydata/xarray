@@ -154,9 +154,8 @@ jobs:
     needs: [detect-ci-trigger, cache-pixi-lock]
     if: |
       always()
-      && (
-          contains( github.event.pull_request.labels.*.name, 'run-upstream')
-      )
+      && contains( github.event.pull_request.labels.*.name, 'run-upstream')
+
     defaults:
       run:
         shell: bash -l {0}
