@@ -133,7 +133,8 @@ jobs:
     needs: upstream-dev
     runs-on: ubuntu-slim
     if: |
-      needs.upstream-dev.result == 'failure'
+      always()
+      && needs.upstream-dev.result == 'failure'
       && github.event_name == 'schedule'
       && github.repository_owner == 'pydata'
 
