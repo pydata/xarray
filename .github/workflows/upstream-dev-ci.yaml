@@ -152,7 +152,7 @@ jobs:
   mypy-upstream-dev:
     name: mypy-upstream-dev
     runs-on: ubuntu-latest
-    needs: [detect-ci-trigger, cache-pixi-lock]
+    needs: cache-pixi-lock
     if: |
       always()
       && contains( github.event.pull_request.labels.*.name, 'run-upstream')
