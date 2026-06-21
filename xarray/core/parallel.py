@@ -440,6 +440,7 @@ def map_blocks(
         dataarray_to_dataset(arg) if isinstance(arg, DataArray) else arg
         for arg in aligned
     )
+
     # rechunk any numpy variables appropriately
     xarray_objs = tuple(arg.chunk(arg.chunksizes) for arg in xarray_objs)
 
