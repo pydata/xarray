@@ -57,7 +57,9 @@ from xarray.tests import (
 
 
 def _using_dask_array_chunkmanager() -> bool:
-    return get_dask_chunkmanager().array_cls.__module__.startswith("dask_array")
+    return has_dask and get_dask_chunkmanager().array_cls.__module__.startswith(
+        "dask_array"
+    )
 
 
 @pytest.fixture

@@ -1016,7 +1016,9 @@ class DatasetIOBase:
                     find_and_validate_array(obj.array)
                 elif isinstance(obj.array, np.ndarray):
                     assert isinstance(obj, indexing.NumpyIndexingAdapter)
-                elif isinstance(obj.array, get_dask_chunkmanager().array_cls):
+                elif has_dask and isinstance(
+                    obj.array, get_dask_chunkmanager().array_cls
+                ):
                     assert isinstance(obj, indexing.DaskIndexingAdapter)
                 elif isinstance(obj.array, pd.Index):
                     assert isinstance(obj, indexing.PandasIndexingAdapter)

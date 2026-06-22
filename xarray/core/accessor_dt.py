@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING, Generic, cast
 
 import numpy as np
 import pandas as pd
@@ -134,7 +134,7 @@ def _get_date_field(values, name, dtype):
         new_axis = chunks = None
         # isocalendar adds an axis
         if name == "isocalendar":
-            chunks = (3,) + values.chunksize
+            chunks = cast(tuple[int, ...], (3,) + values.chunksize)
             new_axis = 0
 
         return chunkmanager.map_blocks(
@@ -188,7 +188,11 @@ def _round_field(values, name, freq):
     """
     if is_duck_dask_array(values):
         chunkmanager = get_chunked_array_type(values)
-        dtype = np.datetime64 if is_np_datetime_like(values.dtype) else np.dtype("O")
+        dtype = (
+            np.dtype(values.dtype)
+            if is_np_datetime_like(values.dtype)
+            else np.dtype("O")
+        )
         return chunkmanager.map_blocks(
             _round_through_series_or_index, values, name, freq=freq, dtype=dtype
         )
