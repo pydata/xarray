@@ -13,6 +13,7 @@ from xarray.tests import (
     assert_chunks_equal,
     assert_equal,
     assert_identical,
+    get_dask_chunkmanager,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -198,19 +199,13 @@ class TestDatetimeAccessor:
         ],
     )
     def test_dask_field_access(self, field) -> None:
-        import dask.array as da
-
         expected = getattr(self.times_data.dt, field)
-
-        dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
-        dask_times_2d = xr.DataArray(
-            dask_times_arr, coords=self.data.coords, dims=self.data.dims, name="data"
-        )
+        dask_times_2d = self.times_data.chunk({"lon": 5, "lat": 5, "time": 50})
 
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, field)
 
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual.compute(), expected.compute())
 
@@ -224,19 +219,13 @@ class TestDatetimeAccessor:
         ],
     )
     def test_isocalendar_dask(self, field) -> None:
-        import dask.array as da
-
         expected = getattr(self.times_data.dt.isocalendar(), field)
-
-        dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
-        dask_times_2d = xr.DataArray(
-            dask_times_arr, coords=self.data.coords, dims=self.data.dims, name="data"
-        )
+        dask_times_2d = self.times_data.chunk({"lon": 5, "lat": 5, "time": 50})
 
         with raise_if_dask_computes():
             actual = dask_times_2d.dt.isocalendar()[field]
 
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual.compute(), expected.compute())
 
@@ -251,18 +240,13 @@ class TestDatetimeAccessor:
         ],
     )
     def test_dask_accessor_method(self, method, parameters) -> None:
-        import dask.array as da
-
         expected = getattr(self.times_data.dt, method)(parameters)
-        dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
-        dask_times_2d = xr.DataArray(
-            dask_times_arr, coords=self.data.coords, dims=self.data.dims, name="data"
-        )
+        dask_times_2d = self.times_data.chunk({"lon": 5, "lat": 5, "time": 50})
 
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, method)(parameters)
 
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual.compute(), expected.compute())
 
@@ -359,19 +343,13 @@ class TestTimedeltaAccessor:
         "field", ["days", "seconds", "microseconds", "nanoseconds"]
     )
     def test_dask_field_access(self, field) -> None:
-        import dask.array as da
-
         expected = getattr(self.times_data.dt, field)
-
-        dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
-        dask_times_2d = xr.DataArray(
-            dask_times_arr, coords=self.data.coords, dims=self.data.dims, name="data"
-        )
+        dask_times_2d = self.times_data.chunk({"lon": 5, "lat": 5, "time": 50})
 
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, field)
 
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual, expected)
 
@@ -380,18 +358,13 @@ class TestTimedeltaAccessor:
         "method, parameters", [("floor", "D"), ("ceil", "D"), ("round", "D")]
     )
     def test_dask_accessor_method(self, method, parameters) -> None:
-        import dask.array as da
-
         expected = getattr(self.times_data.dt, method)(parameters)
-        dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
-        dask_times_2d = xr.DataArray(
-            dask_times_arr, coords=self.data.coords, dims=self.data.dims, name="data"
-        )
+        dask_times_2d = self.times_data.chunk({"lon": 5, "lat": 5, "time": 50})
 
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, method)(parameters)
 
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual.compute(), expected.compute())
 
@@ -472,11 +445,9 @@ def test_calendar_datetime64_2d() -> None:
 
 @requires_dask
 def test_calendar_datetime64_3d_dask() -> None:
-    import dask.array as da
-
     data = xr.DataArray(
-        da.zeros((4, 5, 6), dtype="datetime64[ns]"), dims=("x", "y", "z")
-    )
+        np.zeros((4, 5, 6), dtype="datetime64[ns]"), dims=("x", "y", "z")
+    ).chunk({"x": 2})
     with raise_if_dask_computes():
         assert data.dt.calendar == "proleptic_gregorian"
 
@@ -540,8 +511,6 @@ def test_cftime_strftime_access(data) -> None:
     "field", ["year", "month", "day", "hour", "day_of_year", "day_of_week"]
 )
 def test_dask_field_access_1d(data, field) -> None:
-    import dask.array as da
-
     expected = xr.DataArray(
         getattr(xr.coding.cftimeindex.CFTimeIndex(data.time.values), field),
         name=field,
@@ -549,7 +518,7 @@ def test_dask_field_access_1d(data, field) -> None:
     )
     times = xr.DataArray(data.time.values, dims=["time"]).chunk({"time": 50})
     result = getattr(times.dt, field)
-    assert isinstance(result.data, da.Array)
+    assert isinstance(result.data, get_dask_chunkmanager().array_cls)
     assert result.chunks == times.chunks
     assert_equal(result.compute(), expected)
 
@@ -560,8 +529,6 @@ def test_dask_field_access_1d(data, field) -> None:
     "field", ["year", "month", "day", "hour", "day_of_year", "day_of_week"]
 )
 def test_dask_field_access(times_3d, data, field) -> None:
-    import dask.array as da
-
     expected = xr.DataArray(
         getattr(
             xr.coding.cftimeindex.CFTimeIndex(times_3d.values.ravel()), field
@@ -572,7 +539,7 @@ def test_dask_field_access(times_3d, data, field) -> None:
     )
     times_3d = times_3d.chunk({"lon": 5, "lat": 5, "time": 50})
     result = getattr(times_3d.dt, field)
-    assert isinstance(result.data, da.Array)
+    assert isinstance(result.data, get_dask_chunkmanager().array_cls)
     assert result.chunks == times_3d.chunks
     assert_equal(result.compute(), expected)
 
@@ -618,8 +585,6 @@ def cftime_rounding_dataarray(cftime_date_type):
 def test_cftime_floor_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
-    import dask.array as da
-
     freq = "D"
     expected = xr.DataArray(
         [
@@ -637,7 +602,7 @@ def test_cftime_floor_accessor(
         with raise_if_dask_computes(max_computes=1):
             result = cftime_rounding_dataarray.chunk(chunks).dt.floor(freq)
         expected = expected.chunk(chunks)
-        assert isinstance(result.data, da.Array)
+        assert isinstance(result.data, get_dask_chunkmanager().array_cls)
         assert result.chunks == expected.chunks
     else:
         result = cftime_rounding_dataarray.dt.floor(freq)
@@ -651,8 +616,6 @@ def test_cftime_floor_accessor(
 def test_cftime_ceil_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
-    import dask.array as da
-
     freq = "D"
     expected = xr.DataArray(
         [
@@ -670,7 +633,7 @@ def test_cftime_ceil_accessor(
         with raise_if_dask_computes(max_computes=1):
             result = cftime_rounding_dataarray.chunk(chunks).dt.ceil(freq)
         expected = expected.chunk(chunks)
-        assert isinstance(result.data, da.Array)
+        assert isinstance(result.data, get_dask_chunkmanager().array_cls)
         assert result.chunks == expected.chunks
     else:
         result = cftime_rounding_dataarray.dt.ceil(freq)
@@ -684,8 +647,6 @@ def test_cftime_ceil_accessor(
 def test_cftime_round_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
-    import dask.array as da
-
     freq = "D"
     expected = xr.DataArray(
         [
@@ -703,7 +664,7 @@ def test_cftime_round_accessor(
         with raise_if_dask_computes(max_computes=1):
             result = cftime_rounding_dataarray.chunk(chunks).dt.round(freq)
         expected = expected.chunk(chunks)
-        assert isinstance(result.data, da.Array)
+        assert isinstance(result.data, get_dask_chunkmanager().array_cls)
         assert result.chunks == expected.chunks
     else:
         result = cftime_rounding_dataarray.dt.round(freq)

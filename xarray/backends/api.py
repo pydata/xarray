@@ -34,7 +34,7 @@ from xarray.core.treenode import group_subtrees
 from xarray.core.types import ReadBuffer
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
-from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.parallelcompat import guess_chunkmanager, list_chunkmanagers
 from xarray.namedarray.utils import _get_chunk
 from xarray.structure.chunks import _maybe_chunk
 from xarray.structure.combine import (
@@ -232,7 +232,11 @@ def _chunk_ds(
     chunkmanager = guess_chunkmanager(chunked_array_type)
 
     # TODO refactor to move this dask-specific logic inside the DaskManager class
-    if isinstance(chunkmanager, DaskManager):
+    registered_as_dask = any(
+        name == "dask" and manager is chunkmanager
+        for name, manager in list_chunkmanagers().items()
+    )
+    if isinstance(chunkmanager, DaskManager) or registered_as_dask:
         from dask.base import tokenize
 
         mtime = _get_mtime(filename_or_obj)

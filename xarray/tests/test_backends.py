@@ -66,7 +66,6 @@ from xarray.core.indexes import PandasIndex
 from xarray.core.options import set_options
 from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
-from xarray.namedarray.pycompat import array_type
 from xarray.structure.alignment import AlignmentError
 from xarray.tests import (
     assert_allclose,
@@ -74,6 +73,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    get_dask_chunkmanager,
     has_dask,
     has_netCDF4,
     has_numpy_2,
@@ -119,7 +119,7 @@ with contextlib.suppress(ImportError):
 
 with contextlib.suppress(ImportError):
     import dask
-    import dask.array as da
+
 
 with contextlib.suppress(ImportError):
     import fsspec
@@ -225,9 +225,6 @@ def _check_compression_codec_available(codec: str | None) -> bool:
     except Exception:
         # Any other error, assume codec is not available
         return False
-
-
-dask_array_type = array_type("dask")
 
 
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
@@ -1010,6 +1007,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def validate_array_type(self, ds):
+
         # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
@@ -1018,7 +1016,7 @@ class DatasetIOBase:
                     find_and_validate_array(obj.array)
                 elif isinstance(obj.array, np.ndarray):
                     assert isinstance(obj, indexing.NumpyIndexingAdapter)
-                elif isinstance(obj.array, dask_array_type):
+                elif isinstance(obj.array, get_dask_chunkmanager().array_cls):
                     assert isinstance(obj, indexing.DaskIndexingAdapter)
                 elif isinstance(obj.array, pd.Index):
                     assert isinstance(obj, indexing.PandasIndexingAdapter)
@@ -2248,16 +2246,19 @@ class NetCDF4Base(NetCDFBase):
                 assert len(loaded_ds.xindexes) == 0
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_encoding_masked_arrays(self, tmp_path) -> None:
         store_path = tmp_path / "tmp.nc"
 
         with raise_if_dask_computes():
+            da = get_dask_chunkmanager().array_api
             ds = xr.DataArray(
-                dask.array.from_array(
+                da.from_array(
                     np.ma.masked_array(
                         np.array([[np.nan, np.nan], [np.nan, 2]]),
                         np.array([[True, True], [True, False]]),
-                    )
+                    ),
+                    chunks=(2, 2),
                 ).astype("float32"),
                 dims=("x", "y"),
             ).to_dataset(name="mydata")
@@ -2595,6 +2596,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     def test_write_inconsistent_chunks(self) -> None:
         # Construct two variables with the same dimensions, but different
         # chunk sizes.
+        da = get_dask_chunkmanager().array_api
         x = da.zeros((100, 100), dtype="f4", chunks=(50, 100))
         x = DataArray(data=x, dims=("lat", "lon"), name="x")
         x.encoding["chunksizes"] = (50, 100)
@@ -3799,8 +3801,14 @@ class ZarrBase(CFEncodedBase):
         # We test this by writing a dask array with compute=False,
         # on read we should receive chunks filled with `fill_value`
         fv = -1
+        da = get_dask_chunkmanager().array_api
         ds = xr.Dataset(
-            {"foo": ("x", dask.array.from_array(np.array([0, 0, 0], dtype=dtype)))}
+            {
+                "foo": (
+                    "x",
+                    da.from_array(np.array([0, 0, 0], dtype=dtype), chunks=(3,)),
+                )
+            }
         )
         expected = xr.Dataset({"foo": ("x", [fv] * 3)})
 
@@ -5218,6 +5226,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
     def test_write_inconsistent_chunks(self) -> None:
         # Construct two variables with the same dimensions, but different
         # chunk sizes.
+        da = get_dask_chunkmanager().array_api
         x = da.zeros((100, 100), dtype="f4", chunks=(50, 100))
         x = DataArray(data=x, dims=("lat", "lon"), name="x")
         x.encoding["chunksizes"] = (50, 100)
@@ -5439,7 +5448,7 @@ def test_open_mfdataset_manyfiles(
             chunks=chunks if (not chunks and readengine != "zarr") else "auto",
         ) as actual:
             # check that using open_mfdataset returns dask arrays for variables
-            assert isinstance(actual["foo"].data, dask_array_type)
+            assert isinstance(actual["foo"].data, get_dask_chunkmanager().array_cls)
 
             assert_identical(original, actual)
 
@@ -5868,7 +5877,9 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset(
                     [tmp1, tmp2], concat_dim="x", combine="nested"
                 ) as actual:
-                    assert isinstance(actual.foo.variable.data, da.Array)
+                    assert isinstance(
+                        actual.foo.variable.data, get_dask_chunkmanager().array_cls
+                    )
                     assert actual.foo.variable.data.chunks == ((5, 5),)
                     assert_identical(original, actual)
                 with open_mfdataset(
@@ -5904,7 +5915,10 @@ class TestDask(DatasetIOBase):
                             combine="nested",
                             concat_dim=["y", "x"],
                         ) as actual:
-                            assert isinstance(actual.foo.variable.data, da.Array)
+                            assert isinstance(
+                                actual.foo.variable.data,
+                                get_dask_chunkmanager().array_cls,
+                            )
                             assert actual.foo.variable.data.chunks == ((5, 5), (4, 4))
                             assert_identical(original, actual)
                         with open_mfdataset(
@@ -6264,7 +6278,9 @@ class TestDask(DatasetIOBase):
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
             with open_dataset(tmp, chunks={"x": 5}) as actual:
-                assert isinstance(actual.foo.variable.data, da.Array)
+                assert isinstance(
+                    actual.foo.variable.data, get_dask_chunkmanager().array_cls
+                )
                 assert actual.foo.variable.data.chunks == ((5, 5),)
                 assert_identical(original, actual)
             with open_dataset(tmp, chunks=5) as actual:
@@ -6336,7 +6352,9 @@ class TestDask(DatasetIOBase):
             {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]},
         )
         with self.roundtrip(original, open_kwargs={"chunks": "auto"}) as actual:
-            assert isinstance(actual.time_bnds.variable.data, da.Array)
+            assert isinstance(
+                actual.time_bnds.variable.data, get_dask_chunkmanager().array_cls
+            )
             assert _contains_cftime_datetimes(actual.time)
             assert_identical(original, actual)
 
@@ -6427,6 +6445,7 @@ class TestDask(DatasetIOBase):
         ON_WINDOWS,
         reason="counting number of tasks in graph fails on windows for some reason",
     )
+    @pytest.mark.skip_with_dask_array
     def test_inline_array(self) -> None:
         with create_tmp_file() as tmp:
             original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -7267,7 +7286,7 @@ def test_load_single_value_h5netcdf(tmp_path: Path) -> None:
 )
 def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
     encoded_chunks = 100
-    dask_arr = da.from_array(
+    dask_arr = get_dask_chunkmanager().array_api.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
     ds = xr.Dataset(
@@ -7297,7 +7316,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
 @pytest.mark.filterwarnings("ignore:The specified chunks separate")
 def test_chunking_consistency(chunks, tmp_path: Path) -> None:
     encoded_chunks: dict[str, Any] = {}
-    dask_arr = da.from_array(
+    dask_arr = get_dask_chunkmanager().array_api.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
     ds = xr.Dataset(

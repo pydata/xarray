@@ -17,6 +17,7 @@ from xarray.core.common import (
 )
 from xarray.core.types import T_DataArray
 from xarray.core.variable import IndexVariable, Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
@@ -129,15 +130,14 @@ def _get_date_field(values, name, dtype):
         access_method = _access_through_cftimeindex
 
     if is_duck_dask_array(values):
-        from dask.array import map_blocks
-
+        chunkmanager = get_chunked_array_type(values)
         new_axis = chunks = None
         # isocalendar adds an axis
         if name == "isocalendar":
             chunks = (3,) + values.chunksize
             new_axis = 0
 
-        return map_blocks(
+        return chunkmanager.map_blocks(
             access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
         )
     else:
@@ -187,10 +187,9 @@ def _round_field(values, name, freq):
 
     """
     if is_duck_dask_array(values):
-        from dask.array import map_blocks
-
+        chunkmanager = get_chunked_array_type(values)
         dtype = np.datetime64 if is_np_datetime_like(values.dtype) else np.dtype("O")
-        return map_blocks(
+        return chunkmanager.map_blocks(
             _round_through_series_or_index, values, name, freq=freq, dtype=dtype
         )
     else:
@@ -224,9 +223,8 @@ def _strftime(values, date_format):
     else:
         access_method = _strftime_through_cftimeindex
     if is_duck_dask_array(values):
-        from dask.array import map_blocks
-
-        return map_blocks(access_method, values, date_format)
+        chunkmanager = get_chunked_array_type(values)
+        return chunkmanager.map_blocks(access_method, values, date_format)
     else:
         return access_method(values, date_format)
 

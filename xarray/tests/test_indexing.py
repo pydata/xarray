@@ -16,6 +16,8 @@ from xarray.tests import (
     ReturnItem,
     assert_array_equal,
     assert_identical,
+    get_dask_chunkmanager,
+    has_dask,
     raise_if_dask_computes,
     requires_dask,
     requires_pandas_3,
@@ -983,8 +985,9 @@ def test_create_mask_basic_indexer() -> None:
     np.testing.assert_array_equal(False, actual)
 
 
+@requires_dask
 def test_create_mask_dask() -> None:
-    da = pytest.importorskip("dask.array")
+    da = get_dask_chunkmanager().array_api
 
     indexer = indexing.OuterIndexer((1, slice(2), np.array([0, -1, 2])))
     expected = np.array(2 * [[False, True, False]])
@@ -1001,7 +1004,7 @@ def test_create_mask_dask() -> None:
     actual = indexing.create_mask(
         indexer_vec, (5, 2), da.empty((3, 2), chunks=((3,), (2,)))
     )
-    assert isinstance(actual, da.Array)
+    assert isinstance(actual, get_dask_chunkmanager().array_cls)
     np.testing.assert_array_equal(expected, actual)
 
     with pytest.raises(ValueError):
@@ -1049,11 +1052,10 @@ class ArrayWithNamespaceAndArrayFunction:
 
 
 def as_dask_array(arr, chunks):
-    try:
-        import dask.array as da
-    except ImportError:
+    if not has_dask:
         return None
 
+    da = get_dask_chunkmanager().array_api
     return da.from_array(arr, chunks=chunks)
 
 
@@ -1113,30 +1115,30 @@ def test_indexing_1d_object_array() -> None:
 
 @requires_dask
 def test_indexing_dask_array() -> None:
-    import dask.array
+    da = get_dask_chunkmanager().array_api
 
-    da = DataArray(
+    data = DataArray(
         np.ones(10 * 3 * 3).reshape((10, 3, 3)),
         dims=("time", "x", "y"),
     ).chunk(dict(time=-1, x=1, y=1))
     with raise_if_dask_computes():
-        actual = da.isel(time=dask.array.from_array([9], chunks=(1,)))
-    expected = da.isel(time=[9])
+        actual = data.isel(time=da.from_array([9], chunks=(1,)))
+    expected = data.isel(time=[9])
     assert_identical(actual, expected)
 
 
 @requires_dask
 def test_indexing_dask_array_scalar() -> None:
     # GH4276
-    import dask.array
+    da = get_dask_chunkmanager().array_api
 
-    a = dask.array.from_array(np.linspace(0.0, 1.0))
-    da = DataArray(a, dims="x")
-    x_selector = da.argmax(dim=...)
+    a = da.from_array(np.linspace(0.0, 1.0))
+    data = DataArray(a, dims="x")
+    x_selector = data.argmax(dim=...)
     assert not isinstance(x_selector, DataArray)
     with raise_if_dask_computes():
-        actual = da.isel(x_selector)
-    expected = da.isel(x=-1)
+        actual = data.isel(x_selector)
+    expected = data.isel(x=-1)
     assert_identical(actual, expected)
 
 
@@ -1174,7 +1176,7 @@ def test_vectorized_indexing_dask_array() -> None:
 @requires_dask
 def test_advanced_indexing_dask_array() -> None:
     # GH4663
-    import dask.array as da
+    da = get_dask_chunkmanager().array_api
 
     ds = Dataset(
         dict(

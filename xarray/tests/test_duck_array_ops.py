@@ -34,11 +34,11 @@ from xarray.core.duck_array_ops import (
 )
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.types import NPDatetimeUnitOptions, PDDatetimeUnitOptions
-from xarray.namedarray.pycompat import array_type
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 from xarray.tests import (
     arm_xfail,
     assert_array_equal,
+    get_dask_chunkmanager,
     has_dask,
     has_scipy,
     raise_if_dask_computes,
@@ -48,8 +48,6 @@ from xarray.tests import (
     requires_dask,
     requires_pyarrow,
 )
-
-dask_array_type = array_type("dask")
 
 
 @pytest.fixture
@@ -261,9 +259,7 @@ class TestOps:
 class TestDaskOps(TestOps):
     @pytest.fixture(autouse=True)
     def setUp(self):
-        import dask.array
-
-        self.x = dask.array.from_array(
+        self.x = get_dask_chunkmanager().array_api.from_array(
             [
                 [
                     [nan, nan, 2.0, nan],
@@ -436,7 +432,7 @@ def series_reduce(da, func, dim, **kwargs):
 
 def assert_dask_array(da, dask):
     if dask and da.ndim > 0:
-        assert isinstance(da.data, dask_array_type)
+        assert isinstance(da.data, get_dask_chunkmanager().array_cls)
 
 
 @arm_xfail
@@ -650,7 +646,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
             # also check ddof!=0 case
             actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
             if dask:
-                assert isinstance(da.data, dask_array_type)
+                assert isinstance(da.data, get_dask_chunkmanager().array_cls)
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=5)
             assert_allclose(actual, expected, rtol=rtol)
         else:
@@ -667,7 +663,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
         actual = getattr(da, func)(skipna=skipna)
         if dask:
-            assert isinstance(da.data, dask_array_type)
+            assert isinstance(da.data, get_dask_chunkmanager().array_cls)
         expected = getattr(np, f"nan{func}")(da.values)
         if actual.dtype == object:
             assert actual.values == np.array(expected)
@@ -760,8 +756,25 @@ def test_isnull(array, expected):
 @requires_dask
 def test_isnull_with_dask():
     da = construct_dataarray(2, np.float32, contains_nan=True, dask=True)
-    assert isinstance(da.isnull().data, dask_array_type)
+    assert isinstance(da.isnull().data, get_dask_chunkmanager().array_cls)
     assert_equal(da.isnull().load(), da.load().isnull())
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "func", [duck_array_ops.masked_invalid, duck_array_ops.getmaskarray]
+)
+def test_dask_or_eager_func_does_not_fallback_to_legacy_dask_array(func):
+    da = get_dask_chunkmanager().array_api
+    array = da.from_array(np.array([1.0, np.nan]), chunks=2)
+
+    try:
+        result = func(array)
+    except NotImplementedError:
+        if get_dask_chunkmanager().array_cls.__module__.startswith("dask.array"):
+            raise
+    else:
+        assert isinstance(result, get_dask_chunkmanager().array_cls)
 
 
 @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType to exist")
@@ -805,7 +818,7 @@ def test_isnull_with_default_StringDType():
 @pytest.mark.parametrize("axis", [0, -1, 1])
 @pytest.mark.parametrize("edge_order", [1, 2])
 def test_dask_gradient(axis, edge_order):
-    import dask.array as da
+    da = get_dask_chunkmanager().array_api
 
     array = np.array(np.random.randn(100, 5, 40))
     x = np.exp(np.linspace(0, 1, array.shape[axis]))
@@ -814,7 +827,7 @@ def test_dask_gradient(axis, edge_order):
     expected = gradient(array, x, axis=axis, edge_order=edge_order)
     actual = gradient(darray, x, axis=axis, edge_order=edge_order)
 
-    assert isinstance(actual, da.Array)
+    assert isinstance(actual, get_dask_chunkmanager().array_cls)
     assert_array_equal(actual, expected)
 
 
@@ -937,9 +950,7 @@ def test_datetime_to_numeric_datetime64(dask, time_unit: PDDatetimeUnitOptions):
 
     times = pd.date_range("2000", periods=5, freq="7D").as_unit(time_unit).values
     if dask:
-        import dask.array
-
-        times = dask.array.from_array(times, chunks=-1)
+        times = get_dask_chunkmanager().array_api.from_array(times, chunks=-1)
 
     with raise_if_dask_computes():
         result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
@@ -973,9 +984,7 @@ def test_datetime_to_numeric_cftime(dask):
         "2000", periods=5, freq="7D", calendar="standard", use_cftime=True
     ).values
     if dask:
-        import dask.array
-
-        times = dask.array.from_array(times, chunks=-1)
+        times = get_dask_chunkmanager().array_api.from_array(times, chunks=-1)
     with raise_if_dask_computes():
         result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
     expected = 24 * np.arange(0, 35, 7)
@@ -999,7 +1008,7 @@ def test_datetime_to_numeric_cftime(dask):
 
     with raise_if_dask_computes():
         if dask:
-            time = dask.array.asarray(times[1])
+            time = get_dask_chunkmanager().array_api.asarray(times[1])
         else:
             time = np.asarray(times[1])
         result = duck_array_ops.datetime_to_numeric(
@@ -1131,7 +1140,8 @@ def test_least_squares(use_dask, skipna):
 )
 def test_push_dask(method, arr):
     import bottleneck
-    import dask.array as da
+
+    da = get_dask_chunkmanager().array_api
 
     arr = np.array(arr)
     chunks = list(range(1, 11)) + [(1, 2, 3, 2, 2, 1, 1)]

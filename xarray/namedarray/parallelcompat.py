@@ -211,6 +211,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     array_cls: type[T_ChunkedArray]
     available: bool = True
+    vectorized_indexing_returns_numpy_order: bool = False
 
     @abstractmethod
     def __init__(self) -> None:

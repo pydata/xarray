@@ -90,6 +90,12 @@ def _importorskip(
     return has, func
 
 
+def get_dask_chunkmanager():
+    from xarray.namedarray.parallelcompat import guess_chunkmanager
+
+    return guess_chunkmanager("dask")
+
+
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
 has_scipy_ge_1_13, requires_scipy_ge_1_13 = _importorskip("scipy", "1.13")

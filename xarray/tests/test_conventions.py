@@ -23,6 +23,7 @@ from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 from xarray.tests import (
     assert_array_equal,
+    get_dask_chunkmanager,
     requires_cftime,
     requires_dask,
     requires_netCDF4,
@@ -488,8 +489,6 @@ class TestDecodeCF:
 
     @requires_dask
     def test_decode_cf_with_dask(self) -> None:
-        import dask.array as da
-
         original = Dataset(
             {
                 "t": ("t", [0, 1, 2], {"units": "days since 2000-01-01"}),
@@ -501,7 +500,7 @@ class TestDecodeCF:
         ).chunk()
         decoded = conventions.decode_cf(original)
         assert all(
-            isinstance(var.data, da.Array)
+            isinstance(var.data, get_dask_chunkmanager().array_cls)
             for name, var in decoded.variables.items()
             if name not in decoded.xindexes
         )

@@ -7568,9 +7568,9 @@ class Dataset(
         dask.dataframe.DataFrame
         """
 
-        import dask.array as da
         import dask.dataframe as dd
 
+        chunkmanager = guess_chunkmanager("dask")
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         columns = list(ordered_dims)
@@ -7587,7 +7587,7 @@ class Dataset(
             except KeyError:
                 # dimension without a matching coordinate
                 size = self.sizes[name]
-                data = da.arange(size, chunks=size, dtype=np.int64)
+                data = chunkmanager.array_api.arange(size, chunks=size, dtype=np.int64)
                 var = Variable((name,), data)
 
             # IndexVariable objects have a dummy .chunk() method

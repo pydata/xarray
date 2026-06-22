@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from contextlib import suppress
-
 import numpy as np
 import pytest
 
@@ -12,11 +10,9 @@ from xarray.tests import (
     IndexerMaker,
     assert_array_equal,
     assert_identical,
+    get_dask_chunkmanager,
     requires_dask,
 )
-
-with suppress(ImportError):
-    import dask.array as da
 
 
 def test_vlen_dtype() -> None:
@@ -75,13 +71,13 @@ def test_EncodedStringCoder_decode_dask() -> None:
     raw_data = np.array([b"abc", "ß∂µ∆".encode()])
     raw = Variable(("x",), raw_data, {"_Encoding": "utf-8"}).chunk()
     actual = coder.decode(raw)
-    assert isinstance(actual.data, da.Array)
+    assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
 
     expected = Variable(("x",), np.array(["abc", "ß∂µ∆"], dtype=object))
     assert_identical(actual, expected)
 
     actual_indexed = coder.decode(actual[0])
-    assert isinstance(actual_indexed.data, da.Array)
+    assert isinstance(actual_indexed.data, get_dask_chunkmanager().array_cls)
     assert_identical(actual_indexed, expected[0])
 
 
@@ -275,10 +271,10 @@ def test_char_to_bytes_size_zero() -> None:
 @requires_dask
 def test_char_to_bytes_dask() -> None:
     numpy_array = np.array([[b"a", b"b", b"c"], [b"d", b"e", b"f"]])
-    array = da.from_array(numpy_array, ((2,), (3,)))
+    array = Variable(("x", "y"), numpy_array).chunk({"x": 2, "y": 3}).data
     expected = np.array([b"abc", b"def"])
     actual = strings.char_to_bytes(array)
-    assert isinstance(actual, da.Array)
+    assert isinstance(actual, get_dask_chunkmanager().array_cls)
     assert actual.chunks == ((2,),)
     assert actual.dtype == "S3"
     assert_array_equal(np.array(actual), expected)
@@ -301,10 +297,10 @@ def test_bytes_to_char() -> None:
 @requires_dask
 def test_bytes_to_char_dask() -> None:
     numpy_array = np.array([b"ab", b"cd"])
-    array = da.from_array(numpy_array, ((1, 1),))
+    array = Variable(("x",), numpy_array).chunk({"x": 1}).data
     expected = np.array([[b"a", b"b"], [b"c", b"d"]])
     actual = strings.bytes_to_char(array)
-    assert isinstance(actual, da.Array)
+    assert isinstance(actual, get_dask_chunkmanager().array_cls)
     assert actual.chunks == ((1, 1), ((2,)))
     assert actual.dtype == "S1"
     assert_array_equal(np.array(actual), expected)

@@ -22,7 +22,6 @@ try:
 except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
-import contextlib
 
 from pandas.errors import UndefinedVariableError
 
@@ -61,6 +60,7 @@ from xarray.tests import (
     assert_no_warnings,
     assert_writeable,
     create_test_data,
+    get_dask_chunkmanager,
     has_cftime,
     has_dask,
     has_pyarrow,
@@ -77,9 +77,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import ScalarIndex, XYIndex
-
-with contextlib.suppress(ImportError):
-    import dask.array as da
 
 # from numpy version 2.0 trapz is deprecated and renamed to trapezoid
 # remove once numpy 2.0 is the oldest supported version
@@ -1156,8 +1153,6 @@ class TestDataset:
         ],
     )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
-        import dask.array
-
         N = 365 + 365  # 2 years - 1 day
         time = xr.date_range(
             "2000-01-01", periods=N, freq="D", use_cftime=use_cftime, calendar=calendar
@@ -1165,8 +1160,18 @@ class TestDataset:
 
         ds = Dataset(
             {
-                "pr": ("time", dask.array.random.random((N), chunks=(20))),
-                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "pr": (
+                    "time",
+                    DataArray(np.random.random(N), dims="time")
+                    .chunk({"time": 20})
+                    .data,
+                ),
+                "pr2d": (
+                    ("x", "time"),
+                    DataArray(np.random.random((10, N)), dims=("x", "time"))
+                    .chunk({"time": 20})
+                    .data,
+                ),
                 "ones": ("time", np.ones((N,))),
             },
             coords={"time": time},
@@ -1262,7 +1267,7 @@ class TestDataset:
             if k in reblocked.dims:
                 assert isinstance(v.data, np.ndarray)
             else:
-                assert isinstance(v.data, da.Array)
+                assert isinstance(v.data, get_dask_chunkmanager().array_cls)
 
         expected_chunks: dict[Hashable, tuple[int, ...]] = {
             "dim1": (8,),
@@ -1326,8 +1331,6 @@ class TestDataset:
     @pytest.mark.parametrize("freq", ["D", "W", "5ME", "YE"])
     @pytest.mark.parametrize("add_gap", [True, False])
     def test_chunk_by_frequency(self, freq: str, calendar: str, add_gap: bool) -> None:
-        import dask.array
-
         N = 365 * 2
         ΔN = 28  # noqa: PLC2401
         time = xr.date_range(
@@ -1342,8 +1345,18 @@ class TestDataset:
 
         ds = Dataset(
             {
-                "pr": ("time", dask.array.random.random((N), chunks=(20))),
-                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "pr": (
+                    "time",
+                    DataArray(np.random.random(N), dims="time")
+                    .chunk({"time": 20})
+                    .data,
+                ),
+                "pr2d": (
+                    ("x", "time"),
+                    DataArray(np.random.random((10, N)), dims=("x", "time"))
+                    .chunk({"time": 20})
+                    .data,
+                ),
                 "ones": ("time", np.ones((N,))),
             },
             coords={"time": time},
@@ -7673,6 +7686,7 @@ class TestDataset:
                 },
             )
         elif backend == "dask":
+            da = get_dask_chunkmanager().array_api
             ds = Dataset(
                 {
                     "a": ("x", da.from_array(a, chunks=3)),
@@ -7680,7 +7694,10 @@ class TestDataset:
                     "c": ("y", da.from_array(c, chunks=7)),
                     "d": ("z", da.from_array(d, chunks=12)),
                     "e": (("x", "y"), da.from_array(e, chunks=(3, 7))),
-                    "f": (("x", "y", "z"), da.from_array(f, chunks=(3, 7, 12))),
+                    "f": (
+                        ("x", "y", "z"),
+                        da.from_array(f, chunks=(3, 7, 12)),
+                    ),
                 },
                 coords={
                     "a2": ("x", a),

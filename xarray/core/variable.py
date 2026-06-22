@@ -807,6 +807,14 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         if slice_positions:
             new_order = [i for i in range(len(out_dims)) if i not in slice_positions]
+            if is_duck_dask_array(self._data):
+                try:
+                    chunkmanager = get_chunked_array_type(self._data)
+                except TypeError:
+                    pass
+                else:
+                    if chunkmanager.vectorized_indexing_returns_numpy_order:
+                        new_order = None
         else:
             new_order = None
 

@@ -1,8 +1,11 @@
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.tests import get_dask_chunkmanager
 
 # Don't run cupy in CI because it requires a GPU
 NAMESPACE_ARRAYS = {
@@ -110,15 +113,37 @@ except ImportError:
     pass
 
 
+def use_dask_array(config):
+    env_value = os.environ.get("XR_USE_DASK_ARRAY", "")
+    return config.getoption("--use-dask-array") or env_value.lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 class _BaseTest:
     def setup_for_test(self, request, namespace):
         self.namespace = namespace
-        self.xp = pytest.importorskip(namespace)
-        self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["array"])
-        self.constructor = getattr(
-            self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["constructor"]
-        )
         xarray_method = request.node.name.split("test_")[1].split("[")[0]
+        if namespace == "dask.array" and use_dask_array(request.config):
+            if xarray_method in {"groupby", "groupby_bins", "resample"}:
+                pytest.xfail("flox groupby currently builds legacy dask arrays")
+            chunkmanager = get_dask_chunkmanager()
+            self.xp = chunkmanager.array_api
+            self.Array = chunkmanager.array_cls
+
+            def constructor(data):
+                return chunkmanager.from_array(data, chunks=data.shape)
+
+            self.constructor = constructor
+        else:
+            self.xp = pytest.importorskip(namespace)
+            self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["array"])
+            self.constructor = getattr(
+                self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["constructor"]
+            )
         if xarray_method in NAMESPACE_ARRAYS[namespace]["xfails"]:
             reason = NAMESPACE_ARRAYS[namespace]["xfails"][xarray_method]
             pytest.xfail(f"xfail for {self.namespace}: {reason}")

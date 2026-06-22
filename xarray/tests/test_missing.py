@@ -17,12 +17,12 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
     assert_array_equal,
     assert_equal,
+    get_dask_chunkmanager,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -31,8 +31,6 @@ from xarray.tests import (
     requires_numbagg_or_bottleneck,
     requires_scipy,
 )
-
-dask_array_type = array_type("dask")
 
 
 @pytest.fixture
@@ -390,14 +388,14 @@ def test_interpolate_dask():
     da = da.chunk({"x": 5})
     actual = da.interpolate_na("time")
     expected = da.load().interpolate_na("time")
-    assert isinstance(actual.data, dask_array_type)
+    assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
     assert_equal(actual.compute(), expected)
 
     # with limit
     da = da.chunk({"x": 5})
     actual = da.interpolate_na("time", limit=3)
     expected = da.load().interpolate_na("time", limit=3)
-    assert isinstance(actual.data, dask_array_type)
+    assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
     assert_equal(actual, expected)
 
 
