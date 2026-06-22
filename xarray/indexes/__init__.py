@@ -10,6 +10,7 @@ from xarray.core.indexes import (
     PandasIndex,
     PandasMultiIndex,
 )
+from xarray.indexes.multipandasindex import MultiPandasIndex
 from xarray.indexes.nd_point_index import NDPointIndex, TreeAdapter
 from xarray.indexes.range_index import RangeIndex
 
@@ -17,6 +18,7 @@ __all__ = [
     "CoordinateTransform",
     "CoordinateTransformIndex",
     "Index",
+    "MultiPandasIndex",
     "NDPointIndex",
     "PandasIndex",
     "PandasMultiIndex",
