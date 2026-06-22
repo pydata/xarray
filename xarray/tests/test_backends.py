@@ -6917,6 +6917,7 @@ def test_source_encoding_always_present_with_pathlib() -> None:
 
 @requires_h5netcdf
 @requires_fsspec
+@requires_dask  # TODO remove after https://github.com/pydata/xarray/issues/9038
 def test_source_encoding_always_present_with_fsspec() -> None:
     import fsspec
 
@@ -8122,6 +8123,7 @@ class TestZarrRegionAuto:
 
 @requires_h5netcdf
 @requires_fsspec
+@requires_dask  # TODO remove after https://github.com/pydata/xarray/issues/9038
 def test_h5netcdf_storage_options() -> None:
     with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
         ds1 = create_test_data()
