@@ -844,16 +844,20 @@ For more examples and further discussion see :ref:`alignment and coordinate inhe
 Coordinates
 -----------
 
-Coordinates are ancillary variables stored for ``DataArray`` and ``Dataset``
-objects in the ``coords`` attribute:
+The :py:class:`xarray.Coordinates` object is a dict-like container that contains coordinate variables and the associated indexes. It is mainly used as the return value of the ``coords`` property of the ``DataArray``, ``Dataset``, and ``DataTree``:
 
 .. jupyter-execute::
 
+    foo.coords
     ds.coords
+    dt.coords
 
-Unlike attributes, xarray *does* interpret and persist coordinates in
-operations that transform xarray objects. There are two types of coordinates
-in xarray:
+But can also be used to customize the behavior of the constructors of these classes or to transfer or combine coordinates from different objects.
+
+Coordinate variables
+~~~~~~~~~~~~~~~~~~~~
+
+Coordinate variables (or simply coordinates) are ancillary variables stored in ``DataArray``, ``Dataset``, and ``DataTree`` objects. Unlike attributes, xarray *does* interpret coordinates in operations that transform xarray objects. There are two types of coordinates in xarray:
 
 - **dimension coordinates** are one dimensional coordinates with a name equal
   to their sole dimension (marked by ``*`` when printing a dataset or data
