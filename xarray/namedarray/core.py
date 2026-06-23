@@ -562,12 +562,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.imag
         """
-        if isinstance(self._data, _arrayapi):
-            from xarray.namedarray._array_api import imag
+        from xarray.namedarray._array_api import imag
 
-            return imag(self)
-
-        return self._new(data=self._data.imag)
+        return imag(self)
 
     @property
     def real(
@@ -580,11 +577,9 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
         --------
         numpy.ndarray.real
         """
-        if isinstance(self._data, _arrayapi):
-            from xarray.namedarray._array_api import real
+        from xarray.namedarray._array_api import real
 
-            return real(self)
-        return self._new(data=self._data.real)
+        return real(self)
 
     def __dask_tokenize__(self) -> object:
         # Use v.data, instead of v._data, in order to cope with the wrappers

@@ -180,12 +180,6 @@ class _arrayfunction(
         kwargs: Mapping[str, Any],
     ) -> Any: ...
 
-    @property
-    def imag(self) -> _arrayfunction[_ShapeType_co, Any]: ...
-
-    @property
-    def real(self) -> _arrayfunction[_ShapeType_co, Any]: ...
-
 
 @runtime_checkable
 class _arrayapi(_array[_ShapeType_co, _DType_co], Protocol[_ShapeType_co, _DType_co]):
