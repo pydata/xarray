@@ -347,7 +347,9 @@ class RangeIndex(CoordinateTransformIndex):
         if coord_name is None:
             coord_name = dim
 
-        if endpoint:
+        if num == 1:
+            stop = start
+        elif endpoint:
             stop += (stop - start) / (num - 1)
 
         transform = RangeCoordinateTransform(
