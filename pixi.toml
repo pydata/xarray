@@ -63,6 +63,7 @@ numbagg = "*"
 [feature.dask.dependencies]
 dask = "*"
 distributed = "*"
+iris = "*"        # depends on dask
 
 [feature.accel.dependencies]
 flox = "*"
@@ -92,9 +93,6 @@ pooch = "*"
 
 # calendar
 cftime = "*"
-
-# other
-iris = "*"
 
 [feature.extras.pypi-dependencies]
 # array
@@ -220,6 +218,7 @@ test = { cmd = "pytest", description = "Run the test suite with pytest." }
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
+iris = "*"
 ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
@@ -376,6 +375,9 @@ numpydoc = "*"
 [feature.numpydoc-lint.tasks]
 numpydoc-lint = { cmd = "python ci/numpydoc-public-api.py" }
 
+[feature.nodask.constraints]
+dask-core = "<0.0a0"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -400,6 +402,7 @@ test-py314-no-numba = { features = [
 ] }
 test-py314-no-dask = { features = [
   "py314",
+  "nodask",
   "test",
   "backends",
   "accel",

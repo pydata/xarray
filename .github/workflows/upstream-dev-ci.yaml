@@ -119,7 +119,7 @@ jobs:
         if: success()
         id: status
         env:
-          LOG_PATH: ${{ steps.determine-log-path.output.log-file }}
+          LOG_PATH: ${{ steps.determine-log-path.outputs.log-file }}
         run: |
           pixi run -e ${{matrix.pixi-env}} -- python -m pytest --timeout=60 -rf -nauto \
             --report-log "$LOG_PATH"
@@ -128,12 +128,14 @@ jobs:
         with:
           name: log file
           path: ${{ steps.determine-log-path.outputs.log-file }}
+          if-no-files-found: error
 
   create-issue:
     needs: upstream-dev
     runs-on: ubuntu-slim
     if: |
-      needs.upstream-dev.result == 'failure'
+      always()
+      && needs.upstream-dev.result == 'failure'
       && github.event_name == 'schedule'
       && github.repository_owner == 'pydata'
 
@@ -146,9 +148,6 @@ jobs:
           name: log file
           path: logs/
       - name: Generate and publish the report
-        if: |
-          failure()
-          && steps.status.outcome == 'failure'
         uses: scientific-python/issue-from-pytest-log-action@8e905db353437cda1d6a773de245343fbfc940dd # v1.5.0
         with:
           log-path: logs/${{ needs.upstream-dev.outputs.log-file }}
@@ -156,12 +155,11 @@ jobs:
   mypy-upstream-dev:
     name: mypy-upstream-dev
     runs-on: ubuntu-latest
-    needs: [detect-ci-trigger, cache-pixi-lock]
+    needs: cache-pixi-lock
     if: |
       always()
-      && (
-          contains( github.event.pull_request.labels.*.name, 'run-upstream')
-      )
+      && contains( github.event.pull_request.labels.*.name, 'run-upstream')
+
     defaults:
       run:
         shell: bash -l {0}

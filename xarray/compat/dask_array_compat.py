@@ -1,5 +1,6 @@
 from typing import Any
 
+from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.utils import module_available
 
 
@@ -8,10 +9,17 @@ def reshape_blockwise(
     shape: int | tuple[int, ...],
     chunks: tuple[tuple[int, ...], ...] | None = None,
 ):
-    if module_available("dask", "2024.08.2"):
-        from dask.array import reshape_blockwise
+    try:
+        array_api = get_chunked_array_type(x).array_api
+    except TypeError:
+        array_api = None
 
-        return reshape_blockwise(x, shape=shape, chunks=chunks)
+    if array_api is not None and hasattr(array_api, "reshape_blockwise"):
+        return array_api.reshape_blockwise(x, shape=shape, chunks=chunks)
+    elif module_available("dask", "2024.08.2"):
+        from dask.array import reshape_blockwise as dask_reshape_blockwise
+
+        return dask_reshape_blockwise(x, shape=shape, chunks=chunks)
     else:
         return x.reshape(shape)
 
