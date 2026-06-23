@@ -610,6 +610,7 @@ def test_dataset() -> None:
     new_dim2 = xr.DataArray([0.11, 0.21, 0.31], dims="z")
     interpolated = ds.interp(dim2=new_dim2)
 
+    # No crash?
     assert_allclose(interpolated["var1"], ds["var1"].interp(dim2=new_dim2))
     assert interpolated["var3"].equals(ds["var3"])
 
