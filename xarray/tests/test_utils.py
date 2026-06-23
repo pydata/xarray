@@ -34,7 +34,11 @@ class TestMaybeCoerceToStr:
         ["a", "b", "expected"],
         [
             [np.array(["a"]), np.array(["b"]), np.array(["a", "b"])],
-            [np.array([1], dtype="int64"), np.array([2], dtype="int64"), pd.Index([1, 2])],
+            [
+                np.array([1], dtype="int64"),
+                np.array([2], dtype="int64"),
+                pd.Index([1, 2]),
+            ],
         ],
     )
     def test_maybe_coerce_to_str(self, a, b, expected):
@@ -44,7 +48,6 @@ class TestMaybeCoerceToStr:
 
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
-
 
     def test_maybe_coerce_to_str_minimal_str_dtype(self):
         a = np.array(["a", "a_long_string"])
