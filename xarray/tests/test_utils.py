@@ -29,31 +29,42 @@ class TestAlias:
             old_method()
 
 
-@pytest.mark.parametrize(
-    ["a", "b", "expected"],
-    [
-        [np.array(["a"]), np.array(["b"]), np.array(["a", "b"])],
-        [np.array([1], dtype="int64"), np.array([2], dtype="int64"), pd.Index([1, 2])],
-    ],
-)
-def test_maybe_coerce_to_str(a, b, expected):
-    index = pd.Index(a).append(pd.Index(b))
+class TestMaybeCoerceToStr:
+    @pytest.mark.parametrize(
+        ["a", "b", "expected"],
+        [
+            [np.array(["a"]), np.array(["b"]), np.array(["a", "b"])],
+            [np.array([1], dtype="int64"), np.array([2], dtype="int64"), pd.Index([1, 2])],
+        ],
+    )
+    def test_maybe_coerce_to_str(self, a, b, expected):
+        index = pd.Index(a).append(pd.Index(b))
 
-    actual = utils.maybe_coerce_to_str(index, [a, b])
+        actual = utils.maybe_coerce_to_str(index, [a, b])
 
-    assert_array_equal(expected, actual)
-    assert expected.dtype == actual.dtype
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
 
 
-def test_maybe_coerce_to_str_minimal_str_dtype():
-    a = np.array(["a", "a_long_string"])
-    index = pd.Index(["a"])
+    def test_maybe_coerce_to_str_minimal_str_dtype(self):
+        a = np.array(["a", "a_long_string"])
+        index = pd.Index(["a"])
 
-    actual = utils.maybe_coerce_to_str(index, [a])
-    expected = np.array("a")
+        actual = utils.maybe_coerce_to_str(index, [a])
+        expected = np.array("a")
 
-    assert_array_equal(expected, actual)
-    assert expected.dtype == actual.dtype
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
+
+    def test_maybe_coerce_to_str_python_obj_dtype(self):
+        """No change to dtype if the array contains a custom python object."""
+        a = np.array([type("Foo", (object,), {"foo": "bar"}), "a_long_string"])
+        index = pd.Index(["a"], dtype=object)
+
+        actual = utils.maybe_coerce_to_str(index, [a])
+
+        assert_array_equal(index, actual)
+        assert index.dtype == actual.dtype
 
 
 class TestArrayEquiv:

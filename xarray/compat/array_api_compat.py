@@ -4,17 +4,6 @@ import numpy as np
 
 from xarray.namedarray.pycompat import array_type
 
-builtin_types = (
-    bool,
-    int,
-    float,
-    complex,
-    str,
-    bytes,
-    dt.datetime,
-    dt.timedelta,
-)
-
 
 def is_weak_scalar_type(t):
     return isinstance(t, bool | int | float | complex | str | bytes)
@@ -51,15 +40,12 @@ def _future_array_api_result_type(*arrays_and_dtypes, xp):
 
 
 def result_type(*arrays_and_dtypes, xp) -> np.dtype:
-    try:
-        if xp is np or any(
-            isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
-        ):
-            return xp.result_type(*arrays_and_dtypes)
-        else:
-            return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)
-    except TypeError:
-        return np.dtype(object)
+    if xp is np or any(
+        isinstance(getattr(t, "dtype", t), np.dtype) for t in arrays_and_dtypes
+    ):
+        return xp.result_type(*arrays_and_dtypes)
+    else:
+        return _future_array_api_result_type(*arrays_and_dtypes, xp=xp)
 
 
 def get_array_namespace(*values):
