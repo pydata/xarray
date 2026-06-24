@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 from collections.abc import (
     Callable,
@@ -102,7 +103,8 @@ def _get_mtime(filename_or_obj):
         path = None
 
     if path and not is_remote_uri(path):
-        mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
+        with contextlib.suppress(OSError):
+            mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
 
     return mtime
 

@@ -17,6 +17,16 @@ New Features
   to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
   export to pyarrow, polars or duckdb.
   By `Jules Chéron <https://github.com/jules-ch>`_.
+- Following pandas, xarray's
+  :py:class:`~xarray.core.accessor_dt.DatetimeAccessor` now supports
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_week` and
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_year` attributes,
+  which are alternative names for the existing
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofweek` and
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.dayofyear` attributes.
+  These alternative attributes have similarly been added to
+  :py:class:`~xarray.CFTimeIndex` (:pull:`11270`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -45,7 +55,19 @@ Bug Fixes
 - Fix :py:func:`decode_cf` failing on integer-encoded time arrays that contain
   NaT when running against numpy 2.5+.
   By `Ian Hunt-Isaak <https://github.com/ianhi>`_.
-
+- Fix ``TypeError: Implicit conversion to a NumPy array is not allowed`` when trying to
+  use :py:func:`open_mfdataset` with a backend engine reading to CuPy arrays.
+  By `Wei Ji Leong <https://github.com/weiji14>`_.
+- The names of :py:class:`~xarray.DataArray` objects returned by properties of
+  the :py:class:`~xarray.core.accessor_dt.DatetimeAccessor` now always match
+  the property names. Previously properties like
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.days_in_month`,
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.weekday`, and
+  :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.weekofyear` would return
+  :py:class:`~xarray.DataArray` objects named ``"daysinmonth"``,
+  ``"dayofweek"``, and ``"week"``, respectively; now they return objects named
+  ``"days_in_month"``, ``"weekday"``, and ``"weekofyear"`` (:pull:`11270`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
