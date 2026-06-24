@@ -57,10 +57,6 @@ from xarray.tests import (
 )
 
 
-def _using_dask_array_chunkmanager() -> bool:
-    return has_dask_array_expr
-
-
 @pytest.fixture
 def dataset() -> xr.Dataset:
     ds = xr.Dataset(
@@ -673,7 +669,7 @@ def test_groupby_repr_datetime(obj) -> None:
     ],
 )
 def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None:
-    if chunk and _using_dask_array_chunkmanager():
+    if chunk and has_dask_array_expr:
         pytest.xfail("flox groupby currently builds legacy dask arrays")
     if shuffle and chunk and not has_dask_ge_2024_08_1:
         pytest.skip()
@@ -2654,7 +2650,7 @@ def test_groupby_scans(
     if use_dask and not has_dask:
         pytest.skip("requires dask")
 
-    if use_dask and use_flox and _using_dask_array_chunkmanager():
+    if use_dask and use_flox and has_dask_array_expr:
         pytest.xfail("flox groupby scans currently mix legacy dask arrays")
 
     if use_flox:
@@ -3001,7 +2997,7 @@ def test_multiple_groupers_string(as_dataset) -> None:
 @pytest.mark.parametrize("shuffle", [True, False])
 @pytest.mark.parametrize("use_flox", [True, False])
 def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
-    if use_flox and _using_dask_array_chunkmanager():
+    if use_flox and has_dask_array_expr:
         pytest.xfail("flox multiple-groupers currently mix legacy dask arrays")
 
     da = DataArray(
@@ -3099,7 +3095,7 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
         assert is_chunked_array(gb.encoded.codes.data)
         assert not gb.encoded.group_indices
         if has_flox:
-            if _using_dask_array_chunkmanager():
+            if has_dask_array_expr:
                 pytest.xfail(
                     "flox lazy multiple-groupers currently mix legacy dask arrays"
                 )
@@ -3264,7 +3260,7 @@ def test_lazy_grouping(grouper, expect_index):
     assert_identical(eager, expected)
 
     if has_flox:
-        if _using_dask_array_chunkmanager():
+        if has_dask_array_expr:
             pytest.xfail("flox lazy grouping currently mixes legacy dask arrays")
         lazy = (
             xr.Dataset({"foo": data}, coords={"zoo": data}).groupby(zoo=grouper).count()
@@ -3424,7 +3420,7 @@ def test_shuffle_by(chunks, expected_chunks):
     for obj in [ds, da]:
         actual = obj.groupby(x=UniqueGrouper()).shuffle_to_chunks()
         assert_identical(actual, obj.sortby("x"))
-        if chunks == (1,) and _using_dask_array_chunkmanager():
+        if chunks == (1,) and has_dask_array_expr:
             pytest.xfail(
                 "dask-array shuffle_to_chunks does not preserve group chunks yet"
             )

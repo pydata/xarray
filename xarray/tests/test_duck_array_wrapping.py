@@ -1,11 +1,9 @@
-import os
-
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.tests import get_dask_chunkmanager
+from xarray.tests import get_dask_chunkmanager, has_dask_array_expr
 
 # Don't run cupy in CI because it requires a GPU
 NAMESPACE_ARRAYS = {
@@ -113,21 +111,11 @@ except ImportError:
     pass
 
 
-def use_dask_array(config):
-    env_value = os.environ.get("XR_USE_DASK_ARRAY_WITH_EXPR", "")
-    return config.getoption("--use-dask-array-with-expr") or env_value.lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
-
-
 class _BaseTest:
     def setup_for_test(self, request, namespace):
         self.namespace = namespace
         xarray_method = request.node.name.split("test_")[1].split("[")[0]
-        if namespace == "dask.array" and use_dask_array(request.config):
+        if namespace == "dask.array" and has_dask_array_expr:
             if xarray_method in {"groupby", "groupby_bins", "resample"}:
                 pytest.xfail("flox groupby currently builds legacy dask arrays")
             chunkmanager = get_dask_chunkmanager()

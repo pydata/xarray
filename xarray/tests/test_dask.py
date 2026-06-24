@@ -38,11 +38,10 @@ dask = pytest.importorskip("dask")
 pytest.importorskip("dask.array")
 dd = pytest.importorskip("dask.dataframe")
 da = dask_array_api
-USING_DASK_ARRAY = has_dask_array_expr
 
 
 def dask_compute_patch_target():
-    if USING_DASK_ARRAY:
+    if has_dask_array_expr:
         return "dask.compute"
     return "dask.array.compute"
 
@@ -313,7 +312,7 @@ class TestVariable(DaskTestCase):
         (v2,) = dask.persist(v)
         assert v is not v2
         assert len(v2.__dask_graph__()) < len(v.__dask_graph__())  # type: ignore[arg-type]
-        if not USING_DASK_ARRAY:
+        if not has_dask_array_expr:
             assert v2.__dask_keys__() == v.__dask_keys__()
         assert dask.is_dask_collection(v)
         assert dask.is_dask_collection(v2)
@@ -433,13 +432,13 @@ class TestDataArrayAndDataset(DaskTestCase):
         u = self.eager_array
         v = self.lazy_array + 1
 
-        if USING_DASK_ARRAY:
+        if has_dask_array_expr:
             v2 = v.persist()
         else:
             (v2,) = dask.persist(v)
         assert v is not v2
         assert len(v2.__dask_graph__()) < len(v.__dask_graph__())
-        if not USING_DASK_ARRAY:
+        if not has_dask_array_expr:
             assert v2.__dask_keys__() == v.__dask_keys__()
         assert dask.is_dask_collection(v)
         assert dask.is_dask_collection(v2)
@@ -1162,7 +1161,7 @@ def test_unify_chunks(map_ds):
     with pytest.raises(ValueError, match=r"inconsistent chunks"):
         _ = ds_copy.chunks
 
-    expected_y_chunks = (10, 10) if USING_DASK_ARRAY else (5, 5, 5, 5)
+    expected_y_chunks = (10, 10) if has_dask_array_expr else (5, 5, 5, 5)
     expected_chunks = {"x": (4, 4, 2), "y": expected_y_chunks}
     with raise_if_dask_computes():
         actual_chunks = ds_copy.unify_chunks().chunks
@@ -1461,7 +1460,7 @@ def test_map_blocks_da_ds_with_template(obj):
         actual = xr.map_blocks(func, obj, template=template)
     assert_identical(actual, template)
 
-    if not USING_DASK_ARRAY:
+    if not has_dask_array_expr:
         # Check that indexes are written into the graph directly
         dsk = dict(actual.__dask_graph__())
         assert {k for k in dsk if "x-coordinate" in k}

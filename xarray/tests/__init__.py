@@ -140,21 +140,21 @@ else:
         has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 
 dask_array_api = None
-dask_array_type = dask_array_cls = ()
+dask_array_type = ()
 has_dask_array_expr = False
 
 
 def refresh_dask_chunkmanager_helpers() -> None:
-    global dask_array_api, dask_array_type, dask_array_cls, has_dask_array_expr
+    global dask_array_api, dask_array_type, has_dask_array_expr
 
     dask_array_api = None
-    dask_array_type = dask_array_cls = ()
+    dask_array_type = ()
     has_dask_array_expr = False
     if has_dask:
         dask_chunkmanager = get_dask_chunkmanager()
         dask_array_api = dask_chunkmanager.array_api
-        dask_array_type = dask_array_cls = dask_chunkmanager.array_cls
-        has_dask_array_expr = dask_array_cls.__module__.startswith("dask_array")
+        dask_array_type = dask_chunkmanager.array_cls
+        has_dask_array_expr = dask_array_type.__module__.startswith("dask_array")
 
 
 refresh_dask_chunkmanager_helpers()
