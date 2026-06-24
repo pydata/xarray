@@ -173,6 +173,21 @@ def _infer_coords_and_dims(
         if not hashable(d):
             raise TypeError(f"Dimension {d} is not hashable")
 
+    if coords is not None and not utils.is_dict_like(coords):
+        if any(
+            isinstance(coord, tuple)
+            and len(coord) >= 2
+            and hashable(coord[0])
+            and coord[0] != dim
+            for dim, coord in zip(dims_tuple, coords, strict=True)
+        ):
+            utils.emit_user_level_warning(
+                "Coordinate names in tuple-style coords are ignored when `dims` "
+                "are provided. Use a mapping for `coords` if you need named "
+                "coordinates.",
+                UserWarning,
+            )
+
     new_coords: Mapping[Hashable, Any]
 
     if isinstance(coords, Coordinates):
