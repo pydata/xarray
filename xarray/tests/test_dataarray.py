@@ -4558,6 +4558,11 @@ class TestDataArray:
         actual = da.sortby(["x", "y"])
         assert_equal(actual, expected)
 
+        # test tuple of dimension names (GH4821)
+        expected = sorted2d
+        actual = da.sortby(("x", "y"))
+        assert_equal(actual, expected)
+
     @requires_bottleneck
     def test_rank(self) -> None:
         # floats
