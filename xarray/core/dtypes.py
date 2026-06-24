@@ -336,7 +336,9 @@ def result_type(
         ),
     )
     try:
-        result = array_api_compat.result_type(*map(maybe_promote, arrays_and_dtypes), xp=xp)
+        result = array_api_compat.result_type(
+            *map(maybe_promote, arrays_and_dtypes), xp=xp
+        )
     except TypeError:
         # Unknown python objects will raise a TypeError in `xp.result_type`;
         # We assume the user wants them to be there and therefore promote to object dtype instead of raising.
