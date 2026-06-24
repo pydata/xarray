@@ -859,13 +859,19 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         autoclose=False,
         **kwargs,
     ) -> dict[str, Dataset]:
-        from xarray.backends.common import _iter_nc_groups
+        from xarray.backends.common import (
+            _is_glob_pattern,
+            _iter_nc_groups,
+            _resolve_group_and_filter,
+        )
         from xarray.core.treenode import NodePath
 
         filename_or_obj = _normalize_path(filename_or_obj)
+
+        effective_group = None if (group and _is_glob_pattern(group)) else group
         store = NetCDF4DataStore.open(
             filename_or_obj,
-            group=group,
+            group=effective_group,
             format=format,
             clobber=clobber,
             diskless=diskless,
@@ -875,15 +881,17 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             autoclose=autoclose,
         )
 
-        # Check for a group and make it a parent if it exists
-        if group:
-            parent = NodePath("/") / NodePath(group)
+        if effective_group:
+            parent = NodePath("/") / NodePath(effective_group)
         else:
             parent = NodePath("/")
 
         manager = store._manager
+        all_group_paths = list(_iter_nc_groups(store.ds, parent=parent))
+        _, filtered_paths = _resolve_group_and_filter(group, all_group_paths)
+
         groups_dict = {}
-        for path_group in _iter_nc_groups(store.ds, parent=parent):
+        for path_group in filtered_paths:
             group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(group_store):
@@ -897,7 +905,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            if group:
+            if effective_group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))

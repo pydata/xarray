@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
@@ -71,6 +72,38 @@ class StoreBackendEntrypoint(BackendEntrypoint):
         ds.encoding = encoding
 
         return ds
+
+    async def open_dataset_async(
+        self,
+        filename_or_obj: T_PathFileOrDataStore,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables: str | Iterable[str] | None = None,
+        set_indexes: bool = True,
+        use_cftime=None,
+        decode_timedelta=None,
+    ) -> Dataset:
+        """Async version of open_dataset.
+
+        Offloads the entire open_dataset operation to a thread to avoid blocking
+        the event loop. This is necessary because decode_cf_variables can trigger
+        data reads (e.g., for time decoding) which may use synchronous I/O.
+        """
+        return await asyncio.to_thread(
+            self.open_dataset,
+            filename_or_obj,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            set_indexes=set_indexes,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
 
 
 BACKEND_ENTRYPOINTS["store"] = (None, StoreBackendEntrypoint)

@@ -655,7 +655,11 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         open_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> dict[str, Dataset]:
-        from xarray.backends.common import _iter_nc_groups
+        from xarray.backends.common import (
+            _is_glob_pattern,
+            _iter_nc_groups,
+            _resolve_group_and_filter,
+        )
         from xarray.core.treenode import NodePath
         from xarray.core.utils import close_on_error
 
@@ -664,10 +668,12 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         emit_phony_dims_warning, phony_dims = _check_phony_dims(phony_dims)
 
         filename_or_obj = _normalize_filename_or_obj(filename_or_obj)
+
+        effective_group = None if (group and _is_glob_pattern(group)) else group
         store = H5NetCDFStore.open(
             filename_or_obj,
             format=format,
-            group=group,
+            group=effective_group,
             lock=lock,
             invalid_netcdf=invalid_netcdf,
             phony_dims=phony_dims,
@@ -678,15 +684,17 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             open_kwargs=open_kwargs,
         )
 
-        # Check for a group and make it a parent if it exists
-        if group:
-            parent = NodePath("/") / NodePath(group)
+        if effective_group:
+            parent = NodePath("/") / NodePath(effective_group)
         else:
             parent = NodePath("/")
 
         manager = store._manager
+        all_group_paths = list(_iter_nc_groups(store.ds, parent=parent))
+        _, filtered_paths = _resolve_group_and_filter(group, all_group_paths)
+
         groups_dict = {}
-        for path_group in _iter_nc_groups(store.ds, parent=parent):
+        for path_group in filtered_paths:
             group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
             store_entrypoint = StoreBackendEntrypoint()
             with close_on_error(group_store):
@@ -701,7 +709,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
                     decode_timedelta=decode_timedelta,
                 )
 
-            if group:
+            if effective_group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
