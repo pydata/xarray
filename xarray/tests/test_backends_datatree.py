@@ -15,6 +15,7 @@ import xarray as xr
 from xarray import DataTree, load_datatree, open_datatree, open_groups
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    dask_array_type,
     get_dask_chunkmanager,
     network,
     parametrize_zarr_format,
@@ -76,9 +77,7 @@ def assert_chunks_equal(
         (path, name): (
             (
                 not enforce_dask
-                or isinstance(
-                    node1.variables[name].data, get_dask_chunkmanager().array_cls
-                )
+                or isinstance(node1.variables[name].data, dask_array_type)
             )
             and node1.variables[name].chunksizes == node2.variables[name].chunksizes
         )
@@ -835,7 +834,7 @@ class TestZarrDatatreeIO:
                     # don't expect dask.Arrays to be written to disk, as compute=False
                     # also don't expect numpy arrays containing only zarr's fill_value to be written to disk
                     chunks_expected=(
-                        not isinstance(var.data, get_dask_chunkmanager().array_cls)
+                        not isinstance(var.data, dask_array_type)
                         and (
                             var.data != DEFAULT_ZARR_FILL_VALUE
                             or WRITE_EMPTY_CHUNKS_DEFAULT

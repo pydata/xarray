@@ -31,7 +31,7 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     assert_no_warnings,
-    get_dask_chunkmanager,
+    dask_array_type,
     requires_cartopy,
     requires_cftime,
     requires_dask,
@@ -3439,7 +3439,7 @@ def test_dataarray_not_loading_inplace(plotfunc: str) -> None:
     with figure_context():
         getattr(ds.A.plot, plotfunc)(x="x")
 
-    assert isinstance(ds.A.data, get_dask_chunkmanager().array_cls)
+    assert isinstance(ds.A.data, dask_array_type)
 
 
 @requires_matplotlib

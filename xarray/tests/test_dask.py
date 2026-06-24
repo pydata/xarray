@@ -24,7 +24,9 @@ from xarray.tests import (
     assert_equal,
     assert_frame_equal,
     assert_identical,
-    get_dask_chunkmanager,
+    dask_array_api,
+    dask_array_type,
+    has_dask_array_expr,
     mock,
     raise_if_dask_computes,
     requires_pint,
@@ -35,8 +37,8 @@ from xarray.tests.test_backends import create_tmp_file
 dask = pytest.importorskip("dask")
 pytest.importorskip("dask.array")
 dd = pytest.importorskip("dask.dataframe")
-da = get_dask_chunkmanager().array_api
-USING_DASK_ARRAY = get_dask_chunkmanager().array_cls.__module__.startswith("dask_array")
+da = dask_array_api
+USING_DASK_ARRAY = has_dask_array_expr
 
 
 def dask_compute_patch_target():
@@ -65,16 +67,16 @@ class DaskTestCase:
                 if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
-                    assert isinstance(v.data, get_dask_chunkmanager().array_cls)
+                    assert isinstance(v.data, dask_array_type)
         elif isinstance(actual, DataArray):
-            assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+            assert isinstance(actual.data, dask_array_type)
             for k, v in actual.coords.items():
                 if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
-                    assert isinstance(v.data, get_dask_chunkmanager().array_cls)
+                    assert isinstance(v.data, dask_array_type)
         elif isinstance(actual, Variable):
-            assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+            assert isinstance(actual.data, dask_array_type)
         else:
             raise AssertionError()
 
@@ -154,9 +156,9 @@ class TestVariable(DaskTestCase):
     def test_equals(self):
         v = self.lazy_var
         assert v.equals(v)
-        assert isinstance(v.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(v.data, dask_array_type)
         assert v.identical(v)
-        assert isinstance(v.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(v.data, dask_array_type)
 
     def test_transpose(self):
         u = self.eager_var
@@ -402,7 +404,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
     def test_lazy_dataset(self):
         lazy_ds = Dataset({"foo": (("x", "y"), self.data)})
-        assert isinstance(lazy_ds.foo.variable.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(lazy_ds.foo.variable.data, dask_array_type)
 
     def test_lazy_array(self):
         u = self.eager_array
@@ -477,21 +479,21 @@ class TestDataArrayAndDataset(DaskTestCase):
         out = xr.concat([ds1, ds2, ds3], dim="n", data_vars="all", coords="all")
         # no extra kernel calls
         assert kernel_call_count == 6
-        assert isinstance(out["d"].data, get_dask_chunkmanager().array_cls)
-        assert isinstance(out["c"].data, get_dask_chunkmanager().array_cls)
+        assert isinstance(out["d"].data, dask_array_type)
+        assert isinstance(out["c"].data, dask_array_type)
 
         out = xr.concat([ds1, ds2, ds3], dim="n", data_vars=["d"], coords=["c"])
         # no extra kernel calls
         assert kernel_call_count == 6
-        assert isinstance(out["d"].data, get_dask_chunkmanager().array_cls)
-        assert isinstance(out["c"].data, get_dask_chunkmanager().array_cls)
+        assert isinstance(out["d"].data, dask_array_type)
+        assert isinstance(out["c"].data, dask_array_type)
 
         with xr.set_options(use_new_combine_kwarg_defaults=True):
             out = xr.concat([ds1, ds2, ds3], dim="n", data_vars=[], coords=[])
             # no extra kernel calls
             assert kernel_call_count == 6
-            assert isinstance(out["d"].data, get_dask_chunkmanager().array_cls)
-            assert isinstance(out["c"].data, get_dask_chunkmanager().array_cls)
+            assert isinstance(out["d"].data, dask_array_type)
+            assert isinstance(out["c"].data, dask_array_type)
 
         out = xr.concat(
             [ds1, ds2, ds3], dim="n", data_vars=[], coords=[], compat="equals"
@@ -525,8 +527,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         )
         # the variables of ds1 and ds2 were computed, but those of ds3 didn't
         assert kernel_call_count == 22
-        assert isinstance(out["d"].data, get_dask_chunkmanager().array_cls)
-        assert isinstance(out["c"].data, get_dask_chunkmanager().array_cls)
+        assert isinstance(out["d"].data, dask_array_type)
+        assert isinstance(out["c"].data, dask_array_type)
         # the data of ds1 and ds2 was loaded into numpy and then
         # concatenated to the data of ds3. Thus, only ds3 is computed now.
         out.compute()
@@ -550,16 +552,16 @@ class TestDataArrayAndDataset(DaskTestCase):
         )
         assert kernel_call_count == 24
         # variables are not loaded in the output
-        assert isinstance(out["d"].data, get_dask_chunkmanager().array_cls)
-        assert isinstance(out["c"].data, get_dask_chunkmanager().array_cls)
+        assert isinstance(out["d"].data, dask_array_type)
+        assert isinstance(out["c"].data, dask_array_type)
 
         out = xr.concat(
             [ds1, ds1, ds1], dim="n", data_vars=[], coords=[], compat="identical"
         )
         assert kernel_call_count == 24
         # variables are not loaded in the output
-        assert isinstance(out["d"].data, get_dask_chunkmanager().array_cls)
-        assert isinstance(out["c"].data, get_dask_chunkmanager().array_cls)
+        assert isinstance(out["d"].data, dask_array_type)
+        assert isinstance(out["c"].data, dask_array_type)
 
         out = xr.concat(
             [ds1, ds2.compute(), ds3],

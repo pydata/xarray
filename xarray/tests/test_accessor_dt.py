@@ -13,7 +13,7 @@ from xarray.tests import (
     assert_chunks_equal,
     assert_equal,
     assert_identical,
-    get_dask_chunkmanager,
+    dask_array_type,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -205,7 +205,7 @@ class TestDatetimeAccessor:
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, field)
 
-        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(actual.data, dask_array_type)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual.compute(), expected.compute())
 
@@ -225,7 +225,7 @@ class TestDatetimeAccessor:
         with raise_if_dask_computes():
             actual = dask_times_2d.dt.isocalendar()[field]
 
-        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(actual.data, dask_array_type)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual.compute(), expected.compute())
 
@@ -246,7 +246,7 @@ class TestDatetimeAccessor:
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, method)(parameters)
 
-        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(actual.data, dask_array_type)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual.compute(), expected.compute())
 
@@ -349,7 +349,7 @@ class TestTimedeltaAccessor:
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, field)
 
-        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(actual.data, dask_array_type)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual, expected)
 
@@ -364,7 +364,7 @@ class TestTimedeltaAccessor:
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, method)(parameters)
 
-        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(actual.data, dask_array_type)
         assert_chunks_equal(actual, dask_times_2d)
         assert_equal(actual.compute(), expected.compute())
 
@@ -518,7 +518,7 @@ def test_dask_field_access_1d(data, field) -> None:
     )
     times = xr.DataArray(data.time.values, dims=["time"]).chunk({"time": 50})
     result = getattr(times.dt, field)
-    assert isinstance(result.data, get_dask_chunkmanager().array_cls)
+    assert isinstance(result.data, dask_array_type)
     assert result.chunks == times.chunks
     assert_equal(result.compute(), expected)
 
@@ -539,7 +539,7 @@ def test_dask_field_access(times_3d, data, field) -> None:
     )
     times_3d = times_3d.chunk({"lon": 5, "lat": 5, "time": 50})
     result = getattr(times_3d.dt, field)
-    assert isinstance(result.data, get_dask_chunkmanager().array_cls)
+    assert isinstance(result.data, dask_array_type)
     assert result.chunks == times_3d.chunks
     assert_equal(result.compute(), expected)
 
@@ -602,7 +602,7 @@ def test_cftime_floor_accessor(
         with raise_if_dask_computes(max_computes=1):
             result = cftime_rounding_dataarray.chunk(chunks).dt.floor(freq)
         expected = expected.chunk(chunks)
-        assert isinstance(result.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(result.data, dask_array_type)
         assert result.chunks == expected.chunks
     else:
         result = cftime_rounding_dataarray.dt.floor(freq)
@@ -633,7 +633,7 @@ def test_cftime_ceil_accessor(
         with raise_if_dask_computes(max_computes=1):
             result = cftime_rounding_dataarray.chunk(chunks).dt.ceil(freq)
         expected = expected.chunk(chunks)
-        assert isinstance(result.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(result.data, dask_array_type)
         assert result.chunks == expected.chunks
     else:
         result = cftime_rounding_dataarray.dt.ceil(freq)
@@ -664,7 +664,7 @@ def test_cftime_round_accessor(
         with raise_if_dask_computes(max_computes=1):
             result = cftime_rounding_dataarray.chunk(chunks).dt.round(freq)
         expected = expected.chunk(chunks)
-        assert isinstance(result.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(result.data, dask_array_type)
         assert result.chunks == expected.chunks
     else:
         result = cftime_rounding_dataarray.dt.round(freq)

@@ -232,11 +232,11 @@ def _chunk_ds(
     chunkmanager = guess_chunkmanager(chunked_array_type)
 
     # TODO refactor to move this dask-specific logic inside the DaskManager class
-    registered_as_dask = any(
+    is_dask_chunkmanager = isinstance(chunkmanager, DaskManager) or any(
         name == "dask" and manager is chunkmanager
         for name, manager in list_chunkmanagers().items()
     )
-    if isinstance(chunkmanager, DaskManager) or registered_as_dask:
+    if is_dask_chunkmanager:
         from dask.base import tokenize
 
         mtime = _get_mtime(filename_or_obj)

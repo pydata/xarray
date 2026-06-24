@@ -6,8 +6,8 @@ import pytest
 
 
 def _use_dask_array(config: pytest.Config) -> bool:
-    env_value = os.environ.get("XR_USE_DASK_ARRAY", "")
-    return config.getoption("--use-dask-array") or env_value.lower() in {
+    env_value = os.environ.get("XR_USE_DASK_ARRAY_WITH_EXPR", "")
+    return config.getoption("--use-dask-array-with-expr") or env_value.lower() in {
         "1",
         "true",
         "yes",
@@ -20,14 +20,18 @@ def _register_dask_array() -> None:
         import dask_array.xarray
     except ImportError as err:
         raise pytest.UsageError(
-            "--use-dask-array requires dask-array to be importable"
+            "--use-dask-array-with-expr requires dask-array to be importable"
         ) from err
 
     dask_array.xarray.register()
     if not dask_array.xarray.isactive():
         raise pytest.UsageError(
-            "--use-dask-array registered dask-array, but it is not the active dask chunk manager"
+            "--use-dask-array-with-expr registered dask-array, but it is not the active dask chunk manager"
         )
+
+    from xarray.tests import refresh_dask_chunkmanager_helpers
+
+    refresh_dask_chunkmanager_helpers()
 
 
 def pytest_addoption(parser: pytest.Parser):
@@ -40,7 +44,7 @@ def pytest_addoption(parser: pytest.Parser):
     )
     parser.addoption("--run-mypy", action="store_true", help="runs mypy tests")
     parser.addoption(
-        "--use-dask-array",
+        "--use-dask-array-with-expr",
         action="store_true",
         help="register dask-array as xarray's dask chunk manager",
     )

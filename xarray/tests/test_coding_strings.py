@@ -10,7 +10,7 @@ from xarray.tests import (
     IndexerMaker,
     assert_array_equal,
     assert_identical,
-    get_dask_chunkmanager,
+    dask_array_type,
     requires_dask,
 )
 
@@ -71,13 +71,13 @@ def test_EncodedStringCoder_decode_dask() -> None:
     raw_data = np.array([b"abc", "ß∂µ∆".encode()])
     raw = Variable(("x",), raw_data, {"_Encoding": "utf-8"}).chunk()
     actual = coder.decode(raw)
-    assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+    assert isinstance(actual.data, dask_array_type)
 
     expected = Variable(("x",), np.array(["abc", "ß∂µ∆"], dtype=object))
     assert_identical(actual, expected)
 
     actual_indexed = coder.decode(actual[0])
-    assert isinstance(actual_indexed.data, get_dask_chunkmanager().array_cls)
+    assert isinstance(actual_indexed.data, dask_array_type)
     assert_identical(actual_indexed, expected[0])
 
 
@@ -274,7 +274,7 @@ def test_char_to_bytes_dask() -> None:
     array = Variable(("x", "y"), numpy_array).chunk({"x": 2, "y": 3}).data
     expected = np.array([b"abc", b"def"])
     actual = strings.char_to_bytes(array)
-    assert isinstance(actual, get_dask_chunkmanager().array_cls)
+    assert isinstance(actual, dask_array_type)
     assert actual.chunks == ((2,),)
     assert actual.dtype == "S3"
     assert_array_equal(np.array(actual), expected)
@@ -300,7 +300,7 @@ def test_bytes_to_char_dask() -> None:
     array = Variable(("x",), numpy_array).chunk({"x": 1}).data
     expected = np.array([[b"a", b"b"], [b"c", b"d"]])
     actual = strings.bytes_to_char(array)
-    assert isinstance(actual, get_dask_chunkmanager().array_cls)
+    assert isinstance(actual, dask_array_type)
     assert actual.chunks == ((1, 1), ((2,)))
     assert actual.dtype == "S1"
     assert_array_equal(np.array(actual), expected)

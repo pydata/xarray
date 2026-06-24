@@ -11,7 +11,7 @@ from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
-    get_dask_chunkmanager,
+    dask_array_type,
     requires_dask,
 )
 
@@ -80,7 +80,7 @@ def test_CFMaskCoder_decode_dask() -> None:
     expected = xr.Variable(("x",), [0, np.nan, 1])
     coder = variables.CFMaskCoder()
     encoded = coder.decode(original)
-    assert isinstance(encoded.data, get_dask_chunkmanager().array_cls)
+    assert isinstance(encoded.data, dask_array_type)
     assert_identical(expected, encoded)
 
 

@@ -34,7 +34,8 @@ from xarray.backends.locks import HDF5_LOCK, CombinedLock, SerializableLock
 from xarray.tests import (
     assert_allclose,
     assert_identical,
-    get_dask_chunkmanager,
+    dask_array_api,
+    dask_array_type,
     has_h5netcdf,
     has_netCDF4,
     has_scipy,
@@ -117,7 +118,7 @@ def test_dask_distributed_netcdf_roundtrip(
             with xr.open_dataset(
                 tmp_netcdf_filename, chunks=chunks, engine=engine
             ) as restored:
-                assert isinstance(restored.var1.data, get_dask_chunkmanager().array_cls)
+                assert isinstance(restored.var1.data, dask_array_type)
                 computed = restored.compute()
                 assert_allclose(original, computed)
 
@@ -129,7 +130,7 @@ def test_dask_distributed_write_netcdf_with_dimensionless_variables(
 ):
     with cluster() as (s, [_a, _b]):
         with Client(s["address"], loop=loop):
-            original = xr.Dataset({"x": get_dask_chunkmanager().array_api.zeros(())})
+            original = xr.Dataset({"x": dask_array_api.zeros(())})
             original.to_netcdf(tmp_netcdf_filename)
 
             with xr.open_dataset(tmp_netcdf_filename) as actual:
@@ -223,7 +224,7 @@ def test_dask_distributed_read_netcdf_integration_test(
             with xr.open_dataset(
                 tmp_netcdf_filename, chunks=chunks, engine=engine
             ) as restored:
-                assert isinstance(restored.var1.data, get_dask_chunkmanager().array_cls)
+                assert isinstance(restored.var1.data, dask_array_type)
                 computed = restored.compute()
                 assert_allclose(original, computed)
 
@@ -278,7 +279,7 @@ def test_dask_distributed_zarr_integration_test(
         with xr.open_dataset(
             filename, chunks="auto", engine="zarr", **read_kwargs
         ) as restored:
-            assert isinstance(restored.var1.data, get_dask_chunkmanager().array_cls)
+            assert isinstance(restored.var1.data, dask_array_type)
             computed = restored.compute()
             assert_allclose(original, computed)
 

@@ -16,7 +16,7 @@ from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     assert_equal,
     assert_identical,
-    get_dask_chunkmanager,
+    has_dask_array_expr,
     requires_dask,
 )
 
@@ -727,7 +727,7 @@ class TestSparseDataArrayAndDataset:
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
-        if get_dask_chunkmanager().array_cls.__module__.startswith("dask_array"):
+        if has_dask_array_expr:
             array_repr = "dask.array<xarray-a, shape=(4,), dtype=float64, ..."
         else:
             if Version(sparse.__version__) >= Version("0.16.0"):
@@ -889,7 +889,7 @@ def test_chunk():
     ac = a.chunk(2)
     assert ac.chunks == ((2, 2),)
     assert isinstance(ac.data._meta, sparse.COO)
-    if get_dask_chunkmanager().array_cls.__module__.startswith("dask_array"):
+    if has_dask_array_expr:
         pytest.xfail(
             "dask-array sparse COO equality with eager sparse arrays is not implemented"
         )

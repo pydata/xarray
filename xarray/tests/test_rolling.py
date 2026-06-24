@@ -12,7 +12,7 @@ from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
-    get_dask_chunkmanager,
+    dask_array_api,
     has_dask,
     requires_dask,
     requires_dask_ge_2024_11_0,
@@ -617,7 +617,7 @@ class TestDatasetRolling:
 
     @requires_dask_ge_2024_11_0
     def test_rolling_construct_automatic_rechunk(self):
-        da = get_dask_chunkmanager().array_api
+        da = dask_array_api
 
         # Construct dataset with chunk size of (400, 400, 1) or 1.22 MiB
         array = DataArray(

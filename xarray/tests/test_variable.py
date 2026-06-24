@@ -37,7 +37,8 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
-    get_dask_chunkmanager,
+    dask_array_type,
+    has_dask_array_expr,
     has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
@@ -676,7 +677,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         v = self.cls("x", data)
         print(v)  # should not error
         if v.dtype == np.dtype("O"):
-            assert isinstance(v.data, get_dask_chunkmanager().array_cls)
+            assert isinstance(v.data, dask_array_type)
         else:
             assert v.dtype == data.dtype
 
@@ -1922,7 +1923,7 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_dask(self, q, axis, dim):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
         actual = v.quantile(q, dim=dim)
-        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(actual.data, dask_array_type)
         expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
 
@@ -1941,7 +1942,7 @@ class TestVariable(VariableSubclassobjects):
         expected = np.nanquantile(self.d, q, axis=1, method=method)
 
         if use_dask:
-            assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+            assert isinstance(actual.data, dask_array_type)
 
         np.testing.assert_allclose(actual.values, expected)
 
@@ -2104,13 +2105,13 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x", "y"], self.d).chunk()
 
         actual = v.mean(keepdims=True)
-        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, keepdims=True))
         assert_identical(actual, expected)
 
         actual = v.mean(dim="y", keepdims=True)
-        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, axis=1, keepdims=True))
         assert_identical(actual, expected)
@@ -2432,7 +2433,7 @@ class TestVariableWithDask(VariableSubclassobjects):
 
         # Check that kwargs are passed
         blocked = unblocked.chunk(name="testname_")
-        assert isinstance(blocked.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(blocked.data, dask_array_type)
         assert "testname_" in blocked.data.name
 
         # test kwargs form of chunks
@@ -2490,12 +2491,12 @@ class TestVariableWithDask(VariableSubclassobjects):
             actual = dx.rolling_window(
                 dim, window, "window", center=center, fill_value=np.nan
             )
-        assert isinstance(actual.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(actual.data, dask_array_type)
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
     def test_legacy_dask_array_rejected_by_dask_array_manager(self):
-        if get_dask_chunkmanager().array_cls.__module__.startswith("dask.array"):
+        if not has_dask_array_expr:
             pytest.skip("only meaningful with an alternate dask chunk manager")
 
         import dask.array as da

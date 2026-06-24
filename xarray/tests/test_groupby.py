@@ -39,9 +39,10 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     create_test_data,
-    get_dask_chunkmanager,
+    dask_array_api,
     has_cftime,
     has_dask,
+    has_dask_array_expr,
     has_dask_ge_2024_08_1,
     has_flox,
     has_pandas_ge_2_2,
@@ -57,9 +58,7 @@ from xarray.tests import (
 
 
 def _using_dask_array_chunkmanager() -> bool:
-    return has_dask and get_dask_chunkmanager().array_cls.__module__.startswith(
-        "dask_array"
-    )
+    return has_dask_array_expr
 
 
 @pytest.fixture
@@ -3240,7 +3239,7 @@ def test_groupby_transpose() -> None:
     ],
 )
 def test_lazy_grouping(grouper, expect_index):
-    da = get_dask_chunkmanager().array_api
+    da = dask_array_api
 
     data = DataArray(
         dims=("x", "y"),
@@ -3275,7 +3274,7 @@ def test_lazy_grouping(grouper, expect_index):
 
 @requires_dask
 def test_lazy_grouping_errors() -> None:
-    da = get_dask_chunkmanager().array_api
+    da = dask_array_api
 
     data = DataArray(
         dims=("x",),
@@ -3299,7 +3298,7 @@ def test_lazy_grouping_errors() -> None:
 
 @requires_dask
 def test_lazy_int_bins_error() -> None:
-    da = get_dask_chunkmanager().array_api
+    da = dask_array_api
 
     with pytest.raises(ValueError, match="Bin edges must be provided"):
         with raise_if_dask_computes():
@@ -3388,7 +3387,7 @@ def test_groupby_multiple_bin_grouper_missing_groups() -> None:
 
 @requires_dask_ge_2024_08_1
 def test_shuffle_simple() -> None:
-    array_api = get_dask_chunkmanager().array_api
+    array_api = dask_array_api
 
     da = xr.DataArray(
         dims="x",
@@ -3412,7 +3411,7 @@ def test_shuffle_simple() -> None:
     ],
 )
 def test_shuffle_by(chunks, expected_chunks):
-    array_api = get_dask_chunkmanager().array_api
+    array_api = dask_array_api
 
     da = xr.DataArray(
         dims="x",

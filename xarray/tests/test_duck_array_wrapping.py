@@ -114,8 +114,8 @@ except ImportError:
 
 
 def use_dask_array(config):
-    env_value = os.environ.get("XR_USE_DASK_ARRAY", "")
-    return config.getoption("--use-dask-array") or env_value.lower() in {
+    env_value = os.environ.get("XR_USE_DASK_ARRAY_WITH_EXPR", "")
+    return config.getoption("--use-dask-array-with-expr") or env_value.lower() in {
         "1",
         "true",
         "yes",

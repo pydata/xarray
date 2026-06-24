@@ -16,7 +16,8 @@ from xarray.tests import (
     ReturnItem,
     assert_array_equal,
     assert_identical,
-    get_dask_chunkmanager,
+    dask_array_api,
+    dask_array_type,
     has_dask,
     raise_if_dask_computes,
     requires_dask,
@@ -987,7 +988,7 @@ def test_create_mask_basic_indexer() -> None:
 
 @requires_dask
 def test_create_mask_dask() -> None:
-    da = get_dask_chunkmanager().array_api
+    da = dask_array_api
 
     indexer = indexing.OuterIndexer((1, slice(2), np.array([0, -1, 2])))
     expected = np.array(2 * [[False, True, False]])
@@ -1004,7 +1005,7 @@ def test_create_mask_dask() -> None:
     actual = indexing.create_mask(
         indexer_vec, (5, 2), da.empty((3, 2), chunks=((3,), (2,)))
     )
-    assert isinstance(actual, get_dask_chunkmanager().array_cls)
+    assert isinstance(actual, dask_array_type)
     np.testing.assert_array_equal(expected, actual)
 
     with pytest.raises(ValueError):
@@ -1055,7 +1056,7 @@ def as_dask_array(arr, chunks):
     if not has_dask:
         return None
 
-    da = get_dask_chunkmanager().array_api
+    da = dask_array_api
     return da.from_array(arr, chunks=chunks)
 
 
@@ -1115,7 +1116,7 @@ def test_indexing_1d_object_array() -> None:
 
 @requires_dask
 def test_indexing_dask_array() -> None:
-    da = get_dask_chunkmanager().array_api
+    da = dask_array_api
 
     data = DataArray(
         np.ones(10 * 3 * 3).reshape((10, 3, 3)),
@@ -1130,7 +1131,7 @@ def test_indexing_dask_array() -> None:
 @requires_dask
 def test_indexing_dask_array_scalar() -> None:
     # GH4276
-    da = get_dask_chunkmanager().array_api
+    da = dask_array_api
 
     a = da.from_array(np.linspace(0.0, 1.0))
     data = DataArray(a, dims="x")
@@ -1176,7 +1177,7 @@ def test_vectorized_indexing_dask_array() -> None:
 @requires_dask
 def test_advanced_indexing_dask_array() -> None:
     # GH4663
-    da = get_dask_chunkmanager().array_api
+    da = dask_array_api
 
     ds = Dataset(
         dict(

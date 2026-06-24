@@ -60,7 +60,8 @@ from xarray.tests import (
     assert_no_warnings,
     assert_writeable,
     create_test_data,
-    get_dask_chunkmanager,
+    dask_array_api,
+    dask_array_type,
     has_cftime,
     has_dask,
     has_pyarrow,
@@ -1267,7 +1268,7 @@ class TestDataset:
             if k in reblocked.dims:
                 assert isinstance(v.data, np.ndarray)
             else:
-                assert isinstance(v.data, get_dask_chunkmanager().array_cls)
+                assert isinstance(v.data, dask_array_type)
 
         expected_chunks: dict[Hashable, tuple[int, ...]] = {
             "dim1": (8,),
@@ -7686,7 +7687,7 @@ class TestDataset:
                 },
             )
         elif backend == "dask":
-            da = get_dask_chunkmanager().array_api
+            da = dask_array_api
             ds = Dataset(
                 {
                     "a": ("x", da.from_array(a, chunks=3)),

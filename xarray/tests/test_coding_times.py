@@ -52,7 +52,7 @@ from xarray.tests import (
     assert_duckarray_allclose,
     assert_duckarray_equal,
     assert_no_warnings,
-    get_dask_chunkmanager,
+    dask_array_type,
     has_cftime,
     requires_cftime,
     requires_dask,
@@ -1637,7 +1637,7 @@ def test_encode_cf_datetime_datetime64_via_dask(
         times, units, None, dtype
     )
 
-    assert isinstance(encoded_times, get_dask_chunkmanager().array_cls)
+    assert isinstance(encoded_times, dask_array_type)
     assert is_duck_dask_array(encoded_times)
     assert encoded_times.chunks == times.chunks
 
@@ -1693,7 +1693,7 @@ def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype) -> None:
         times, units, None, dtype
     )
 
-    assert isinstance(encoded_times, get_dask_chunkmanager().array_cls)
+    assert isinstance(encoded_times, dask_array_type)
     assert is_duck_dask_array(encoded_times)
     assert encoded_times.chunks == times.chunks
 
@@ -1769,7 +1769,7 @@ def test_encode_cf_timedelta_via_dask(
     times = Variable(["time"], times_pd).chunk({"time": 1}).data
     encoded_times, encoding_units = encode_cf_timedelta(times, units, dtype)
 
-    assert isinstance(encoded_times, get_dask_chunkmanager().array_cls)
+    assert isinstance(encoded_times, dask_array_type)
     assert is_duck_dask_array(encoded_times)
     assert encoded_times.chunks == times.chunks
 

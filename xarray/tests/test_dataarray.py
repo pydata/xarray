@@ -48,7 +48,8 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
-    get_dask_chunkmanager,
+    dask_array_api,
+    dask_array_type,
     has_dask,
     has_dask_ge_2025_1_0,
     has_pyarrow,
@@ -983,7 +984,7 @@ class TestDataArray:
 
         # Check that kwargs are passed
         blocked = unblocked.chunk(name_prefix="testname_")
-        assert isinstance(blocked.data, get_dask_chunkmanager().array_cls)
+        assert isinstance(blocked.data, dask_array_type)
         assert "testname_" in blocked.data.name
 
         # test kwargs form of chunks
@@ -4825,7 +4826,7 @@ class TestDataArray:
         dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
         if backend == "dask":
-            da = get_dask_chunkmanager().array_api
+            da = dask_array_api
             aa = aa.copy(data=da.from_array(a, chunks=3))
             bb = bb.copy(data=da.from_array(b, chunks=3))
             cc = cc.copy(data=da.from_array(c, chunks=7))

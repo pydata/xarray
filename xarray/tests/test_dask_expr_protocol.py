@@ -237,6 +237,32 @@ def test_map_blocks_reduces_single_chunk_dimension():
     )
 
 
+def test_map_blocks_slice_pushdown_equivalent_to_preselection():
+    x = dask_array.arange(12, chunks=(3,))
+    ds = Dataset({"x": ("t", x)}, coords={"t": np.arange(12)})
+    post_calls = []
+    pre_calls = []
+
+    def add_one(calls):
+        def func(block):
+            if block.sizes["t"]:
+                calls.append(tuple(block["t"].values.tolist()))
+            return block + 1
+
+        return func
+
+    post_selected = xr.map_blocks(add_one(post_calls), ds).sel(t=slice(3, 8))
+    pre_selected = xr.map_blocks(add_one(pre_calls), ds.sel(t=slice(3, 8)))
+
+    assert isinstance(dask.base.collections_to_expr(post_selected), CompositeExpr)
+    assert_identical(
+        post_selected.compute(scheduler="single-threaded"),
+        pre_selected.compute(scheduler="single-threaded"),
+    )
+    assert sorted(post_calls) == [(3, 4, 5), (6, 7, 8)]
+    assert sorted(pre_calls) == [(3, 4, 5), (6, 7, 8)]
+
+
 def test_mixed_legacy_inputs_do_not_use_composite_path():
     ds = Dataset(
         {
