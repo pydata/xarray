@@ -321,14 +321,12 @@ def result_type(
         xp = get_array_namespace(arrays_and_dtypes)
 
     try:
-        promote_to_object = should_promote_to_object(arrays_and_dtypes, xp)
+        if should_promote_to_object(arrays_and_dtypes, xp):
+            return np.dtype(object)
     except TypeError:
-        # unknown python objects will raise a TypeError in `xp.result_type`;
-        # We assume the user wants them to be there and therefore promote to object dtype instead of raising.
-        promote_to_object = True
-
-    if promote_to_object:
-        return np.dtype(object)
+        # Unknown python objects will raise a TypeError in `xp.result_type`;
+        # We pass the decision on its impact on array type to after we've attempted to promote.
+        pass
 
     maybe_promote = functools.partial(
         maybe_promote_to_variable_width,
@@ -337,4 +335,10 @@ def result_type(
             map(utils.is_allowed_extension_array_dtype, arrays_and_dtypes)
         ),
     )
-    return array_api_compat.result_type(*map(maybe_promote, arrays_and_dtypes), xp=xp)
+    try:
+        result = array_api_compat.result_type(*map(maybe_promote, arrays_and_dtypes), xp=xp)
+    except TypeError:
+        # Unknown python objects will raise a TypeError in `xp.result_type`;
+        # We assume the user wants them to be there and therefore promote to object dtype instead of raising.
+        return np.dtype(object)
+    return result
