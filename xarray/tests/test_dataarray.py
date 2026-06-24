@@ -5623,6 +5623,15 @@ class TestReduce1D(TestReduce):
             assert_identical(result2[key], expected2[key])
 
 
+def test_idxmax_intervalindex_coord() -> None:
+    idx = pd.IntervalIndex.from_breaks([0, 1, 2, 3])
+    da = xr.DataArray([False, True, True], dims=["z"], coords={"z": idx})
+
+    expected = xr.DataArray(idx[1], name="z")
+
+    assert_identical(da.idxmax(), expected)
+
+
 @pytest.mark.parametrize(
     ["x", "minindex", "maxindex", "nanindex"],
     [
