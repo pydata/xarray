@@ -31,7 +31,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 2
           persist-credentials: false
@@ -61,7 +61,7 @@ jobs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
       pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - uses: Parcels-code/pixi-lock/create-and-cache@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
@@ -90,7 +90,7 @@ jobs:
       log-file: ${{ steps.determine-log-path.outputs.log-file }}
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
           persist-credentials: false
@@ -98,7 +98,7 @@ jobs:
         uses: Parcels-code/pixi-lock/restore@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
-      - uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -119,7 +119,7 @@ jobs:
         if: success()
         id: status
         env:
-          LOG_PATH: ${{ steps.determine-log-path.output.log-file }}
+          LOG_PATH: ${{ steps.determine-log-path.outputs.log-file }}
         run: |
           pixi run -e ${{matrix.pixi-env}} -- python -m pytest --timeout=60 -rf -nauto \
             --report-log "$LOG_PATH"
@@ -128,12 +128,14 @@ jobs:
         with:
           name: log file
           path: ${{ steps.determine-log-path.outputs.log-file }}
+          if-no-files-found: error
 
   create-issue:
     needs: upstream-dev
     runs-on: ubuntu-slim
     if: |
-      needs.upstream-dev.result == 'failure'
+      always()
+      && needs.upstream-dev.result == 'failure'
       && github.event_name == 'schedule'
       && github.repository_owner == 'pydata'
 
@@ -146,9 +148,6 @@ jobs:
           name: log file
           path: logs/
       - name: Generate and publish the report
-        if: |
-          failure()
-          && steps.status.outcome == 'failure'
         uses: scientific-python/issue-from-pytest-log-action@8e905db353437cda1d6a773de245343fbfc940dd # v1.5.0
         with:
           log-path: logs/${{ needs.upstream-dev.outputs.log-file }}
@@ -156,22 +155,21 @@ jobs:
   mypy-upstream-dev:
     name: mypy-upstream-dev
     runs-on: ubuntu-latest
-    needs: [detect-ci-trigger, cache-pixi-lock]
+    needs: cache-pixi-lock
     if: |
       always()
-      && (
-          contains( github.event.pull_request.labels.*.name, 'run-upstream')
-      )
+      && contains( github.event.pull_request.labels.*.name, 'run-upstream')
+
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
-        pixi-env: ["test-nightly"]
+        pixi-env: ["mypy-upstream"]
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
           persist-credentials: false
@@ -180,7 +178,7 @@ jobs:
         uses: Parcels-code/pixi-lock/restore@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
-      - uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
@@ -198,7 +196,7 @@ jobs:
         run: |
           pixi run -e ${{matrix.pixi-env}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: mypy_report/cobertura.xml
           flags: mypy

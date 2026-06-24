@@ -490,6 +490,11 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert v3.encoding == encoding3
         assert v4.encoding == {}
 
+        # drop_encoding should not copy data — fix for GH#11390
+        v = self.cls(["x"], np.arange(1000000))
+        v_dropped = v.drop_encoding()
+        assert v_dropped._data is v._data
+
     def test_concat(self):
         x = np.arange(5)
         y = np.arange(5, 10)
