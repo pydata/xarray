@@ -115,13 +115,10 @@ with warnings.catch_warnings():
         category=UserWarning,
     )
 
-    has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
+has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
-has_dask_array = importlib.util.find_spec("dask_array") is not None
-requires_dask_array = pytest.mark.skipif(
-    not has_dask_array, reason="requires dask_array"
-)
+has_dask_array, requires_dask_array = _importorskip("dask_array")
 has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
     "dask", minversion="2024.08.1"
 )
@@ -139,25 +136,15 @@ else:
         )
         has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 
-dask_array_api = None
-dask_array_type = ()
-has_dask_array_expr = False
-
-
-def refresh_dask_chunkmanager_helpers() -> None:
-    global dask_array_api, dask_array_type, has_dask_array_expr
-
+if has_dask:
+    dask_chunkmanager = get_dask_chunkmanager()
+    dask_array_api = dask_chunkmanager.array_api
+    dask_array_type = dask_chunkmanager.array_cls
+    has_dask_array_expr = dask_array_type.__module__.startswith("dask_array")
+else:
     dask_array_api = None
     dask_array_type = ()
     has_dask_array_expr = False
-    if has_dask:
-        dask_chunkmanager = get_dask_chunkmanager()
-        dask_array_api = dask_chunkmanager.array_api
-        dask_array_type = dask_chunkmanager.array_cls
-        has_dask_array_expr = dask_array_type.__module__.startswith("dask_array")
-
-
-refresh_dask_chunkmanager_helpers()
 
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")

@@ -29,10 +29,6 @@ def _register_dask_array() -> None:
             "--use-dask-array-with-expr registered dask-array, but it is not the active dask chunk manager"
         )
 
-    from xarray.tests import refresh_dask_chunkmanager_helpers
-
-    refresh_dask_chunkmanager_helpers()
-
 
 def pytest_addoption(parser: pytest.Parser):
     """Add command-line flags for pytest."""

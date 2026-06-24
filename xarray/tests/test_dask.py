@@ -312,7 +312,11 @@ class TestVariable(DaskTestCase):
         (v2,) = dask.persist(v)
         assert v is not v2
         assert len(v2.__dask_graph__()) < len(v.__dask_graph__())  # type: ignore[arg-type]
-        if not has_dask_array_expr:
+        if has_dask_array_expr:
+            assert [key[1:] for key in dask.core.flatten(v2.__dask_keys__())] == [
+                key[1:] for key in dask.core.flatten(v.__dask_keys__())
+            ]
+        else:
             assert v2.__dask_keys__() == v.__dask_keys__()
         assert dask.is_dask_collection(v)
         assert dask.is_dask_collection(v2)
@@ -438,7 +442,11 @@ class TestDataArrayAndDataset(DaskTestCase):
             (v2,) = dask.persist(v)
         assert v is not v2
         assert len(v2.__dask_graph__()) < len(v.__dask_graph__())
-        if not has_dask_array_expr:
+        if has_dask_array_expr:
+            assert [key[1:] for key in dask.core.flatten(v2.__dask_keys__())] == [
+                key[1:] for key in dask.core.flatten(v.__dask_keys__())
+            ]
+        else:
             assert v2.__dask_keys__() == v.__dask_keys__()
         assert dask.is_dask_collection(v)
         assert dask.is_dask_collection(v2)
