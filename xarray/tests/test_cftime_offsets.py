@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from itertools import product, starmap
+from itertools import product
 from typing import TYPE_CHECKING, Literal
 
 import numpy as np
@@ -1237,11 +1237,20 @@ _CFTIME_RANGE_TESTS = [
     _CFTIME_RANGE_TESTS,
     ids=_id_func,
 )
+@pytest.mark.parametrize("use_legacy_date_type", [True, False])
 def test_cftime_range(
-    start, end, periods, freq, inclusive, normalize, calendar, expected_date_args
+    start,
+    end,
+    periods,
+    freq,
+    inclusive,
+    normalize,
+    calendar,
+    expected_date_args,
+    use_legacy_date_type,
 ):
-    date_type = get_date_type(calendar)
-    expected_dates = list(starmap(date_type, expected_date_args))
+    date_type = get_date_type(calendar, legacy=use_legacy_date_type)
+    expected_dates = [date_type(*args) for args in expected_date_args]
 
     if isinstance(start, tuple):
         start = date_type(*start)
@@ -1261,17 +1270,7 @@ def test_cftime_range(
     resulting_dates = result.values
 
     assert isinstance(result, CFTimeIndex)
-
-    if freq is not None:
-        np.testing.assert_equal(resulting_dates, expected_dates)
-    else:
-        # If we create a linear range of dates using cftime.num2date
-        # we will not get exact round number dates.  This is because
-        # datetime arithmetic in cftime is accurate approximately to
-        # 1 millisecond (see https://unidata.github.io/cftime/api.html).
-        deltas = resulting_dates - expected_dates
-        deltas = np.array([delta.total_seconds() for delta in deltas])
-        assert np.max(np.abs(deltas)) < 0.001
+    np.testing.assert_equal(resulting_dates, expected_dates)
 
 
 def test_date_range_name():
