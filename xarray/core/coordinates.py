@@ -31,6 +31,7 @@ from xarray.core.types import (
 )
 from xarray.core.utils import (
     Frozen,
+    FrozenMappingWarningOnValuesAccess,
     ReprObject,
     either_dict_or_kwargs,
     emit_user_level_warning,
@@ -119,12 +120,13 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
         raise NotImplementedError()
 
     def to_index(self, ordered_dims: Sequence[Hashable] | None = None) -> pd.Index:
-        """Convert all index coordinates into a :py:class:`pandas.Index`.
+        """Convert all index dimension coordinates into a :py:class:`pandas.Index`.
 
         Parameters
         ----------
         ordered_dims : sequence of hashable, optional
-            Possibly reordered version of this object's dimensions indicating
+            Possibly reordered version of this object's dimensions (or the full dimensions
+            of it's corresponding Dataset, DataArray or DataTree object) indicating
             the order in which dimensions should appear on the result.
 
         Returns
@@ -132,14 +134,14 @@ class AbstractCoordinates(Mapping[Hashable, "T_DataArray"]):
         pandas.Index
             Index subclass corresponding to the outer-product of all dimension
             coordinates. This will be a MultiIndex if this object is has more
-            than more dimension.
+            than one dimension.
         """
         if ordered_dims is None:
-            ordered_dims = list(self.dims)
-        elif set(ordered_dims) != set(self.dims):
+            ordered_dims = list(self._data.dims)
+        elif set(ordered_dims) != set(self._data.dims):
             raise ValueError(
                 "ordered_dims must match dims, but does not: "
-                f"{ordered_dims} vs {self.dims}"
+                f"{ordered_dims} vs {tuple(self._data.dims)}"
             )
 
         if len(ordered_dims) == 0:
@@ -894,8 +896,8 @@ class DatasetCoordinates(Coordinates):
 
     @property
     def dims(self) -> Frozen[Hashable, int]:
-        # deliberately display all dims, not just those on coordinate variables - see https://github.com/pydata/xarray/issues/9466
-        return self._data.dims
+        dims = calculate_dimensions(self.variables)
+        return FrozenMappingWarningOnValuesAccess(dims)
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
@@ -1004,8 +1006,8 @@ class DataTreeCoordinates(Coordinates):
 
     @property
     def dims(self) -> Frozen[Hashable, int]:
-        # deliberately display all dims, not just those on coordinate variables - see https://github.com/pydata/xarray/issues/9466
-        return Frozen(self._data.dims)
+        dims = calculate_dimensions(self.variables)
+        return FrozenMappingWarningOnValuesAccess(dims)
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
@@ -1095,7 +1097,8 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
 
     @property
     def dims(self) -> tuple[Hashable, ...]:
-        return self._data.dims
+        dims = calculate_dimensions(self._data._coords)
+        return tuple(dims)
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
@@ -1120,7 +1123,9 @@ class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
         self, coords: dict[Hashable, Variable], indexes: dict[Hashable, Index]
     ) -> None:
         validate_dataarray_coords(
-            self._data.shape, Coordinates._construct_direct(coords, indexes), self.dims
+            self._data.shape,
+            Coordinates._construct_direct(coords, indexes),
+            self._data.dims,
         )
 
         self._data._coords = coords
