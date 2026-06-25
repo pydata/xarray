@@ -538,20 +538,21 @@ def test_infer_datetime_units(freq, units) -> None:
 
 
 @pytest.mark.parametrize(
-    ["dates", "expected"],
+    ["date_strings", "expected"],
     [
         (
-            pd.to_datetime(["1900-01-01", "1900-01-02", "NaT"], unit="ns"),
+            ["1900-01-01", "1900-01-02", "NaT"],
             "days since 1900-01-01 00:00:00",
         ),
         (
-            pd.to_datetime(["NaT", "1900-01-01"], unit="ns"),
+            ["NaT", "1900-01-01"],
             "days since 1900-01-01 00:00:00",
         ),
-        (pd.to_datetime(["NaT"], unit="ns"), "days since 1970-01-01 00:00:00"),
+        (["NaT"], "days since 1970-01-01 00:00:00"),
     ],
 )
-def test_infer_datetime_units_with_NaT(dates, expected) -> None:
+def test_infer_datetime_units_with_NaT(date_strings, expected) -> None:
+    dates = pd.to_datetime(date_strings, unit="ns")
     assert expected == infer_datetime_units(dates)
 
 
