@@ -240,8 +240,8 @@ def test_map_blocks_reduces_single_chunk_dimension():
 def test_map_blocks_slice_pushdown_equivalent_to_preselection():
     x = dask_array.arange(12, chunks=(3,))
     ds = Dataset({"x": ("t", x)}, coords={"t": np.arange(12)})
-    post_calls = []
-    pre_calls = []
+    post_calls: list[tuple[int, ...]] = []
+    pre_calls: list[tuple[int, ...]] = []
 
     def add_one(calls):
         def func(block):
