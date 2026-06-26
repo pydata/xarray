@@ -6361,6 +6361,31 @@ class TestDataset:
         actual = ds.var("a")
         assert_identical(expected, actual)
 
+    def test_reduce_string_scalar(self) -> None:
+        # regression test for GH#11417
+        # scalar variables without the reduce dim should be preserved
+        ds = Dataset(
+            data_vars={
+                "a": (["index"], [1, 2, 3]),
+                "d": ([], "hello"),
+            }
+        )
+        expected = Dataset({"a": 6, "d": "hello"})
+        actual = ds.sum("index")
+        assert_identical(expected, actual)
+
+        expected = Dataset({"a": 2.0, "d": "hello"})
+        actual = ds.mean("index")
+        assert_identical(expected, actual)
+
+        expected = Dataset({"a": 1, "d": "hello"})
+        actual = ds.min("index")
+        assert_identical(expected, actual)
+
+        expected = Dataset({"a": 3, "d": "hello"})
+        actual = ds.max("index")
+        assert_identical(expected, actual)
+
     def test_reduce_only_one_axis(self) -> None:
         def mean_only_one_axis(x, axis):
             if not isinstance(axis, integer_types):
