@@ -2432,6 +2432,19 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return self._new(data=self.data.real)
 
     def __array_wrap__(self, obj, context=None, return_scalar=False):
+        if obj.shape != self.shape:
+            # Shape changed during the numpy operation.
+            # Check if only the last two dims are transposed (e.g. np.linalg.pinv).
+            if (
+                obj.ndim == self.ndim
+                and obj.ndim >= 2
+                and obj.shape[:-2] == self.shape[:-2]
+                and obj.shape[-2:] == self.shape[-2:][::-1]
+            ):
+                new_dims = self.dims[:-2] + (self.dims[-1], self.dims[-2])
+                return Variable(new_dims, obj)
+            # Fallback: use generic dim names since we can't reliably map dims.
+            return Variable(tuple(f"dim_{i}" for i in range(obj.ndim)), obj)
         return Variable(self.dims, obj)
 
     def _unary_op(self, f, *args, **kwargs):

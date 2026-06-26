@@ -2478,6 +2478,34 @@ class TestDataArray:
         bar = Variable(["x", "y"], np.zeros((10, 20)))
         assert_equal(self.dv, np.maximum(self.dv, bar))
 
+    def test_array_wrap_drops_mismatched_coords(self) -> None:
+        array = DataArray(
+            np.arange(12).reshape(3, 4),
+            dims=("foo", "bar"),
+            coords={
+                "foo": ["x", "y", "z"],
+                "bar": ["a", "b", "c", "d"],
+                "aux": (("foo", "bar"), np.ones((3, 4))),
+                "scalar": 1,
+            },
+        )
+
+        actual = np.linalg.pinv(array)
+        # pinv transposes the last two dims, so dims are swapped from
+        # (foo: 3, bar: 4) to (bar: 4, foo: 3). All coords whose dims
+        # still exist in the result are preserved.
+        expected = DataArray(
+            np.linalg.pinv(array.data),
+            dims=("bar", "foo"),
+            coords={
+                "foo": ["x", "y", "z"],
+                "bar": ["a", "b", "c", "d"],
+                "aux": (("foo", "bar"), np.ones((3, 4))),
+                "scalar": 1,
+            },
+        )
+        assert_identical(expected, actual)
+
     def test_astype_attrs(self) -> None:
         # Split into two loops for mypy - Variable, DataArray, and Dataset
         # don't share a common base class, so mypy infers type object for v,
