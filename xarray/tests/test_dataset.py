@@ -6572,6 +6572,40 @@ class TestDataset:
         ds["x"].attrs["y"] = "x"
         assert ds["x"].attrs != actual["x"].attrs
 
+    def test_map_preserves_func_attrs(self) -> None:
+        # Regression test for GH#11356
+        # Dataset.map should preserve attrs explicitly set by the mapped function
+        ds = xr.Dataset(
+            {
+                "a": ("x", [1, 2, 3], {"units": "kg"}),
+                "b": ("x", [4, 5, 6], {"units": "kg"}),
+            }
+        )
+
+        # keep_attrs=True, func sets attrs -> func's attrs preserved
+        result = ds.map(
+            lambda x: (x / x.sum()).assign_attrs(units="unitless"), keep_attrs=True
+        )
+        assert result["a"].attrs == {"units": "unitless"}
+        assert result["b"].attrs == {"units": "unitless"}
+
+        # keep_attrs=False, func sets attrs -> func's attrs preserved
+        result = ds.map(
+            lambda x: (x / x.sum()).assign_attrs(units="unitless"), keep_attrs=False
+        )
+        assert result["a"].attrs == {"units": "unitless"}
+        assert result["b"].attrs == {"units": "unitless"}
+
+        # keep_attrs=True, func doesn't set attrs -> original attrs restored
+        result = ds.map(lambda x: x / x.sum(), keep_attrs=True)
+        assert result["a"].attrs == {"units": "kg"}
+        assert result["b"].attrs == {"units": "kg"}
+
+        # keep_attrs=False, func doesn't set attrs -> attrs wiped
+        result = ds.map(lambda x: x / x.sum(), keep_attrs=False)
+        assert result["a"].attrs == {}
+        assert result["b"].attrs == {}
+
     def test_map_non_dataarray_outputs(self) -> None:
         # Test that map handles non-DataArray outputs by converting them
         # Regression test for GH10835

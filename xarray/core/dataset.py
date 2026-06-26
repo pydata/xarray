@@ -7052,15 +7052,22 @@ class Dataset(
 
         if keep_attrs:
             for k, v in variables.items():
-                v._copy_attrs_from(self.data_vars[k])
+                if not (v.attrs and v.attrs != self.data_vars[k].attrs):
+                    v._copy_attrs_from(self.data_vars[k])
             for k, v in coords.items():
                 if k in self.coords:
-                    v._copy_attrs_from(self.coords[k])
+                    if not (v.attrs and v.attrs != self.coords[k].attrs):
+                        v._copy_attrs_from(self.coords[k])
         else:
-            for v in variables.values():
-                v.attrs = {}
-            for v in coords.values():
-                v.attrs = {}
+            for k, v in variables.items():
+                if not (v.attrs and v.attrs != self.data_vars[k].attrs):
+                    v.attrs = {}
+            for k, v in coords.items():
+                if k in self.coords:
+                    if not (v.attrs and v.attrs != self.coords[k].attrs):
+                        v.attrs = {}
+                else:
+                    v.attrs = {}
 
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, coords=coords, attrs=attrs)
