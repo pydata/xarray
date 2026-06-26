@@ -81,6 +81,20 @@ def test_range_index_linspace() -> None:
     assert index.stop == 1.1
     assert index.step == 0.1
 
+    # https://github.com/pydata/xarray/issues/11397
+    # num=1 should match numpy behavior (single point at start value)
+    index = RangeIndex.linspace(0.0, 1.0, num=1, endpoint=True, dim="x")
+    actual = xr.Coordinates.from_xindex(index)
+    expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=1, endpoint=True)})
+    assert_allclose(actual, expected, check_default_indexes=False)
+    assert index.start == 0.0
+
+    index = RangeIndex.linspace(0.0, 1.0, num=1, endpoint=False, dim="x")
+    actual = xr.Coordinates.from_xindex(index)
+    expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=1, endpoint=False)})
+    assert_allclose(actual, expected, check_default_indexes=False)
+    assert index.start == 0.0
+
 
 def test_range_index_dtype() -> None:
     index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x", dtype=np.float32)
