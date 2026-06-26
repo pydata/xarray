@@ -134,16 +134,21 @@ class _PickleWorkaround:
         new_class.__qualname__ = cls.__qualname__ + "." + new_class.__name__
 
 
-def _open_scipy_netcdf(
-    filename: str | os.PathLike[Any] | IO[bytes],
-    mode: Literal["r", "w", "a"],
-    mmap: bool | None,
-    version: Literal[1, 2],
-    flush_only: bool = False,
-) -> scipy.io.netcdf_file:
+# Cache for the flush_only_netcdf_file class to prevent identity mismatch on pickle.
+# GH#11323: Creating a new class on each call to _open_scipy_netcdf() breaks pickling
+# because subsequent calls overwrite _PickleWorkaround.flush_only_netcdf_file with a
+# new class object, making previously-created instances unpicklable.
+_flush_only_class: type[scipy.io.netcdf_file] | None = None
+
+
+def _get_flush_only_class() -> type[scipy.io.netcdf_file]:
+    """Return a cached subclass of scipy.io.netcdf_file that only flushes on close."""
+    global _flush_only_class
+    if _flush_only_class is not None:
+        return _flush_only_class
+
     import scipy.io
 
-    # TODO: Remove this after upstreaming these fixes.
     class flush_only_netcdf_file(scipy.io.netcdf_file):
         # scipy.io.netcdf_file.close() incorrectly closes file objects that
         # were passed in as constructor arguments:
@@ -166,10 +171,20 @@ def _open_scipy_netcdf(
             pass
 
     _PickleWorkaround.add_cls(flush_only_netcdf_file)
+    _flush_only_class = flush_only_netcdf_file
+    return _flush_only_class
 
-    netcdf_file = (
-        _PickleWorkaround.flush_only_netcdf_file if flush_only else scipy.io.netcdf_file
-    )
+
+def _open_scipy_netcdf(
+    filename: str | os.PathLike[Any] | IO[bytes],
+    mode: Literal["r", "w", "a"],
+    mmap: bool | None,
+    version: Literal[1, 2],
+    flush_only: bool = False,
+) -> scipy.io.netcdf_file:
+    import scipy.io
+
+    netcdf_file = _get_flush_only_class() if flush_only else scipy.io.netcdf_file
 
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):

@@ -4682,6 +4682,35 @@ class TestScipyFilePath(NetCDF3Only, CFEncodedBase):
                 open_dataset(tmp_file, engine="scipy")
 
 
+@requires_scipy
+def test_scipy_pickle_after_multiple_opens(tmp_path: Path) -> None:
+    """Regression test for GH#11323.
+
+    Opening multiple scipy-backed datasets from file-like objects should not
+    break pickling of previously-opened datasets. The bug was that each call
+    to _open_scipy_netcdf() created a new flush_only_netcdf_file class,
+    overwriting the previous one and breaking pickle's class-identity check.
+    """
+    ds = Dataset(
+        {"foo": (("x",), np.arange(4, dtype=np.float64))},
+        coords={"x": np.arange(4)},
+    )
+    buf = BytesIO()
+    ds.to_netcdf(buf, engine="scipy")
+
+    buf.seek(0)
+    ds1 = open_dataset(buf, engine="scipy")
+    buf.seek(0)
+    ds2 = open_dataset(buf, engine="scipy")
+
+    # This should not raise PicklingError
+    pickle.dumps(ds1)
+    pickle.dumps(ds2)
+
+    ds1.close()
+    ds2.close()
+
+
 @requires_netCDF4
 class TestNetCDF3ViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
     engine: T_NetcdfEngine = "netcdf4"
