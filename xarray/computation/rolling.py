@@ -177,7 +177,7 @@ class Rolling(Generic[T_Xarray]):
         def method(self, keep_attrs=None, **kwargs):
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
-            return self._array_reduce(
+            result = self._array_reduce(
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
                 numbagg_move_func=numbagg_move_func,
@@ -187,6 +187,11 @@ class Rolling(Generic[T_Xarray]):
                 sliding_window_view_kwargs=dict(automatic_rechunk=automatic_rechunk),
                 **kwargs,
             )
+
+            if name in ("argmax", "argmin"):
+                result = self._adjust_argminmax_result(result)
+
+            return result
 
         method.__name__ = name
         method.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=name)
@@ -579,6 +584,33 @@ class DataArrayRolling(Rolling["DataArray"]):
         # Find valid windows based on count.
         counts = self._counts(keep_attrs=False)
         return result.where(counts >= self.min_periods)
+
+    def _is_cumulative(self) -> bool:
+        for i, d in enumerate(self.dim):
+            if self.center[i]:
+                return False
+            if self.window[i] != self.obj.sizes[d]:
+                return False
+        return True
+
+    def _adjust_argminmax_result(self, result: DataArray) -> DataArray:
+        if not self._is_cumulative():
+            return result
+
+        for i, d in enumerate(self.dim):
+            window_size = self.window[i]
+            if window_size <= 1:
+                continue
+
+            n = result.sizes[d]
+            position = np.arange(n)
+            # GH#11336: cumulative windows have NaN padding on the left,
+            # so window-local indices need adjustment to become absolute:
+            # absolute = local - (window_size - 1 - position)
+            offset = window_size - 1 - position
+            result = result - offset
+
+        return result
 
     def _counts(self, keep_attrs: bool | None) -> DataArray:
         """Number of non-nan entries in each rolling window."""

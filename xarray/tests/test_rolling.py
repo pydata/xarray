@@ -49,6 +49,31 @@ def test_cumulative_vs_cum(d) -> None:
     assert_identical(result, expected)
 
 
+@pytest.mark.parametrize("func", ["argmax", "argmin"])
+def test_cumulative_argminmax(func) -> None:
+    # Regression test for GH#11336: cumulative argmax/argmin should return
+    # absolute indices, not window-local indices
+    da = DataArray([3, 1, 4, 2, 5], dims=["time"])
+    result = getattr(da.cumulative("time"), func)()
+
+    if func == "argmax":
+        expected = DataArray([0, 0, 2, 2, 4], dims=["time"])
+    else:
+        expected = DataArray([0, 1, 1, 1, 1], dims=["time"])
+
+    assert_identical(result, expected)
+
+
+def test_cumulative_argmax_2d() -> None:
+    da = DataArray(
+        [[1, 3, 2], [4, 1, 5]],
+        dims=("x", "time"),
+    )
+    result = da.cumulative("time").argmax()
+    expected = DataArray([[0, 1, 1], [0, 0, 2]], dims=("x", "time"))
+    assert_identical(result, expected)
+
+
 class TestDataArrayRolling:
     @pytest.mark.parametrize("da", (1, 2), indirect=True)
     @pytest.mark.parametrize("center", [True, False])
