@@ -165,7 +165,7 @@ def _get_flush_only_class() -> type[Any]:
         # resolve it by qualname ``xarray.backends.scipy_.flush_only_netcdf_file``.
         import sys
 
-        sys.modules[__name__].flush_only_netcdf_file = _flush_only_class
+        sys.modules[__name__].flush_only_netcdf_file = _flush_only_class  # type: ignore[attr-defined]
     return _flush_only_class
 
 
