@@ -46,7 +46,9 @@ def test_variable_expr_protocol_avoids_graph_materialization(monkeypatch):
     monkeypatch.setattr(dask_array.Array, "__dask_graph__", raise_if_materialized)
 
     assert dask.is_dask_collection(var)
-    assert len(var.__dask_exprs__()) == 1
+    exprs = var.__dask_exprs__()
+    assert exprs is not None
+    assert len(exprs) == 1
     assert isinstance(dask.base.collections_to_expr(Dataset({"x": var})), CompositeExpr)
 
 
