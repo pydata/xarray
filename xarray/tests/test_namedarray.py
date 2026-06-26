@@ -666,3 +666,16 @@ def test_fake_target_chunksize_cftime() -> None:
 
     assert faked_chunksize == 73
     assert dtype == np.float64
+
+
+def test_module_available_with_none_version(monkeypatch):
+    """Regression test for https://github.com/pydata/xarray/issues/11344."""
+    import importlib.metadata
+
+    from xarray.namedarray.utils import module_available
+
+    module_available.cache_clear()
+    monkeypatch.setattr(importlib.metadata, "version", lambda name: None)
+
+    assert module_available("numpy", minversion="1.0.0") is False
+    assert module_available("numpy") is True
