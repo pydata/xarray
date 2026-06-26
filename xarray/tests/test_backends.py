@@ -6917,6 +6917,7 @@ def test_source_encoding_always_present_with_pathlib() -> None:
 
 @requires_h5netcdf
 @requires_fsspec
+@requires_dask  # TODO remove after https://github.com/pydata/xarray/issues/9038
 def test_source_encoding_always_present_with_fsspec() -> None:
     import fsspec
 
@@ -8122,6 +8123,7 @@ class TestZarrRegionAuto:
 
 @requires_h5netcdf
 @requires_fsspec
+@requires_dask  # TODO remove after https://github.com/pydata/xarray/issues/9038
 def test_h5netcdf_storage_options() -> None:
     with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
         ds1 = create_test_data()
@@ -8140,3 +8142,14 @@ def test_h5netcdf_storage_options() -> None:
             storage_options={"skip_instance_cache": False},
         ) as ds:
             assert_identical(xr.concat([ds1, ds2], dim="time", data_vars="all"), ds)
+
+
+def test_get_mtime_non_file_paths() -> None:
+    """_get_mtime should not raise on non-file paths (gh#11386)."""
+    from xarray.backends.api import _get_mtime
+
+    # Non-existent local path should return None, not crash
+    assert _get_mtime("/nonexistent/path.nc") is None
+
+    # GDAL virtual filesystem paths are not real files
+    assert _get_mtime("/vsicurl/https://example.com/file.nc") is None

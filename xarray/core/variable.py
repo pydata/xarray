@@ -983,7 +983,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
-            data = copy.copy(self._data)
+            # Only copy data when it is actually being changed.
+            # Many callers (e.g. drop_encoding) only change encoding/attrs,
+            # and a full data copy is expensive for large arrays.
+            data = self._data
         if attrs is _default:
             attrs = copy.copy(self._attrs)
         if encoding is _default:

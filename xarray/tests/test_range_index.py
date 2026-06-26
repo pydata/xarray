@@ -94,6 +94,11 @@ def test_range_index_linspace() -> None:
     assert index.stop == 1.1
     assert index.step == 0.1
 
+    index = RangeIndex.linspace(0.0, 1.0, num=1, dim="x")
+    actual = xr.Coordinates.from_xindex(index)
+    expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=1)})
+    assert_equal(actual, expected, check_default_indexes=False)
+
 
 def test_range_index_dtype() -> None:
     index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x", dtype=np.float32)

@@ -32,11 +32,11 @@ pydap-server = "*"
 [feature.py311.dependencies]
 python = "3.11.*"
 
-[feature.py312.dependencies]
-python = "3.12.*"
-
 [feature.py313.dependencies]
 python = "3.13.*"
+
+[feature.py314.dependencies]
+python-gil = "3.14.*"
 
 [feature.backends.dependencies]
 # files
@@ -63,6 +63,7 @@ numbagg = "*"
 [feature.dask.dependencies]
 dask = "*"
 distributed = "*"
+iris = "*"        # depends on dask
 
 [feature.accel.dependencies]
 flox = "*"
@@ -92,9 +93,6 @@ pooch = "*"
 
 # calendar
 cftime = "*"
-
-# other
-iris = "*"
 
 [feature.extras.pypi-dependencies]
 # array
@@ -201,7 +199,7 @@ cartopy = "*"
 seaborn = "*"
 
 [feature.test.dependencies]
-pytest = "*"
+pytest = "!=9.1.0"
 pytest-asyncio = "*"
 pytest-cov = "*"
 pytest-env = "*"
@@ -220,6 +218,7 @@ test = { cmd = "pytest", description = "Run the test suite with pytest." }
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
+iris = "*"
 ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
@@ -376,11 +375,24 @@ numpydoc = "*"
 [feature.numpydoc-lint.tasks]
 numpydoc-lint = { cmd = "python ci/numpydoc-public-api.py" }
 
+[feature.nodask.constraints]
+dask-core = "<0.0a0"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
-test-py313-no-numba = { features = [
+test-py313 = { features = [
   "py313",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
+test-py314-no-numba = { features = [
+  "py314",
   "test",
   "backends",
   "accel",
@@ -388,8 +400,9 @@ test-py313-no-numba = { features = [
   "viz",
   "extras",
 ] }
-test-py313-no-dask = { features = [
-  "py312",
+test-py314-no-dask = { features = [
+  "py314",
+  "nodask",
   "test",
   "backends",
   "accel",
@@ -397,8 +410,8 @@ test-py313-no-dask = { features = [
   "viz",
   "extras",
 ] }
-test-py313 = { features = [
-  "py313",
+test-py314 = { features = [
+  "py314",
   "test",
   "backends",
   "accel",
@@ -454,8 +467,8 @@ test-py311-with-typing = { features = [
   "typing-stubs",
 ] }
 
-test-py313-with-typing = { features = [
-  "py313",
+test-py314-with-typing = { features = [
+  "py314",
   "test",
   "backends",
   "accel",

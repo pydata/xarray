@@ -28,7 +28,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 2
           persist-credentials: false
@@ -48,13 +48,11 @@ jobs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - uses: Parcels-code/pixi-lock/create-and-cache@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
         id: pixi-lock
-        with:
-          pixi-version: v0.70.0
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pixi-lock
@@ -72,7 +70,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        pixi-env: ["test-py311", "test-py313"]
+        pixi-env: ["test-py311", "test-py314"]
         pytest-addopts: [""]
         include:
           # Minimum python version:
@@ -83,11 +81,11 @@ jobs:
           - pixi-env: "test-py311-min-versions"
             os: ubuntu-latest
           # Latest python version:
-          - pixi-env: "test-py313-no-numba"
+          - pixi-env: "test-py314-no-numba"
             os: ubuntu-latest
-          - pixi-env: "test-py313-no-dask"
+          - pixi-env: "test-py314-no-dask"
             os: ubuntu-latest
-          - pixi-env: "test-py313"
+          - pixi-env: "test-py314"
             pytest-addopts: "flaky"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
@@ -96,7 +94,7 @@ jobs:
             pytest-addopts: "mypy"
             numprocesses: 1
             os: ubuntu-latest
-          - pixi-env: "test-py313-with-typing"
+          - pixi-env: "test-py314-with-typing"
             numprocesses: 1
             os: ubuntu-latest
 
@@ -105,7 +103,7 @@ jobs:
       deployment: false
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
           persist-credentials: false
@@ -181,7 +179,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
