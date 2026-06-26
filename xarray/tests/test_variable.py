@@ -2947,6 +2947,20 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         orig = Variable(dims=(), data=array2)
         assert isinstance(orig._data.item(), CustomWithValuesAttr)  # type: ignore[union-attr]
 
+    def test_array_wrap_infers_dims_on_shape_change(self):
+        # Regression test for https://github.com/pydata/xarray/issues/11396
+        # np.linalg.pinv swaps last two dims; __array_wrap__ should infer this
+        var = Variable(dims=("x", "y"), data=np.arange(12).reshape(3, 4))
+        result = np.linalg.pinv(var)
+        assert result.shape == (4, 3)
+        assert result.dims == ("y", "x")
+
+    def test_array_wrap_preserves_dims_when_shape_unchanged(self):
+        var = Variable(dims=("x", "y"), data=np.random.rand(3, 3))
+        result = np.linalg.pinv(var)
+        assert result.shape == (3, 3)
+        assert result.dims == ("x", "y")
+
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with assert_no_warnings():

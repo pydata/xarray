@@ -7673,3 +7673,16 @@ def test_unstack_index_var() -> None:
         name="x",
     )
     assert_identical(actual, expected)
+
+
+def test_pinv_infers_dims_on_shape_change():
+    # Regression test for GH#11396
+    da = xr.DataArray(
+        np.arange(12).reshape(3, 4),
+        coords={"foo": ["x", "y", "z"], "bar": ["a", "b", "c", "d"]},
+    )
+    result = np.linalg.pinv(da)
+    assert result.shape == (4, 3)
+    assert result.dims == ("bar", "foo")
+    assert list(result.coords["foo"].values) == ["x", "y", "z"]
+    assert list(result.coords["bar"].values) == ["a", "b", "c", "d"]

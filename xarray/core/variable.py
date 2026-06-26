@@ -95,6 +95,60 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
+def _infer_new_dims(old_dims, old_shape, new_shape):
+    """Infer new dimension names when shape changes in __array_wrap__.
+
+    Handles the case where numpy operations rearrange dimensions (e.g.,
+    np.linalg.pinv swaps the last two axes). When the new shape is a
+    permutation of the old shape, we map dimension names accordingly.
+
+    Parameters
+    ----------
+    old_dims : tuple
+        Original dimension names.
+    old_shape : tuple
+        Original shape.
+    new_shape : tuple
+        New shape after the numpy operation.
+
+    Returns
+    -------
+    tuple
+        New dimension names that match the new shape.
+
+    Raises
+    ------
+    ValueError
+        If the shape change cannot be resolved as a dimension permutation.
+    """
+    if len(old_shape) != len(new_shape):
+        raise ValueError(
+            f"Cannot infer dimensions: shape changed from {old_shape} to {new_shape} "
+            f"(different number of dimensions)"
+        )
+
+    # Try to find a permutation that maps old_shape to new_shape
+    # This handles cases like np.linalg.pinv which swaps last two dims
+    used = [False] * len(old_shape)
+    new_dims = list(old_dims)
+
+    for i, new_size in enumerate(new_shape):
+        found = False
+        for j, old_size in enumerate(old_shape):
+            if not used[j] and old_size == new_size:
+                new_dims[i] = old_dims[j]
+                used[j] = True
+                found = True
+                break
+        if not found:
+            raise ValueError(
+                f"Cannot infer dimensions: shape changed from {old_shape} to {new_shape} "
+                f"(not a permutation of existing dimensions)"
+            )
+
+    return tuple(new_dims)
+
+
 def as_variable(
     obj: T_DuckArray | Any, name=None, auto_convert: bool = True
 ) -> Variable | IndexVariable:
@@ -2432,7 +2486,11 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return self._new(data=self.data.real)
 
     def __array_wrap__(self, obj, context=None, return_scalar=False):
-        return Variable(self.dims, obj)
+        if obj.shape != self.shape:
+            dims = _infer_new_dims(self.dims, self.shape, obj.shape)
+        else:
+            dims = self.dims
+        return Variable(dims, obj)
 
     def _unary_op(self, f, *args, **kwargs):
         keep_attrs = kwargs.pop("keep_attrs", None)
