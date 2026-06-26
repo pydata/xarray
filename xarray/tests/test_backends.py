@@ -2523,6 +2523,14 @@ class InMemoryNetCDF:
             with pickle.loads(pickle.dumps(roundtrip)) as unpickled:
                 assert_identical(unpickled, original)
 
+    def test_pickle_open_dataset_after_multiple_opens(self) -> None:
+        original = Dataset({"foo": ("x", [1, 2, 3])})
+        netcdf_bytes = bytes(original.to_netcdf(engine=self.engine))
+        with open_dataset(netcdf_bytes, engine=self.engine) as ds1:
+            with open_dataset(netcdf_bytes, engine=self.engine):
+                with pickle.loads(pickle.dumps(ds1)) as unpickled:
+                    assert_identical(unpickled, original)
+
     def test_compute_false(self) -> None:
         original = create_test_data()
         with pytest.raises(
