@@ -1771,6 +1771,9 @@ class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
             )
         self.array = array
 
+    def __array_namespace__(self: Any) -> ModuleType:
+        return get_array_namespace(self.array)
+
 
 class ArrayApiIndexingAdapter(IndexingAdapter):
     """Wrap an array API array to use explicit indexing."""
