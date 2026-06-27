@@ -68,8 +68,9 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         import dask.array as da
 
         if isinstance(data, ImplicitToExplicitIndexingAdapter):
-            # lazily loaded backend array classes should use NumPy array operations.
-            kwargs["meta"] = np.ndarray
+            # lazily loaded backend array classes should use NumPy or CuPy array operations.
+            xp = data.__array_namespace__()
+            kwargs["meta"] = xp.ndarray
 
         return da.from_array(
             data,

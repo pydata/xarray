@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.tests import requires_dask
 
 # Don't run cupy in CI because it requires a GPU
 NAMESPACE_ARRAYS = {
@@ -22,6 +23,7 @@ NAMESPACE_ARRAYS = {
             "argsort": "no argsort",
             "conjugate": "conj but no conjugate",
             "searchsorted": "dask.array.searchsorted but no Array.searchsorted",
+            "dask_chunk_compute_roundtrip": "no need to test dask with dask",
         },
     },
     "jax.numpy": {
@@ -123,7 +125,7 @@ class _BaseTest:
             reason = NAMESPACE_ARRAYS[namespace]["xfails"][xarray_method]
             pytest.xfail(f"xfail for {self.namespace}: {reason}")
 
-    def get_test_dataarray(self):
+    def get_test_dataarray(self) -> xr.DataArray:
         data = np.asarray([[1, 2, 3, np.nan, 5]])
         x = np.arange(5)
         data = self.constructor(data)
@@ -516,3 +518,25 @@ class TestDataArrayMethods(_BaseTest):
     def test_broadcast_like(self):
         result = self.x.broadcast_like(self.x)
         assert isinstance(result.data, self.Array)
+
+
+@pytest.mark.parametrize("namespace", NAMESPACE_ARRAYS)
+class TestDatasetMethods(_BaseTest):
+    @pytest.fixture(autouse=True)
+    def setUp(self, request, namespace):
+        self.setup_for_test(request, namespace)
+        self.ds = self.get_test_dataarray().to_dataset()
+
+    @requires_dask
+    def test_dask_chunk_compute_roundtrip(self):
+        """
+        Ensure duck arrays chunked into a dask.Array get returned as duck arrays
+        (and not numpy array) after calling `.compute()`.
+        """
+        chunked_ds = self.ds.chunk(x=2, chunked_array_type="dask")
+        assert isinstance(chunked_ds.foo.data._meta, self.Array)
+
+        computed_ds = chunked_ds.compute()
+        assert isinstance(computed_ds.foo.data, self.Array), (
+            f"Expected: {self.Array}, got {computed_ds.foo.data.__class__}"
+        )
