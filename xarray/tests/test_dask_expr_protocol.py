@@ -36,6 +36,22 @@ def test_dataset_composite_expr_protocol_simple():
     )
 
 
+def test_variable_expr_protocol_avoids_graph_materialization(monkeypatch):
+    x = dask_array.arange(6, chunks=(3,))
+    var = xr.Variable(("i",), x + 1)
+
+    def raise_if_materialized(self):
+        raise AssertionError("__dask_graph__ should not be materialized")
+
+    monkeypatch.setattr(dask_array.Array, "__dask_graph__", raise_if_materialized)
+
+    assert dask.is_dask_collection(var)
+    exprs = var.__dask_exprs__()
+    assert exprs is not None
+    assert len(exprs) == 1
+    assert isinstance(dask.base.collections_to_expr(Dataset({"x": var})), CompositeExpr)
+
+
 def test_dataarray_composite_expr_protocol_includes_chunked_coord():
     x = dask_array.arange(6, chunks=(3,))
     arr = DataArray(x + 1, dims=("i",), coords={"coord": ("i", x + 10)}, name="z")
