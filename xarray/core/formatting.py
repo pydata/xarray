@@ -700,7 +700,9 @@ def short_data_repr(array):
 
     if isinstance(array, np.ndarray):
         return short_array_repr(array)
-    elif is_duck_array(internal_data):
+    elif not isinstance(internal_data, (ExplicitlyIndexed)) and is_duck_array(
+        internal_data
+    ):
         return limit_lines(repr(array.data), limit=40)
     elif getattr(array, "_in_memory", None):
         return short_array_repr(array)

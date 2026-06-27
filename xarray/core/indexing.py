@@ -612,6 +612,9 @@ class ExplicitlyIndexed:
         else:
             return np.asarray(self.get_duck_array(), dtype=dtype)
 
+    def __array_namespace__(self: Any) -> ModuleType:
+        return get_array_namespace(self.array)
+
     def get_duck_array(self):
         return self.array
 
