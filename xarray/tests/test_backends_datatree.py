@@ -15,6 +15,8 @@ import xarray as xr
 from xarray import DataTree, load_datatree, open_datatree, open_groups
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
+    dask_array_type,
+    get_dask_chunkmanager,
     network,
     parametrize_zarr_format,
     requires_dask,
@@ -70,10 +72,6 @@ def assert_chunks_equal(
     actual: DataTree, expected: DataTree, enforce_dask: bool = False
 ) -> None:
     __tracebackhide__ = True
-
-    from xarray.namedarray.pycompat import array_type
-
-    dask_array_type = array_type("dask")
 
     comparison = {
         (path, name): (
@@ -772,8 +770,6 @@ class TestZarrDatatreeIO:
     def test_to_zarr_compute_false(
         self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal[2, 3]
     ) -> None:
-        import dask.array as da
-
         storepath = tmp_path / "test.zarr"
         original_dt = simple_datatree.chunk()
         result = original_dt.to_zarr(
@@ -838,7 +834,7 @@ class TestZarrDatatreeIO:
                     # don't expect dask.Arrays to be written to disk, as compute=False
                     # also don't expect numpy arrays containing only zarr's fill_value to be written to disk
                     chunks_expected=(
-                        not isinstance(var.data, da.Array)
+                        not isinstance(var.data, dask_array_type)
                         and (
                             var.data != DEFAULT_ZARR_FILL_VALUE
                             or WRITE_EMPTY_CHUNKS_DEFAULT
@@ -868,8 +864,6 @@ class TestZarrDatatreeIO:
 
     @requires_dask
     def test_to_zarr_no_redundant_computation(self, tmpdir, zarr_format) -> None:
-        import dask.array as da
-
         eval_count = 0
 
         def expensive_func(x):
@@ -877,8 +871,11 @@ class TestZarrDatatreeIO:
             eval_count += 1
             return x + 1
 
-        base = da.random.random((), chunks=())
-        derived1 = da.map_blocks(expensive_func, base, meta=np.array((), np.float64))
+        chunkmanager = get_dask_chunkmanager()
+        base = chunkmanager.array_api.random.random((), chunks=())
+        derived1 = chunkmanager.map_blocks(
+            expensive_func, base, meta=np.array((), np.float64)
+        )
         derived2 = derived1 + 1  # depends on derived1
         tree = DataTree.from_dict(
             {

@@ -15,6 +15,7 @@ from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
     get_chunked_array_type,
     guess_chunkmanager,
+    list_chunkmanagers,
 )
 
 if TYPE_CHECKING:
@@ -83,7 +84,11 @@ def _maybe_chunk(
         chunked_array_type = guess_chunkmanager(
             chunked_array_type
         )  # coerce string to ChunkManagerEntrypoint type
-        if isinstance(chunked_array_type, DaskManager):
+        is_dask_chunkmanager = isinstance(chunked_array_type, DaskManager) or any(
+            name == "dask" and manager is chunked_array_type
+            for name, manager in list_chunkmanagers().items()
+        )
+        if is_dask_chunkmanager:
             if not just_use_token:
                 from dask.base import tokenize
 
