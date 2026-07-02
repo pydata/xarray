@@ -509,6 +509,28 @@ class TestPandasMultiIndex:
         with pytest.raises(IndexError):
             index.sel({"x": (slice(None), 1, "no_level")})
 
+    def test_sel_nested_tuple_key(self) -> None:
+        """Test that tuple-valued MultiIndex levels can be selected with a single key.
+
+        Regression test for GH#11341: when a MultiIndex level contains tuples,
+        selecting with a nested tuple key ((1, 1), 2) should collapse the dimension
+        just like selecting with a non-nested tuple key (1, 2).
+        """
+        # Create a MultiIndex where the first level contains tuples
+        nested_level_0 = pd.Index(
+            [(1, 1), (1, 1), (2, 2), (3, 3)], name="a", tupleize_cols=False
+        )
+        nested_level_1 = pd.Index([1, 2, 10, 20], name="b")
+        nested_mi = pd.MultiIndex.from_arrays([nested_level_0, nested_level_1])
+
+        index = PandasMultiIndex(nested_mi, "index")
+
+        # Select with a nested tuple key - should return scalar indexer
+        actual = index.sel({"index": ((1, 1), 2)})
+        # pandas.get_loc returns an integer for exact match
+        expected_dim_indexers = {"index": 1}
+        assert actual.dim_indexers == expected_dim_indexers
+
     def test_join(self):
         midx = pd.MultiIndex.from_product([["a", "aa"], [1, 2]], names=("one", "two"))
         level_coords_dtype = {"one": "=U2", "two": "i"}
