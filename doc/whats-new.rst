@@ -68,6 +68,10 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Document :py:meth:`Index._repr_inline_` in the custom-index how-to guide
+  (:issue:`11036`).
+  By `Mike Yevdokimov <https://github.com/xronocode>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
