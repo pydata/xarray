@@ -148,7 +148,7 @@ jobs:
           name: log file
           path: logs/
       - name: Generate and publish the report
-        uses: scientific-python/issue-from-pytest-log-action@8e905db353437cda1d6a773de245343fbfc940dd # v1.5.0
+        uses: scientific-python/issue-from-pytest-log-action@87351a8f864e969567cda22a25a2f214cbe2340f # v1.6.0
         with:
           log-path: logs/${{ needs.upstream-dev.outputs.log-file }}
 
