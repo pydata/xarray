@@ -86,7 +86,7 @@
     # Call to pipe missing argument for kwonly parameter `kwonly`
     dt = DataTree().pipe(f, 42)
   out: |
-    main:7: error: No overload variant of "pipe" of "DataTree" matches argument types "Callable[[DataTree, int, NamedArg(int, 'kwonly')], DataTree]", "int"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataTree" matches argument types "def f(dt: DataTree, arg: int, *, kwonly: int) -> DataTree", "int"  [call-overload]
     main:7: note: Possible overload variants:
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[DataTree, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
@@ -101,7 +101,7 @@
     # Call to pipe missing keyword for kwonly parameter `kwonly`
     dt = DataTree().pipe(f, 42, 99)
   out: |
-    main:7: error: No overload variant of "pipe" of "DataTree" matches argument types "Callable[[DataTree, int, NamedArg(int, 'kwonly')], DataTree]", "int", "int"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataTree" matches argument types "def f(dt: DataTree, arg: int, *, kwonly: int) -> DataTree", "int", "int"  [call-overload]
     main:7: note: Possible overload variants:
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[DataTree, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T

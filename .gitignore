@@ -36,6 +36,7 @@ pip-log.txt
 # Unit test / coverage reports
 .coverage
 .coverage.*
+coverage.xml
 .tox
 nosetests.xml
 .cache
@@ -47,6 +48,7 @@ nosetests.xml
 .testmon*
 .tmontmp/
 .pytest_cache
+pytest.xml
 dask-worker-space/
 
 # asv environments

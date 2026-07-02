@@ -588,7 +588,7 @@ def _localize(obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
         minval = np.nanmin(new_x_loaded)
         maxval = np.nanmax(new_x_loaded)
         index = x.to_index()
-        imin, imax = index.get_indexer([minval, maxval], method="nearest")
+        imin, imax = index.get_indexer(pd.Index([minval, maxval]), method="nearest")
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
     return obj.isel(indexes), indexes_coords  # type: ignore[attr-defined]

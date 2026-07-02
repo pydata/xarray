@@ -386,45 +386,45 @@ def _decode_datetime_with_cftime(
         return np.array([], dtype=object)
 
 
+def _decode_to_timedelta(value, unit: NPDatetimeUnitOptions) -> np.timedelta64:
+    """Decode a single CF-encoded scalar to ``np.timedelta64``.
+
+    Returns NaT for encoded NaT inputs. Raises ``OutOfBoundsTimedelta`` if the
+    value is not representable.
+    """
+    # Integer arrays encode NaT as int64.min (numpy/pandas's NaT bit pattern);
+    # float arrays encode it as NaN. Detect both before the multiplication
+    # below. In numpy >= 2.5 (numpy/numpy#31378) int64.min * timedelta64
+    # raises OverflowError instead of silently producing NaT.
+    if (value.dtype.kind == "i" and int(value) == np.iinfo("int64").min) or (
+        value.dtype.kind == "f" and np.isnan(value)
+    ):
+        return np.timedelta64("NaT", unit)
+    if value > np.iinfo("int64").max or value < np.iinfo("int64").min:
+        raise OutOfBoundsTimedelta(
+            f"Value {value} can't be represented as Datetime/Timedelta."
+        )
+    delta = value * np.timedelta64(1, unit)
+    # uint overflow during the multiplication above
+    if value.dtype.kind == "u" and not np.int64(delta) == value:
+        raise OutOfBoundsTimedelta("DType overflow in Datetime/Timedelta calculation.")
+    return delta
+
+
 def _check_date_for_units_since_refdate(
     date, unit: NPDatetimeUnitOptions, ref_date: pd.Timestamp
 ) -> pd.Timestamp:
-    # check for out-of-bounds floats and raise
-    if date > np.iinfo("int64").max or date < np.iinfo("int64").min:
-        raise OutOfBoundsTimedelta(
-            f"Value {date} can't be represented as Datetime/Timedelta."
-        )
-    delta = date * np.timedelta64(1, unit)
-    if not np.isnan(delta):
-        # this will raise on dtype overflow for integer dtypes
-        if date.dtype.kind in "u" and not np.int64(delta) == date:
-            raise OutOfBoundsTimedelta(
-                "DType overflow in Datetime/Timedelta calculation."
-            )
-        # this will raise on overflow if ref_date + delta
-        # can't be represented in the current ref_date resolution
-        return timestamp_as_unit(ref_date + delta, ref_date.unit)
-    else:
-        # if date is exactly NaT (np.iinfo("int64").min) return NaT
-        # to make follow-up checks work
+    delta = _decode_to_timedelta(date, unit)
+    if np.isnat(delta):
         return pd.Timestamp("NaT")
+    # this will raise on overflow if ref_date + delta can't be represented in
+    # the current ref_date resolution
+    return timestamp_as_unit(ref_date + delta, ref_date.unit)
 
 
 def _check_timedelta_range(value, data_unit, time_unit):
-    if value > np.iinfo("int64").max or value < np.iinfo("int64").min:
-        OutOfBoundsTimedelta(f"Value {value} can't be represented as Timedelta.")
-    # on windows multiplying nan leads to RuntimeWarning
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", "invalid value encountered in multiply", RuntimeWarning
-        )
-        delta = value * np.timedelta64(1, data_unit)
-    if not np.isnan(delta):
-        # this will raise on dtype overflow for integer dtypes
-        if value.dtype.kind in "u" and not np.int64(delta) == value:
-            raise OutOfBoundsTimedelta(
-                "DType overflow in Datetime/Timedelta calculation."
-            )
+    delta = _decode_to_timedelta(value, data_unit)
+    if not np.isnat(delta):
         # this will raise on overflow if delta cannot be represented with the
         # resolutions supported by pandas.
         pd.to_timedelta(delta)
@@ -521,7 +521,7 @@ def _decode_datetime_with_pandas(
     # timedelta64 value, and therefore would raise an error in the lines above.
     if flat_num_dates.dtype.kind in "iu":
         flat_num_dates = flat_num_dates.astype(np.int64)
-    elif flat_num_dates.dtype.kind in "f":
+    elif flat_num_dates.dtype.kind == "f":
         flat_num_dates = flat_num_dates.astype(np.float64)
 
     timedeltas = _numbers_to_timedelta(
@@ -830,7 +830,7 @@ def cftime_to_nptime(
                     f"standard calendar.  Reason: {e}."
                 ) from e
             else:
-                dt = np.datetime64("NaT")
+                dt = np.datetime64("NaT", time_unit)
         new.append(dt)
     return np.asarray(new).reshape(times.shape)
 
@@ -1492,13 +1492,12 @@ class CFTimedeltaCoder(VariableCoder):
     def __init__(
         self,
         time_unit: PDDatetimeUnitOptions | None = None,
-        decode_via_units: bool = True,
+        decode_via_units: bool = False,
         decode_via_dtype: bool = True,
     ) -> None:
         self.time_unit = time_unit
         self.decode_via_units = decode_via_units
         self.decode_via_dtype = decode_via_dtype
-        self._emit_decode_timedelta_future_warning = False
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.timedelta64):
@@ -1540,23 +1539,6 @@ class CFTimedeltaCoder(VariableCoder):
                 else:
                     time_unit = self.time_unit
             else:
-                if self._emit_decode_timedelta_future_warning:
-                    var_string = f"the variable {name!r}" if name else ""
-                    emit_user_level_warning(
-                        "In a future version, xarray will not decode "
-                        f"{var_string} into a timedelta64 dtype based on the "
-                        "presence of a timedelta-like 'units' attribute by "
-                        "default. Instead it will rely on the presence of a "
-                        "timedelta64 'dtype' attribute, which is now xarray's "
-                        "default way of encoding timedelta64 values.\n"
-                        "To continue decoding into a timedelta64 dtype, either "
-                        "set `decode_timedelta=True` when opening this "
-                        "dataset, or add the attribute "
-                        "`dtype='timedelta64[ns]'` to this variable on disk.\n"
-                        "To opt-in to future behavior, set "
-                        "`decode_timedelta=False`.",
-                        FutureWarning,
-                    )
                 if self.time_unit is None:
                     time_unit = "ns"
                 else:

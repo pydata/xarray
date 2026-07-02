@@ -72,7 +72,7 @@ UNARY_OPS = (
     ("__invert__", "operator.invert"),
 )
 # round method and numpy/pandas unary methods which don't modify the data shape,
-# so the result should still be wrapped in an Variable/DataArray/Dataset
+# so the result should still be wrapped in a Variable/DataArray/Dataset
 OTHER_UNARY_METHODS = (
     ("round", "ops.round_"),
     ("argsort", "ops.argsort"),

@@ -311,7 +311,7 @@ __ https://www.unidata.ucar.edu/software/netcdf/
     If you aren't familiar with this data format, the `netCDF FAQ`_ is a good
     place to start.
 
-.. _netCDF FAQ: https://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
+.. _netCDF FAQ: https://docs.unidata.ucar.edu/netcdf-c/current/faq.html
 
 Reading and writing netCDF files with xarray requires scipy, h5netcdf, or the
 `netCDF4-Python`__ library to be installed. SciPy only supports reading and writing
@@ -851,7 +851,7 @@ Natively the xarray data structures can only handle one level of nesting, organi
 DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you
 can only access one group and a time and will need to specify group names.
 
-.. _HDF5: https://hdfgroup.github.io/hdf5/index.html
+.. _HDF5: https://www.hdfgroup.org/solutions/hdf5/
 .. _h5py: https://www.h5py.org/
 
 

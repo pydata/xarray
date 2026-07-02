@@ -12,6 +12,7 @@ from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
+    dask_array_api,
     has_dask,
     requires_dask,
     requires_dask_ge_2024_11_0,
@@ -137,7 +138,7 @@ class TestDataArrayRolling:
         # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
         np.testing.assert_allclose(actual.values, expected)
 
-        with pytest.warns(DeprecationWarning, match="Reductions are applied"):
+        with pytest.warns(FutureWarning, match="Reductions are applied"):
             getattr(rolling_obj, name)(dim="time")
 
         # Test center
@@ -157,7 +158,7 @@ class TestDataArrayRolling:
         rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
         actual = getattr(rolling_obj, name)().load()
         if name != "count":
-            with pytest.warns(DeprecationWarning, match="Reductions are applied"):
+            with pytest.warns(FutureWarning, match="Reductions are applied"):
                 getattr(rolling_obj, name)(dim="time")
         # numpy version
         rolling_obj = da.load().rolling(
@@ -616,16 +617,16 @@ class TestDatasetRolling:
 
     @requires_dask_ge_2024_11_0
     def test_rolling_construct_automatic_rechunk(self):
-        import dask
+        da = dask_array_api
 
         # Construct dataset with chunk size of (400, 400, 1) or 1.22 MiB
-        da = DataArray(
+        array = DataArray(
             dims=["latitude", "longitude", "time"],
-            data=dask.array.random.random((400, 400, 400), chunks=(-1, -1, 1)),
+            data=da.random.random((400, 400, 400), chunks=(-1, -1, 1)),
             name="foo",
         )
 
-        for obj in [da, da.to_dataset()]:
+        for obj in [array, array.to_dataset()]:
             # Dataset now has chunks of size (400, 400, 100 100) or 11.92 GiB
             rechunked = obj.rolling(time=100, center=True).construct(
                 "window",

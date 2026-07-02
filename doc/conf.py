@@ -54,6 +54,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "jupyter_sphinx",
+    "myst_parser",
     "nbsphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",
@@ -192,9 +193,7 @@ language = "en"
 project = "xarray"
 copyright = f"2014-{datetime.datetime.now().year}, xarray Developers"
 
-# The short Y.M.D version.
-v = packaging.version.parse(xarray.__version__)
-version = ".".join(str(p) for p in v.release)
+version = xarray.__version__
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -234,6 +233,7 @@ html_theme_options = {
     "header_links_before_dropdown": 8,
     "navbar_align": "left",
     "footer_center":["last-updated"],
+    "announcement": "Xarray now has a home in the <a href='https://ossci.zulipchat.com/'>OSSci Zulip</a>! Chat here with other devs, users, and our friends at Zarr.", # TODO: Remove a couple months'ish after 21 March 2026
     # Instead of adding these to the header bar they are linked in 'getting help' and 'contributing'
     # "icon_links": [
     # {
@@ -270,6 +270,10 @@ html_favicon = "_static/logos/Xarray_Icon_Final.svg"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 html_css_files = ["style.css"]
+
+linkcheck_exclude_documents = [
+    r'whats-new.*', # Allow broken links in old release notes
+]
 
 
 # configuration for sphinxext.opengraph
@@ -335,6 +339,11 @@ intersphinx_mapping = {
     "xarray-lmfit": ("https://xarray-lmfit.readthedocs.io/stable", None),
 }
 
+# Resolve the git ref once at import time, not per-object.
+tag = subprocess.getoutput("git describe --tags --exact-match HEAD")
+source_ref = tag if tag.startswith("v") else "main"
+
+
 # based on numpy doc/source/conf.py
 def linkcode_resolve(domain, info):
     """
@@ -376,13 +385,7 @@ def linkcode_resolve(domain, info):
 
     fn = os.path.relpath(fn, start=os.path.dirname(xarray.__file__))
 
-    if "+" in xarray.__version__:
-        return f"https://github.com/pydata/xarray/blob/main/xarray/{fn}{linespec}"
-    else:
-        return (
-            f"https://github.com/pydata/xarray/blob/"
-            f"v{xarray.__version__}/xarray/{fn}{linespec}"
-        )
+    return f"https://github.com/pydata/xarray/blob/{source_ref}/xarray/{fn}{linespec}"
 
 
 def html_page_context(app, pagename, templatename, context, doctree):
