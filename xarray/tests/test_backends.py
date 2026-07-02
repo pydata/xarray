@@ -2695,6 +2695,60 @@ class ZarrBase(CFEncodedBase):
     async def test_load_async(self) -> None:
         await super().test_load_async()
 
+    def test_roundtrip_boolean_dtype(self) -> None:
+        original = create_boolean_data()
+        assert original["x"].dtype == "bool"
+        with self.create_zarr_target() as store_target:
+            self.save(original, store_target, consolidated=False)
+            # Verify on-disk zarr array uses native bool dtype (not int8)
+            zg = zarr.open_group(store_target, mode="r")
+            zarr_arr = zg["x"]
+            assert isinstance(zarr_arr, zarr.Array)
+            assert zarr_arr.dtype == np.dtype("bool")
+            assert "dtype" not in zarr_arr.attrs
+            with self.open(
+                store_target, backend_kwargs={"consolidated": False}
+            ) as actual:
+                assert_identical(original, actual)
+                assert actual["x"].dtype == "bool"
+                # Verify second roundtrip also preserves bool
+                with self.roundtrip(actual) as actual2:
+                    assert_identical(original, actual2)
+                    assert actual2["x"].dtype == "bool"
+
+    def test_roundtrip_boolean_dtype_legacy_int8(self) -> None:
+        """Verify backward compat: old-style int8 + attrs['dtype']='bool' decodes to bool."""
+        original = create_boolean_data()
+        with self.create_zarr_target() as store_target:
+            zg = zarr.open_group(store_target, mode="w")
+            data_int8 = original["x"].values.astype("i1")
+            is_v3_format = has_zarr_v3 and zg.metadata.zarr_format == 3
+            if is_v3_format:
+                arr = zg.create_array(
+                    "x",
+                    shape=data_int8.shape,
+                    dtype=data_int8.dtype,
+                    fill_value=-1,
+                    dimension_names=("t", "x"),
+                )
+            else:
+                arr = zg.create_array(
+                    "x",
+                    shape=data_int8.shape,
+                    dtype=data_int8.dtype,
+                    fill_value=-1,
+                )
+            arr[:] = data_int8
+            arr.attrs["dtype"] = "bool"
+            arr.attrs["units"] = "-"
+            if not is_v3_format:
+                arr.attrs["_ARRAY_DIMENSIONS"] = ["t", "x"]
+            with self.open(
+                store_target, backend_kwargs={"consolidated": False}
+            ) as actual:
+                assert actual["x"].dtype == "bool"
+                np.testing.assert_array_equal(actual["x"].values, original["x"].values)
+
     def test_roundtrip_bytes_with_fill_value(self):
         pytest.xfail("Broken by Zarr 3.0.7")
 

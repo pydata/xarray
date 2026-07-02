@@ -24,6 +24,7 @@ from xarray.backends.common import (
     ensure_dtype_not_object,
 )
 from xarray.backends.store import StoreBackendEntrypoint
+from xarray.conventions import ZARR_CODERS
 from xarray.core import indexing
 from xarray.core.treenode import NodePath
 from xarray.core.types import ZarrWriteModes
@@ -561,8 +562,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     out : Variable
         A variable which has been encoded as described above.
     """
-
-    var = conventions.encode_cf_variable(var, name=name)
+    var = conventions.encode_cf_variable(var, name=name, coders=ZARR_CODERS)
     var = ensure_dtype_not_object(var, name=name)
 
     # zarr allows unicode, but not variable-length strings, so it's both
