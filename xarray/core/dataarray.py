@@ -4882,7 +4882,7 @@ class DataArray(
 
     def __array_wrap__(self, obj, context=None, return_scalar=False) -> Self:
         new_var = self.variable.__array_wrap__(obj, context, return_scalar)
-        return self._replace(new_var)
+        return self._replace_maybe_drop_dims(new_var)
 
     def __matmul__(self, obj: T_Xarray) -> T_Xarray:
         return self.dot(obj)
