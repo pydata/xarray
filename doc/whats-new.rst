@@ -72,6 +72,13 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Short-circuit ``to_duck_array``, ``async_to_duck_array``, and ``to_numpy``
+  when the input is already a plain ``numpy.ndarray``. The dispatch was a no-op
+  for that case but added noticeable per-call overhead in :py:meth:`Dataset.load`,
+  :py:meth:`DataArray.load`, :py:meth:`DataArray.to_numpy`,
+  :py:meth:`Variable.to_numpy`, and the in-memory paths of ``to_pandas`` /
+  ``to_dataframe`` / plotting (:issue:`11352`).
+
 
 .. _whats-new.2026.04.0:
 
