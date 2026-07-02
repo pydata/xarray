@@ -1027,8 +1027,21 @@ def open_datatree(
         Additional keyword arguments passed on to the engine open function.
         For example:
 
-        - 'group': path to the group in the given file to open as the root group as
-          a str.
+        - 'group': path to the group in the given file to open as the root
+          group as a str. Mutually exclusive with ``'group_filter'``.
+        - 'group_filter': non-empty glob pattern matched against every
+          group path in the file. Only groups whose paths match the
+          pattern are loaded, along with their ancestors so the resulting
+          tree stays connected. Matching follows
+          :py:meth:`pathlib.PurePath.match` semantics: the pattern is
+          anchored on the right, so ``group_filter="*/leaf_0"`` matches
+          any group whose path ends in ``<segment>/leaf_0`` at any depth.
+          Group names that contain literal glob metacharacters can be
+          targeted with character-class escapes: ``[*]`` matches a literal
+          ``*``, ``[?]`` a literal ``?``, and ``[[]`` a literal ``[``. For
+          example, ``group_filter="group_[*]_01"`` matches a group
+          literally named ``group_*_01``. Mutually exclusive with
+          ``'group'``.
         - 'lock': resource lock to use when reading data from disk. Only
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
@@ -1271,8 +1284,21 @@ def open_groups(
         Additional keyword arguments passed on to the engine open function.
         For example:
 
-        - 'group': path to the group in the given file to open as the root group as
-          a str.
+        - 'group': path to the group in the given file to open as the root
+          group as a str. Mutually exclusive with ``'group_filter'``.
+        - 'group_filter': non-empty glob pattern matched against every
+          group path in the file. Only groups whose paths match the
+          pattern are loaded, along with their ancestors so the resulting
+          tree stays connected. Matching follows
+          :py:meth:`pathlib.PurePath.match` semantics: the pattern is
+          anchored on the right, so ``group_filter="*/leaf_0"`` matches
+          any group whose path ends in ``<segment>/leaf_0`` at any depth.
+          Group names that contain literal glob metacharacters can be
+          targeted with character-class escapes: ``[*]`` matches a literal
+          ``*``, ``[?]`` a literal ``?``, and ``[[]`` a literal ``[``. For
+          example, ``group_filter="group_[*]_01"`` matches a group
+          literally named ``group_*_01``. Mutually exclusive with
+          ``'group'``.
         - 'lock': resource lock to use when reading data from disk. Only
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the

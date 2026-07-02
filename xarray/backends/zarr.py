@@ -680,6 +680,7 @@ class ZarrStore(AbstractWritableDataStore):
         mode: ZarrWriteModes = "r",
         synchronizer=None,
         group=None,
+        group_filter: str | None = None,
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
@@ -715,8 +716,15 @@ class ZarrStore(AbstractWritableDataStore):
 
         from zarr import Group
 
+        from xarray.backends.common import _filter_group_paths
+
         group_members: dict[str, Group] = {}
         group_paths = list(_iter_zarr_groups(zarr_group, parent=group))
+        # Filter before materializing child Group objects: each
+        # ``zarr_group[rel_path]`` lookup triggers metadata I/O, so
+        # pruning paths up-front skips the cost for groups we'd discard.
+        if group_filter is not None:
+            group_paths = _filter_group_paths(group_paths, group_filter)
         for path in group_paths:
             if path == group:
                 group_members[path] = zarr_group
@@ -1779,6 +1787,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         group: str | None = None,
+        group_filter: str | None = None,
         mode="r",
         synchronizer=None,
         consolidated=None,
@@ -1798,6 +1807,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
             group=group,
+            group_filter=group_filter,
             mode=mode,
             synchronizer=synchronizer,
             consolidated=consolidated,
@@ -1821,6 +1831,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         group: str | None = None,
+        group_filter: str | None = None,
         mode="r",
         synchronizer=None,
         consolidated=None,
@@ -1829,10 +1840,13 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         zarr_version=None,
         zarr_format=None,
     ) -> dict[str, Dataset]:
+        from xarray.backends.common import _check_group_filter_mutex
+
+        _check_group_filter_mutex(group, group_filter)
+
         filename_or_obj = _normalize_path(filename_or_obj)
 
-        # Check for a group and make it a parent if it exists
-        if group:
+        if group is not None:
             parent = str(NodePath("/") / NodePath(group))
         else:
             parent = str(NodePath("/"))
@@ -1840,6 +1854,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         stores = ZarrStore.open_store(
             filename_or_obj,
             group=parent,
+            group_filter=group_filter,
             mode=mode,
             synchronizer=synchronizer,
             consolidated=consolidated,
@@ -1850,8 +1865,11 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             zarr_format=zarr_format,
         )
 
+        group_paths = list(stores.keys())
+
         groups_dict = {}
-        for path_group, store in stores.items():
+        for path_group in group_paths:
+            store = stores[path_group]
             store_entrypoint = StoreBackendEntrypoint()
 
             with close_on_error(store):
@@ -1865,7 +1883,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
-            if group:
+            if group is not None:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))

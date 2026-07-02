@@ -105,6 +105,14 @@ New Features
   or a fixed ``(width, height)`` tuple instead of computing figure size from
   ``size`` and ``aspect`` (:issue:`11103`).
   By `Kristian Kollsga <https://github.com/kkollsga>`_.
+- Added ``group_filter`` keyword to :py:func:`open_datatree` and
+  :py:func:`open_groups`, accepting an ``fnmatch``-style glob pattern
+  (e.g. ``"*/leaf_0"``) to selectively open matching groups. Mutually
+  exclusive with ``group``, which keeps its exact-path semantics.
+  Groups whose names literally contain ``*`` or ``?`` are reachable via
+  character-class escapes (``[*]``, ``[?]``)
+  (:issue:`11196`, :pull:`11302`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

@@ -374,6 +374,191 @@ class NetCDFIOBase:
             assert subgroup_tree.root.parent is None
             assert_equal(subgroup_tree, expected_subtree)
 
+    def test_open_datatree_group_filter(self, tmpdir) -> None:
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/A": xr.Dataset({"a_var": 2}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/A/leaf_1": xr.Dataset({"data": ("x", [3, 4])}),
+                "/B": xr.Dataset({"b_var": 3}),
+                "/B/leaf_0": xr.Dataset({"data": ("x", [5, 6])}),
+            }
+        )
+        filepath = tmpdir / "filter.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        with open_datatree(
+            filepath, group_filter="*/leaf_0", engine=self.engine
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert paths == {"/", "/A", "/A/leaf_0", "/B", "/B/leaf_0"}
+
+    def test_open_datatree_group_filter_no_match(self, tmpdir) -> None:
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/A": xr.Dataset({"a_var": 2}),
+            }
+        )
+        filepath = tmpdir / "filter_nomatch.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        with open_datatree(
+            filepath, group_filter="*/nonexistent", engine=self.engine
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert paths == {"/"}
+
+    def test_open_datatree_group_filter_preserves_data(self, tmpdir) -> None:
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/A": xr.Dataset({"a_var": 2}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+            }
+        )
+        filepath = tmpdir / "filter_data.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        with open_datatree(
+            filepath, group_filter="*/leaf_0", engine=self.engine
+        ) as tree:
+            assert tree["/A"].dataset["a_var"].item() == 2
+            np.testing.assert_array_equal(
+                tree["/A/leaf_0"].dataset["data"].values, [1, 2]
+            )
+
+    def test_open_groups_group_filter(self, tmpdir) -> None:
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/A": xr.Dataset({"a_var": 2}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/A/leaf_1": xr.Dataset({"data": ("x", [3, 4])}),
+            }
+        )
+        filepath = tmpdir / "filter_groups.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        groups = open_groups(filepath, group_filter="*/leaf_0", engine=self.engine)
+        try:
+            assert set(groups.keys()) == {"/", "/A", "/A/leaf_0"}
+        finally:
+            for ds in groups.values():
+                ds.close()
+
+    def test_open_datatree_group_filter_char_class_escape(self, tmpdir) -> None:
+        # Group names that literally contain glob metacharacters (*, ?, [)
+        # are reachable via character-class escaping ([*], [?], [[]),
+        # mirroring fnmatch / PurePath.match semantics.
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/group_*_01": xr.Dataset({"data": ("x", [1, 2])}),
+                "/group_*_02": xr.Dataset({"data": ("x", [3, 4])}),
+                "/group_?_01": xr.Dataset({"data": ("x", [5, 6])}),
+                "/plain_01": xr.Dataset({"data": ("x", [7, 8])}),
+            }
+        )
+        filepath = tmpdir / "filter_escape.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        with open_datatree(
+            filepath, group_filter="group_[*]_01", engine=self.engine
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_*_01" in paths
+            assert "/group_*_02" not in paths
+            assert "/group_?_01" not in paths
+
+        with open_datatree(
+            filepath, group_filter="group_[*]_*", engine=self.engine
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_*_01" in paths
+            assert "/group_*_02" in paths
+            assert "/group_?_01" not in paths
+            assert "/plain_01" not in paths
+
+        with open_datatree(
+            filepath, group_filter="group_[?]_01", engine=self.engine
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_?_01" in paths
+            assert "/group_*_01" not in paths
+
+    def test_open_datatree_group_with_literal_metachar(self, tmpdir) -> None:
+        # With explicit ``group=``, the value is an exact path — glob
+        # metacharacters in the name are taken literally, not as a
+        # pattern. Confirms the API ambiguity Stephan flagged is gone.
+        #
+        # Sibling groups ``/weird_X_name`` and ``/weird_Y_name`` would
+        # both match a glob ``weird_*_name``, so the data assertion on
+        # the ``[1, 2]`` payload distinguishes literal-path lookup from
+        # accidental glob behavior.
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/weird_*_name": xr.Dataset({"data": ("x", [1, 2])}),
+                "/weird_X_name": xr.Dataset({"data": ("x", [3, 4])}),
+                "/weird_Y_name": xr.Dataset({"data": ("x", [5, 6])}),
+            }
+        )
+        filepath = tmpdir / "literal.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        with open_datatree(filepath, group="weird_*_name", engine=self.engine) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert paths == {"/"}
+            np.testing.assert_array_equal(tree.dataset["data"].values, [1, 2])
+
+    def test_open_datatree_group_and_group_filter_mutually_exclusive(
+        self, tmpdir
+    ) -> None:
+        original_dt = DataTree.from_dict(
+            {"/": xr.Dataset({"root_var": 1}), "/A": xr.Dataset({"a_var": 2})}
+        )
+        filepath = tmpdir / "mutex.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            open_datatree(filepath, group="A", group_filter="*/A", engine=self.engine)
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            open_groups(filepath, group="A", group_filter="*/A", engine=self.engine)
+
+    def test_open_datatree_group_filter_match_is_right_anchored(self, tmpdir) -> None:
+        # ``NodePath.match`` is anchored on the right, so ``*/leaf_0``
+        # matches a ``leaf_0`` at any depth as long as the parent
+        # segment matches ``*``. This pins the documented semantics.
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/x": xr.Dataset({"v": 0}),
+                "/x/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/x/y": xr.Dataset({"v": 0}),
+                "/x/y/leaf_0": xr.Dataset({"data": ("x", [3, 4])}),
+                "/x/y/z": xr.Dataset({"v": 0}),
+                "/x/y/z/leaf_0": xr.Dataset({"data": ("x", [5, 6])}),
+            }
+        )
+        filepath = tmpdir / "anchor.nc"
+        original_dt.to_netcdf(filepath, engine=self.engine)
+
+        with open_datatree(
+            filepath, group_filter="*/leaf_0", engine=self.engine
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert paths == {
+                "/",
+                "/x",
+                "/x/leaf_0",
+                "/x/y",
+                "/x/y/leaf_0",
+                "/x/y/z",
+                "/x/y/z/leaf_0",
+            }
+
 
 @requires_h5netcdf_or_netCDF4
 class TestGenericNetCDFIO(NetCDFIOBase):
@@ -1013,6 +1198,170 @@ class TestZarrDatatreeIO:
             assert subgroup_tree.root.parent is None
             assert_equal(subgroup_tree, expected_subtree)
 
+    def test_open_datatree_group_filter(self, tmpdir, zarr_format) -> None:
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/A": xr.Dataset({"a_var": 2}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/A/leaf_1": xr.Dataset({"data": ("x", [3, 4])}),
+                "/B": xr.Dataset({"b_var": 3}),
+                "/B/leaf_0": xr.Dataset({"data": ("x", [5, 6])}),
+            }
+        )
+        filepath = str(tmpdir / "filter.zarr")
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
+
+        with open_datatree(
+            filepath, group_filter="*/leaf_0", engine=self.engine
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert paths == {"/", "/A", "/A/leaf_0", "/B", "/B/leaf_0"}
+
+    def test_open_datatree_group_filter_no_match(self, tmpdir, zarr_format) -> None:
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/A": xr.Dataset({"a_var": 2}),
+            }
+        )
+        filepath = str(tmpdir / "filter_nomatch.zarr")
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
+
+        with open_datatree(
+            filepath, group_filter="*/nonexistent", engine=self.engine
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert paths == {"/"}
+
+    def test_open_groups_group_filter(self, tmpdir, zarr_format) -> None:
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/A": xr.Dataset({"a_var": 2}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+                "/A/leaf_1": xr.Dataset({"data": ("x", [3, 4])}),
+            }
+        )
+        filepath = str(tmpdir / "filter_groups.zarr")
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
+
+        groups = open_groups(filepath, group_filter="*/leaf_0", engine=self.engine)
+        try:
+            assert set(groups.keys()) == {"/", "/A", "/A/leaf_0"}
+        finally:
+            for ds in groups.values():
+                ds.close()
+
+    def test_open_datatree_group_filter_char_class_escape(self, zarr_format) -> None:
+        # In-memory store: Windows disallows "*" and "?" in directory names.
+        from zarr.storage import MemoryStore
+
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/group_*_01": xr.Dataset({"data": ("x", [1, 2])}),
+                "/group_*_02": xr.Dataset({"data": ("x", [3, 4])}),
+                "/group_?_01": xr.Dataset({"data": ("x", [5, 6])}),
+                "/plain_01": xr.Dataset({"data": ("x", [7, 8])}),
+            }
+        )
+        store = MemoryStore()
+        original_dt.to_zarr(store, zarr_format=zarr_format)
+
+        with open_datatree(
+            store,  # type: ignore[arg-type]
+            group_filter="group_[*]_01",
+            engine=self.engine,
+            zarr_format=zarr_format,
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_*_01" in paths
+            assert "/group_*_02" not in paths
+            assert "/group_?_01" not in paths
+
+        with open_datatree(
+            store,  # type: ignore[arg-type]
+            group_filter="group_[*]_*",
+            engine=self.engine,
+            zarr_format=zarr_format,
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_*_01" in paths
+            assert "/group_*_02" in paths
+            assert "/group_?_01" not in paths
+            assert "/plain_01" not in paths
+
+        with open_datatree(
+            store,  # type: ignore[arg-type]
+            group_filter="group_[?]_01",
+            engine=self.engine,
+            zarr_format=zarr_format,
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert "/group_?_01" in paths
+            assert "/group_*_01" not in paths
+
+    def test_open_datatree_group_filter_preserves_data(
+        self, tmpdir, zarr_format
+    ) -> None:
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/A": xr.Dataset({"a_var": 2}),
+                "/A/leaf_0": xr.Dataset({"data": ("x", [1, 2])}),
+            }
+        )
+        filepath = str(tmpdir / "filter_data.zarr")
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
+
+        with open_datatree(
+            filepath, group_filter="*/leaf_0", engine=self.engine
+        ) as tree:
+            assert tree["/A"].dataset["a_var"].item() == 2
+            np.testing.assert_array_equal(
+                tree["/A/leaf_0"].dataset["data"].values, [1, 2]
+            )
+
+    def test_open_datatree_group_with_literal_metachar(self, zarr_format) -> None:
+        # MemoryStore: Windows disallows ``*``/``?`` in directory names.
+        from zarr.storage import MemoryStore
+
+        original_dt = DataTree.from_dict(
+            {
+                "/": xr.Dataset({"root_var": 1}),
+                "/weird_*_name": xr.Dataset({"data": ("x", [1, 2])}),
+                "/weird_X_name": xr.Dataset({"data": ("x", [3, 4])}),
+                "/weird_Y_name": xr.Dataset({"data": ("x", [5, 6])}),
+            }
+        )
+        store = MemoryStore()
+        original_dt.to_zarr(store, zarr_format=zarr_format)
+
+        with open_datatree(
+            store,  # type: ignore[arg-type]
+            group="weird_*_name",
+            engine=self.engine,
+            zarr_format=zarr_format,
+        ) as tree:
+            paths = {node.path for node in tree.subtree}
+            assert paths == {"/"}
+            np.testing.assert_array_equal(tree.dataset["data"].values, [1, 2])
+
+    def test_open_datatree_group_and_group_filter_mutually_exclusive(
+        self, tmpdir, zarr_format
+    ) -> None:
+        original_dt = DataTree.from_dict(
+            {"/": xr.Dataset({"root_var": 1}), "/A": xr.Dataset({"a_var": 2})}
+        )
+        filepath = str(tmpdir / "mutex.zarr")
+        original_dt.to_zarr(filepath, zarr_format=zarr_format)
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            open_datatree(filepath, group="A", group_filter="*/A", engine=self.engine)
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            open_groups(filepath, group="A", group_filter="*/A", engine=self.engine)
+
     @requires_dask
     def test_open_groups_chunks(self, tmpdir, zarr_format) -> None:
         """Test `open_groups` with chunks on a zarr store."""
@@ -1130,3 +1479,134 @@ class TestZarrDatatreeIO:
 
         with open_datatree(filepath) as roundtrip_dt:
             assert_identical(original_dt, roundtrip_dt)
+
+
+class TestGroupFilterHelpers:
+    """Unit tests for the helpers in ``xarray/backends/common.py``."""
+
+    def test_filter_group_paths(self) -> None:
+        from xarray.backends.common import _filter_group_paths
+
+        paths = ["/", "/A", "/A/leaf_0", "/A/leaf_1", "/B", "/B/leaf_0"]
+        result = _filter_group_paths(paths, "*/leaf_0")
+        assert result == ["/", "/A", "/A/leaf_0", "/B", "/B/leaf_0"]
+
+    def test_filter_group_paths_no_match(self) -> None:
+        from xarray.backends.common import _filter_group_paths
+
+        paths = ["/", "/A", "/B"]
+        result = _filter_group_paths(paths, "*/nonexistent")
+        assert result == ["/"]
+
+    def test_filter_group_paths_question_mark(self) -> None:
+        from xarray.backends.common import _filter_group_paths
+
+        paths = ["/", "/A", "/B", "/AB"]
+        result = _filter_group_paths(paths, "?")
+        assert result == ["/", "/A", "/B"]
+
+    def test_filter_group_paths_bracket(self) -> None:
+        from xarray.backends.common import _filter_group_paths
+
+        paths = ["/", "/A", "/A/leaf_0", "/A/leaf_1", "/A/leaf_2"]
+        result = _filter_group_paths(paths, "*/leaf_[01]")
+        assert result == ["/", "/A", "/A/leaf_0", "/A/leaf_1"]
+
+    def test_filter_group_paths_literal_metachar_via_char_class(self) -> None:
+        from xarray.backends.common import _filter_group_paths
+
+        # Group names that literally contain glob metacharacters are
+        # reachable via character-class escaping (inherited from
+        # fnmatch / PurePath.match semantics).
+        paths = ["/", "/group_*_01", "/group_*_02", "/group_?_01", "/plain_01"]
+
+        assert _filter_group_paths(paths, "group_[*]_01") == [
+            "/",
+            "/group_*_01",
+        ]
+        assert _filter_group_paths(paths, "group_[*]_*") == [
+            "/",
+            "/group_*_01",
+            "/group_*_02",
+        ]
+        assert _filter_group_paths(paths, "group_[?]_01") == [
+            "/",
+            "/group_?_01",
+        ]
+
+    @pytest.mark.parametrize(
+        "group, group_filter",
+        [
+            (None, None),
+            ("A", None),
+            (None, "*/leaf_0"),
+            # Empty ``group`` is not None — pins the ``is not None`` check
+            # for ``group`` against a refactor to plain truthiness.
+            ("", None),
+        ],
+    )
+    def test_check_group_filter_mutex_passes(self, group, group_filter) -> None:
+        from xarray.backends.common import _check_group_filter_mutex
+
+        _check_group_filter_mutex(group, group_filter)  # should not raise
+
+    @pytest.mark.parametrize(
+        "group, group_filter",
+        [
+            ("A", "*/leaf_0"),
+            # Empty strings still count as "set" — exclusivity is by
+            # ``is not None``, not truthiness.
+            ("", ""),
+            ("A", ""),
+            ("", "*/leaf_0"),
+        ],
+    )
+    def test_check_group_filter_mutex_raises_when_both_set(
+        self, group, group_filter
+    ) -> None:
+        from xarray.backends.common import _check_group_filter_mutex
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            _check_group_filter_mutex(group, group_filter)
+
+    def test_check_group_filter_mutex_rejects_empty_pattern(self) -> None:
+        from xarray.backends.common import _check_group_filter_mutex
+
+        with pytest.raises(ValueError, match="non-empty"):
+            _check_group_filter_mutex(None, "")
+
+    def test_filter_group_paths_match_is_right_anchored(self) -> None:
+        # ``NodePath.match`` is anchored on the right, so ``*/leaf_0``
+        # matches a ``leaf_0`` at any depth as long as the parent
+        # segment matches ``*``. (The root-level ``/leaf_0`` is omitted
+        # because :py:meth:`pathlib.PurePath.match` semantics for that
+        # corner case differ between Python 3.11 and 3.13.)
+        from xarray.backends.common import _filter_group_paths
+
+        paths = ["/", "/a", "/a/leaf_0", "/a/b", "/a/b/leaf_0"]
+        assert _filter_group_paths(paths, "*/leaf_0") == [
+            "/",
+            "/a",
+            "/a/leaf_0",
+            "/a/b",
+            "/a/b/leaf_0",
+        ]
+
+    def test_filter_group_paths_leading_slash_pattern(self) -> None:
+        # Patterns starting with ``/`` are fully anchored — they match
+        # the exact absolute path and nothing else.
+        from xarray.backends.common import _filter_group_paths
+
+        paths = ["/", "/A", "/A/leaf_0", "/B", "/B/leaf_0"]
+        assert _filter_group_paths(paths, "/A/leaf_0") == [
+            "/",
+            "/A",
+            "/A/leaf_0",
+        ]
+
+    def test_filter_group_paths_recursive_glob(self) -> None:
+        # ``**`` selects every path (pinning ``NodePath.match`` behavior).
+        from xarray.backends.common import _filter_group_paths
+
+        paths = ["/", "/A", "/A/leaf_0", "/B/leaf_1"]
+        assert _filter_group_paths(paths, "**") == paths
