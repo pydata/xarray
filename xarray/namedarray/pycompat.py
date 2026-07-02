@@ -8,7 +8,11 @@ import numpy as np
 from packaging.version import Version
 
 from xarray.core.utils import is_scalar
-from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
+from xarray.namedarray.utils import (
+    is_dask_collection,
+    is_duck_array,
+    is_duck_dask_array,
+)
 
 integer_types = (int, np.integer)
 
@@ -89,7 +93,12 @@ def mod_version(mod: ModType) -> Version:
 
 
 def is_chunked_array(x: duckarray[Any, Any]) -> bool:
-    return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
+    # `is_duck_array` already short-circuits np.ndarray via isinstance, so we
+    # don't repeat that check here. `hasattr("chunks")` runs before
+    # `is_dask_collection` so the dominant numpy case skips the dask dispatch.
+    if not is_duck_array(x):
+        return False
+    return hasattr(x, "chunks") or is_dask_collection(x)
 
 
 def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:

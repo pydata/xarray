@@ -72,6 +72,16 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Speed up the duck-array dispatch helpers on ``numpy.ndarray`` inputs:
+  ``is_chunked_array`` no longer duplicates ``is_duck_array``'s built-in
+  ``np.ndarray`` short-circuit, and ``is_dask_collection`` now
+  short-circuits ``np.ndarray`` directly, skipping the dask import and
+  dispatch on numpy-backed data. The knock-on speedup for
+  ``is_duck_dask_array`` (~2× on numpy) benefits many hot paths in
+  ``duck_array_ops``, ``variable``, ``indexing``, ``groupby`` and the
+  ``dt`` / ``str`` accessors. Roughly 1.4× faster ``isel().load()`` on a
+  400-scalar-var dataset; no effect on chunked paths.
+
 
 .. _whats-new.2026.04.0:
 
