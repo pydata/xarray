@@ -21,7 +21,7 @@ from xarray.coding.common import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
-from xarray.compat.pdcompat import default_precision_timestamp, timestamp_as_unit
+from xarray.compat.pdcompat import default_precision_timestamp
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import array_all, asarray, ravel, reshape
@@ -419,7 +419,7 @@ def _check_date_for_units_since_refdate(
         return pd.Timestamp("NaT")
     # this will raise on overflow if ref_date + delta can't be represented in
     # the current ref_date resolution
-    return timestamp_as_unit(ref_date + delta, ref_date.unit)
+    return (ref_date + delta).as_unit(ref_date.unit)
 
 
 def _check_timedelta_range(value, data_unit, time_unit):
@@ -437,7 +437,7 @@ def _align_reference_date_and_unit(
     if np.timedelta64(1, ref_date.unit) > np.timedelta64(1, unit):
         # this will raise accordingly
         # if data can't be represented in the higher resolution
-        return timestamp_as_unit(ref_date, cast(PDDatetimeUnitOptions, unit))
+        return ref_date.as_unit(cast(PDDatetimeUnitOptions, unit))
     return ref_date
 
 

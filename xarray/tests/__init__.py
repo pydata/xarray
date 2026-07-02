@@ -189,7 +189,6 @@ has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_netcdf, requires_netcdf = _importorskip("netcdf")
-has_pandas_ge_2_2, requires_pandas_ge_2_2 = _importorskip("pandas", "2.2")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0")
 
 

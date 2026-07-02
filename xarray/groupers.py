@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
-from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
+from xarray.coding.cftime_offsets import BaseCFTimeOffset
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.compat.toolzcompat import sliding_window
 from xarray.computation.apply_ufunc import apply_ufunc
@@ -540,9 +540,8 @@ class TimeResampler(Resampler):
                     "when resampling a 'CFTimeIndex'"
                 )
 
-            self.index_grouper = pd.Grouper(
-                # TODO remove once requiring pandas >= 2.2
-                freq=_new_to_legacy_freq(self.freq),
+            self.index_grouper = pd.Grouper(  # type:ignore[misc]
+                freq=self.freq,  # type:ignore[arg-type]
                 closed=self.closed,
                 label=self.label,
                 origin=self.origin,
