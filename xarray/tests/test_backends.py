@@ -4576,6 +4576,18 @@ class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only, InMemoryNetCDF):
         fobj = BytesIO()
         yield backends.ScipyDataStore(fobj, "w")
 
+    def test_pickle_after_second_file_object_open(self) -> None:
+        original = Dataset(
+            {"foo": ("x", np.arange(4, dtype=np.float64))},
+            coords={"x": np.arange(4)},
+        )
+        netcdf_bytes = bytes(original.to_netcdf(engine=self.engine))
+
+        with open_dataset(BytesIO(netcdf_bytes), engine=self.engine) as first:
+            with open_dataset(BytesIO(netcdf_bytes), engine=self.engine):
+                with pickle.loads(pickle.dumps(first)) as unpickled:
+                    assert_identical(original, unpickled)
+
     @contextlib.contextmanager
     def roundtrip(
         self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
