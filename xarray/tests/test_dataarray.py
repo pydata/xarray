@@ -1466,6 +1466,20 @@ class TestDataArray:
 
         assert_identical(mdata.sel(x={"one": "a", "two": 1}), mdata.sel(one="a", two=1))
 
+    def test_selection_multiindex_nested_tuple_level_value(self) -> None:
+        level_0 = pd.Index(
+            [(1, 1), (1, 1), (2, 2), (3, 3)], name="a", tupleize_cols=False
+        )
+        level_1 = pd.Index([1, 2, 10, 20], name="b")
+        midx = pd.MultiIndex.from_arrays([level_0, level_1])
+        coords = Coordinates.from_pandas_multiindex(midx, "index")
+        data = DataArray(np.arange(4), dims=("index",), coords=coords)
+
+        actual = data.sel(index=((1, 1), 2))
+        expected = data.isel(index=1)
+
+        assert_identical(actual, expected)
+
     def test_selection_multiindex_remove_unused(self) -> None:
         # GH2619. For MultiIndex, we need to call remove_unused.
         ds = xr.DataArray(
