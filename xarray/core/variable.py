@@ -836,6 +836,14 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def _finalize_indexing_result(self, dims, data) -> Self:
         """Used by IndexVariable to return IndexVariable objects when possible."""
+        # PandasExtensionArray is always 1-D and cannot represent scalar (0-d)
+        # data. When indexing produces a scalar result (dims=()), convert to
+        # numpy array (GH#11300).
+        if not dims:
+            from xarray.core.extension_array import PandasExtensionArray
+
+            if isinstance(data, PandasExtensionArray):
+                data = data.array[0]
         return self._replace(dims=dims, data=data)
 
     def _getitem_with_mask(self, key, fill_value=dtypes.NA):

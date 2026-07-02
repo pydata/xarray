@@ -6999,6 +6999,28 @@ class TestReduceND(TestReduce):
         assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
+def test_idxminmax_interval_coords() -> None:
+    # GH#11300 - idxmax/idxmin should work with IntervalIndex coordinates
+    import pandas as pd
+
+    idx = pd.IntervalIndex.from_breaks([0, 1, 2, 3])
+    da = xr.DataArray([False, True, True], dims=["z"], coords={"z": idx})
+
+    result = da.idxmax()
+    assert result.values.item() == pd.Interval(1, 2, closed="right")
+
+    result = da.idxmin()
+    assert result.values.item() == pd.Interval(0, 1, closed="right")
+
+    # Test with skipna=False
+    da2 = xr.DataArray([np.nan, 1.0, 2.0], dims=["z"], coords={"z": idx})
+    result2 = da2.idxmax()
+    assert result2.values.item() == pd.Interval(2, 3, closed="right")
+
+    result3 = da2.idxmin()
+    assert result3.values.item() == pd.Interval(1, 2, closed="right")
+
+
 @pytest.mark.parametrize("da", ("repeating_ints",), indirect=True)
 def test_isin(da) -> None:
     expected = DataArray(
