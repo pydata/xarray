@@ -363,6 +363,13 @@ def _calc_concat_dim_index(
         else:
             (dim,) = dim_or_data.dims
         coord_dtype = getattr(dim_or_data, "dtype", None)
+        # pandas may produce a StringDtype-backed Index, which xarray does
+        # not treat as an allowed extension array dtype for coords. Let
+        # PandasIndex compute a valid numpy coord_dtype in that case so a
+        # subsequent concat against a numpy-string-dtype coord does not fail
+        # in ``np.result_type``. See GH#11317.
+        if isinstance(coord_dtype, pd.StringDtype):
+            coord_dtype = None
         index = PandasIndex(dim_or_data, dim, coord_dtype=coord_dtype)
 
     return dim, index
