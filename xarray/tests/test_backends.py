@@ -4588,6 +4588,21 @@ class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only, InMemoryNetCDF):
         with self.open(saved, **open_kwargs) as ds:
             yield ds
 
+    def test_pickle_after_multiple_opens_from_bytes(self) -> None:
+        # Regression test for GH#11323: opening two scipy-backed datasets
+        # from BytesIO objects would overwrite the cached flush_only class,
+        # making the first dataset unpicklable.
+        original = Dataset({"foo": ("x", [1, 2, 3])})
+        netcdf_bytes = bytes(original.to_netcdf(engine=self.engine))
+        ds1 = open_dataset(BytesIO(netcdf_bytes), engine=self.engine)
+        ds2 = open_dataset(BytesIO(netcdf_bytes), engine=self.engine)
+        try:
+            with pickle.loads(pickle.dumps(ds1)) as unpickled:
+                assert_identical(unpickled, original)
+        finally:
+            ds1.close()
+            ds2.close()
+
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="NetCDF backends don't support async loading")
     async def test_load_async(self) -> None:

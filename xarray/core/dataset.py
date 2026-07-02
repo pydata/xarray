@@ -6966,7 +6966,7 @@ class Dataset(
                 # keep single-element dims as list, to support Hashables
                 reduce_maybe_single = (
                     None
-                    if len(reduce_dims) == var.ndim and var.ndim != 1
+                    if reduce_dims and len(reduce_dims) == var.ndim and var.ndim != 1
                     else reduce_dims
                 )
                 variables[name] = var.reduce(
