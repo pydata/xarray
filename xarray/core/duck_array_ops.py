@@ -489,6 +489,15 @@ def moveaxis(array, source, destination):
 
 def pad(array, pad_width, **kwargs):
     xp = get_array_namespace(array)
+    if (
+        isinstance(array, pd.api.extensions.ExtensionArray)
+        and kwargs.get("mode", "constant") == "constant"
+    ):
+        # Wrap so that NEP-18 dispatch routes to __extension_duck_array__pad,
+        # which preserves the extension dtype (and its NA) instead of letting
+        # numpy coerce to a plain ndarray. See GH #10301. Non-constant modes
+        # don't introduce fill values, so the historical numpy path is fine.
+        array = PandasExtensionArray(array)
     return xp.pad(array, pad_width, **kwargs)
 
 

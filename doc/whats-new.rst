@@ -64,6 +64,12 @@ Bug Fixes
   ``"dayofweek"``, and ``"week"``, respectively; now they return objects named
   ``"days_in_month"``, ``"weekday"``, and ``"weekofyear"`` (:pull:`11270`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`DataArray.shift`, :py:meth:`Dataset.shift`, :py:meth:`DataArray.pad`
+  and :py:meth:`Dataset.pad` no longer raise ``TypeError`` on variables backed by
+  pandas nullable extension arrays (e.g. ``Int64``, ``Float64``, ``boolean``).
+  The padding/fill values are now inserted using the extension array's own
+  missing value (``pd.NA``), preserving the extension dtype instead of letting
+  numpy coerce it to an ``object`` or numeric ndarray (:issue:`10301`).
 
 Documentation
 ~~~~~~~~~~~~~
