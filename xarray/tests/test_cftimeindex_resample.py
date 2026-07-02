@@ -11,7 +11,6 @@ import xarray as xr
 from xarray.coding.cftime_offsets import (
     CFTIME_TICKS,
     Day,
-    _new_to_legacy_freq,
     to_offset,
 )
 from xarray.coding.cftimeindex import CFTimeIndex
@@ -141,9 +140,7 @@ def test_resample_with_tick_resample_freq(freqs, closed, label, offset) -> None:
     start = "2000-01-01T12:07:01"
     origin = "start"
 
-    datetime_index = pd.date_range(
-        start=start, periods=5, freq=_new_to_legacy_freq(initial_freq), unit="ns"
-    )
+    datetime_index = pd.date_range(start=start, periods=5, freq=initial_freq, unit="ns")
     cftime_index = xr.date_range(
         start=start, periods=5, freq=initial_freq, use_cftime=True
     )
@@ -178,9 +175,7 @@ def test_resample_with_non_tick_resample_freq(freqs, closed, label) -> None:
     offset = None
     origin = "start_day"
 
-    datetime_index = pd.date_range(
-        start=start, periods=5, freq=_new_to_legacy_freq(initial_freq), unit="ns"
-    )
+    datetime_index = pd.date_range(start=start, periods=5, freq=initial_freq, unit="ns")
     cftime_index = xr.date_range(
         start=start, periods=5, freq=initial_freq, use_cftime=True
     )
