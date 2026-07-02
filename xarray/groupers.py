@@ -540,9 +540,8 @@ class TimeResampler(Resampler):
                     "when resampling a 'CFTimeIndex'"
                 )
 
-            self.index_grouper = pd.Grouper(
-                # TODO remove once requiring pandas >= 2.2
-                freq=self.freq,
+            self.index_grouper = pd.Grouper(  # type:ignore[misc]
+                freq=self.freq,  # type:ignore[arg-type]
                 closed=self.closed,
                 label=self.label,
                 origin=self.origin,
