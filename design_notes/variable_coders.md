@@ -39,7 +39,9 @@ Within `encode_cf_variable`:
 
 These coders try to apply their operations in a lazy way, such that the actual computation is only triggered when explicitly or implicitly requested.
 
-## new: variable coders
+## new: custom coders
+
+### variable coders
 
 Variable coders will follow a protocol (not a ABC), with two methods:
 
@@ -51,20 +53,40 @@ It will also need a heuristic to decide whether the coder should be applied. Thi
 - a function that, given metadata (dtype, attributes, encoding), decides whether to apply the coder
 - the coder performs the check and returns `NotImplemented` if it doesn't fit.
 
+### dataset coders
+
+Dataset coders have a very similar API (still a protocol):
+
+- `DatasetCoder.encode(dataset, **additional_metadata)`
+- `DatasetCoder.decode(dataset, **additional_metadata)`
+
+Just like with variable coders it might make sense to have a function that determines whether a coder is applicable given dataset structure and attributes.
+
+### coder pipelines
+
+Coder pipelines describe a set of coding operations of the same type.
+
+TODO: defaults based on the existing attributes (for a CF coder variable and dataset pipeline).
+
+## processing steps
+
 ### decoding
 
-The `StoreBackendEntrypoint.open_dataset` method will be split up into different parts:
+The `StoreBackendEntrypoint.open_dataset` method will be split up into different parts (as functions):
 
 - load variables and attributes from the datastore
-- determine coordinate names
-- apply coders (given a ordered list of coders)
-- split variables into coords and data vars (using the dimension name / coordinate names)
-- construct a backend dataset from coords, data vars, attrs, encoding, and the file object
+- apply variable coders (given a ordered list of coders)
+- construct a backend dataset from variables, attrs, and the file object
+- apply dataset coders (by default contains a CF `coordinates` dataset coder)
 
-Then there will be a constructor / object that, given the cf coder settings, constructs a list of coders that need to be applied. Backends can then filter these coders to only select those that apply.
+Where only the first two will stay in the `StoreBackendEntrypoint` (?).
+
+Then there will be a constructor / object that, given the cf coder settings, constructs a list of variable coders that need to be applied. Backends can then filter these coders to only select those that apply.
 
 ### encoding
 
-## new: dataset coders
+The steps from `decoding` can be inverted:
 
-In
+- apply dataset coders
+- apply variable coders
+- split dataset into variables and attrs
