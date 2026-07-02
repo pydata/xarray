@@ -13,6 +13,14 @@ v2026.05.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
+- The ``h5netcdf`` backend now reports compression and filter settings in the
+  variable ``encoding`` consistently with the ``netCDF4`` backend (using
+  ``h5netcdf``'s ``Variable.filters()``). This means data compressed with codecs
+  such as ``zstd`` or ``blosc`` keeps its compression when re-saved, instead of
+  silently being written uncompressed (:issue:`10657`, :pull:`11067`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+
 - Following pandas, xarray's
   :py:class:`~xarray.core.accessor_dt.DatetimeAccessor` now supports
   :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_week` and
@@ -26,6 +34,11 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+
+- The minimum supported version of ``h5netcdf`` is now 1.8.0, which introduced
+  the compatibility features with ``netCDF4`` that the harmonized encoding relies
+  on (:issue:`10657`, :pull:`11067`).
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
 
 Deprecations
