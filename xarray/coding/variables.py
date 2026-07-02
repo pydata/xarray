@@ -271,7 +271,7 @@ class CFMaskCoder(VariableCoder):
 
     def __init__(
         self,
-        decode_times: bool | CFDatetimeCoder = False,
+        decode_times: bool | str | CFDatetimeCoder = False,
         decode_timedelta: bool | CFTimedeltaCoder = False,
     ) -> None:
         self.decode_times = decode_times
@@ -499,7 +499,7 @@ class CFScaleOffsetCoder(VariableCoder):
 
     def __init__(
         self,
-        decode_times: bool | CFDatetimeCoder = False,
+        decode_times: bool | str | CFDatetimeCoder = False,
         decode_timedelta: bool | CFTimedeltaCoder = False,
     ) -> None:
         self.decode_times = decode_times

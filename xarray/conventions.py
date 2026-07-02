@@ -16,6 +16,7 @@ from xarray.core.common import (
     _contains_datetime_like_objects,
     contains_cftime_datetimes,
 )
+from xarray.core.types import DECODE_TIMES_OPTIONS
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
 from xarray.namedarray.utils import is_duck_array
@@ -37,7 +38,6 @@ CF_RELATED_DATA_NEEDS_PARSING = (
     "cell_measures",
     "formula_terms",
 )
-
 
 if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
@@ -111,7 +111,7 @@ def decode_cf_variable(
     var: Variable,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool | CFDatetimeCoder = True,
+    decode_times: bool | str | CFDatetimeCoder = True,
     decode_endianness: bool = True,
     stack_char_dim: bool = True,
     use_cftime: bool | None = None,
@@ -138,8 +138,11 @@ def decode_cf_variable(
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue). If the _Unsigned attribute is present
         treat integer arrays as unsigned.
-    decode_times : bool or CFDatetimeCoder
+    decode_times : bool or str or CFDatetimeCoder
+        One of "error", "ignore", "warn", False, or a CFDatetimeCoder
         Decode cf times ("hours since 2000-01-01") to np.datetime64.
+        If not False, then non-decodable time units will raise an
+        exception, a warning, or ignore the error.
     decode_endianness : bool
         Decode arrays from non-native to native endianness.
     stack_char_dim : bool
@@ -223,7 +226,15 @@ def decode_cf_variable(
                     "    ds = xr.open_dataset(decode_times=time_coder)\n",
                     FutureWarning,
                 )
-            decode_times = CFDatetimeCoder(use_cftime=use_cftime)
+            try:
+                on_error = DECODE_TIMES_OPTIONS[decode_times]
+            except KeyError:
+                raise ValueError(
+                    "`decode_times` must be one of: "
+                    f"{set(k for k in DECODE_TIMES_OPTIONS.keys() if isinstance(k, str))}"
+                ) from None
+            decode_times = CFDatetimeCoder(use_cftime=use_cftime, on_error=on_error)
+
         elif use_cftime is not None:
             raise TypeError(
                 "Usage of 'use_cftime' as a kwarg is not allowed "
@@ -352,7 +363,10 @@ def decode_cf_variables(
     attributes: T_Attrs,
     concat_characters: bool | Mapping[str, bool] = True,
     mask_and_scale: bool | Mapping[str, bool] = True,
-    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
+    decode_times: bool
+    | str
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder] = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | Mapping[str, bool] | None = None,
@@ -413,7 +427,8 @@ def decode_cf_variables(
                 concat_characters=_item_or_default(concat_characters, k, True),
                 mask_and_scale=_item_or_default(mask_and_scale, k, True),
                 decode_times=cast(
-                    bool | CFDatetimeCoder, _item_or_default(decode_times, k, True)
+                    bool | str | CFDatetimeCoder,
+                    _item_or_default(decode_times, k, True),
                 ),
                 stack_char_dim=stack_char_dim,
                 use_cftime=_item_or_default(use_cftime, k, None),
@@ -499,7 +514,10 @@ def decode_cf(
     obj: T_DatasetOrAbstractstore,
     concat_characters: bool = True,
     mask_and_scale: bool = True,
-    decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
+    decode_times: bool
+    | str
+    | CFDatetimeCoder
+    | Mapping[str, bool | CFDatetimeCoder] = True,
     decode_coords: bool | Literal["coordinates", "all"] = True,
     drop_variables: T_DropVariables = None,
     use_cftime: bool | None = None,
@@ -521,7 +539,7 @@ def decode_cf(
     mask_and_scale : bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
-    decode_times : bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder], optional
+    decode_times : bool | str | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder], optional
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
     decode_coords : bool or {"coordinates", "all"}, optional
