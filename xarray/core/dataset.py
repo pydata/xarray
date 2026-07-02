@@ -2316,6 +2316,10 @@ class Dataset(
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
+            Zarr-specific options such as ``chunks``, ``compressor``,
+            ``compressors``, ``filters``, ``serializer``, ``shards``, and
+            ``chunk_key_encoding`` may also be provided. See the Zarr encoding
+            section in the I/O user guide for details.
         compute : bool, default: True
             If True write array data immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed to write
