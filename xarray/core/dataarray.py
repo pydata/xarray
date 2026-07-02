@@ -3060,6 +3060,19 @@ class DataArray(
         >>> arr.identical(roundtripped)
         True
 
+        Notes
+        -----
+        **Sort order**
+
+        When the stacked dimension's ``MultiIndex`` was created by pandas (for
+        example, by wrapping a ``pd.Series`` with a ``pd.MultiIndex``), pandas
+        stores ``MultiIndex.levels`` in **sorted order** regardless of
+        insertion order.  In that case the coordinates of the new dimensions
+        after unstacking will also be sorted.  When the ``MultiIndex`` was
+        created by :py:meth:`DataArray.stack`, xarray preserves insertion
+        order instead.  Use :py:meth:`DataArray.sel` after unstacking to
+        select a specific order if needed.
+
         See Also
         --------
         DataArray.stack
