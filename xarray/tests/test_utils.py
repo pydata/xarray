@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Hashable
 from types import EllipsisType
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,7 @@ from xarray.core.utils import (
     infix_dims,
     iterate_nested,
 )
+from xarray.namedarray.utils import module_available
 from xarray.tests import assert_array_equal, requires_dask
 
 
@@ -400,3 +402,30 @@ def test_attempt_import() -> None:
         attempt_import(module="foo")
     with pytest.raises(ImportError, match="The foo package is required"):
         attempt_import(module="foo.bar")
+
+
+class TestModuleAvailable:
+    def test_existing_module_without_version(self) -> None:
+        assert module_available("numpy") is True
+
+    def test_existing_module_with_version(self) -> None:
+        assert module_available("numpy", minversion="1.0.0") is True
+
+    def test_nonexistent_module(self) -> None:
+        assert module_available("nonexistent_module_xyz") is False
+
+    def test_nonexistent_module_with_version(self) -> None:
+        assert module_available("nonexistent_module_xyz", minversion="1.0.0") is False
+
+    @patch("importlib.metadata.version", return_value=None)
+    def test_module_with_none_version(self, mock_version) -> None:
+        """Regression test for GH#11344: importlib.metadata.version() returning None."""
+        module_available.cache_clear()
+        result = module_available("numpy", minversion="1.0.0")
+        assert result is False
+
+    @patch("importlib.metadata.version", return_value=None)
+    def test_module_with_none_version_no_minversion(self, mock_version) -> None:
+        module_available.cache_clear()
+        result = module_available("numpy")
+        assert result is True
