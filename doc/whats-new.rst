@@ -197,6 +197,19 @@ Deprecations
 ~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+
+- Add ``infer_dtype`` parameter to :py:class:`xarray.coders.CFDatetimeCoder`.
+  With ``infer_dtype="metadata"``, dtype inference uses only ``units``,
+  ``calendar``, ``use_cftime`` and ``time_unit`` — no data reads. This
+  significantly speeds up :py:func:`open_dataset` / :py:func:`open_datatree`
+  on remote-backed stores (zarr on S3, icechunk) with many time-encoded
+  variables. The default (``infer_dtype="data"``) preserves the current
+  behavior of reading the first and last values to verify decoding
+  (:issue:`11303`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+
 Bug Fixes
 ~~~~~~~~~
 
