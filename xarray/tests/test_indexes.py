@@ -559,6 +559,22 @@ class TestPandasMultiIndex:
         assert actual.dim == expected.dim
         assert actual.level_coords_dtype == expected.level_coords_dtype
 
+    def test_sel_nested_tuple_key_collapses_dimension(self) -> None:
+        # Regression test for GH#11341
+        # When indexing with a single nested tuple key (where one level has
+        # tuple-valued entries), the dimension should collapse like scalar selection
+        nested_level_0 = pd.Index(
+            [(1, 1), (1, 1), (2, 2), (3, 3)], name="a", tupleize_cols=False
+        )
+        nested_level_1 = pd.Index([1, 2, 10, 20], name="b")
+        nested_mi = pd.MultiIndex.from_arrays([nested_level_0, nested_level_1])
+        index = PandasMultiIndex(nested_mi, "index")
+
+        # A single nested tuple key should produce a scalar indexer (int),
+        # not an array, collapsing the dimension
+        actual = index.sel({"index": ((1, 1), 2)})
+        assert isinstance(actual.dim_indexers["index"], (int, np.integer))
+
 
 class TestIndexes:
     @pytest.fixture

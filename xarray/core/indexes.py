@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
+from pandas.errors import InvalidIndexError
 
 from xarray.core import formatting, nputils, utils
 from xarray.core.coordinate_transform import CoordinateTransform
@@ -1367,7 +1368,14 @@ class PandasMultiIndex(PandasIndex):
 
             elif isinstance(label, tuple):
                 if _is_nested_tuple(label):
-                    indexer = self.index.get_locs(label)
+                    # When the tuple contains sub-tuples/lists/slices, it could be:
+                    # 1. A single key with tuple-valued levels (e.g., ((1, 1), 2))
+                    # 2. A multi-value selection (e.g., (1, slice(1, 2)))
+                    # Try get_loc first for case 1, fall back to get_locs for case 2
+                    try:
+                        indexer = self.index.get_loc(label)
+                    except (InvalidIndexError, KeyError):
+                        indexer = self.index.get_locs(label)
                 elif len(label) == self.index.nlevels:
                     indexer = self.index.get_loc(label)
                 else:
