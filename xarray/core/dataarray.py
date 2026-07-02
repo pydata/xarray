@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import datetime
+import json
 import warnings
 from collections.abc import (
     Callable,
@@ -73,6 +74,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.namedarray.pycompat import is_chunked_array
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.structure import alignment
@@ -253,6 +255,21 @@ class _LocIndexer(Generic[T_DataArray]):
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
 _THIS_ARRAY = ReprObject("<this-array>")
+
+
+class _NumpyEncoder(json.JSONEncoder):
+    """Encode numpy value in Arrow schema metadata"""
+
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
 
 
 class DataArray(
@@ -476,6 +493,102 @@ class DataArray(
         self._indexes = dict(indexes)
 
         self._close = None
+
+    def __arrow_c_schema__(self):
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        values_column = self.name or "values"
+
+        fields = []
+        for name, coord in self._coords.items():
+            arrow_dtype = pa.from_numpy_dtype(coord.dtype)
+            fields.append(pa.field(str(name), arrow_dtype))
+
+        fields.append(
+            pa.field(str(values_column), pa.from_numpy_dtype(self._variable.dtype))
+        )
+
+        xarray_metadata = {
+            "name": self.name,
+            "dims": list(self._variable.dims),
+            "shape": list(self._variable.shape),
+            "attrs": self.attrs,
+            "coords": {
+                str(name): variable.to_dict(data=False)
+                for name, variable in self._coords.items()
+            },
+        }
+        schema_metadata = {
+            b"xarray:arrow_schema_version": b"v1",
+            b"xarray": json.dumps(xarray_metadata, cls=_NumpyEncoder).encode(),
+        }
+
+        schema = pa.schema(fields, metadata=schema_metadata)
+        return schema.__arrow_c_schema__()
+
+    def __arrow_c_stream__(self, requested_schema: Any = None) -> Any:
+        """Export the DataArray through the Arrow PyCapsule Interface.
+
+        https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
+        """
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        if is_chunked_array(self._variable._data):
+            raise ValueError(
+                "Chunked DataArray must be computed first, use: DataArray.compute()"
+            )
+
+        values = self._variable.values
+        dims = self._variable.dims
+        shape = self._variable.shape
+
+        values_column = self.name or "values"
+
+        if not values.flags.c_contiguous:
+            values = np.ascontiguousarray(values)
+
+        columns: dict[Hashable, pa.Array] = {}
+        for name, coord in self._coords.items():
+            # Broadcast each coordinate up to the full data shape so that 1D
+            # dimension coordinates and N-D (e.g. curvilinear) coordinates
+            # flatten consistently with the data values.
+
+            # Order axes based on Variable dims
+            dim_order = tuple(
+                coord.dims.index(dim) for dim in dims if dim in coord.dims
+            )
+
+            # Reorder coords values to variable dim order
+            ordered_coords = coord.values.transpose(dim_order)
+
+            # Expand coord dims
+            # coord dims (x, y) variable dims (x,y,z) -> (x, y, 1)
+            # NOTE: Insert a length-1 axis for each data dim missing for coordinates
+            # (slice(None) keeps an existing axis, np.newaxis adds one)
+            indexer = tuple(
+                slice(None) if dim in coord.dims else np.newaxis for dim in dims
+            )
+            expanded_coords = ordered_coords[indexer]
+
+            # Broadcast to full flattened shape (x, y, 1) -> (x, y, z)
+            columns[name] = pa.array(np.broadcast_to(expanded_coords, shape).ravel())
+
+        columns[values_column] = pa.array(np.ravel(values))
+
+        schema = pa.schema(self)
+
+        table = pa.table(columns, schema=schema)
+        return table.__arrow_c_stream__(requested_schema)
 
     @classmethod
     def _construct_direct(

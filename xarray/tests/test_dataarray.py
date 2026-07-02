@@ -61,6 +61,7 @@ from xarray.tests import (
     requires_iris,
     requires_numexpr,
     requires_pint,
+    requires_polars,
     requires_pyarrow,
     requires_scipy,
     requires_sparse,
@@ -7675,3 +7676,225 @@ def test_unstack_index_var() -> None:
         name="x",
     )
     assert_identical(actual, expected)
+
+
+class TestArrowPyCapsule:
+    @requires_pyarrow
+    def test_pyarrow_table_1d(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords={"x": [10, 20, 30]},
+            name="temperature",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"x", "temperature"}
+        assert table.num_rows == 3
+        assert table.schema.field("x").type == pa.int64()
+        assert table.schema.field("temperature").type == pa.float64()
+        np.testing.assert_array_equal(table["x"].to_pylist(), [10, 20, 30])
+        np.testing.assert_array_equal(table["temperature"].to_pylist(), [1.0, 2.0, 3.0])
+
+    @requires_pyarrow
+    def test_pyarrow_table_2d(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"x", "y", "data"}
+        assert table.num_rows == 6
+        assert table.schema.field("x").type == pa.int64()
+        assert table.schema.field("y").type == pa.int64()
+        assert table.schema.field("data").type == pa.float64()
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), list(np.arange(6, dtype=float))
+        )
+
+    @requires_pyarrow
+    def test_data_array_unnamed_variable(self):
+        import pyarrow as pa
+
+        da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [0, 1, 2]})
+        table = pa.table(da)
+
+        assert "values" in table.column_names
+
+    @requires_polars
+    def test_polars_dataframe_1d(self):
+        import polars as pl
+
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords={"x": [10, 20, 30]},
+            name="temperature",
+        )
+        df = pl.from_arrow(da)
+
+        assert isinstance(df, pl.DataFrame)
+        assert set(df.columns) == {"x", "temperature"}
+        assert len(df) == 3
+        np.testing.assert_array_equal(df["x"].to_list(), [10, 20, 30])
+        np.testing.assert_array_equal(df["temperature"].to_list(), [1.0, 2.0, 3.0])
+
+    @requires_polars
+    def test_polars_dataframe_2d(self):
+        import polars as pl
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        df = pl.from_arrow(da)
+
+        assert isinstance(df, pl.DataFrame)
+        assert set(df.columns) == {"x", "y", "data"}
+        assert len(df) == 6
+        np.testing.assert_array_equal(
+            df["data"].to_list(), list(np.arange(6, dtype=float))
+        )
+        # x repeats for each y: [0,0,0,1,1,1]
+        np.testing.assert_array_equal(df["x"].to_list(), [0, 0, 0, 1, 1, 1])
+        # y cycles for each x: [10,20,30,10,20,30]
+        np.testing.assert_array_equal(df["y"].to_list(), [10, 20, 30, 10, 20, 30])
+
+    @requires_dask
+    @requires_pyarrow
+    def test_dask_dataarray(self):
+        import dask.array as da
+        import pyarrow as pa
+
+        dask_da = xr.DataArray(
+            da.from_array(np.arange(6, dtype=float).reshape(2, 3)),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        with pytest.raises(ValueError):
+            pa.table(dask_da)
+
+    @requires_polars
+    @requires_pyarrow
+    def test_polars_pyarrow_consistent(self):
+        import polars as pl
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        pa_table = pa.table(da)
+        pl_df = pl.from_arrow(da)
+
+        for col in pa_table.column_names:
+            np.testing.assert_array_equal(
+                pa_table[col].to_pylist(), pl_df[col].to_list()
+            )
+
+    @requires_pyarrow
+    def test_arrow_schema_fields(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        schema = pa.schema(da)
+
+        assert isinstance(schema, pa.Schema)
+        assert schema.names == ["x", "y", "data"]
+        assert schema.field("x").type == pa.int64()
+        assert schema.field("y").type == pa.int64()
+        assert schema.field("data").type == pa.float64()
+
+    @requires_pyarrow
+    def test_arrow_schema_metadata(self):
+        import json
+
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords={"x": [10, 20, 30]},
+            name="temperature",
+            attrs={"units": "K", "long_name": "temperature"},
+        )
+        schema = pa.schema(da)
+
+        assert schema.metadata[b"xarray:arrow_schema_version"] == b"v1"
+
+        xarray_meta = json.loads(schema.metadata[b"xarray"])
+        assert xarray_meta["name"] == "temperature"
+        assert xarray_meta["dims"] == ["x"]
+        assert xarray_meta["attrs"] == {"units": "K", "long_name": "temperature"}
+        assert "x" in xarray_meta["coords"]
+
+    @requires_pyarrow
+    def test_pyarrow_table_curvilinear_coords(self):
+        import pyarrow as pa
+
+        # non-dimension coordinates spanning multiple dims (e.g. a curvilinear
+        # grid with 2D lat/lon) should be supported
+        lat = np.array([[10.0, 11.0, 12.0], [13.0, 14.0, 15.0]])
+        lon = np.array([[20.0, 21.0, 22.0], [23.0, 24.0, 25.0]])
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"lat": (["x", "y"], lat), "lon": (["x", "y"], lon)},
+            name="data",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"lat", "lon", "data"}
+        assert table.num_rows == 6
+        assert table.schema.field("lat").type == pa.float64()
+        assert table.schema.field("lon").type == pa.float64()
+        assert table.schema.field("data").type == pa.float64()
+        np.testing.assert_array_equal(table["lat"].to_pylist(), lat.ravel())
+        np.testing.assert_array_equal(table["lon"].to_pylist(), lon.ravel())
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), np.arange(6, dtype=float)
+        )
+
+    @requires_pyarrow
+    def test_pyarrow_table_transposed_coords(self):
+        import pyarrow as pa
+
+        lat = np.array([[10.0, 11.0], [12.0, 13.0], [14.0, 15.0]])
+
+        # Array with swapped dims order
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"lat": (["y", "x"], lat)},
+            name="data",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"lat", "data"}
+        assert table.num_rows == 6
+        assert table.schema.field("lat").type == pa.float64()
+        np.testing.assert_array_equal(table["lat"].to_pylist(), lat.T.ravel())
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), np.arange(6, dtype=float)
+        )

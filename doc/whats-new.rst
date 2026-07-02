@@ -13,6 +13,10 @@ v2026.05.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added `PyArrowCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
+  to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
+  export to pyarrow, polars or duckdb.
+  By `Jules Chéron <https://github.com/jules-ch>`_.
 - Following pandas, xarray's
   :py:class:`~xarray.core.accessor_dt.DatetimeAccessor` now supports
   :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_week` and
