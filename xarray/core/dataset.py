@@ -10459,7 +10459,7 @@ class Dataset(
 
         Parameters
         ----------
-        dims : iterable of hashable
+        dim : iterable of hashable
             The name(s) of the dimensions to create the cumulative window along
         min_periods : int, default: 1
             Minimum number of observations in window required to have a value
