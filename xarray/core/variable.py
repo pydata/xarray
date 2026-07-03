@@ -1313,16 +1313,20 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 # Padding an integer array with a non-finite fill value such as
                 # NaN would raise ("cannot convert float NaN to integer"). Promote
                 # the dtype so the fill value can be represented, as is already
-                # done for the default fill value. See GH6431.
-                if isinstance(constant_values, dict):
-                    fill_arrays = [np.asarray(v) for v in constant_values.values()]
-                else:
-                    fill_arrays = [np.asarray(constant_values)]
-                if any(
-                    a.dtype.kind == "f" and not np.isfinite(a).all()
-                    for a in fill_arrays
-                ):
-                    dtype = np.result_type(dtype, *(a.dtype for a in fill_arrays))
+                # done for the default fill value. See GH6431. Only plain
+                # floating scalars are inspected here, so unit-aware duck arrays
+                # (e.g. pint quantities) are left untouched.
+                def _has_nonfinite_fill(value):
+                    if isinstance(value, dict):
+                        return any(_has_nonfinite_fill(v) for v in value.values())
+                    if isinstance(value, tuple | list):
+                        return any(_has_nonfinite_fill(v) for v in value)
+                    return isinstance(value, float | np.floating) and not np.isfinite(
+                        value
+                    )
+
+                if _has_nonfinite_fill(constant_values):
+                    dtype = np.result_type(dtype, float)
 
         # create pad_options_kwargs, numpy requires only relevant kwargs to be nonempty
         if isinstance(stat_length, dict):
