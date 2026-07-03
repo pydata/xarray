@@ -1305,6 +1305,24 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             dtype, constant_values = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype
+            if (
+                mode == "constant"
+                and constant_values is not None
+                and np.issubdtype(dtype, np.integer)
+            ):
+                # Padding an integer array with a non-finite fill value such as
+                # NaN would raise ("cannot convert float NaN to integer"). Promote
+                # the dtype so the fill value can be represented, as is already
+                # done for the default fill value. See GH6431.
+                if isinstance(constant_values, dict):
+                    fill_arrays = [np.asarray(v) for v in constant_values.values()]
+                else:
+                    fill_arrays = [np.asarray(constant_values)]
+                if any(
+                    a.dtype.kind == "f" and not np.isfinite(a).all()
+                    for a in fill_arrays
+                ):
+                    dtype = np.result_type(dtype, *(a.dtype for a in fill_arrays))
 
         # create pad_options_kwargs, numpy requires only relevant kwargs to be nonempty
         if isinstance(stat_length, dict):

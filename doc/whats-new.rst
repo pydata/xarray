@@ -35,6 +35,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`DataArray.pad`, :py:meth:`Dataset.pad` and :py:meth:`Variable.pad`
+  no longer raise when padding an integer array with an explicit non-finite
+  ``constant_values`` such as ``np.nan``; the dtype is now promoted so the fill
+  value can be represented, as already happens for the default fill value
+  (:issue:`6431`).
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
   code ndarrays into Python lists (:issue:`11305`).

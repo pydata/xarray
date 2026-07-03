@@ -4675,8 +4675,15 @@ class TestDataArray:
         expected = xr.DataArray([1, 9, 1], dims="x")
         assert_identical(actual, expected)
 
-        with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
-            ar.pad(x=1, constant_values=np.nan)
+        # padding an integer array with a non-finite fill value promotes the
+        # dtype so the fill value can be represented (GH6431)
+        actual = ar.pad(x=1, constant_values=np.nan)
+        expected = xr.DataArray([np.nan, 9, np.nan], dims="x")
+        assert_identical(actual, expected)
+
+        actual = ar.pad(x=(1, 1), constant_values=(0, np.nan))
+        expected = xr.DataArray([0, 9, np.nan], dims="x")
+        assert_identical(actual, expected)
 
     def test_pad_coords(self) -> None:
         ar = DataArray(
