@@ -107,7 +107,9 @@ xarray\.core\.dataset\.DatasetResample$
 
 xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.date_type$
 xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.day$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.day_of_week$
 xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.dayofweek$
+xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.day_of_year$
 xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.dayofyear$
 xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.days_in_month$
 xarray\.core\.(dataarray|dataset)\.CFTimeIndex\.hour$

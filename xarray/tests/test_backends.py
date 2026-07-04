@@ -66,7 +66,6 @@ from xarray.core.indexes import PandasIndex
 from xarray.core.options import set_options
 from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
-from xarray.namedarray.pycompat import array_type
 from xarray.structure.alignment import AlignmentError
 from xarray.tests import (
     assert_allclose,
@@ -74,12 +73,13 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_api,
+    dask_array_type,
     has_dask,
     has_netCDF4,
     has_numpy_2,
     has_scipy,
     has_zarr,
-    has_zarr_v3,
     has_zarr_v3_async_oindex,
     has_zarr_v3_dtypes,
     mock,
@@ -120,7 +120,7 @@ with contextlib.suppress(ImportError):
 
 with contextlib.suppress(ImportError):
     import dask
-    import dask.array as da
+
 
 with contextlib.suppress(ImportError):
     import fsspec
@@ -128,22 +128,10 @@ with contextlib.suppress(ImportError):
 if has_zarr:
     import zarr
     import zarr.codecs
+    from zarr.storage import MemoryStore as KVStore
+    from zarr.storage import WrapperStore
 
-    if has_zarr_v3:
-        from zarr.storage import MemoryStore as KVStore
-        from zarr.storage import WrapperStore
-
-        ZARR_FORMATS = [2, 3]
-    else:
-        ZARR_FORMATS = [2]
-        try:
-            from zarr import (  # type: ignore[attr-defined,no-redef,unused-ignore]
-                KVStoreV3 as KVStore,
-            )
-        except ImportError:
-            KVStore = None  # type: ignore[assignment,misc,unused-ignore]
-
-        WrapperStore = object  # type: ignore[assignment,misc,unused-ignore]
+    ZARR_FORMATS = [2, 3]
 else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
     WrapperStore = object  # type: ignore[assignment,misc,unused-ignore]
@@ -158,7 +146,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
 def default_zarr_format(request) -> Generator[None, None]:
-    if has_zarr_v3:
+    if has_zarr:
         with zarr.config.set(default_zarr_format=request.param):
             yield
     else:
@@ -166,12 +154,12 @@ def default_zarr_format(request) -> Generator[None, None]:
 
 
 def skip_if_zarr_format_3(reason: str):
-    if has_zarr_v3 and zarr.config["default_zarr_format"] == 3:
+    if has_zarr and zarr.config["default_zarr_format"] == 3:
         pytest.skip(reason=f"Unsupported with zarr_format=3: {reason}")
 
 
 def skip_if_zarr_format_2(reason: str):
-    if not has_zarr_v3 or (zarr.config["default_zarr_format"] == 2):
+    if has_zarr and zarr.config["default_zarr_format"] == 2:
         pytest.skip(reason=f"Unsupported with zarr_format=2: {reason}")
 
 
@@ -238,9 +226,6 @@ def _check_compression_codec_available(codec: str | None) -> bool:
     except Exception:
         # Any other error, assume codec is not available
         return False
-
-
-dask_array_type = array_type("dask")
 
 
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
@@ -1023,6 +1008,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def validate_array_type(self, ds):
+
         # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
@@ -1031,7 +1017,7 @@ class DatasetIOBase:
                     find_and_validate_array(obj.array)
                 elif isinstance(obj.array, np.ndarray):
                     assert isinstance(obj, indexing.NumpyIndexingAdapter)
-                elif isinstance(obj.array, dask_array_type):
+                elif has_dask and isinstance(obj.array, dask_array_type):
                     assert isinstance(obj, indexing.DaskIndexingAdapter)
                 elif isinstance(obj.array, pd.Index):
                     assert isinstance(obj, indexing.PandasIndexingAdapter)
@@ -2261,16 +2247,19 @@ class NetCDF4Base(NetCDFBase):
                 assert len(loaded_ds.xindexes) == 0
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_encoding_masked_arrays(self, tmp_path) -> None:
         store_path = tmp_path / "tmp.nc"
 
         with raise_if_dask_computes():
+            da = dask_array_api
             ds = xr.DataArray(
-                dask.array.from_array(
+                da.from_array(
                     np.ma.masked_array(
                         np.array([[np.nan, np.nan], [np.nan, 2]]),
                         np.array([[True, True], [True, False]]),
-                    )
+                    ),
+                    chunks=(2, 2),
                 ).astype("float32"),
                 dims=("x", "y"),
             ).to_dataset(name="mydata")
@@ -2608,6 +2597,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     def test_write_inconsistent_chunks(self) -> None:
         # Construct two variables with the same dimensions, but different
         # chunk sizes.
+        da = dask_array_api
         x = da.zeros((100, 100), dtype="f4", chunks=(50, 100))
         x = DataArray(data=x, dims=("lat", "lon"), name="x")
         x.encoding["chunksizes"] = (50, 100)
@@ -2702,10 +2692,6 @@ class ZarrBase(CFEncodedBase):
                 yield ds
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        not has_zarr_v3,
-        reason="zarr-python <3 did not support async loading",
-    )
     async def test_load_async(self) -> None:
         await super().test_load_async()
 
@@ -2747,7 +2733,7 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(FileNotFoundError, match=f"({'|'.join(patterns)})"):
             xr.open_zarr(f"{uuid.uuid4()}")
 
-    @pytest.mark.skipif(has_zarr_v3, reason="chunk_store not implemented in zarr v3")
+    @pytest.mark.skip(reason="chunk_store not implemented in zarr v3")
     def test_with_chunkstore(self) -> None:
         expected = create_test_data()
         with (
@@ -2905,7 +2891,7 @@ class ZarrBase(CFEncodedBase):
     def test_shard_encoding(self) -> None:
         # These datasets have no dask chunks. All chunking/sharding specified in
         # encoding
-        if has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3:
+        if zarr.config.config["default_zarr_format"] == 3:
             data = create_test_data()
             chunks = (1, 1)
             shards = (5, 5)
@@ -2924,7 +2910,7 @@ class ZarrBase(CFEncodedBase):
     def test_shard_encoding_with_dask(self) -> None:
         # Test that dask chunks must align with shard boundaries.
         # See https://github.com/pydata/xarray/issues/10831
-        if not (has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3):
+        if zarr.config.config["default_zarr_format"] != 3:
             pytest.skip("sharding requires zarr v3 format")
 
         ds = xr.DataArray(np.arange(12), dims="x", name="var1").to_dataset()
@@ -3140,7 +3126,7 @@ class ZarrBase(CFEncodedBase):
     def test_compressor_encoding(self) -> None:
         # specify a custom compressor
         original = create_test_data()
-        if has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3:
+        if zarr.config.config["default_zarr_format"] == 3:
             encoding_key = "compressors"
             # all parameters need to be explicitly specified in order for the comparison to pass below
             encoding = {
@@ -3158,9 +3144,9 @@ class ZarrBase(CFEncodedBase):
         else:
             from numcodecs.blosc import Blosc
 
-            encoding_key = "compressors" if has_zarr_v3 else "compressor"
+            encoding_key = "compressors"
             comp = Blosc(cname="zstd", clevel=3, shuffle=2)
-            encoding = {encoding_key: (comp,) if has_zarr_v3 else comp}
+            encoding = {encoding_key: (comp,)}
 
         save_kwargs = dict(encoding={"var1": encoding})
 
@@ -3275,7 +3261,7 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
-        if has_zarr_v3 and not has_zarr_v3_dtypes:
+        if not has_zarr_v3_dtypes:
             skip_if_zarr_format_3("This actually works fine with Zarr format 3")
 
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
@@ -3310,12 +3296,12 @@ class ZarrBase(CFEncodedBase):
             import numcodecs
 
             encoding_value: Any
-            if has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3:
+            if zarr.config.config["default_zarr_format"] == 3:
                 compressor = zarr.codecs.BloscCodec()
             else:
                 compressor = numcodecs.Blosc()
-            encoding_key = "compressors" if has_zarr_v3 else "compressor"
-            encoding_value = (compressor,) if has_zarr_v3 else compressor
+            encoding_key = "compressors"
+            encoding_value = (compressor,)
 
             encoding = {"da": {encoding_key: encoding_value}}
             ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
@@ -3816,14 +3802,18 @@ class ZarrBase(CFEncodedBase):
         # We test this by writing a dask array with compute=False,
         # on read we should receive chunks filled with `fill_value`
         fv = -1
+        da = dask_array_api
         ds = xr.Dataset(
-            {"foo": ("x", dask.array.from_array(np.array([0, 0, 0], dtype=dtype)))}
+            {
+                "foo": (
+                    "x",
+                    da.from_array(np.array([0, 0, 0], dtype=dtype), chunks=(3,)),
+                )
+            }
         )
         expected = xr.Dataset({"foo": ("x", [fv] * 3)})
 
-        zarr_format_2 = (
-            has_zarr_v3 and zarr.config.get("default_zarr_format") == 2
-        ) or not has_zarr_v3
+        zarr_format_2 = zarr.config.get("default_zarr_format") == 2
         if zarr_format_2:
             attr = "_FillValue"
             expected.foo.attrs[attr] = fv
@@ -3874,7 +3864,7 @@ class ZarrBase(CFEncodedBase):
         # variable encoding on read, so that it is not lost on round-trip.
         # `fill_value` is an independent encoding key only for zarr_format 3;
         # for zarr_format 2 the fill_value is set via `_FillValue`.
-        if not has_zarr_v3 or zarr.config.get("default_zarr_format") != 3:
+        if zarr.config.get("default_zarr_format") != 3:
             pytest.skip("fill_value is only an encoding key for zarr_format 3")
 
         ds = xr.Dataset({"foo": ("x", [1, 2, 3])})
@@ -3892,38 +3882,20 @@ class ZarrBase(CFEncodedBase):
 
 
 @requires_zarr
-@pytest.mark.skipif(
-    KVStore is None, reason="zarr-python 2.x or ZARR_V3_EXPERIMENTAL_API is unset."
-)
 class TestInstrumentedZarrStore:
-    if has_zarr_v3:
-        methods = [
-            "get",
-            "set",
-            "list_dir",
-            "list_prefix",
-        ]
-    else:
-        methods = [
-            "__iter__",
-            "__contains__",
-            "__setitem__",
-            "__getitem__",
-            "listdir",
-            "list_prefix",
-        ]
+    methods = [
+        "get",
+        "set",
+        "list_dir",
+        "list_prefix",
+    ]
 
     @contextlib.contextmanager
     def create_zarr_target(self):
         if Version(zarr.__version__) < Version("2.18.0"):
             pytest.skip("Instrumented tests only work on latest Zarr.")
 
-        if has_zarr_v3:
-            kwargs = {"read_only": False}
-        else:
-            kwargs = {}  # type: ignore[arg-type,unused-ignore]
-
-        store = KVStore({}, **kwargs)  # type: ignore[arg-type,unused-ignore]
+        store = KVStore({}, read_only=False)  # type: ignore[arg-type,unused-ignore]
         yield store
 
     def make_patches(self, store):
@@ -3958,23 +3930,13 @@ class TestInstrumentedZarrStore:
         modified = Dataset({"foo": ("x", [2])}, coords={"x": [1]})
 
         with self.create_zarr_target() as store:
-            if has_zarr_v3:
-                # TODO: verify these
-                expected = {
-                    "set": 5,
-                    "get": 4,
-                    "list_dir": 2,
-                    "list_prefix": 1,
-                }
-            else:
-                expected = {
-                    "iter": 1,
-                    "contains": 18,
-                    "setitem": 10,
-                    "getitem": 13,
-                    "listdir": 0,
-                    "list_prefix": 3,
-                }
+            # TODO: verify these
+            expected = {
+                "set": 5,
+                "get": 4,
+                "list_dir": 2,
+                "list_prefix": 1,
+            }
 
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
@@ -3984,22 +3946,12 @@ class TestInstrumentedZarrStore:
             patches = self.make_patches(store)
             # v2024.03.0: {'iter': 6, 'contains': 2, 'setitem': 5, 'getitem': 10, 'listdir': 6, 'list_prefix': 0}
             # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
-            if has_zarr_v3:
-                expected = {
-                    "set": 4,
-                    "get": 9,  # TODO: fixme upstream (should be 8)
-                    "list_dir": 2,  # TODO: fixme upstream (should be 2)
-                    "list_prefix": 0,
-                }
-            else:
-                expected = {
-                    "iter": 1,
-                    "contains": 11,
-                    "setitem": 6,
-                    "getitem": 15,
-                    "listdir": 0,
-                    "list_prefix": 1,
-                }
+            expected = {
+                "set": 4,
+                "get": 9,  # TODO: fixme upstream (should be 8)
+                "list_dir": 2,  # TODO: fixme upstream (should be 2)
+                "list_prefix": 0,
+            }
 
             with patch.multiple(KVStore, **patches):
                 modified.to_zarr(store, mode="a", append_dim="x")
@@ -4007,22 +3959,12 @@ class TestInstrumentedZarrStore:
 
             patches = self.make_patches(store)
 
-            if has_zarr_v3:
-                expected = {
-                    "set": 4,
-                    "get": 9,  # TODO: fixme upstream (should be 8)
-                    "list_dir": 2,  # TODO: fixme upstream (should be 2)
-                    "list_prefix": 0,
-                }
-            else:
-                expected = {
-                    "iter": 1,
-                    "contains": 11,
-                    "setitem": 6,
-                    "getitem": 15,
-                    "listdir": 0,
-                    "list_prefix": 1,
-                }
+            expected = {
+                "set": 4,
+                "get": 9,  # TODO: fixme upstream (should be 8)
+                "list_dir": 2,  # TODO: fixme upstream (should be 2)
+                "list_prefix": 0,
+            }
 
             with patch.multiple(KVStore, **patches):
                 modified.to_zarr(store, mode="a-", append_dim="x")
@@ -4037,22 +3979,12 @@ class TestInstrumentedZarrStore:
     def test_region_write(self) -> None:
         ds = Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": [1, 2, 3]}).chunk()
         with self.create_zarr_target() as store:
-            if has_zarr_v3:
-                expected = {
-                    "set": 5,
-                    "get": 2,
-                    "list_dir": 2,
-                    "list_prefix": 4,
-                }
-            else:
-                expected = {
-                    "iter": 1,
-                    "contains": 16,
-                    "setitem": 9,
-                    "getitem": 13,
-                    "listdir": 0,
-                    "list_prefix": 5,
-                }
+            expected = {
+                "set": 5,
+                "get": 2,
+                "list_dir": 2,
+                "list_prefix": 4,
+            }
 
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
@@ -4061,22 +3993,12 @@ class TestInstrumentedZarrStore:
 
             # v2024.03.0: {'iter': 5, 'contains': 2, 'setitem': 1, 'getitem': 6, 'listdir': 5, 'list_prefix': 0}
             # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 5, 'listdir': 4, 'list_prefix': 0}
-            if has_zarr_v3:
-                expected = {
-                    "set": 1,
-                    "get": 3,
-                    "list_dir": 0,
-                    "list_prefix": 0,
-                }
-            else:
-                expected = {
-                    "iter": 1,
-                    "contains": 6,
-                    "setitem": 1,
-                    "getitem": 7,
-                    "listdir": 0,
-                    "list_prefix": 0,
-                }
+            expected = {
+                "set": 1,
+                "get": 3,
+                "list_dir": 0,
+                "list_prefix": 0,
+            }
 
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
@@ -4085,44 +4007,24 @@ class TestInstrumentedZarrStore:
 
             # v2024.03.0: {'iter': 6, 'contains': 4, 'setitem': 1, 'getitem': 11, 'listdir': 6, 'list_prefix': 0}
             # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 7, 'listdir': 4, 'list_prefix': 0}
-            if has_zarr_v3:
-                expected = {
-                    "set": 1,
-                    "get": 4,
-                    "list_dir": 0,
-                    "list_prefix": 0,
-                }
-            else:
-                expected = {
-                    "iter": 1,
-                    "contains": 6,
-                    "setitem": 1,
-                    "getitem": 8,
-                    "listdir": 0,
-                    "list_prefix": 0,
-                }
+            expected = {
+                "set": 1,
+                "get": 4,
+                "list_dir": 0,
+                "list_prefix": 0,
+            }
 
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
                 ds.to_zarr(store, region="auto")
             self.check_requests(expected, patches)
 
-            if has_zarr_v3:
-                expected = {
-                    "set": 0,
-                    "get": 5,
-                    "list_dir": 0,
-                    "list_prefix": 0,
-                }
-            else:
-                expected = {
-                    "iter": 1,
-                    "contains": 6,
-                    "setitem": 0,
-                    "getitem": 8,
-                    "listdir": 0,
-                    "list_prefix": 0,
-                }
+            expected = {
+                "set": 0,
+                "get": 5,
+                "list_dir": 0,
+                "list_prefix": 0,
+            }
 
             patches = self.make_patches(store)
             with patch.multiple(KVStore, **patches):
@@ -4135,10 +4037,7 @@ class TestInstrumentedZarrStore:
 class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        if has_zarr_v3:
-            yield zarr.storage.MemoryStore({}, read_only=False)
-        else:
-            yield {}
+        yield zarr.storage.MemoryStore({}, read_only=False)
 
     def test_chunk_key_encoding_v2(self) -> None:
         encoding = {"name": "v2", "configuration": {"separator": "/"}}
@@ -4158,14 +4057,6 @@ class TestZarrDictStore(ZarrBase):
         # Write to store with custom encoding
         with self.create_zarr_target() as store:
             original.to_zarr(store, encoding=encoding)
-
-            # Verify the chunk keys in store use the slash separator
-            if not has_zarr_v3:
-                chunk_keys = [k for k in store.keys() if k.startswith("var1/")]
-                assert len(chunk_keys) > 0
-                for key in chunk_keys:
-                    assert "/" in key
-                    assert "." not in key.split("/")[1:]  # No dots in chunk coordinates
 
             # Read back and verify data
             with xr.open_zarr(store) as actual:
@@ -4347,9 +4238,8 @@ class TestZarrDictStore(ZarrBase):
             pytest.param(
                 {"dim2": 2},
                 "basic async indexing",
-                marks=pytest.mark.skipif(
-                    has_zarr_v3,
-                    reason="current version of zarr has basic async indexing",
+                marks=pytest.mark.skip(
+                    reason="current version of zarr has basic async indexing"
                 ),
             ),  # tests basic indexing
             pytest.param(
@@ -4512,10 +4402,6 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 assert (
                     "_FillValue" not in on_disk.variables["ints"].encoding
                 )  # use default
-                if not has_zarr_v3:
-                    # zarr-python v2 interprets fill_value=None inconsistently
-                    del on_disk["ints"]
-                    del expected["ints"]
                 assert_identical(expected, on_disk)
 
     @pytest.mark.parametrize("consolidated", [True, False, None])
@@ -4545,8 +4431,8 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
         # The zarr format is set by the `default_zarr_format`
         # pytest fixture that acts on a superclass
-        zarr_format_3 = has_zarr_v3 and zarr.config.config["default_zarr_format"] == 3
-        if (write_empty is False) or (write_empty is None and has_zarr_v3):
+        zarr_format_3 = zarr.config.config["default_zarr_format"] == 3
+        if (write_empty is False) or (write_empty is None):
             expected = ["0.1.0"]
         else:
             expected = [
@@ -4597,9 +4483,9 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 assert_identical(a_ds, expected_ds.compute())
                 # add the new files we expect to be created by the append
                 # that was performed by the roundtrip_dir
-                if (write_empty is False) or (write_empty is None and has_zarr_v3):
+                if (write_empty is False) or (write_empty is None):
                     expected.append("1.1.0")
-                elif not has_zarr_v3 or has_zarr_v3_async_oindex:
+                elif has_zarr_v3_async_oindex:
                     # this was broken from zarr 3.0.0 until 3.1.2
                     # async oindex released in 3.1.2 along with a fix
                     # for write_empty_chunks in append
@@ -4634,16 +4520,10 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         # rather than a mocked method.
 
         Group: Any
-        if has_zarr_v3:
-            Group = zarr.AsyncGroup
-            patched = patch.object(
-                Group, "getitem", side_effect=Group.getitem, autospec=True
-            )
-        else:
-            Group = zarr.Group
-            patched = patch.object(
-                Group, "__getitem__", side_effect=Group.__getitem__, autospec=True
-            )
+        Group = zarr.AsyncGroup
+        patched = patch.object(
+            Group, "getitem", side_effect=Group.getitem, autospec=True
+        )
 
         with self.create_zarr_target() as store, patched as mock:
             ds.to_zarr(store, mode="w")
@@ -4661,7 +4541,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
 @requires_zarr
 @requires_fsspec
-@pytest.mark.skipif(has_zarr_v3, reason="Difficult to test.")
+@pytest.mark.skip(reason="Difficult to test.")
 def test_zarr_storage_options() -> None:
     pytest.importorskip("aiobotocore")
     ds = create_test_data()
@@ -4675,10 +4555,7 @@ def test_zarr_storage_options() -> None:
 def test_zarr_version_deprecated() -> None:
     ds = create_test_data()
     store: Any
-    if has_zarr_v3:
-        store = KVStore()
-    else:
-        store = {}
+    store = KVStore()
 
     with pytest.warns(FutureWarning, match="zarr_version"):
         ds.to_zarr(store=store, zarr_version=2)
@@ -5350,6 +5227,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
     def test_write_inconsistent_chunks(self) -> None:
         # Construct two variables with the same dimensions, but different
         # chunk sizes.
+        da = dask_array_api
         x = da.zeros((100, 100), dtype="f4", chunks=(50, 100))
         x = DataArray(data=x, dims=("lat", "lon"), name="x")
         x.encoding["chunksizes"] = (50, 100)
@@ -6000,7 +5878,7 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset(
                     [tmp1, tmp2], concat_dim="x", combine="nested"
                 ) as actual:
-                    assert isinstance(actual.foo.variable.data, da.Array)
+                    assert isinstance(actual.foo.variable.data, dask_array_type)
                     assert actual.foo.variable.data.chunks == ((5, 5),)
                     assert_identical(original, actual)
                 with open_mfdataset(
@@ -6036,7 +5914,10 @@ class TestDask(DatasetIOBase):
                             combine="nested",
                             concat_dim=["y", "x"],
                         ) as actual:
-                            assert isinstance(actual.foo.variable.data, da.Array)
+                            assert isinstance(
+                                actual.foo.variable.data,
+                                dask_array_type,
+                            )
                             assert actual.foo.variable.data.chunks == ((5, 5), (4, 4))
                             assert_identical(original, actual)
                         with open_mfdataset(
@@ -6396,7 +6277,7 @@ class TestDask(DatasetIOBase):
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
             with open_dataset(tmp, chunks={"x": 5}) as actual:
-                assert isinstance(actual.foo.variable.data, da.Array)
+                assert isinstance(actual.foo.variable.data, dask_array_type)
                 assert actual.foo.variable.data.chunks == ((5, 5),)
                 assert_identical(original, actual)
             with open_dataset(tmp, chunks=5) as actual:
@@ -6468,7 +6349,7 @@ class TestDask(DatasetIOBase):
             {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]},
         )
         with self.roundtrip(original, open_kwargs={"chunks": "auto"}) as actual:
-            assert isinstance(actual.time_bnds.variable.data, da.Array)
+            assert isinstance(actual.time_bnds.variable.data, dask_array_type)
             assert _contains_cftime_datetimes(actual.time)
             assert_identical(original, actual)
 
@@ -6559,6 +6440,7 @@ class TestDask(DatasetIOBase):
         ON_WINDOWS,
         reason="counting number of tasks in graph fails on windows for some reason",
     )
+    @pytest.mark.skip_with_dask_array
     def test_inline_array(self) -> None:
         with create_tmp_file() as tmp:
             original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -6938,7 +6820,7 @@ class TestDataArrayToNetCDF:
 @requires_zarr
 class TestDataArrayToZarr:
     def skip_if_zarr_python_3_and_zip_store(self, store) -> None:
-        if has_zarr_v3 and isinstance(store, zarr.storage.ZipStore):
+        if isinstance(store, zarr.storage.ZipStore):
             pytest.skip(
                 reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode."
             )
@@ -7049,6 +6931,7 @@ def test_source_encoding_always_present_with_pathlib() -> None:
 
 @requires_h5netcdf
 @requires_fsspec
+@requires_dask  # TODO remove after https://github.com/pydata/xarray/issues/9038
 def test_source_encoding_always_present_with_fsspec() -> None:
     import fsspec
 
@@ -7302,7 +7185,7 @@ def test_extract_zarr_variable_encoding() -> None:
     var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
     assert "chunks" in actual
-    assert actual["chunks"] == ("auto" if has_zarr_v3 else None)
+    assert actual["chunks"] == "auto"
 
     var = xr.Variable("x", [1, 2], encoding={"chunks": (1,)})
     actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
@@ -7399,7 +7282,7 @@ def test_load_single_value_h5netcdf(tmp_path: Path) -> None:
 )
 def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
     encoded_chunks = 100
-    dask_arr = da.from_array(
+    dask_arr = dask_array_api.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
     ds = xr.Dataset(
@@ -7429,7 +7312,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
 @pytest.mark.filterwarnings("ignore:The specified chunks separate")
 def test_chunking_consistency(chunks, tmp_path: Path) -> None:
     encoded_chunks: dict[str, Any] = {}
-    dask_arr = da.from_array(
+    dask_arr = dask_array_api.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
     ds = xr.Dataset(
@@ -8254,6 +8137,7 @@ class TestZarrRegionAuto:
 
 @requires_h5netcdf
 @requires_fsspec
+@requires_dask  # TODO remove after https://github.com/pydata/xarray/issues/9038
 def test_h5netcdf_storage_options() -> None:
     with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
         ds1 = create_test_data()
@@ -8272,3 +8156,14 @@ def test_h5netcdf_storage_options() -> None:
             storage_options={"skip_instance_cache": False},
         ) as ds:
             assert_identical(xr.concat([ds1, ds2], dim="time", data_vars="all"), ds)
+
+
+def test_get_mtime_non_file_paths() -> None:
+    """_get_mtime should not raise on non-file paths (gh#11386)."""
+    from xarray.backends.api import _get_mtime
+
+    # Non-existent local path should return None, not crash
+    assert _get_mtime("/nonexistent/path.nc") is None
+
+    # GDAL virtual filesystem paths are not real files
+    assert _get_mtime("/vsicurl/https://example.com/file.nc") is None

@@ -175,6 +175,7 @@ class TestGetChunkManager:
             guess_chunkmanager("foo")
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_get_dask_if_installed(self) -> None:
         chunkmanager = guess_chunkmanager(None)
         assert isinstance(chunkmanager, DaskManager)
@@ -192,6 +193,7 @@ class TestGetChunkManager:
             guess_chunkmanager("dask")
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_choose_dask_over_other_chunkmanagers(
         self, register_dummy_chunkmanager
     ) -> None:
@@ -240,6 +242,7 @@ class TestGetChunkedArrayType:
             get_chunked_array_type(dummy_arr)
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_detect_dask_if_installed(self) -> None:
         import dask.array as da
 

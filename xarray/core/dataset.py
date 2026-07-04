@@ -533,7 +533,7 @@ class Dataset(
 
         Data will be computed and/or loaded from disk or a remote source.
 
-        Unlike ``.compute``, the original dataset is modified and returned.
+        Unlike ``.compute``, the original dataset is modified in-place and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -648,14 +648,17 @@ class Dataset(
         if not graphs:
             return None
         else:
-            try:
-                from dask.highlevelgraph import HighLevelGraph
+            from dask.highlevelgraph import HighLevelGraph
 
+            if all(isinstance(graph, HighLevelGraph) for graph in graphs.values()):
                 return HighLevelGraph.merge(*graphs.values())
-            except ImportError:
-                from dask import sharedict
 
-                return sharedict.merge(*graphs.values())
+            from dask.utils import ensure_dict
+
+            merged = {}
+            for graph in graphs.values():
+                merged.update(ensure_dict(graph))
+            return merged
 
     def __dask_keys__(self):
         import dask
@@ -665,6 +668,56 @@ class Dataset(
             for v in self.variables.values()
             if dask.is_dask_collection(v)
         ]
+
+    def __dask_exprs__(self):
+        from importlib import import_module
+
+        import dask
+
+        try:
+            DaskArray = import_module("dask_array").Array
+        except ImportError:
+            return None
+
+        exprs = []
+        for v in self.variables.values():
+            if dask.is_dask_collection(v):
+                if not isinstance(v._data, DaskArray):
+                    # Composite expressions must account for every Dask-backed
+                    # variable.  Returning None keeps Dask's collection APIs on
+                    # the existing HighLevelGraph path for mixed
+                    # legacy/expression datasets.
+                    return None
+                exprs.append(v._data.expr)
+        return exprs or None
+
+    def __dask_rebuild_from_exprs__(self, exprs):
+        import dask
+        from dask._collections import new_collection
+
+        dask_variables = [
+            (k, v) for k, v in self._variables.items() if dask.is_dask_collection(v)
+        ]
+        exprs = list(exprs)
+        if len(exprs) != len(dask_variables):
+            raise ValueError(
+                f"Expected {len(dask_variables)} expressions to rebuild Dataset, "
+                f"got {len(exprs)}"
+            )
+
+        variables = dict(self._variables)
+        for (k, v), expr in zip(dask_variables, exprs, strict=True):
+            variables[k] = v._replace(data=new_collection(expr))
+
+        return type(self)._construct_direct(
+            variables,
+            self._coord_names,
+            self._dims,
+            self._attrs,
+            self._indexes,
+            self._encoding,
+            self._close,
+        )
 
     def __dask_layers__(self):
         import dask
@@ -7515,9 +7568,9 @@ class Dataset(
         dask.dataframe.DataFrame
         """
 
-        import dask.array as da
         import dask.dataframe as dd
 
+        chunkmanager = guess_chunkmanager("dask")
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         columns = list(ordered_dims)
@@ -7534,7 +7587,7 @@ class Dataset(
             except KeyError:
                 # dimension without a matching coordinate
                 size = self.sizes[name]
-                data = da.arange(size, chunks=size, dtype=np.int64)
+                data = chunkmanager.array_api.arange(size, chunks=size, dtype=np.int64)
                 var = Variable((name,), data)
 
             # IndexVariable objects have a dummy .chunk() method
@@ -10406,7 +10459,7 @@ class Dataset(
 
         Parameters
         ----------
-        dims : iterable of hashable
+        dim : iterable of hashable
             The name(s) of the dimensions to create the cumulative window along
         min_periods : int, default: 1
             Minimum number of observations in window required to have a value
