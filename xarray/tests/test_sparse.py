@@ -338,8 +338,9 @@ class TestSparseVariable:
         a = np.array([0, 1, np.nan, 3])
         s = sparse.COO.from_numpy(a)
         var_s = Variable("x", s)
-        assert np.all(var_s.fillna(2).data.todense() == np.arange(4))
-        assert np.all(var_s.count() == 3)
+
+        np.testing.assert_equal(var_s.fillna(2).data.todense(), np.arange(4))
+        np.testing.assert_equal(var_s.count().data.todense(), 3)
 
 
 @pytest.mark.parametrize(
