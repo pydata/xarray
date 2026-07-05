@@ -340,7 +340,11 @@ class TestSparseVariable:
         var_s = Variable("x", s)
 
         np.testing.assert_equal(var_s.fillna(2).data.todense(), np.arange(4))
-        np.testing.assert_equal(var_s.count().data.todense(), 3)
+
+        count = var_s.count().data
+        if hasattr(count, "todense"):
+            count = count.todense()
+        np.testing.assert_equal(count, 3)
 
 
 @pytest.mark.parametrize(
