@@ -716,7 +716,11 @@ class TestZarrDatatreeIO:
                 # zarr v3 BloscCodec auto-tunes typesize and shuffle on write,
                 # so we only check the attributes we explicitly set
                 rt_codec = roundtrip_dt["/set2/a"].encoding[compressor_key][0]
-                assert rt_codec.cname.value == "zstd"
+                # DEPR: backwards compatibility with zarr <= 3.2.1
+                # This will become a string in the future.
+                # Once we can drop zarr <= 3.2.1, the assertion can become
+                #   assert rt_codec.cname == "zstd"
+                assert getattr(rt_codec.cname, "value", rt_codec.cname) == "zstd"
                 assert rt_codec.clevel == 3
             else:
                 assert (
