@@ -695,7 +695,8 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix :py:meth:`Dataset.sum` and other reductions raising a ``TypeError`` when a
   scalar (0-d) non-numeric variable is present; such variables are now left
-  untouched when reducing over a dimension they do not have (:issue:`11417`).
+  untouched when reducing over a dimension they do not have
+  (:issue:`11417`, :pull:`11442`).
   By `Selim <https://github.com/CodingSelim>`_.
 
 
