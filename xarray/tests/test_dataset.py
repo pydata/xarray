@@ -6314,6 +6314,16 @@ class TestDataset:
         actual = ds.min()
         assert_identical(expected, actual)
 
+    def test_reduce_string_scalar_along_missing_dim(self) -> None:
+        # regression test for GH11417: reducing over a dim that a scalar
+        # (0-d) string variable doesn't have should leave it untouched
+        # instead of trying to sum the string.
+        ds = Dataset({"a": ("index", [1, 2, 3]), "d": ((), "hello")})
+        expected = Dataset({"a": 6, "d": ((), "hello")})
+        assert_identical(ds.sum("index"), expected)
+        # also with no dim given, the string scalar just passes through
+        assert_identical(ds.sum(), expected)
+
     def test_reduce_dtypes(self) -> None:
         # regression test for GH342
         expected = Dataset({"x": 1})

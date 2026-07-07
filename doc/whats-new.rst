@@ -693,6 +693,10 @@ Bug fixes
 - Fix error raised when writing scalar variables to Zarr with ``region={}``
   (:pull:`10796`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix :py:meth:`Dataset.sum` and other reductions raising a ``TypeError`` when a
+  scalar (0-d) non-numeric variable is present; such variables are now left
+  untouched when reducing over a dimension they do not have (:issue:`11417`).
+  By `Selim <https://github.com/CodingSelim>`_.
 
 
 .. _whats-new.2025.09.1:
