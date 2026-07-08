@@ -30,7 +30,6 @@ from xarray.core.indexing import (
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     IndexableArray,
     assert_allclose,
@@ -38,6 +37,8 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_type,
+    has_dask_array_expr,
     has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
@@ -49,8 +50,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.test_namedarray import NamedArraySubclassobjects
-
-dask_array_type = array_type("dask")
 
 _PAD_XR_NP_ARGS = [
     [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
@@ -683,9 +682,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         v = self.cls("x", data)
         print(v)  # should not error
         if v.dtype == np.dtype("O"):
-            import dask.array as da
-
-            assert isinstance(v.data, da.Array)
+            assert isinstance(v.data, dask_array_type)
         else:
             assert v.dtype == data.dtype
 
@@ -2110,18 +2107,16 @@ class TestVariable(VariableSubclassobjects):
 
     @requires_dask
     def test_reduce_keepdims_dask(self):
-        import dask.array
-
         v = Variable(["x", "y"], self.d).chunk()
 
         actual = v.mean(keepdims=True)
-        assert isinstance(actual.data, dask.array.Array)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, keepdims=True))
         assert_identical(actual, expected)
 
         actual = v.mean(dim="y", keepdims=True)
-        assert isinstance(actual.data, dask.array.Array)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, axis=1, keepdims=True))
         assert_identical(actual, expected)
@@ -2442,10 +2437,8 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert blocked.load().chunks is None
 
         # Check that kwargs are passed
-        import dask.array as da
-
         blocked = unblocked.chunk(name="testname_")
-        assert isinstance(blocked.data, da.Array)
+        assert isinstance(blocked.data, dask_array_type)
         assert "testname_" in blocked.data.name
 
         # test kwargs form of chunks
@@ -2478,9 +2471,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         super().test_getitem_1d_fancy()
 
     def test_getitem_with_mask_nd_indexer(self):
-        import dask.array as da
-
-        v = Variable(["x"], da.arange(3, chunks=3))
+        v = Variable(["x"], np.arange(3)).chunk({"x": 3})
         indexer = Variable(("x", "y"), [[0, -1], [-1, 2]])
         assert_identical(
             v._getitem_with_mask(indexer, fill_value=-1),
@@ -2492,12 +2483,11 @@ class TestVariableWithDask(VariableSubclassobjects):
     @pytest.mark.parametrize("center", [True, False])
     def test_dask_rolling(self, dim, window, center):
         import dask
-        import dask.array as da
 
         dask.config.set(scheduler="single-threaded")
 
         x = Variable(("x", "y"), np.array(np.random.randn(100, 40), dtype=float))
-        dx = Variable(("x", "y"), da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8]))
+        dx = x.chunk({"x": (6, 30, 30, 20, 14), "y": 8})
 
         expected = x.rolling_window(
             dim, window, "window", center=center, fill_value=np.nan
@@ -2506,9 +2496,19 @@ class TestVariableWithDask(VariableSubclassobjects):
             actual = dx.rolling_window(
                 dim, window, "window", center=center, fill_value=np.nan
             )
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, dask_array_type)
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
+
+    def test_legacy_dask_array_rejected_by_dask_array_manager(self):
+        if not has_dask_array_expr:
+            pytest.skip("only meaningful with an alternate dask chunk manager")
+
+        import dask.array as da
+
+        x = Variable("x", da.arange(6, chunks=3))
+        with pytest.raises(TypeError, match="Could not find a Chunk Manager"):
+            x.rolling_window("x", 3, "window")
 
     @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11585")
     def test_multiindex(self):
@@ -3046,6 +3046,7 @@ class TestBackendIndexing:
     @requires_dask
     @pytest.mark.asyncio
     @pytest.mark.parametrize("load_async", [True, False])
+    @pytest.mark.skip_with_dask_array
     async def test_DaskIndexingAdapter(self, load_async):
         import dask.array as da
 
@@ -3145,6 +3146,7 @@ class TestNumpyCoercion:
 
     @requires_dask
     @requires_pint
+    @pytest.mark.skip_with_dask_array
     def test_from_pint_wrapping_dask(self, Var):
         import dask
         import pint

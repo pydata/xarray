@@ -7581,9 +7581,9 @@ class Dataset(
         dask.dataframe.DataFrame
         """
 
-        import dask.array as da
         import dask.dataframe as dd
 
+        chunkmanager = guess_chunkmanager("dask")
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         columns = list(ordered_dims)
@@ -7600,7 +7600,7 @@ class Dataset(
             except KeyError:
                 # dimension without a matching coordinate
                 size = self.sizes[name]
-                data = da.arange(size, chunks=size, dtype=np.int64)
+                data = chunkmanager.array_api.arange(size, chunks=size, dtype=np.int64)
                 var = Variable((name,), data)
 
             # IndexVariable objects have a dummy .chunk() method
@@ -10472,7 +10472,7 @@ class Dataset(
 
         Parameters
         ----------
-        dims : iterable of hashable
+        dim : iterable of hashable
             The name(s) of the dimensions to create the cumulative window along
         min_periods : int, default: 1
             Minimum number of observations in window required to have a value
