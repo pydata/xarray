@@ -35,6 +35,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Restore pickling support for open scipy-engine datasets backed by file-like
+  objects after another scipy file-like dataset is opened (:issue:`11323`).
+  By `Puneet Dixit <https://github.com/puneetdixit200>`_.
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
   code ndarrays into Python lists (:issue:`11305`).
