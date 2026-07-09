@@ -26,8 +26,8 @@ Vincent Gao, Wali Reheman, Wei Ji and eeshsaxena
 
 New Features
 ~~~~~~~~~~~~
-- Added support for Dask's query-optimizing expression arrays (`dask-array
-  <https://github.com/mrocklin/dask-array>`_). Xarray now implements the
+- Added support for Dask's `query-optimizing expression arrays
+  <https://github.com/mrocklin/dask-array>`_. Xarray now implements the
   ``__dask_exprs__`` protocol so that Dask can identify and optimize xarray
   :py:class:`Variable` objects without materializing their graphs, together
   with a chunk manager and :py:meth:`~xarray.Dataset.map_blocks` support for
