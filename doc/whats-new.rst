@@ -6,6 +6,35 @@
 What's New
 ==========
 
+.. _whats-new.2026.07.1:
+
+v2026.07.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2026.07.0:
 
 v2026.07.0 (Jul 9, 2026)
