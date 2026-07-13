@@ -16,6 +16,7 @@ def dask_rolling_wrapper(
     if input_dtype is None:
         input_dtype = a.dtype
     if input_dtype.kind in "biufc":
+        // auto-detect bottleneck/numbagg type promotion
         dtype = moving_func(
             np.empty((1,), dtype=input_dtype), window=1, min_count=1, axis=0
         ).dtype
