@@ -670,8 +670,14 @@ class DataArrayRolling(Rolling["DataArray"]):
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
         if is_duck_dask_array(padded.data):
+            input_dtype = self.obj.dtype if self.obj.dtype.kind == "b" else padded.dtype
             values = dask_array_ops.dask_rolling_wrapper(
-                func, padded, axis=axis, window=self.window[0], min_count=min_count
+                func,
+                padded,
+                axis=axis,
+                window=self.window[0],
+                min_count=min_count,
+                input_dtype=input_dtype,
             )
         else:
             values = func(

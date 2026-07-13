@@ -26,6 +26,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
+  differ from the dtype returned by the matching numpy-backed bottleneck path,
+  notably ``object`` instead of ``float64`` for boolean inputs.
+  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
