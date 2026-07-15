@@ -875,7 +875,7 @@ At this time, xarray can only open zarr datasets with these special attributes,
 such as zarr datasets written by xarray,
 `netCDF <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_,
 or `GDAL <https://gdal.org/drivers/raster/zarr.html>`_.
-For implementation details, see :ref:`zarr_encoding`.
+For implementation details, see :ref:`zarr-encoding`.
 
 To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
 
