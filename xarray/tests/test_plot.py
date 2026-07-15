@@ -1218,7 +1218,7 @@ class TestDiscreteColorMap:
         ]:
             for kind in ["imshow", "pcolormesh", "contourf", "contour"]:
                 primitive = getattr(self.darray.plot, kind)(levels=levels)
-                np.testing.assert_array_almost_equal(levels, primitive.norm.boundaries)
+                assert_array_equal(levels, primitive.norm.boundaries)
                 assert max(levels) <= primitive.norm.vmax
                 assert min(levels) == primitive.norm.vmin
                 if kind != "contour":
