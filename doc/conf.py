@@ -65,6 +65,7 @@ extensions = [
     "sphinx_inline_tabs",
     "sphinx_remove_toctrees",
     "sphinx_llm.txt",
+    "myst_nb",
 ]
 
 

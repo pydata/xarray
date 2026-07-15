@@ -241,6 +241,7 @@ sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
 myst-parser = "*"
+myst-nb = ">=1.4.0,<2"
 
 [feature.doc.tasks]
 doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation." }
