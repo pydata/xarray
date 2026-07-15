@@ -30,13 +30,15 @@ from xarray.core.indexing import (
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
+    IndexableArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_type,
+    has_dask_array_expr,
     has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
@@ -48,8 +50,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.test_namedarray import NamedArraySubclassobjects
-
-dask_array_type = array_type("dask")
 
 _PAD_XR_NP_ARGS = [
     [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
@@ -73,11 +73,16 @@ def var():
     ],
 )
 def test_as_compatible_data_writeable(data):
-    pd.set_option("mode.copy_on_write", True)
+    # In pandas 3 the mode.copy_on_write option defaults to True, so the option
+    # setting logic can be removed once our minimum version of pandas is
+    # greater than or equal to 3.
+    if not has_pandas_3:
+        pd.set_option("mode.copy_on_write", True)
     # GH8843, ensure writeable arrays for data_vars even with
     # pandas copy-on-write mode
     assert as_compatible_data(data).flags.writeable
-    pd.reset_option("mode.copy_on_write")
+    if not has_pandas_3:
+        pd.reset_option("mode.copy_on_write")
 
 
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
@@ -224,7 +229,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             x, np.timedelta64(td), np.dtype("timedelta64[us]")
         )
 
-        x = self.cls(["x"], pd.to_timedelta([td]))
+        x = self.cls(["x"], pd.to_timedelta([td]).as_unit("ns"))
         self._assertIndexedLikeNDArray(x, np.timedelta64(td), "timedelta64[ns]")
 
     def test_index_0d_not_a_time(self):
@@ -278,7 +283,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
-    dt64_data = pd.date_range("1970-01-01", periods=3)
+    dt64_data = pd.date_range("1970-01-01", periods=3, unit="ns")
 
     @pytest.mark.parametrize(
         "values, unit",
@@ -310,7 +315,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             (td64_data.values.astype("timedelta64[m]"), "s"),
             (td64_data.values.astype("timedelta64[s]"), "s"),
             (td64_data.values.astype("timedelta64[ps]"), "ns"),
-            (td64_data.to_pytimedelta(), "ns"),
+            (td64_data.to_pytimedelta(), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion(self, values, unit):
@@ -483,6 +488,11 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         v4 = v3.drop_encoding()
         assert v3.encoding == encoding3
         assert v4.encoding == {}
+
+        # drop_encoding should not copy data — fix for GH#11390
+        v = self.cls(["x"], np.arange(1000000))
+        v_dropped = v.drop_encoding()
+        assert v_dropped._data is v._data
 
     def test_concat(self):
         x = np.arange(5)
@@ -672,9 +682,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         v = self.cls("x", data)
         print(v)  # should not error
         if v.dtype == np.dtype("O"):
-            import dask.array as da
-
-            assert isinstance(v.data, da.Array)
+            assert isinstance(v.data, dask_array_type)
         else:
             assert v.dtype == data.dtype
 
@@ -1108,8 +1116,8 @@ class TestVariable(VariableSubclassobjects):
             (np.timedelta64(1, "m"), "s"),
             (np.timedelta64(1, "D"), "s"),
             (np.timedelta64(1001, "ps"), "ns"),
-            (pd.Timedelta("1 day"), "ns"),
-            (timedelta(days=1), "ns"),
+            (pd.Timedelta("1 day").as_unit("ns"), "ns"),
+            (timedelta(days=1), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion_scalar(self, values, unit):
@@ -1134,7 +1142,8 @@ class TestVariable(VariableSubclassobjects):
         assert v.values == np.datetime64("2000-01-01", expected_unit)  # type: ignore[call-overload]
 
     @pytest.mark.parametrize(
-        "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
+        "values, unit",
+        [(pd.to_timedelta("1s").as_unit("ns"), "ns"), (np.timedelta64(1, "s"), "s")],
     )
     def test_0d_timedelta(self, values, unit):
         # todo: check, if this test is OK
@@ -2098,18 +2107,16 @@ class TestVariable(VariableSubclassobjects):
 
     @requires_dask
     def test_reduce_keepdims_dask(self):
-        import dask.array
-
         v = Variable(["x", "y"], self.d).chunk()
 
         actual = v.mean(keepdims=True)
-        assert isinstance(actual.data, dask.array.Array)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, keepdims=True))
         assert_identical(actual, expected)
 
         actual = v.mean(dim="y", keepdims=True)
-        assert isinstance(actual.data, dask.array.Array)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, axis=1, keepdims=True))
         assert_identical(actual, expected)
@@ -2430,10 +2437,8 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert blocked.load().chunks is None
 
         # Check that kwargs are passed
-        import dask.array as da
-
         blocked = unblocked.chunk(name="testname_")
-        assert isinstance(blocked.data, da.Array)
+        assert isinstance(blocked.data, dask_array_type)
         assert "testname_" in blocked.data.name
 
         # test kwargs form of chunks
@@ -2466,9 +2471,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         super().test_getitem_1d_fancy()
 
     def test_getitem_with_mask_nd_indexer(self):
-        import dask.array as da
-
-        v = Variable(["x"], da.arange(3, chunks=3))
+        v = Variable(["x"], np.arange(3)).chunk({"x": 3})
         indexer = Variable(("x", "y"), [[0, -1], [-1, 2]])
         assert_identical(
             v._getitem_with_mask(indexer, fill_value=-1),
@@ -2480,12 +2483,11 @@ class TestVariableWithDask(VariableSubclassobjects):
     @pytest.mark.parametrize("center", [True, False])
     def test_dask_rolling(self, dim, window, center):
         import dask
-        import dask.array as da
 
         dask.config.set(scheduler="single-threaded")
 
         x = Variable(("x", "y"), np.array(np.random.randn(100, 40), dtype=float))
-        dx = Variable(("x", "y"), da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8]))
+        dx = x.chunk({"x": (6, 30, 30, 20, 14), "y": 8})
 
         expected = x.rolling_window(
             dim, window, "window", center=center, fill_value=np.nan
@@ -2494,9 +2496,19 @@ class TestVariableWithDask(VariableSubclassobjects):
             actual = dx.rolling_window(
                 dim, window, "window", center=center, fill_value=np.nan
             )
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, dask_array_type)
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
+
+    def test_legacy_dask_array_rejected_by_dask_array_manager(self):
+        if not has_dask_array_expr:
+            pytest.skip("only meaningful with an alternate dask chunk manager")
+
+        import dask.array as da
+
+        x = Variable("x", da.arange(6, chunks=3))
+        with pytest.raises(TypeError, match="Could not find a Chunk Manager"):
+            x.rolling_window("x", 3, "window")
 
     @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11585")
     def test_multiindex(self):
@@ -2750,7 +2762,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         expected = np.arange(5)
         actual: Any = as_compatible_data(original)
         assert_array_equal(expected, actual)
-        assert np.dtype(int) == actual.dtype
+        assert np.dtype(float) == actual.dtype
 
         original1: Any = np.ma.MaskedArray(np.arange(5), mask=4 * [False] + [True])
         expected1: Any = np.arange(5.0)
@@ -3034,6 +3046,7 @@ class TestBackendIndexing:
     @requires_dask
     @pytest.mark.asyncio
     @pytest.mark.parametrize("load_async", [True, False])
+    @pytest.mark.skip_with_dask_array
     async def test_DaskIndexingAdapter(self, load_async):
         import dask.array as da
 
@@ -3133,6 +3146,7 @@ class TestNumpyCoercion:
 
     @requires_dask
     @requires_pint
+    @pytest.mark.skip_with_dask_array
     def test_from_pint_wrapping_dask(self, Var):
         import dask
         import pint
@@ -3157,7 +3171,7 @@ class TestNumpyCoercion:
         (np.datetime64("2000-01-01", "s"), "s"),
         (np.array([np.datetime64("2000-01-01", "ns")]), "ns"),
         (np.array([np.datetime64("2000-01-01", "s")]), "s"),
-        (pd.date_range("2000", periods=1), "ns"),
+        (pd.date_range("2000", periods=1, unit="ns"), "ns"),
         (
             datetime(2000, 1, 1),
             "us" if has_pandas_3 else "ns",
@@ -3166,10 +3180,17 @@ class TestNumpyCoercion:
             np.array([datetime(2000, 1, 1)]),
             "us" if has_pandas_3 else "ns",
         ),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
+        (
+            pd.date_range(
+                "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+            ),
+            "ns",
+        ),
         (
             pd.Series(
-                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+                pd.date_range(
+                    "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+                )
             ),
             "ns",
         ),
@@ -3244,8 +3265,8 @@ def test_pandas_two_only_datetime_conversion_warnings(
         (np.array([np.timedelta64(10, "ns")]), "ns"),
         (np.array([np.timedelta64(10, "s")]), "s"),
         (pd.timedelta_range("1", periods=1), "ns"),
-        (timedelta(days=1), "ns"),
-        (np.array([timedelta(days=1)]), "ns"),
+        (timedelta(days=1), "us" if has_pandas_3 else "ns"),
+        (np.array([timedelta(days=1)]), "us" if has_pandas_3 else "ns"),
         (pd.timedelta_range("1", periods=1).astype("timedelta64[s]"), "s"),
     ],
     ids=lambda x: f"{x}",
@@ -3255,3 +3276,15 @@ def test_timedelta_conversion(values, unit) -> None:
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     var = Variable(dims, values)
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
+
+
+def test_explicitly_indexed_array_preserved() -> None:
+    """Test that methods using ._data preserve ExplicitlyIndexed arrays.
+
+    Regression test for methods that should use ._data instead of .data
+    to avoid loading lazy arrays into memory.
+    """
+    arr = IndexableArray(np.array([1, 2, 3]))
+    var = Variable(["x"], arr)
+    result = var.drop_encoding()
+    assert isinstance(result._data, indexing.ExplicitlyIndexed)

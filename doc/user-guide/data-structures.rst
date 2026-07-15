@@ -537,7 +537,7 @@ organise heterogeneous data which could not be stored inside a single
 of multiple `groups`_ within a netCDF file or `Zarr Store`_.
 
 .. _groups: https://www.unidata.ucar.edu/software/netcdf/workshops/2011/groups-types/GroupsIntro.html
-.. _Zarr Store: https://zarr.readthedocs.io/en/stable/tutorial.html#groups
+.. _Zarr Store: https://zarr.readthedocs.io/en/stable/user-guide/groups/#groups
 
 Each :py:class:`~xarray.DataTree` object (or "node") contains the same data that a single
 :py:class:`xarray.Dataset` would (i.e. :py:class:`~xarray.DataArray` objects stored under hashable

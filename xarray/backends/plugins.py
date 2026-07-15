@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 import itertools
+import os
 import warnings
 from collections.abc import Callable
 from importlib.metadata import entry_points
@@ -10,10 +11,9 @@ from typing import TYPE_CHECKING, Any
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.options import OPTIONS
-from xarray.core.utils import module_available
+from xarray.core.utils import is_remote_uri, module_available
 
 if TYPE_CHECKING:
-    import os
     from importlib.metadata import EntryPoint, EntryPoints
 
     from xarray.backends.common import AbstractDataStore
@@ -209,21 +209,32 @@ def guess_engine(
             "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"
         )
 
+    if isinstance(store_spec, str | os.PathLike):
+        store_spec_str = str(store_spec)
+        if not is_remote_uri(store_spec_str) and not os.path.exists(store_spec_str):
+            raise FileNotFoundError(f"No such file: '{store_spec_str}'")
+
     raise ValueError(error_msg)
 
 
 def get_backend(engine: str | type[BackendEntrypoint]) -> BackendEntrypoint:
     """Select open_dataset method based on current engine."""
     if isinstance(engine, str):
-        engines = list_engines()
-        if engine not in engines:
-            raise ValueError(
-                f"unrecognized engine '{engine}' must be one of your download engines: {list(engines)}. "
-                "To install additional dependencies, see:\n"
-                "https://docs.xarray.dev/en/stable/user-guide/io.html \n"
-                "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"
-            )
-        backend = engines[engine]
+        if engine in BACKEND_ENTRYPOINTS:
+            # fast path for built-in engines
+            backend_cls = BACKEND_ENTRYPOINTS[engine][1]
+            set_missing_parameters({engine: backend_cls})
+            backend = backend_cls()
+        else:
+            engines = list_engines()
+            if engine not in engines:
+                raise ValueError(
+                    f"unrecognized engine '{engine}' must be one of your download engines: {list(engines)}. "
+                    "To install additional dependencies, see:\n"
+                    "https://docs.xarray.dev/en/stable/user-guide/io.html \n"
+                    "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"
+                )
+            backend = engines[engine]
     elif issubclass(engine, BackendEntrypoint):
         backend = engine()
     else:

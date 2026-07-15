@@ -1677,7 +1677,7 @@ class StringAccessor(Generic[T_DataArray]):
         Parameters
         ----------
         table : dict-like from and to str or bytes or int
-            A a mapping of Unicode ordinals to Unicode ordinals, strings, int
+            A mapping of Unicode ordinals to Unicode ordinals, strings, int
             or None. Unmapped characters are left untouched. Characters mapped
             to None are deleted. :meth:`str.maketrans` is a helper function for
             making translation tables.

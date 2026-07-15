@@ -56,7 +56,7 @@ class CoordinateTransform:
 
         Parameters
         ----------
-        labels : dict
+        coord_labels : dict
             World coordinate labels.
 
         Returns

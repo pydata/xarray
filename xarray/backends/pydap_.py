@@ -123,7 +123,7 @@ class PydapDataStore(AbstractDataStore):
             emit_user_level_warning(
                 "`output_grid` is deprecated and will be removed in a future version"
                 " of xarray. Will be set to `None`, the new default. ",
-                DeprecationWarning,
+                FutureWarning,
             )
             output_grid = False  # new default behavior
 

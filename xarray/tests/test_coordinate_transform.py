@@ -142,6 +142,10 @@ def test_coordinate_transform_variable_basic_outer_indexing() -> None:
     assert var[0, -1] == 6.0
     np.testing.assert_array_equal(var[:, 0:2], [[0.0, 2.0]] * 4)
 
+    expected = var.values[[0], :][:, [0, -1]]
+    actual = var.isel(y=[0], x=[0, -1]).values
+    np.testing.assert_array_equal(actual, expected)
+
     with pytest.raises(IndexError, match="out of bounds index"):
         var[5]
 

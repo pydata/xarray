@@ -178,7 +178,7 @@ numpy array (so-called "duck array wrapping", see :ref:`wrapping numpy-like arra
 Imagine we want to write a strategy which generates arbitrary ``Variable`` objects, each of which wraps a
 :py:class:`sparse.COO` array instead of a ``numpy.ndarray``. How could we do that? There are two ways:
 
-1. Create a xarray object with numpy data and use the hypothesis' ``.map()`` method to convert the underlying array to a
+1. Create an xarray object with numpy data and use the hypothesis' ``.map()`` method to convert the underlying array to a
 different type:
 
 .. jupyter-execute::
