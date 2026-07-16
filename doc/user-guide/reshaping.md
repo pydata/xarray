@@ -334,7 +334,7 @@ ds.sortby(["y", "x"])
 ds.sortby(["y", "x"], ascending=False)
 ```
 
-(reshape-coarsen)=
+(reshape.coarsen)=
 
 ## Reshaping via coarsen
 

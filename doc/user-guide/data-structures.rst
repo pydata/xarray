@@ -43,7 +43,7 @@ the form of their ``attrs`` property. Names and attributes are strictly for
 users and user-written code: xarray makes no attempt to interpret them, and
 propagates them only in unambiguous cases. For reading and writing attributes
 xarray relies on the capabilities of the supported backends.
-(see FAQ, :ref:`approach to metadata`).
+(see FAQ, :ref:`approach-to-metadata`).
 
 .. _creating a dataarray:
 
@@ -870,7 +870,7 @@ in xarray:
   useful for indexing or plotting; otherwise, xarray does not make any
   direct use of the values associated with them.  They are not used
   for alignment or automatic indexing, nor are they required to match
-  when doing arithmetic (see :ref:`coordinates math`).
+  when doing arithmetic (see :ref:`coordinates-math`).
 
 .. note::
 

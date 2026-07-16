@@ -287,7 +287,7 @@ Note that due to the underlying representation of missing values as floating
 point numbers (`NaN`), variable data type is not always preserved when merging
 in this manner.
 
-(combining-multi)=
+(combining.multi)=
 
 ## Combining along multiple dimensions
 

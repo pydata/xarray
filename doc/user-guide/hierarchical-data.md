@@ -699,7 +699,7 @@ power = currents * voltages
 print(power)
 ```
 
-(hierarchical-data-alignment-and-coordinate-inheritance)=
+(hierarchical-data.alignment-and-coordinate-inheritance)=
 
 ## Alignment and Coordinate Inheritance
 

@@ -18,7 +18,7 @@ import xarray as xr
 np.random.seed(123456)
 ```
 
-(testing-hypothesis)=
+(testing.hypothesis)=
 
 ## Hypothesis testing
 

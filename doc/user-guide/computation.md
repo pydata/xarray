@@ -84,7 +84,7 @@ intarr << 2  # only supported for int types
 intarr >> 1
 ```
 
-(missing-values)=
+(missing_values)=
 
 ## Missing values
 
@@ -255,7 +255,7 @@ xr.DataArray([1, 2, np.nan, 3]).mean()
 If desired, you can disable this behavior by invoking the aggregation method
 with `skipna=False`.
 
-(compute-rolling)=
+(compute.rolling)=
 
 ## Rolling window operations
 
@@ -377,7 +377,7 @@ This means `rolling_da.mean('window_dim')` is memory inefficient.
 To avoid this, use `skipna=False` as the above example.
 :::
 
-(compute-weighted)=
+(compute.weighted)=
 
 ## Weighted array reductions
 
@@ -477,7 +477,7 @@ data.weighted(weights).mean()
 Missing values can be replaced manually by `weights.fillna(0)`.
 :::
 
-(compute-coarsen)=
+(compute.coarsen)=
 
 ## Coarsen large arrays
 
@@ -521,7 +521,7 @@ da.coarsen(time=7, x=2, coord_func={"time": "min"}).mean()
 
 You can also {ref}`use coarsen to reshape<reshape.coarsen>` without applying a computation.
 
-(compute-using-coordinates)=
+(compute.using_coordinates)=
 
 ## Computation using Coordinates
 
@@ -662,7 +662,7 @@ da.curvefit(
 This method replicates the behavior of {py:func}`scipy.optimize.curve_fit`.
 :::
 
-(compute-broadcasting)=
+(compute.broadcasting)=
 
 ## Broadcasting by dimension name
 
@@ -854,7 +854,7 @@ ds - ds2
 Similarly to index based alignment, the result has the intersection of all
 matching data variables.
 
-(compute-wrapping-custom)=
+(compute.wrapping-custom)=
 
 ## Wrapping custom computation
 

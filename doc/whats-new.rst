@@ -8395,7 +8395,7 @@ Enhancements
 
 - Added the ability to change default automatic alignment (arithmetic_join="inner")
   for binary operations via :py:func:`~xarray.set_options()`
-  (see :ref:`math automatic alignment`).
+  (see :ref:`math-automatic-alignment`).
   By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_.
 
 - Add checking of ``attr`` names and values when saving to netCDF, raising useful
@@ -9617,7 +9617,7 @@ Breaking changes
   ``xray.align`` and ``xray.Dataset.reindex_like`` should be
   vastly reduced.
 
-  :ref:`For arithmetic<math automatic alignment>`, we align
+  :ref:`For arithmetic<math-automatic-alignment>`, we align
   based on the **intersection** of labels:
 
   .. code:: python

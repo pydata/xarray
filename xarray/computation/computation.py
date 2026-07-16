@@ -521,7 +521,7 @@ def dot(
     Coordinates are aligned by their **values**, not their order. By default, xarray uses
     an inner join, so only overlapping coordinate values are included. With the default
     ``arithmetic_join="inner"``, ``dot(a, b)`` is mathematically equivalent to ``(a * b).sum()``
-    over the specified dimensions. See :ref:`math automatic alignment` for more details.
+    over the specified dimensions. See :ref:`math-automatic-alignment` for more details.
 
     Examples
     --------

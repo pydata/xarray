@@ -527,7 +527,7 @@ corresponding to different model runs or one file per timestamp.
 Xarray can straightforwardly combine such files into a single Dataset by making use of
 :py:func:`concat`, :py:func:`merge`, :py:func:`combine_nested` and
 :py:func:`combine_by_coords`. For details on the difference between these
-functions see :ref:`combining data`.
+functions see :ref:`combining-data`.
 
 Xarray includes support for manipulating datasets that don't fit into memory
 with dask_. If you have dask installed, you can open multiple files
