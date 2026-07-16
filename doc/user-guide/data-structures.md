@@ -486,7 +486,7 @@ transforming your data (using "method chaining") instead of writing hard to
 follow nested function calls:
 
 ```{eval-rst}
-.. jupyter-input::
+.. code-block:: python
 
     # these lines are equivalent, but with pipe we can make the logic flow
     # entirely from left to right

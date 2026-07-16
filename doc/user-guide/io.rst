@@ -1446,15 +1446,15 @@ __ https://www.prism.oregonstate.edu/
 __ https://iri.columbia.edu/
 
 
-.. jupyter-input::
+.. code-block:: python
 
     remote_data = xr.open_dataset(
         "http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods",
         decode_times=False,
-        )
+    )
     remote_data
 
-.. jupyter-output::
+.. code-block:: none
 
     <xarray.Dataset>
     Dimensions:  (T: 1422, X: 1405, Y: 621)
@@ -1487,12 +1487,12 @@ __ https://iri.columbia.edu/
 We can select and slice this data any number of times, and nothing is loaded
 over the network until we look at particular values:
 
-.. jupyter-input::
+.. code-block:: python
 
     tmax = remote_data["tmax"][:500, ::3, ::3]
     tmax
 
-.. jupyter-output::
+.. code-block:: none
 
     <xarray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
     [48541500 values with dtype=float64]
@@ -1506,7 +1506,7 @@ over the network until we look at particular values:
         units: Celsius_scale
         expires: 1443657600
 
-.. jupyter-input::
+.. code-block:: python
 
     # the data is downloaded automatically when we make the plot
     tmax[0].plot()
@@ -1643,14 +1643,14 @@ Rasterio
 GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened using the `rioxarray`_ extension.
 `rioxarray`_ can also handle geospatial related tasks such as re-projecting and clipping.
 
-.. jupyter-input::
+.. code-block:: python
 
     import rioxarray
 
     rds = rioxarray.open_rasterio("RGB.byte.tif")
     rds
 
-.. jupyter-output::
+.. code-block:: none
 
     <xarray.DataArray (band: 3, y: 718, x: 791)>
     [1703814 values with dtype=uint8]
@@ -1670,7 +1670,7 @@ GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened usin
         add_offset:          0.0
         grid_mapping:        spatial_ref
 
-.. jupyter-input::
+.. code-block:: python
 
     rds.rio.crs
     # CRS.from_epsg(32618)
@@ -1702,7 +1702,7 @@ Xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
 if it is installed. To open a GRIB file supply ``engine='cfgrib'``
 to :py:func:`open_dataset` after installing cfgrib_:
 
-.. jupyter-input::
+.. code-block:: python
 
     ds_grib = xr.open_dataset("example.grib", engine="cfgrib")
 

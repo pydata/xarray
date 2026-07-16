@@ -167,11 +167,11 @@ To do this, you can use :py:meth:`Dataset.compute` or :py:meth:`DataArray.comput
 
 You can also access :py:attr:`DataArray.values`, which will always be a NumPy array:
 
-.. jupyter-input::
+.. code-block:: python
 
     ds.temperature.values
 
-.. jupyter-output::
+.. code-block:: none
 
     array([[[  4.691e-01,  -2.829e-01, ...,  -5.577e-01,   3.814e-01],
             [  1.337e+00,  -1.531e+00, ...,   8.726e-01,  -1.538e+00],
@@ -292,7 +292,7 @@ Our new ``spearman_correlation()`` function achieves near linear speedup
 when run on large arrays across the four cores on my laptop. It would also
 work as a streaming operation, when run on arrays loaded from disk:
 
-.. jupyter-input::
+.. code-block:: python
 
     rs = np.random.default_rng(0)
 
@@ -319,11 +319,11 @@ work as a streaming operation, when run on arrays loaded from disk:
 One limitation of ``apply_ufunc()`` is that it cannot be applied to arrays with
 multiple chunks along a core dimension:
 
-.. jupyter-input::
+.. code-block:: python
 
     spearman_correlation(chunked1, chunked2, "place")
 
-.. jupyter-output::
+.. code-block:: none
 
     ValueError: dimension 'place' on 0th function argument to apply_ufunc with
     dask='parallelized' consists of multiple chunks, but is also a core

@@ -456,30 +456,30 @@ In the ``BASIC`` indexing support, numbers and slices are supported.
 
 Example:
 
-.. jupyter-input::
+.. code-block:: python
 
     # () shall return the full array
     backend_array._raw_indexing_method(())
 
-.. jupyter-output::
+.. code-block:: none
 
     array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
-.. jupyter-input::
+.. code-block:: python
 
     # shall support integers
     backend_array._raw_indexing_method(1, 1)
 
-.. jupyter-output::
+.. code-block:: none
 
     5
 
-.. jupyter-input::
+.. code-block:: python
 
-   # shall support slices
-   backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+    # shall support slices
+    backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
 
-.. jupyter-output::
+.. code-block:: none
 
     array([[2, 3], [6, 7], [10, 11]])
 
@@ -489,20 +489,20 @@ The ``OUTER`` indexing shall support number, slices and in addition it shall
 support also lists of integers. The outer indexing is equivalent to
 combining multiple input list with ``itertools.product()``:
 
-.. jupyter-input::
+.. code-block:: python
 
     backend_array._raw_indexing_method([0, 1], [0, 1, 2])
 
-.. jupyter-output::
+.. code-block:: none
 
     array([[0, 1, 2], [4, 5, 6]])
 
-.. jupyter-input::
+.. code-block:: python
 
     # shall support integers
     backend_array._raw_indexing_method(1, 1)
 
-.. jupyter-output::
+.. code-block:: none
 
     5
 

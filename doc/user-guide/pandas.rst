@@ -218,11 +218,11 @@ Let's take a look:
 
 With old versions of pandas (prior to 0.25), this could stored in a ``Panel``:
 
-.. jupyter-input::
+.. code-block:: python
 
     pd.Panel(data, items, major_axis, minor_axis)
 
-.. jupyter-output::
+.. code-block:: none
 
     <class 'pandas.core.panel.Panel'>
     Dimensions: 2 (items) x 3 (major_axis) x 4 (minor_axis)
