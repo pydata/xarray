@@ -98,7 +98,7 @@ Back in an interactive IPython session, we can use these properties:
 ```{code-cell}
 :tags: [hide-input]
 
-exec(open("examples/_code/accessor_example.py").read())
+exec(open("../examples/_code/accessor_example.py").read())
 ```
 
 ```{code-cell}
