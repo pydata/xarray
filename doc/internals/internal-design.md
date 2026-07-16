@@ -44,7 +44,7 @@ and flexible indexes classes (derived from {py:class}`~xarray.indexes.Index`) pr
 
 ## Data Structures
 
-The {ref}`data structures` page in the user guide explains the basics and concentrates on user-facing behavior,
+The {ref}`data-structures` page in the user guide explains the basics and concentrates on user-facing behavior,
 whereas this section explains how xarray's data structure classes actually work internally.
 
 (internal-design-data-structures-variable)=
@@ -138,7 +138,7 @@ a coordinate variable from your `SubclassedDataArray` would return an instance o
 of just an {py:class}`xarray.DataArray`. See [GH issue](https://github.com/pydata/xarray/issues/3980) for more details.
 :::
 
-(internal-design-lazy-indexing)=
+(internal-design.lazy-indexing)=
 
 ## Lazy Indexing Classes
 

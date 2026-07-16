@@ -1566,7 +1566,7 @@ backwards compatible, keeping the current default of ``'ns'`` resolution on
 decoding. To opt-into decoding to other resolutions (``'us'``, ``'ms'`` or
 ``'s'``) an instance of the newly public :py:class:`coders.CFDatetimeCoder`
 class can be passed through the ``decode_times`` keyword argument (see also
-:ref:`internals.default_timeunit`):
+:ref:`internals.default-timeunit`):
 
 .. code-block:: python
 

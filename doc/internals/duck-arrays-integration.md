@@ -4,7 +4,7 @@ kernelspec:
   name: python3
 ---
 
-(internals-duckarrays)=
+(internals.duckarrays)=
 
 # Integrating with duck arrays
 

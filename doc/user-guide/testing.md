@@ -24,7 +24,7 @@ np.random.seed(123456)
 
 :::{note}
 Testing with hypothesis is a fairly advanced topic. Before reading this section it is recommended that you take a look
-at our guide to xarray's {ref}`data structures`, are familiar with conventional unit testing in
+at our guide to xarray's {ref}`data-structures`, are familiar with conventional unit testing in
 [pytest](https://docs.pytest.org/), and have seen the
 [hypothesis library documentation](https://hypothesis.readthedocs.io/).
 :::
