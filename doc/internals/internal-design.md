@@ -37,7 +37,7 @@ and {py:class}`~xarray.DataTree` is a natural generalisation of {py:class}`xarra
 Our {ref}`roadmap` includes plans to document {py:class}`~xarray.Variable` as fully public API.
 :::
 
-Internally private {ref}`lazy indexing classes <internal design.lazy indexing>` are used to avoid loading more data than necessary,
+Internally private {ref}`lazy indexing classes <internal-design.lazy-indexing>` are used to avoid loading more data than necessary,
 and flexible indexes classes (derived from {py:class}`~xarray.indexes.Index`) provide performant label-based lookups.
 
 (internal-design-data-structures)=
@@ -128,7 +128,7 @@ variables cannot have a dimension that is not present on any data variable.
 When a data variable or coordinate variable is accessed, a new `DataArray` is again constructed from all compatible
 coordinates before returning.
 
-(internal-design-subclassing)=
+(internal-design.subclassing)=
 
 :::{note}
 The way that selecting a variable from a `DataArray` or `Dataset` actually involves internally wrapping the

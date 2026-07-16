@@ -8,7 +8,7 @@ kernelspec:
 .. currentmodule:: xarray
 ```
 
-(internals-custom-indexes)=
+(internals.custom-indexes)=
 
 # How to create a custom index
 

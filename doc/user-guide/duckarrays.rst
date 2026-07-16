@@ -116,7 +116,7 @@ Constructing xarray objects which wrap numpy-like arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The primary way to create an xarray object which wraps a numpy-like array is to pass that numpy-like array instance directly
-to the constructor of the xarray class. The :ref:`page on xarray data structures <data structures>` shows how :py:class:`DataArray` and :py:class:`Dataset`
+to the constructor of the xarray class. The :ref:`page on xarray data structures <data-structures>` shows how :py:class:`DataArray` and :py:class:`Dataset`
 both accept data in various forms through their ``data`` argument, but in fact this data can also be any wrappable numpy-like array.
 
 For example, we can wrap the sparse array we created earlier inside a new DataArray object:

@@ -197,7 +197,7 @@ multi-dimensional arrays to xarray.
 Xarray has most of ``Panel``'s features, a more explicit API (particularly around
 indexing), and the ability to scale to >3 dimensions with the same interface.
 
-As discussed in the :ref:`data structures section of the docs <data structures>`, there are two primary data structures in
+As discussed in the :ref:`data structures section of the docs <data-structures>`, there are two primary data structures in
 xarray: ``DataArray`` and ``Dataset``. You can imagine a ``DataArray`` as a
 n-dimensional pandas ``Series`` (i.e. a single typed array), and a ``Dataset``
 as the ``DataFrame`` equivalent (i.e. a dict of aligned ``DataArray`` objects).

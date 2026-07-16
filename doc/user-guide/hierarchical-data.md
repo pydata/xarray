@@ -52,7 +52,7 @@ of the {py:class}`~xarray.DataTree` class for your own hierarchical data needs.
 
 ### Creating a Family Tree
 
-The three main ways of creating a {py:class}`~xarray.DataTree` object are described briefly in {ref}`creating a datatree`.
+The three main ways of creating a {py:class}`~xarray.DataTree` object are described briefly in {ref}`creating-a-datatree`.
 Here we go into more detail about how to create a tree node-by-node, using a famous family tree from the Simpsons cartoon as an example.
 
 Let's start by defining nodes representing the two siblings, Bart and Lisa Simpson:

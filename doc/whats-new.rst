@@ -1241,7 +1241,7 @@ New Features
   (:issue:`10243`, :pull:`10293`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - New :py:class:`~xarray.groupers.SeasonGrouper` and :py:class:`~xarray.groupers.SeasonResampler` objects for ergonomic seasonal aggregation.
-  See the docs on :ref:`seasonal_grouping` or `blog post <https://xarray.dev/blog/season-grouping>`_ for more.
+  See the docs on :ref:`seasonal-grouping` or `blog post <https://xarray.dev/blog/season-grouping>`_ for more.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Data corruption issues arising from misaligned Dask and Zarr chunks
   can now be prevented using the new ``align_chunks`` parameter in
@@ -9333,7 +9333,7 @@ Enhancements
 ~~~~~~~~~~~~
 
 - Added ``xray.Dataset.pipe``, replicating the `new pandas method`_ in version
-  0.16.2. See :ref:`transforming datasets` for more details.
+  0.16.2. See :ref:`transforming-datasets` for more details.
 - ``xray.Dataset.assign`` and ``xray.Dataset.assign_coords``
   now assign new variables in sorted (alphabetical) order, mirroring the
   behavior in pandas. Previously, the order was arbitrary.
