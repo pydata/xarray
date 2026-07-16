@@ -174,7 +174,7 @@ resulting image via the formula `figsize = (aspect * size, size)`:
 air1d.plot(aspect=2, size=3);
 ```
 
-This feature also works with {ref}`plotting-faceting`. For facet plots,
+This feature also works with {ref}`plotting.faceting`. For facet plots,
 `size` and `aspect` refer to a single panel (so that `aspect * size`
 gives the width of each facet in inches), while `figsize` refers to the
 entire figure (as for matplotlib's `figsize` argument).
@@ -473,7 +473,7 @@ since levels are chosen automatically).
 air2d.plot(levels=10, cmap="husl");
 ```
 
-(plotting-faceting)=
+(plotting.faceting)=
 
 ### Faceting
 

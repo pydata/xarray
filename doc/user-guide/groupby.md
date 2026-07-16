@@ -85,7 +85,7 @@ You can index out a particular group:
 ds.groupby("letters")["b"]
 ```
 
-To group by multiple variables, see {ref}`this section <groupby-multiple>`.
+To group by multiple variables, see {ref}`this section <groupby.multiple>`.
 
 ## Binning
 
@@ -228,7 +228,7 @@ stacked = da.stack(gridcell=["ny", "nx"])
 stacked.groupby("gridcell").sum(...).unstack("gridcell")
 ```
 
-Alternatively, you can groupby both `lat` and `lon` at the {ref}`same time <groupby-multiple>`.
+Alternatively, you can groupby both `lat` and `lon` at the {ref}`same time <groupby.multiple>`.
 
 (groupby-groupers)=
 
@@ -303,7 +303,7 @@ will only be run over the specified labels.
 You may use `labels` to also specify the ordering of groups to be used during iteration.
 The order will be preserved in the output.
 
-(groupby-multiple)=
+(groupby.multiple)=
 
 ## Grouping by multiple variables
 

@@ -108,7 +108,7 @@ If you use `to_dataset` without supplying the `dim` argument, the DataArray will
 arr.to_dataset(name="combined")
 ```
 
-(reshape-stack)=
+(reshape.stack)=
 
 ## Stack and unstack
 
@@ -167,7 +167,7 @@ array.to_pandas().stack()
 We departed from pandas's behavior here because predictable shapes for new
 array dimensions is necessary for {ref}`dask`.
 
-(reshape-stacking-different)=
+(reshape.stacking_different)=
 
 ### Stacking different variables together
 
@@ -215,7 +215,7 @@ drawn, whereas the stacked coordinates are the features. Naturally, all variable
 dimensions.
 :::
 
-(reshape-set-index)=
+(reshape.set_index)=
 
 ## Set and reset index
 
@@ -299,7 +299,7 @@ array.shift(x=2)
 array.roll(x=2, roll_coords=True)
 ```
 
-(reshape-sort)=
+(reshape.sort)=
 
 ## Sort
 

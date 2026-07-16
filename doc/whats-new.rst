@@ -8460,7 +8460,7 @@ Enhancements
   :py:func:`~xarray.testing.assert_allclose` for asserting relationships
   between xarray objects, designed for use in a pytest test suite.
 - ``figsize``, ``size`` and ``aspect`` plot arguments are now supported for all
-  plots (:issue:`897`). See :ref:`plotting.figsize` for more details.
+  plots (:issue:`897`). See :ref:`plotting-figsize` for more details.
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Fabien Maussion <https://github.com/fmaussion>`_.
 - New :py:meth:`~Dataset.info` method to summarize ``Dataset`` variables
@@ -8648,7 +8648,7 @@ Enhancements
 - Groupby operations now support grouping over multidimensional variables. A new
   method called :py:meth:`~xarray.Dataset.groupby_bins` has also been added to
   allow users to specify bins for grouping. The new features are described in
-  :ref:`groupby.multidim` and :ref:`/examples/multidimensional-coords.ipynb`.
+  :ref:`groupby-multidim` and :ref:`/examples/multidimensional-coords.ipynb`.
   By `Ryan Abernathey <https://github.com/rabernat>`_.
 
 - DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
