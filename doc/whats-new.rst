@@ -7700,15 +7700,15 @@ Breaking changes
 
   Old syntax:
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    ds.resample("24H", dim="time", how="max")
+      ds.resample("24H", dim="time", how="max")
 
   New syntax:
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    ds.resample(time="24H").max()
+      ds.resample(time="24H").max()
 
   Note that both versions are currently supported, but using the old syntax will
   produce a warning encouraging users to adopt the new syntax.
@@ -7771,16 +7771,16 @@ Enhancements
   values in xarray objects, like :py:func:`numpy.where`:
 
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    import xarray as xr
+      import xarray as xr
 
-    arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("x", "y"))
+      arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("x", "y"))
 
-    xr.where(arr % 2, "even", "odd")
+      xr.where(arr % 2, "even", "odd")
 
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xarray.DataArray (x: 2, y: 3)>
     array([['even', 'odd', 'even'],
@@ -7830,15 +7830,15 @@ Enhancements
   ``xarray.to_netcdf``, and :py:func:`~xarray.save_mfdataset`
   (:issue:`799`):
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    from pathlib import Path  # In Python 2, use pathlib2!
+      from pathlib import Path  # In Python 2, use pathlib2!
 
-    data_dir = Path("data/")
+      data_dir = Path("data/")
 
-    one_file = data_dir / "dta_for_month_01.nc"
+      one_file = data_dir / "dta_for_month_01.nc"
 
-    xr.open_dataset(one_file)
+      xr.open_dataset(one_file)
 
 
   By `Willi Rath <https://github.com/willirath>`_.
@@ -8296,11 +8296,11 @@ Breaking changes
   by their appearance in list of "Dimensions without coordinates" in the
   ``Dataset`` or ``DataArray`` repr:
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    xr.Dataset({"foo": (("x", "y"), [[1, 2]])})
+      xr.Dataset({"foo": (("x", "y"), [[1, 2]])})
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xarray.Dataset>
     Dimensions:  (x: 1, y: 2)
@@ -8755,15 +8755,15 @@ Enhancements
 - Rolling window operations on DataArray objects are now supported via a new
   :py:meth:`DataArray.rolling` method. For example:
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    import xarray as xr
-    import numpy as np
+      import xarray as xr
+      import numpy as np
 
-    arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5), dims=("x", "y"))
-    arr
+      arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5), dims=("x", "y"))
+      arr
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xarray.DataArray (x: 3, y: 5)>
     array([[ 0. ,  0.5,  1. ,  1.5,  2. ],
@@ -8773,11 +8773,11 @@ Enhancements
       * x        (x) int64 0 1 2
       * y        (y) int64 0 1 2 3 4
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    arr.rolling(y=3, min_periods=2).mean()
+      arr.rolling(y=3, min_periods=2).mean()
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xarray.DataArray (x: 3, y: 5)>
     array([[  nan,  0.25,  0.5 ,  1.  ,  1.5 ],
@@ -8901,11 +8901,11 @@ Breaking changes
   corresponding coordinate. You will now need to provide coordinate labels
   explicitly. Here's the old behavior:
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    xray.DataArray([4, 5, 6], dims="x", name="x")
+      xray.DataArray([4, 5, 6], dims="x", name="x")
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.DataArray 'x' (x: 3)>
     array([4, 5, 6])
@@ -8914,11 +8914,11 @@ Breaking changes
 
   and the new behavior (compare the values of the ``x`` coordinate):
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    xray.DataArray([4, 5, 6], dims="x", name="x")
+      xray.DataArray([4, 5, 6], dims="x", name="x")
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.DataArray 'x' (x: 3)>
     array([4, 5, 6])
@@ -8938,38 +8938,38 @@ Enhancements
 - Basic support for :py:class:`~pandas.MultiIndex` coordinates on xray objects, including
   indexing, :py:meth:`~DataArray.stack` and :py:meth:`~DataArray.unstack`:
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
+      df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
 
-    s = df.set_index(["x", "y"])["foo"]
+      s = df.set_index(["x", "y"])["foo"]
 
-    arr = xray.DataArray(s, dims="z")
+      arr = xray.DataArray(s, dims="z")
 
-    arr
+      arr
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.DataArray 'foo' (z: 3)>
     array([0, 1, 2])
     Coordinates:
       * z        (z) object ('a', 0) ('b', 0) ('b', 1)
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    arr.indexes["z"]
+      arr.indexes["z"]
 
-  .. jupyter-output::
+  .. code-block:: none
 
     MultiIndex(levels=[[u'a', u'b'], [0, 1]],
                labels=[[0, 1, 1], [0, 0, 1]],
                names=[u'x', u'y'])
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    arr.unstack("z")
+      arr.unstack("z")
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.DataArray 'foo' (x: 2, y: 2)>
     array([[  0.,  nan],
@@ -8978,11 +8978,11 @@ Enhancements
       * x        (x) object 'a' 'b'
       * y        (y) int64 0 1
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    arr.unstack("z").stack(z=("x", "y"))
+      arr.unstack("z").stack(z=("x", "y"))
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.DataArray 'foo' (z: 4)>
     array([  0.,  nan,   1.,   2.])
@@ -9093,13 +9093,13 @@ Enhancements
   the ``tolerance`` argument for controlling nearest-neighbor selection
   (:issue:`629`):
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    array = xray.DataArray([1, 2, 3], dims="x")
+      array = xray.DataArray([1, 2, 3], dims="x")
 
-    array.reindex(x=[0.9, 1.5], method="nearest", tolerance=0.2)
+      array.reindex(x=[0.9, 1.5], method="nearest", tolerance=0.2)
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.DataArray (x: 2)>
     array([  2.,  nan])
@@ -9176,17 +9176,17 @@ Enhancements
 - Added ``xray.Dataset.isel_points`` and ``xray.Dataset.sel_points``
   to support pointwise indexing of Datasets and DataArrays (:issue:`475`).
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    da = xray.DataArray(
-       ...:     np.arange(56).reshape((7, 8)),
-       ...:     coords={"x": list("abcdefg"), "y": 10 * np.arange(8)},
-       ...:     dims=["x", "y"],
-       ...: )
+      da = xray.DataArray(
+          np.arange(56).reshape((7, 8)),
+          coords={"x": list("abcdefg"), "y": 10 * np.arange(8)},
+          dims=["x", "y"],
+      )
 
-    da
+      da
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.DataArray (x: 7, y: 8)>
     array([[ 0,  1,  2,  3,  4,  5,  6,  7],
@@ -9200,12 +9200,12 @@ Enhancements
     * y        (y) int64 0 10 20 30 40 50 60 70
     * x        (x) |S1 'a' 'b' 'c' 'd' 'e' 'f' 'g'
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    # we can index by position along each dimension
-    da.isel_points(x=[0, 1, 6], y=[0, 1, 0], dim="points")
+      # we can index by position along each dimension
+      da.isel_points(x=[0, 1, 6], y=[0, 1, 0], dim="points")
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.DataArray (points: 3)>
     array([ 0,  9, 48])
@@ -9214,12 +9214,12 @@ Enhancements
         x        (points) |S1 'a' 'b' 'g'
       * points   (points) int64 0 1 2
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    # or equivalently by label
-    da.sel_points(x=["a", "b", "g"], y=[0, 10, 0], dim="points")
+      # or equivalently by label
+      da.sel_points(x=["a", "b", "g"], y=[0, 10, 0], dim="points")
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.DataArray (points: 3)>
     array([ 0,  9, 48])
@@ -9302,13 +9302,13 @@ Enhancements
   with dask.array. For example, to save a dataset too big to fit into memory
   to one file per year, we could write:
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    years, datasets = zip(*ds.groupby("time.year"))
+      years, datasets = zip(*ds.groupby("time.year"))
 
-    paths = ["%s.nc" % y for y in years]
+      paths = ["%s.nc" % y for y in years]
 
-    xray.save_mfdataset(datasets, paths)
+      xray.save_mfdataset(datasets, paths)
 
 Bug fixes
 ~~~~~~~~~
@@ -9376,13 +9376,13 @@ Backwards incompatible changes
   surprising behavior, where the behavior of groupby and concat operations
   could depend on runtime values (:issue:`268`). For example:
 
-  .. jupyter-input::
+  .. code-block:: python
 
-    ds = xray.Dataset({"x": 0})
+      ds = xray.Dataset({"x": 0})
 
-    xray.concat([ds, ds], dim="y")
+      xray.concat([ds, ds], dim="y")
 
-  .. jupyter-output::
+  .. code-block:: none
 
     <xray.Dataset>
     Dimensions:  ()
@@ -9457,11 +9457,11 @@ Enhancements
 
   .. use verbatim because I can't seem to install pandas 0.16.1 on RTD :(
 
-  .. jupyter-input::
+  .. code-block:: python
 
       ds.sel(x=1.1, method="nearest")
 
-  .. jupyter-output::
+  .. code-block:: none
 
       <xray.Dataset>
       Dimensions:  ()
@@ -9470,11 +9470,11 @@ Enhancements
       Data variables:
           y        int64 2
 
-  .. jupyter-input::
+  .. code-block:: python
 
       ds.sel(x=[1.1, 2.1], method="pad")
 
-  .. jupyter-output::
+  .. code-block:: none
 
       <xray.Dataset>
       Dimensions:  (x: 2)
@@ -9506,7 +9506,7 @@ Enhancements
 
   Or to set a global option:
 
-  .. jupyter-input::
+  .. code-block:: python
 
       xray.set_options(display_width=80)
 
