@@ -15,7 +15,7 @@ This is an experimental feature. Please report any bugs or other difficulties on
 Xarray can wrap custom numpy-like arrays ("{term}`duck array`s") - see the {ref}`user guide documentation <userguide.duckarrays>`.
 This page is intended for developers who are interested in wrapping a new custom array type with xarray.
 
-(internals-duckarrays-requirements)=
+(internals.duckarrays.requirements)=
 
 ## Duck array requirements
 
@@ -34,7 +34,7 @@ property needs to obey [numpy's broadcasting rules](https://numpy.org/doc/stable
 (see also the [Python Array API standard's explanation](https://data-apis.org/array-api/latest/API_specification/broadcasting.html)
 of these same rules).
 
-(internals-duckarrays-array-api-standard)=
+(internals.duckarrays.array_api_standard)=
 
 ## Python Array API standard support
 

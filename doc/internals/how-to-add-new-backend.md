@@ -12,10 +12,10 @@ Adding a new backend for read support to Xarray does not require
 one to integrate any code in Xarray; all you need to do is:
 
 - Create a class that inherits from Xarray {py:class}`~xarray.backends.BackendEntrypoint`
-  and implements the method `open_dataset` see {ref}`RST backend_entrypoint`
+  and implements the method `open_dataset` see {ref}`rst-backend-entrypoint`
 - Declare this class as an external plugin in your project configuration, see {ref}`rst-backend-registration`
 
-If you also want to support lazy loading and dask see {ref}`RST lazy_loading`.
+If you also want to support lazy loading and dask see {ref}`rst-lazy-loading`.
 
 Note that the new interface for backends is available from Xarray
 version >= 0.18 onwards.
@@ -133,7 +133,7 @@ in backend `open_dataset` signature and adding a `**kwargs` is not allowed.
 These keyword arguments are explicitly defined in Xarray
 {py:func}`~xarray.open_dataset` signature. Xarray will pass them to the
 backend only if the User explicitly sets a value different from `None`.
-For more details on decoders see {ref}`RST decoders`.
+For more details on decoders see {ref}`rst-decoders`.
 
 Your backend can also take as input a set of backend-specific keyword
 arguments. All these keyword arguments can be passed to
