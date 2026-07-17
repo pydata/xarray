@@ -4707,7 +4707,7 @@ New Features
   By `Todd Jennings <https://github.com/toddrjen>`_
 - Thanks to the new pluggable backend infrastructure external packages may now
   use the ``xarray.backends`` entry point to register additional engines to be used in
-  :py:func:`open_dataset`, see the documentation in :ref:`add_a_backend`
+  :py:func:`open_dataset`, see the documentation in :ref:`add-a-backend`
   (:issue:`4309`, :issue:`4803`, :pull:`4989`, :pull:`4810` and many others).
   The backend refactor has been sponsored with the "Essential Open Source Software for Science"
   grant from the `Chan Zuckerberg Initiative <https://chanzuckerberg.com>`_ and
@@ -4841,7 +4841,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- New section on :ref:`add_a_backend` in the "Internals" chapter aimed to backend developers
+- New section on :ref:`add-a-backend` in the "Internals" chapter aimed to backend developers
   (:issue:`4803`, :pull:`4810`).
   By `Aureliana Barghini <https://github.com/aurghs>`_.
 - Add :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit` under "See also" in
