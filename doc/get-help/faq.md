@@ -69,7 +69,7 @@ if you were using Panels:
   In contrast, this sort of data structure fits very naturally in an
   xarray `Dataset`.
 
-You can {ref}`read about switching from Panels to xarray here <panel transition>`.
+You can {ref}`read about switching from Panels to xarray here <panel-transition>`.
 pandas gets a lot of things right, but many science, engineering and complex
 analytics use cases need fully multi-dimensional data structures.
 

@@ -302,7 +302,7 @@ ds = xr.open_dataset("https://example.com/data.nc", engine="netcdf4")
 
 :::
 
-(io-netcdf)=
+(io.netcdf)=
 
 ## netCDF
 
@@ -447,7 +447,7 @@ It is possible to append or overwrite netCDF variables using the `mode='a'`
 argument. When using this option, all variables in the dataset will be written
 to the original netCDF file, regardless if they exist in the original dataset.
 
-(io-netcdf-groups)=
+(io.netcdf_groups)=
 
 ### Groups
 
@@ -457,14 +457,14 @@ whole file of many nested groups can be loaded as a single
 use the {py:func}`xarray.open_datatree` function. To save a DataTree object as a
 netCDF file containing many groups, use the {py:meth}`xarray.DataTree.to_netcdf` method.
 
-(netcdf-root-group-note)=
+(netcdf.root_group.note)=
 
 :::{note}
 Due to file format specifications the on-disk root group name is always `"/"`,
 overriding any given `DataTree` root node name.
 :::
 
-(netcdf-group-warning)=
+(netcdf.group.warning)=
 
 :::{warning}
 `DataTree` objects do not follow the exact same data model as netCDF
@@ -484,7 +484,7 @@ Saving this DataTree object to file will therefore not preserve these
 "unused" dimensions.
 :::
 
-(io-encoding)=
+(io.encoding)=
 
 ### Reading encoded data
 
@@ -645,7 +645,7 @@ combined = read_netcdfs('/all/my/files/*.nc', dim='time',
 This pattern works well and is very robust. We've used similar code to process
 tens of thousands of files constituting 100s of GB of data.
 
-(io-netcdf-writing-encoded)=
+(io.netcdf.writing-encoded)=
 
 ### Writing encoded data
 
@@ -689,7 +689,7 @@ converting `NaN` to `-9999`, we would use
 `encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}`.
 Compression and decompression with such discretization is extremely fast.
 
-(io-string-encoding)=
+(io.string-encoding)=
 
 #### String encoding
 
@@ -759,7 +759,7 @@ supported by netCDF4-python: `'standard'`, `'gregorian'`, `'proleptic_gregorian'
 By default, xarray uses the `'proleptic_gregorian'` calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
 
-(io-coordinates)=
+(io.coordinates)=
 
 #### Coordinates
 
@@ -844,7 +844,7 @@ Natively the xarray data structures can only handle one level of nesting, organi
 DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you
 can only access one group and a time and will need to specify group names.
 
-(io-zarr)=
+(io.zarr)=
 
 ## Zarr
 
@@ -1092,7 +1092,7 @@ Not all native zarr compression and filtering options have been tested with
 xarray.
 :::
 
-(io-zarr-appending)=
+(io.zarr.appending)=
 
 ### Modifying existing Zarr stores
 
@@ -1238,7 +1238,7 @@ Due to file format specifications the on-disk root group name is always `"/"`
 overriding any given `DataTree` root node name.
 :::
 
-(io-zarr-consolidated-metadata)=
+(io.zarr.consolidated_metadata)=
 
 ### Consolidated Metadata
 
@@ -1328,7 +1328,7 @@ You can refer to the [project pythia kerchunk cookbook](https://projectpythia.or
 and the [pangeo guide on kerchunk](https://guide.cloudnativegeo.org/kerchunk/intro.html) for more information.
 :::
 
-(io-iris)=
+(io.iris)=
 
 ## Iris
 
@@ -1395,7 +1395,7 @@ Ncdata can also adjust file data within load and save operations, to fix data lo
 problems or provide exact save formatting without needing to modify files on disk.
 See for example : [ncdata usage examples]
 
-(io-opendap)=
+(io.opendap)=
 
 ## OPeNDAP
 
@@ -1594,7 +1594,7 @@ tempdir.cleanup()
 This can be useful for generating indices of dataset contents to expose to
 search indices or other automated data discovery tools.
 
-(io-rasterio)=
+(io.rasterio)=
 
 ## Rasterio
 

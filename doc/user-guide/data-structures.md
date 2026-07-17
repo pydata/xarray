@@ -946,7 +946,7 @@ mda.wn
 ```
 
 Indexing with multi-index levels is also possible using the `sel` method
-(see {ref}`multi-level indexing`).
+(see {ref}`multi-level-indexing`).
 
 Unlike other coordinates, "virtual" level coordinates are not stored in
 the `coords` attribute of `DataArray` and `Dataset` objects

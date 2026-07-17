@@ -48,7 +48,7 @@ below and summarized in this table:
 
 More advanced indexing is also possible for all the methods by
 supplying {py:class}`~xarray.DataArray` objects as indexer.
-See {ref}`vectorized_indexing` for the details.
+See {ref}`vectorized-indexing` for the details.
 
 ## Positional indexing
 
@@ -80,7 +80,7 @@ Attributes are persisted in all indexing operations.
 :::{warning}
 Positional indexing deviates from the NumPy when indexing with multiple
 arrays like `da[[0, 1], [0, 1]]`, as described in
-{ref}`vectorized_indexing`.
+{ref}`vectorized-indexing`.
 :::
 
 Xarray also supports label-based indexing, just like pandas. Because
@@ -715,7 +715,7 @@ other = xr.DataArray(["a", "b", "c"], dims="other")
 ds.reindex_like(other)
 ```
 
-(indexing-missing-coordinates)=
+(indexing.missing_coordinates)=
 
 ## Missing coordinate labels
 
@@ -862,7 +862,7 @@ labels of the 1st and 2nd dimension, respectively. You must specify all
 dimensions or use the ellipsis in the `loc` specifier, e.g. in the example
 above, `mda.loc[{'one': 'a', 'two': 0}, :]` or `mda.loc[('a', 0), ...]`.
 
-(indexing-rules)=
+(indexing.rules)=
 
 ## Indexing rules
 

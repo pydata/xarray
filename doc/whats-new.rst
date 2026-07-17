@@ -6190,7 +6190,7 @@ Breaking changes
   (:issue:`3089`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - The ``isel_points`` and ``sel_points`` methods are removed, having been deprecated
   since v0.10.0. These are redundant with the ``isel`` / ``sel`` methods.
-  See :ref:`vectorized_indexing` for the details
+  See :ref:`vectorized-indexing` for the details
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - The ``inplace`` kwarg for public methods now raises an error, having been deprecated
   since v0.11.0.
@@ -7293,7 +7293,7 @@ Documentation
 
 - New FAQ entry, :ref:`ecosystem`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- :ref:`assigning_values` now includes examples on how to select and assign
+- :ref:`assigning-values` now includes examples on how to select and assign
   values to a :py:class:`~xarray.DataArray` with ``.loc``.
   By `Chiara Lepore <https://github.com/chiaral>`_.
 
@@ -7381,7 +7381,7 @@ Enhancements
 
 - :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` methods,
   which test each value in the array for whether it is contained in the
-  supplied list, returning a bool array. See :ref:`selecting values with isin`
+  supplied list, returning a bool array. See :ref:`selecting-values-with-isin`
   for full details. Similar to the ``np.isin`` function.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Some speed improvement to construct :py:class:`~xarray.computation.rolling.DataArrayRolling`
@@ -7687,7 +7687,7 @@ Breaking changes
   vectorized indexing in a single interface.
   The ``isel_points`` and ``sel_points`` methods are deprecated, since they are
   now redundant with the ``isel`` / ``sel`` methods.
-  See :ref:`vectorized_indexing` for the details (:issue:`1444`,
+  See :ref:`vectorized-indexing` for the details (:issue:`1444`,
   :issue:`1436`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_ and
   `Stephan Hoyer <https://github.com/shoyer>`_.
@@ -8411,7 +8411,7 @@ Enhancements
   e.g., ``ds['time']`` can pull out the ``'time'`` level of a multi-index
   (see :ref:`coordinates`). ``sel`` also accepts providing multi-index levels
   as keyword arguments, e.g., ``ds.sel(time='2000-01')``
-  (see :ref:`multi-level indexing`).
+  (see :ref:`multi-level-indexing`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Added ``set_index``, ``reset_index`` and ``reorder_levels`` methods to
   easily create and manipulate (multi-)indexes (see :ref:`reshape.set_index`).
@@ -8571,12 +8571,12 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
-- New documentation on :ref:`panel transition`. By
+- New documentation on :ref:`panel-transition`. By
   `Maximilian Roos <https://github.com/max-sixty>`_.
 - New ``Dataset`` and ``DataArray`` methods :py:meth:`~xarray.Dataset.to_dict`
   and :py:meth:`~xarray.Dataset.from_dict` to allow easy conversion between
   dictionaries and xarray objects (:issue:`432`). See
-  :ref:`dictionary IO<dictionary io>` for more details.
+  :ref:`dictionary IO<dictionary-io>` for more details.
   By `Julia Signell <https://github.com/jsignell>`_.
 - Added ``exclude`` and ``indexes`` optional parameters to :py:func:`~xarray.align`,
   and ``exclude`` optional parameter to :py:func:`~xarray.broadcast`.
@@ -8668,7 +8668,7 @@ Enhancements
   :py:meth:`DataArray.loc`, :py:meth:`Dataset.sel` and
   :py:meth:`Dataset.loc`, which now behave more closely to pandas and
   which also accept dictionaries for indexing based on given level names
-  and labels (see :ref:`multi-level indexing`).
+  and labels (see :ref:`multi-level-indexing`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 
 - New (experimental) decorators :py:func:`~xarray.register_dataset_accessor` and
@@ -9109,7 +9109,7 @@ Enhancements
   This feature requires pandas v0.17 or newer.
 - New ``encoding`` argument in ``xray.Dataset.to_netcdf`` for writing
   netCDF files with compression, as described in the new documentation
-  section on :ref:`io.netcdf.writing_encoded`.
+  section on :ref:`io.netcdf.writing-encoded`.
 - Add ``xray.Dataset.real`` and ``xray.Dataset.imag``
   attributes to Dataset and DataArray (:issue:`553`).
 - More informative error message with ``xray.Dataset.from_dataframe``
@@ -9169,7 +9169,7 @@ Enhancements
 - Variables in netCDF files with multiple missing values are now decoded as NaN
   after issuing a warning if open_dataset is called with mask_and_scale=True.
 - We clarified our rules for when the result from an xray operation is a copy
-  vs. a view (see :ref:`copies_vs_views` for more details).
+  vs. a view (see :ref:`copies-vs-views` for more details).
 - Dataset variables are now written to netCDF files in order of appearance
   when using the netcdf4 backend (:issue:`479`).
 
@@ -9483,7 +9483,7 @@ Enhancements
       Data variables:
           y        (x) int64 2 3
 
-  See :ref:`nearest neighbor lookups` for more details.
+  See :ref:`nearest-neighbor-lookups` for more details.
 - You can now control the underlying backend used for accessing remote
   datasets (via OPeNDAP) by specifying ``engine='netcdf4'`` or
   ``engine='pydap'``.
@@ -9531,7 +9531,7 @@ Enhancements
 ~~~~~~~~~~~~
 
 - New documentation sections on :ref:`time-series` and
-  :ref:`combining multiple files`.
+  :ref:`combining-multiple-files`.
 - ``xray.Dataset.resample`` lets you resample a dataset or data array to
   a new temporal resolution. The syntax is the `same as pandas`_, except you
   need to supply the time dimension explicitly:

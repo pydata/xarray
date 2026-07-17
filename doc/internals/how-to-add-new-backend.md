@@ -420,7 +420,7 @@ input the `key`, the array `shape` and the following parameters:
   of a tuple and return an indexed {py:class}`numpy.ndarray`.
 
 For more details see
-{py:class}`~xarray.core.indexing.IndexingSupport` and {ref}`RST indexing`.
+{py:class}`~xarray.core.indexing.IndexingSupport` and {ref}`rst-indexing`.
 
 ### Async support
 

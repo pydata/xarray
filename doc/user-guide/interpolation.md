@@ -242,7 +242,7 @@ da.interp(x=x, y=y, kwargs={"fill_value": None})
 ```
 
 For the details of the advanced indexing,
-see {ref}`more advanced indexing <more_advanced_indexing>`.
+see {ref}`more advanced indexing <more-advanced-indexing>`.
 
 ## Interpolating arrays with NaN
 

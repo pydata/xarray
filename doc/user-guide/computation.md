@@ -760,12 +760,12 @@ arr + arr[:1]
 Before loops or performance critical code, it's a good idea to align arrays
 explicitly (e.g., by putting them in the same Dataset or using
 {py:func}`~xarray.align`) to avoid the overhead of repeated alignment with each
-operation. See {ref}`align and reindex` for more details.
+operation. See {ref}`align-and-reindex` for more details.
 
 :::{note}
 There is no automatic alignment between arguments when performing in-place
 arithmetic operations such as `+=`. You will need to use
-{ref}`manual alignment<align and reindex>`. This ensures in-place
+{ref}`manual alignment<align-and-reindex>`. This ensures in-place
 arithmetic never needs to modify data types.
 :::
 
