@@ -66,55 +66,59 @@ Like NumPy, `.real` and `.imag` typically return _views_, not copies, of the ori
 
 Writing complex data to NetCDF files (see {ref}`io.netcdf`) is supported via {py:meth}`~xarray.DataArray.to_netcdf` using specific backend engines that handle complex types:
 
-```{eval-rst}
-.. tab:: h5netcdf
+### h5netcdf
 
-   This requires the `h5netcdf <https://h5netcdf.org>`_ library to be installed.
+This requires the [h5netcdf](https://h5netcdf.org) library to be installed.
 
-   .. jupyter-execute::
+```{code-cell}
+complex_nums_h5_filename = "complex_nums_h5.nc"
+```
 
-       complex_nums_h5_filename = "complex_nums_h5.nc"
+```{code-cell}
+:tags: [hide-input]
 
-   .. jupyter-execute::
-       :hide-code:
-
-       complex_nums_h5_filename = os.path.join(tempdir.name, complex_nums_h5_filename)
-
-   .. jupyter-execute::
-
-       # write the data to disk
-       da.to_netcdf(complex_nums_h5_filename, engine="h5netcdf")
-       # read the file back into memory
-       ds_h5 = xr.open_dataset(complex_nums_h5_filename, engine="h5netcdf")
-       # check the dtype
-       ds_h5[da.name].dtype
+complex_nums_h5_filename = os.path.join(tempdir.name, complex_nums_h5_filename)
 
 ```
 
-```{eval-rst}
-.. tab:: netcdf4
+```{code-cell}
 
-   Requires the `netcdf4-python (>= 1.7.1) <https://github.com/Unidata/netcdf4-python>`_ library and you have to enable ``auto_complex=True``.
+# write the data to disk
+da.to_netcdf(complex_nums_h5_filename, engine="h5netcdf")
+# read the file back into memory
+ds_h5 = xr.open_dataset(complex_nums_h5_filename, engine="h5netcdf")
+# check the dtype
+ds_h5[da.name].dtype
 
-   .. jupyter-execute::
+```
 
-       complex_nums_nc4_filename = "complex_nums_nc4.nc"
+### netcdf4
 
-   .. jupyter-execute::
-       :hide-code:
+Requires the [netcdf4-python (>= 1.7.1)](https://github.com/Unidata/netcdf4-python) library and you have to enable `auto_complex=True`.
 
-       complex_nums_nc4_filename = os.path.join(tempdir.name, complex_nums_nc4_filename)
+```{code-cell}
 
-   .. jupyter-execute::
+complex_nums_nc4_filename = "complex_nums_nc4.nc"
 
-       # write the data to disk
-       da.to_netcdf(complex_nums_nc4_filename, engine="netcdf4", auto_complex=True)
-       # read the file back into memory
-       ds_nc4 = xr.open_dataset(
-           complex_nums_nc4_filename, engine="netcdf4", auto_complex=True
-       )
-       # check the dtype
-       ds_nc4[da.name].dtype
+```
+
+```{code-cell}
+:tags: [hide-input]
+
+complex_nums_nc4_filename = os.path.join(tempdir.name, complex_nums_nc4_filename)
+
+```
+
+```{code-cell}
+
+# write the data to disk
+da.to_netcdf(complex_nums_nc4_filename, engine="netcdf4", auto_complex=True)
+# read the file back into memory
+ds_nc4 = xr.open_dataset(
+    complex_nums_nc4_filename, engine="netcdf4", auto_complex=True
+)
+# check the dtype
+ds_nc4[da.name].dtype
 
 ```
 
