@@ -240,7 +240,6 @@ sphinx-remove-toctrees = "*"
 sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
-myst-parser = "*"
 myst-nb = ">=1.4.0,<2"
 
 [feature.doc.tasks]
