@@ -8,9 +8,9 @@ kernelspec:
 
 # Integrating with duck arrays
 
-:::{warning}
+```{warning}
 This is an experimental feature. Please report any bugs or other difficulties on [xarray's issue tracker](https://github.com/pydata/xarray/issues).
-:::
+```
 
 Xarray can wrap custom numpy-like arrays ("{term}`duck array`s") - see the {ref}`user guide documentation <userguide.duckarrays>`.
 This page is intended for developers who are interested in wrapping a new custom array type with xarray.

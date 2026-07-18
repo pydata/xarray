@@ -12,11 +12,11 @@ kernelspec:
 
 # How to create a custom index
 
-:::{warning}
+```{warning}
 This feature is highly experimental. Support for custom indexes has been
 introduced in v2022.06.0 and is still incomplete. API is subject to change
 without deprecation notice. However we encourage you to experiment and report issues that arise.
-:::
+```
 
 Xarray's built-in support for label-based indexing (e.g. `ds.sel(latitude=40, method="nearest")`) and alignment operations
 relies on {py:class}`pandas.Index` objects. Pandas Indexes are powerful and suitable for many

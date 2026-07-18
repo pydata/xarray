@@ -130,7 +130,7 @@ When opening a file or URL without explicitly specifying the `engine` parameter,
 xarray automatically selects an appropriate backend based on the file path or URL.
 The backends are tried in order: **netcdf4 → h5netcdf → scipy → pydap → zarr**.
 
-:::{note}
+```{note}
 You can customize the order in which netCDF backends are tried using the
 `netcdf_engine_order` option in {py:func}`~xarray.set_options`:
 
@@ -140,17 +140,17 @@ xr.set_options(netcdf_engine_order=["h5netcdf", "netcdf4", "scipy"])
 ```
 
 See {ref}`options` for more details on configuration options.
-:::
+```
 
 The following tables show which backend will be selected for different types of URLs and files.
 
-:::{important}
+```{important}
 ✅ means the backend will **guess it can open** the URL or file based on its path, extension,
 or magic number, but this doesn't guarantee success. For example, not all Zarr stores are
 xarray-compatible.
 
 ❌ means the backend will not attempt to open it.
-:::
+```
 
 ### Remote URL Resolution
 
@@ -283,7 +283,7 @@ backend returns False (does not fall back to extension).
      - ❌
 ```
 
-:::{note}
+```{note}
 Remote URLs ending in `.nc` are **ambiguous**:
 
 - They could be netCDF files stored on a remote HTTP server (readable by `netcdf4` or `h5netcdf`)
@@ -300,7 +300,7 @@ ds = xr.open_dataset("http://example.com/data.nc", engine="pydap")
 ds = xr.open_dataset("https://example.com/data.nc", engine="netcdf4")
 ```
 
-:::
+```
 
 (io.netcdf)=
 
@@ -317,10 +317,10 @@ NetCDF is supported on almost all platforms, and parsers exist
 for the vast majority of scientific programming languages. Recent versions of
 netCDF are based on the even more widely used HDF5 file-format.
 
-:::{tip}
+```{tip}
 If you aren't familiar with this data format, the [netCDF FAQ] is a good
 place to start.
-:::
+```
 
 Reading and writing netCDF files with xarray requires scipy, h5netcdf, or the
 [netCDF4-Python](https://github.com/Unidata/netcdf4-python) library to be installed. SciPy only supports reading and writing
@@ -364,12 +364,12 @@ By default, the file is saved as netCDF4 (assuming netCDF4-Python is
 installed). You can control the format and engine used to write the file with
 the `format` and `engine` arguments.
 
-:::{tip}
+```{tip}
 Using the [h5netcdf](https://github.com/h5netcdf/h5netcdf) package
 by passing `engine='h5netcdf'` to {py:meth}`open_dataset` can
 sometimes be quicker than the default `engine='netcdf4'` that uses the
 [netCDF4](https://github.com/Unidata/netcdf4-python) package.
-:::
+```
 
 We can load netCDF files to create a new Dataset using
 {py:func}`open_dataset`:
@@ -403,11 +403,11 @@ string, e.g., to access subgroup 'bar' within group 'foo' pass
 pass `mode='a'` to `to_netcdf` to ensure that each call does not delete the
 file.
 
-:::{tip}
+```{tip}
 It is recommended to use {py:class}`~xarray.DataTree` to represent
 hierarchical data, and to use the {py:meth}`xarray.DataTree.to_netcdf` method
 when writing hierarchical data to a netCDF file.
-:::
+```
 
 Data is _always_ loaded lazily from netCDF files. You can manipulate, slice and subset
 Dataset and DataArray objects, and no array values are loaded into memory until
@@ -421,12 +421,12 @@ It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xarray
 is modified: the original file on disk is never touched.
 
-:::{tip}
+```{tip}
 Xarray's lazy loading of remote or on-disk datasets is often but not always
 desirable. Before performing computationally intense operations, it is
 often a good idea to load a Dataset (or DataArray) entirely into memory by
 invoking the {py:meth}`Dataset.load` method.
-:::
+```
 
 Datasets have a {py:meth}`Dataset.close` method to close the associated
 netCDF file. However, it's often cleaner to use a `with` statement:
@@ -459,14 +459,14 @@ netCDF file containing many groups, use the {py:meth}`xarray.DataTree.to_netcdf`
 
 (netcdf.root_group.note)=
 
-:::{note}
+```{note}
 Due to file format specifications the on-disk root group name is always `"/"`,
 overriding any given `DataTree` root node name.
-:::
+```
 
 (netcdf.group.warning)=
 
-:::{warning}
+```{warning}
 `DataTree` objects do not follow the exact same data model as netCDF
 files, which means that perfect round-tripping is not always possible.
 
@@ -482,7 +482,7 @@ possess those dimensions, these dimensions will not be present when that
 file is opened as a DataTree object.
 Saving this DataTree object to file will therefore not preserve these
 "unused" dimensions.
-:::
+```
 
 (io.encoding)=
 
@@ -549,7 +549,7 @@ For more details on parallel reading, see {ref}`combining.multi`, {ref}`dask.io`
 control its behaviour (for e.g. `parallel`, `combine`, `compat`, `join`, `concat_dim`).
 See its docstring for more details.
 
-:::{note}
+```{note}
 A common use-case involves a dataset distributed across a large number of files with
 each file containing a large number of variables. Commonly, a few of these variables
 need to be concatenated along a dimension (say `"time"`), while the rest are equal
@@ -565,7 +565,7 @@ This command concatenates variables along the `"time"` dimension, but only those
 already contain the `"time"` dimension (`data_vars='minimal', coords='minimal'`).
 Variables that lack the `"time"` dimension are taken from the first dataset
 (`compat='override'`).
-:::
+```
 
 Sometimes multi-file datasets are not conveniently organized for easy use of {py:func}`open_mfdataset`.
 One can use the `preprocess` argument to provide a function that takes a dataset
@@ -722,7 +722,7 @@ If character arrays are used:
   `char_dim_name` is added to the variables `encoding` to preserve if encoding happens, but
   the field can be edited by the user.
 
-:::{warning}
+```{warning}
 Missing values in bytes or unicode string arrays (represented by `NaN` in
 xarray) are currently written to disk as empty strings `''`. This means
 missing values will not be restored when data is loaded from disk.
@@ -730,7 +730,7 @@ This behavior is likely to change in the future ({issue}`1647`).
 Unfortunately, explicitly setting a `_FillValue` for string arrays to handle
 missing values doesn't work yet either, though we also hope to fix this in the
 future.
-:::
+```
 
 #### Chunk based compression
 
@@ -780,10 +780,10 @@ This feature is available through {py:meth}`DataArray.to_netcdf` and
 {py:meth}`Dataset.to_netcdf` when used with `engine="h5netcdf"`, only if
 `invalid_netcdf=True` is explicitly set.
 
-:::{warning}
+```{warning}
 Note that this produces a file that is likely to be not readable by other netCDF
 libraries!
-:::
+```
 
 (io-hdf5)=
 
@@ -910,10 +910,10 @@ convert the `DataArray` to a `Dataset` before saving, and then convert back
 when loading, ensuring that the `DataArray` that is loaded is always exactly
 the same as the one that was saved.
 
-:::{note}
+```{note}
 xarray does not write [NCZarr](https://docs.unidata.ucar.edu/nug/current/nczarr_head.html) attributes.
 Therefore, NCZarr data must be opened in read-only mode.
-:::
+```
 
 To store variable length strings, convert them to object arrays first with
 `dtype=object`.
@@ -1087,10 +1087,10 @@ compressor = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
 ds.to_zarr(zarr_filename, consolidated=False, encoding={"foo": {"compressors": [compressor]}})
 ```
 
-:::{note}
+```{note}
 Not all native zarr compression and filtering options have been tested with
 xarray.
-:::
+```
 
 (io.zarr.appending)=
 
@@ -1104,16 +1104,16 @@ undesirable to write your entire dataset at once.
 2. Use `append_dim` to resize and append to existing variables, and
 3. Use `region` to write to limited regions of existing arrays.
 
-:::{tip}
+```{tip}
 For `Dataset` objects containing dask arrays, a
 single call to `to_zarr()` will write all of your data in parallel.
-:::
+```
 
-:::{warning}
+```{warning}
 Alignment of coordinates is currently not checked when modifying an
 existing Zarr store. It is up to the user to ensure that coordinates are
 consistent.
-:::
+```
 
 To add or overwrite entire variables, simply call {py:meth}`~Dataset.to_zarr`
 with `mode='a'` on a Dataset containing the new variables, passing in an
@@ -1176,11 +1176,11 @@ arrays, it may still be desirable to specify a chunk size for the coordinate arr
 To specify chunks manually using the `encoding` argument, provide a nested
 dictionary with the structure `{'variable_or_coord_name': {'chunks': chunks_tuple}}`.
 
-:::{note}
+```{note}
 The positional ordering of the chunks in the encoding argument must match the
 positional ordering of the dimensions in each array. Watch out for arrays with
 differently-ordered dimensions within a single Dataset.
-:::
+```
 
 For example, let's say we're working with a dataset with dimensions
 `('time', 'x', 'y')`, a variable `Tair` which is chunked in `x` and `y`,
@@ -1228,7 +1228,7 @@ a tree of groups use the {py:func}`open_datatree` function. To save a
 `DataTree` object as a zarr store containing many groups, use the
 {py:meth}`xarray.DataTree.to_zarr()` method.
 
-:::{note}
+```{note}
 Note that perfect round-tripping should always be possible with a zarr
 store ({ref}`unlike for netCDF files <netcdf.group.warning>`), as zarr does
 not support "unused" dimensions.
@@ -1236,7 +1236,7 @@ not support "unused" dimensions.
 For the root group the same restrictions ({ref}`as for netCDF files <netcdf.root_group.note>`) apply.
 Due to file format specifications the on-disk root group name is always `"/"`
 overriding any given `DataTree` root node name.
-:::
+```
 
 (io.zarr.consolidated_metadata)=
 
@@ -1298,11 +1298,11 @@ These references are then saved as `json` files or `parquet` (more efficient)
 for later use. You can view some of these stored in the `references`
 directory [here](https://github.com/pydata/xarray-data).
 
-:::{note}
+```{note}
 These references follow this [specification](https://fsspec.github.io/kerchunk/spec.html).
 Packages like [kerchunk] and [virtualizarr](https://github.com/zarr-developers/VirtualiZarr)
 help in creating and reading these references.
-:::
+```
 
 Reading these data archives becomes really easy with `kerchunk` in combination
 with `xarray`, especially when these archives are large in size. A single combined
@@ -1323,10 +1323,10 @@ ds_kerchunked = xr.open_dataset(
 ds_kerchunked
 ```
 
-:::{note}
+```{note}
 You can refer to the [project pythia kerchunk cookbook](https://projectpythia.org/kerchunk-cookbook/README.html)
 and the [pangeo guide on kerchunk](https://guide.cloudnativegeo.org/kerchunk/intro.html) for more information.
-:::
+```
 
 (io.iris)=
 
@@ -1432,7 +1432,7 @@ Attributes:
 
 % TODO: update this example to show off decode_cf?
 
-:::{note}
+```{note}
 Like many real-world datasets, this dataset does not entirely follow
 [CF conventions]. Unexpected formats will usually cause xarray's automatic
 decoding to fail. The way to work around this is to either set
@@ -1441,7 +1441,7 @@ conventions, or by only disabling the troublesome parser.
 In this case, we set `decode_times=False` because the time axis here
 provides the calendar attribute in a format that xarray does not expect
 (the integer `360` instead of a string like `'360_day'`).
-:::
+```
 
 We can select and slice this data any number of times, and nothing is loaded
 over the network until we look at particular values:
@@ -1539,12 +1539,12 @@ pickled data remain unchanged. Because the internal design of xarray is still
 being refined, we make no guarantees (at this point) that objects pickled with
 this version of xarray will work in future versions.
 
-:::{note}
+```{note}
 When pickling an object opened from a NetCDF file, the pickle file will
 contain a reference to the file on disk. If you want to store the actual
 array values, load it into memory first with {py:meth}`Dataset.load`
 or {py:meth}`Dataset.compute`.
-:::
+```
 
 (dictionary-io)=
 

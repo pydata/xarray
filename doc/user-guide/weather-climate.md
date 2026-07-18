@@ -66,7 +66,7 @@ functionality enabled through the standard {py:class}`pandas.DatetimeIndex` for
 dates from non-standard calendars commonly used in climate science or dates
 using a standard calendar, but outside the [precision range] and dates prior to [1582-10-15].
 
-:::{note}
+```{note}
 As of xarray version 0.11, by default, {py:class}`cftime.datetime` objects
 will be used to represent times (either in indexes, as a
 {py:class}`~xarray.CFTimeIndex`, or in data arrays with dtype object) if
@@ -81,7 +81,7 @@ represented with the `np.datetime64[unit]` data type (where unit can be one of `
 
 As of pandas version 2.0.0, pandas supports non-nanosecond precision datetime
 values. From xarray version 2025.01.2 on, non-nanosecond precision datetime values are also supported in xarray (this can be parameterized via {py:class}`~xarray.coders.CFDatetimeCoder` and `decode_times` kwarg). See also {ref}`internals.timecoding`.
-:::
+```
 
 For example, you can create a DataArray indexed by a time
 coordinate with dates from a no-leap calendar and a
@@ -165,7 +165,7 @@ da.sel(time="0001")
 da.sel(time=slice("0001-05", "0002-02"))
 ```
 
-:::{note}
+```{note}
 For specifying full or partial datetime strings in cftime
 indexing, xarray supports two versions of the [ISO 8601 standard], the
 basic pattern (YYYYMMDDhhmmss) or the extended pattern
@@ -174,7 +174,7 @@ basic pattern (YYYYMMDDhhmmss) or the extended pattern
 in other words, some datetime strings that would be valid for a
 {py:class}`pandas.DatetimeIndex` are not valid for an
 {py:class}`~xarray.CFTimeIndex`.
-:::
+```
 
 - Access of basic datetime components via the `dt` accessor (in this case
   just "year", "month", "day", "hour", "minute", "second", "microsecond",

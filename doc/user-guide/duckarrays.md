@@ -25,16 +25,16 @@ Some numpy-like array types that xarray already has some support for:
 - [Dask](https://docs.dask.org/en/stable/) - parallel computing on larger-than-memory arrays (see {ref}`using dask with xarray <dask>`),
 - [Cubed](https://github.com/cubed-dev/cubed/tree/main/cubed) - another parallel computing framework that emphasises reliability (see [cubed-xarray]).
 
-:::{warning}
+```{warning}
 This feature should be considered somewhat experimental. Please report any bugs you find on
 [xarray’s issue tracker](https://github.com/pydata/xarray/issues).
-:::
+```
 
-:::{note}
+```{note}
 For information on wrapping dask arrays see {ref}`dask`. Whilst xarray wraps dask arrays in a similar way to that
 described on this page, chunked array types like {py:class}`dask.array.Array` implement additional methods that require
 slightly different user code (e.g. calling `.chunk` or `.compute`). See the docs on {ref}`wrapping chunked arrays <internals.chunkedarrays>`.
-:::
+```
 
 ## Why "duck"?
 
@@ -107,9 +107,9 @@ np.sum(s, axis=1)
 Notice that in each case the API for calling the operation on the sparse array is identical to that of calling it on the
 equivalent numpy array - this is the sense in which the sparse array is "numpy-like".
 
-:::{note}
+```{note}
 For discussion on exactly which methods a class needs to implement to be considered "numpy-like", see {ref}`internals.duckarrays`.
-:::
+```
 
 ## Wrapping numpy-like arrays in xarray
 

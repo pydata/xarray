@@ -94,11 +94,11 @@ between datasets. With the default parameters, xarray will load some coordinate
 variables into memory to compare them between datasets. This may be prohibitively
 expensive if you are manipulating your dataset lazily using {ref}`dask`.
 
-:::{note}
+```{note}
 In a future version of xarray the default values for many of these options
 will change. You can opt into the new default values early using
 `xr.set_options(use_new_combine_kwarg_defaults=True)`.
-:::
+```
 
 (merge)=
 
@@ -121,13 +121,13 @@ If you merge another dataset (or a dictionary including data array objects), by
 default the resulting dataset will be aligned on the **union** of all index
 coordinates:
 
-:::{note}
+```{note}
 In a future version of xarray the default value for `join` and `compat`
 will change. This change will mean that xarray will no longer attempt
 to align the indices of the merged dataset. You can opt into the new default
 values early using `xr.set_options(use_new_combine_kwarg_defaults=True)`.
 Or explicitly set `join='outer'` to preserve old behavior.
-:::
+```
 
 ```{code-cell}
 other = xr.Dataset({"bar": ("x", [1, 2, 3, 4]), "x": list("abcd")})
@@ -144,7 +144,7 @@ xr.merge([ds, ds + 1])
 
 ```
 
-:::{note}
+```{note}
 In a future version of xarray the default value for `compat` will change
 from `compat='no_conflicts'` to `compat='override'`. In this scenario
 the values in the first object override all the values in other objects.
@@ -153,7 +153,7 @@ the values in the first object override all the values in other objects.
 xr.merge([ds, ds + 1], compat="override")
 ```
 
-:::
+```
 
 The same non-destructive merging between `DataArray` index coordinates is
 used in the {py:class}`~xarray.Dataset` constructor:
@@ -187,10 +187,10 @@ For datasets, `ds0.combine_first(ds1)` works similarly to
 there are conflicting values in variables to be merged, whereas
 `.combine_first` defaults to the calling object's values.
 
-:::{note}
+```{note}
 In a future version of xarray the default options for `xr.merge` will change
 such that the behavior matches `combine_first`.
-:::
+```
 
 (update)=
 

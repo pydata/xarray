@@ -33,9 +33,9 @@ The user guide lists only {py:class}`xarray.DataArray` and {py:class}`xarray.Dat
 but {py:class}`~xarray.Variable` is the fundamental object internally,
 and {py:class}`~xarray.DataTree` is a natural generalisation of {py:class}`xarray.Dataset`.
 
-:::{note}
+```{note}
 Our {ref}`roadmap` includes plans to document {py:class}`~xarray.Variable` as fully public API.
-:::
+```
 
 Internally private {ref}`lazy indexing classes <internal-design.lazy-indexing>` are used to avoid loading more data than necessary,
 and flexible indexes classes (derived from {py:class}`~xarray.indexes.Index`) provide performant label-based lookups.
@@ -130,13 +130,13 @@ coordinates before returning.
 
 (internal-design.subclassing)=
 
-:::{note}
+```{note}
 The way that selecting a variable from a `DataArray` or `Dataset` actually involves internally wrapping the
 `Variable` object back up into a `DataArray`/`Dataset` is the primary reason {ref}`we recommend against subclassing <internals.accessors.composition>`
 Xarray objects. The main problem it creates is that we currently cannot easily guarantee that for example selecting
 a coordinate variable from your `SubclassedDataArray` would return an instance of `SubclassedDataArray` instead
 of just an {py:class}`xarray.DataArray`. See [GH issue](https://github.com/pydata/xarray/issues/3980) for more details.
-:::
+```
 
 (internal-design.lazy-indexing)=
 
@@ -204,10 +204,10 @@ Looking at the private attribute again shows how this indexing information was p
 var.isel(time=0)._data
 ```
 
-:::{note}
+```{note}
 Currently only certain indexing operations are lazy, not all array operations. For discussion of making all array
 operations lazy see [GH issue #5081](https://github.com/pydata/xarray/issues/5081).
-:::
+```
 
 ### Lazy Dask Arrays
 

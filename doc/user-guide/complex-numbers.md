@@ -58,9 +58,9 @@ da.real
 np.abs(da)
 ```
 
-:::{note}
+```{note}
 Like NumPy, `.real` and `.imag` typically return _views_, not copies, of the original data.
-:::
+```
 
 ## Reading and Writing Complex Data
 
@@ -122,9 +122,9 @@ ds_nc4[da.name].dtype
 
 ```
 
-:::{warning}
+```{warning}
 The `scipy` engine only supports NetCDF V3 and does _not_ support complex arrays; writing with `engine="scipy"` raises a `TypeError`.
-:::
+```
 
 ### Alternative: Manual Handling
 

@@ -76,12 +76,12 @@ We now have a small family tree where we can see how these individual Simpson fa
 print(homer)
 ```
 
-:::{note}
+```{note}
 We use `print()` above to show the compact tree hierarchy.
 {py:class}`~xarray.DataTree` objects also have an interactive HTML representation that is enabled by default in editors such as JupyterLab and VSCode.
 The HTML representation is especially helpful for larger trees and exploring new datasets, as it allows you to expand and collapse nodes.
 If you prefer the text representations you can also set `xr.set_options(display_style="text")`.
-:::
+```
 
 % Comment:: may remove note and print()s after upstream theme changes https://github.com/pydata/pydata-sphinx-theme/pull/2187
 
@@ -149,13 +149,13 @@ print(abe["Herbert"].name)
 print(herbert.name)
 ```
 
-:::{note}
+```{note}
 This example shows a subtlety - the returned tree has Homer's brother listed as `"Herbert"`,
 but the original node was named "Herb". Not only are names overridden when stored as keys like this,
 but the new node is a copy, so that the original node that was referenced is unchanged (i.e. `herbert.name == "Herb"` still).
 In other words, nodes are copied into trees, not inserted into them.
 This is intentional, and mirrors the behaviour when storing named {py:class}`~xarray.DataArray` objects inside datasets.
-:::
+```
 
 Certain manipulations of our tree are forbidden, if they would create an inconsistent result.
 In episode 51 of the show Futurama, Philip J. Fry travels back in time and accidentally becomes his own Grandfather.
@@ -294,12 +294,12 @@ print(dt.a)
 Hierarchical trees can be thought of as analogous to file systems.
 Each node is like a directory, and each directory can contain both more sub-directories and data.
 
-:::{note}
+```{note}
 Future development will allow you to make the filesystem analogy concrete by
 using {py:func}`~xarray.DataTree.open_mfdatatree` or
 {py:func}`~xarray.DataTree.save_mfdatatree`.
 ([See related issue in GitHub](https://github.com/xarray-contrib/datatree/issues/55))
-:::
+```
 
 Datatree objects support a syntax inspired by unix-like filesystems,
 where the "path" to a node is specified by the keys of each intermediate node in sequence,
@@ -355,11 +355,11 @@ dt = xr.DataTree.from_dict(d)
 print(dt)
 ```
 
-:::{note}
+```{note}
 Notice that using the path-like syntax will also create any intermediate empty nodes necessary to reach the end of the specified path
 (i.e. the node labelled `"/a/c"` in this case.)
 This is to help avoid lots of redundant entries when creating deeply-nested trees using {py:meth}`xarray.DataTree.from_dict`.
-:::
+```
 
 (iterating-over-trees)=
 
@@ -564,10 +564,10 @@ You can map custom computation over each node in a tree using {py:meth}`xarray.D
 You can map any function, so long as it takes {py:class}`xarray.Dataset` objects as one (or more) of the input arguments,
 and returns one (or more) xarray datasets.
 
-:::{note}
+```{note}
 Functions passed to {py:func}`~xarray.DataTree.map_over_datasets` cannot alter nodes in-place.
 Instead they must return new {py:class}`xarray.Dataset` objects.
-:::
+```
 
 For example, we can define a function to calculate the Root Mean Square of a timeseries
 
@@ -710,11 +710,11 @@ print(power)
 The data in different datatree nodes are not totally independent. In particular dimensions (and indexes) in child nodes must be exactly aligned with those in their parent nodes.
 Exact alignment means that shared dimensions must be the same length, and indexes along those dimensions must be equal.
 
-:::{note}
+```{note}
 If you were a previous user of the prototype [xarray-contrib/datatree](https://github.com/xarray-contrib/datatree) package, this is different from what you're used to!
 In that package the data model was that the data stored in each node actually was completely unrelated. The data model is now slightly stricter.
 This allows us to provide features like {ref}`coordinate-inheritance`.
-:::
+```
 
 To demonstrate, let's first generate some example datasets which are not aligned with one another:
 
@@ -754,9 +754,9 @@ xr.DataTree.from_dict({"daily": ds_daily, "daily/weekly": ds_weekly})
 
 This is because DataTree checks that data in child nodes align exactly with their parents.
 
-:::{note}
+```{note}
 This requirement of aligned dimensions is similar to netCDF's concept of [inherited dimensions](https://www.unidata.ucar.edu/software/netcdf/workshops/2007/groups-types/Introduction.html), as in netCDF-4 files dimensions are [visible to all child groups](https://docs.unidata.ucar.edu/netcdf-c/current/groups.html).
-:::
+```
 
 This alignment check is performed up through the tree, all the way to the root, and so is therefore equivalent to requiring that this {py:func}`~xarray.align` command succeeds:
 
@@ -802,9 +802,9 @@ dt
 
 We can use "Coordinate Inheritance" to define them only once in a parent group and remove this redundancy, whilst still being able to access those coordinate variables from the child groups.
 
-:::{note}
+```{note}
 This is also a new feature relative to the prototype [xarray-contrib/datatree](https://github.com/xarray-contrib/datatree) package.
-:::
+```
 
 Let's instead place only the time-dependent variables in the child groups, and put the non-time-dependent `lat` and `lon` variables in the parent (root) group:
 

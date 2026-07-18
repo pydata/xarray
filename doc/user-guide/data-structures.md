@@ -86,14 +86,14 @@ you do not provide them, defaults of the form `dim_N` will be created.
 However, coordinates are always optional, and dimensions do not have automatic
 coordinate labels.
 
-:::{note}
+```{note}
 This is different from pandas, where axes always have tick labels, which
 default to the integers `[0, ..., n-1]`.
 
 Prior to xarray v0.9, xarray copied this behavior: default coordinates for
 each dimension would be created if coordinates were not supplied explicitly.
 This is no longer the case.
-:::
+```
 
 Coordinates can be specified in the following ways:
 
@@ -194,12 +194,12 @@ You can modify `values` inplace:
 foo.values = 1.0 * foo.values
 ```
 
-:::{note}
+```{note}
 The array values in a {py:class}`~xarray.DataArray` have a single
 (homogeneous) data type. To work with heterogeneous or structured data
 types in xarray, use coordinates, or put separate `DataArray` objects
 in a single {py:class}`~xarray.Dataset` (see below).
-:::
+```
 
 Now fill in some of that missing metadata:
 
@@ -848,12 +848,12 @@ in xarray:
   for alignment or automatic indexing, nor are they required to match
   when doing arithmetic (see {ref}`coordinates-math`).
 
-:::{note}
+```{note}
 Xarray's terminology differs from the [CF terminology], where the
 "dimension coordinates" are called "coordinate variables", and the
 "non-dimension coordinates" are called "auxiliary coordinate variables"
 (see {issue}`1295` for more details).
-:::
+```
 
 ### Modifying coordinates
 

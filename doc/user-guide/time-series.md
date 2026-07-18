@@ -54,14 +54,14 @@ xr.date_range("2000-01-01", periods=365)
 xr.date_range("2000-01-01", periods=365, unit="s")
 ```
 
-:::{note}
+```{note}
 Care has to be taken to create the output with the wanted resolution.
 For {py:func}`pandas.date_range` the `unit`-kwarg has to be specified
 and for {py:func}`pandas.to_datetime` the selection of the resolution
 isn't possible at all. For that {py:class}`pd.DatetimeIndex` can be used
 directly. There is more in-depth information in section
 {ref}`internals.timecoding`.
-:::
+```
 
 Alternatively, you can supply arrays of Python `datetime` objects. These get
 converted automatically when used as arguments in xarray objects (with us-resolution):
@@ -76,13 +76,13 @@ When reading or writing netCDF files, xarray automatically decodes datetime and
 timedelta arrays using [CF conventions] (that is, by using a `units`
 attribute like `'days since 2000-01-01'`).
 
-:::{note}
+```{note}
 When decoding/encoding datetimes for non-standard calendars or for dates
 before [1582-10-15], xarray uses the [cftime] library by default.
 It was previously packaged with the `netcdf4-python` package under the
 name `netcdftime` but is now distributed separately. `cftime` is an
 {ref}`optional dependency<installing>` of xarray.
-:::
+```
 
 You can manual decode arrays in this form by passing a dataset to
 {py:func}`decode_cf`:
@@ -213,9 +213,9 @@ ds.isel(time=ds.time.dt.month.isin([1, 2, 3]))
 
 ## Resampling and grouped operations
 
-:::{seealso}
+```{seealso}
 For more generic documentation on grouping, see {ref}`groupby`.
-:::
+```
 
 Datetime components couple particularly well with grouped operations for analyzing features that repeat over time.
 Here's how to calculate the mean by time of day:
@@ -281,9 +281,9 @@ resampled_ds["time"] = resampled_ds.get_index("time") + offset
 resampled_ds
 ```
 
-:::{seealso}
+```{seealso}
 For more examples of using grouped operations on a time dimension, see {doc}`../examples/weather-data`.
-:::
+```
 
 (seasonal-grouping)=
 

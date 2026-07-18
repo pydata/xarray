@@ -173,9 +173,9 @@ To do this, you can use {py:meth}`Dataset.compute` or {py:meth}`DataArray.comput
 ds.compute()
 ```
 
-:::{note}
+```{note}
 Using {py:meth}`Dataset.compute` is preferred to {py:meth}`Dataset.load`, which changes the results in-place.
-:::
+```
 
 You can also access {py:attr}`DataArray.values`, which will always be a NumPy array:
 
@@ -205,9 +205,9 @@ If you're using a Dask cluster, you can also use {py:meth}`Dataset.persist` for 
 ds = ds.persist()
 ```
 
-:::{tip}
+```{tip}
 Remember to save the dataset returned by persist! This is a common mistake.
-:::
+```
 
 (dask.chunks)=
 
@@ -215,9 +215,9 @@ Remember to save the dataset returned by persist! This is a common mistake.
 
 The way a dataset is chunked can be critical to performance when working with large datasets. You'll want chunk sizes large enough to reduce the number of chunks that Dask has to think about (to reduce overhead from the task graph) but also small enough so that many of them can fit in memory at once.
 
-:::{tip}
+```{tip}
 A good rule of thumb is to create arrays with a minimum chunk size of at least one million elements (e.g., a 1000x1000 matrix). With large arrays (10+ GB), you may need larger chunks. See [Choosing good chunk sizes in Dask](https://blog.dask.org/2021/11/02/choosing-dask-chunk-sizes?utm_source=xarray-docs).
-:::
+```
 
 It can be helpful to choose chunk sizes based on your downstream analyses and to chunk as early as possible. Datasets with smaller chunks along the time axis, for example, can make time domain problems easier to parallelize since Dask can perform the same operation on each time chunk. If you're working with a large dataset with chunks that make downstream analyses challenging, you may need to rechunk your data. This is an expensive operation though, so is only recommended when needed.
 
@@ -242,9 +242,9 @@ each block of your xarray object, you have three options:
    to apply functions that consume and return xarray objects.
 3. Extract Dask Arrays from xarray objects with {py:attr}`DataArray.data` and use Dask directly.
 
-:::{tip}
+```{tip}
 See the extensive Xarray tutorial on [apply_ufunc](https://tutorial.xarray.dev/advanced/apply_ufunc/apply_ufunc.html).
-:::
+```
 
 #### `apply_ufunc`
 
@@ -341,13 +341,13 @@ This reflects the nature of core dimensions, in contrast to broadcast (non-core)
 dimensions that allow operations to be split into arbitrary chunks for
 application.
 
-:::{tip}
+```{tip}
 When possible, it's recommended to use pre-existing `dask.array` functions, either with existing xarray methods or
 {py:func}`~xarray.apply_ufunc()` with `dask='allowed'`. Dask can often
 have a more efficient implementation that makes use of the specialized
 structure of a problem, unlike the generic speedups offered by
 `dask='parallelized'`.
-:::
+```
 
 #### `map_blocks`
 
@@ -415,10 +415,10 @@ incur much memory cost.
 
 (template-note)=
 
-:::{note}
+```{note}
 Note that when `template` is provided, `attrs` from `template` are copied over to the result. Any
 `attrs` set in `func` will be ignored.
-:::
+```
 
 ```{code-cell}
 template = ds.temperature.isel(time=[1, 11, 21])
@@ -452,10 +452,10 @@ ds.close()  # Closes "example-data.nc".
 tempdir.cleanup()
 ```
 
-:::{tip}
+```{tip}
 As {py:func}`map_blocks` loads each block into memory, reduce as much as possible objects consumed by user functions.
 For example, drop useless variables before calling `func` with {py:func}`map_blocks`.
-:::
+```
 
 ## Deploying Dask
 

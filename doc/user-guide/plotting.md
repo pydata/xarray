@@ -89,9 +89,9 @@ air.attrs = airtemps.air.attrs
 air.attrs["units"] = "deg C"
 ```
 
-:::{note}
+```{note}
 Until {issue}`1614` is solved, you might need to copy over the metadata in `attrs` to get informative figure labels (as was done above).
-:::
+```
 
 ## DataArrays
 
@@ -131,11 +131,11 @@ can be used:
 air1d[:200].plot.line("b-^");
 ```
 
-:::{note}
+```{note}
 Not all xarray plotting methods support passing positional arguments
 to the wrapped matplotlib functions, but they do all
 support keyword arguments.
-:::
+```
 
 Keyword arguments work the same way, and are more explicit.
 
@@ -179,15 +179,15 @@ This feature also works with {ref}`plotting.faceting`. For facet plots,
 gives the width of each facet in inches), while `figsize` refers to the
 entire figure (as for matplotlib's `figsize` argument).
 
-:::{note}
+```{note}
 If `figsize` or `size` are used, a new figure is created,
 so this is mutually exclusive with the `ax` argument.
-:::
+```
 
-:::{note}
+```{note}
 The convention used by xarray (`figsize = (aspect * size, size)`) is
 borrowed from seaborn: it is therefore [not equivalent to matplotlib's].
-:::
+```
 
 (plotting-multiplelines)=
 
@@ -315,13 +315,13 @@ and `xincrease`.
 air2d.plot(yincrease=False);
 ```
 
-:::{note}
+```{note}
 We use {py:func}`xarray.plot.pcolormesh` as the default two-dimensional plot
 method because it is more flexible than {py:func}`xarray.plot.imshow`.
 However, for large arrays, `imshow` can be much faster than `pcolormesh`.
 If speed is important to you and you are plotting a regular mesh, consider
 using `imshow`.
-:::
+```
 
 #### Missing Values
 
@@ -382,7 +382,7 @@ plt.ylabel("latitude")
 plt.xlabel("longitude");
 ```
 
-:::{note}
+```{note}
 Xarray methods update label information and generally play around with the
 axes. So any kind of updates to the plot
 should be done _after_ the call to the xarray's plot.
@@ -394,7 +394,7 @@ plt.xlabel("Never gonna see this.")
 air2d.plot();
 ```
 
-:::
+```
 
 #### Colormaps
 
@@ -873,11 +873,11 @@ ax.coastlines()
 ax.gridlines(draw_labels=True);
 ```
 
-:::{note}
+```{note}
 The data model of xarray does not support datasets with [cell boundaries]
 yet. If you want to use these coordinates, you'll have to make the plots
 outside the xarray framework.
-:::
+```
 
 One can also make line plots with multidimensional coordinates. In this case, `hue` must be a dimension name, not a coordinate name.
 

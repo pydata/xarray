@@ -77,11 +77,11 @@ da[:, [2, 1]]
 
 Attributes are persisted in all indexing operations.
 
-:::{warning}
+```{warning}
 Positional indexing deviates from the NumPy when indexing with multiple
 arrays like `da[[0, 1], [0, 1]]`, as described in
 {ref}`vectorized-indexing`.
-:::
+```
 
 Xarray also supports label-based indexing, just like pandas. Because
 we use a {py:class}`pandas.Index` under the hood, label based indexing is very
@@ -143,11 +143,11 @@ The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
 {py:class}`Python slice` objects or 1-dimensional arrays.
 
-:::{note}
+```{note}
 We would love to be able to do indexing with labeled dimension names inside
 brackets, but unfortunately, [Python does not yet support indexing with
 keyword arguments](https://legacy.python.org/dev/peps/pep-0472/) like `da[space=0]`
-:::
+```
 
 (nearest-neighbor-lookups)=
 
@@ -203,12 +203,12 @@ reversed_da = da[::-1]
 reversed_da.loc[3.1:0.9]
 ```
 
-:::{note}
+```{note}
 If you want to interpolate along coordinates rather than looking up the
 nearest neighbors, use {py:meth}`~xarray.Dataset.interp` and
 {py:meth}`~xarray.Dataset.interp_like`.
 See {ref}`interpolation <interp>` for the details.
-:::
+```
 
 ## Dataset indexing
 
@@ -420,19 +420,19 @@ da = ds["air"].sel(lon=target_lon, lat=target_lat, method="nearest")
 da
 ```
 
-:::{tip}
+```{tip}
 If you are lazily loading your data from disk, not every form of vectorized
 indexing is supported (or if supported, may not be supported efficiently).
 You may find increased performance by loading your data into memory first,
 e.g., with {py:meth}`~xarray.Dataset.load`.
-:::
+```
 
-:::{note}
+```{note}
 If an indexer is a {py:meth}`~xarray.DataArray`, its coordinates should not
 conflict with the selected subpart of the target array (except for the
 explicitly indexed dimensions with `.loc`/`.sel`).
 Otherwise, `IndexError` will be raised.
-:::
+```
 
 (assigning-values)=
 
@@ -518,18 +518,18 @@ This is because `v[0] = v[0] - 1` is called three times, rather than
 `v[0] = v[0] - 1 - 1 - 1`.
 See [Assigning values to indexed arrays](https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-indexed-arrays) for the details.
 
-:::{note}
+```{note}
 Dask array does not support value assignment
 (see {ref}`dask` for the details).
-:::
+```
 
-:::{note}
+```{note}
 Coordinates in both the left- and right-hand-side arrays should not
 conflict with each other.
 Otherwise, `IndexError` will be raised.
-:::
+```
 
-:::{warning}
+```{warning}
 Do not try to assign values when using any of the indexing methods `isel`
 or `sel`:
 
@@ -553,7 +553,7 @@ da.isel(x=[0, 1, 2])[1] = -1
 da
 ```
 
-:::
+```
 
 You can also assign values to all variables of a {py:class}`Dataset` at once:
 
@@ -893,9 +893,9 @@ support various backends, the actual implementation is different.
 5. If any indexer DataArray has coordinates and no coordinate with the
    same name exists, attach them to the indexed object.
 
-:::{note}
+```{note}
 Only 1-dimensional boolean arrays can be used as indexers.
-:::
+```
 
 [numpy's advanced indexing]: https://numpy.org/doc/stable/user/basics.indexing.html#advanced-indexing
 [rules]: https://numpy.org/doc/stable/user/basics.copies.html

@@ -318,9 +318,9 @@ r = arr.rolling(x=2, y=3, min_periods=2)
 r.mean()
 ```
 
-:::{tip}
+```{tip}
 Note that rolling window aggregations are faster and use less memory when [bottleneck] is installed. This only applies to numpy-backed xarray objects with 1d-rolling.
-:::
+```
 
 We can also manually iterate through `Rolling` objects:
 
@@ -369,13 +369,13 @@ weight = xr.DataArray([0.25, 0.5, 0.25], dims=["window"])
 arr.rolling(y=3).construct(y="window").dot(weight)
 ```
 
-:::{note}
+```{note}
 numpy's Nan-aggregation functions such as `nansum` copy the original array.
 In xarray, we internally use these functions in our aggregation methods
 (such as `.sum()`) if `skipna` argument is not specified or set to True.
 This means `rolling_da.mean('window_dim')` is memory inefficient.
 To avoid this, use `skipna=False` as the above example.
-:::
+```
 
 (compute.weighted)=
 
@@ -472,10 +472,10 @@ and `mean`, `std` and `var` return `nan`:
 data.weighted(weights).mean()
 ```
 
-:::{note}
+```{note}
 `weights` must be a {py:class}`DataArray` and cannot contain missing values.
 Missing values can be replaced manually by `weights.fillna(0)`.
-:::
+```
 
 (compute.coarsen)=
 
@@ -550,10 +550,10 @@ trapezoidal rule using their coordinates,
 a.integrate("x")
 ```
 
-:::{note}
+```{note}
 These methods are limited to simple cartesian geometry. Differentiation
 and integration along multidimensional coordinate are not supported.
-:::
+```
 
 (compute-polyfit)=
 
@@ -577,9 +577,9 @@ The inverse operation is done with {py:meth}`~xarray.polyval`,
 xr.polyval(coord=x, coeffs=out.polyfit_coefficients)
 ```
 
-:::{note}
+```{note}
 These methods replicate the behaviour of {py:func}`numpy.polyfit` and {py:func}`numpy.polyval`.
-:::
+```
 
 (compute-curvefit)=
 
@@ -658,9 +658,9 @@ da.curvefit(
 )
 ```
 
-:::{note}
+```{note}
 This method replicates the behavior of {py:func}`scipy.optimize.curve_fit`.
-:::
+```
 
 (compute.broadcasting)=
 
@@ -762,12 +762,12 @@ explicitly (e.g., by putting them in the same Dataset or using
 {py:func}`~xarray.align`) to avoid the overhead of repeated alignment with each
 operation. See {ref}`align-and-reindex` for more details.
 
-:::{note}
+```{note}
 There is no automatic alignment between arguments when performing in-place
 arithmetic operations such as `+=`. You will need to use
 {ref}`manual alignment<align-and-reindex>`. This ensures in-place
 arithmetic never needs to modify data types.
-:::
+```
 
 (coordinates-math)=
 

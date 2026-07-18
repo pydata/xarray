@@ -28,13 +28,13 @@ over a multi-dimensional variable has recently been implemented. Note that for
 one-dimensional data, it is usually faster to rely on pandas' implementation of
 the same pipeline.
 
-:::{tip}
+```{tip}
 [Install the flox package](https://flox.readthedocs.io) to substantially improve the performance
 of GroupBy operations, particularly with dask. flox
 [extends Xarray's in-built GroupBy capabilities](https://flox.readthedocs.io/en/latest/xarray.html)
 by allowing grouping by multiple variables, and lazy grouping by dask arrays.
 If installed, Xarray will automatically use flox by default.
-:::
+```
 
 ## Split
 
@@ -139,10 +139,10 @@ dimensions _other than_ the provided one:
 ds.groupby("x").std(...)
 ```
 
-:::{note}
+```{note}
 We use an ellipsis (`...`) here to indicate we want to reduce over all
 other dimensions
-:::
+```
 
 ## First and last
 
@@ -241,10 +241,10 @@ spatial resampling; or more complex time grouping like special handling of seaso
 custom seasons. To handle these use-cases and more, Xarray is evolving to providing an
 extension point using `Grouper` objects.
 
-:::{tip}
+```{tip}
 See the [grouper design] doc for more detail on the motivation and design ideas behind
 Grouper objects.
-:::
+```
 
 For now Xarray provides three specialized Grouper objects:
 
@@ -331,9 +331,9 @@ ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
 
 ## Time Grouping and Resampling
 
-:::{seealso}
+```{seealso}
 See {ref}`resampling`.
-:::
+```
 
 ## Shuffling
 

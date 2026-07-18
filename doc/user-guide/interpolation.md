@@ -22,9 +22,9 @@ np.random.seed(123456)
 Xarray offers flexible interpolation routines, which have a similar interface
 to our {ref}`indexing <indexing>`.
 
-:::{note}
+```{note}
 `interp` requires `scipy` installed.
-:::
+```
 
 ## Scalar and 1-dimensional interpolation
 
@@ -77,12 +77,12 @@ da_dt64.interp(time=pd.date_range("1/1/2000", "1/3/2000", periods=3))
 Interpolation of data indexed by a {py:class}`~xarray.CFTimeIndex` is also
 allowed. See {ref}`CFTimeIndex` for examples.
 
-:::{note}
+```{note}
 Currently, our interpolation only works for regular grids.
 Therefore, similarly to {py:meth}`~xarray.DataArray.sel`,
 only 1D coordinates along a dimension can be used as the
 original coordinate to be interpolated.
-:::
+```
 
 ## Multi-dimensional Interpolation
 
