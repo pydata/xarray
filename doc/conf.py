@@ -102,7 +102,7 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
    :target: https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/{{ docname }}
 """
 
-nb_execution_timeout = 60
+nb_execution_excludepatterns = ["examples/**/*.ipynb"] # Gallery examples are broken https://github.com/pydata/xarray/issues/10537
 
 # AutoDoc configuration
 autosummary_generate = True
