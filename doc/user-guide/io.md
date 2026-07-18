@@ -130,7 +130,7 @@ When opening a file or URL without explicitly specifying the `engine` parameter,
 xarray automatically selects an appropriate backend based on the file path or URL.
 The backends are tried in order: **netcdf4 → h5netcdf → scipy → pydap → zarr**.
 
-```{note}
+````{note}
 You can customize the order in which netCDF backends are tried using the
 `netcdf_engine_order` option in {py:func}`~xarray.set_options`:
 
@@ -140,7 +140,8 @@ xr.set_options(netcdf_engine_order=["h5netcdf", "netcdf4", "scipy"])
 ```
 
 See {ref}`options` for more details on configuration options.
-```
+
+````
 
 The following tables show which backend will be selected for different types of URLs and files.
 
@@ -283,7 +284,7 @@ backend returns False (does not fall back to extension).
      - ❌
 ```
 
-```{note}
+````{note}
 Remote URLs ending in `.nc` are **ambiguous**:
 
 - They could be netCDF files stored on a remote HTTP server (readable by `netcdf4` or `h5netcdf`)
@@ -300,7 +301,7 @@ ds = xr.open_dataset("http://example.com/data.nc", engine="pydap")
 ds = xr.open_dataset("https://example.com/data.nc", engine="netcdf4")
 ```
 
-```
+````
 
 (io.netcdf)=
 
@@ -536,8 +537,8 @@ Xarray includes support for manipulating datasets that don't fit into memory
 with [dask]. If you have dask installed, you can open multiple files
 simultaneously in parallel using {py:func}`open_mfdataset`:
 
-```
-xr.open_mfdataset('my/files/*.nc', parallel=True)
+```python
+xr.open_mfdataset("my/files/*.nc", parallel=True)
 ```
 
 This function automatically concatenates and merges multiple files into a
@@ -549,23 +550,29 @@ For more details on parallel reading, see {ref}`combining.multi`, {ref}`dask.io`
 control its behaviour (for e.g. `parallel`, `combine`, `compat`, `join`, `concat_dim`).
 See its docstring for more details.
 
-```{note}
+````{note}
 A common use-case involves a dataset distributed across a large number of files with
 each file containing a large number of variables. Commonly, a few of these variables
 need to be concatenated along a dimension (say `"time"`), while the rest are equal
 across the datasets (ignoring floating point differences). The following command
 with suitable modifications (such as `parallel=True`) works well with such datasets:
 
-```
-xr.open_mfdataset('my/files/*.nc', concat_dim="time", combine="nested",
-                  data_vars='minimal', coords='minimal', compat='override')
+```python
+xr.open_mfdataset(
+    "my/files/*.nc",
+    concat_dim="time",
+    combine="nested",
+    data_vars="minimal",
+    coords="minimal",
+    compat="override",
+)
 ```
 
 This command concatenates variables along the `"time"` dimension, but only those that
 already contain the `"time"` dimension (`data_vars='minimal', coords='minimal'`).
 Variables that lack the `"time"` dimension are taken from the first dataset
 (`compat='override'`).
-```
+````
 
 Sometimes multi-file datasets are not conveniently organized for easy use of {py:func}`open_mfdataset`.
 One can use the `preprocess` argument to provide a function that takes a dataset
@@ -577,7 +584,7 @@ If {py:func}`open_mfdataset` does not meet your needs, other approaches are poss
 The general pattern for parallel reading of multiple files
 using dask, modifying those datasets and then combining into a single `Dataset` is:
 
-```
+```python
 def modify(ds):
     # modify ds here
     return ds
@@ -594,9 +601,10 @@ combined = xr.combine_nested(datasets)  # or some combination of concat, merge
 As an example, here's how we could approximate `MFDataset` from the netCDF4
 library:
 
-```
+```python
 from glob import glob
 import xarray as xr
+
 
 def read_netcdfs(files, dim):
     # glob expands paths with * to a list of files, like the unix shell
@@ -605,7 +613,8 @@ def read_netcdfs(files, dim):
     combined = xr.concat(datasets, dim)
     return combined
 
-combined = read_netcdfs('/all/my/files/*.nc', dim='time')
+
+combined = read_netcdfs("/all/my/files/*.nc", dim="time")
 ```
 
 This function will work in many cases, but it's not very robust. First, it
@@ -617,7 +626,7 @@ a small subset or an aggregated summary of the data from each file.
 Here's a slightly more sophisticated example of how to remedy these
 deficiencies:
 
-```
+```python
 def read_netcdfs(files, dim, transform_func=None):
     def process_one_path(path):
         # use a context manager, to ensure the file gets closed after use
@@ -636,10 +645,12 @@ def read_netcdfs(files, dim, transform_func=None):
     combined = xr.concat(datasets, dim)
     return combined
 
+
 # here we suppose we only care about the combined mean of each file;
 # you might also use indexing operations like .sel to subset datasets
-combined = read_netcdfs('/all/my/files/*.nc', dim='time',
-                        transform_func=lambda ds: ds.mean())
+combined = read_netcdfs(
+    "/all/my/files/*.nc", dim="time", transform_func=lambda ds: ds.mean()
+)
 ```
 
 This pattern works well and is very robust. We've used similar code to process
@@ -1500,12 +1511,12 @@ Lastly, OPeNDAP servers may provide endpoint URLs for different OPeNDAP protocol
 DAP2 and DAP4. To specify which protocol between the two options to use, you can
 replace the scheme of the url with the name of the protocol. For example:
 
-```
+```python
 # dap2 url
-ds_url = 'dap2://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+ds_url = "dap2://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc"
 
 # dap4 url
-ds_url = 'dap4://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+ds_url = "dap4://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc"
 ```
 
 While most OPeNDAP servers implement DAP2, not all servers implement DAP4. It
@@ -1608,7 +1619,7 @@ rds = rioxarray.open_rasterio("RGB.byte.tif")
 rds
 ```
 
-```none
+```
 <xarray.DataArray (band: 3, y: 718, x: 791)>
 [1703814 values with dtype=uint8]
 Coordinates:

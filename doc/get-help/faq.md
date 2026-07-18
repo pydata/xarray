@@ -376,6 +376,7 @@ would certainly appreciate it. We recommend two citations.
 >        url       = {https://doi.org/10.5334/jors.148}
 >      }
 >      ```
+>
 > 2. You may also want to cite a specific version of the xarray package. We
 >    provide a [Zenodo citation and DOI](https://doi.org/10.5281/zenodo.598201)
 >    for this purpose:

@@ -529,18 +529,18 @@ conflict with each other.
 Otherwise, `IndexError` will be raised.
 ```
 
-```{warning}
+````{warning}
 Do not try to assign values when using any of the indexing methods `isel`
 or `sel`:
 
-```
+```python
 # DO NOT do this
 da.isel(space=0) = 0
 ```
 
 Instead, values can be assigned using dictionary-based indexing:
 
-```
+```python
 da[dict(space=0)] = 0
 ```
 
@@ -553,7 +553,7 @@ da.isel(x=[0, 1, 2])[1] = -1
 da
 ```
 
-```
+````
 
 You can also assign values to all variables of a {py:class}`Dataset` at once:
 

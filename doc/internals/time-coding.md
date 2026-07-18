@@ -76,7 +76,7 @@ print("DatetimeIndex as_unit('us'):", time.as_unit("us"))
 print("DatetimeIndex to_numpy():", time.as_unit("us").to_numpy())
 ```
 
-```{warning}
+````{warning}
 Input data with resolution higher than `'ns'` (eg. `'ps'`, `'fs'`, `'as'`) is truncated (not rounded) at the `'ns'`-level. This is [currently broken](https://github.com/pandas-dev/pandas/issues/60341) for the `'ps'` input, where it is interpreted as `'ns'`.
 
 ```{code-cell}
@@ -88,9 +88,9 @@ print("Good:", pd.to_datetime([np.datetime64(1901901901901, "us")]))
 print("Good:", pd.to_datetime([np.datetime64(1901901901901, "ms")]))
 ```
 
-```
+````
 
-```{warning}
+````{warning}
 Care has to be taken, as some configurations of input data will raise. The following shows, that we are safe to use {py:func}`pandas.to_datetime` when providing {py:class}`numpy.datetime64` as scalar or numpy array as input.
 
 ```{code-cell}
@@ -122,7 +122,7 @@ except Exception as err:
     print("Raises:", err)
 ```
 
-```
+````
 
 ### to_timedelta
 
@@ -171,7 +171,7 @@ print("TimedeltaIndex as_unit('ms'):", delta.as_unit("ms"))
 print("TimedeltaIndex to_numpy():", delta.as_unit("ms").to_numpy())
 ```
 
-```{warning}
+````{warning}
 Care has to be taken, as some configurations of input data will raise. The following shows, that we are safe to use {py:func}`pandas.to_timedelta` when providing {py:class}`numpy.timedelta64` as scalar or numpy array as input.
 
 ```{code-cell}
@@ -203,7 +203,7 @@ except Exception as err:
     print("Raises:", err)
 ```
 
-```
+````
 
 ### Timestamp
 
@@ -225,7 +225,7 @@ for unit in ["s", "ms", "us", "ns"]:
 
 Since relaxing the resolution, this enhances the range to several hundreds of thousands of centuries with microsecond representation. `NaT` will be at `np.iinfo("int64").min` for all of the different representations.
 
-```{warning}
+````{warning}
 When initialized with a datetime string this is only defined from `-9999-01-01` to `9999-12-31`.
 
 ```{code-cell}
@@ -237,9 +237,9 @@ except Exception as err:
     print("Errors:", err)
 ```
 
-```
+````
 
-```{note}
+````{note}
 {py:class}`pandas.Timestamp` is the only current possibility to correctly import time reference strings. It handles non-ISO formatted strings, keeps the resolution of the strings (`'s'`, `'ms'` etc.) and imports time zones. When initialized with {py:class}`numpy.datetime64` instead of a string it even overcomes the above limitation of the possible time range.
 
 ```{code-cell}
@@ -269,7 +269,7 @@ except Exception as err:
     print("Errors:", err)
 ```
 
-```
+````
 
 ### DatetimeIndex
 

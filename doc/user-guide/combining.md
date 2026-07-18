@@ -144,7 +144,7 @@ xr.merge([ds, ds + 1])
 
 ```
 
-```{note}
+````{note}
 In a future version of xarray the default value for `compat` will change
 from `compat='no_conflicts'` to `compat='override'`. In this scenario
 the values in the first object override all the values in other objects.
@@ -153,7 +153,7 @@ the values in the first object override all the values in other objects.
 xr.merge([ds, ds + 1], compat="override")
 ```
 
-```
+````
 
 The same non-destructive merging between `DataArray` index coordinates is
 used in the {py:class}`~xarray.Dataset` constructor:
