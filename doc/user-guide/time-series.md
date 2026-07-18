@@ -18,7 +18,7 @@ data in pandas such a joy to xarray. In most cases, we rely on pandas for the
 core functionality.
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import numpy as np
 import pandas as pd

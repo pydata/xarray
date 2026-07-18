@@ -15,7 +15,7 @@ These methods are particularly useful for reshaping xarray objects for use in ma
 ## Importing the library
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import numpy as np
 import pandas as pd

@@ -9,7 +9,7 @@ kernelspec:
 # Extending xarray using accessors
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import xarray as xr
 import numpy as np
@@ -96,7 +96,7 @@ accessors created.
 Back in an interactive IPython session, we can use these properties:
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 exec(open("../examples/_code/accessor_example.py").read())
 ```

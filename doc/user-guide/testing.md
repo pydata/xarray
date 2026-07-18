@@ -9,7 +9,7 @@ kernelspec:
 # Testing your code
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import numpy as np
 import pandas as pd

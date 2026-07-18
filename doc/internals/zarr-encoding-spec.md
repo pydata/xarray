@@ -95,7 +95,7 @@ zarr_v2_filename = "example_v2.zarr"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import tempfile
 import os.path
@@ -127,7 +127,7 @@ zarr_v3_filename = "example_v3.zarr"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 zarr_v3_filename = os.path.join(tempdir.name, zarr_v3_filename)
 ```
@@ -162,7 +162,7 @@ example_filename = "example.zarr"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 example_filename = os.path.join(tempdir.name, example_filename)
 ```
@@ -199,7 +199,7 @@ chunk key encoding based on the store's format and configuration.
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 tempdir.cleanup()
 ```

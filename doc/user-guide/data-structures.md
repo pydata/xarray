@@ -9,7 +9,7 @@ kernelspec:
 # Data Structures
 
 ```{code-cell}
-:tags: [hide-input, hide-output]
+:tags: [remove-input, hide-output]
 
 import numpy as np
 import pandas as pd

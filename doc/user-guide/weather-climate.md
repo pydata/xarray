@@ -13,7 +13,7 @@ kernelspec:
 # Weather and climate data
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import xarray as xr
 import numpy as np
@@ -255,7 +255,7 @@ filename = "example-no-leap.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # Ensure the file is located in a unique temporary directory
 # so that it doesn't conflict with parallel builds of the
@@ -275,7 +275,7 @@ reopened
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 reopened.close()
 tempdir.cleanup()

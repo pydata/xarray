@@ -216,7 +216,7 @@ performs the inverse transformation.
 In the following an example on how to use the coders `decode` method:
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import xarray as xr
 import numpy as np

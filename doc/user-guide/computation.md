@@ -23,7 +23,7 @@ Arithmetic operations with a single DataArray automatically vectorize (like
 numpy) over all array values:
 
 ```{code-cell}
-:tags: [hide-input, hide-output]
+:tags: [remove-input, hide-output]
 
 import numpy as np
 import pandas as pd
@@ -916,7 +916,7 @@ def vector_norm(x, dim, ord=None):
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 def vector_norm(x, dim, ord=None):
     return xr.apply_ufunc(

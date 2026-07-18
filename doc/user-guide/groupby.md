@@ -41,7 +41,7 @@ If installed, Xarray will automatically use flox by default.
 Let's create a simple example dataset:
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import numpy as np
 import pandas as pd

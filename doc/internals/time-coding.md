@@ -5,7 +5,7 @@ kernelspec:
 ---
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import numpy as np
 import pandas as pd
@@ -462,7 +462,7 @@ datetimes1_filename = "test-datetimes1.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # Ensure the file is located in a unique temporary directory
 # so that it doesn't conflict with parallel builds of the
@@ -498,7 +498,7 @@ datetimes2_filename = "test-datetimes2.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 datetimes2_filename = os.path.join(tempdir.name, datetimes2_filename)
 ```
@@ -526,7 +526,7 @@ timedeltas1_filename = "test-timedeltas1.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 timedeltas1_filename = os.path.join(tempdir.name, timedeltas1_filename)
 ```
@@ -568,7 +568,7 @@ timedeltas2_filename = "test-timedeltas2.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 timedeltas2_filename = os.path.join(tempdir.name, timedeltas2_filename)
 ```
@@ -600,7 +600,7 @@ Note that in the future the default value of `decode_timedelta` will be
 :::
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # Cleanup
 tempdir.cleanup()

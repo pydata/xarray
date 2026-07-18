@@ -19,7 +19,7 @@ using the [visualization built in to pandas itself](https://pandas.pydata.org/pa
 aware libraries such as [Seaborn](https://seaborn.pydata.org/).
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import numpy as np
 import pandas as pd

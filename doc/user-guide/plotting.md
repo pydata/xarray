@@ -55,7 +55,7 @@ For more extensive plotting applications consider the following projects:
 ### Imports
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # Use defaults so we don't get gridlines in generated docs
 import matplotlib as mpl

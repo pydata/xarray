@@ -9,7 +9,7 @@ kernelspec:
 # Interpolating data
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import numpy as np
 import pandas as pd

@@ -203,7 +203,7 @@ filename = "example.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 
 # Ensure the file is located in a unique temporary directory
@@ -224,7 +224,7 @@ reopened
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 reopened.close()
 tempdir.cleanup()

@@ -13,14 +13,14 @@ kernelspec:
 # Complex Numbers
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import numpy as np
 import xarray as xr
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # Ensure the file is located in a unique temporary directory
 # so that it doesn't conflict with parallel builds of the
@@ -75,7 +75,7 @@ complex_nums_h5_filename = "complex_nums_h5.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 complex_nums_h5_filename = os.path.join(tempdir.name, complex_nums_h5_filename)
 
@@ -103,7 +103,7 @@ complex_nums_nc4_filename = "complex_nums_nc4.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 complex_nums_nc4_filename = os.path.join(tempdir.name, complex_nums_nc4_filename)
 
@@ -136,7 +136,7 @@ complex_manual_filename = "complex_manual.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 complex_manual_filename = os.path.join(tempdir.name, complex_manual_filename)
 ```
@@ -163,7 +163,7 @@ reconstructed = ds[f"{da.name}_real"] + 1j * ds[f"{da.name}_imag"]
 - For maximum legacy support (NetCDF3), manually handle real/imaginary components.
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # Cleanup
 tempdir.cleanup()

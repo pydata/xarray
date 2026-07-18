@@ -21,7 +21,7 @@ import bottleneck
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import os
 import tempfile
@@ -446,7 +446,7 @@ mapped.identical(expected)
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 ds.close()  # Closes "example-data.nc".
 tempdir.cleanup()

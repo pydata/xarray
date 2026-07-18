@@ -17,7 +17,7 @@ simple {ref}`io.pickle` files to the more flexible {ref}`io.netcdf`
 format (recommended).
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import os
 
@@ -334,7 +334,7 @@ nc_filename = "saved_on_disk.nc"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # Ensure the file is located in a unique temporary directory
 # so that it doesn't conflict with parallel builds of the
@@ -380,7 +380,7 @@ ds_disk
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # Close "saved_on_disk.nc", but retain the file until after closing or deleting other
 # datasets that will refer to it.
@@ -816,7 +816,7 @@ ds = xr.Dataset(
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # Check if the file exists and if not, create it
 if not os.path.exists("saved_on_disk.h5"):
@@ -874,7 +874,7 @@ zarr_filename = "example.zarr"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import os.path
 import tempfile
@@ -1016,7 +1016,7 @@ without writing all of its array data. This can be done by first creating a
 to Zarr:
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 tempdir.cleanup()
 ```
@@ -1071,7 +1071,7 @@ zarr_filename = "foo.zarr"
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 import os.path
 import tempfile
@@ -1124,7 +1124,7 @@ To resize and then append values along an existing dimension in a store, set
 order, e.g., for time-stepping a simulation:
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 tempdir.cleanup()
 ```
@@ -1580,7 +1580,7 @@ ds.to_dict(data=False)
 ```
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 # We're now done with the dataset named `ds`.  Although the `with` statement closed
 # the dataset, displaying the unpickled pickle of `ds` re-opened "saved_on_disk.nc".
@@ -1643,7 +1643,7 @@ rds4326.rio.to_raster("RGB.byte.4326.tif")
 (io-cfgrib)=
 
 ```{code-cell}
-:tags: [hide-input]
+:tags: [remove-input]
 
 tempdir.cleanup()
 ```
