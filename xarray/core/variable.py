@@ -1308,7 +1308,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             if (
                 mode == "constant"
                 and constant_values is not None
-                and np.issubdtype(dtype, np.integer)
+                and dtypes.isdtype(dtype, "integral")
             ):
                 # Padding an integer array with a non-finite fill value such as
                 # NaN would raise ("cannot convert float NaN to integer"). Promote
