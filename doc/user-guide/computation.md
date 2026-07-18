@@ -23,7 +23,7 @@ Arithmetic operations with a single DataArray automatically vectorize (like
 numpy) over all array values:
 
 ```{code-cell}
-:tags: [remove-input, hide-output]
+:tags: [remove-input, remove-output]
 
 import numpy as np
 import pandas as pd

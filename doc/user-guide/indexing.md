@@ -9,7 +9,7 @@ kernelspec:
 # Indexing and selecting data
 
 ```{code-cell}
-:tags: [remove-input, hide-output]
+:tags: [remove-input, remove-output]
 
 import numpy as np
 import pandas as pd
