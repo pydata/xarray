@@ -6,13 +6,67 @@
 What's New
 ==========
 
-.. _whats-new.2026.05.0:
+.. _whats-new.2026.07.1:
 
-v2026.05.0 (unreleased)
+v2026.07.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+- Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
+  differ from the dtype returned by the matching numpy-backed bottleneck path,
+  notably ``object`` instead of ``float64`` for boolean inputs.
+  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2026.07.0:
+
+v2026.07.0 (Jul 9, 2026)
+------------------------
+
+This release adds support for Dask's query-optimizing expression arrays, along
+with new ``day_of_week`` and ``day_of_year`` datetime accessor attributes. It
+also includes a number of bug fixes, notably for a performance regression in
+:py:meth:`Coordinates.to_index`, Zarr ``fill_value`` round-tripping, and
+excessive memory use in ``drop_encoding``.
+
+Thanks to the 25 contributors to this release:
+Davis Bennett, Deepak Cherian, Ian Hunt-Isaak, Illviljan, Jonathan Dung, Julia
+Signell, Justus Magin, Kai Mühlbauer, MJSHANG, Mark Harfouche, Mathias Hauser,
+Matt Van Horn, Matthew Rocklin, Max Jones, Maximilian Roos, Nick Hodgskin,
+S Anand, Spencer Clark, Sreekant Baheti, Timothy Hodson, Tom Nicholas,
+Vincent Gao, Wali Reheman, Wei Ji and eeshsaxena
+
+New Features
+~~~~~~~~~~~~
+- Added support for Dask's `query-optimizing expression arrays
+  <https://github.com/mrocklin/dask-array>`_. Xarray now implements the
+  ``__dask_exprs__`` protocol so that Dask can identify and optimize xarray
+  :py:class:`Variable` objects without materializing their graphs, together
+  with a chunk manager and :py:meth:`~xarray.Dataset.map_blocks` support for
+  these arrays (:pull:`11382`, :pull:`11398`, :pull:`11423`).
+  By `Matthew Rocklin <https://github.com/mrocklin>`_.
 - Following pandas, xarray's
   :py:class:`~xarray.core.accessor_dt.DatetimeAccessor` now supports
   :py:attr:`~xarray.core.accessor_dt.DatetimeAccessor.day_of_week` and
@@ -40,6 +94,21 @@ Bug Fixes
   ``constant_values`` such as ``np.nan``; the dtype is now promoted so the fill
   value can be represented, as already happens for the default fill value
   (:issue:`6431`).
+- :py:meth:`Dataset.drop_encoding` and :py:meth:`DataArray.drop_encoding` no
+  longer copy the underlying data, avoiding excessive memory use on large
+  datasets (:issue:`11390`, :pull:`11394`).
+  By `Wali Reheman <https://github.com/wali-reheman>`_.
+- Fix :py:func:`open_dataset` raising ``OSError`` when opening data from GDAL
+  virtual filesystems (e.g. ``/vsicurl/``, ``/vsis3/``) or other URI-like paths
+  that do not support ``stat`` (:pull:`11392`).
+  By `Vincent Gao <https://github.com/gaoflow>`_.
+- Fix :py:func:`testing.assert_equal` with ``check_dim_order=False`` for
+  :py:class:`Dataset` objects containing variables with different dimension
+  orders (:issue:`10704`, :pull:`10718`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`~xarray.indexes.RangeIndex.linspace` now handles ``num=1`` like
+  :py:func:`numpy.linspace` (:issue:`11397`, :pull:`11401`).
+  By `S Anand <https://github.com/sanand0>`_.
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
   code ndarrays into Python lists (:issue:`11305`).

@@ -6753,10 +6753,11 @@ class TestDataset:
             ds += ds[["bar"]]
 
         # verify we can rollback in-place operations if something goes wrong
-        # nb. inplace datetime64 math actually will work with an integer array
-        # but not floats thanks to numpy's inconsistent handling
-        other = DataArray(np.datetime64("2000-01-01"), coords={"c": 2})
+        # (datetime64 math works with timedelta64 values stored in "bar", but
+        # not floats stored in "foo").
+        other = DataArray(np.datetime64("2000-01-01", "ns"), coords={"c": 2})
         actual = ds.copy(deep=True)
+        actual["bar"] = actual.bar.astype("timedelta64[ns]")
         with pytest.raises(TypeError):
             actual += other
         assert_identical(actual, ds)

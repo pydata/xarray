@@ -45,14 +45,12 @@ from xarray.tests import (
     has_dask_array_expr,
     has_dask_ge_2024_08_1,
     has_flox,
-    has_pandas_ge_2_2,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
     requires_dask_ge_2024_08_1,
     requires_flox,
     requires_flox_0_9_12,
-    requires_pandas_ge_2_2,
     requires_scipy,
 )
 
@@ -155,15 +153,10 @@ def test_multi_index_groupby_sum() -> None:
         )
         assert_equal(expected, ds)
 
-    if not has_pandas_ge_2_2:
-        # the next line triggers a mysterious multiindex error on pandas 2.0
-        return
-
     actual = ds.stack(space=["x", "y"]).groupby("space").sum(...).unstack("space")
     assert_equal(expected, actual)
 
 
-@requires_pandas_ge_2_2
 def test_multi_index_propagation() -> None:
     # regression test for GH9648
     times = pd.date_range("2023-01-01", periods=4)
