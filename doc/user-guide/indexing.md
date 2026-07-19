@@ -545,6 +545,9 @@ da[dict(space=0)] = 0
 ```
 
 Assigning values with the chained indexing using `.sel` or `.isel` fails silently.
+See the cell below:
+
+````
 
 ```{code-cell}
 da = xr.DataArray([0, 1, 2, 3], dims=["x"])
@@ -552,8 +555,6 @@ da = xr.DataArray([0, 1, 2, 3], dims=["x"])
 da.isel(x=[0, 1, 2])[1] = -1
 da
 ```
-
-````
 
 You can also assign values to all variables of a {py:class}`Dataset` at once:
 

@@ -382,19 +382,19 @@ plt.ylabel("latitude")
 plt.xlabel("longitude");
 ```
 
-````{note}
+```{note}
 Xarray methods update label information and generally play around with the
 axes. So any kind of updates to the plot
 should be done _after_ the call to the xarray's plot.
 In the example below, `plt.xlabel` effectively does nothing, since
 `d_ylog.plot()` updates the xlabel.
+See the cell below:
+```
 
 ```{code-cell}
 plt.xlabel("Never gonna see this.")
 air2d.plot();
 ```
-
-````
 
 #### Colormaps
 
