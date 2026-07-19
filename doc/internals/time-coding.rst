@@ -484,12 +484,14 @@ The current default time unit of xarray is ``'ns'``. When setting keyword argume
 
 .. jupyter-execute::
 
-    xr.open_dataset(datetimes1_filename)
+    ds_datetimes1 = xr.open_dataset(datetimes1_filename)
+    ds_datetimes1
 
 .. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset(datetimes1_filename, decode_times=coder)
+    ds_datetimes1_s = xr.open_dataset(datetimes1_filename, decode_times=coder)
+    ds_datetimes1_s
 
 If a coarser unit is requested the datetimes are decoded into their native
 on-disk resolution, if possible.
@@ -511,12 +513,14 @@ on-disk resolution, if possible.
 
 .. jupyter-execute::
 
-    xr.open_dataset(datetimes2_filename)
+    ds_datetimes2 = xr.open_dataset(datetimes2_filename)
+    ds_datetimes2
 
 .. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset(datetimes2_filename, decode_times=coder)
+    ds_datetimes2_s = xr.open_dataset(datetimes2_filename, decode_times=coder)
+    ds_datetimes2_s
 
 Similar logic applies for decoding timedelta values. The default resolution is
 ``"ns"``:
@@ -539,14 +543,16 @@ Similar logic applies for decoding timedelta values. The default resolution is
 .. jupyter-execute::
     :stderr:
 
-    xr.open_dataset(timedeltas1_filename)
+    ds_timedeltas1 = xr.open_dataset(timedeltas1_filename)
+    ds_timedeltas1
 
 By default, timedeltas will be decoded to the same resolution as datetimes:
 
 .. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset(timedeltas1_filename, decode_times=coder, decode_timedelta=True)
+    ds_timedeltas1_s = xr.open_dataset(timedeltas1_filename, decode_times=coder, decode_timedelta=True)
+    ds_timedeltas1_s
 
 but if one would like to decode timedeltas to a different resolution, one can
 provide a coder specifically for timedeltas to ``decode_timedelta``:
@@ -554,9 +560,10 @@ provide a coder specifically for timedeltas to ``decode_timedelta``:
 .. jupyter-execute::
 
     timedelta_coder = xr.coders.CFTimedeltaCoder(time_unit="ms")
-    xr.open_dataset(
+    ds_timedeltas1_ms = xr.open_dataset(
         timedeltas1_filename, decode_times=coder, decode_timedelta=timedelta_coder
     )
+    ds_timedeltas1_ms
 
 As with datetimes, if a coarser unit is requested the timedeltas are decoded
 into their native on-disk resolution, if possible:
@@ -578,18 +585,21 @@ into their native on-disk resolution, if possible:
 
 .. jupyter-execute::
 
-    xr.open_dataset(timedeltas2_filename, decode_timedelta=True)
+    ds_timedeltas2 = xr.open_dataset(timedeltas2_filename, decode_timedelta=True)
+    ds_timedeltas2
 
 .. jupyter-execute::
 
     coder = xr.coders.CFDatetimeCoder(time_unit="s")
-    xr.open_dataset(timedeltas2_filename, decode_times=coder, decode_timedelta=True)
+    ds_timedeltas2_s = xr.open_dataset(timedeltas2_filename, decode_times=coder, decode_timedelta=True)
+    ds_timedeltas2_s
 
 To opt-out of timedelta decoding (see issue `Undesired decoding to timedelta64 <https://github.com/pydata/xarray/issues/1621>`_) pass ``False`` to ``decode_timedelta``:
 
 .. jupyter-execute::
 
-    xr.open_dataset(timedeltas2_filename, decode_timedelta=False)
+    ds_timedeltas2_none = xr.open_dataset(timedeltas2_filename, decode_timedelta=False)
+    ds_timedeltas2_none
 
 .. note::
     Note that in the future the default value of ``decode_timedelta`` will be
@@ -601,4 +611,17 @@ To opt-out of timedelta decoding (see issue `Undesired decoding to timedelta64 <
     :hide-code:
 
     # Cleanup
+    for _ds in (
+        ds_datetimes1,
+        ds_datetimes1_s,
+        ds_datetimes2,
+        ds_datetimes2_s,
+        ds_timedeltas1,
+        ds_timedeltas1_s,
+        ds_timedeltas1_ms,
+        ds_timedeltas2,
+        ds_timedeltas2_s,
+        ds_timedeltas2_none,
+    ):
+        _ds.close()
     tempdir.cleanup()
