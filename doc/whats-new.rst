@@ -7502,7 +7502,7 @@ Documentation
 
 - Added a new guide on :ref:`contributing` (:issue:`640`)
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Added apply_ufunc example to :ref:`/examples/weather-data.ipynb#Toy-weather-data` (:issue:`1844`).
+- Added apply_ufunc example to :doc:`/examples/weather-data` (:issue:`1844`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry ``Why don’t aggregations return Python scalars?`` in the
   :ref:`faq` (:issue:`1726`).
@@ -8648,7 +8648,7 @@ Enhancements
 - Groupby operations now support grouping over multidimensional variables. A new
   method called :py:meth:`~xarray.Dataset.groupby_bins` has also been added to
   allow users to specify bins for grouping. The new features are described in
-  :ref:`groupby-multidim` and :ref:`/examples/multidimensional-coords.ipynb`.
+  :ref:`groupby-multidim` and :doc:`/examples/multidimensional-coords`.
   By `Ryan Abernathey <https://github.com/rabernat>`_.
 
 - DataArray and Dataset method :py:meth:`where` now supports a ``drop=True``
@@ -9438,7 +9438,7 @@ Enhancements
   ``fillna`` works on both ``Dataset`` and ``DataArray`` objects, and uses
   index based alignment and broadcasting like standard binary operations. It
   also can be applied by group, as illustrated in
-  :ref:`/examples/weather-data.ipynb#Fill-missing-values-with-climatology`.
+  :doc:`/examples/weather-data`.
 - New ``xray.Dataset.assign`` and ``xray.Dataset.assign_coords``
   methods patterned off the new :py:meth:`DataFrame.assign <pandas.DataFrame.assign>`
   method in pandas:
@@ -9750,7 +9750,7 @@ Enhancements
 - Long attributes are now truncated at 500 characters when printing a dataset
   (:issue:`338`). This should make things more convenient for working with
   datasets interactively.
-- Added a new documentation example, :ref:`/examples/monthly-means.ipynb`. Thanks Joe
+- Added a new documentation example, :doc:`/examples/monthly-means`. Thanks Joe
   Hamman!
 
 Bug fixes

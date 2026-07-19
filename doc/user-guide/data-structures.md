@@ -840,7 +840,7 @@ in xarray:
   {py:class}`pandas.Index` internally to store their values.
 - **non-dimension coordinates** are variables that contain coordinate
   data, but are not a dimension coordinate. They can be multidimensional (see
-  {ref}`/examples/multidimensional-coords.ipynb`), and there is no
+  {doc}`/examples/multidimensional-coords`), and there is no
   relationship between the name of a non-dimension coordinate and the
   name(s) of its dimension(s). Non-dimension coordinates can be
   useful for indexing or plotting; otherwise, xarray does not make any

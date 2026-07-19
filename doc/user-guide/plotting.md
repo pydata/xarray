@@ -828,7 +828,7 @@ coordinates.
 
 ### Multidimensional coordinates
 
-See also: {ref}`/examples/multidimensional-coords.ipynb`.
+See also: {doc}`/examples/multidimensional-coords`.
 
 You can plot irregular grids defined by multidimensional coordinates with
 xarray, but you'll have to tell the plot function to use these coordinates
