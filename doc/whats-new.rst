@@ -30,6 +30,8 @@ Bug Fixes
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs.
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
+- Disable using bottleneck by default, as certain operations are less numerically
+  stable than the equivalent numpy functions.
 
 
 Documentation
