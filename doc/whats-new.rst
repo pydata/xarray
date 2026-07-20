@@ -30,6 +30,12 @@ Bug Fixes
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs.
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
+- Fixed a :py:class:`KeyError` when building a multi-index (e.g. via
+  :py:meth:`Dataset.stack` or :py:meth:`Dataset.set_index`) from levels whose
+  name is falsy but valid, such as an empty string ``""``. Such names were
+  incorrectly replaced by the default ``{dim}_level_{i}`` name instead of being
+  preserved.
+  By `Kropiunig <https://github.com/Kropiunig>`_.
 
 
 Documentation

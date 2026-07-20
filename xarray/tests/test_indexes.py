@@ -354,6 +354,12 @@ class TestPandasMultiIndex:
         index = PandasMultiIndex(pd_idx, "x")
         assert list(index.index.names) == ["x_level_0", "x_level_1"]
 
+        # a falsy but valid level name (e.g. "") must be preserved rather than
+        # replaced by the default ``{dim}_level_{i}`` name
+        pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data], names=("", "bar"))
+        index = PandasMultiIndex(pd_idx, "x")
+        assert list(index.index.names) == ["", "bar"]
+
     def test_from_variables(self) -> None:
         v_level1 = xr.Variable(
             "x", [1, 2, 3], attrs={"unit": "m"}, encoding={"dtype": np.int32}
