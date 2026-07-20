@@ -426,7 +426,7 @@ We can use :py:meth:`xarray.DataTree.match` for this:
 We can also subset trees by the contents of the nodes.
 :py:meth:`xarray.DataTree.filter` retains only the nodes of a tree that meet a certain condition.
 For example, we could recreate the Simpson's family tree with the ages of each individual, then filter for only the adults:
-First lets recreate the tree but with an ``age`` data variable in every node:
+First let's recreate the tree but with an ``age`` data variable in every node:
 
 .. jupyter-execute::
 
@@ -452,6 +452,8 @@ Now let's filter out the minors:
 The result is a new tree, containing only the nodes matching the condition.
 
 (Yes, under the hood :py:meth:`~xarray.DataTree.filter` is just syntactic sugar for the pattern we showed you in :ref:`iterating over trees` !)
+
+If you want to filter out empty nodes you can use :py:meth:`~xarray.DataTree.prune`.
 
 .. _Tree Contents:
 
@@ -483,7 +485,7 @@ Operations and Methods on Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To show how applying operations across a whole tree at once can be useful,
-let's first create a example scientific dataset.
+let's first create an example scientific dataset.
 
 .. jupyter-execute::
 

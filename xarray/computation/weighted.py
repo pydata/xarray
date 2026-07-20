@@ -448,7 +448,6 @@ class Weighted(Generic[T_Xarray]):
 
         result = result.transpose("quantile", ...)
         result = result.assign_coords(quantile=q).squeeze()
-
         return result
 
     def _implementation(self, func, dim, **kwargs):
@@ -551,7 +550,6 @@ class DataArrayWeighted(Weighted["DataArray"]):
 class DatasetWeighted(Weighted["Dataset"]):
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
-
         return self.obj.map(func, dim=dim, **kwargs)
 
 

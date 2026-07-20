@@ -13,14 +13,13 @@ pytest.importorskip("hypothesis")
 # isort: split
 
 import hypothesis.extra.numpy as npst
-import hypothesis.strategies as st
 import numpy as np
 from hypothesis import given
+from hypothesis import strategies as st
 
 import xarray as xr
 from xarray.coding.times import _parse_iso8601
-from xarray.testing.strategies import CFTimeStrategyISO8601, variables
-from xarray.tests import requires_cftime
+from xarray.testing.strategies import datetimes, variables
 
 
 @pytest.mark.slow
@@ -50,8 +49,23 @@ def test_CFScaleOffset_coder_roundtrip(original) -> None:
     xr.testing.assert_identical(original, roundtripped)
 
 
-@requires_cftime
-@given(dt=st.datetimes() | CFTimeStrategyISO8601())
+@given(
+    real=st.floats(allow_nan=True, allow_infinity=True),
+    imag=st.floats(allow_nan=True, allow_infinity=True),
+    dtype=st.sampled_from([np.complex64, np.complex128]),
+)
+def test_FillValueCoder_complex_roundtrip(real, imag, dtype) -> None:
+    from xarray.backends.zarr import FillValueCoder
+
+    value = dtype(complex(real, imag))
+    encoded = FillValueCoder.encode(value, np.dtype(dtype))
+    decoded = FillValueCoder.decode(encoded, np.dtype(dtype))
+    np.testing.assert_equal(
+        np.array(decoded, dtype=dtype), np.array(value, dtype=dtype)
+    )
+
+
+@given(dt=datetimes())
 def test_iso8601_decode(dt):
     iso = dt.isoformat()
     with warnings.catch_warnings():

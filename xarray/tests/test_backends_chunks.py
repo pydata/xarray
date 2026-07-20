@@ -14,6 +14,8 @@ from xarray.tests import requires_dask
         (10, 3, None, (3, 3, 3, 1)),
         (10, 3, slice(None, 10), (3, 3, 3, 1)),
         (10, 3, slice(0, None), (3, 3, 3, 1)),
+        (2, 10, slice(0, 3), (2,)),
+        (4, 10, slice(7, 10), (3, 1)),
     ],
 )
 def test_build_grid_chunks(size, chunk_size, region, expected_chunks):
@@ -26,16 +28,16 @@ def test_build_grid_chunks(size, chunk_size, region, expected_chunks):
 
 
 @pytest.mark.parametrize(
-    "nd_var_chunks, nd_backend_chunks, expected_chunks",
+    "nd_v_chunks, nd_backend_chunks, expected_chunks",
     [
         (((2, 2, 2, 2),), ((3, 3, 2),), ((3, 3, 2),)),
         # ND cases
         (((2, 4), (2, 3)), ((2, 2, 2), (3, 2)), ((2, 4), (3, 2))),
     ],
 )
-def test_align_nd_chunks(nd_var_chunks, nd_backend_chunks, expected_chunks):
+def test_align_nd_chunks(nd_v_chunks, nd_backend_chunks, expected_chunks):
     aligned_nd_chunks = align_nd_chunks(
-        nd_var_chunks=nd_var_chunks,
+        nd_v_chunks=nd_v_chunks,
         nd_backend_chunks=nd_backend_chunks,
     )
     assert aligned_nd_chunks == expected_chunks
@@ -43,7 +45,7 @@ def test_align_nd_chunks(nd_var_chunks, nd_backend_chunks, expected_chunks):
 
 @requires_dask
 @pytest.mark.parametrize(
-    "enc_chunks, region, nd_var_chunks, expected_chunks",
+    "enc_chunks, region, nd_v_chunks, expected_chunks",
     [
         (
             (3,),
@@ -93,7 +95,7 @@ def test_align_nd_chunks(nd_var_chunks, nd_backend_chunks, expected_chunks):
         ),
     ],
 )
-def test_grid_rechunk(enc_chunks, region, nd_var_chunks, expected_chunks):
+def test_grid_rechunk(enc_chunks, region, nd_v_chunks, expected_chunks):
     dims = [f"dim_{i}" for i in range(len(region))]
     coords = {
         dim: list(range(r.start, r.stop)) for dim, r in zip(dims, region, strict=False)
@@ -104,7 +106,7 @@ def test_grid_rechunk(enc_chunks, region, nd_var_chunks, expected_chunks):
         dims=dims,
         coords=coords,
     )
-    arr = arr.chunk(dict(zip(dims, nd_var_chunks, strict=False)))
+    arr = arr.chunk(dict(zip(dims, nd_v_chunks, strict=False)))
 
     result = grid_rechunk(
         arr.variable,

@@ -37,6 +37,7 @@ import numpy as np
 import pandas as pd
 import pandas._testing as tm
 import pytest
+from packaging.version import Version
 from pandas import (
     Categorical,
     CategoricalIndex,
@@ -171,7 +172,9 @@ class TestDataFrameToXArray:
 
         result = result.to_dataframe()
         expected = df.copy()
-        expected["f"] = expected["f"].astype(object)
+        expected["f"] = expected["f"].astype(
+            object if Version(pd.__version__) < Version("3.0.0dev0") else str
+        )
         expected.columns.name = None
         tm.assert_frame_equal(result, expected)
 

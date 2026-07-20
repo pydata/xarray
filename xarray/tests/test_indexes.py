@@ -346,7 +346,7 @@ class TestPandasMultiIndex:
             "bar": bar_data.dtype,
         }
 
-        with pytest.raises(ValueError, match=".*conflicting multi-index level name.*"):
+        with pytest.raises(ValueError, match=r".*conflicting multi-index level name.*"):
             PandasMultiIndex(pd_idx, "foo")
 
         # default level names
@@ -636,10 +636,10 @@ class TestIndexes:
         }
         assert indexes.get_all_coords("one") == expected
 
-        with pytest.raises(ValueError, match="errors must be.*"):
+        with pytest.raises(ValueError, match=r"errors must be.*"):
             indexes.get_all_coords("x", errors="invalid")
 
-        with pytest.raises(ValueError, match="no index found.*"):
+        with pytest.raises(ValueError, match=r"no index found.*"):
             indexes.get_all_coords("no_coord")
 
         assert indexes.get_all_coords("no_coord", errors="ignore") == {}

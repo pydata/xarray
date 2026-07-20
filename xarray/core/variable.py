@@ -8,11 +8,11 @@ import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from functools import partial
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
-from numpy.typing import ArrayLike
+from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 from xarray.compat.array_api_compat import to_like_array
@@ -40,6 +40,7 @@ from xarray.core.utils import (
     emit_user_level_warning,
     ensure_us_time_resolution,
     infix_dims,
+    is_allowed_extension_array,
     is_dict_like,
     is_duck_array,
     is_duck_dask_array,
@@ -48,6 +49,8 @@ from xarray.core.utils import (
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
+    array_type,
+    async_to_duck_array,
     integer_types,
     is_0d_dask_array,
     is_chunked_array,
@@ -198,14 +201,19 @@ def _maybe_wrap_data(data):
         return PandasIndexingAdapter(data)
     if isinstance(data, UNSUPPORTED_EXTENSION_ARRAY_TYPES):
         return data.to_numpy()
-    if isinstance(data, pd.api.extensions.ExtensionArray):
+    if isinstance(
+        data, pd.api.extensions.ExtensionArray
+    ) and is_allowed_extension_array(data):
         return PandasExtensionArray(data)
     return data
 
 
 def _possibly_convert_objects(values):
     """Convert object arrays into datetime64 and timedelta64 according
-    to the pandas convention.
+    to the pandas convention.  For backwards compat, as of 3.0.0 pandas,
+    object dtype inputs are cast to strings by `pandas.Series`
+    but we output them as object dtype with the input metadata preserved as well.
+
 
     * datetime.datetime
     * datetime.timedelta
@@ -220,11 +228,22 @@ def _possibly_convert_objects(values):
             result.flags.writeable = True
         except ValueError:
             result = result.copy()
+    # For why we need this behavior: https://github.com/pandas-dev/pandas/issues/61938
+    # Object datatype inputs that are strings
+    # will be converted to strings by `pandas.Series`, and as of 3.0.0, lose
+    # `dtype.metadata`.  If the roundtrip back to numpy in this function yields an
+    # object array again, the dtype.metadata will be preserved.
+    if (
+        result.dtype.kind == "O"
+        and values.dtype.kind == "O"
+        and Version(pd.__version__) >= Version("3.0.0dev0")
+    ):
+        result = result.view(values.dtype)
     return result
 
 
 def as_compatible_data(
-    data: T_DuckArray | ArrayLike, fastpath: bool = False
+    data: T_DuckArray | np.typing.ArrayLike, fastpath: bool = False
 ) -> T_DuckArray:
     """Prepare and wrap data to put in a Variable.
 
@@ -261,7 +280,8 @@ def as_compatible_data(
     if isinstance(data, pd.Series | pd.DataFrame):
         if (
             isinstance(data, pd.Series)
-            and pd.api.types.is_extension_array_dtype(data)
+            and is_allowed_extension_array(data.array)
+            # Some datetime types are not allowed as well as backing Variable types
             and not isinstance(data.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES)
         ):
             pandas_data = data.array
@@ -272,13 +292,12 @@ def as_compatible_data(
         else:
             data = pandas_data
 
-    if isinstance(data, np.ma.MaskedArray):
-        mask = np.ma.getmaskarray(data)
-        if mask.any():
-            dtype, fill_value = dtypes.maybe_promote(data.dtype)
-            data = duck_array_ops.where_method(data, ~mask, fill_value)
-        else:
-            data = np.asarray(data)
+    if isinstance(data, np.ma.MaskedArray) or (
+        isinstance(data, array_type("dask"))
+        and isinstance(getattr(data, "_meta", None), np.ma.MaskedArray)
+    ):
+        mask = duck_array_ops.getmaskarray(data)
+        data = duck_array_ops.where_method(data, ~mask)
 
     if isinstance(data, np.matrix):
         data = np.asarray(data)
@@ -333,7 +352,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     The main functional difference between Variables and numpy arrays is that
     numerical operations on Variables implement array broadcasting by dimension
-    name. For example, adding an Variable with dimensions `('time',)` to
+    name. For example, adding a Variable with dimensions `('time',)` to
     another Variable with dimensions `('space',)` results in a new Variable
     with dimensions `('time', 'space')`. Furthermore, numpy reduce operations
     like ``mean`` or ``sum`` are overwritten to take a "dimension" argument
@@ -351,7 +370,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def __init__(
         self,
         dims,
-        data: T_DuckArray | ArrayLike,
+        data: T_DuckArray | np.typing.ArrayLike,
         attrs=None,
         encoding=None,
         fastpath=False,
@@ -380,7 +399,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             dims=dims, data=as_compatible_data(data, fastpath=fastpath), attrs=attrs
         )
 
-        self._encoding = None
+        self._encoding: dict[Any, Any] | None = None
         if encoding is not None:
             self.encoding = encoding
 
@@ -445,8 +464,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             return duck_array.array
         return duck_array
 
-    @data.setter
-    def data(self, data: T_DuckArray | ArrayLike) -> None:
+    @data.setter  # type: ignore[override,unused-ignore]
+    def data(self, data: T_DuckArray | np.typing.ArrayLike) -> None:
         data = as_compatible_data(data)
         self._check_shape(data)
         self._data = data
@@ -563,7 +582,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return self.to_index_variable().to_index()
 
     def to_dict(
-        self, data: bool | str = "list", encoding: bool = False
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """Dictionary representation of variable."""
         item: dict[str, Any] = {
@@ -615,6 +634,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             positions.
         """
         key = self._item_key_to_tuple(key)  # key is a tuple
+        # Fast path: key is already a tuple of the right length with only
+        # ints and slices (the common case from Variable.isel)
+        if (
+            isinstance(key, tuple)
+            and len(key) == self.ndim
+            and all(
+                not isinstance(k, bool) and isinstance(k, BASIC_INDEXING_TYPES)
+                for k in key
+            )
+        ):
+            return self._broadcast_indexes_basic(key)
+
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
         # Convert a scalar Variable to a 0d-array
@@ -627,7 +658,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
         )
 
-        if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
+        if all(
+            (isinstance(k, BASIC_INDEXING_TYPES) and not isinstance(k, bool))
+            for k in key
+        ):
             return self._broadcast_indexes_basic(key)
 
         self._validate_indexers(key)
@@ -750,7 +784,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 if dim in variable_dims:
                     # We only convert slice objects to variables if they share
                     # a dimension with at least one other variable. Otherwise,
-                    # we can equivalently leave them as slices aknd transpose
+                    # we can equivalently leave them as slices and transpose
                     # the result. This is significantly faster/more efficient
                     # for most array backends.
                     values = np.arange(*value.indices(self.sizes[dim]))
@@ -883,7 +917,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def encoding(self) -> dict[Any, Any]:
         """Dictionary of encodings on this variable."""
         if self._encoding is None:
-            self._encoding = {}
+            encoding: dict[Any, Any] = {}
+            self._encoding = encoding
         return self._encoding
 
     @encoding.setter
@@ -907,7 +942,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _copy(
         self,
         deep: bool = True,
-        data: T_DuckArray | ArrayLike | None = None,
+        data: T_DuckArray | np.typing.ArrayLike | None = None,
         memo: dict[int, Any] | None = None,
     ) -> Self:
         if data is None:
@@ -925,9 +960,9 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:  # type: ignore[attr-defined]
+            if self.shape != ndata.shape:
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
@@ -948,17 +983,22 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
-            data = copy.copy(self.data)
+            # Only copy data when it is actually being changed.
+            # Many callers (e.g. drop_encoding) only change encoding/attrs,
+            # and a full data copy is expensive for large arrays.
+            data = self._data
         if attrs is _default:
             attrs = copy.copy(self._attrs)
-
         if encoding is _default:
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
 
-    def load(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return this variable.
+    def load(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return this variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original variable is modified and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -969,17 +1009,61 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
+        Returns
+        -------
+        object : Variable
+            Same object but with lazy data as an in-memory array.
+
         See Also
         --------
         dask.array.compute
+        Variable.compute
+        Variable.load_async
+        DataArray.load
+        Dataset.load
         """
         self._data = to_duck_array(self._data, **kwargs)
         return self
 
-    def compute(self, **kwargs):
-        """Manually trigger loading of this variable's data from disk or a
-        remote source into memory and return a new variable. The original is
-        left unaltered.
+    async def load_async(self, **kwargs) -> Self:
+        """Trigger and await asynchronous loading of data into memory and return this variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        Unlike ``.compute``, the original variable is modified and returned.
+
+        Only works when opening data lazily from IO storage backends which support lazy asynchronous loading.
+        Otherwise will raise a NotImplementedError.
+
+        Note users are expected to limit concurrency themselves - xarray does not internally limit concurrency in any way.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        Returns
+        -------
+        object : Variable
+            Same object but with lazy data as an in-memory array.
+
+        See Also
+        --------
+        dask.array.compute
+        Variable.load
+        Variable.compute
+        DataArray.load_async
+        Dataset.load_async
+        """
+        self._data = await async_to_duck_array(self._data, **kwargs)
+        return self
+
+    def compute(self, **kwargs) -> Self:
+        """Trigger loading data into memory and return a new variable.
+
+        Data will be computed and/or loaded from disk or a remote source.
+
+        The original variable is left unaltered.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -990,9 +1074,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         **kwargs : dict
             Additional keyword arguments passed on to ``dask.array.compute``.
 
+        Returns
+        -------
+        object : Variable
+            New object with the data as an in-memory array.
+
         See Also
         --------
         dask.array.compute
+        Variable.load
+        Variable.load_async
+        DataArray.compute
+        Dataset.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1149,7 +1242,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if fill_with_shape:
             return [
                 pad_option.get(d, (n, n))
-                for d, n in zip(self.dims, self.data.shape, strict=True)
+                for d, n in zip(self.dims, self.shape, strict=True)
             ]
         return [pad_option.get(d, (0, 0)) for d in self.dims]
 
@@ -1225,7 +1318,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         # workaround for bug in Dask's default value of stat_length https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
-            stat_length = [(n, n) for n in self.data.shape]  # type: ignore[assignment]
+            stat_length = [(n, n) for n in self.shape]  # type: ignore[assignment]
 
         pad_width_by_index = self._pad_options_dim_to_index(pad_width)
 
@@ -1276,7 +1369,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def roll(self, shifts=None, **shifts_kwargs):
         """
-        Return a new Variable with rolld data.
+        Return a new Variable with rolled data.
 
         Parameters
         ----------
@@ -1390,7 +1483,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if self.dims == expanded_dims:
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
-            expanded_data = self.data
+            expanded_data = self._data
         elif shape is None or all(
             s == 1 for s, e in zip(shape, dim, strict=True) if e not in self_dims
         ):
@@ -1398,6 +1491,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             # This is typically easier for duck arrays to implement
             # than the full "broadcast_to" semantics
             indexer = (None,) * (len(expanded_dims) - self.ndim) + (...,)
+            # TODO: switch this to ._data once we teach ExplicitlyIndexed arrays to handle indexers with None.
             expanded_data = self.data[indexer]
         else:  # elif shape is not None:
             dims_map = dict(zip(dim, shape, strict=True))
@@ -1662,8 +1756,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             the reduction is calculated over the flattened array (by calling
             `func(x)` without an axis argument).
         keep_attrs : bool, optional
-            If True, the variable's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If True (default), the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
         keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
@@ -1678,7 +1772,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             removed.
         """
         keep_attrs_ = (
-            _get_keep_attrs(default=False) if keep_attrs is None else keep_attrs
+            _get_keep_attrs(default=True) if keep_attrs is None else keep_attrs
         )
 
         # Note that the call order for Variable.mean is
@@ -1834,7 +1928,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
     def quantile(
         self,
-        q: ArrayLike,
+        q: np.typing.ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
@@ -1930,7 +2024,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             _quantile_func = duck_array_ops.quantile
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         scalar = utils.is_scalar(q)
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
@@ -2058,7 +2152,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
 
         Returns
         -------
-        Variable that is a view of the original array with a added dimension of
+        Variable that is a view of the original array with an added dimension of
         size w.
         The return dim: self.dims + (window_dim, )
         The return shape: self.shape + (window, )
@@ -2201,6 +2295,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 )
 
         variable = self
+        pad_widths = {}
         for d, window in windows.items():
             # trim or pad the object
             size = variable.shape[self._get_axis_num(d)]
@@ -2221,16 +2316,16 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 pad = window * n - size
                 if pad < 0:
                     pad += window
-                if side[d] == "left":
-                    pad_width = {d: (0, pad)}
-                else:
-                    pad_width = {d: (pad, 0)}
-                variable = variable.pad(pad_width, mode="constant")
+                elif pad == 0:
+                    continue
+                pad_widths[d] = (0, pad) if side[d] == "left" else (pad, 0)
             else:
                 raise TypeError(
                     f"{boundary[d]} is invalid for boundary. Valid option is 'exact', "
                     "'trim' and 'pad'"
                 )
+        if pad_widths:
+            variable = variable.pad(pad_widths, mode="constant")
 
         shape = []
         axes = []
@@ -2271,7 +2366,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.isnull,
@@ -2305,7 +2400,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.notnull,
@@ -2356,8 +2451,17 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             other_data, self_data, dims = _broadcast_compat_data(other, self)
         else:
             self_data, other_data, dims = _broadcast_compat_data(self, other)
-        keep_attrs = _get_keep_attrs(default=False)
-        attrs = self._attrs if keep_attrs else None
+        keep_attrs = _get_keep_attrs(default=True)
+        if keep_attrs:
+            # Combine attributes from both operands, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
+            # Access attrs property to normalize None to {} due to property side effect
+            self_attrs = self.attrs
+            other_attrs = getattr(other, "attrs", {})
+            attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
+        else:
+            attrs = None
         with np.errstate(all="ignore"):
             new_data = (
                 f(self_data, other_data) if not reflexive else f(other_data, self_data)
@@ -2401,7 +2505,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 "change to return a dict of indices of each dimension. To get a "
                 "single, flat index, please use np.argmin(da.data) or "
                 "np.argmax(da.data) instead of da.argmin() or da.argmax().",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=3,
             )
 
@@ -2447,7 +2551,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         }
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         if keep_attrs:
             for v in result.values():
                 v.attrs = self.attrs
@@ -2681,6 +2785,10 @@ class IndexVariable(Variable):
         # data is already loaded into memory for IndexVariable
         return self
 
+    async def load_async(self):
+        # data is already loaded into memory for IndexVariable
+        return self
+
     # https://github.com/python/mypy/issues/1465
     @Variable.data.setter  # type: ignore[attr-defined]
     def data(self, data):
@@ -2778,7 +2886,9 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep: bool = True, data: T_DuckArray | ArrayLike | None = None):
+    def copy(
+        self, deep: bool = True, data: T_DuckArray | np.typing.ArrayLike | None = None
+    ):
         """Returns a copy of this object.
 
         `deep` is ignored since data is stored in the form of
@@ -2810,9 +2920,9 @@ class IndexVariable(Variable):
 
         else:
             ndata = as_compatible_data(data)
-            if self.shape != ndata.shape:  # type: ignore[attr-defined]
+            if self.shape != ndata.shape:
                 raise ValueError(
-                    f"Data shape {ndata.shape} must match shape of object {self.shape}"  # type: ignore[attr-defined]
+                    f"Data shape {ndata.shape} must match shape of object {self.shape}"
                 )
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
@@ -2871,13 +2981,13 @@ class IndexVariable(Variable):
             return index
 
     @property
-    def level_names(self) -> list[str] | None:
+    def level_names(self) -> list[Hashable | None] | None:
         """Return MultiIndex level names or None if this IndexVariable has no
         MultiIndex.
         """
         index = self.to_index()
         if isinstance(index, pd.MultiIndex):
-            return index.names
+            return list(index.names)
         else:
             return None
 

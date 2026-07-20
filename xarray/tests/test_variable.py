@@ -5,7 +5,7 @@ from abc import ABC
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
-from typing import Generic
+from typing import Any, Generic
 
 import numpy as np
 import pandas as pd
@@ -30,13 +30,15 @@ from xarray.core.indexing import (
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
+    IndexableArray,
     assert_allclose,
     assert_array_equal,
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_type,
+    has_dask_array_expr,
     has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
@@ -48,8 +50,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.test_namedarray import NamedArraySubclassobjects
-
-dask_array_type = array_type("dask")
 
 _PAD_XR_NP_ARGS = [
     [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
@@ -73,11 +73,16 @@ def var():
     ],
 )
 def test_as_compatible_data_writeable(data):
-    pd.set_option("mode.copy_on_write", True)
+    # In pandas 3 the mode.copy_on_write option defaults to True, so the option
+    # setting logic can be removed once our minimum version of pandas is
+    # greater than or equal to 3.
+    if not has_pandas_3:
+        pd.set_option("mode.copy_on_write", True)
     # GH8843, ensure writeable arrays for data_vars even with
     # pandas copy-on-write mode
     assert as_compatible_data(data).flags.writeable
-    pd.reset_option("mode.copy_on_write")
+    if not has_pandas_3:
+        pd.reset_option("mode.copy_on_write")
 
 
 class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
@@ -224,7 +229,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             x, np.timedelta64(td), np.dtype("timedelta64[us]")
         )
 
-        x = self.cls(["x"], pd.to_timedelta([td]))
+        x = self.cls(["x"], pd.to_timedelta([td]).as_unit("ns"))
         self._assertIndexedLikeNDArray(x, np.timedelta64(td), "timedelta64[ns]")
 
     def test_index_0d_not_a_time(self):
@@ -278,7 +283,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         expected = np.datetime64("2000-01-01", "ns")
         assert x[0].values == expected
 
-    dt64_data = pd.date_range("1970-01-01", periods=3)
+    dt64_data = pd.date_range("1970-01-01", periods=3, unit="ns")
 
     @pytest.mark.parametrize(
         "values, unit",
@@ -310,7 +315,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             (td64_data.values.astype("timedelta64[m]"), "s"),
             (td64_data.values.astype("timedelta64[s]"), "s"),
             (td64_data.values.astype("timedelta64[ps]"), "ns"),
-            (td64_data.to_pytimedelta(), "ns"),
+            (td64_data.to_pytimedelta(), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion(self, values, unit):
@@ -337,7 +342,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert "PeriodArray" in repr(v)
 
     @pytest.mark.parametrize("dtype", [float, int])
-    def test_1d_math(self, dtype: np.typing.DTypeLike) -> None:
+    def test_1d_math(self, dtype: np.typing.DTypeLike | None) -> None:
         x = np.arange(5, dtype=dtype)
         y = np.ones(5, dtype=dtype)
 
@@ -372,7 +377,10 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         # binary ops with all variables
         assert_array_equal(v + v, 2 * v)
         w = self.cls(["x"], y, {"foo": "bar"})
-        assert_identical(v + w, self.cls(["x"], x + y).to_base_variable())
+        # With drop_conflicts, v (no attrs) + w (has attrs) should keep w's attrs
+        # Note: IndexVariable ops return Variable, not IndexVariable
+        expected = self.cls(["x"], x + y, {"foo": "bar"}).to_base_variable()
+        assert_identical(v + w, expected)
         assert_array_equal((v * w).values, x * y)
 
         # something complicated
@@ -480,6 +488,11 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         v4 = v3.drop_encoding()
         assert v3.encoding == encoding3
         assert v4.encoding == {}
+
+        # drop_encoding should not copy data — fix for GH#11390
+        v = self.cls(["x"], np.arange(1000000))
+        v_dropped = v.drop_encoding()
+        assert v_dropped._data is v._data
 
     def test_concat(self):
         x = np.arange(5)
@@ -669,9 +682,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         v = self.cls("x", data)
         print(v)  # should not error
         if v.dtype == np.dtype("O"):
-            import dask.array as da
-
-            assert isinstance(v.data, da.Array)
+            assert isinstance(v.data, dask_array_type)
         else:
             assert v.dtype == data.dtype
 
@@ -722,9 +733,9 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_array_equal(v_new, expected)
 
         # with boolean variable with wrong shape
-        ind = np.array([True, False])
+        ind2: np.ndarray[Any, np.dtype[np.bool_]] = np.array([True, False])
         with pytest.raises(IndexError, match=r"Boolean array size 2 is "):
-            v[Variable(("a", "b"), [[0, 1]]), ind]
+            v[Variable(("a", "b"), [[0, 1]]), ind2]
 
         # boolean indexing with different dimension
         ind = Variable(["a"], [True, False, False])
@@ -1072,18 +1083,18 @@ class TestVariable(VariableSubclassobjects):
 
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
-        assert v.item() == 0
-        assert type(v.item()) is float
+        assert v.item() == 0  # type: ignore[attr-defined]
+        assert type(v.item()) is float  # type: ignore[attr-defined]
 
         v = IndexVariable("x", np.arange(5))
-        assert 2 == v.searchsorted(2)
+        assert 2 == v.searchsorted(2)  # type: ignore[attr-defined]
 
     @pytest.mark.parametrize(
         "values, unit",
         [
             (np.datetime64("2000-01-01"), "s"),
             (
-                pd.Timestamp("2000-01-01T00"),
+                pd.Timestamp("2000-01-01T00").as_unit("s"),
                 "s" if has_pandas_3 else "ns",
             ),
             (
@@ -1105,8 +1116,8 @@ class TestVariable(VariableSubclassobjects):
             (np.timedelta64(1, "m"), "s"),
             (np.timedelta64(1, "D"), "s"),
             (np.timedelta64(1001, "ps"), "ns"),
-            (pd.Timedelta("1 day"), "ns"),
-            (timedelta(days=1), "ns"),
+            (pd.Timedelta("1 day").as_unit("ns"), "ns"),
+            (timedelta(days=1), "us" if has_pandas_3 else "ns"),
         ],
     )
     def test_timedelta64_conversion_scalar(self, values, unit):
@@ -1125,13 +1136,14 @@ class TestVariable(VariableSubclassobjects):
         assert v.values == "foo".encode("ascii")
 
     def test_0d_datetime(self):
-        v = Variable([], pd.Timestamp("2000-01-01"))
+        v = Variable([], pd.Timestamp("2000-01-01").as_unit("s"))
         expected_unit = "s" if has_pandas_3 else "ns"
         assert v.dtype == np.dtype(f"datetime64[{expected_unit}]")
-        assert v.values == np.datetime64("2000-01-01", expected_unit)
+        assert v.values == np.datetime64("2000-01-01", expected_unit)  # type: ignore[call-overload]
 
     @pytest.mark.parametrize(
-        "values, unit", [(pd.to_timedelta("1s"), "ns"), (np.timedelta64(1, "s"), "s")]
+        "values, unit",
+        [(pd.to_timedelta("1s").as_unit("ns"), "ns"), (np.timedelta64(1, "s"), "s")],
     )
     def test_0d_timedelta(self, values, unit):
         # todo: check, if this test is OK
@@ -1239,10 +1251,12 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable([], 0)
         assert_identical(expected, actual)
 
-        data = np.arange(9).reshape((3, 3))
-        expected = Variable(("x", "y"), data)
+        data2: np.ndarray[tuple[int, int], np.dtype[np.signedinteger[Any]]] = np.arange(
+            9
+        ).reshape((3, 3))
+        expected = Variable(("x", "y"), data2)
         with pytest.raises(ValueError, match=r"without explicit dimension names"):
-            as_variable(data, name="x")
+            as_variable(data2, name="x")
 
         # name of nD variable matches dimension name
         actual = as_variable(expected, name="x")
@@ -1323,7 +1337,7 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x", "y"], data)
 
         def assert_indexer_type(key, object_type):
-            dims, index_tuple, new_order = v._broadcast_indexes(key)
+            _dims, index_tuple, _new_order = v._broadcast_indexes(key)
             assert isinstance(index_tuple, object_type)
 
         # should return BasicIndexer
@@ -1401,11 +1415,11 @@ class TestVariable(VariableSubclassobjects):
         # list arguments
         v_new = v[[0]]
         assert v_new.dims == ("x", "y")
-        assert_array_equal(v_new, v._data[[0]])
+        assert_array_equal(v_new, v._data[[0]])  # type: ignore[call-overload]
 
         v_new = v[[]]
         assert v_new.dims == ("x", "y")
-        assert_array_equal(v_new, v._data[[]])
+        assert_array_equal(v_new, v._data[[]])  # type: ignore[call-overload]
 
         # dict arguments
         v_new = v[dict(x=0)]
@@ -1594,7 +1608,7 @@ class TestVariable(VariableSubclassobjects):
         data = pd.Categorical(np.arange(10, dtype="int64"))
         v = self.cls("x", data)
         print(v)  # should not error
-        assert pd.api.types.is_extension_array_dtype(v.dtype)
+        assert isinstance(v.dtype, pd.CategoricalDtype)
 
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
@@ -1850,15 +1864,24 @@ class TestVariable(VariableSubclassobjects):
 
     def test_reduce(self):
         v = Variable(["x", "y"], self.d, {"ignored": "attributes"})
-        assert_identical(v.reduce(np.std, "x"), Variable(["y"], self.d.std(axis=0)))
+        # Reduce keeps attrs by default
+        expected = Variable(["y"], self.d.std(axis=0), {"ignored": "attributes"})
+        assert_identical(v.reduce(np.std, "x"), expected)
         assert_identical(v.reduce(np.std, axis=0), v.reduce(np.std, dim="x"))
         assert_identical(
-            v.reduce(np.std, ["y", "x"]), Variable([], self.d.std(axis=(0, 1)))
+            v.reduce(np.std, ["y", "x"]),
+            Variable([], self.d.std(axis=(0, 1)), {"ignored": "attributes"}),
         )
-        assert_identical(v.reduce(np.std), Variable([], self.d.std()))
+        assert_identical(
+            v.reduce(np.std), Variable([], self.d.std(), {"ignored": "attributes"})
+        )
+        # Chained reductions both keep attrs
+        expected_chained = Variable(
+            [], self.d.mean(axis=0).std(), {"ignored": "attributes"}
+        )
         assert_identical(
             v.reduce(np.mean, "x").reduce(np.std, "y"),
-            Variable([], self.d.mean(axis=0).std()),
+            expected_chained,
         )
         assert_allclose(v.mean("x"), v.reduce(np.mean, "x"))
 
@@ -1928,6 +1951,9 @@ class TestVariable(VariableSubclassobjects):
 
         np.testing.assert_allclose(actual.values, expected)
 
+    @pytest.mark.filterwarnings(
+        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
+    )
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_interpolation_deprecation(self, method) -> None:
         v = Variable(["x", "y"], self.d)
@@ -2081,18 +2107,16 @@ class TestVariable(VariableSubclassobjects):
 
     @requires_dask
     def test_reduce_keepdims_dask(self):
-        import dask.array
-
         v = Variable(["x", "y"], self.d).chunk()
 
         actual = v.mean(keepdims=True)
-        assert isinstance(actual.data, dask.array.Array)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, keepdims=True))
         assert_identical(actual, expected)
 
         actual = v.mean(dim="y", keepdims=True)
-        assert isinstance(actual.data, dask.array.Array)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, axis=1, keepdims=True))
         assert_identical(actual, expected)
@@ -2102,27 +2126,62 @@ class TestVariable(VariableSubclassobjects):
 
         v = Variable(["x", "y"], self.d, _attrs)
 
-        # Test dropped attrs
+        # Test default behavior (keeps attrs for reduction operations)
         vm = v.mean()
-        assert len(vm.attrs) == 0
-        assert vm.attrs == {}
+        assert len(vm.attrs) == len(_attrs)
+        assert vm.attrs == _attrs
 
-        # Test kept attrs
+        # Test explicitly keeping attrs
         vm = v.mean(keep_attrs=True)
         assert len(vm.attrs) == len(_attrs)
         assert vm.attrs == _attrs
+
+        # Test explicitly dropping attrs
+        vm = v.mean(keep_attrs=False)
+        assert len(vm.attrs) == 0
+        assert vm.attrs == {}
 
     def test_binary_ops_keep_attrs(self):
         _attrs = {"units": "test", "long_name": "testing"}
         a = Variable(["x", "y"], np.random.randn(3, 3), _attrs)
         b = Variable(["x", "y"], np.random.randn(3, 3), _attrs)
-        # Test dropped attrs
+        # Test kept attrs (now default)
         d = a - b  # just one operation
-        assert d.attrs == {}
-        # Test kept attrs
-        with set_options(keep_attrs=True):
-            d = a - b
         assert d.attrs == _attrs
+        # Test dropped attrs
+        with set_options(keep_attrs=False):
+            d = a - b
+        assert d.attrs == {}
+
+    def test_binary_ops_attrs_drop_conflicts(self):
+        # Test that binary operations combine attrs with drop_conflicts behavior
+        attrs_a = {"units": "meters", "long_name": "distance", "source": "sensor_a"}
+        attrs_b = {"units": "feet", "resolution": "high", "source": "sensor_b"}
+        a = Variable(["x"], [1, 2, 3], attrs_a)
+        b = Variable(["x"], [4, 5, 6], attrs_b)
+
+        # With keep_attrs=True (default), should combine attrs dropping conflicts
+        result = a + b
+        # "units" and "source" conflict, so they're dropped
+        # "long_name" only in a, "resolution" only in b, so they're kept
+        assert result.attrs == {"long_name": "distance", "resolution": "high"}
+
+        # Test with identical values for some attrs
+        attrs_c = {"units": "meters", "type": "data", "source": "sensor_c"}
+        c = Variable(["x"], [7, 8, 9], attrs_c)
+        result2 = a + c
+        # "units" has same value, so kept; "source" conflicts, so dropped
+        # "long_name" from a, "type" from c
+        assert result2.attrs == {
+            "units": "meters",
+            "long_name": "distance",
+            "type": "data",
+        }
+
+        # With keep_attrs=False, attrs should be empty
+        with set_options(keep_attrs=False):
+            result3 = a + b
+            assert result3.attrs == {}
 
     def test_count(self):
         expected = Variable([], 3)
@@ -2363,7 +2422,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert blocked.chunks == ((3,), (4,))
         first_dask_name = blocked.data.name
 
-        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
+        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore[arg-type]
         assert blocked.chunks == ((2, 1), (2, 2))
         assert blocked.data.name != first_dask_name
 
@@ -2378,10 +2437,8 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert blocked.load().chunks is None
 
         # Check that kwargs are passed
-        import dask.array as da
-
         blocked = unblocked.chunk(name="testname_")
-        assert isinstance(blocked.data, da.Array)
+        assert isinstance(blocked.data, dask_array_type)
         assert "testname_" in blocked.data.name
 
         # test kwargs form of chunks
@@ -2414,9 +2471,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         super().test_getitem_1d_fancy()
 
     def test_getitem_with_mask_nd_indexer(self):
-        import dask.array as da
-
-        v = Variable(["x"], da.arange(3, chunks=3))
+        v = Variable(["x"], np.arange(3)).chunk({"x": 3})
         indexer = Variable(("x", "y"), [[0, -1], [-1, 2]])
         assert_identical(
             v._getitem_with_mask(indexer, fill_value=-1),
@@ -2428,12 +2483,11 @@ class TestVariableWithDask(VariableSubclassobjects):
     @pytest.mark.parametrize("center", [True, False])
     def test_dask_rolling(self, dim, window, center):
         import dask
-        import dask.array as da
 
         dask.config.set(scheduler="single-threaded")
 
         x = Variable(("x", "y"), np.array(np.random.randn(100, 40), dtype=float))
-        dx = Variable(("x", "y"), da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8]))
+        dx = x.chunk({"x": (6, 30, 30, 20, 14), "y": 8})
 
         expected = x.rolling_window(
             dim, window, "window", center=center, fill_value=np.nan
@@ -2442,9 +2496,19 @@ class TestVariableWithDask(VariableSubclassobjects):
             actual = dx.rolling_window(
                 dim, window, "window", center=center, fill_value=np.nan
             )
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, dask_array_type)
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
+
+    def test_legacy_dask_array_rejected_by_dask_array_manager(self):
+        if not has_dask_array_expr:
+            pytest.skip("only meaningful with an alternate dask chunk manager")
+
+        import dask.array as da
+
+        x = Variable("x", da.arange(6, chunks=3))
+        with pytest.raises(TypeError, match="Could not find a Chunk Manager"):
+            x.rolling_window("x", 3, "window")
 
     @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11585")
     def test_multiindex(self):
@@ -2524,7 +2588,7 @@ class TestIndexVariable(VariableSubclassobjects):
         v = IndexVariable(["x"], midx, {"foo": "bar"})
         assert v.to_index().names == ("x_level_0", "x_level_1")
 
-    def test_data(self):
+    def test_data(self):  # type: ignore[override]
         x = IndexVariable("x", np.arange(3.0))
         assert isinstance(x._data, PandasIndexingAdapter)
         assert isinstance(x.data, np.ndarray)
@@ -2657,7 +2721,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
     @pytest.mark.skip
     def test_coarsen_2d(self):
-        super().test_coarsen_2d()
+        super().test_coarsen_2d()  # type: ignore[misc]
 
     def test_to_index_variable_copy(self) -> None:
         # to_index_variable should return a copy
@@ -2678,7 +2742,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
                 pd.date_range("2000-01-01", periods=3),
                 pd.date_range("2000-01-01", periods=3).values,
             ]:
-                x = t(data)
+                x = t(data)  # type: ignore[arg-type]
                 assert source_ndarray(x) is source_ndarray(as_compatible_data(x))
 
     def test_converted_types(self):
@@ -2694,51 +2758,51 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
             assert np.asarray(input_array).dtype == actual.dtype
 
     def test_masked_array(self):
-        original = np.ma.MaskedArray(np.arange(5))
+        original: Any = np.ma.MaskedArray(np.arange(5))
         expected = np.arange(5)
-        actual = as_compatible_data(original)
-        assert_array_equal(expected, actual)
-        assert np.dtype(int) == actual.dtype
-
-        original = np.ma.MaskedArray(np.arange(5), mask=4 * [False] + [True])
-        expected = np.arange(5.0)
-        expected[-1] = np.nan
-        actual = as_compatible_data(original)
+        actual: Any = as_compatible_data(original)
         assert_array_equal(expected, actual)
         assert np.dtype(float) == actual.dtype
 
-        original = np.ma.MaskedArray([1.0, 2.0], mask=[True, False])
-        original.flags.writeable = False
-        expected = [np.nan, 2.0]
-        actual = as_compatible_data(original)
-        assert_array_equal(expected, actual)
+        original1: Any = np.ma.MaskedArray(np.arange(5), mask=4 * [False] + [True])
+        expected1: Any = np.arange(5.0)
+        expected1[-1] = np.nan
+        actual = as_compatible_data(original1)
+        assert_array_equal(expected1, actual)
+        assert np.dtype(float) == actual.dtype
+
+        original2: Any = np.ma.MaskedArray([1.0, 2.0], mask=[True, False])
+        original2.flags.writeable = False
+        expected2: Any = [np.nan, 2.0]
+        actual = as_compatible_data(original2)
+        assert_array_equal(expected2, actual)
         assert np.dtype(float) == actual.dtype
 
         # GH2377
-        actual = Variable(dims=tuple(), data=np.ma.masked)
-        expected = Variable(dims=tuple(), data=np.nan)
-        assert_array_equal(expected, actual)
-        assert actual.dtype == expected.dtype
+        actual_var: Any = Variable(dims=tuple(), data=np.ma.masked)
+        expected_var = Variable(dims=tuple(), data=np.nan)
+        assert_array_equal(expected_var, actual_var)
+        assert actual_var.dtype == expected_var.dtype
 
     def test_datetime(self):
         expected = np.datetime64("2000-01-01")
-        actual = as_compatible_data(expected)
+        actual: Any = as_compatible_data(expected)
         assert expected == actual
         assert np.ndarray is type(actual)
         assert np.dtype("datetime64[s]") == actual.dtype
 
-        expected = np.array([np.datetime64("2000-01-01")])
-        actual = as_compatible_data(expected)
-        assert np.asarray(expected) == actual
+        expected_dt: Any = np.array([np.datetime64("2000-01-01")])
+        actual = as_compatible_data(expected_dt)
+        assert np.asarray(expected_dt) == actual
         assert np.ndarray is type(actual)
         assert np.dtype("datetime64[s]") == actual.dtype
 
-        expected = np.array([np.datetime64("2000-01-01", "ns")])
-        actual = as_compatible_data(expected)
-        assert np.asarray(expected) == actual
+        expected_dt_ns: Any = np.array([np.datetime64("2000-01-01", "ns")])
+        actual = as_compatible_data(expected_dt_ns)
+        assert np.asarray(expected_dt_ns) == actual
         assert np.ndarray is type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
-        assert expected is source_ndarray(np.asarray(actual))
+        assert expected_dt_ns is source_ndarray(np.asarray(actual))
 
         expected = np.datetime64(
             "2000-01-01",
@@ -2776,11 +2840,11 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
 
         expect = orig.copy(deep=True)
         # see https://github.com/python/mypy/issues/3004 for why we need to ignore type
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment]
+        expect.values = [[2.0, 2.0], [2.0, 2.0]]  # type: ignore[assignment,unused-ignore]
         assert_identical(expect, full_like(orig, 2))
 
         # override dtype
-        expect.values = [[True, True], [True, True]]  # type: ignore[assignment]
+        expect.values = [[True, True], [True, True]]  # type: ignore[assignment,unused-ignore]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
@@ -2841,19 +2905,19 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         class SubclassedArray(np.ndarray):
             def __new__(cls, array, foo):
                 obj = np.asarray(array).view(cls)
-                obj.foo = foo
+                obj.foo = foo  # type: ignore[attr-defined]
                 return obj
 
         data = SubclassedArray([1, 2, 3], foo="bar")
-        actual = as_compatible_data(data)
+        actual: Any = as_compatible_data(data)
         assert isinstance(actual, SubclassedArray)
-        assert actual.foo == "bar"
+        assert actual.foo == "bar"  # type: ignore[attr-defined]
         assert_array_equal(data, actual)
 
     def test_numpy_matrix(self):
         with pytest.warns(PendingDeprecationWarning):
             data = np.matrix([[1, 2], [3, 4]])
-        actual = as_compatible_data(data)
+        actual: Any = as_compatible_data(data)
         assert isinstance(actual, np.ndarray)
         assert_array_equal(data, actual)
 
@@ -2879,9 +2943,9 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
         orig = Variable(dims=("x"), data=array, attrs={"foo": "bar"})
         assert isinstance(orig._data, CustomIndexable)
 
-        array = CustomWithValuesAttr(np.arange(3))
-        orig = Variable(dims=(), data=array)
-        assert isinstance(orig._data.item(), CustomWithValuesAttr)
+        array2: Any = CustomWithValuesAttr(np.arange(3))
+        orig = Variable(dims=(), data=array2)
+        assert isinstance(orig._data.item(), CustomWithValuesAttr)  # type: ignore[union-attr]
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
@@ -2897,18 +2961,34 @@ class TestBackendIndexing:
         self.d = np.random.random((10, 3)).astype(np.float64)
         self.cat = PandasExtensionArray(pd.Categorical(["a", "b"] * 5))
 
-    def check_orthogonal_indexing(self, v):
-        assert np.allclose(v.isel(x=[8, 3], y=[2, 1]), self.d[[8, 3]][:, [2, 1]])
+    async def check_orthogonal_indexing(self, v, load_async):
+        expected = self.d[[8, 3]][:, [2, 1]]
 
-    def check_vectorized_indexing(self, v):
+        if load_async:
+            result = await v.isel(x=[8, 3], y=[2, 1]).load_async()
+        else:
+            result = v.isel(x=[8, 3], y=[2, 1])
+
+        assert np.allclose(result, expected)
+
+    async def check_vectorized_indexing(self, v, load_async):
         ind_x = Variable("z", [0, 2])
         ind_y = Variable("z", [2, 1])
-        assert np.allclose(v.isel(x=ind_x, y=ind_y), self.d[ind_x, ind_y])
+        expected = self.d[ind_x, ind_y]
 
-    def test_NumpyIndexingAdapter(self):
+        if load_async:
+            result = await v.isel(x=ind_x, y=ind_y).load_async()
+        else:
+            result = v.isel(x=ind_x, y=ind_y).load()
+
+        assert np.allclose(result, expected)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_NumpyIndexingAdapter(self, load_async):
         v = Variable(dims=("x", "y"), data=NumpyIndexingAdapter(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # could not doubly wrapping
         with pytest.raises(TypeError, match=r"NumpyIndexingAdapter only wraps "):
             v = Variable(
@@ -2923,54 +3003,64 @@ class TestBackendIndexing:
         lazy = Variable(dims=("x"), data=LazilyIndexedArray(self.cat))
         assert (lazy[[0, 1, 5]] == ["a", "b", "b"]).all()
 
-    def test_LazilyIndexedArray(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_LazilyIndexedArray(self, load_async):
         v = Variable(dims=("x", "y"), data=LazilyIndexedArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
         v = Variable(
             dims=("x", "y"),
             data=LazilyIndexedArray(LazilyIndexedArray(self.d)),
         )
-        self.check_orthogonal_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
         # hierarchical wrapping
         v = Variable(
             dims=("x", "y"), data=LazilyIndexedArray(NumpyIndexingAdapter(self.d))
         )
-        self.check_orthogonal_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
 
-    def test_CopyOnWriteArray(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_CopyOnWriteArray(self, load_async):
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
-        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(LazilyIndexedArray(self.d)))  # type: ignore[arg-type]
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
 
-    def test_MemoryCachedArray(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    async def test_MemoryCachedArray(self, load_async):
         v = Variable(dims=("x", "y"), data=MemoryCachedArray(self.d))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
-        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(MemoryCachedArray(self.d)))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(MemoryCachedArray(self.d)))  # type: ignore[arg-type]
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
 
     @requires_dask
-    def test_DaskIndexingAdapter(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("load_async", [True, False])
+    @pytest.mark.skip_with_dask_array
+    async def test_DaskIndexingAdapter(self, load_async):
         import dask.array as da
 
         dask_array = da.asarray(self.d)
         v = Variable(dims=("x", "y"), data=DaskIndexingAdapter(dask_array))
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
         # doubly wrapping
         v = Variable(
-            dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(dask_array))
+            dims=("x", "y"),
+            data=CopyOnWriteArray(DaskIndexingAdapter(dask_array)),  # type: ignore[arg-type]
         )
-        self.check_orthogonal_indexing(v)
-        self.check_vectorized_indexing(v)
+        await self.check_orthogonal_indexing(v, load_async)
+        await self.check_vectorized_indexing(v, load_async)
 
 
 def test_clip(var):
@@ -3056,6 +3146,7 @@ class TestNumpyCoercion:
 
     @requires_dask
     @requires_pint
+    @pytest.mark.skip_with_dask_array
     def test_from_pint_wrapping_dask(self, Var):
         import dask
         import pint
@@ -3080,7 +3171,7 @@ class TestNumpyCoercion:
         (np.datetime64("2000-01-01", "s"), "s"),
         (np.array([np.datetime64("2000-01-01", "ns")]), "ns"),
         (np.array([np.datetime64("2000-01-01", "s")]), "s"),
-        (pd.date_range("2000", periods=1), "ns"),
+        (pd.date_range("2000", periods=1, unit="ns"), "ns"),
         (
             datetime(2000, 1, 1),
             "us" if has_pandas_3 else "ns",
@@ -3089,10 +3180,17 @@ class TestNumpyCoercion:
             np.array([datetime(2000, 1, 1)]),
             "us" if has_pandas_3 else "ns",
         ),
-        (pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York")), "ns"),
+        (
+            pd.date_range(
+                "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+            ),
+            "ns",
+        ),
         (
             pd.Series(
-                pd.date_range("2000", periods=1, tz=pytz.timezone("America/New_York"))
+                pd.date_range(
+                    "2000", periods=1, tz=pytz.timezone("America/New_York"), unit="ns"
+                )
             ),
             "ns",
         ),
@@ -3167,8 +3265,8 @@ def test_pandas_two_only_datetime_conversion_warnings(
         (np.array([np.timedelta64(10, "ns")]), "ns"),
         (np.array([np.timedelta64(10, "s")]), "s"),
         (pd.timedelta_range("1", periods=1), "ns"),
-        (timedelta(days=1), "ns"),
-        (np.array([timedelta(days=1)]), "ns"),
+        (timedelta(days=1), "us" if has_pandas_3 else "ns"),
+        (np.array([timedelta(days=1)]), "us" if has_pandas_3 else "ns"),
         (pd.timedelta_range("1", periods=1).astype("timedelta64[s]"), "s"),
     ],
     ids=lambda x: f"{x}",
@@ -3178,3 +3276,15 @@ def test_timedelta_conversion(values, unit) -> None:
     dims = ["time"] if isinstance(values, np.ndarray | pd.Index) else []
     var = Variable(dims, values)
     assert var.dtype == np.dtype(f"timedelta64[{unit}]")
+
+
+def test_explicitly_indexed_array_preserved() -> None:
+    """Test that methods using ._data preserve ExplicitlyIndexed arrays.
+
+    Regression test for methods that should use ._data instead of .data
+    to avoid loading lazy arrays into memory.
+    """
+    arr = IndexableArray(np.array([1, 2, 3]))
+    var = Variable(["x"], arr)
+    result = var.drop_encoding()
+    assert isinstance(result._data, indexing.ExplicitlyIndexed)

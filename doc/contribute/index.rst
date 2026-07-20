@@ -13,6 +13,7 @@ In this section you will also find documentation on the internal organization of
    :hidden:
 
    contributing
+   ai-policy
    ../internals/index
    ../roadmap
    ../whats-new

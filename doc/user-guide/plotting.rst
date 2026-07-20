@@ -45,7 +45,7 @@ For more extensive plotting applications consider the following projects:
   dynamic plots (backed by ``Holoviews`` or ``Geoviews``) by adding a ``hvplot``
   accessor to DataArrays.
 
-- `Cartopy <https://scitools.org.uk/cartopy/docs/latest/>`_: Provides cartographic
+- `Cartopy <https://cartopy.readthedocs.io/stable/>`_: Provides cartographic
   tools.
 
 Imports
@@ -212,7 +212,7 @@ from the time and assign it as a non-dimension coordinate:
 
 .. jupyter-execute::
 
-    decimal_day = (air1d.time - air1d.time[0]) / pd.Timedelta("1d")
+    decimal_day = (air1d.time - air1d.time[0]) / pd.Timedelta("1D")
     air1d_multi = air1d.assign_coords(decimal_day=("time", decimal_day.data))
     air1d_multi
 

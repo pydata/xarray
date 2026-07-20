@@ -1,20 +1,25 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, get_args
 
+from xarray.core.types import CompatOptions
 from xarray.core.utils import FrozenDict
 
 if TYPE_CHECKING:
     from matplotlib.colors import Colormap
 
     Options = Literal[
+        "arithmetic_compat",
         "arithmetic_join",
         "chunk_manager",
         "cmap_divergent",
         "cmap_sequential",
         "display_max_children",
+        "display_max_html_elements",
         "display_max_rows",
+        "display_max_items",
         "display_values_threshold",
         "display_style",
         "display_width",
@@ -28,21 +33,27 @@ if TYPE_CHECKING:
         "enable_cftimeindex",
         "file_cache_maxsize",
         "keep_attrs",
+        "netcdf_engine_order",
         "warn_for_unclosed_files",
         "use_bottleneck",
+        "use_new_combine_kwarg_defaults",
         "use_numbagg",
         "use_opt_einsum",
         "use_flox",
+        "facetgrid_figsize",
     ]
 
     class T_Options(TypedDict):
         arithmetic_broadcast: bool
+        arithmetic_compat: CompatOptions
         arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
         chunk_manager: str
         cmap_divergent: str | Colormap
         cmap_sequential: str | Colormap
         display_max_children: int
+        display_max_html_elements: int
         display_max_rows: int
+        display_max_items: int
         display_values_threshold: int
         display_style: Literal["text", "html"]
         display_width: int
@@ -56,21 +67,27 @@ if TYPE_CHECKING:
         enable_cftimeindex: bool
         file_cache_maxsize: int
         keep_attrs: Literal["default"] | bool
+        netcdf_engine_order: Sequence[Literal["netcdf4", "h5netcdf", "scipy"]]
         warn_for_unclosed_files: bool
         use_bottleneck: bool
         use_flox: bool
+        use_new_combine_kwarg_defaults: bool
         use_numbagg: bool
         use_opt_einsum: bool
+        facetgrid_figsize: Literal["computed", "rcparams"] | tuple[float, float]
 
 
 OPTIONS: T_Options = {
     "arithmetic_broadcast": True,
+    "arithmetic_compat": "minimal",
     "arithmetic_join": "inner",
     "chunk_manager": "dask",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
-    "display_max_children": 6,
+    "display_max_children": 12,
+    "display_max_html_elements": 300,
     "display_max_rows": 12,
+    "display_max_items": 20,
     "display_values_threshold": 200,
     "display_style": "html",
     "display_width": 80,
@@ -84,15 +101,20 @@ OPTIONS: T_Options = {
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
+    "netcdf_engine_order": ("netcdf4", "h5netcdf", "scipy"),
     "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
+    "use_new_combine_kwarg_defaults": False,
     "use_numbagg": True,
     "use_opt_einsum": True,
+    "facetgrid_figsize": "computed",
 }
 
+_FACETGRID_FIGSIZE_OPTIONS = frozenset(["computed", "rcparams"])
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 _DISPLAY_OPTIONS = frozenset(["text", "html"])
+_NETCDF_ENGINES = frozenset(["netcdf4", "h5netcdf", "scipy"])
 
 
 def _positive_integer(value: Any) -> bool:
@@ -101,9 +123,12 @@ def _positive_integer(value: Any) -> bool:
 
 _VALIDATORS = {
     "arithmetic_broadcast": lambda value: isinstance(value, bool),
+    "arithmetic_compat": get_args(CompatOptions).__contains__,
     "arithmetic_join": _JOIN_OPTIONS.__contains__,
     "display_max_children": _positive_integer,
+    "display_max_html_elements": _positive_integer,
     "display_max_rows": _positive_integer,
+    "display_max_items": _positive_integer,
     "display_values_threshold": _positive_integer,
     "display_style": _DISPLAY_OPTIONS.__contains__,
     "display_width": _positive_integer,
@@ -116,11 +141,21 @@ _VALIDATORS = {
     "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
+    "netcdf_engine_order": lambda engines: set(engines) <= _NETCDF_ENGINES,
     "use_bottleneck": lambda value: isinstance(value, bool),
+    "use_new_combine_kwarg_defaults": lambda value: isinstance(value, bool),
     "use_numbagg": lambda value: isinstance(value, bool),
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
+    "facetgrid_figsize": lambda value: (
+        value in _FACETGRID_FIGSIZE_OPTIONS
+        or (
+            isinstance(value, tuple)
+            and len(value) == 2
+            and all(isinstance(v, (int, float)) for v in value)
+        )
+    ),
 }
 
 
@@ -168,8 +203,27 @@ class set_options:
 
     Parameters
     ----------
+    arithmetic_broadcast : bool, default: True
+        Whether to perform automatic broadcasting in binary operations.
+    arithmetic_compat: {"identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"}, default: "minimal"
+        How to compare non-index coordinates of the same name for potential
+        conflicts when performing binary operations. (For the alignment of index
+        coordinates in binary operations, see `arithmetic_join`.)
+
+        - "identical": all values, dimensions and attributes of the coordinates
+          must be the same.
+        - "equals": all values and dimensions of the coordinates must be the
+          same.
+        - "broadcast_equals": all values of the coordinates must be equal after
+          broadcasting to ensure common dimensions.
+        - "no_conflicts": only values which are not null in both coordinates
+          must be equal. The returned coordinate then contains the combination
+          of all non-null values.
+        - "override": skip comparing and take the coordinates from the first
+          operand.
+        - "minimal": drop conflicting coordinates.
     arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
-        DataArray/Dataset alignment in binary operations:
+        DataArray/Dataset index alignment in binary operations:
 
         - "outer": use the union of object indexes
         - "inner": use the intersection of object indexes
@@ -177,12 +231,18 @@ class set_options:
         - "right": use indexes from the last object with each dimension
         - "exact": instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
-        - "override": if indexes are of same size, rewrite indexes to be
-          those of the first object with that dimension. Indexes for the same
-          dimension must have the same size in all objects.
     chunk_manager : str, default: "dask"
         Chunk manager to use for chunked array computations when multiple
         options are installed.
+    facetgrid_figsize : {"computed", "rcparams"} or tuple of float, default: "computed"
+        How :class:`~xarray.plot.FacetGrid` determines figure size when
+        ``figsize`` is not explicitly passed:
+
+        * ``"computed"`` : figure size is derived from ``size`` and ``aspect``
+          parameters (current default behavior).
+        * ``"rcparams"`` : use ``matplotlib.rcParams['figure.figsize']`` as the
+          total figure size.
+        * ``(width, height)`` : use a fixed figure size (in inches).
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
@@ -226,10 +286,16 @@ class set_options:
         * ``True`` : to always expand indexes
         * ``False`` : to always collapse indexes
         * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
-    display_max_children : int, default: 6
+    display_max_children : int, default: 12
         Maximum number of children to display for each node in a DataTree.
+    display_max_html_elements : int, default: 300
+        Maximum number of HTML elements to include in DataTree HTML displays.
+        Additional items are truncated.
     display_max_rows : int, default: 12
         Maximum display rows.
+    display_max_items : int, default 20
+        Maximum number of items to display for a DataTree before collapsing
+        child nodes, across all levels.
     display_values_threshold : int, default: 200
         Total number of array elements which trigger summarization rather
         than full repr for variable data views (numpy arrays).
@@ -250,12 +316,26 @@ class set_options:
         * ``False`` : to always discard attrs
         * ``default`` : to use original logic that attrs should only
           be kept in unambiguous circumstances
+    netcdf_engine_order : sequence, default ['netcdf4', 'h5netcdf', 'scipy']
+        Preference order of backend engines to use when reading or writing
+        netCDF files with ``open_dataset()`` and ``to_netcdf()`` if ``engine``
+        is not explicitly specified. May be any permutation or subset of
+        ``['netcdf4', 'h5netcdf', 'scipy']``.
     use_bottleneck : bool, default: True
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.
     use_flox : bool, default: True
         Whether to use ``numpy_groupies`` and `flox`` to
         accelerate groupby and resampling reductions.
+    use_new_combine_kwarg_defaults : bool, default False
+        Whether to use new kwarg default values for combine functions:
+        :py:func:`~xarray.concat`, :py:func:`~xarray.merge`,
+        :py:func:`~xarray.open_mfdataset`. New values are:
+
+        * ``data_vars``: None
+        * ``coords``: "minimal"
+        * ``compat``: "override"
+        * ``join``: "exact"
     use_numbagg : bool, default: True
         Whether to use ``numbagg`` to accelerate reductions.
         Takes precedence over ``use_bottleneck`` when both are True.
@@ -298,6 +378,13 @@ class set_options:
                     expected = f"Expected one of {_JOIN_OPTIONS!r}"
                 elif k == "display_style":
                     expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
+                elif k == "facetgrid_figsize":
+                    expected = (
+                        f"Expected one of {_FACETGRID_FIGSIZE_OPTIONS!r}"
+                        " or a (width, height) tuple of floats"
+                    )
+                elif k == "netcdf_engine_order":
+                    expected = f"Expected a subset of {sorted(_NETCDF_ENGINES)}"
                 else:
                     expected = ""
                 raise ValueError(
@@ -324,7 +411,7 @@ def get_options():
     Get options for xarray.
 
     See Also
-    ----------
+    --------
     set_options
 
     """

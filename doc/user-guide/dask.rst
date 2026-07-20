@@ -17,6 +17,9 @@ Parallel Computing with Dask
     :hide-code:
 
     import os
+    import tempfile
+
+    tempdir = tempfile.TemporaryDirectory()
 
     np.random.seed(123456)
 
@@ -35,7 +38,7 @@ Parallel Computing with Dask
             "latitude": np.arange(89.5, -90.5, -1),
         }
     )
-    ds.to_netcdf("example-data.nc")
+    ds.to_netcdf(os.path.join(tempdir.name, "example-data.nc"))
 
 
 Xarray integrates with `Dask <https://dask.org/?utm_source=xarray-docs>`__, a general purpose library for parallel computing, to handle larger-than-memory computations.
@@ -210,7 +213,7 @@ It can be helpful to choose chunk sizes based on your downstream analyses and to
 You can chunk or rechunk a dataset by:
 
 - Specifying the ``chunks`` kwarg when reading in your dataset. If you know you'll want to do some spatial subsetting, for example, you could use ``chunks={'latitude': 10, 'longitude': 10}`` to specify small chunks across space. This can avoid loading subsets of data that span multiple chunks, thus reducing the number of file reads. Note that this will only work, though, for chunks that are similar to how the data is chunked on disk. Otherwise, it will be very slow and require a lot of network bandwidth.
-- Many array file formats are chunked on disk. You can specify ``chunks={}`` to have a single dask chunk map to a single on-disk chunk, and ``chunks="auto"`` to have a single dask chunk be a automatically chosen multiple of the on-disk chunks.
+- Many array file formats are chunked on disk. You can specify ``chunks={}`` to have a single dask chunk map to a single on-disk chunk, and ``chunks="auto"`` to have a single dask chunk be an automatically chosen multiple of the on-disk chunks.
 - Using :py:meth:`Dataset.chunk` after you've already read in your dataset. For time domain problems, for example, you can use ``ds.chunk(time=TimeResampler())`` to rechunk according to a specified unit of time. ``ds.chunk(time=TimeResampler("MS"))``, for example, will set the chunks so that a month of data is contained in one chunk.
 
 
@@ -444,7 +447,7 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
     :hide-code:
 
     ds.close()  # Closes "example-data.nc".
-    os.remove("example-data.nc")
+    tempdir.cleanup()
 
 .. tip::
 

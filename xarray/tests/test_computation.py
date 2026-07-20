@@ -23,6 +23,8 @@ from xarray.computation.apply_ufunc import (
 from xarray.core.utils import result_name
 from xarray.structure.alignment import broadcast
 from xarray.tests import (
+    dask_array_api,
+    dask_array_type,
     has_dask,
     raise_if_dask_computes,
     requires_cftime,
@@ -694,10 +696,7 @@ def test_broadcast_compat_data_2d() -> None:
 
 def test_keep_attrs() -> None:
     def add(a, b, keep_attrs):
-        if keep_attrs:
-            return apply_ufunc(operator.add, a, b, keep_attrs=keep_attrs)
-        else:
-            return apply_ufunc(operator.add, a, b)
+        return apply_ufunc(operator.add, a, b, keep_attrs=keep_attrs)
 
     a = xr.DataArray([0, 1], [("x", [0, 1])])
     a.attrs["attr"] = "da"
@@ -733,7 +732,7 @@ def test_keep_attrs() -> None:
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -802,7 +801,7 @@ def test_keep_attrs_strategies_variable(strategy, attrs, expected, error) -> Non
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -872,7 +871,7 @@ def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error) -> No
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -926,7 +925,7 @@ def test_keep_attrs_strategies_dataarray_variables(
     compute_attrs = {
         "dim": lambda attrs, default: (attrs, default),
         "coord": lambda attrs, default: (default, attrs),
-    }.get(variant)
+    }[variant]
 
     dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
 
@@ -967,7 +966,7 @@ def test_keep_attrs_strategies_dataarray_variables(
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -1037,7 +1036,7 @@ def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error) -> None
         pytest.param(
             None,
             [{"a": 1}, {"a": 2}, {"a": 3}],
-            {},
+            {"a": 1},
             False,
             id="default",
         ),
@@ -1092,7 +1091,8 @@ def test_keep_attrs_strategies_dataset_variables(
         "data": lambda attrs, default: (attrs, default, default),
         "dim": lambda attrs, default: (default, attrs, default),
         "coord": lambda attrs, default: (default, default, attrs),
-    }.get(variant)
+    }[variant]
+
     data_attrs, dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
 
     a = xr.Dataset(
@@ -1171,8 +1171,7 @@ def test_dataset_join() -> None:
 
 @requires_dask
 def test_apply_dask() -> None:
-    import dask.array as da
-
+    da = dask_array_api
     array = da.ones((2,), chunks=2)
     variable = xr.Variable("x", array)
     coords = xr.DataArray(variable).coords.variables
@@ -1199,22 +1198,21 @@ def test_apply_dask() -> None:
     assert array is dask_safe_identity(array)
 
     actual = dask_safe_identity(variable)
-    assert isinstance(actual.data, da.Array)
+    assert isinstance(actual.data, dask_array_type)
     assert_identical(variable, actual)
 
     actual = dask_safe_identity(data_array)
-    assert isinstance(actual.data, da.Array)
+    assert isinstance(actual.data, dask_array_type)
     assert_identical(data_array, actual)
 
     actual = dask_safe_identity(dataset)
-    assert isinstance(actual["y"].data, da.Array)
+    assert isinstance(actual["y"].data, dask_array_type)
     assert_identical(dataset, actual)
 
 
 @requires_dask
 def test_apply_dask_parallelized_one_arg() -> None:
-    import dask.array as da
-
+    da = dask_array_api
     array = da.ones((2, 2), chunks=(1, 1))
     data_array = xr.DataArray(array, dims=("x", "y"))
 
@@ -1222,7 +1220,7 @@ def test_apply_dask_parallelized_one_arg() -> None:
         return apply_ufunc(identity, x, dask="parallelized", output_dtypes=[x.dtype])
 
     actual = parallel_identity(data_array)
-    assert isinstance(actual.data, da.Array)
+    assert isinstance(actual.data, dask_array_type)
     assert actual.data.chunks == array.chunks
     assert_identical(data_array, actual)
 
@@ -1233,8 +1231,7 @@ def test_apply_dask_parallelized_one_arg() -> None:
 
 @requires_dask
 def test_apply_dask_parallelized_two_args() -> None:
-    import dask.array as da
-
+    da = dask_array_api
     array = da.ones((2, 2), chunks=(1, 1), dtype=np.int64)
     data_array = xr.DataArray(array, dims=("x", "y"))
     data_array.name = None
@@ -1246,7 +1243,7 @@ def test_apply_dask_parallelized_two_args() -> None:
 
     def check(x, y):
         actual = parallel_add(x, y)
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, dask_array_type)
         assert actual.data.chunks == array.chunks
         assert_identical(data_array, actual)
 
@@ -1261,8 +1258,7 @@ def test_apply_dask_parallelized_two_args() -> None:
 
 @requires_dask
 def test_apply_dask_parallelized_errors() -> None:
-    import dask.array as da
-
+    da = dask_array_api
     array = da.ones((2, 2), chunks=(1, 1))
     data_array = xr.DataArray(array, dims=("x", "y"))
 
@@ -1287,7 +1283,7 @@ def test_apply_dask_parallelized_errors() -> None:
 @requires_dask
 @pytest.mark.filterwarnings("ignore:Mean of empty slice")
 def test_apply_dask_multiple_inputs() -> None:
-    import dask.array as da
+    da = dask_array_api
 
     def covariance(x, y):
         return (
@@ -1313,7 +1309,7 @@ def test_apply_dask_multiple_inputs() -> None:
         input_core_dims=[["z"], ["z"]],
         dask="allowed",
     )
-    assert isinstance(allowed.data, da.Array)
+    assert isinstance(allowed.data, dask_array_type)
     xr.testing.assert_allclose(expected, allowed.compute())
 
     parallelized = apply_ufunc(
@@ -1324,14 +1320,13 @@ def test_apply_dask_multiple_inputs() -> None:
         dask="parallelized",
         output_dtypes=[float],
     )
-    assert isinstance(parallelized.data, da.Array)
+    assert isinstance(parallelized.data, dask_array_type)
     xr.testing.assert_allclose(expected, parallelized.compute())
 
 
 @requires_dask
 def test_apply_dask_new_output_dimension() -> None:
-    import dask.array as da
-
+    da = dask_array_api
     array = da.ones((2, 2), chunks=(1, 1))
     data_array = xr.DataArray(array, dims=("x", "y"))
 
@@ -1353,7 +1348,7 @@ def test_apply_dask_new_output_dimension() -> None:
     actual = stack_negative(data_array)
     assert actual.dims == ("x", "y", "sign")
     assert actual.shape == (2, 2, 2)
-    assert isinstance(actual.data, da.Array)
+    assert isinstance(actual.data, dask_array_type)
     assert_identical(expected, actual)
 
 
@@ -1549,7 +1544,7 @@ def test_vectorize_exclude_dims_dask() -> None:
 
 
 def test_corr_only_dataarray() -> None:
-    with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
+    with pytest.raises(TypeError, match=r"Only xr.DataArray is supported"):
         xr.corr(xr.Dataset(), xr.Dataset())  # type: ignore[type-var]
 
 
@@ -2247,6 +2242,11 @@ def test_where_attrs() -> None:
     expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
     assert_identical(expected, actual)
 
+    # x and y as a scalar, takes no attrs
+    actual = xr.where(cond, 1, 0, keep_attrs=False)
+    expected = xr.DataArray([1, 0], coords={"a": [0, 1]})
+    assert_identical(expected, actual)
+
     # cond and y as a scalar, takes attrs from x
     actual = xr.where(True, x, y, keep_attrs=True)
     expected = xr.DataArray([1, 1], coords={"a": [0, 1]}, attrs={"attr": "x_da"})
@@ -2643,6 +2643,7 @@ def test_complex_number_reduce(compute_backend):
     da.min()
 
 
+@pytest.mark.filterwarnings("ignore:numpy.fix is deprecated.")
 def test_fix() -> None:
     val = 3.0
     val_fixed = np.fix(val)

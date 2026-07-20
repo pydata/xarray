@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.tests import get_dask_chunkmanager, has_dask_array_expr
 
 # Don't run cupy in CI because it requires a GPU
 NAMESPACE_ARRAYS = {
@@ -102,7 +103,7 @@ NAMESPACE_ARRAYS = {
 }
 
 try:
-    import jax
+    import jax  # type: ignore[import-not-found,unused-ignore]
 
     # enable double-precision
     jax.config.update("jax_enable_x64", True)
@@ -113,12 +114,24 @@ except ImportError:
 class _BaseTest:
     def setup_for_test(self, request, namespace):
         self.namespace = namespace
-        self.xp = pytest.importorskip(namespace)
-        self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["array"])
-        self.constructor = getattr(
-            self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["constructor"]
-        )
         xarray_method = request.node.name.split("test_")[1].split("[")[0]
+        if namespace == "dask.array" and has_dask_array_expr:
+            if xarray_method in {"groupby", "groupby_bins", "resample"}:
+                pytest.xfail("flox groupby currently builds legacy dask arrays")
+            chunkmanager = get_dask_chunkmanager()
+            self.xp = chunkmanager.array_api
+            self.Array = chunkmanager.array_cls
+
+            def constructor(data):
+                return chunkmanager.from_array(data, chunks=data.shape)
+
+            self.constructor = constructor
+        else:
+            self.xp = pytest.importorskip(namespace)
+            self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["array"])
+            self.constructor = getattr(
+                self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["constructor"]
+            )
         if xarray_method in NAMESPACE_ARRAYS[namespace]["xfails"]:
             reason = NAMESPACE_ARRAYS[namespace]["xfails"][xarray_method]
             pytest.xfail(f"xfail for {self.namespace}: {reason}")
@@ -163,7 +176,7 @@ class TestTopLevelMethods(_BaseTest):
         assert isinstance(result.data, self.Array)
 
     def test_merge(self):
-        result = xr.merge([self.x1, self.x2], compat="override")
+        result = xr.merge([self.x1, self.x2], compat="override", join="outer")
         assert isinstance(result.foo.data, self.Array)
 
     def test_where(self):

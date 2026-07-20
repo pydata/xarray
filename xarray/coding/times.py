@@ -21,7 +21,7 @@ from xarray.coding.common import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
-from xarray.compat.pdcompat import default_precision_timestamp, timestamp_as_unit
+from xarray.compat.pdcompat import default_precision_timestamp
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import array_all, asarray, ravel, reshape
@@ -97,6 +97,8 @@ _INVALID_LITERAL_TIMEDELTA64_ENCODING_KEYS = [
     "add_offset",
     "scale_factor",
 ]
+
+_ORDERED_PANDAS_TIME_RESOLUTIONS: list[PDDatetimeUnitOptions] = ["s", "ms", "us", "ns"]
 
 
 def _is_standard_calendar(calendar: str) -> bool:
@@ -293,6 +295,21 @@ def _maybe_strip_tz_from_timestamp(date: pd.Timestamp) -> pd.Timestamp:
     return date
 
 
+def _cast_timestamp_to_coarsest_resolution(timestamp: pd.Timestamp) -> pd.Timestamp:
+    # Cast timestamp to the coarsest resolution that can be used without
+    # changing its value. If provided a string, the pandas.Timestamp
+    # constructor used to automatically infer this from the resolution of the
+    # string, but this behavior was changed in pandas-dev/pandas#62801. This
+    # function allows us to approximately restore the old behavior in a way
+    # that is perhaps more consistent with how we infer the resolution of the
+    # data values themselves.
+    for unit in _ORDERED_PANDAS_TIME_RESOLUTIONS:
+        coarsest_timestamp = timestamp.as_unit(unit)
+        if coarsest_timestamp == timestamp:
+            return coarsest_timestamp
+    return timestamp
+
+
 def _unpack_time_unit_and_ref_date(
     units: str,
 ) -> tuple[NPDatetimeUnitOptions, pd.Timestamp]:
@@ -301,6 +318,7 @@ def _unpack_time_unit_and_ref_date(
     time_unit, _ref_date = _unpack_netcdf_time_units(units)
     time_unit = _netcdf_to_numpy_timeunit(time_unit)
     ref_date = pd.Timestamp(_ref_date)
+    ref_date = _cast_timestamp_to_coarsest_resolution(ref_date)
     ref_date = _maybe_strip_tz_from_timestamp(ref_date)
     return time_unit, ref_date
 
@@ -368,45 +386,45 @@ def _decode_datetime_with_cftime(
         return np.array([], dtype=object)
 
 
+def _decode_to_timedelta(value, unit: NPDatetimeUnitOptions) -> np.timedelta64:
+    """Decode a single CF-encoded scalar to ``np.timedelta64``.
+
+    Returns NaT for encoded NaT inputs. Raises ``OutOfBoundsTimedelta`` if the
+    value is not representable.
+    """
+    # Integer arrays encode NaT as int64.min (numpy/pandas's NaT bit pattern);
+    # float arrays encode it as NaN. Detect both before the multiplication
+    # below. In numpy >= 2.5 (numpy/numpy#31378) int64.min * timedelta64
+    # raises OverflowError instead of silently producing NaT.
+    if (value.dtype.kind == "i" and int(value) == np.iinfo("int64").min) or (
+        value.dtype.kind == "f" and np.isnan(value)
+    ):
+        return np.timedelta64("NaT", unit)
+    if value > np.iinfo("int64").max or value < np.iinfo("int64").min:
+        raise OutOfBoundsTimedelta(
+            f"Value {value} can't be represented as Datetime/Timedelta."
+        )
+    delta = value * np.timedelta64(1, unit)
+    # uint overflow during the multiplication above
+    if value.dtype.kind == "u" and not np.int64(delta) == value:
+        raise OutOfBoundsTimedelta("DType overflow in Datetime/Timedelta calculation.")
+    return delta
+
+
 def _check_date_for_units_since_refdate(
     date, unit: NPDatetimeUnitOptions, ref_date: pd.Timestamp
 ) -> pd.Timestamp:
-    # check for out-of-bounds floats and raise
-    if date > np.iinfo("int64").max or date < np.iinfo("int64").min:
-        raise OutOfBoundsTimedelta(
-            f"Value {date} can't be represented as Datetime/Timedelta."
-        )
-    delta = date * np.timedelta64(1, unit)
-    if not np.isnan(delta):
-        # this will raise on dtype overflow for integer dtypes
-        if date.dtype.kind in "u" and not np.int64(delta) == date:
-            raise OutOfBoundsTimedelta(
-                "DType overflow in Datetime/Timedelta calculation."
-            )
-        # this will raise on overflow if ref_date + delta
-        # can't be represented in the current ref_date resolution
-        return timestamp_as_unit(ref_date + delta, ref_date.unit)
-    else:
-        # if date is exactly NaT (np.iinfo("int64").min) return NaT
-        # to make follow-up checks work
+    delta = _decode_to_timedelta(date, unit)
+    if np.isnat(delta):
         return pd.Timestamp("NaT")
+    # this will raise on overflow if ref_date + delta can't be represented in
+    # the current ref_date resolution
+    return (ref_date + delta).as_unit(ref_date.unit)
 
 
 def _check_timedelta_range(value, data_unit, time_unit):
-    if value > np.iinfo("int64").max or value < np.iinfo("int64").min:
-        OutOfBoundsTimedelta(f"Value {value} can't be represented as Timedelta.")
-    # on windows multiplying nan leads to RuntimeWarning
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", "invalid value encountered in multiply", RuntimeWarning
-        )
-        delta = value * np.timedelta64(1, data_unit)
-    if not np.isnan(delta):
-        # this will raise on dtype overflow for integer dtypes
-        if value.dtype.kind in "u" and not np.int64(delta) == value:
-            raise OutOfBoundsTimedelta(
-                "DType overflow in Datetime/Timedelta calculation."
-            )
+    delta = _decode_to_timedelta(value, data_unit)
+    if not np.isnat(delta):
         # this will raise on overflow if delta cannot be represented with the
         # resolutions supported by pandas.
         pd.to_timedelta(delta)
@@ -419,7 +437,7 @@ def _align_reference_date_and_unit(
     if np.timedelta64(1, ref_date.unit) > np.timedelta64(1, unit):
         # this will raise accordingly
         # if data can't be represented in the higher resolution
-        return timestamp_as_unit(ref_date, cast(PDDatetimeUnitOptions, unit))
+        return ref_date.as_unit(cast(PDDatetimeUnitOptions, unit))
     return ref_date
 
 
@@ -442,8 +460,8 @@ def _check_higher_resolution(
     time_unit: PDDatetimeUnitOptions,
 ) -> tuple[np.ndarray, PDDatetimeUnitOptions]:
     """Iterate until fitting resolution found."""
-    res: list[PDDatetimeUnitOptions] = ["s", "ms", "us", "ns"]
-    new_units = res[res.index(time_unit) :]
+    index = _ORDERED_PANDAS_TIME_RESOLUTIONS.index(time_unit)
+    new_units = _ORDERED_PANDAS_TIME_RESOLUTIONS[index:]
     for new_time_unit in new_units:
         if not ((np.unique(flat_num_dates % 1) > 0).any() and new_time_unit != "ns"):
             break
@@ -503,7 +521,7 @@ def _decode_datetime_with_pandas(
     # timedelta64 value, and therefore would raise an error in the lines above.
     if flat_num_dates.dtype.kind in "iu":
         flat_num_dates = flat_num_dates.astype(np.int64)
-    elif flat_num_dates.dtype.kind in "f":
+    elif flat_num_dates.dtype.kind == "f":
         flat_num_dates = flat_num_dates.astype(np.float64)
 
     timedeltas = _numbers_to_timedelta(
@@ -608,6 +626,8 @@ def _numbers_to_timedelta(
         nan = np.asarray(np.isnan(flat_num))
     elif flat_num.dtype.kind == "i":
         nan = np.asarray(flat_num == np.iinfo(np.int64).min)
+    elif flat_num.dtype.kind == "u":
+        nan = np.broadcast_to(np.asarray(False), flat_num.shape)
 
     # in case we need to change the unit, we fix the numbers here
     # this should be safe, as errors would have been raised above
@@ -810,7 +830,7 @@ def cftime_to_nptime(
                     f"standard calendar.  Reason: {e}."
                 ) from e
             else:
-                dt = np.datetime64("NaT")
+                dt = np.datetime64("NaT", time_unit)
         new.append(dt)
     return np.asarray(new).reshape(times.shape)
 
@@ -1065,9 +1085,12 @@ def _eagerly_encode_cf_datetime(
             # parse with cftime instead
             raise OutOfBoundsDatetime
         assert np.issubdtype(dates.dtype, "datetime64")
-        if calendar in ["standard", "gregorian"] and np.nanmin(dates).astype(
-            "=M8[us]"
-        ).astype(datetime) < datetime(1582, 10, 15):
+        if (
+            calendar in ["standard", "gregorian"]
+            and dates.size > 0
+            and np.nanmin(dates).astype("=M8[us]").astype(datetime)
+            < datetime(1582, 10, 15)
+        ):
             raise_gregorian_proleptic_gregorian_mismatch_error = True
 
         time_unit, ref_date = _unpack_time_unit_and_ref_date(units)
@@ -1358,9 +1381,9 @@ class CFDatetimeCoder(VariableCoder):
         self.time_unit = time_unit
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if np.issubdtype(
-            variable.data.dtype, np.datetime64
-        ) or contains_cftime_datetimes(variable):
+        if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
+            variable
+        ):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
 
             units = encoding.pop("units", None)
@@ -1416,8 +1439,9 @@ def resolve_time_unit_from_attrs_dtype(
     dtype = np.dtype(attrs_dtype)
     resolution, _ = np.datetime_data(dtype)
     resolution = cast(NPDatetimeUnitOptions, resolution)
+    time_unit: PDDatetimeUnitOptions
     if np.timedelta64(1, resolution) > np.timedelta64(1, "s"):
-        time_unit = cast(PDDatetimeUnitOptions, "s")
+        time_unit = "s"
         message = (
             f"Following pandas, xarray only supports decoding to timedelta64 "
             f"values with a resolution of 's', 'ms', 'us', or 'ns'. Encoded "
@@ -1430,7 +1454,7 @@ def resolve_time_unit_from_attrs_dtype(
         )
         emit_user_level_warning(message)
     elif np.timedelta64(1, resolution) < np.timedelta64(1, "ns"):
-        time_unit = cast(PDDatetimeUnitOptions, "ns")
+        time_unit = "ns"
         message = (
             f"Following pandas, xarray only supports decoding to timedelta64 "
             f"values with a resolution of 's', 'ms', 'us', or 'ns'. Encoded "
@@ -1461,23 +1485,22 @@ class CFTimedeltaCoder(VariableCoder):
         units attribute, e.g. "seconds". Defaults to True, but in the future
         will default to False.
     decode_via_dtype : bool
-        Whether to decode timedeltas based on the presence of a np.timedelta64
+        Whether to decode timedeltas based on the presence of an np.timedelta64
         dtype attribute, e.g. "timedelta64[s]". Defaults to True.
     """
 
     def __init__(
         self,
         time_unit: PDDatetimeUnitOptions | None = None,
-        decode_via_units: bool = True,
+        decode_via_units: bool = False,
         decode_via_dtype: bool = True,
     ) -> None:
         self.time_unit = time_unit
         self.decode_via_units = decode_via_units
         self.decode_via_dtype = decode_via_dtype
-        self._emit_decode_timedelta_future_warning = False
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if np.issubdtype(variable.data.dtype, np.timedelta64):
+        if np.issubdtype(variable.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             dtype = encoding.get("dtype", None)
             units = encoding.pop("units", None)
@@ -1516,25 +1539,8 @@ class CFTimedeltaCoder(VariableCoder):
                 else:
                     time_unit = self.time_unit
             else:
-                if self._emit_decode_timedelta_future_warning:
-                    var_string = f"the variable {name!r}" if name else ""
-                    emit_user_level_warning(
-                        "In a future version, xarray will not decode "
-                        f"{var_string} into a timedelta64 dtype based on the "
-                        "presence of a timedelta-like 'units' attribute by "
-                        "default. Instead it will rely on the presence of a "
-                        "timedelta64 'dtype' attribute, which is now xarray's "
-                        "default way of encoding timedelta64 values.\n"
-                        "To continue decoding into a timedelta64 dtype, either "
-                        "set `decode_timedelta=True` when opening this "
-                        "dataset, or add the attribute "
-                        "`dtype='timedelta64[ns]'` to this variable on disk.\n"
-                        "To opt-in to future behavior, set "
-                        "`decode_timedelta=False`.",
-                        FutureWarning,
-                    )
                 if self.time_unit is None:
-                    time_unit = cast(PDDatetimeUnitOptions, "ns")
+                    time_unit = "ns"
                 else:
                     time_unit = self.time_unit
 

@@ -4,6 +4,7 @@ import pickle
 from unittest.mock import patch
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 
 import xarray as xr
@@ -33,7 +34,7 @@ def test_unary(a):
 
 
 def test_binary():
-    args = [
+    args: list[int | float | npt.NDArray | xr.Variable | xr.DataArray | xr.Dataset] = [
         0,
         np.zeros(2),
         xr.Variable(["x"], [0, 0]),
@@ -49,7 +50,7 @@ def test_binary():
 
 
 def test_binary_out():
-    args = [
+    args: list[int | float | npt.NDArray | xr.Variable | xr.DataArray | xr.Dataset] = [
         1,
         np.ones(2),
         xr.Variable(["x"], [1, 1]),
@@ -81,20 +82,20 @@ def test_groupby():
     group_mean = ds_grouped.mean("x")
     arr_grouped = ds["a"].groupby("c")
 
-    assert_identical(ds, np.maximum(ds_grouped, group_mean))
-    assert_identical(ds, np.maximum(group_mean, ds_grouped))
+    assert_identical(ds, np.maximum(ds_grouped, group_mean))  # type: ignore[call-overload]
+    assert_identical(ds, np.maximum(group_mean, ds_grouped))  # type: ignore[call-overload]
 
-    assert_identical(ds, np.maximum(arr_grouped, group_mean))
-    assert_identical(ds, np.maximum(group_mean, arr_grouped))
+    assert_identical(ds, np.maximum(arr_grouped, group_mean))  # type: ignore[call-overload]
+    assert_identical(ds, np.maximum(group_mean, arr_grouped))  # type: ignore[call-overload]
 
-    assert_identical(ds, np.maximum(ds_grouped, group_mean["a"]))
-    assert_identical(ds, np.maximum(group_mean["a"], ds_grouped))
+    assert_identical(ds, np.maximum(ds_grouped, group_mean["a"]))  # type: ignore[call-overload]
+    assert_identical(ds, np.maximum(group_mean["a"], ds_grouped))  # type: ignore[call-overload]
 
-    assert_identical(ds.a, np.maximum(arr_grouped, group_mean.a))
-    assert_identical(ds.a, np.maximum(group_mean.a, arr_grouped))
+    assert_identical(ds.a, np.maximum(arr_grouped, group_mean.a))  # type: ignore[call-overload]
+    assert_identical(ds.a, np.maximum(group_mean.a, arr_grouped))  # type: ignore[call-overload]
 
     with pytest.raises(ValueError, match=r"mismatched lengths for dimension"):
-        np.maximum(ds.a.variable, ds_grouped)
+        np.maximum(ds.a.variable, ds_grouped)  # type: ignore[call-overload]
 
 
 def test_alignment():
@@ -126,8 +127,8 @@ def test_xarray_defers_to_unrecognized_type():
 
     xarray_obj = xr.DataArray([1, 2, 3])
     other = Other()
-    assert np.maximum(xarray_obj, other) == "other"
-    assert np.sin(xarray_obj, out=other) == "other"
+    assert np.maximum(xarray_obj, other) == "other"  # type: ignore[call-overload]
+    assert np.sin(xarray_obj, out=other) == "other"  # type: ignore[call-overload]
 
 
 def test_xarray_handles_dask():
@@ -159,7 +160,7 @@ def test_out():
 
     # xarray out arguments should raise
     with pytest.raises(NotImplementedError, match=r"`out` argument"):
-        np.add(xarray_obj, 1, out=xarray_obj)
+        np.add(xarray_obj, 1, out=xarray_obj)  # type: ignore[call-overload]
 
     # but non-xarray should be OK
     other = np.zeros((3,))
@@ -181,7 +182,7 @@ class DuckArray(np.ndarray):
         obj = np.asarray(array).view(cls)
         return obj
 
-    def __array_namespace__(self):
+    def __array_namespace__(self, *, api_version=None):
         return DuckArray
 
     @staticmethod
@@ -194,7 +195,7 @@ class DuckArray(np.ndarray):
 
 
 class DuckArray2(DuckArray):
-    def __array_namespace__(self):
+    def __array_namespace__(self, *, api_version=None):
         return DuckArray2
 
 
@@ -216,12 +217,12 @@ class TestXarrayUfuncs:
 
         if name == "isnat":
             args = (self.xt,)
-        elif hasattr(np_func, "nin") and np_func.nin == 2:
-            args = (self.x, self.x)
+        elif hasattr(np_func, "nin") and np_func.nin == 2:  # type: ignore[union-attr]
+            args = (self.x, self.x)  # type: ignore[assignment]
         else:
             args = (self.x,)
 
-        expected = np_func(*args)
+        expected = np_func(*args)  # type: ignore[misc]
         actual = xu_func(*args)
 
         if name in ["angle", "iscomplex"]:

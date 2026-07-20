@@ -168,10 +168,6 @@ third-party libraries.
 Flexible storage
 ~~~~~~~~~~~~~~~~
 
-.. note::
-   Work on flexible storage backends is currently underway. See
-   `GH Project #3 <https://github.com/pydata/xarray/projects/3>`__ for more detail.
-
 The xarray backends module has grown in size and complexity. Much of
 this growth has been "organic" and mostly to support incremental
 additions to the supported backends. This has left us with a fragile
@@ -249,11 +245,6 @@ many applications and depends on pandas.
 
 Engaging more users
 -------------------
-
-.. note::
-   Work on improving xarray’s documentation and user engagement is
-   currently underway. See `GH Project #4 <https://github.com/pydata/xarray/projects/4>`__
-   for more detail.
 
 Like many open-source projects, the documentation of xarray has grown
 together with the library's features. While we think that the xarray

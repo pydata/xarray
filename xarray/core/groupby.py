@@ -13,6 +13,7 @@ import pandas as pd
 from packaging.version import Version
 
 from xarray.computation import ops
+from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.computation.arithmetic import (
     DataArrayGroupbyArithmetic,
     DatasetGroupbyArithmetic,
@@ -22,7 +23,11 @@ from xarray.core._aggregations import (
     DataArrayGroupByAggregations,
     DatasetGroupByAggregations,
 )
-from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
+from xarray.core.common import (
+    ImplementsArrayReduce,
+    ImplementsDatasetReduce,
+    _is_numeric_aggregatable_dtype,
+)
 from xarray.core.coordinates import Coordinates, coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
@@ -169,11 +174,12 @@ def _inverse_permutation_indices(positions, N: int | None = None) -> np.ndarray 
 
     if isinstance(positions[0], slice):
         positions = _consolidate_slices(positions)
-        if positions == slice(None):
+        if positions == [slice(None)] or positions == [slice(0, None)]:
             return None
         positions = [np.arange(sl.start, sl.stop, sl.step) for sl in positions]
-
-    newpositions = nputils.inverse_permutation(np.concatenate(positions), N)
+    newpositions = nputils.inverse_permutation(
+        np.concatenate(tuple(p for p in positions if len(p) > 0)), N
+    )
     return newpositions[newpositions != -1]
 
 
@@ -207,7 +213,7 @@ class _DummyGroup(Generic[T_Xarray]):
         return np.arange(self.size, dtype=int)
 
     def __array__(
-        self, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if copy is False:
             raise NotImplementedError(f"An array copy is necessary, got {copy = }.")
@@ -339,7 +345,7 @@ class ResolvedGrouper(Generic[T_DataWithCoords]):
         if self.eagerly_compute_group is not None:
             emit_user_level_warning(
                 "Passing `eagerly_compute_group` is now deprecated. It has no effect.",
-                DeprecationWarning,
+                FutureWarning,
             )
 
         if not isinstance(self.group, _DummyGroup) and is_chunked_array(
@@ -386,7 +392,6 @@ def _parse_group_and_groupers(
     eagerly_compute_group: Literal[False] | None,
 ) -> tuple[ResolvedGrouper, ...]:
     from xarray.core.dataarray import DataArray
-    from xarray.core.variable import Variable
     from xarray.groupers import Grouper, UniqueGrouper
 
     if group is not None and groupers:
@@ -540,7 +545,7 @@ class ComposedGrouper:
         _flatcodes = where(mask.data, -1, _flatcodes)
 
         full_index = pd.MultiIndex.from_product(
-            [grouper.full_index.values for grouper in groupers],
+            [list(grouper.full_index.values) for grouper in groupers],
             names=tuple(grouper.name for grouper in groupers),
         )
         if not full_index.is_unique:
@@ -747,8 +752,8 @@ class GroupBy(Generic[T_Xarray]):
         <xarray.DataArray 'a' (x: 4)> Size: 32B
         array([9., 3., 4., 5.])
         Coordinates:
-            quantile  float64 8B 0.5
           * x         (x) int64 32B 0 1 2 3
+            quantile  float64 8B 0.5
 
         See Also
         --------
@@ -824,7 +829,7 @@ class GroupBy(Generic[T_Xarray]):
             self._groups = dict(
                 zip(
                     self.encoded.unique_coord.data,
-                    self.encoded.group_indices,
+                    tuple(g for g in self.encoded.group_indices if g),
                     strict=True,
                 )
             )
@@ -987,7 +992,7 @@ class GroupBy(Generic[T_Xarray]):
             if (has_missing_groups and index is not None) or (
                 len(self.groupers) > 1
                 and not isinstance(grouper.full_index, pd.RangeIndex)
-                and not index.index.equals(grouper.full_index)
+                and not (index is not None and index.index.equals(grouper.full_index))
             ):
                 indexers[grouper.name] = grouper.full_index
         if indexers:
@@ -1024,6 +1029,37 @@ class GroupBy(Generic[T_Xarray]):
             obj = obj.drop_vars(to_drop)
 
         return obj
+
+    def _parse_dim(self, dim: Dims) -> tuple[Hashable, ...]:
+        parsed_dim: tuple[Hashable, ...]
+        if isinstance(dim, str):
+            parsed_dim = (dim,)
+        elif dim is None:
+            parsed_dim_list = list()
+            # preserve order
+            for dim_ in itertools.chain(
+                *(grouper.codes.dims for grouper in self.groupers)
+            ):
+                if dim_ not in parsed_dim_list:
+                    parsed_dim_list.append(dim_)
+            parsed_dim = tuple(parsed_dim_list)
+        elif dim is ...:
+            parsed_dim = tuple(self._original_obj.dims)
+        else:
+            parsed_dim = tuple(dim)
+
+        # Do this so we raise the same error message whether flox is present or not.
+        # Better to control it here than in flox.
+        for grouper in self.groupers:
+            if any(
+                d not in grouper.codes.dims and d not in self._original_obj.dims
+                for d in parsed_dim
+            ):
+                # TODO: Not a helpful error, it's a sanity check that dim actually exist
+                # either in self.groupers or self._original_obj
+                raise ValueError(f"cannot reduce over dimensions {dim}.")
+
+        return parsed_dim
 
     def _flox_reduce(
         self,
@@ -1068,7 +1104,7 @@ class GroupBy(Generic[T_Xarray]):
                 name: var
                 for name, var in variables.items()
                 if (
-                    not (np.issubdtype(var.dtype, np.number) or (var.dtype == np.bool_))
+                    not _is_numeric_aggregatable_dtype(var)
                     # this avoids dropping any levels of a MultiIndex, which raises
                     # a warning
                     and name not in midx_grouping_vars
@@ -1085,30 +1121,7 @@ class GroupBy(Generic[T_Xarray]):
                 # set explicitly to avoid unnecessarily accumulating count
                 kwargs["min_count"] = 0
 
-        parsed_dim: tuple[Hashable, ...]
-        if isinstance(dim, str):
-            parsed_dim = (dim,)
-        elif dim is None:
-            parsed_dim_list = list()
-            # preserve order
-            for dim_ in itertools.chain(
-                *(grouper.codes.dims for grouper in self.groupers)
-            ):
-                if dim_ not in parsed_dim_list:
-                    parsed_dim_list.append(dim_)
-            parsed_dim = tuple(parsed_dim_list)
-        elif dim is ...:
-            parsed_dim = tuple(obj.dims)
-        else:
-            parsed_dim = tuple(dim)
-
-        # Do this so we raise the same error message whether flox is present or not.
-        # Better to control it here than in flox.
-        for grouper in self.groupers:
-            if any(
-                d not in grouper.codes.dims and d not in obj.dims for d in parsed_dim
-            ):
-                raise ValueError(f"cannot reduce over dimensions {dim}.")
+        parsed_dim = self._parse_dim(dim)
 
         has_missing_groups = (
             self.encoded.unique_coord.size != self.encoded.full_index.size
@@ -1198,6 +1211,50 @@ class GroupBy(Generic[T_Xarray]):
             result = self._restore_dim_order(result)
 
         return result
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> T_Xarray:
+        from flox import groupby_scan
+
+        parsed_dim = self._parse_dim(dim)
+        obj = self._original_obj.transpose(..., *parsed_dim)
+        axis = range(-len(parsed_dim), 0)
+        codes = tuple(g.codes for g in self.groupers)
+
+        def wrapper(array, *by, func: str, skipna: bool | None, **kwargs):
+            if skipna or (skipna is None and array.dtype.kind in "cfO"):
+                if "nan" not in func:
+                    func = f"nan{func}"
+
+            return groupby_scan(array, *codes, func=func, **kwargs)
+
+        actual = apply_ufunc(
+            wrapper,
+            obj,
+            *codes,
+            dask="allowed",
+            keep_attrs=(
+                _get_keep_attrs(default=True) if keep_attrs is None else keep_attrs
+            ),
+            kwargs=dict(
+                func=func,
+                skipna=skipna,
+                expected_groups=None,  # TODO: Should be same as _flox_reduce?
+                axis=axis,
+                dtype=kwargs.get("dtype"),
+                method=kwargs.get("method"),
+                engine=kwargs.get("engine"),
+            ),
+        )
+
+        return actual
 
     def fillna(self, value: Any) -> T_Xarray:
         """Fill missing values in this object by group.
@@ -1310,15 +1367,15 @@ class GroupBy(Generic[T_Xarray]):
         array([[0.7, 4.2, 0.7, 1.5],
                [6.5, 7.3, 2.6, 1.9]])
         Coordinates:
+          * x         (x) int64 16B 0 1
           * y         (y) int64 32B 1 1 2 2
             quantile  float64 8B 0.0
-          * x         (x) int64 16B 0 1
         >>> ds.groupby("y").quantile(0, dim=...)
         <xarray.Dataset> Size: 40B
         Dimensions:   (y: 2)
         Coordinates:
-            quantile  float64 8B 0.0
           * y         (y) int64 16B 1 2
+            quantile  float64 8B 0.0
         Data variables:
             a         (y) float64 16B 0.7 0.7
         >>> da.groupby("x").quantile([0, 0.5, 1])
@@ -1333,15 +1390,15 @@ class GroupBy(Generic[T_Xarray]):
                 [2.6 , 2.6 , 2.6 ],
                 [1.9 , 1.9 , 1.9 ]]])
         Coordinates:
+          * x         (x) int64 16B 0 1
           * y         (y) int64 32B 1 1 2 2
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
-          * x         (x) int64 16B 0 1
         >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
         <xarray.Dataset> Size: 88B
         Dimensions:   (y: 2, quantile: 3)
         Coordinates:
-          * quantile  (quantile) float64 24B 0.0 0.5 1.0
           * y         (y) int64 16B 1 2
+          * quantile  (quantile) float64 24B 0.0 0.5 1.0
         Data variables:
             a         (y, quantile) float64 48B 0.7 5.35 8.4 0.7 2.25 9.4
 
@@ -1628,7 +1685,14 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         if shortcut:
             combined = self._concat_shortcut(applied, dim, positions)
         else:
-            combined = concat(applied, dim)
+            combined = concat(
+                applied,
+                dim,
+                data_vars="all",
+                coords="different",
+                compat="equals",
+                join="outer",
+            )
             combined = _maybe_reorder(combined, dim, positions, N=self.group1d.size)
 
         if isinstance(combined, type(self._obj)):
@@ -1789,7 +1853,14 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
         dim, positions = self._infer_concat_args(applied_example)
-        combined = concat(applied, dim)
+        combined = concat(
+            applied,
+            dim,
+            data_vars="all",
+            coords="different",
+            compat="equals",
+            join="outer",
+        )
         combined = _maybe_reorder(combined, dim, positions, N=self.group1d.size)
         # assign coord when the applied function does not return that coord
         if dim not in applied_example.dims:

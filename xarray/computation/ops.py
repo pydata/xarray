@@ -8,11 +8,14 @@ functions.
 from __future__ import annotations
 
 import operator
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 
 from xarray.core import dtypes, duck_array_ops
+
+if TYPE_CHECKING:
+    pass
 
 try:
     import bottleneck as bn
@@ -158,8 +161,8 @@ def fillna(data, other, join="left", dataset_join="left"):
     )
 
 
-# Unsure why we get a mypy error here
-def where_method(self, cond, other=dtypes.NA):  # type: ignore[has-type]
+# TODO: type this properly
+def where_method(self, cond, other=dtypes.NA):  # type: ignore[unused-ignore,has-type]
     """Return elements from `self` or `other` depending on `cond`.
 
     Parameters

@@ -5,7 +5,7 @@ import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,7 @@ from xarray.backends.common import (
     AbstractWritableDataStore,
     BackendArray,
     BackendEntrypoint,
+    T_PathFileOrDataStore,
     _encode_variable_name,
     _normalize_path,
     datatree_from_dict_with_io_cleanup,
@@ -29,6 +30,7 @@ from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
+    _default,
     attempt_import,
     close_on_error,
     emit_user_level_warning,
@@ -39,10 +41,9 @@ from xarray.namedarray.pycompat import integer_types
 from xarray.namedarray.utils import module_available
 
 if TYPE_CHECKING:
-    from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ReadBuffer, ZarrArray, ZarrGroup
+    from xarray.core.types import ZarrArray, ZarrGroup
 
 
 def _get_mappers(*, storage_options, store, chunk_store):
@@ -121,40 +122,89 @@ class FillValueCoder:
     """
 
     @classmethod
-    def encode(cls, value: int | float | str | bytes, dtype: np.dtype[Any]) -> Any:
-        if dtype.kind in "S":
+    def encode(
+        cls, value: int | float | complex | str | bytes, dtype: np.dtype[Any]
+    ) -> Any:
+        if dtype.kind == "S":
             # byte string, this implies that 'value' must also be `bytes` dtype.
-            assert isinstance(value, bytes)
+            if not isinstance(value, bytes):
+                raise TypeError(
+                    f"Failed to encode fill_value: expected bytes for dtype {dtype}, got {type(value).__name__}"
+                )
             return base64.standard_b64encode(value).decode()
-        elif dtype.kind in "b":
+        elif dtype.kind == "b":
             # boolean
             return bool(value)
         elif dtype.kind in "iu":
-            # todo: do we want to check for decimals?
+            if not isinstance(value, int | float | np.integer | np.floating):
+                raise TypeError(
+                    f"Failed to encode fill_value: expected int or float for dtype {dtype}, got {type(value).__name__}"
+                )
             return int(value)
-        elif dtype.kind in "f":
+        elif dtype.kind == "f":
+            if not isinstance(value, int | float | np.integer | np.floating):
+                raise TypeError(
+                    f"Failed to encode fill_value: expected int or float for dtype {dtype}, got {type(value).__name__}"
+                )
             return base64.standard_b64encode(struct.pack("<d", float(value))).decode()
-        elif dtype.kind in "U":
+        elif dtype.kind == "c":
+            # complex - encode each component as base64, matching float encoding
+            if not isinstance(value, complex) and not np.issubdtype(
+                type(value), np.complexfloating
+            ):
+                raise TypeError(
+                    f"Failed to encode fill_value: expected complex for dtype {dtype}, got {type(value).__name__}"
+                )
+            return [
+                base64.standard_b64encode(
+                    struct.pack("<d", float(value.real))  # type: ignore[union-attr]
+                ).decode(),
+                base64.standard_b64encode(
+                    struct.pack("<d", float(value.imag))  # type: ignore[union-attr]
+                ).decode(),
+            ]
+        elif dtype.kind == "U":
             return str(value)
         else:
             raise ValueError(f"Failed to encode fill_value. Unsupported dtype {dtype}")
 
     @classmethod
-    def decode(cls, value: int | float | str | bytes, dtype: str | np.dtype[Any]):
+    def decode(
+        cls, value: int | float | str | bytes | list, dtype: str | np.dtype[Any]
+    ):
         if dtype == "string":
             # zarr V3 string type
             return str(value)
         elif dtype == "bytes":
             # zarr V3 bytes type
-            assert isinstance(value, str | bytes)
+            if not isinstance(value, str | bytes):
+                raise TypeError(
+                    f"Failed to decode fill_value: expected str or bytes for dtype {dtype}, got {type(value).__name__}"
+                )
             return base64.standard_b64decode(value)
         np_dtype = np.dtype(dtype)
-        if np_dtype.kind in "f":
-            assert isinstance(value, str | bytes)
+        if np_dtype.kind == "f":
+            if not isinstance(value, str | bytes):
+                raise TypeError(
+                    f"Failed to decode fill_value: expected str or bytes for dtype {np_dtype}, got {type(value).__name__}"
+                )
             return struct.unpack("<d", base64.standard_b64decode(value))[0]
-        elif np_dtype.kind in "b":
+        elif np_dtype.kind == "c":
+            # complex - decode each component from base64, matching float decoding
+            if not (isinstance(value, list | tuple) and len(value) == 2):
+                raise TypeError(
+                    f"Failed to decode fill_value: expected a 2-element list for dtype {np_dtype}, got {type(value).__name__}"
+                )
+            real = struct.unpack("<d", base64.standard_b64decode(value[0]))[0]
+            imag = struct.unpack("<d", base64.standard_b64decode(value[1]))[0]
+            return complex(real, imag)
+        elif np_dtype.kind == "b":
             return bool(value)
         elif np_dtype.kind in "iu":
+            if not isinstance(value, int | float | np.integer | np.floating):
+                raise TypeError(
+                    f"Failed to decode fill_value: expected int or float for dtype {np_dtype}, got {type(value).__name__}"
+                )
             return int(value)
         else:
             raise ValueError(f"Failed to decode fill_value. Unsupported dtype {dtype}")
@@ -162,7 +212,7 @@ class FillValueCoder:
 
 def encode_zarr_attr_value(value):
     """
-    Encode a attribute value as something that can be serialized as json
+    Encode an attribute value as something that can be serialized as json
 
     Many xarray datasets / variables have numpy arrays and values. This
     function handles encoding / decoding of such items.
@@ -180,12 +230,23 @@ def encode_zarr_attr_value(value):
     return encoded
 
 
+def has_zarr_async_index() -> bool:
+    try:
+        import zarr
+
+        return hasattr(zarr.AsyncArray, "oindex")
+    except (ImportError, AttributeError):
+        return False
+
+
 class ZarrArrayWrapper(BackendArray):
     __slots__ = ("_array", "dtype", "shape")
 
     def __init__(self, zarr_array):
         # some callers attempt to evaluate an array if an `array` property exists on the object.
         # we prefix with _ to avoid this inference.
+
+        # TODO type hint this?
         self._array = zarr_array
         self.shape = self._array.shape
 
@@ -194,6 +255,10 @@ class ZarrArrayWrapper(BackendArray):
             not _zarr_v3()
             and self._array.filters is not None
             and any(filt.codec_id == "vlen-utf8" for filt in self._array.filters)
+        ) or (
+            _zarr_v3()
+            and self._array.serializer
+            and self._array.serializer.to_dict()["name"] == "vlen-utf8"
         ):
             dtype = coding.strings.create_vlen_dtype(str)
         else:
@@ -213,6 +278,33 @@ class ZarrArrayWrapper(BackendArray):
     def _getitem(self, key):
         return self._array[key]
 
+    async def _async_getitem(self, key):
+        if not _zarr_v3():
+            raise NotImplementedError(
+                "For lazy basic async indexing with zarr, zarr-python=>v3.0.0 is required"
+            )
+
+        async_array = self._array._async_array
+        return await async_array.getitem(key)
+
+    async def _async_oindex(self, key):
+        if not has_zarr_async_index():
+            raise NotImplementedError(
+                "For lazy orthogonal async indexing with zarr, zarr-python=>v3.1.2 is required"
+            )
+
+        async_array = self._array._async_array
+        return await async_array.oindex.getitem(key)
+
+    async def _async_vindex(self, key):
+        if not has_zarr_async_index():
+            raise NotImplementedError(
+                "For lazy vectorized async indexing with zarr, zarr-python=>v3.1.2 is required"
+            )
+
+        async_array = self._array._async_array
+        return await async_array.vindex.getitem(key)
+
     def __getitem__(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
@@ -227,6 +319,18 @@ class ZarrArrayWrapper(BackendArray):
 
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
+
+    async def async_getitem(self, key):
+        array = self._array
+        if isinstance(key, indexing.BasicIndexer):
+            method = self._async_getitem
+        elif isinstance(key, indexing.VectorizedIndexer):
+            method = self._async_vindex
+        elif isinstance(key, indexing.OuterIndexer):
+            method = self._async_oindex
+        return await indexing.async_explicit_indexing_adapter(
+            key, array.shape, indexing.IndexingSupport.VECTORIZED, method
+        )
 
 
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
@@ -305,6 +409,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
+    # Check for attributes and dimension name metadata as discussed in the Zarr encoding
+    # specification https://docs.xarray.dev/en/stable/internals/zarr-encoding-spec.html
+
     # Zarr V3 explicitly stores the dimension names in the metadata
     try:
         # if this exists, we are looking at a Zarr V3 array
@@ -436,7 +543,7 @@ def extract_zarr_variable_encoding(
 # The only change is to raise an error for object dtypes.
 def encode_zarr_variable(var, needs_copy=True, name=None):
     """
-    Converts an Variable into an Variable which follows some
+    Converts a Variable into another Variable which follows some
     of the CF conventions:
 
         - Nans are masked using _FillValue (or the deprecated missing_value)
@@ -735,6 +842,22 @@ class ZarrStore(AbstractWritableDataStore):
             # on demand.
             self._members = self._fetch_members()
 
+    def get_child_store(self, group: str) -> Self:
+        zarr_group = self.zarr_group.require_group(group)
+        return type(self)(
+            zarr_group=zarr_group,
+            mode=self._mode,
+            consolidate_on_close=self._consolidate_on_close,
+            append_dim=self._append_dim,
+            write_region=self._write_region,
+            safe_chunks=self._safe_chunks,
+            write_empty=self._write_empty,
+            close_store_on_close=self._close_store_on_close,
+            use_zarr_fill_value_as_mask=self._use_zarr_fill_value_as_mask,
+            align_chunks=self._align_chunks,
+            cache_members=self._cache_members,
+        )
+
     @property
     def members(self) -> dict[str, ZarrArray | ZarrGroup]:
         """
@@ -815,10 +938,19 @@ class ZarrStore(AbstractWritableDataStore):
             # by interpreting Zarr's fill_value to mean the same as netCDF's _FillValue
             if zarr_array.fill_value is not None:
                 attributes["_FillValue"] = zarr_array.fill_value
-        elif "_FillValue" in attributes:
-            attributes["_FillValue"] = FillValueCoder.decode(
-                attributes["_FillValue"], zarr_array.dtype
-            )
+        else:
+            # Preserve the Zarr array fill_value in the encoding so it is not
+            # lost on round-trip. The write path reads it back from here.
+            # Only zarr_format 3 supports `fill_value` as an encoding key
+            # (in zarr_format 2 the fill_value is set via `_FillValue`).
+            # See https://github.com/pydata/xarray/issues/10269
+            zarr_format_3 = _zarr_v3() and self.zarr_group.metadata.zarr_format == 3
+            if zarr_format_3:
+                encoding["fill_value"] = zarr_array.fill_value
+            if "_FillValue" in attributes:
+                attributes["_FillValue"] = FillValueCoder.decode(
+                    attributes["_FillValue"], zarr_array.dtype
+                )
 
         return Variable(dimensions, data, attributes, encoding)
 
@@ -996,9 +1128,6 @@ class ZarrStore(AbstractWritableDataStore):
                 kwargs["zarr_format"] = self.zarr_group.metadata.zarr_format
             zarr.consolidate_metadata(self.zarr_group.store, **kwargs)
 
-    def sync(self):
-        pass
-
     def _open_existing_array(self, *, name) -> ZarrArray:
         import zarr
         from zarr import Array as ZarrArray
@@ -1115,6 +1244,11 @@ class ZarrStore(AbstractWritableDataStore):
                 fill_value = attrs.pop("_FillValue", None)
             else:
                 fill_value = v.encoding.pop("fill_value", None)
+                if fill_value is None and v.dtype.kind == "f":
+                    # For floating point data, Xarray defaults to a fill_value
+                    # of NaN (unlike Zarr, which uses zero):
+                    # https://github.com/pydata/xarray/issues/10646
+                    fill_value = np.nan
                 if "_FillValue" in attrs:
                     # replace with encoded fill value
                     fv = attrs.pop("_FillValue")
@@ -1167,16 +1301,22 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_format=3 if is_zarr_v3_format else 2,
             )
 
-            if self._align_chunks and isinstance(encoding["chunks"], tuple):
+            # When shards are specified, dask chunks must align with shard boundaries
+            # (not just zarr chunk boundaries) to avoid data corruption during
+            # parallel writes. See https://github.com/pydata/xarray/issues/10831
+            effective_write_chunks = encoding.get("shards") or encoding["chunks"]
+
+            if self._align_chunks and isinstance(effective_write_chunks, tuple):
                 v = grid_rechunk(
                     v=v,
-                    enc_chunks=encoding["chunks"],
+                    enc_chunks=effective_write_chunks,
                     region=region,
                 )
 
-            if self._safe_chunks and isinstance(encoding["chunks"], tuple):
+            if self._safe_chunks and isinstance(effective_write_chunks, tuple):
                 # the hard case
                 # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
+                # (or shard, when sharding is enabled)
                 # this avoids the need to get involved in zarr synchronization / locking
                 # From zarr docs:
                 #  "If each worker in a parallel computation is writing to a
@@ -1186,8 +1326,8 @@ class ZarrStore(AbstractWritableDataStore):
                 # threads
                 shape = zarr_shape or v.shape
                 validate_grid_chunks_alignment(
-                    nd_var_chunks=v.chunks,
-                    enc_chunks=encoding["chunks"],
+                    nd_v_chunks=v.chunks,
+                    enc_chunks=effective_write_chunks,
                     region=region,
                     allow_partial_chunks=self._mode != "r+",
                     name=name,
@@ -1215,6 +1355,9 @@ class ZarrStore(AbstractWritableDataStore):
                 )
 
             writer.add(v.data, zarr_array, region)
+
+    def sync(self) -> None:
+        pass
 
     def close(self) -> None:
         if self._close_store_on_close:
@@ -1293,7 +1436,7 @@ class ZarrStore(AbstractWritableDataStore):
         non_matching_vars = [
             k for k, v in ds.variables.items() if not set(region).intersection(v.dims)
         ]
-        if non_matching_vars:
+        if region and non_matching_vars:
             raise ValueError(
                 f"when setting `region` explicitly in to_zarr(), all "
                 f"variables in the dataset to write must have at least "
@@ -1329,12 +1472,12 @@ def open_zarr(
     store,
     group=None,
     synchronizer=None,
-    chunks="auto",
+    chunks=_default,
     decode_cf=True,
     mask_and_scale=True,
     decode_times=True,
     concat_characters=True,
-    decode_coords=True,
+    decode_coords: Literal["coordinates", "all"] | bool = True,
     drop_variables=None,
     consolidated=None,
     overwrite_encoded_chunks=False,
@@ -1365,13 +1508,16 @@ def open_zarr(
         Array synchronizer provided to zarr
     group : str, optional
         Group path. (a.k.a. `path` in zarr terminology.)
-    chunks : int, dict, 'auto' or None, default: 'auto'
-        If provided, used to load the data into dask arrays.
+    chunks : int, dict, "auto" or None, optional
+        Used to load the data into dask arrays. Default behavior is to use
+        ``chunks={}`` if dask is available, otherwise ``chunks=None``.
 
         - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
-        - ``chunks=None`` skips using dask, which is generally faster for
-          small arrays.
+        - ``chunks=None`` skips using dask. This uses xarray's internally private
+          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          but data is eagerly loaded into memory as numpy arrays when accessed.
+          This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
         - ``chunks={}`` loads the data with dask using engine preferred chunks if
           exposed by the backend, otherwise with a single chunk for all arrays.
@@ -1399,9 +1545,17 @@ def open_zarr(
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
+    decode_coords : bool or {"coordinates", "all"}, optional
+        Controls which variables are set as coordinate variables:
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
+          as coordinate variables.
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+          other attributes as coordinate variables.
+
+        Only existing variables can be set as coordinates. Missing variables
+        will be silently ignored.
     drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -1485,7 +1639,7 @@ def open_zarr(
     if from_array_kwargs is None:
         from_array_kwargs = {}
 
-    if chunks == "auto":
+    if chunks is _default:
         try:
             guess_chunkmanager(
                 chunked_array_type
@@ -1547,20 +1701,20 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     description = "Open zarr files (.zarr) using zarr in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
+    supports_groups = True
 
-    def guess_can_open(
-        self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
-    ) -> bool:
+    def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
-            _, ext = os.path.splitext(filename_or_obj)
+            # allow a trailing slash to account for an autocomplete
+            # adding it.
+            _, ext = os.path.splitext(str(filename_or_obj).rstrip("/"))
             return ext == ".zarr"
 
         return False
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1615,7 +1769,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
@@ -1657,7 +1811,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,

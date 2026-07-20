@@ -142,6 +142,10 @@ def test_coordinate_transform_variable_basic_outer_indexing() -> None:
     assert var[0, -1] == 6.0
     np.testing.assert_array_equal(var[:, 0:2], [[0.0, 2.0]] * 4)
 
+    expected = var.values[[0], :][:, [0, -1]]
+    actual = var.isel(y=[0], x=[0, -1]).values
+    np.testing.assert_array_equal(actual, expected)
+
     with pytest.raises(IndexError, match="out of bounds index"):
         var[5]
 
@@ -217,16 +221,16 @@ def test_coordinate_transform_sel() -> None:
     # doesn't work with coordinate transform index coordinate variables)
     assert actual.equals(expected)
 
-    with pytest.raises(ValueError, match=".*only supports selection.*nearest"):
+    with pytest.raises(ValueError, match=r".*only supports selection.*nearest"):
         ds.sel(x=xr.Variable("z", [0.5, 5.5]), y=xr.Variable("z", [0.0, 0.5]))
 
-    with pytest.raises(ValueError, match="missing labels for coordinate.*y"):
+    with pytest.raises(ValueError, match=r"missing labels for coordinate.*y"):
         ds.sel(x=[0.5, 5.5], method="nearest")
 
-    with pytest.raises(TypeError, match=".*only supports advanced.*indexing"):
+    with pytest.raises(TypeError, match=r".*only supports advanced.*indexing"):
         ds.sel(x=[0.5, 5.5], y=[0.0, 0.5], method="nearest")
 
-    with pytest.raises(ValueError, match=".*only supports advanced.*indexing"):
+    with pytest.raises(ValueError, match=r".*only supports advanced.*indexing"):
         ds.sel(
             x=xr.Variable("z", [0.5, 5.5]),
             y=xr.Variable("z", [0.0, 0.5, 1.5]),

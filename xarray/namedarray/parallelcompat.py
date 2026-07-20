@@ -174,8 +174,15 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
         if chunkmanager.is_chunked_array(chunked_arr)
     ]
     if not selected:
+        if (
+            maybe_lib := type(chunked_arr).__module__.split(".")[0]
+        ) in KNOWN_CHUNKMANAGERS:
+            suggestion = f"Please try installing {KNOWN_CHUNKMANAGERS[maybe_lib]!r}."
+        else:
+            suggestion = "This is usually the result of a missing dependency."
         raise TypeError(
             f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
+            f" {suggestion}"
         )
     elif len(selected) >= 2:
         raise TypeError(f"Multiple ChunkManagers recognise type {type(chunked_arr)}")
@@ -346,7 +353,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         dask.array.Array.rechunk
         cubed.Array.rechunk
         """
-        return data.rechunk(chunks, **kwargs)
+        from xarray.core.common import _contains_cftime_datetimes
+        from xarray.namedarray.utils import _get_chunk
+
+        if _contains_cftime_datetimes(data):
+            chunks2 = _get_chunk(data, chunks, self, preferred_chunks={})  # type: ignore[arg-type]
+        else:
+            chunks2 = chunks  # type: ignore[assignment]
+        return data.rechunk(chunks2, **kwargs)
 
     @abstractmethod
     def compute(
@@ -500,7 +514,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         -------
         Chunked array
 
-        See also
+        See Also
         --------
         dask.array.cumreduction
         """
@@ -746,3 +760,27 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         cubed.store
         """
         raise NotImplementedError()
+
+    def get_auto_chunk_size(
+        self,
+    ) -> int:
+        """
+        Get the default chunk size for a variable.
+
+        This is used to determine the chunk size when opening a dataset with
+        ``chunks="auto"`` or when rechunking an array with ``chunks="auto"``.
+
+        Parameters
+        ----------
+        target_chunksize : int, optional
+            The target chunk size in bytes. If not provided, a default value is used.
+
+        Returns
+        -------
+        chunk_size : int
+            The chunk size in bytes.
+        """
+
+        raise NotImplementedError(
+            "For 'auto' rechunking of cftime arrays, get_auto_chunk_size must be implemented by the chunk manager"
+        )

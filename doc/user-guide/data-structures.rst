@@ -360,7 +360,7 @@ in the dictionary:
 Where a pandas object is supplied as a value, the names of its indexes are used as dimension
 names, and its data is aligned to any existing dimensions.
 
-You can also create an dataset from:
+You can also create a dataset from:
 
 - A :py:class:`pandas.DataFrame` or ``pandas.Panel`` along its columns and items
   respectively, by passing it into the :py:class:`~xarray.Dataset` directly
@@ -537,7 +537,7 @@ organise heterogeneous data which could not be stored inside a single
 of multiple `groups`_ within a netCDF file or `Zarr Store`_.
 
 .. _groups: https://www.unidata.ucar.edu/software/netcdf/workshops/2011/groups-types/GroupsIntro.html
-.. _Zarr Store: https://zarr.readthedocs.io/en/stable/tutorial.html#groups
+.. _Zarr Store: https://zarr.readthedocs.io/en/stable/user-guide/groups/#groups
 
 Each :py:class:`~xarray.DataTree` object (or "node") contains the same data that a single
 :py:class:`xarray.Dataset` would (i.e. :py:class:`~xarray.DataArray` objects stored under hashable
@@ -559,7 +559,7 @@ nested dict-like containers of both :py:class:`xarray.DataArray`\s and :py:class
 A single datatree object is known as a "node", and its position relative to
 other nodes is defined by two more key properties:
 
-- ``children``: An dictionary mapping from names to other :py:class:`~xarray.DataTree`
+- ``children``: A dictionary mapping from names to other :py:class:`~xarray.DataTree`
   objects, known as its "child nodes".
 - ``parent``: The single :py:class:`~xarray.DataTree` object whose children this datatree is a
   member of, known as its "parent node".
@@ -650,7 +650,7 @@ Alternatively you can also create a :py:class:`~xarray.DataTree` object from:
 - A dictionary mapping directory-like paths to either :py:class:`~xarray.DataTree` nodes or data, using :py:meth:`xarray.DataTree.from_dict()`,
 - A well formed netCDF or Zarr file on disk with :py:func:`~xarray.open_datatree()`. See :ref:`reading and writing files <io>`.
 
-For data files with groups that do not not align see
+For data files with groups that do not align see
 :py:func:`xarray.open_groups` or target each group individually
 :py:func:`xarray.open_dataset(group='groupname') <xarray.open_dataset>`. For
 more information about coordinate alignment see :ref:`datatree-inheritance`

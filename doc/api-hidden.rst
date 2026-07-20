@@ -114,7 +114,9 @@
    core.accessor_dt.DatetimeAccessor.date
    core.accessor_dt.DatetimeAccessor.day
    core.accessor_dt.DatetimeAccessor.dayofweek
+   core.accessor_dt.DatetimeAccessor.day_of_week
    core.accessor_dt.DatetimeAccessor.dayofyear
+   core.accessor_dt.DatetimeAccessor.day_of_year
    core.accessor_dt.DatetimeAccessor.days_in_month
    core.accessor_dt.DatetimeAccessor.daysinmonth
    core.accessor_dt.DatetimeAccessor.hour
@@ -228,6 +230,7 @@
    Variable.isnull
    Variable.item
    Variable.load
+   Variable.load_async
    Variable.max
    Variable.mean
    Variable.median
@@ -408,6 +411,8 @@
    CFTimeIndex.ceil
    CFTimeIndex.contains
    CFTimeIndex.copy
+   CFTimeIndex.day_of_week
+   CFTimeIndex.day_of_year
    CFTimeIndex.days_in_month
    CFTimeIndex.delete
    CFTimeIndex.difference
@@ -420,7 +425,6 @@
    CFTimeIndex.factorize
    CFTimeIndex.fillna
    CFTimeIndex.floor
-   CFTimeIndex.format
    CFTimeIndex.get_indexer
    CFTimeIndex.get_indexer_for
    CFTimeIndex.get_indexer_non_unique
@@ -429,18 +433,10 @@
    CFTimeIndex.get_slice_bound
    CFTimeIndex.get_value
    CFTimeIndex.groupby
-   CFTimeIndex.holds_integer
    CFTimeIndex.identical
    CFTimeIndex.insert
    CFTimeIndex.intersection
    CFTimeIndex.is_
-   CFTimeIndex.is_boolean
-   CFTimeIndex.is_categorical
-   CFTimeIndex.is_floating
-   CFTimeIndex.is_integer
-   CFTimeIndex.is_interval
-   CFTimeIndex.is_numeric
-   CFTimeIndex.is_object
    CFTimeIndex.isin
    CFTimeIndex.isna
    CFTimeIndex.isnull
@@ -464,7 +460,6 @@
    CFTimeIndex.shift
    CFTimeIndex.slice_indexer
    CFTimeIndex.slice_locs
-   CFTimeIndex.sort
    CFTimeIndex.sort_values
    CFTimeIndex.sortlevel
    CFTimeIndex.strftime

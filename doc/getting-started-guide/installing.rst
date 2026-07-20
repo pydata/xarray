@@ -28,7 +28,7 @@ For netCDF and IO
 - `netCDF4 <https://github.com/Unidata/netcdf4-python>`__: recommended if you
   want to use xarray for reading or writing netCDF files
 - `scipy <https://scipy.org>`__: used as a fallback for reading/writing netCDF3
-- `pydap <https://www.pydap.org>`__: used as a fallback for accessing OPeNDAP
+- `pydap <https://pydap.github.io/pydap/en/intro.html>`__: used as a fallback for accessing OPeNDAP
 - `h5netcdf <https://github.com/h5netcdf/h5netcdf>`__: an alternative library for
   reading and writing netCDF4 files that does not use the netCDF-C libraries
 - `zarr <https://zarr.readthedocs.io>`__: for chunked, compressed, N-dimensional arrays.
@@ -57,7 +57,7 @@ For plotting
 ~~~~~~~~~~~~
 
 - `matplotlib <https://matplotlib.org>`__: required for :ref:`plotting`
-- `cartopy <https://scitools.org.uk/cartopy>`__: recommended for :ref:`plot-maps`
+- `cartopy <https://cartopy.readthedocs.io>`__: recommended for :ref:`plot-maps`
 - `seaborn <https://seaborn.pydata.org>`__: for better
   color palettes
 - `nc-time-axis <https://nc-time-axis.readthedocs.io>`__: for plotting

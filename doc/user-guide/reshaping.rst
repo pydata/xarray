@@ -179,7 +179,7 @@ arrays as inputs. For datasets with only one variable, we only need ``stack``
 and ``unstack``, but combining multiple variables in a
 :py:class:`xarray.Dataset` is more complicated. If the variables in the dataset
 have matching numbers of dimensions, we can call
-:py:meth:`~xarray.Dataset.to_dataarray` and then stack along the the new coordinate.
+:py:meth:`~xarray.Dataset.to_dataarray` and then stack along the new coordinate.
 But :py:meth:`~xarray.Dataset.to_dataarray` will broadcast the dataarrays together,
 which will effectively tile the lower dimensional variable along the missing
 dimensions. The method :py:meth:`xarray.Dataset.to_stacked_array` allows

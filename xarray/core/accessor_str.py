@@ -112,7 +112,7 @@ def _apply_str_ufunc(
     *,
     func: Callable,
     obj: Any,
-    dtype: DTypeLike = None,
+    dtype: DTypeLike | None = None,
     output_core_dims: list | tuple = ((),),
     output_sizes: Mapping[Any, int] | None = None,
     func_args: tuple = (),
@@ -224,7 +224,7 @@ class StringAccessor(Generic[T_DataArray]):
         self,
         *,
         func: Callable,
-        dtype: DTypeLike = None,
+        dtype: DTypeLike | None = None,
         output_core_dims: list | tuple = ((),),
         output_sizes: Mapping[Any, int] | None = None,
         func_args: tuple = (),
@@ -1677,7 +1677,7 @@ class StringAccessor(Generic[T_DataArray]):
         Parameters
         ----------
         table : dict-like from and to str or bytes or int
-            A a mapping of Unicode ordinals to Unicode ordinals, strings, int
+            A mapping of Unicode ordinals to Unicode ordinals, strings, int
             or None. Unmapped characters are left untouched. Characters mapped
             to None are deleted. :meth:`str.maketrans` is a helper function for
             making translation tables.

@@ -13,7 +13,12 @@ import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Variable
 from xarray.namedarray.pycompat import array_type
-from xarray.tests import assert_equal, assert_identical, requires_dask
+from xarray.tests import (
+    assert_equal,
+    assert_identical,
+    has_dask_array_expr,
+    requires_dask,
+)
 
 filterwarnings = pytest.mark.filterwarnings
 param = pytest.param
@@ -21,6 +26,16 @@ xfail = pytest.mark.xfail
 
 sparse = pytest.importorskip("sparse")
 sparse_array_type = array_type("sparse")
+
+
+def array_api_scalar() -> bool:
+    # scalars are sparse arrays from 0.19.0 onwards
+    # TODO: remove after sparse<0.19.0 is dropped
+    # (ignore the stylistic error for clarity)
+    if Version(sparse.__version__) >= Version("0.19.0"):  # noqa: SIM103
+        return True
+    else:
+        return False
 
 
 def assert_sparse_equal(a, b):
@@ -94,20 +109,20 @@ def test_variable_property(prop):
 @pytest.mark.parametrize(
     "func,sparse_output",
     [
-        (do("all"), False),
-        (do("any"), False),
+        (do("all"), array_api_scalar()),
+        (do("any"), array_api_scalar()),
         (do("astype", dtype=int), True),
         (do("clip", min=0, max=1), True),
         (do("coarsen", windows={"x": 2}, func="sum"), True),
         (do("compute"), True),
         (do("conj"), True),
         (do("copy"), True),
-        (do("count"), False),
+        (do("count"), array_api_scalar()),
         (do("get_axis_num", dim="x"), False),
         (do("isel", x=slice(2, 4)), True),
         (do("isnull"), True),
         (do("load"), True),
-        (do("mean"), False),
+        (do("mean"), array_api_scalar()),
         (do("notnull"), True),
         (do("roll"), True),
         (do("round"), True),
@@ -173,11 +188,11 @@ def test_variable_property(prop):
         ),
         param(
             do("median"),
-            False,
+            array_api_scalar(),
             marks=xfail(reason="Missing implementation for np.nanmedian"),
         ),
-        param(do("max"), False),
-        param(do("min"), False),
+        param(do("max"), array_api_scalar()),
+        param(do("min"), array_api_scalar()),
         param(
             do("no_conflicts", other=make_xrvar({"x": 10, "y": 5})),
             True,
@@ -188,7 +203,7 @@ def test_variable_property(prop):
             True,
             marks=xfail(reason="Missing implementation for np.pad"),
         ),
-        (do("prod"), False),
+        (do("prod"), array_api_scalar()),
         param(
             do("quantile", q=0.5),
             True,
@@ -212,11 +227,15 @@ def test_variable_property(prop):
             do("shift", x=2), True, marks=xfail(reason="mixed sparse-dense operation")
         ),
         param(
-            do("std"), False, marks=xfail(reason="Missing implementation for np.nanstd")
+            do("std"),
+            array_api_scalar(),
+            marks=xfail(reason="Missing implementation for np.nanstd"),
         ),
-        (do("sum"), False),
+        (do("sum"), array_api_scalar()),
         param(
-            do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
+            do("var"),
+            array_api_scalar(),
+            marks=xfail(reason="Missing implementation for np.nanvar"),
         ),
         param(do("to_dict"), False),
         (do("where", cond=make_xrvar({"x": 10, "y": 5}) > 0.5), True),
@@ -319,8 +338,13 @@ class TestSparseVariable:
         a = np.array([0, 1, np.nan, 3])
         s = sparse.COO.from_numpy(a)
         var_s = Variable("x", s)
-        assert np.all(var_s.fillna(2).data.todense() == np.arange(4))
-        assert np.all(var_s.count() == 3)
+
+        np.testing.assert_equal(var_s.fillna(2).data.todense(), np.arange(4))
+
+        count = var_s.count().data
+        if hasattr(count, "todense"):
+            count = count.todense()
+        np.testing.assert_equal(count, 3)
 
 
 @pytest.mark.parametrize(
@@ -356,8 +380,8 @@ def test_dataarray_property(prop):
 @pytest.mark.parametrize(
     "func,sparse_output",
     [
-        (do("all"), False),
-        (do("any"), False),
+        (do("all"), array_api_scalar()),
+        (do("any"), array_api_scalar()),
         (do("assign_attrs", {"foo": "bar"}), True),
         (do("assign_coords", x=make_xrarray({"x": 10}).x + 1), True),
         (do("astype", int), True),
@@ -365,7 +389,7 @@ def test_dataarray_property(prop):
         (do("compute"), True),
         (do("conj"), True),
         (do("copy"), True),
-        (do("count"), False),
+        (do("count"), array_api_scalar()),
         (do("diff", "x"), True),
         (do("drop_vars", "x"), True),
         (do("expand_dims", {"z": 2}, axis=2), True),
@@ -376,7 +400,7 @@ def test_dataarray_property(prop):
         (do("isel", {"x": slice(0, 3), "y": slice(2, 4)}), True),
         (do("isnull"), True),
         (do("load"), True),
-        (do("mean"), False),
+        (do("mean"), array_api_scalar()),
         (do("persist"), True),
         (do("reindex", {"x": [1, 2, 3]}), True),
         (do("rename", "foo"), True),
@@ -476,16 +500,16 @@ def test_dataarray_property(prop):
             False,
             marks=xfail(reason="'COO' object has no attribute 'item'"),
         ),
-        param(do("max"), False),
-        param(do("min"), False),
+        param(do("max"), array_api_scalar()),
+        param(do("min"), array_api_scalar()),
         param(
             do("median"),
-            False,
+            array_api_scalar(),
             marks=xfail(reason="Missing implementation for np.nanmedian"),
         ),
         (do("notnull"), True),
         (do("pipe", func="sum", axis=1), True),
-        (do("prod"), False),
+        (do("prod"), array_api_scalar()),
         param(
             do("quantile", q=0.5),
             False,
@@ -521,7 +545,7 @@ def test_dataarray_property(prop):
         param(
             do("std"), False, marks=xfail(reason="Missing implementation for np.nanstd")
         ),
-        (do("sum"), False),
+        (do("sum"), array_api_scalar()),
         param(
             do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
         ),
@@ -661,16 +685,19 @@ class TestSparseDataArrayAndDataset:
             sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=0),
         )
 
-        out = xr.concat([self.sp_xr, self.sp_xr, self.sp_xr], dim="y")
+        out_concat = xr.concat([self.sp_xr, self.sp_xr, self.sp_xr], dim="y")
         assert_sparse_equal(
-            out.data, sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=1)
+            out_concat.data,
+            sparse.concatenate([self.sp_ar, self.sp_ar, self.sp_ar], axis=1),
         )
 
     def test_stack(self):
         arr = make_xrarray({"w": 2, "x": 3, "y": 4})
         stacked = arr.stack(z=("x", "y"))
 
-        z = pd.MultiIndex.from_product([np.arange(3), np.arange(4)], names=["x", "y"])
+        z = pd.MultiIndex.from_product(
+            [list(range(3)), list(range(4))], names=["x", "y"]
+        )
 
         expected = xr.DataArray(
             arr.data.reshape((2, -1)), {"w": [0, 1], "z": z}, dims=["w", "z"]
@@ -719,17 +746,21 @@ class TestSparseDataArrayAndDataset:
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
-        if Version(sparse.__version__) >= Version("0.16.0"):
-            meta = "sparse.numba_backend._coo.core.COO"
+        if has_dask_array_expr:
+            array_repr = "dask.array<xarray-a, shape=(4,), dtype=float64, ..."
         else:
-            meta = "sparse.COO"
+            if Version(sparse.__version__) >= Version("0.16.0"):
+                meta = "sparse.numba_backend._coo.core.COO"
+            else:
+                meta = "sparse.COO"
+            array_repr = f"dask.array<chunksize=(4,), meta={meta}>"
         expected = dedent(
             f"""\
             <xarray.Dataset> Size: 32B
             Dimensions:  (x: 4)
             Dimensions without coordinates: x
             Data variables:
-                a        (x) float64 32B dask.array<chunksize=(4,), meta={meta}>"""
+                a        (x) float64 32B {array_repr}"""
         )
         assert expected == repr(ds)
 
@@ -753,8 +784,8 @@ class TestSparseDataArrayAndDataset:
     def test_coarsen(self):
         a1 = self.ds_xr
         a2 = self.sp_xr
-        m1 = a1.coarsen(x=2, boundary="trim").mean()
-        m2 = a2.coarsen(x=2, boundary="trim").mean()
+        m1 = a1.coarsen(x=2, boundary="trim").mean()  # type: ignore[attr-defined]
+        m2 = a2.coarsen(x=2, boundary="trim").mean()  # type: ignore[attr-defined]
 
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
@@ -781,7 +812,7 @@ class TestSparseDataArrayAndDataset:
 
     @pytest.mark.xfail(reason="No implementation of np.einsum")
     def test_dot(self):
-        a1 = self.xp_xr.dot(self.xp_xr[0])
+        a1 = self.sp_xr.dot(self.sp_xr[0])
         a2 = self.sp_ar.dot(self.sp_ar[0])
         assert_equal(a1, a2)
 
@@ -835,8 +866,8 @@ class TestSparseDataArrayAndDataset:
             {"x": [1, 100, 2, 101, 3]},
             {"x": [2.5, 3, 3.5], "y": [2, 2.5, 3]},
         ]:
-            m1 = x1.reindex(**kwargs)
-            m2 = x2.reindex(**kwargs)
+            m1 = x1.reindex(**kwargs)  # type: ignore[arg-type]
+            m2 = x2.reindex(**kwargs)  # type: ignore[arg-type]
             assert np.allclose(m1, m2, equal_nan=True)
 
     @pytest.mark.xfail
@@ -852,12 +883,12 @@ class TestSparseDataArrayAndDataset:
         xr.DataArray(a).where(cond)
 
         s = sparse.COO.from_numpy(a)
-        cond = s > 3
-        xr.DataArray(s).where(cond)
+        cond2 = s > 3
+        xr.DataArray(s).where(cond2)
 
         x = xr.DataArray(s)
-        cond = x > 3
-        x.where(cond)
+        cond3: DataArray = x > 3
+        x.where(cond3)
 
 
 class TestSparseCoords:
@@ -877,6 +908,10 @@ def test_chunk():
     ac = a.chunk(2)
     assert ac.chunks == ((2, 2),)
     assert isinstance(ac.data._meta, sparse.COO)
+    if has_dask_array_expr:
+        pytest.xfail(
+            "dask-array sparse COO equality with eager sparse arrays is not implemented"
+        )
     assert_identical(ac, a)
 
     ds = a.to_dataset(name="a")

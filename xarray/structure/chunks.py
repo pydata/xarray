@@ -7,22 +7,22 @@ from __future__ import annotations
 import itertools
 from collections.abc import Hashable, Mapping
 from functools import lru_cache
-from numbers import Number
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, overload
 
 from xarray.core import utils
-from xarray.core.utils import emit_user_level_warning
-from xarray.core.variable import IndexVariable, Variable
+from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
     get_chunked_array_type,
     guess_chunkmanager,
+    list_chunkmanagers,
 )
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.types import T_ChunkDim
+    from xarray.core.variable import Variable
 
     MissingCoreDimOptions = Literal["raise", "copy", "drop"]
 
@@ -62,54 +62,6 @@ def _get_breaks_cached(
         return None
 
 
-def _get_chunk(var: Variable, chunks, chunkmanager: ChunkManagerEntrypoint):
-    """
-    Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
-    """
-    if isinstance(var, IndexVariable):
-        return {}
-    dims = var.dims
-    shape = var.shape
-
-    # Determine the explicit requested chunks.
-    preferred_chunks = var.encoding.get("preferred_chunks", {})
-    preferred_chunk_shape = tuple(
-        itertools.starmap(preferred_chunks.get, zip(dims, shape, strict=True))
-    )
-    if isinstance(chunks, Number) or (chunks == "auto"):
-        chunks = dict.fromkeys(dims, chunks)
-    chunk_shape = tuple(
-        chunks.get(dim, None) or preferred_chunk_sizes
-        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
-    )
-
-    chunk_shape = chunkmanager.normalize_chunks(
-        chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
-    )
-
-    # Warn where requested chunks break preferred chunks, provided that the variable
-    # contains data.
-    if var.size:
-        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
-            try:
-                preferred_chunk_sizes = preferred_chunks[dim]
-            except KeyError:
-                continue
-            disagreement = _get_breaks_cached(
-                size=size,
-                chunk_sizes=chunk_sizes,
-                preferred_chunk_sizes=preferred_chunk_sizes,
-            )
-            if disagreement:
-                emit_user_level_warning(
-                    "The specified chunks separate the stored chunks along "
-                    f'dimension "{dim}" starting at index {disagreement}. This could '
-                    "degrade performance. Instead, consider rechunking after loading.",
-                )
-
-    return dict(zip(dims, chunk_shape, strict=True))
-
-
 def _maybe_chunk(
     name: Hashable,
     var: Variable,
@@ -121,6 +73,7 @@ def _maybe_chunk(
     inline_array: bool = False,
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
+    just_use_token=False,
 ) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
@@ -131,15 +84,21 @@ def _maybe_chunk(
         chunked_array_type = guess_chunkmanager(
             chunked_array_type
         )  # coerce string to ChunkManagerEntrypoint type
-        if isinstance(chunked_array_type, DaskManager):
-            from dask.base import tokenize
+        is_dask_chunkmanager = isinstance(chunked_array_type, DaskManager) or any(
+            name == "dask" and manager is chunked_array_type
+            for name, manager in list_chunkmanagers().items()
+        )
+        if is_dask_chunkmanager:
+            if not just_use_token:
+                from dask.base import tokenize
 
-            # when rechunking by different amounts, make sure dask names change
-            # by providing chunks as an input to tokenize.
-            # subtle bugs result otherwise. see GH3350
-            # we use str() for speed, and use the name for the final array name on the next line
-            token2 = tokenize(token or var._data, str(chunks))
-            name2 = f"{name_prefix}{name}-{token2}"
+                # when rechunking by different amounts, make sure dask names change
+                # by providing chunks as an input to tokenize.
+                # subtle bugs result otherwise. see GH3350
+                # we use str() for speed, and use the name for the final array name on the next line
+                token = tokenize(token or var._data, str(chunks))
+
+            name2 = f"{name_prefix}{name}-{token}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
                 from_array_kwargs,

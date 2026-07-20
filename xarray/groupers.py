@@ -12,8 +12,9 @@ import itertools
 import operator
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from itertools import chain, pairwise
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -21,7 +22,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
-from xarray.coding.cftime_offsets import BaseCFTimeOffset, _new_to_legacy_freq
+from xarray.coding.cftime_offsets import BaseCFTimeOffset
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.compat.toolzcompat import sliding_window
 from xarray.computation.apply_ufunc import apply_ufunc
@@ -38,8 +39,10 @@ from xarray.core.indexes import safe_cast_to_index
 from xarray.core.resample_cftime import CFTimeGrouper
 from xarray.core.types import (
     Bins,
+    CFTimeDatetime,
     DatetimeLike,
     GroupIndices,
+    PDDatetimeUnitOptions,
     ResampleCompatible,
     Self,
     SideOptions,
@@ -52,11 +55,23 @@ __all__ = [
     "EncodedGroups",
     "Grouper",
     "Resampler",
+    "SeasonGrouper",
+    "SeasonResampler",
     "TimeResampler",
     "UniqueGrouper",
 ]
 
 RESAMPLE_DIM = "__resample_dim__"
+
+
+def _datetime64_via_timestamp(unit: PDDatetimeUnitOptions, **kwargs) -> np.datetime64:
+    """Construct a numpy.datetime64 object through the pandas.Timestamp
+    constructor with a specific resolution."""
+    # TODO: when pandas 3 is our minimum requirement we will no longer need to
+    # convert to np.datetime64 values prior to passing to the DatetimeIndex
+    # constructor. With pandas < 3 the DatetimeIndex constructor does not
+    # infer the resolution from the resolution of the Timestamp values.
+    return pd.Timestamp(**kwargs).as_unit(unit).to_numpy()
 
 
 @dataclass(init=False)
@@ -169,7 +184,26 @@ class Resampler(Grouper):
     Currently only used for TimeResampler, but could be used for SpaceResampler in the future.
     """
 
-    pass
+    def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
+        """
+        Compute chunk sizes for this resampler.
+
+        This method should be implemented by subclasses to provide appropriate
+        chunking behavior for their specific resampling strategy.
+
+        Parameters
+        ----------
+        variable : Variable
+            The variable being chunked.
+        dim : Hashable
+            The name of the dimension being chunked.
+
+        Returns
+        -------
+        tuple[int, ...]
+            A tuple of chunk sizes for the dimension.
+        """
+        raise NotImplementedError("Subclasses must implement compute_chunks method")
 
 
 @dataclass
@@ -506,9 +540,8 @@ class TimeResampler(Resampler):
                     "when resampling a 'CFTimeIndex'"
                 )
 
-            self.index_grouper = pd.Grouper(
-                # TODO remove once requiring pandas >= 2.2
-                freq=_new_to_legacy_freq(self.freq),
+            self.index_grouper = pd.Grouper(  # type:ignore[misc]
+                freq=self.freq,  # type:ignore[arg-type]
                 closed=self.closed,
                 label=self.label,
                 origin=self.origin,
@@ -526,9 +559,6 @@ class TimeResampler(Resampler):
         return full_index, first_items, codes
 
     def first_items(self) -> tuple[pd.Series, np.ndarray]:
-        from xarray.coding.cftimeindex import CFTimeIndex
-        from xarray.core.resample_cftime import CFTimeGrouper
-
         if isinstance(self.index_grouper, CFTimeGrouper):
             return self.index_grouper.first_items(
                 cast(CFTimeIndex, self.group_as_index)
@@ -564,6 +594,47 @@ class TimeResampler(Resampler):
             unique_coord=unique_coord,
             coords=coordinates_from_variable(unique_coord),
         )
+
+    def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
+        """
+        Compute chunk sizes for this time resampler.
+
+        This method is used during chunking operations to determine appropriate
+        chunk sizes for the given variable when using this resampler.
+
+        Parameters
+        ----------
+        name : Hashable
+            The name of the dimension being chunked.
+        variable : Variable
+            The variable being chunked.
+
+        Returns
+        -------
+        tuple[int, ...]
+            A tuple of chunk sizes for the dimension.
+        """
+        if not _contains_datetime_like_objects(variable):
+            raise ValueError(
+                f"Computing chunks with {type(self)!r} only supported for datetime variables. "
+                f"Received variable with dtype {variable.dtype!r} instead."
+            )
+
+        chunks = (
+            DataArray(
+                np.ones(variable.shape, dtype=int),
+                dims=(dim,),
+                coords={dim: variable},
+            )
+            .resample({dim: self})
+            .sum()
+        )
+        # When bins (binning) or time periods are missing (resampling)
+        # we can end up with NaNs. Drop them.
+        if chunks.dtype.kind == "f":
+            chunks = chunks.dropna(dim).astype(int)
+        chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+        return chunks_tuple
 
 
 def _factorize_given_labels(data: np.ndarray, labels: np.ndarray) -> np.ndarray:
@@ -691,8 +762,7 @@ def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
     >>> find_independent_seasons(
     ...     ["DJF", "FMA", "AMJ", "JJA", "ASO", "OND"]
     ... )  # doctest: +NORMALIZE_WHITESPACE
-    [SeasonsGroup(seasons=('DJF', 'AMJ', 'ASO'), inds=((12, 1, 2), (4, 5, 6), (8, 9, 10)), codes=[0, 2, 4]),
-    SeasonsGroup(seasons=('FMA', 'JJA', 'OND'), inds=((2, 3, 4), (6, 7, 8), (10, 11, 12)), codes=[1, 3, 5])]
+    [SeasonsGroup(seasons=('DJF', 'AMJ', 'ASO'), inds=((12, 1, 2), (4, 5, 6), (8, 9, 10)), codes=[0, 2, 4]), SeasonsGroup(seasons=('FMA', 'JJA', 'OND'), inds=((2, 3, 4), (6, 7, 8), (10, 11, 12)), codes=[1, 3, 5])]
 
     >>> find_independent_seasons(["DJF", "MAM", "JJA", "SON"])
     [SeasonsGroup(seasons=('DJF', 'MAM', 'JJA', 'SON'), inds=((12, 1, 2), (3, 4, 5), (6, 7, 8), (9, 10, 11)), codes=[0, 1, 2, 3])]
@@ -897,19 +967,28 @@ class SeasonResampler(Resampler):
         counts = agged["count"]
 
         index_class: type[CFTimeIndex | pd.DatetimeIndex]
+        datetime_class: CFTimeDatetime | Callable[..., np.datetime64]
         if _contains_cftime_datetimes(group.data):
             index_class = CFTimeIndex
             datetime_class = type(first_n_items(group.data, 1).item())
         else:
             index_class = pd.DatetimeIndex
-            datetime_class = datetime.datetime
+            unit, _ = np.datetime_data(group.dtype)
+            unit = cast(PDDatetimeUnitOptions, unit)
+            datetime_class = partial(_datetime64_via_timestamp, unit)
 
         # these are the seasons that are present
+
+        # TODO: when pandas 3 is our minimum requirement we will no longer need
+        # to cast the list to a NumPy array prior to passing to the index
+        # constructor.
         unique_coord = index_class(
-            [
-                datetime_class(year=year, month=season_tuples[season][0], day=1)
-                for year, season in first_items.index
-            ]
+            np.array(
+                [
+                    datetime_class(year=year, month=season_tuples[season][0], day=1)
+                    for year, season in first_items.index
+                ]
+            )
         )
 
         # This sorted call is a hack. It's hard to figure out how
@@ -917,15 +996,21 @@ class SeasonResampler(Resampler):
         # for example "DJF" as first entry or last entry
         # So we construct the largest possible index and slice it to the
         # range present in the data.
+
+        # TODO: when pandas 3 is our minimum requirement we will no longer need
+        # to cast the list to a NumPy array prior to passing to the index
+        # constructor.
         complete_index = index_class(
-            sorted(
-                [
-                    datetime_class(year=y, month=m, day=1)
-                    for y, m in itertools.product(
-                        range(year[0].item(), year[-1].item() + 1),
-                        [s[0] for s in season_inds],
-                    )
-                ]
+            np.array(
+                sorted(
+                    [
+                        datetime_class(year=y, month=m, day=1)
+                        for y, m in itertools.product(
+                            range(year[0].item(), year[-1].item() + 1),
+                            [s[0] for s in season_inds],
+                        )
+                    ]
+                )
             )
         )
 
@@ -967,6 +1052,57 @@ class SeasonResampler(Resampler):
         codes = group.copy(data=final_codes, deep=False)
 
         return EncodedGroups(codes=codes, full_index=full_index)
+
+    def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
+        """
+        Compute chunk sizes for this season resampler.
+
+        This method is used during chunking operations to determine appropriate
+        chunk sizes for the given variable when using this resampler.
+
+        Parameters
+        ----------
+        name : Hashable
+            The name of the dimension being chunked.
+        variable : Variable
+            The variable being chunked.
+
+        Returns
+        -------
+        tuple[int, ...]
+            A tuple of chunk sizes for the dimension.
+        """
+        if not _contains_datetime_like_objects(variable):
+            raise ValueError(
+                f"Computing chunks with {type(self)!r} only supported for datetime variables. "
+                f"Received variable with dtype {variable.dtype!r} instead."
+            )
+
+        if len("".join(self.seasons)) != 12:
+            raise ValueError(
+                "Cannot rechunk with a SeasonResampler that does not cover all 12 months. "
+                f"Received `seasons={self.seasons!r}`."
+            )
+
+        # Create a temporary resampler that ignores drop_incomplete for chunking
+        # This prevents data from being silently dropped during chunking
+        resampler_for_chunking = type(self)(seasons=self.seasons, drop_incomplete=False)
+
+        chunks = (
+            DataArray(
+                np.ones(variable.shape, dtype=int),
+                dims=(dim,),
+                coords={dim: variable},
+            )
+            .resample({dim: resampler_for_chunking})
+            .sum()
+        )
+        # When bins (binning) or time periods are missing (resampling)
+        # we can end up with NaNs. Drop them.
+        if chunks.dtype.kind == "f":
+            chunks = chunks.dropna(dim).astype(int)
+        chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
+        return chunks_tuple
 
     def reset(self) -> Self:
         return type(self)(seasons=self.seasons, drop_incomplete=self.drop_incomplete)

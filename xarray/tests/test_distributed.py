@@ -10,11 +10,9 @@ import pytest
 
 if TYPE_CHECKING:
     import dask
-    import dask.array as da
     import distributed
 else:
     dask = pytest.importorskip("dask")
-    da = pytest.importorskip("dask.array")
     distributed = pytest.importorskip("distributed")
 
 import contextlib
@@ -36,6 +34,8 @@ from xarray.backends.locks import HDF5_LOCK, CombinedLock, SerializableLock
 from xarray.tests import (
     assert_allclose,
     assert_identical,
+    dask_array_api,
+    dask_array_type,
     has_h5netcdf,
     has_netCDF4,
     has_scipy,
@@ -85,18 +85,20 @@ ENGINES_AND_FORMATS = [
 
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
+@pytest.mark.parametrize("compute", [True, False])
 def test_dask_distributed_netcdf_roundtrip(
     loop,  # noqa: F811
     tmp_netcdf_filename,
     engine,
     nc_format,
+    compute,
 ):
     if engine not in ENGINES:
         pytest.skip("engine not available")
 
     chunks = {"dim1": 4, "dim2": 3, "dim3": 6}
 
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"], loop=loop):
             original = create_test_data().chunk(chunks)
 
@@ -107,12 +109,16 @@ def test_dask_distributed_netcdf_roundtrip(
                     )
                 return
 
-            original.to_netcdf(tmp_netcdf_filename, engine=engine, format=nc_format)
+            result = original.to_netcdf(
+                tmp_netcdf_filename, engine=engine, format=nc_format, compute=compute
+            )
+            if not compute:
+                result.compute()
 
             with xr.open_dataset(
                 tmp_netcdf_filename, chunks=chunks, engine=engine
             ) as restored:
-                assert isinstance(restored.var1.data, da.Array)
+                assert isinstance(restored.var1.data, dask_array_type)
                 computed = restored.compute()
                 assert_allclose(original, computed)
 
@@ -122,9 +128,9 @@ def test_dask_distributed_write_netcdf_with_dimensionless_variables(
     loop,  # noqa: F811
     tmp_netcdf_filename,
 ):
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"], loop=loop):
-            original = xr.Dataset({"x": da.zeros(())})
+            original = xr.Dataset({"x": dask_array_api.zeros(())})
             original.to_netcdf(tmp_netcdf_filename)
 
             with xr.open_dataset(tmp_netcdf_filename) as actual:
@@ -141,7 +147,7 @@ def test_open_mfdataset_can_open_files_with_cftime_index(parallel, tmp_path):
     da = xr.DataArray(data, coords={"time": T, "Lon": Lon}, name="test")
     file_path = tmp_path / "test.nc"
     da.to_netcdf(file_path)
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"]):
             with xr.open_mfdataset(file_path, parallel=parallel) as tf:
                 assert_identical(tf["test"], da)
@@ -162,7 +168,7 @@ def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
         da.isel(time=slice(i, i + 10)).to_netcdf(fname)
         fnames.append(fname)
 
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"]):
             with xr.open_mfdataset(
                 fnames, parallel=parallel, concat_dim="time", combine="nested"
@@ -210,7 +216,7 @@ def test_dask_distributed_read_netcdf_integration_test(
 
     chunks = {"dim1": 4, "dim2": 3, "dim3": 6}
 
-    with cluster() as (s, [a, b]):
+    with cluster() as (s, [_a, _b]):
         with Client(s["address"], loop=loop):
             original = create_test_data()
             original.to_netcdf(tmp_netcdf_filename, engine=engine, format=nc_format)
@@ -218,7 +224,7 @@ def test_dask_distributed_read_netcdf_integration_test(
             with xr.open_dataset(
                 tmp_netcdf_filename, chunks=chunks, engine=engine
             ) as restored:
-                assert isinstance(restored.var1.data, da.Array)
+                assert isinstance(restored.var1.data, dask_array_type)
                 computed = restored.compute()
                 assert_allclose(original, computed)
 
@@ -240,7 +246,7 @@ def zarr(client):  # noqa: F811
     except AttributeError:
         yield zarr_lib
     finally:
-        # Zarr-Python 3 lazily allocates a IO thread, a thread pool executor, and
+        # Zarr-Python 3 lazily allocates an IO thread, a thread pool executor, and
         # an IO loop. Here we clean up these resources to avoid leaking threads
         # In normal operations, this is done as by an atexit handler when Zarr
         # is shutting down.
@@ -273,7 +279,7 @@ def test_dask_distributed_zarr_integration_test(
         with xr.open_dataset(
             filename, chunks="auto", engine="zarr", **read_kwargs
         ) as restored:
-            assert isinstance(restored.var1.data, da.Array)
+            assert isinstance(restored.var1.data, dask_array_type)
             computed = restored.compute()
             assert_allclose(original, computed)
 

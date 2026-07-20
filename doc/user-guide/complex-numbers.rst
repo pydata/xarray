@@ -11,6 +11,18 @@ Complex Numbers
     import numpy as np
     import xarray as xr
 
+.. jupyter-execute::
+    :hide-code:
+
+    # Ensure the file is located in a unique temporary directory
+    # so that it doesn't conflict with parallel builds of the
+    # documentation.
+
+    import tempfile
+    import os.path
+
+    tempdir = tempfile.TemporaryDirectory()
+
 Xarray leverages NumPy to seamlessly handle complex numbers in :py:class:`~xarray.DataArray` and :py:class:`~xarray.Dataset` objects.
 
 In the examples below, we are using a DataArray named ``da`` with complex elements (of :math:`\mathbb{C}`):
@@ -54,10 +66,19 @@ Writing complex data to NetCDF files (see :ref:`io.netcdf`) is supported via :py
 
    .. jupyter-execute::
 
+       complex_nums_h5_filename = "complex_nums_h5.nc"
+
+   .. jupyter-execute::
+       :hide-code:
+
+       complex_nums_h5_filename = os.path.join(tempdir.name, complex_nums_h5_filename)
+
+   .. jupyter-execute::
+
        # write the data to disk
-       da.to_netcdf("complex_nums_h5.nc", engine="h5netcdf")
+       da.to_netcdf(complex_nums_h5_filename, engine="h5netcdf")
        # read the file back into memory
-       ds_h5 = xr.open_dataset("complex_nums_h5.nc", engine="h5netcdf")
+       ds_h5 = xr.open_dataset(complex_nums_h5_filename, engine="h5netcdf")
        # check the dtype
        ds_h5[da.name].dtype
 
@@ -68,11 +89,20 @@ Writing complex data to NetCDF files (see :ref:`io.netcdf`) is supported via :py
 
    .. jupyter-execute::
 
+       complex_nums_nc4_filename = "complex_nums_nc4.nc"
+
+   .. jupyter-execute::
+       :hide-code:
+
+       complex_nums_nc4_filename = os.path.join(tempdir.name, complex_nums_nc4_filename)
+
+   .. jupyter-execute::
+
        # write the data to disk
-       da.to_netcdf("complex_nums_nc4.nc", engine="netcdf4", auto_complex=True)
+       da.to_netcdf(complex_nums_nc4_filename, engine="netcdf4", auto_complex=True)
        # read the file back into memory
        ds_nc4 = xr.open_dataset(
-           "complex_nums_nc4.nc", engine="netcdf4", auto_complex=True
+           complex_nums_nc4_filename, engine="netcdf4", auto_complex=True
        )
        # check the dtype
        ds_nc4[da.name].dtype
@@ -90,6 +120,15 @@ split the complex array into separate real and imaginary variables before saving
 
 .. jupyter-execute::
 
+    complex_manual_filename = "complex_manual.nc"
+
+.. jupyter-execute::
+    :hide-code:
+
+    complex_manual_filename = os.path.join(tempdir.name, complex_manual_filename)
+
+.. jupyter-execute::
+
     # Write data to file
     ds_manual = xr.Dataset(
         {
@@ -97,10 +136,10 @@ split the complex array into separate real and imaginary variables before saving
             f"{da.name}_imag": da.imag,
         }
     )
-    ds_manual.to_netcdf("complex_manual.nc", engine="scipy")  # Example
+    ds_manual.to_netcdf(complex_manual_filename, engine="scipy")  # Example
 
     # Read data from file
-    ds = xr.open_dataset("complex_manual.nc", engine="scipy")
+    ds = xr.open_dataset(complex_manual_filename, engine="scipy")
     reconstructed = ds[f"{da.name}_real"] + 1j * ds[f"{da.name}_imag"]
 
 Recommendations
@@ -114,11 +153,7 @@ Recommendations
     :hide-code:
 
     # Cleanup
-    import os
-
-    for f in ["complex_nums_nc4.nc", "complex_nums_h5.nc", "complex_manual.nc"]:
-        if os.path.exists(f):
-            os.remove(f)
+    tempdir.cleanup()
 
 
 

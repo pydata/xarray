@@ -31,6 +31,7 @@ from xarray.tests.arrays import (  # noqa: F401
     DuckArrayWrapper,
     FirstElementAccessibleArray,
     InaccessibleArray,
+    IndexableArray,
     UnexpectedDataAccess,
 )
 
@@ -48,6 +49,7 @@ except ImportError:
 warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is deprecated")
 warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
 warnings.filterwarnings("ignore", "pkg_resources is deprecated as an API")
+warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -88,6 +90,12 @@ def _importorskip(
     return has, func
 
 
+def get_dask_chunkmanager():
+    from xarray.namedarray.parallelcompat import guess_chunkmanager
+
+    return guess_chunkmanager("dask")
+
+
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
 has_scipy_ge_1_13, requires_scipy_ge_1_13 = _importorskip("scipy", "1.13")
@@ -95,7 +103,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
         message="'cgi' is deprecated and slated for removal in Python 3.13",
-        category=DeprecationWarning,
+        category=FutureWarning,
     )
     has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
@@ -107,9 +115,10 @@ with warnings.catch_warnings():
         category=UserWarning,
     )
 
-    has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
+has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
+has_dask_array, requires_dask_array = _importorskip("dask_array")
 has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
     "dask", minversion="2024.08.1"
 )
@@ -123,15 +132,27 @@ else:
         warnings.filterwarnings(
             "ignore",
             message="The current Dask DataFrame implementation is deprecated.",
-            category=DeprecationWarning,
+            category=FutureWarning,
         )
         has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
+
+if has_dask:
+    dask_chunkmanager = get_dask_chunkmanager()
+    dask_array_api = dask_chunkmanager.array_api
+    dask_array_type = dask_chunkmanager.array_cls
+    has_dask_array_expr = dask_array_type.__module__.startswith("dask_array")
+else:
+    dask_array_api = None
+    dask_array_type = ()
+    has_dask_array_expr = False
+
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
-has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
+requires_zarr_v3 = requires_zarr
 has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
-if has_zarr_v3:
+has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", "3.1.2")
+if has_zarr:
     import zarr
 
     # manual update by checking attrs for now
@@ -139,10 +160,15 @@ if has_zarr_v3:
     # installing from git main is giving me a lower version than the
     # most recently released zarr
     has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
+    has_zarr_v3_async_oindex = hasattr(zarr.AsyncArray, "oindex")
 
     requires_zarr_v3_dtypes = pytest.mark.skipif(
         not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
     )
+    requires_zarr_v3_async_oindex = pytest.mark.skipif(
+        not has_zarr_v3_async_oindex, reason="requires zarr>3.1.1"
+    )
+
 
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
@@ -152,7 +178,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
         message="is_categorical_dtype is deprecated and will be removed in a future version.",
-        category=DeprecationWarning,
+        category=FutureWarning,
     )
     # seaborn uses the deprecated `pandas.is_categorical_dtype`
     has_seaborn, requires_seaborn = _importorskip("seaborn")
@@ -163,14 +189,17 @@ has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_netcdf, requires_netcdf = _importorskip("netcdf")
-has_pandas_ge_2_2, requires_pandas_ge_2_2 = _importorskip("pandas", "2.2")
-has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0.dev0")
+has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0")
 
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
     not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+)
+has_h5netcdf_or_netCDF4 = has_h5netcdf or has_netCDF4
+requires_h5netcdf_or_netCDF4 = pytest.mark.skipif(
+    not has_h5netcdf_or_netCDF4, reason="requires h5netcdf or netCDF4"
 )
 has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
@@ -185,14 +214,7 @@ parametrize_zarr_format = pytest.mark.parametrize(
     "zarr_format",
     [
         pytest.param(2, id="zarr_format=2"),
-        pytest.param(
-            3,
-            marks=pytest.mark.skipif(
-                not has_zarr_v3,
-                reason="zarr-python v2 cannot understand the zarr v3 format",
-            ),
-            id="zarr_format=3",
-        ),
+        pytest.param(3, id="zarr_format=3"),
     ],
 )
 
@@ -203,9 +225,13 @@ def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
             not has_h5netcdf, reason="requires h5netcdf"
         )
 
-    import h5py
+    has_h5py, _ = _importorskip("h5py")
+    if has_h5py:
+        import h5py
 
-    h5py_with_ros3 = h5py.get_config().ros3
+        h5py_with_ros3 = h5py.get_config().ros3
+    else:
+        h5py_with_ros3 = has_h5py
 
     return h5py_with_ros3, pytest.mark.skipif(
         not h5py_with_ros3,
@@ -218,8 +244,8 @@ has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
 )
 
-has_h5netcdf_1_4_0_or_above, requires_h5netcdf_1_4_0_or_above = _importorskip(
-    "h5netcdf", "1.4.0.dev"
+has_h5netcdf_1_7_0_or_above, requires_h5netcdf_1_7_0_or_above = _importorskip(
+    "h5netcdf", "1.7.0.dev"
 )
 
 has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(
@@ -316,9 +342,45 @@ def assert_equal(a, b, check_default_indexes=True):
     xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def assert_identical(a, b, check_default_indexes=True):
+def assert_identical(a, b, check_default_indexes=True, check_indexes=None):
+    """Assert that two xarray objects are identical.
+
+    This is a test-internal wrapper around xarray.testing.assert_identical
+    that also validates internal invariants.
+
+    Parameters
+    ----------
+    a, b : xarray objects
+        Objects to compare.
+    check_default_indexes : bool, default True
+        If True, validates that 1D dimension coordinates have default indexes
+        (internal invariant check). Set to False for objects that intentionally
+        lack default indexes.
+    check_indexes : bool, optional
+        If not specified (default), defaults to the value of check_default_indexes
+        for backwards compatibility.
+        If True (default), compare indexes as part of identity check.
+        If False, skip index comparison (only check data, attrs, names).
+    """
     __tracebackhide__ = True
-    xarray.testing.assert_identical(a, b)
+    # For backwards compatibility, check_default_indexes=False implies check_indexes=False
+    # unless check_indexes is explicitly specified
+    if check_indexes is None:
+        check_indexes = check_default_indexes
+    if check_indexes:
+        xarray.testing.assert_identical(a, b)
+    else:
+        # Drop all indexes before comparing to skip index comparison
+        from xarray import DataArray, Dataset
+
+        if isinstance(a, Dataset | DataArray):
+            a_no_idx = a.drop_indexes(list(a.xindexes))
+            b_no_idx = b.drop_indexes(list(b.xindexes))
+        else:
+            a_no_idx, b_no_idx = a, b
+
+        xarray.testing.assert_identical(a_no_idx, b_no_idx)
+
     xarray.testing._assert_internal_invariants(a, check_default_indexes)
     xarray.testing._assert_internal_invariants(b, check_default_indexes)
 

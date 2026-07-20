@@ -112,6 +112,182 @@ You can learn more about using and developing backends in the
         linkStyle default font-size:18pt,stroke-width:4
 
 
+.. _io.backend_resolution:
+
+Backend Selection
+-----------------
+
+When opening a file or URL without explicitly specifying the ``engine`` parameter,
+xarray automatically selects an appropriate backend based on the file path or URL.
+The backends are tried in order: **netcdf4 → h5netcdf → scipy → pydap → zarr**.
+
+.. note::
+    You can customize the order in which netCDF backends are tried using the
+    ``netcdf_engine_order`` option in :py:func:`~xarray.set_options`:
+
+    .. code-block:: python
+
+        # Prefer h5netcdf over netcdf4
+        xr.set_options(netcdf_engine_order=["h5netcdf", "netcdf4", "scipy"])
+
+    See :ref:`options` for more details on configuration options.
+
+The following tables show which backend will be selected for different types of URLs and files.
+
+.. important::
+    ✅ means the backend will **guess it can open** the URL or file based on its path, extension,
+    or magic number, but this doesn't guarantee success. For example, not all Zarr stores are
+    xarray-compatible.
+
+    ❌ means the backend will not attempt to open it.
+
+Remote URL Resolution
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 50 10 10 10 10 10
+
+   * - URL
+     - :ref:`netcdf4 <io.netcdf>`
+     - :ref:`h5netcdf <io.hdf5>`
+     - :ref:`scipy <io.netcdf>`
+     - :ref:`pydap <io.opendap>`
+     - :ref:`zarr <io.zarr>`
+   * - ``https://example.com/store.zarr``
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+   * - ``https://example.com/data.nc``
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+     - ❌
+   * - ``http://example.com/data.nc?var=temp``
+     - ✅
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+   * - ``http://example.com/dap4/data.nc?var=x``
+     - ✅
+     - ❌
+     - ❌
+     - ✅
+     - ❌
+   * - ``dap2://opendap.nasa.gov/dataset``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ❌
+   * - ``https://example.com/DAP4/data``
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ❌
+   * - ``http://test.opendap.org/dap4/file.nc4``
+     - ✅
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+   * - ``https://example.com/DAP4/data.nc``
+     - ✅
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+
+Local File Resolution
+~~~~~~~~~~~~~~~~~~~~~
+
+For local files, backends first try to read the file's **magic number** (first few bytes).
+If the magic number **cannot be read** (e.g., file doesn't exist, no permissions), they fall
+back to checking the file **extension**. If the magic number is readable but invalid, the
+backend returns False (does not fall back to extension).
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20 10 10 10 10
+
+   * - File Path
+     - Magic Number
+     - :ref:`netcdf4 <io.netcdf>`
+     - :ref:`h5netcdf <io.hdf5>`
+     - :ref:`scipy <io.netcdf>`
+     - :ref:`zarr <io.zarr>`
+   * - ``/path/to/file.nc``
+     - ``CDF\x01`` (netCDF3)
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+   * - ``/path/to/file.nc4``
+     - ``\x89HDF\r\n\x1a\n`` (HDF5/netCDF4)
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+   * - ``/path/to/file.nc.gz``
+     - ``\x1f\x8b`` + ``CDF`` inside
+     - ❌
+     - ❌
+     - ✅
+     - ❌
+   * - ``/path/to/store.zarr/``
+     - (directory)
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+   * - ``/path/to/file.nc``
+     - *(no magic number)*
+     - ✅
+     - ✅
+     - ✅
+     - ❌
+   * - ``/path/to/file.xyz``
+     - ``CDF\x01`` (netCDF3)
+     - ✅
+     - ❌
+     - ✅
+     - ❌
+   * - ``/path/to/file.xyz``
+     - ``\x89HDF\r\n\x1a\n`` (HDF5/netCDF4)
+     - ✅
+     - ✅
+     - ❌
+     - ❌
+   * - ``/path/to/file.xyz``
+     - *(no magic number)*
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+
+.. note::
+    Remote URLs ending in ``.nc`` are **ambiguous**:
+
+    - They could be netCDF files stored on a remote HTTP server (readable by ``netcdf4`` or ``h5netcdf``)
+    - They could be OPeNDAP/DAP endpoints (readable by ``netcdf4`` with DAP support or ``pydap``)
+
+    These interpretations are fundamentally incompatible. If xarray's automatic
+    selection chooses the wrong backend, you must explicitly specify the ``engine`` parameter:
+
+    .. code-block:: python
+
+        # Force interpretation as a DAP endpoint
+        ds = xr.open_dataset("http://example.com/data.nc", engine="pydap")
+
+        # Force interpretation as a remote netCDF file
+        ds = xr.open_dataset("https://example.com/data.nc", engine="netcdf4")
+
+
 .. _io.netcdf:
 
 netCDF
@@ -135,7 +311,7 @@ __ https://www.unidata.ucar.edu/software/netcdf/
     If you aren't familiar with this data format, the `netCDF FAQ`_ is a good
     place to start.
 
-.. _netCDF FAQ: https://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
+.. _netCDF FAQ: https://docs.unidata.ucar.edu/netcdf-c/current/faq.html
 
 Reading and writing netCDF files with xarray requires scipy, h5netcdf, or the
 `netCDF4-Python`__ library to be installed. SciPy only supports reading and writing
@@ -148,6 +324,23 @@ We can save a Dataset to disk using the
 
 .. jupyter-execute::
 
+    nc_filename = "saved_on_disk.nc"
+
+.. jupyter-execute::
+    :hide-code:
+
+    # Ensure the file is located in a unique temporary directory
+    # so that it doesn't conflict with parallel builds of the
+    # documentation.
+
+    import tempfile
+    import os.path
+
+    tempdir = tempfile.TemporaryDirectory()
+    nc_filename = os.path.join(tempdir.name, nc_filename)
+
+.. jupyter-execute::
+
     ds = xr.Dataset(
         {"foo": (("x", "y"), np.random.rand(4, 5))},
         coords={
@@ -157,7 +350,7 @@ We can save a Dataset to disk using the
         },
     )
 
-    ds.to_netcdf("saved_on_disk.nc")
+    ds.to_netcdf(nc_filename)
 
 By default, the file is saved as netCDF4 (assuming netCDF4-Python is
 installed). You can control the format and engine used to write the file with
@@ -176,7 +369,7 @@ We can load netCDF files to create a new Dataset using
 
 .. jupyter-execute::
 
-    ds_disk = xr.open_dataset("saved_on_disk.nc")
+    ds_disk = xr.open_dataset(nc_filename)
     ds_disk
 
 .. jupyter-execute::
@@ -233,7 +426,7 @@ netCDF file. However, it's often cleaner to use a ``with`` statement:
 .. jupyter-execute::
 
     # this automatically closes the dataset after use
-    with xr.open_dataset("saved_on_disk.nc") as ds:
+    with xr.open_dataset(nc_filename) as ds:
         print(ds.keys())
 
 Although xarray provides reasonable support for incremental reads of files on
@@ -591,8 +784,8 @@ The library ``h5netcdf`` allows writing some dtypes that aren't
 allowed in netCDF4 (see
 `h5netcdf documentation <https://github.com/h5netcdf/h5netcdf#invalid-netcdf-files>`_).
 This feature is available through :py:meth:`DataArray.to_netcdf` and
-:py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``
-and currently raises a warning unless ``invalid_netcdf=True`` is set.
+:py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``, only if
+``invalid_netcdf=True`` is explicitly set.
 
 .. warning::
 
@@ -629,6 +822,15 @@ same :py:meth:`Dataset.to_netcdf` method as used for netCDF4 data:
         },
     )
 
+.. jupyter-execute::
+    :hide-code:
+
+    # Check if the file exists and if not, create it
+    if not os.path.exists("saved_on_disk.h5"):
+        ds.to_netcdf("saved_on_disk.h5")
+
+.. code:: python
+
     ds.to_netcdf("saved_on_disk.h5")
 
 Groups
@@ -649,7 +851,7 @@ Natively the xarray data structures can only handle one level of nesting, organi
 DataArrays inside of Datasets. If your HDF5 file has additional levels of hierarchy you
 can only access one group and a time and will need to specify group names.
 
-.. _HDF5: https://hdfgroup.github.io/hdf5/index.html
+.. _HDF5: https://www.hdfgroup.org/solutions/hdf5/
 .. _h5py: https://www.h5py.org/
 
 
@@ -680,9 +882,17 @@ To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
 To write to a local directory, we pass a path to a directory:
 
 .. jupyter-execute::
+
+    zarr_filename = "example.zarr"
+
+.. jupyter-execute::
     :hide-code:
 
-    ! rm -rf path/to/directory.zarr
+    import os.path
+    import tempfile
+
+    tempdir = tempfile.TemporaryDirectory()
+    zarr_filename = os.path.join(tempdir.name, zarr_filename)
 
 .. jupyter-execute::
     :stderr:
@@ -695,7 +905,7 @@ To write to a local directory, we pass a path to a directory:
             "z": ("x", list("abcd")),
         },
     )
-    ds.to_zarr("path/to/directory.zarr", zarr_format=2, consolidated=False)
+    ds.to_zarr(zarr_filename, zarr_format=2, consolidated=False)
 
 (The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
 there.) If the directory does not exist, it will be created. If a zarr
@@ -723,7 +933,7 @@ To read back a zarr dataset that has been created this way, we use the
 
 .. jupyter-execute::
 
-    ds_zarr = xr.open_zarr("path/to/directory.zarr", consolidated=False)
+    ds_zarr = xr.open_zarr(zarr_filename, consolidated=False)
     ds_zarr
 
 Cloud Storage Buckets
@@ -827,7 +1037,7 @@ to Zarr:
 .. jupyter-execute::
     :hide-code:
 
-    ! rm -rf path/to/directory.zarr
+    tempdir.cleanup()
 
 .. jupyter-execute::
 
@@ -837,9 +1047,8 @@ to Zarr:
     # shape and chunks are used
     dummies = dask.array.zeros(30, chunks=10)
     ds = xr.Dataset({"foo": ("x", dummies)}, coords={"x": np.arange(30)})
-    path = "path/to/directory.zarr"
     # Now we write the metadata without computing any array values
-    ds.to_zarr(path, compute=False, consolidated=False)
+    ds.to_zarr(zarr_filename, compute=False, consolidated=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
 can be filled out by subsequent calls to ``to_zarr``.
@@ -854,9 +1063,9 @@ where the data should be written (in index space, not label space), e.g.,
     # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))}, coords={"x": np.arange(30)})
     # Any of the following region specifications are valid
-    ds.isel(x=slice(0, 10)).to_zarr(path, region="auto", consolidated=False)
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": "auto"}, consolidated=False)
-    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)}, consolidated=False)
+    ds.isel(x=slice(0, 10)).to_zarr(zarr_filename, region="auto", consolidated=False)
+    ds.isel(x=slice(10, 20)).to_zarr(zarr_filename, region={"x": "auto"}, consolidated=False)
+    ds.isel(x=slice(20, 30)).to_zarr(zarr_filename, region={"x": slice(20, 30)}, consolidated=False)
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
 chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
@@ -877,9 +1086,16 @@ These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
 .. jupyter-execute::
+
+    zarr_filename = "foo.zarr"
+
+.. jupyter-execute::
     :hide-code:
 
-    ! rm -rf foo.zarr
+    import os.path
+    import tempfile
+    tempdir = tempfile.TemporaryDirectory()
+    zarr_filename = os.path.join(tempdir.name, zarr_filename)
 
 .. jupyter-execute::
 
@@ -887,7 +1103,7 @@ For example:
     from zarr.codecs import BloscCodec
 
     compressor = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
-    ds.to_zarr("foo.zarr", consolidated=False, encoding={"foo": {"compressors": [compressor]}})
+    ds.to_zarr(zarr_filename, consolidated=False, encoding={"foo": {"compressors": [compressor]}})
 
 .. note::
 
@@ -929,7 +1145,7 @@ order, e.g., for time-stepping a simulation:
 .. jupyter-execute::
     :hide-code:
 
-    ! rm -rf path/to/directory.zarr
+    tempdir.cleanup()
 
 .. jupyter-execute::
 
@@ -941,7 +1157,7 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-01", periods=2),
         },
     )
-    ds1.to_zarr("path/to/directory.zarr", consolidated=False)
+    ds1.to_zarr(zarr_filename, consolidated=False)
 
 .. jupyter-execute::
 
@@ -953,7 +1169,7 @@ order, e.g., for time-stepping a simulation:
             "t": pd.date_range("2001-01-03", periods=2),
         },
     )
-    ds2.to_zarr("path/to/directory.zarr", append_dim="t", consolidated=False)
+    ds2.to_zarr(zarr_filename, append_dim="t", consolidated=False)
 
 .. _io.zarr.writing_chunks:
 
@@ -1003,8 +1219,8 @@ split them into chunks:
 
 .. jupyter-execute::
 
-    ds.to_zarr("path/to/directory.zarr", consolidated=False, mode="w")
-    !tree -I zarr.json path/to/directory.zarr
+    ds.to_zarr(zarr_filename, consolidated=False, mode="w")
+    !tree -I zarr.json $zarr_filename
 
 
 This may cause unwanted overhead on some systems, such as when reading from a cloud
@@ -1014,12 +1230,12 @@ shape of each coordinate array in the ``encoding`` argument:
 .. jupyter-execute::
 
     ds.to_zarr(
-        "path/to/directory.zarr",
+        zarr_filename,
         encoding={"xc": {"chunks": ds.xc.shape}, "yc": {"chunks": ds.yc.shape}},
         consolidated=False,
         mode="w",
     )
-    !tree -I zarr.json path/to/directory.zarr
+    !tree -I zarr.json $zarr_filename
 
 
 The number of chunks on Tair matches our dask chunks, while there is now only a single
@@ -1209,9 +1425,11 @@ Ncdata can also adjust file data within load and save operations, to fix data lo
 problems or provide exact save formatting without needing to modify files on disk.
 See for example : `ncdata usage examples`_
 
-.. _Iris: https://scitools.org.uk/iris
+.. _Iris: https://scitools-iris.readthedocs.io
 .. _Ncdata: https://ncdata.readthedocs.io/en/latest/index.html
 .. _ncdata usage examples: https://github.com/pp-mo/ncdata/tree/v0.1.2?tab=readme-ov-file#correct-a-miscoded-attribute-in-iris-input
+
+.. _io.opendap:
 
 OPeNDAP
 -------
@@ -1412,9 +1630,7 @@ To export just the dataset schema without the data itself, use the
     # `ds` to close the file.
     del ds
 
-    for f in ["saved_on_disk.nc", "saved_on_disk.h5"]:
-        if os.path.exists(f):
-            os.remove(f)
+    tempdir.cleanup()
 
 This can be useful for generating indices of dataset contents to expose to
 search indices or other automated data discovery tools.
@@ -1477,10 +1693,7 @@ GDAL readable raster data using `rasterio`_  such as GeoTIFFs can be opened usin
 .. jupyter-execute::
     :hide-code:
 
-    import shutil
-
-    shutil.rmtree("foo.zarr")
-    shutil.rmtree("path/to/directory.zarr")
+    tempdir.cleanup()
 
 GRIB format via cfgrib
 ----------------------

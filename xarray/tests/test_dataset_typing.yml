@@ -86,7 +86,7 @@
     # Call to pipe missing argument for kwonly parameter `kwonly`
     ds = Dataset().pipe(f, 42)
   out: |
-    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[Dataset, int, NamedArg(int, 'kwonly')], Dataset]", "int"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(ds: Dataset, arg: int, *, kwonly: int) -> Dataset", "int"  [call-overload]
     main:7: note: Possible overload variants:
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
@@ -101,12 +101,14 @@
     # Call to pipe missing keyword for kwonly parameter `kwonly`
     ds = Dataset().pipe(f, 42, 99)
   out: |
-    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[Dataset, int, NamedArg(int, 'kwonly')], Dataset]", "int", "int"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(ds: Dataset, arg: int, *, kwonly: int) -> Dataset", "int", "int"  [call-overload]
     main:7: note: Possible overload variants:
     main:7: note:     def [P`2, T] pipe(self, func: Callable[[Dataset, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_unexpected_keyword
+  skip: True # mypy 1.18.1 outputs "defined here" notes without line numbers that pytest-mypy-plugins can't parse
+  # See: https://github.com/python/mypy/issues/19257 (mypy issue about missing line numbers)
   main: |
     from xarray import Dataset
 
@@ -117,6 +119,7 @@
     ds = Dataset().pipe(f, 42, kw=99)
   out: |
     main:7: error: Unexpected keyword argument "kw" for "pipe" of "DataWithCoords"  [call-arg]
+    # Note: mypy 1.18.1 also outputs a "defined here" note that pytest-mypy-plugins can't parse
 
 - case: test_mypy_pipe_tuple_return_type_dataset
   main: |
