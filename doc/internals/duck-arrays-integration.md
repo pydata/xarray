@@ -76,9 +76,7 @@ import dask.array as da
 import xarray as xr
 import numpy as np
 import sparse
-```
 
-```{code-cell}
 a = da.linspace(0, 1, 20, chunks=2)
 a
 ```
