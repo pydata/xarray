@@ -32,6 +32,7 @@ Bug Fixes
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
 - Disable using bottleneck by default, as certain operations are less numerically
   stable than the equivalent numpy functions.
+  By `Thomas Kluyver <https://github.com/takluyver>`_.
 
 
 Documentation
