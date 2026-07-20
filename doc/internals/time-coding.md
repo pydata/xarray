@@ -508,9 +508,7 @@ datetimes2_filename = os.path.join(tempdir.name, datetimes2_filename)
 attrs = {"units": "milliseconds since 2000-01-01"}
 ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
 ds.to_netcdf(datetimes2_filename)
-```
 
-```{code-cell}
 xr.open_dataset(datetimes2_filename)
 ```
 
@@ -578,9 +576,7 @@ timedeltas2_filename = os.path.join(tempdir.name, timedeltas2_filename)
 attrs = {"units": "milliseconds"}
 ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
 ds.to_netcdf(timedeltas2_filename)
-```
 
-```{code-cell}
 xr.open_dataset(timedeltas2_filename, decode_timedelta=True)
 ```
 
