@@ -88,7 +88,7 @@ The simplest data structure used by most users is {py:class}`~xarray.DataArray`.
 A {py:class}`~xarray.DataArray` is a composite object consisting of multiple
 {py:class}`~xarray.Variable` objects which store related data.
 
-A single {py:class}`~xarray.Variable` is referred to as the "data variable", and stored under the {py:attr}`~xarray.DataArray.variable`` attribute.
+A single {py:class}`~xarray.Variable` is referred to as the "data variable", and stored under the {py:attr}`~xarray.DataArray.variable` attribute.
 A {py:class}`~xarray.DataArray`inherits all of the properties of this data variable, i.e.`dims`, `data`, `attrs`and`encoding`,
 all of which are implemented by forwarding on to the underlying `Variable` object.
 
