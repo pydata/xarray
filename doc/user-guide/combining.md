@@ -20,10 +20,10 @@ np.random.seed(123456)
 %xmode minimal
 ```
 
-- For combining datasets or data arrays along a single dimension, see [concatenate].
-- For combining datasets with different variables, see [merge].
-- For combining datasets or data arrays with different indexes or missing values, see [combine].
-- For combining datasets or data arrays along multiple dimensions see [combining.multi].
+- For combining datasets or data arrays along a single dimension, see [concatenate](#concatenate).
+- For combining datasets with different variables, see [merge](#merge).
+- For combining datasets or data arrays with different indexes or missing values, see [combine](#combine).
+- For combining datasets or data arrays along multiple dimensions see [combining.multi](#combining-multi).
 
 (concatenate)=
 
@@ -287,7 +287,7 @@ Note that due to the underlying representation of missing values as floating
 point numbers (`NaN`), variable data type is not always preserved when merging
 in this manner.
 
-(combining.multi)=
+(combining-multi)=
 
 ## Combining along multiple dimensions
 

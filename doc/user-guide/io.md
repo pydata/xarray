@@ -544,7 +544,7 @@ xr.open_mfdataset("my/files/*.nc", parallel=True)
 This function automatically concatenates and merges multiple files into a
 single xarray dataset.
 It is the recommended way to open multiple files with xarray.
-For more details on parallel reading, see {ref}`combining.multi`, {ref}`dask.io` and a
+For more details on parallel reading, see {ref}`combining-multi`, {ref}`dask.io` and a
 [blog post] by Stephan Hoyer.
 {py:func}`open_mfdataset` takes many kwargs that allow you to
 control its behaviour (for e.g. `parallel`, `combine`, `compat`, `join`, `concat_dim`).
@@ -1311,7 +1311,7 @@ directory [here](https://github.com/pydata/xarray-data).
 
 ```{note}
 These references follow this [specification](https://fsspec.github.io/kerchunk/spec.html).
-Packages like [kerchunk] and [virtualizarr](https://github.com/zarr-developers/VirtualiZarr)
+Packages like [kerchunk](#kerchunk) and [virtualizarr](https://github.com/zarr-developers/VirtualiZarr)
 help in creating and reading these references.
 ```
 
