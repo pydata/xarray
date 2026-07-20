@@ -94,9 +94,7 @@ In your tests however you should not use `.example()` - instead you should param
 
 ```{code-cell}
 from hypothesis import given
-```
 
-```{code-cell}
 @given(xrst.variables())
 def test_function_that_acts_on_variables(var):
     assert func(var) == ...
@@ -186,14 +184,10 @@ different type:
 
 ```{code-cell}
 import sparse
-```
 
-```{code-cell}
 def convert_to_sparse(var):
     return var.copy(data=sparse.COO.from_numpy(var.to_numpy()))
-```
 
-```{code-cell}
 sparse_variables = xrst.variables(dims=xrst.dimension_names(min_dims=1)).map(
     convert_to_sparse
 )
@@ -223,9 +217,7 @@ def sparse_random_arrays_fn(
     *, shape: tuple[int, ...], dtype: np.dtype
 ) -> st.SearchStrategy[sparse._coo.core.COO]:
     return sparse_random_arrays(shape=shape)
-```
 
-```{code-cell}
 sparse_random_variables = xrst.variables(
     array_strategy_fn=sparse_random_arrays_fn, dtype=st.just(np.dtype("float64"))
 )
