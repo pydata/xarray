@@ -95,7 +95,10 @@ class TestAccessor:
             _ = xr.Dataset().stupid_accessor
 
     def test_registry_and_repr_accessors(self) -> None:
-        from xarray.core.extensions import get_accessors_for_repr, get_registered_accessors
+        from xarray.core.extensions import (
+            get_accessors_for_repr,
+            get_registered_accessors,
+        )
 
         @xr.register_dataset_accessor("repr_demo_ds")
         class ReprDemo:
