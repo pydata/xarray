@@ -496,7 +496,8 @@ def scatter(
 @_update_doc_to_datatree(dataarray_plot.scatter)
 def scatter(
     dt: DataTree,
-    variable,
+    variable: str,
+    ax: Axes | None = None,
     *,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -508,7 +509,6 @@ def scatter(
     figsize: Iterable[float] | None = None,
     size: float | None = None,
     aspect: float | None = None,
-    ax: Axes | None = None,
     row: Hashable | None = None,
     col: Hashable | None = None,
     col_wrap: int | Literal["auto"] | None = None,
@@ -538,7 +538,14 @@ def scatter(
     del locals_["dt"]
     locals_.update(locals_.pop("kwargs", {}))
     locals_.pop("variable")
+    locals_.pop("ax")
+
     for node in dt.descendants:
-        da = node[variable]
-        print(da)
-        return da.plot.scatter(**locals_)
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+        try:
+            da = node[variable]
+            da.plot.scatter(*locals_.pop("args", ()), **locals_, ax=ax)
+        except KeyError as err:
+            raise KeyError(f"{variable} not found at node: {node.name}") from err
