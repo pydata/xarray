@@ -506,8 +506,8 @@ def scatter(
     hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
-    figsize: Iterable[float] | None = None,
-    size: float | None = None,
+    # figsize: Iterable[float] | None = None,
+    # size: float | None = None,
     aspect: float | None = None,
     row: Hashable | None = None,
     col: Hashable | None = None,
@@ -539,13 +539,18 @@ def scatter(
     locals_.update(locals_.pop("kwargs", {}))
     locals_.pop("variable")
     locals_.pop("ax")
+    print(locals_)
 
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots()
     for node in dt.descendants:
-        import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots()
         try:
             da = node[variable]
-            da.plot.scatter(*locals_.pop("args", ()), **locals_, ax=ax)
+            da.plot.scatter(
+                ax=ax,
+                label=node.name,
+                **locals_,
+            )
         except KeyError as err:
             raise KeyError(f"{variable} not found at node: {node.name}") from err
