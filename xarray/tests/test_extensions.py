@@ -93,3 +93,38 @@ class TestAccessor:
 
         with pytest.raises(RuntimeError, match=r"error initializing"):
             _ = xr.Dataset().stupid_accessor
+
+    def test_registry_and_repr_accessors(self) -> None:
+        from xarray.core.extensions import get_accessors_for_repr, get_registered_accessors
+
+        @xr.register_dataset_accessor("repr_demo_ds")
+        class ReprDemo:
+            def __init__(self, obj):
+                self._obj = obj
+
+            def __repr__(self) -> str:
+                return "ReprDemo()"
+
+        try:
+            assert "repr_demo_ds" in get_registered_accessors(xr.Dataset)
+            ds = xr.Dataset()
+            accessors = get_accessors_for_repr(ds)
+            assert "repr_demo_ds" in accessors
+            assert repr(accessors["repr_demo_ds"]) == "ReprDemo()"
+        finally:
+            del xr.Dataset.repr_demo_ds  # type: ignore[attr-defined]
+
+        assert "repr_demo_ds" not in get_accessors_for_repr(xr.Dataset())
+
+    def test_repr_skips_default_object_repr(self) -> None:
+        from xarray.core.extensions import get_accessors_for_repr
+
+        @xr.register_dataset_accessor("no_custom_repr_demo")
+        class NoCustomRepr:
+            def __init__(self, obj):
+                self._obj = obj
+
+        try:
+            assert get_accessors_for_repr(xr.Dataset()) == {}
+        finally:
+            del xr.Dataset.no_custom_repr_demo  # type: ignore[attr-defined]
