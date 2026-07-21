@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import inspect
 import warnings
+from typing import Any
 
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
@@ -47,6 +49,9 @@ class _CachedAccessor:
         return accessor_obj
 
 
+_ACCESSORS: dict[type, dict[str, type]] = {}
+
+
 def _register_accessor(name, cls):
     def decorator(accessor):
         if hasattr(cls, name):
@@ -57,9 +62,42 @@ def _register_accessor(name, cls):
                 stacklevel=2,
             )
         setattr(cls, name, _CachedAccessor(name, accessor))
+        _ACCESSORS.setdefault(cls, {})[name] = accessor
         return accessor
 
     return decorator
+
+
+def get_registered_accessors(cls: type) -> dict[str, type]:
+    """Merge accessor registries along the class MRO."""
+    merged: dict[str, type] = {}
+    for base in reversed(cls.mro()):
+        merged.update(_ACCESSORS.get(base, {}))
+    return merged
+
+
+def get_accessors_for_repr(obj: Any) -> dict[str, object]:
+    """Return ``{name: instance}`` for accessors that should appear in the repr.
+
+    Only accessors registered via ``register_*_accessor`` that still exist as
+    ``_CachedAccessor`` descriptors, define a custom ``__repr__``, and
+    construct without error are included.
+    """
+    result: dict[str, object] = {}
+    obj_type = type(obj)
+    for name, accessor_cls in get_registered_accessors(obj_type).items():
+        # MUST use getattr_static: normal getattr on the class invokes
+        # _CachedAccessor.__get__(None, cls) and returns the accessor class.
+        desc = inspect.getattr_static(obj_type, name, None)
+        if not isinstance(desc, _CachedAccessor):
+            continue
+        if accessor_cls.__repr__ is object.__repr__:
+            continue
+        try:
+            result[name] = getattr(obj, name)
+        except Exception:
+            continue
+    return result
 
 
 def register_dataarray_accessor(name):
@@ -70,6 +108,11 @@ def register_dataarray_accessor(name):
     name : str
         Name under which the accessor should be registered. A warning is issued
         if this name conflicts with a preexisting attribute.
+
+    Notes
+    -----
+    Accessors that define a custom ``__repr__`` may appear under an Accessors
+    section in the DataArray text and HTML repr.
 
     See Also
     --------
@@ -86,6 +129,11 @@ def register_dataset_accessor(name):
     name : str
         Name under which the accessor should be registered. A warning is issued
         if this name conflicts with a preexisting attribute.
+
+    Notes
+    -----
+    Accessors that define a custom ``__repr__`` may appear under an Accessors
+    section in the Dataset text and HTML repr.
 
     Examples
     --------
@@ -132,6 +180,11 @@ def register_datatree_accessor(name):
     name : str
         Name under which the accessor should be registered. A warning is issued
         if this name conflicts with a preexisting attribute.
+
+    Notes
+    -----
+    Accessors that define a custom ``__repr__`` may appear under an Accessors
+    section in the DataTree text and HTML repr.
 
     See Also
     --------
