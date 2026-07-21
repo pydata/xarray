@@ -14,6 +14,10 @@ v2026.07.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Dataset, DataArray, and DataTree text and HTML reprs can include an Accessors
+  section for accessors registered via ``register_*_accessor`` that define a
+  custom ``__repr__``.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
