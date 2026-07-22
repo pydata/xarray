@@ -77,7 +77,7 @@ extlinks = {
 copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: "
 copybutton_prompt_is_regexp = True
 
-nb_execution_excludepatterns = ["examples/*.ipynb"] # Gallery examples are broken https://github.com/pydata/xarray/issues/10537
+nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
 
 # AutoDoc configuration
 autosummary_generate = True
