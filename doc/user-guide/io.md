@@ -1311,7 +1311,7 @@ directory [here](https://github.com/pydata/xarray-data).
 
 ```{note}
 These references follow this [specification](https://fsspec.github.io/kerchunk/spec.html).
-Packages like [kerchunk](#kerchunk) and [virtualizarr](https://github.com/zarr-developers/VirtualiZarr)
+Packages like kerchunk and [virtualizarr](https://github.com/zarr-developers/VirtualiZarr)
 help in creating and reading these references.
 ```
 
