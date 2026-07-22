@@ -142,7 +142,7 @@ attributes. That has some implications on roundtripping. One example for such in
 ## What other netCDF related Python libraries should I know about?
 
 [netCDF4-python](https://unidata.github.io/netcdf4-python/) provides a lower level interface for working with
-netCDF and OpenDAP datasets in Python. We use netCDF4-python internally in
+netCDF and OpeNDAP datasets in Python. We use netCDF4-python internally in
 xarray, and have contributed a number of improvements and fixes upstream. Xarray
 does not yet support all of netCDF4-python's features, such as modifying files
 on-disk.

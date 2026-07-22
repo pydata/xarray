@@ -81,7 +81,7 @@ data.x.attrs["units"] = "x units"
 
 ## Computation
 
-Data arrays work very similarly to numpy ndarrays:
+Xarray DataArrays work very similarly to numpy ndarrays:
 
 ```{code-cell}
 data + 10
@@ -145,7 +145,9 @@ Visualizing your datasets is quick and convenient:
 data.plot()
 ```
 
+```{note}
 Note the automatic labeling with names and units. Our effort in adding metadata attributes has paid off! Many aspects of these figures are customizable: see {ref}`plotting`.
+```
 
 ## pandas
 
@@ -177,7 +179,7 @@ ds["foo"]
 ds.foo
 ```
 
-When creating `ds`, we specified that `foo` is identical to `data` created earlier, `bar` is one-dimensional with single dimension `x` and associated values '1' and '2', and `baz` is a scalar not associated with any dimension in `ds`. Variables in datasets can have different `dtype` and even different dimensions, but all dimensions are assumed to refer to points in the same shared coordinate system i.e. if two variables have dimension `x`, that dimension must be identical in both variables.
+When creating `ds`, we specified that `foo` is identical to `data` created earlier, `bar` is one-dimensional with single dimension `x` and associated values '1' and '2', and `baz` is a scalar not associated with any dimension in `ds`. Variables in datasets can have different `dtype`s and even different dimensions, but all dimensions are assumed to refer to points in the same shared coordinate system i.e. if two variables have dimension `x`, that dimension must be identical in both variables.
 
 For example, when creating `ds` xarray automatically _aligns_ `bar` with `DataArray` `foo`, i.e., they share the same coordinate system so that `ds.bar['x'] == ds.foo['x'] == ds['x']`. Consequently, the following works without explicitly specifying the coordinate `x` when creating `ds['bar']`:
 
