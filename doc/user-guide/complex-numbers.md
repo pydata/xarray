@@ -34,7 +34,7 @@ tempdir = tempfile.TemporaryDirectory()
 
 Xarray leverages NumPy to seamlessly handle complex numbers in {py:class}`~xarray.DataArray` and {py:class}`~xarray.Dataset` objects.
 
-In the examples below, we are using a DataArray named `da` with complex elements (of $\mathbb{C}$):
+In the examples below, we are using a DataArray named `da` with complex elements (of {math}`\mathbb{C}` ):
 
 ```{code-cell}
 data = np.array([[1 + 2j, 3 + 4j], [5 + 6j, 7 + 8j]])

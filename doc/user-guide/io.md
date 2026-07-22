@@ -1487,7 +1487,7 @@ tmax[0].plot()
 
 Some servers require authentication before we can access the data. Pydap uses
 a [Requests](https://docs.python-requests.org) session object (which the user can pre-define), and this
-session object can recover ``authentication`__`` credentials from a locally stored
+session object can recover `authentication` credentials from a locally stored
 `.netrc` file. For example, to connect to a server that requires NASA's
 URS authentication, with the username/password credentials stored on a locally
 accessible `.netrc`, access to OPeNDAP data should be as simple as this:
