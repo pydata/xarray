@@ -35,6 +35,9 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Migrated from nbsphinx/jupyter-execute to myst-nb (:issue:`7924`, :pull:`11456`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
