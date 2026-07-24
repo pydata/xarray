@@ -114,7 +114,9 @@
    core.accessor_dt.DatetimeAccessor.date
    core.accessor_dt.DatetimeAccessor.day
    core.accessor_dt.DatetimeAccessor.dayofweek
+   core.accessor_dt.DatetimeAccessor.day_of_week
    core.accessor_dt.DatetimeAccessor.dayofyear
+   core.accessor_dt.DatetimeAccessor.day_of_year
    core.accessor_dt.DatetimeAccessor.days_in_month
    core.accessor_dt.DatetimeAccessor.daysinmonth
    core.accessor_dt.DatetimeAccessor.hour
@@ -409,6 +411,8 @@
    CFTimeIndex.ceil
    CFTimeIndex.contains
    CFTimeIndex.copy
+   CFTimeIndex.day_of_week
+   CFTimeIndex.day_of_year
    CFTimeIndex.days_in_month
    CFTimeIndex.delete
    CFTimeIndex.difference

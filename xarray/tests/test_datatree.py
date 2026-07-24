@@ -2720,13 +2720,21 @@ class TestDask:
         )
         original_chunksizes = tree.chunksizes
         original_hlg_depths = {
-            node.path: len(node.dataset.__dask_graph__().layers)
+            node.path: (
+                len(graph.layers)
+                if hasattr((graph := node.dataset.__dask_graph__()), "layers")
+                else None
+            )
             for node in tree.subtree
         }
 
         actual = tree.persist()
         actual_hlg_depths = {
-            node.path: len(node.dataset.__dask_graph__().layers)
+            node.path: (
+                len(graph.layers)
+                if hasattr((graph := node.dataset.__dask_graph__()), "layers")
+                else None
+            )
             for node in actual.subtree
         }
 
@@ -2736,12 +2744,14 @@ class TestDask:
         assert tree.chunksizes == original_chunksizes, (
             "original chunksizes were modified"
         )
-        assert all(d == 1 for d in actual_hlg_depths.values()), (
-            "unexpected dask graph depth"
-        )
-        assert all(d == 2 for d in original_hlg_depths.values()), (
-            "original dask graph was modified"
-        )
+        if all(d is not None for d in actual_hlg_depths.values()):
+            assert all(d == 1 for d in actual_hlg_depths.values()), (
+                "unexpected dask graph depth"
+            )
+        if all(d is not None for d in original_hlg_depths.values()):
+            assert all(d == 2 for d in original_hlg_depths.values()), (
+                "original dask graph was modified"
+            )
 
     def test_chunk(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})

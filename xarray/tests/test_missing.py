@@ -17,12 +17,12 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
     assert_array_equal,
     assert_equal,
+    dask_array_type,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -31,8 +31,6 @@ from xarray.tests import (
     requires_numbagg_or_bottleneck,
     requires_scipy,
 )
-
-dask_array_type = array_type("dask")
 
 
 @pytest.fixture
