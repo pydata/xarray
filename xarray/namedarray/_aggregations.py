@@ -60,9 +60,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.count()
@@ -217,9 +215,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.max()
@@ -279,9 +275,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.min()
@@ -345,9 +339,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.mean()
@@ -418,9 +410,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.prod()
@@ -496,9 +486,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.sum()
@@ -571,9 +559,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.std()
@@ -646,9 +632,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.var()
@@ -717,9 +701,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.median()
@@ -788,9 +770,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.cumsum()
@@ -859,9 +839,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
 
         >>> na.cumprod()

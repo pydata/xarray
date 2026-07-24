@@ -80,7 +80,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -141,9 +144,17 @@ class DataTreeAggregations:
         --------
         >>> dt = xr.DataTree(
         ...     xr.Dataset(
-        ...         data_vars=dict(foo=("time", np.array([True, True, True, True, True, False], dtype=bool))),
+        ...         data_vars=dict(
+        ...             foo=(
+        ...                 "time",
+        ...                 np.array([True, True, True, True, True, False], dtype=bool),
+        ...             )
+        ...         ),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -204,9 +215,17 @@ class DataTreeAggregations:
         --------
         >>> dt = xr.DataTree(
         ...     xr.Dataset(
-        ...         data_vars=dict(foo=("time", np.array([True, True, True, True, True, False], dtype=bool))),
+        ...         data_vars=dict(
+        ...             foo=(
+        ...                 "time",
+        ...                 np.array([True, True, True, True, True, False], dtype=bool),
+        ...             )
+        ...         ),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -275,7 +294,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -349,7 +371,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -427,7 +452,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -512,7 +540,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -602,7 +633,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -689,7 +723,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -776,7 +813,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -859,7 +899,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -942,7 +985,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),
@@ -1025,7 +1071,10 @@ class DataTreeAggregations:
         ...     xr.Dataset(
         ...         data_vars=dict(foo=("time", np.array([1, 2, 3, 0, 2, np.nan]))),
         ...         coords=dict(
-        ...             time=("time", pd.date_range("2001-01-01", freq="ME", periods=6)),
+        ...             time=(
+        ...                 "time",
+        ...                 pd.date_range("2001-01-01", freq="ME", periods=6),
+        ...             ),
         ...             labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...         ),
         ...     ),

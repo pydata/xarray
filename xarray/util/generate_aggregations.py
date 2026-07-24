@@ -330,7 +330,7 @@ class Method:
     def __init__(
         self,
         name,
-        long_name = None,
+        long_name=None,
         bool_reduce=False,
         extra_kwargs=tuple(),
         numeric_only=False,
@@ -393,7 +393,7 @@ class AggregationGenerator:
         template_kwargs = dict(
             obj=self.datastructure.name,
             method=method.name,
-            long_name= method.long_name,
+            long_name=method.long_name,
             keep_attrs=(
                 "\n        keep_attrs: bool | None = None,"
                 if self.has_keep_attrs
@@ -598,9 +598,16 @@ AGGREGATION_METHODS = (
     Method("max", long_name="maximum", extra_kwargs=(skipna,)),
     Method("min", long_name="minimum", extra_kwargs=(skipna,)),
     Method("mean", extra_kwargs=(skipna,), numeric_only=True),
-    Method("prod", long_name="product", extra_kwargs=(skipna, min_count), numeric_only=True),
+    Method(
+        "prod", long_name="product", extra_kwargs=(skipna, min_count), numeric_only=True
+    ),
     Method("sum", extra_kwargs=(skipna, min_count), numeric_only=True),
-    Method("std", long_name="standard deviation", extra_kwargs=(skipna, ddof), numeric_only=True),
+    Method(
+        "std",
+        long_name="standard deviation",
+        extra_kwargs=(skipna, ddof),
+        numeric_only=True,
+    ),
     Method("var", long_name="variance", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method(
         "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
