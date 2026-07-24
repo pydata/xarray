@@ -194,7 +194,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
+        Reduce this {obj}'s data by applying ``{long_name}`` along some dimension(s).
 
         Parameters
         ----------'''
@@ -330,6 +330,7 @@ class Method:
     def __init__(
         self,
         name,
+        long_name = None,
         bool_reduce=False,
         extra_kwargs=tuple(),
         numeric_only=False,
@@ -340,6 +341,8 @@ class Method:
         aggregation_type: Literal["reduce", "scan"] = "reduce",
     ):
         self.name = name
+
+        self.long_name = name if long_name is None else long_name
         self.extra_kwargs = extra_kwargs
         self.numeric_only = numeric_only
         self.see_also_modules = see_also_modules
@@ -390,6 +393,7 @@ class AggregationGenerator:
         template_kwargs = dict(
             obj=self.datastructure.name,
             method=method.name,
+            long_name= method.long_name,
             keep_attrs=(
                 "\n        keep_attrs: bool | None = None,"
                 if self.has_keep_attrs
@@ -591,19 +595,20 @@ AGGREGATION_METHODS = (
     Method("count", see_also_modules=("pandas.DataFrame", "dask.dataframe.DataFrame")),
     Method("all", bool_reduce=True),
     Method("any", bool_reduce=True),
-    Method("max", extra_kwargs=(skipna,)),
-    Method("min", extra_kwargs=(skipna,)),
+    Method("max", long_name="maximum", extra_kwargs=(skipna,)),
+    Method("min", long_name="minimum", extra_kwargs=(skipna,)),
     Method("mean", extra_kwargs=(skipna,), numeric_only=True),
-    Method("prod", extra_kwargs=(skipna, min_count), numeric_only=True),
+    Method("prod", long_name="product", extra_kwargs=(skipna, min_count), numeric_only=True),
     Method("sum", extra_kwargs=(skipna, min_count), numeric_only=True),
-    Method("std", extra_kwargs=(skipna, ddof), numeric_only=True),
-    Method("var", extra_kwargs=(skipna, ddof), numeric_only=True),
+    Method("std", long_name="standard deviation", extra_kwargs=(skipna, ddof), numeric_only=True),
+    Method("var", long_name="variance", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method(
         "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
     ),
     # Scans:
     Method(
         "cumsum",
+        long_name="Cumulative Sum",
         extra_kwargs=(skipna,),
         numeric_only=True,
         see_also_methods=("cumulative",),
@@ -613,6 +618,7 @@ AGGREGATION_METHODS = (
     ),
     Method(
         "cumprod",
+        long_name="Cumulative Product",
         extra_kwargs=(skipna,),
         numeric_only=True,
         see_also_methods=("cumulative",),
