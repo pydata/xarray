@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import datetime
 import itertools
 import math
 import numbers
@@ -208,6 +209,14 @@ def _maybe_wrap_data(data):
     return data
 
 
+_DATETIMELIKE_TYPES = (
+    datetime.datetime,
+    datetime.timedelta,
+    np.datetime64,
+    np.timedelta64,
+)
+
+
 def _possibly_convert_objects(values):
     """Convert object arrays into datetime64 and timedelta64 according
     to the pandas convention.  For backwards compat, as of 3.0.0 pandas,
@@ -220,7 +229,49 @@ def _possibly_convert_objects(values):
     * pd.Timestamp
     * pd.Timedelta
     """
-    as_series = pd.Series(values.ravel(), copy=False)
+    if values.dtype.kind == "O":
+        flat = values.ravel()
+        limit = min(10000, len(flat))
+        has_datetimelike = False
+        has_non_null_non_datetimelike = False
+
+        for i in range(limit):
+            val = flat[i]
+            if isinstance(val, _DATETIMELIKE_TYPES):
+                has_datetimelike = True
+                break
+            is_null = (
+                val is None
+                or val is pd.NaT
+                or (isinstance(val, float) and math.isnan(val))
+                or (isinstance(val, np.floating) and np.isnan(val))
+            )
+            if not is_null:
+                has_non_null_non_datetimelike = True
+                break
+
+        if has_datetimelike:
+            is_datetimelike = True
+        elif has_non_null_non_datetimelike:
+            is_datetimelike = False
+        elif len(flat) > limit:
+            inferred = pd.api.types.infer_dtype(flat, skipna=False)
+            is_datetimelike = inferred in (
+                "datetime",
+                "datetime64",
+                "timedelta",
+                "timedelta64",
+            )
+        else:
+            is_datetimelike = False
+
+        if not is_datetimelike:
+            return values
+
+        as_series = pd.Series(flat, copy=False)
+    else:
+        as_series = pd.Series(values.ravel(), copy=False)
+
     result = np.asarray(as_series).reshape(values.shape)
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
