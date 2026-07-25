@@ -237,7 +237,7 @@ def _possibly_convert_objects(values):
 
         for i in range(limit):
             val = flat[i]
-            if isinstance(val, _DATETIMELIKE_TYPES):
+            if isinstance(val, _DATETIMELIKE_TYPES) or val is pd.NaT:
                 has_datetimelike = True
                 break
             is_null = (
