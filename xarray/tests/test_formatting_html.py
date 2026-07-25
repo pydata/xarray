@@ -477,6 +477,20 @@ class TestDataTreeChildren:
         assert "/reanalysis/model" in html_only
         assert "type='checkbox' checked" in html_only
 
+    def test_repr_html_respects_global_element_limit(self) -> None:
+        tree = xr.DataTree.from_dict(
+            {
+                "observed": xr.Dataset({"temperature": 1}),
+                "reanalysis": xr.Dataset({"temperature": 2}),
+            }
+        )
+
+        with xr.set_options(display_max_html_elements=1):
+            html = tree.children._repr_html_()  # type: ignore[attr-defined]
+        html_only = drop_fallback_text_repr(html)
+
+        assert html_only.count("Too many items to display") == 2
+
     def test_text_repr_unchanged(self) -> None:
         tree = xr.DataTree.from_dict({"child": None})
 
