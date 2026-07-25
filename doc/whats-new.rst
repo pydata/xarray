@@ -14,6 +14,10 @@ v2026.07.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- :py:attr:`DataTree.children` now has a rich HTML representation that displays
+  child nodes as a collapsible forest instead of an inline mapping
+  (:issue:`11453`). By `Deepak Ganesh <https://github.com/deepakganesh78>`_.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

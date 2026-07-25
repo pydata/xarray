@@ -659,3 +659,17 @@ def datatree_repr(node: DataTree) -> str:
         header_components.append(f"<div class='xr-obj-name'>{name}</div>")
     sections = datatree_sections(node, displays)
     return _obj_repr(node, header_components, sections)
+
+
+def datatree_children_repr(children: Mapping[str, DataTree]) -> str:
+    displays = {}
+    for child in children.values():
+        child_displays = _build_datatree_displays(child)
+        child_displays[child.path].collapsed = True
+        displays.update(child_displays)
+
+    header_components = [
+        "<div class='xr-obj-type'>xarray.DataTree children</div>",
+    ]
+    sections = [children_section(children, displays)] if children else []
+    return _obj_repr(children, header_components, sections)
