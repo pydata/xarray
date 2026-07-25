@@ -220,6 +220,17 @@ class TestPlot(PlotTestCase):
         da.attrs = dict(long_name=long_latex_name)
         assert label_from_attrs(da) == long_latex_name
 
+        # Regression test for GH#11452: LaTeX labels with units should not be
+        # broken by textwrap, which can produce invalid "$$" sequences when
+        # the wrap point falls between two adjacent $...$ blocks.
+        da.attrs = dict(
+            long_name=r"$\frac{\mathrm{x}}{\mathrm{A}}$",
+            units=r"$\mathrm{m~hello~very~long}$",
+        )
+        result = label_from_attrs(da)
+        assert "\n" not in result
+        assert "$$" not in result
+
     def test1d(self) -> None:
         self.darray[:, 0, 0].plot()  # type: ignore[call-arg]
 
