@@ -15,7 +15,8 @@ import xarray as xr
 from xarray import DataTree, load_datatree, open_datatree, open_groups
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
-    has_zarr_v3,
+    dask_array_type,
+    get_dask_chunkmanager,
     network,
     parametrize_zarr_format,
     requires_dask,
@@ -71,10 +72,6 @@ def assert_chunks_equal(
     actual: DataTree, expected: DataTree, enforce_dask: bool = False
 ) -> None:
     __tracebackhide__ = True
-
-    from xarray.namedarray.pycompat import array_type
-
-    dask_array_type = array_type("dask")
 
     comparison = {
         (path, name): (
@@ -702,7 +699,7 @@ class TestZarrDatatreeIO:
             from numcodecs.blosc import Blosc
 
             codec = Blosc(cname="zstd", clevel=3, shuffle=2)
-            comp = {"compressors": (codec,)} if has_zarr_v3 else {"compressor": codec}
+            comp = {"compressors": (codec,)}
         elif zarr_format == 3:
             import zarr
 
@@ -714,12 +711,16 @@ class TestZarrDatatreeIO:
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
-            compressor_key = "compressors" if has_zarr_v3 else "compressor"
+            compressor_key = "compressors"
             if zarr_format == 3:
                 # zarr v3 BloscCodec auto-tunes typesize and shuffle on write,
                 # so we only check the attributes we explicitly set
                 rt_codec = roundtrip_dt["/set2/a"].encoding[compressor_key][0]
-                assert rt_codec.cname.value == "zstd"
+                # DEPR: backwards compatibility with zarr <= 3.2.1
+                # This will become a string in the future.
+                # Once we can drop zarr <= 3.2.1, the assertion can become
+                #   assert rt_codec.cname == "zstd"
+                assert getattr(rt_codec.cname, "value", rt_codec.cname) == "zstd"
                 assert rt_codec.clevel == 3
             else:
                 assert (
@@ -765,23 +766,14 @@ class TestZarrDatatreeIO:
     ) -> None:
         simple_datatree.to_zarr(str(tmpdir), zarr_format=zarr_format)
 
-        import zarr
-
-        # expected exception type changed in zarr-python v2->v3, see https://github.com/zarr-developers/zarr-python/issues/2821
-        expected_exception_type = (
-            FileExistsError if has_zarr_v3 else zarr.errors.ContainsGroupError
-        )
-
         # with default settings, to_zarr should not overwrite an existing dir
-        with pytest.raises(expected_exception_type):
+        with pytest.raises(FileExistsError):
             simple_datatree.to_zarr(str(tmpdir))
 
     @requires_dask
     def test_to_zarr_compute_false(
         self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal[2, 3]
     ) -> None:
-        import dask.array as da
-
         storepath = tmp_path / "test.zarr"
         original_dt = simple_datatree.chunk()
         result = original_dt.to_zarr(
@@ -833,8 +825,7 @@ class TestZarrDatatreeIO:
                     assert not chunk_file.exists()
 
         DEFAULT_ZARR_FILL_VALUE = 0
-        # The default value of write_empty_chunks changed from True->False in zarr-python v2->v3
-        WRITE_EMPTY_CHUNKS_DEFAULT = not has_zarr_v3
+        WRITE_EMPTY_CHUNKS_DEFAULT = False
 
         for node in original_dt.subtree:
             # inherited variables aren't meant to be written to zarr
@@ -847,7 +838,7 @@ class TestZarrDatatreeIO:
                     # don't expect dask.Arrays to be written to disk, as compute=False
                     # also don't expect numpy arrays containing only zarr's fill_value to be written to disk
                     chunks_expected=(
-                        not isinstance(var.data, da.Array)
+                        not isinstance(var.data, dask_array_type)
                         and (
                             var.data != DEFAULT_ZARR_FILL_VALUE
                             or WRITE_EMPTY_CHUNKS_DEFAULT
@@ -877,8 +868,6 @@ class TestZarrDatatreeIO:
 
     @requires_dask
     def test_to_zarr_no_redundant_computation(self, tmpdir, zarr_format) -> None:
-        import dask.array as da
-
         eval_count = 0
 
         def expensive_func(x):
@@ -886,8 +875,11 @@ class TestZarrDatatreeIO:
             eval_count += 1
             return x + 1
 
-        base = da.random.random((), chunks=())
-        derived1 = da.map_blocks(expensive_func, base, meta=np.array((), np.float64))
+        chunkmanager = get_dask_chunkmanager()
+        base = chunkmanager.array_api.random.random((), chunks=())
+        derived1 = chunkmanager.map_blocks(
+            expensive_func, base, meta=np.array((), np.float64)
+        )
         derived2 = derived1 + 1  # depends on derived1
         tree = DataTree.from_dict(
             {

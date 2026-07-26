@@ -90,6 +90,12 @@ def _importorskip(
     return has, func
 
 
+def get_dask_chunkmanager():
+    from xarray.namedarray.parallelcompat import guess_chunkmanager
+
+    return guess_chunkmanager("dask")
+
+
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
 has_scipy_ge_1_13, requires_scipy_ge_1_13 = _importorskip("scipy", "1.13")
@@ -109,9 +115,10 @@ with warnings.catch_warnings():
         category=UserWarning,
     )
 
-    has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
+has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
+has_dask_array, requires_dask_array = _importorskip("dask_array")
 has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
     "dask", minversion="2024.08.1"
 )
@@ -128,13 +135,24 @@ else:
             category=FutureWarning,
         )
         has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
+
+if has_dask:
+    dask_chunkmanager = get_dask_chunkmanager()
+    dask_array_api = dask_chunkmanager.array_api
+    dask_array_type = dask_chunkmanager.array_cls
+    has_dask_array_expr = dask_array_type.__module__.startswith("dask_array")
+else:
+    dask_array_api = None
+    dask_array_type = ()
+    has_dask_array_expr = False
+
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
-has_zarr_v3, requires_zarr_v3 = _importorskip("zarr", "3.0.0")
+requires_zarr_v3 = requires_zarr
 has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
 has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", "3.1.2")
-if has_zarr_v3:
+if has_zarr:
     import zarr
 
     # manual update by checking attrs for now
@@ -171,7 +189,6 @@ has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_netcdf, requires_netcdf = _importorskip("netcdf")
-has_pandas_ge_2_2, requires_pandas_ge_2_2 = _importorskip("pandas", "2.2")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0")
 
 
@@ -197,14 +214,7 @@ parametrize_zarr_format = pytest.mark.parametrize(
     "zarr_format",
     [
         pytest.param(2, id="zarr_format=2"),
-        pytest.param(
-            3,
-            marks=pytest.mark.skipif(
-                not has_zarr_v3,
-                reason="zarr-python v2 cannot understand the zarr v3 format",
-            ),
-            id="zarr_format=3",
-        ),
+        pytest.param(3, id="zarr_format=3"),
     ],
 )
 
