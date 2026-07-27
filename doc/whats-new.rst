@@ -30,6 +30,9 @@ Bug Fixes
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs.
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
+- Fixed :py:meth:`Dataset.stack` raising ``KeyError`` when a stacked dimension
+  has a falsy but valid name such as ``""``, ``False`` or ``0`` (:issue:`9969`).
+  By `JOhnsonKC201 <https://github.com/JOhnsonKC201>`_.
 
 
 Documentation
