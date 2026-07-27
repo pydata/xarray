@@ -48,6 +48,8 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_api,
+    dask_array_type,
     has_dask,
     has_dask_ge_2025_1_0,
     has_pyarrow,
@@ -501,10 +503,13 @@ class TestDataArray:
     @requires_dask
     def test_constructor_dask_coords(self) -> None:
         # regression test for GH1684
-        import dask.array as da
-
-        coord = da.arange(8, chunks=(4,))
-        data = da.random.random((8, 8), chunks=(4, 4)) + 1
+        coord = DataArray(np.arange(8), dims="x").chunk({"x": 4}).data
+        data = (
+            DataArray(np.random.random((8, 8)), dims=["x", "y"])
+            .chunk({"x": 4, "y": 4})
+            .data
+            + 1
+        )
         actual = DataArray(data, coords={"x": coord, "y": coord}, dims=["x", "y"])
 
         ecoord = np.arange(8)
@@ -554,6 +559,39 @@ class TestDataArray:
 
         assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
+
+    def test_replace_maybe_drop_dims_preserves_multi_coord_index(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/11215
+        # Multi-coordinate indexes spanning multiple dims should be preserved
+        # after reducing over an unrelated dimension.
+        class MultiDimIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = MultiDimIndex()
+        coords = Coordinates(
+            coords={
+                "node_x": ("nodes", [0.0, 1.0, 2.0]),
+                "node_y": ("nodes", [0.0, 0.0, 1.0]),
+                "face_x": ("faces", [0.5, 1.5]),
+                "face_y": ("faces", [0.5, 0.5]),
+            },
+            indexes=dict.fromkeys(["node_x", "node_y", "face_x", "face_y"], idx),
+        )
+        node_da = DataArray(
+            np.random.rand(3, 4), dims=("nodes", "extra"), coords=coords
+        )
+        face_da = DataArray(
+            np.random.rand(2, 4), dims=("faces", "extra"), coords=coords
+        )
+
+        reduced_node = node_da.mean("extra")
+        reduced_face = face_da.mean("extra")
+
+        for da in [reduced_node, reduced_face]:
+            for name in ["node_x", "node_y", "face_x", "face_y"]:
+                assert name in da.coords
+                assert isinstance(da.xindexes[name], MultiDimIndex)
 
     def test_equals_and_identical(self) -> None:
         orig = DataArray(np.arange(5.0), {"a": 42}, dims="x")
@@ -945,10 +983,8 @@ class TestDataArray:
         assert blocked.load().chunks is None
 
         # Check that kwargs are passed
-        import dask.array as da
-
         blocked = unblocked.chunk(name_prefix="testname_")
-        assert isinstance(blocked.data, da.Array)
+        assert isinstance(blocked.data, dask_array_type)
         assert "testname_" in blocked.data.name
 
         # test kwargs form of chunks
@@ -1481,8 +1517,8 @@ class TestDataArray:
         dates = pd.date_range("2000-01-01", periods=10)
         da = DataArray(np.arange(1, 11), [("time", dates)])
 
-        assert_array_equal(da["time.dayofyear"], da.values)
-        assert_array_equal(da.coords["time.dayofyear"], da.values)
+        assert_array_equal(da["time.day_of_year"], da.values)
+        assert_array_equal(da.coords["time.day_of_year"], da.values)
 
     def test_coords(self) -> None:
         # use int64 to ensure repr() consistency on windows
@@ -4790,8 +4826,7 @@ class TestDataArray:
         dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
         if backend == "dask":
-            import dask.array as da
-
+            da = dask_array_api
             aa = aa.copy(data=da.from_array(a, chunks=3))
             bb = bb.copy(data=da.from_array(b, chunks=3))
             cc = cc.copy(data=da.from_array(c, chunks=7))
@@ -4908,8 +4943,6 @@ class TestDataArray:
         param_names = ["a"]
         params, func_args = _get_func_args(np.power, param_names)
         assert params == param_names
-        with pytest.raises(ValueError):
-            _get_func_args(np.power, [])
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])

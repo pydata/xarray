@@ -249,7 +249,7 @@ def _interpolate_day_of_year(times, target_calendar):
     source_calendar = times.dt.calendar
     return np.round(
         _days_in_year(times.dt.year, target_calendar)
-        * times.dt.dayofyear
+        * times.dt.day_of_year
         / _days_in_year(times.dt.year, source_calendar)
     ).astype(int)
 
@@ -272,7 +272,7 @@ def _random_day_of_year(time, target_calendar, use_cftime):
         new_doy = np.insert(new_doy, rm_idx - np.arange(5), -1)
         if _days_in_year(year, source_calendar) == 366:
             new_doy = np.insert(new_doy, 60, -1)
-    return new_doy[time.dt.dayofyear - 1]
+    return new_doy[time.dt.day_of_year - 1]
 
 
 def _convert_to_new_calendar_with_new_day_of_year(

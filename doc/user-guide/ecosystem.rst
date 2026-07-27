@@ -41,6 +41,7 @@ Geosciences
 - `SARXarray <https://tudelftgeodesy.github.io/sarxarray/>`_: xarray extension for reading and processing large Synthetic Aperture Radar (SAR) data stacks.
 - `shxarray <https://shxarray.wobbly.earth/>`_: Convert, filter,and map geodesy related spherical harmonic representations of gravity and terrestrial water storage through an xarray extension.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
+- `TOAD <https://github.com/tipmip-methods/toad/>`_: TOAD (Tipping and Other Abrupt events Detector) detects and clusters abrupt shifts in gridded Earth system data and operates directly on xarray datasets.
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
   harmonic wind analysis in Python.
 - `wradlib <https://wradlib.org/>`_: An Open Source Library for Weather Radar Data Processing.
