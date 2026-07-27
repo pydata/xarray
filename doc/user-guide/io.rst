@@ -1105,6 +1105,13 @@ For example:
     compressor = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
     ds.to_zarr(zarr_filename, consolidated=False, encoding={"foo": {"compressors": [compressor]}})
 
+For Zarr v3, xarray forwards codec configuration in each variable's
+``encoding`` dictionary to zarr-python. Use ``compressors`` for bytes-to-bytes
+codecs and ``serializer`` for array-to-bytes codecs, with codec objects and
+configuration following zarr-python. Other Zarr v3 metadata options accepted by
+xarray include ``filters``, ``shards``, ``fill_value``, and
+``chunk_key_encoding``.
+
 .. note::
 
     Not all native zarr compression and filtering options have been tested with
