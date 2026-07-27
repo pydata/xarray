@@ -28,6 +28,16 @@ sparse = pytest.importorskip("sparse")
 sparse_array_type = array_type("sparse")
 
 
+def array_api_scalar() -> bool:
+    # scalars are sparse arrays from 0.19.0 onwards
+    # TODO: remove after sparse<0.19.0 is dropped
+    # (ignore the stylistic error for clarity)
+    if Version(sparse.__version__) >= Version("0.19.0"):  # noqa: SIM103
+        return True
+    else:
+        return False
+
+
 def assert_sparse_equal(a, b):
     assert isinstance(a, sparse_array_type)
     assert isinstance(b, sparse_array_type)
@@ -99,20 +109,20 @@ def test_variable_property(prop):
 @pytest.mark.parametrize(
     "func,sparse_output",
     [
-        (do("all"), False),
-        (do("any"), False),
+        (do("all"), array_api_scalar()),
+        (do("any"), array_api_scalar()),
         (do("astype", dtype=int), True),
         (do("clip", min=0, max=1), True),
         (do("coarsen", windows={"x": 2}, func="sum"), True),
         (do("compute"), True),
         (do("conj"), True),
         (do("copy"), True),
-        (do("count"), False),
+        (do("count"), array_api_scalar()),
         (do("get_axis_num", dim="x"), False),
         (do("isel", x=slice(2, 4)), True),
         (do("isnull"), True),
         (do("load"), True),
-        (do("mean"), False),
+        (do("mean"), array_api_scalar()),
         (do("notnull"), True),
         (do("roll"), True),
         (do("round"), True),
@@ -178,11 +188,11 @@ def test_variable_property(prop):
         ),
         param(
             do("median"),
-            False,
+            array_api_scalar(),
             marks=xfail(reason="Missing implementation for np.nanmedian"),
         ),
-        param(do("max"), False),
-        param(do("min"), False),
+        param(do("max"), array_api_scalar()),
+        param(do("min"), array_api_scalar()),
         param(
             do("no_conflicts", other=make_xrvar({"x": 10, "y": 5})),
             True,
@@ -193,7 +203,7 @@ def test_variable_property(prop):
             True,
             marks=xfail(reason="Missing implementation for np.pad"),
         ),
-        (do("prod"), False),
+        (do("prod"), array_api_scalar()),
         param(
             do("quantile", q=0.5),
             True,
@@ -217,11 +227,15 @@ def test_variable_property(prop):
             do("shift", x=2), True, marks=xfail(reason="mixed sparse-dense operation")
         ),
         param(
-            do("std"), False, marks=xfail(reason="Missing implementation for np.nanstd")
+            do("std"),
+            array_api_scalar(),
+            marks=xfail(reason="Missing implementation for np.nanstd"),
         ),
-        (do("sum"), False),
+        (do("sum"), array_api_scalar()),
         param(
-            do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
+            do("var"),
+            array_api_scalar(),
+            marks=xfail(reason="Missing implementation for np.nanvar"),
         ),
         param(do("to_dict"), False),
         (do("where", cond=make_xrvar({"x": 10, "y": 5}) > 0.5), True),
@@ -324,8 +338,13 @@ class TestSparseVariable:
         a = np.array([0, 1, np.nan, 3])
         s = sparse.COO.from_numpy(a)
         var_s = Variable("x", s)
-        assert np.all(var_s.fillna(2).data.todense() == np.arange(4))
-        assert np.all(var_s.count() == 3)
+
+        np.testing.assert_equal(var_s.fillna(2).data.todense(), np.arange(4))
+
+        count = var_s.count().data
+        if hasattr(count, "todense"):
+            count = count.todense()
+        np.testing.assert_equal(count, 3)
 
 
 @pytest.mark.parametrize(
@@ -361,8 +380,8 @@ def test_dataarray_property(prop):
 @pytest.mark.parametrize(
     "func,sparse_output",
     [
-        (do("all"), False),
-        (do("any"), False),
+        (do("all"), array_api_scalar()),
+        (do("any"), array_api_scalar()),
         (do("assign_attrs", {"foo": "bar"}), True),
         (do("assign_coords", x=make_xrarray({"x": 10}).x + 1), True),
         (do("astype", int), True),
@@ -370,7 +389,7 @@ def test_dataarray_property(prop):
         (do("compute"), True),
         (do("conj"), True),
         (do("copy"), True),
-        (do("count"), False),
+        (do("count"), array_api_scalar()),
         (do("diff", "x"), True),
         (do("drop_vars", "x"), True),
         (do("expand_dims", {"z": 2}, axis=2), True),
@@ -381,7 +400,7 @@ def test_dataarray_property(prop):
         (do("isel", {"x": slice(0, 3), "y": slice(2, 4)}), True),
         (do("isnull"), True),
         (do("load"), True),
-        (do("mean"), False),
+        (do("mean"), array_api_scalar()),
         (do("persist"), True),
         (do("reindex", {"x": [1, 2, 3]}), True),
         (do("rename", "foo"), True),
@@ -481,16 +500,16 @@ def test_dataarray_property(prop):
             False,
             marks=xfail(reason="'COO' object has no attribute 'item'"),
         ),
-        param(do("max"), False),
-        param(do("min"), False),
+        param(do("max"), array_api_scalar()),
+        param(do("min"), array_api_scalar()),
         param(
             do("median"),
-            False,
+            array_api_scalar(),
             marks=xfail(reason="Missing implementation for np.nanmedian"),
         ),
         (do("notnull"), True),
         (do("pipe", func="sum", axis=1), True),
-        (do("prod"), False),
+        (do("prod"), array_api_scalar()),
         param(
             do("quantile", q=0.5),
             False,
@@ -526,7 +545,7 @@ def test_dataarray_property(prop):
         param(
             do("std"), False, marks=xfail(reason="Missing implementation for np.nanstd")
         ),
-        (do("sum"), False),
+        (do("sum"), array_api_scalar()),
         param(
             do("var"), False, marks=xfail(reason="Missing implementation for np.nanvar")
         ),

@@ -14,6 +14,7 @@ from xarray.tests import (
     assert_identical,
     dask_array_api,
     has_dask,
+    requires_bottleneck,
     requires_dask,
     requires_dask_ge_2024_11_0,
     requires_numbagg,
@@ -433,6 +434,43 @@ class TestDataArrayRolling:
         unchunked_result = data.rolling(x=3, min_periods=1).mean()
         chunked_result = data.chunk({"x": 1}).rolling(x=3, min_periods=1).mean()
         assert chunked_result.dtype == unchunked_result.dtype
+
+    @requires_bottleneck
+    @requires_dask_ge_2024_11_0
+    @pytest.mark.parametrize(
+        "name",
+        ("sum", "mean", "std", "var", "min", "max", "median", "argmin", "argmax"),
+    )
+    @pytest.mark.parametrize("center", [False, True])
+    @pytest.mark.parametrize("dtype", [bool, np.int8, np.int64])
+    def test_rolling_bottleneck_dask_dtype_matches_numpy(
+        self, name, center, dtype
+    ) -> None:
+        if center and dtype is bool and name in ("std", "median"):
+            pytest.skip("centered bool bottleneck path fails for numpy-backed arrays")
+
+        raw = np.arange(100 * 4).reshape(100, 4)
+        data = raw % 3 == 0 if dtype is bool else raw.astype(dtype)
+        unchunked = DataArray(data, dims=("t", "a")).rolling(
+            t=72, min_periods=72, center=center
+        )
+        chunked = (
+            DataArray(data, dims=("t", "a"))
+            .chunk({"t": 40})
+            .rolling(t=72, min_periods=72, center=center)
+        )
+
+        with set_options(use_numbagg=False):
+            expected = getattr(unchunked, name)()
+            actual = getattr(chunked, name)()
+        actual_block = actual.data.blocks[0, 0].compute()
+        computed = actual.compute()
+
+        assert actual.dtype == expected.dtype
+        assert actual.data._meta.dtype == expected.dtype
+        assert actual_block.dtype == expected.dtype
+        assert computed.dtype == expected.dtype
+        assert_allclose(computed, expected)
 
     def test_rolling_mean_bool(self) -> None:
         bool_raster = DataArray(
