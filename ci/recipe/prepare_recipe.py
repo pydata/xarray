@@ -3,24 +3,28 @@
 import pathlib
 import textwrap
 
-import git
-import packaging.version
-from tlz.itertoolz import last
+import vcs_versioning
 
 
-def dev_version(most_recent_release):
-    v = packaging.version.parse(str(most_recent_release))
+def find_pyproject(dir):
+    while dir != dir.root:
+        path = dir / "pyproject.toml"
+        if path.is_file():
+            return path
 
-    next_version = (v.major, v.minor, v.micro + 1)
-    return str(v.__replace__(release=next_version, dev=0))
+        dir = dir.parent
+
+    raise RuntimeError("pyproject.toml can't be found")
 
 
 def main():
-    repo = git.Repo(".")
-    root = pathlib.Path(repo.working_dir)
+    cwd = pathlib.Path(__file__).parent
+    pyproject_path = find_pyproject(cwd)
+    root = pyproject_path.parent
 
-    most_recent_release = last(list(repo.tags))
-    version = dev_version(most_recent_release)
+    pyproject = vcs_versioning.PyProjectData.from_file(pyproject_path)
+    version = vcs_versioning.infer_version_string("xarray", pyproject)
+
     recipe_root = root / "ci/recipe"
 
     template_path = recipe_root / "recipe_template.yaml"

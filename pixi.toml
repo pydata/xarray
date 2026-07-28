@@ -380,9 +380,8 @@ rst-to-myst = { version = "*", extras = ["sphinx"] }
 rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
 
 [feature.build-package.dependencies]
-gitpython = "*"
+vcs_versioning = "*"
 cytoolz = "*"
-packaging = "*"
 rattler-build = "*"
 
 [feature.build-package.tasks.prepare-recipe]
