@@ -192,7 +192,7 @@ np.random.seed(0)
 jupyterlite_silence = False
 jupyterlite_bind_ipynb_suffix = False
 
-jupyterlite_contents_path = "_build/contents"
+jupyterlite_content_dir = "_build/contents"
 
 # mermaid config
 mermaid_version = "11.6.0"
