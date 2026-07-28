@@ -544,6 +544,7 @@ doc = { features = [
   "accel",
   "viz",
   "extras",
+  "numba",
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 release = { features = ["release"], no-default-feature = true }
