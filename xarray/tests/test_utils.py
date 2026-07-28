@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Hashable
 from types import EllipsisType
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,7 @@ from xarray.core.utils import (
     infix_dims,
     iterate_nested,
 )
+from xarray.namedarray.utils import module_available
 from xarray.tests import assert_array_equal, requires_dask
 
 
@@ -390,6 +392,21 @@ def test_find_stack_level():
 
     assert f() == 3
 
+# regression test
+def test_module_available_with_none_version() -> None:
+    module_available.cache_clear()
+
+    try:
+        with (
+            patch("importlib.util.find_spec", return_value=object()),
+            patch("importlib.metadata.version", return_value=None),
+        ):
+            assert not module_available(
+                "package_with_missing_version",
+                minversion="1.0",
+            )
+    finally:
+        module_available.cache_clear()
 
 def test_attempt_import() -> None:
     """Test optional dependency handling."""
