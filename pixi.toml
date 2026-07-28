@@ -1,6 +1,6 @@
 [workspace]
 preview = ["pixi-build"]
-channels = ["conda-forge", "nodefaults"]
+channels = ["conda-forge", "nodefaults", "https://prefix.dev/keewis-oss"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 requires-pixi = ">=0.63.2,!=0.68.0"
 
