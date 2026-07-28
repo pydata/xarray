@@ -392,6 +392,7 @@ def test_find_stack_level():
 
     assert f() == 3
 
+
 # regression test
 def test_module_available_with_none_version() -> None:
     module_available.cache_clear()
@@ -407,6 +408,7 @@ def test_module_available_with_none_version() -> None:
             )
     finally:
         module_available.cache_clear()
+
 
 def test_attempt_import() -> None:
     """Test optional dependency handling."""
