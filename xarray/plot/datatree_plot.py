@@ -505,9 +505,7 @@ def scatter(
     hue: Hashable | None = None,
     hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
-    linewidth: Hashable | None = None,
-    # figsize: Iterable[float] | None = None,
-    # size: float | None = None,
+    size: float | None = None,
     aspect: float | None = None,
     row: Hashable | None = None,
     col: Hashable | None = None,
@@ -531,19 +529,23 @@ def scatter(
     norm: Normalize | None = None,
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
+    fig_kw: Hashable | None = None,
     **kwargs: Any,
 ) -> PathCollection | FacetGrid[DataArray]:
     """Scat plot DataTree data variables against each other."""
+
+    if fig_kw is None:
+        fig_kw = {}
+
     locals_ = locals()
     del locals_["dt"]
     locals_.update(locals_.pop("kwargs", {}))
     locals_.pop("variable")
-    locals_.pop("ax")
-    print(locals_)
-
+    (locals_.pop("ax"),)
+    locals_.pop("fig_kw")
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(**fig_kw)
     for node in dt.descendants:
         try:
             da = node[variable]

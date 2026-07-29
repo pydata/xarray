@@ -3666,6 +3666,7 @@ class TestDataTreeScatterPlots(PlotTestCase):
         dt.col.attrs["units"] = "colunits"
         dt.row.attrs["units"] = "rowunits"
         dt["group_1/A"].attrs["units"] = "Aunits"
+        dt["group_2/A"].attrs["units"] = "Aunits"
         self.dt = dt
 
     def test_accessor(self) -> None:
@@ -3674,20 +3675,7 @@ class TestDataTreeScatterPlots(PlotTestCase):
         assert DataTree.plot is DataTreePlotAccessor
         assert isinstance(self.dt.plot, DataTreePlotAccessor)
 
-    # @pytest.mark.parametrize(
-    #     "add_guide, hue_style, legend, colorbar",
-    #     [
-    #         (None, None, False, True),
-    #         (False, None, False, False),
-    #         (True, None, False, True),
-    #         (True, "continuous", False, True),
-    #         (False, "discrete", False, False),
-    #         (True, "discrete", True, False),
-    #     ],
-    # )
-
     def test_key_error(self):
-        """Assert that a KeyError is raised when accessing a variable that doesn't exist in node."""
-        with pytest.raises(KeyError) as exc_info:
+        """Assert that a KeyError is raised when accessing a variable that doesn't exist in a node."""
+        with pytest.raises(KeyError):
             self.dt.plot.scatter("B")
-            print(exc_info.value)
