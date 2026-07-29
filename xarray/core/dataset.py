@@ -100,6 +100,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
+    module_available,
     parse_dims_as_set,
 )
 from xarray.core.variable import (
@@ -8447,11 +8448,8 @@ class Dataset(
         ranked : Dataset
             Variables that do not depend on `dim` are dropped.
         """
-        if not OPTIONS["use_bottleneck"]:
-            raise RuntimeError(
-                "rank requires bottleneck to be enabled."
-                " Call `xr.set_options(use_bottleneck=True)` to enable it."
-            )
+        if not module_available("bottleneck"):
+            raise ImportError("rank requires bottleneck to be installed.")
 
         if dim not in self.dims:
             raise ValueError(

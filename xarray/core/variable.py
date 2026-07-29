@@ -2093,11 +2093,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Dataset.rank, DataArray.rank
         """
         # This could / should arguably be implemented at the DataArray & Dataset level
-        if not OPTIONS["use_bottleneck"]:
-            raise RuntimeError(
-                "rank requires bottleneck to be enabled."
-                " Call `xr.set_options(use_bottleneck=True)` to enable it."
-            )
+        if not module_available("bottleneck"):
+            raise ImportError("rank requires bottleneck to be installed.")
 
         import bottleneck as bn
 
