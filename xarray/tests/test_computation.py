@@ -2475,6 +2475,15 @@ def test_polyval_degree_dim_checks() -> None:
         xr.polyval(x, coeffs.assign_coords(degree=coeffs.degree.astype(float)))
 
 
+def test_polyval_timedelta_nat() -> None:
+    # NaT in a timedelta coordinate must propagate as NaN, not a huge sentinel value (GH #11462).
+    x = xr.DataArray(np.array([0, "NaT", 2], dtype="timedelta64[D]"), dims="x")
+    coeffs = xr.DataArray([2.0, 1.0], dims="degree", coords={"degree": [1, 0]})
+    actual = xr.polyval(x, coeffs)
+    assert np.isnan(actual.values[1])
+    assert not np.isnan(actual.values[[0, 2]]).any()
+
+
 @pytest.mark.parametrize(
     "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
 )
