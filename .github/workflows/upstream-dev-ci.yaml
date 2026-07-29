@@ -89,6 +89,7 @@ jobs:
 
     env:
       ENV: ${{ matrix.pixi-env }}
+      MANIFEST_PATH: ci/nightly/pixi.toml
 
     outputs:
       log-file: ${{ steps.determine-log-path.outputs.log-file }}
@@ -112,20 +113,21 @@ jobs:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ matrix.pixi-env }}
+          manifest-path: ${{ env.MANIFEST_PATH }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
       - name: Version info
         run: |
-          pixi run -e $ENV -- python xarray/util/print_versions.py
+          pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python xarray/util/print_versions.py
       - name: Import xarray
         run: |
-          pixi run -e $ENV -- python -c 'import xarray'
+          pixi run -e "$MANIFEST_PATH" -e $ENV -- python -c 'import xarray'
       - name: Run Tests
         if: success()
         id: status
         env:
           LOG_PATH: ${{ steps.determine-log-path.outputs.log-file }}
         run: |
-          pixi run -e $ENV -- python -m pytest --timeout=60 -rf -nauto \
+          pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python -m pytest --timeout=60 -rf -nauto \
             --report-log "$LOG_PATH"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
@@ -174,6 +176,7 @@ jobs:
 
     env:
       ENV: ${{ matrix.pixi-env }}
+      MANIFEST_PATH: ci/nightly/pixi.toml
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -190,6 +193,7 @@ jobs:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ matrix.pixi-env }}
+          manifest-path: ${{ env.MANIFEST_PATH }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: set environment variables
@@ -198,10 +202,10 @@ jobs:
           echo "PYTHON_VERSION=$(pixi run -e $ENV -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          pixi run -e $ENV -- python xarray/util/print_versions.py
+          pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python xarray/util/print_versions.py
       - name: Run mypy
         run: |
-          pixi run -e $ENV -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
