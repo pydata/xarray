@@ -20,6 +20,16 @@ Breaking Changes
 - Disable using bottleneck by default, as certain operations are less numerically
   stable than the equivalent numpy functions.
   By `Thomas Kluyver <https://github.com/takluyver>`_.
+- All remaining zarr-python 2.x compatibility code has been removed from the
+  zarr backend, following the bump of the minimum ``zarr`` version to 3.0.
+  The following parameters have been removed from ``to_zarr`` and
+  ``open_zarr``:
+
+  - ``zarr_version``: Use ``zarr_format`` instead (was deprecated since 2024.9.1).
+  - ``synchronizer``: Not supported in zarr-python 3.x.
+  - ``chunk_store``: Not supported in zarr-python 3.x.
+
+  By `Joe Hamman <https://github.com/jhamman>`_ (:pull:`11232`).
 
 Deprecations
 ~~~~~~~~~~~~
@@ -28,6 +38,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
+  which caused ``AsyncMock`` objects to leak through instead of real array data
+  (:pull:`11232`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs.
