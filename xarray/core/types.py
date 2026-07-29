@@ -106,6 +106,7 @@ except ImportError:
 DatetimeLike: TypeAlias = (
     pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
 )
+TimedeltaLike: TypeAlias = pd.Timedelta | datetime.timedelta | np.timedelta64
 
 
 class Alignable(Protocol):
@@ -238,6 +239,9 @@ InterpolantOptions = Literal[
 ]
 InterpnOptions = Literal["linear", "nearest", "slinear", "cubic", "quintic", "pchip"]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions, InterpnOptions]
+T_GapLength = Union[int, float, str, TimedeltaLike]
+LimitDirectionOptions = Literal["forward", "backward", "both"]
+LimitAreaOptions = Literal["inside", "outside"]
 
 DatetimeUnitOptions = (
     Literal["W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as"] | None
