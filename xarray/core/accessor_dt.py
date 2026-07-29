@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING, Generic, cast
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,7 @@ from xarray.core.common import (
 )
 from xarray.core.types import T_DataArray
 from xarray.core.variable import IndexVariable, Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
@@ -129,15 +130,14 @@ def _get_date_field(values, name, dtype):
         access_method = _access_through_cftimeindex
 
     if is_duck_dask_array(values):
-        from dask.array import map_blocks
-
+        chunkmanager = get_chunked_array_type(values)
         new_axis = chunks = None
         # isocalendar adds an axis
         if name == "isocalendar":
-            chunks = (3,) + values.chunksize
+            chunks = cast(tuple[int, ...], (3,) + values.chunksize)
             new_axis = 0
 
-        return map_blocks(
+        return chunkmanager.map_blocks(
             access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
         )
     else:
@@ -187,10 +187,13 @@ def _round_field(values, name, freq):
 
     """
     if is_duck_dask_array(values):
-        from dask.array import map_blocks
-
-        dtype = np.datetime64 if is_np_datetime_like(values.dtype) else np.dtype("O")
-        return map_blocks(
+        chunkmanager = get_chunked_array_type(values)
+        dtype = (
+            np.dtype(values.dtype)
+            if is_np_datetime_like(values.dtype)
+            else np.dtype("O")
+        )
+        return chunkmanager.map_blocks(
             _round_through_series_or_index, values, name, freq=freq, dtype=dtype
         )
     else:
@@ -224,9 +227,8 @@ def _strftime(values, date_format):
     else:
         access_method = _strftime_through_cftimeindex
     if is_duck_dask_array(values):
-        from dask.array import map_blocks
-
-        return map_blocks(access_method, values, date_format)
+        chunkmanager = get_chunked_array_type(values)
+        return chunkmanager.map_blocks(access_method, values, date_format)
     else:
         return access_method(values, date_format)
 
@@ -338,8 +340,8 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
       * time     (time) datetime64[us] 80B 2000-01-01 2000-01-02 ... 2000-01-10
     >>> ts.dt  # doctest: +ELLIPSIS
     <xarray.core.accessor_dt.DatetimeAccessor object at 0x...>
-    >>> ts.dt.dayofyear
-    <xarray.DataArray 'dayofyear' (time: 10)> Size: 80B
+    >>> ts.dt.day_of_year
+    <xarray.DataArray 'day_of_year' (time: 10)> Size: 80B
     array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10])
     Coordinates:
       * time     (time) datetime64[us] 80B 2000-01-01 2000-01-02 ... 2000-01-10
@@ -459,23 +461,45 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
             stacklevel=2,
         )
 
-        weekofyear = self.isocalendar().week
+        return self.isocalendar().week.rename("weekofyear")
 
-        return weekofyear
+    @property
+    def week(self) -> DataArray:
+        "The week ordinal of the year"
 
-    week = weekofyear
+        warnings.warn(
+            "dt.weekofyear and dt.week have been deprecated. Please use "
+            "dt.isocalendar().week instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
+        return self.isocalendar().week
+
+    @property
+    def day_of_week(self) -> T_DataArray:
+        """The day of the week with Monday=0, Sunday=6"""
+        return self._date_field("day_of_week", np.int64)
 
     @property
     def dayofweek(self) -> T_DataArray:
         """The day of the week with Monday=0, Sunday=6"""
-        return self._date_field("dayofweek", np.int64)
+        return self._date_field("day_of_week", np.int64).rename("dayofweek")
 
-    weekday = dayofweek
+    @property
+    def weekday(self) -> T_DataArray:
+        """The day of the week with Monday=0, Sunday=6"""
+        return self._date_field("day_of_week", np.int64).rename("weekday")
+
+    @property
+    def day_of_year(self) -> T_DataArray:
+        """The ordinal day of the year"""
+        return self._date_field("day_of_year", np.int64)
 
     @property
     def dayofyear(self) -> T_DataArray:
         """The ordinal day of the year"""
-        return self._date_field("dayofyear", np.int64)
+        return self._date_field("day_of_year", np.int64).rename("dayofyear")
 
     @property
     def quarter(self) -> T_DataArray:
@@ -487,7 +511,10 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         """The number of days in the month"""
         return self._date_field("days_in_month", np.int64)
 
-    daysinmonth = days_in_month
+    @property
+    def daysinmonth(self) -> T_DataArray:
+        """The number of days in the month"""
+        return self._date_field("days_in_month", np.int64).rename("daysinmonth")
 
     @property
     def season(self) -> T_DataArray:

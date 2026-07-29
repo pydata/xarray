@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 from collections.abc import (
     Callable,
@@ -34,7 +35,7 @@ from xarray.core.treenode import group_subtrees
 from xarray.core.types import ReadBuffer
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
-from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.parallelcompat import guess_chunkmanager, list_chunkmanagers
 from xarray.namedarray.utils import _get_chunk
 from xarray.structure.chunks import _maybe_chunk
 from xarray.structure.combine import (
@@ -102,7 +103,8 @@ def _get_mtime(filename_or_obj):
         path = None
 
     if path and not is_remote_uri(path):
-        mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
+        with contextlib.suppress(OSError):
+            mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
 
     return mtime
 
@@ -232,7 +234,11 @@ def _chunk_ds(
     chunkmanager = guess_chunkmanager(chunked_array_type)
 
     # TODO refactor to move this dask-specific logic inside the DaskManager class
-    if isinstance(chunkmanager, DaskManager):
+    is_dask_chunkmanager = isinstance(chunkmanager, DaskManager) or any(
+        name == "dask" and manager is chunkmanager
+        for name, manager in list_chunkmanagers().items()
+    )
+    if is_dask_chunkmanager:
         from dask.base import tokenize
 
         mtime = _get_mtime(filename_or_obj)

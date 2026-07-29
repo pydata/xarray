@@ -47,7 +47,7 @@ Help Flowchart
             fab:fa-readme <a href="https://docs.dask.org">Dask</a>
             fab:fa-readme <a href="https://corteva.github.io/rioxarray">Rioxarray</a>]):::ansNodefmt
         help([fab:fa-github <a href="https://github.com/pydata/xarray/discussions">Xarray Discussions</a>
-            fab:fa-discord <a href="https://discord.com/invite/wEKPCt4PDu">Xarray Discord</a>
+            fa:fa-globe <a href="https://ossci.zulipchat.com/#narrow/channel/582428-Xarray">OSSci Zulip</a>
             fa:fa-globe <a href="https://discourse.pangeo.io">Pangeo Discourse</a>]):::ansNodefmt
         bug([Let us know:
             fab:fa-github <a href="https://github.com/pydata/xarray/issues">Xarray Issues</a>]):::ansNodefmt
@@ -88,7 +88,7 @@ Flowchart links
 - `Xarray Docs <https://docs.xarray.dev>`__
 - `Stack Exchange <https://stackoverflow.com/questions/tagged/python-xarray>`__
 - `Xarray Discussions <https://github.com/pydata/xarray/discussions>`__
-- `Xarray Discord <https://discord.com/invite/wEKPCt4PDu>`__
+- `OSSci Zulip <https://ossci.zulipchat.com/#narrow/channel/582428-Xarray>`__
 - `Xarray Office Hours <https://github.com/pydata/xarray/discussions/categories/office-hours>`__
 - `Pangeo Discourse <https://discourse.pangeo.io/>`__
 - `Xarray Issues <https://github.com/pydata/xarray/issues>`__

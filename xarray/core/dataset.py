@@ -100,6 +100,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
+    module_available,
     parse_dims_as_set,
 )
 from xarray.core.variable import (
@@ -385,6 +386,11 @@ class Dataset(
     ) -> None:
         if data_vars is None:
             data_vars = {}
+        if isinstance(data_vars, Dataset):
+            raise TypeError(
+                "Passing a Dataset as `data_vars` to the Dataset constructor is"
+                " not supported. Use `ds.copy()` to create a copy of a Dataset."
+            )
         if coords is None:
             coords = {}
 
@@ -528,7 +534,7 @@ class Dataset(
 
         Data will be computed and/or loaded from disk or a remote source.
 
-        Unlike ``.compute``, the original dataset is modified and returned.
+        Unlike ``.compute``, the original dataset is modified in-place and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -643,14 +649,17 @@ class Dataset(
         if not graphs:
             return None
         else:
-            try:
-                from dask.highlevelgraph import HighLevelGraph
+            from dask.highlevelgraph import HighLevelGraph
 
+            if all(isinstance(graph, HighLevelGraph) for graph in graphs.values()):
                 return HighLevelGraph.merge(*graphs.values())
-            except ImportError:
-                from dask import sharedict
 
-                return sharedict.merge(*graphs.values())
+            from dask.utils import ensure_dict
+
+            merged = {}
+            for graph in graphs.values():
+                merged.update(ensure_dict(graph))
+            return merged
 
     def __dask_keys__(self):
         import dask
@@ -660,6 +669,56 @@ class Dataset(
             for v in self.variables.values()
             if dask.is_dask_collection(v)
         ]
+
+    def __dask_exprs__(self):
+        from importlib import import_module
+
+        import dask
+
+        try:
+            DaskArray = import_module("dask_array").Array
+        except ImportError:
+            return None
+
+        exprs = []
+        for v in self.variables.values():
+            if dask.is_dask_collection(v):
+                if not isinstance(v._data, DaskArray):
+                    # Composite expressions must account for every Dask-backed
+                    # variable.  Returning None keeps Dask's collection APIs on
+                    # the existing HighLevelGraph path for mixed
+                    # legacy/expression datasets.
+                    return None
+                exprs.append(v._data.expr)
+        return exprs or None
+
+    def __dask_rebuild_from_exprs__(self, exprs):
+        import dask
+        from dask._collections import new_collection
+
+        dask_variables = [
+            (k, v) for k, v in self._variables.items() if dask.is_dask_collection(v)
+        ]
+        exprs = list(exprs)
+        if len(exprs) != len(dask_variables):
+            raise ValueError(
+                f"Expected {len(dask_variables)} expressions to rebuild Dataset, "
+                f"got {len(exprs)}"
+            )
+
+        variables = dict(self._variables)
+        for (k, v), expr in zip(dask_variables, exprs, strict=True):
+            variables[k] = v._replace(data=new_collection(expr))
+
+        return type(self)._construct_direct(
+            variables,
+            self._coord_names,
+            self._dims,
+            self._attrs,
+            self._indexes,
+            self._encoding,
+            self._close,
+        )
 
     def __dask_layers__(self):
         import dask
@@ -1221,7 +1280,13 @@ class Dataset(
             if k not in self._coord_names:
                 continue
 
-            if set(self.variables[k].dims) <= needed_dims:
+            if k in self._indexes:
+                if self._indexes[k].should_add_coord_to_array(
+                    k, self._variables[k], set(needed_dims)
+                ):
+                    variables[k] = self._variables[k]
+                    coord_names.add(k)
+            elif set(self.variables[k].dims) <= needed_dims:
                 variables[k] = self._variables[k]
                 coord_names.add(k)
 
@@ -2216,14 +2281,22 @@ class Dataset(
         store : zarr.storage.StoreLike, optional
             Store or path to directory in local or remote file system.
         mode : {"w", "w-", "a", "a-", r+", None}, optional
-            Persistence mode: "w" means create (overwrite if exists);
-            "w-" means create (fail if exists);
-            "a" means override all existing variables including dimension coordinates (create if does not exist);
-            "a-" means only append those variables that have ``append_dim``.
-            "r+" means modify existing array *values* only (raise an error if
-            any metadata or shapes would change).
+            Persistence mode:
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "a-" means only append those variables that have ``append_dim``.
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
             "r+" if ``region`` is set and ``w-`` otherwise.
+
+            .. note::
+                When modifying an existing Zarr array that is lazily opened, the "w"
+                behavior can be surprising since the underlying file that is being
+                lazily read from might get deleted before the data is computed.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
         encoding : dict, optional
@@ -7131,7 +7204,7 @@ class Dataset(
         variable = Variable(dims, data, self.attrs, fastpath=True)
 
         coords = {k: v.variable for k, v in self.coords.items()}
-        indexes = filter_indexes_from_coords(self._indexes, set(coords))
+        indexes = dict(self._indexes)
         new_dim_index = PandasIndex(list(self.data_vars), dim)
         indexes[dim] = new_dim_index
         coords.update(new_dim_index.create_variables())
@@ -7472,9 +7545,9 @@ class Dataset(
         dask.dataframe.DataFrame
         """
 
-        import dask.array as da
         import dask.dataframe as dd
 
+        chunkmanager = guess_chunkmanager("dask")
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         columns = list(ordered_dims)
@@ -7491,7 +7564,7 @@ class Dataset(
             except KeyError:
                 # dimension without a matching coordinate
                 size = self.sizes[name]
-                data = da.arange(size, chunks=size, dtype=np.int64)
+                data = chunkmanager.array_api.arange(size, chunks=size, dtype=np.int64)
                 var = Variable((name,), data)
 
             # IndexVariable objects have a dummy .chunk() method
@@ -8351,11 +8424,8 @@ class Dataset(
         ranked : Dataset
             Variables that do not depend on `dim` are dropped.
         """
-        if not OPTIONS["use_bottleneck"]:
-            raise RuntimeError(
-                "rank requires bottleneck to be enabled."
-                " Call `xr.set_options(use_bottleneck=True)` to enable it."
-            )
+        if not module_available("bottleneck"):
+            raise ImportError("rank requires bottleneck to be installed.")
 
         if dim not in self.dims:
             raise ValueError(
@@ -10363,7 +10433,7 @@ class Dataset(
 
         Parameters
         ----------
-        dims : iterable of hashable
+        dim : iterable of hashable
             The name(s) of the dimensions to create the cumulative window along
         min_periods : int, default: 1
             Minimum number of observations in window required to have a value

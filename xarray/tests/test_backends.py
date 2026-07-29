@@ -20,7 +20,7 @@ from contextlib import ExitStack
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 from unittest.mock import patch
 
 import numpy as np
@@ -66,7 +66,6 @@ from xarray.core.indexes import PandasIndex
 from xarray.core.options import set_options
 from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
-from xarray.namedarray.pycompat import array_type
 from xarray.structure.alignment import AlignmentError
 from xarray.tests import (
     assert_allclose,
@@ -74,6 +73,8 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_api,
+    dask_array_type,
     has_dask,
     has_netCDF4,
     has_numpy_2,
@@ -119,7 +120,7 @@ with contextlib.suppress(ImportError):
 
 with contextlib.suppress(ImportError):
     import dask
-    import dask.array as da
+
 
 with contextlib.suppress(ImportError):
     import fsspec
@@ -135,6 +136,12 @@ else:
     KVStore = None  # type: ignore[assignment,misc,unused-ignore]
     WrapperStore = object  # type: ignore[assignment,misc,unused-ignore]
     ZARR_FORMATS = []
+
+if TYPE_CHECKING:
+    from zarr.abc.store import Store as ZarrStoreABC
+
+    from xarray import Variable
+    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
 
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
@@ -216,12 +223,6 @@ def _check_compression_codec_available(codec: str | None) -> bool:
     except Exception:
         # Any other error, assume codec is not available
         return False
-
-
-dask_array_type = array_type("dask")
-
-if TYPE_CHECKING:
-    from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
 
 
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
@@ -1004,6 +1005,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def validate_array_type(self, ds):
+
         # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
@@ -1012,7 +1014,7 @@ class DatasetIOBase:
                     find_and_validate_array(obj.array)
                 elif isinstance(obj.array, np.ndarray):
                     assert isinstance(obj, indexing.NumpyIndexingAdapter)
-                elif isinstance(obj.array, dask_array_type):
+                elif has_dask and isinstance(obj.array, dask_array_type):
                     assert isinstance(obj, indexing.DaskIndexingAdapter)
                 elif isinstance(obj.array, pd.Index):
                     assert isinstance(obj, indexing.PandasIndexingAdapter)
@@ -2242,16 +2244,19 @@ class NetCDF4Base(NetCDFBase):
                 assert len(loaded_ds.xindexes) == 0
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_encoding_masked_arrays(self, tmp_path) -> None:
         store_path = tmp_path / "tmp.nc"
 
         with raise_if_dask_computes():
+            da = dask_array_api
             ds = xr.DataArray(
-                dask.array.from_array(
+                da.from_array(
                     np.ma.masked_array(
                         np.array([[np.nan, np.nan], [np.nan, 2]]),
                         np.array([[True, True], [True, False]]),
-                    )
+                    ),
+                    chunks=(2, 2),
                 ).astype("float32"),
                 dims=("x", "y"),
             ).to_dataset(name="mydata")
@@ -2589,6 +2594,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     def test_write_inconsistent_chunks(self) -> None:
         # Construct two variables with the same dimensions, but different
         # chunk sizes.
+        da = dask_array_api
         x = da.zeros((100, 100), dtype="f4", chunks=(50, 100))
         x = DataArray(data=x, dims=("lat", "lon"), name="x")
         x.encoding["chunksizes"] = (50, 100)
@@ -3777,8 +3783,14 @@ class ZarrBase(CFEncodedBase):
         # We test this by writing a dask array with compute=False,
         # on read we should receive chunks filled with `fill_value`
         fv = -1
+        da = dask_array_api
         ds = xr.Dataset(
-            {"foo": ("x", dask.array.from_array(np.array([0, 0, 0], dtype=dtype)))}
+            {
+                "foo": (
+                    "x",
+                    da.from_array(np.array([0, 0, 0], dtype=dtype), chunks=(3,)),
+                )
+            }
         )
         expected = xr.Dataset({"foo": ("x", [fv] * 3)})
 
@@ -3827,6 +3839,27 @@ class ZarrBase(CFEncodedBase):
             # TODO: this doesn't fail because of the
             # ``raise_on_invalid=vn in check_encoding_set`` line in zarr.py
             # ds.foo.encoding["fill_value"] = fv
+
+    def test_zarr_fill_value_in_encoding_on_read(self) -> None:
+        # GH #10269: the Zarr array fill_value should be preserved in the
+        # variable encoding on read, so that it is not lost on round-trip.
+        # `fill_value` is an independent encoding key only for zarr_format 3;
+        # for zarr_format 2 the fill_value is set via `_FillValue`.
+        if zarr.config.get("default_zarr_format") != 3:
+            pytest.skip("fill_value is only an encoding key for zarr_format 3")
+
+        ds = xr.Dataset({"foo": ("x", [1, 2, 3])})
+        ds.foo.encoding = {"fill_value": -99}
+
+        open_kwargs = {"consolidated": False, "use_zarr_fill_value_as_mask": False}
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as actual:
+            assert actual.foo.encoding["fill_value"] == -99
+
+        # the fill_value must survive an open -> write -> open round-trip even
+        # when the user never touches the encoding explicitly
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as opened:
+            with self.roundtrip(opened, open_kwargs=open_kwargs) as actual:
+                assert actual.foo.encoding["fill_value"] == -99
 
 
 @requires_zarr
@@ -4037,7 +4070,7 @@ class TestZarrDictStore(ZarrBase):
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     async def test_concurrent_load_multiple_objects(
         self,
-        cls_name,
+        cls_name: Literal["Variable", "DataArray", "Dataset"],
     ) -> None:
         N_OBJECTS = 5
         N_LAZY_VARS = {
@@ -4123,8 +4156,8 @@ class TestZarrDictStore(ZarrBase):
     )
     async def test_indexing(
         self,
-        cls_name,
-        method,
+        cls_name: Literal["Variable", "DataArray", "Dataset"],
+        method: Literal["sel", "isel"],
         indexer,
         target_zarr_class,
     ) -> None:
@@ -4215,9 +4248,27 @@ class TestZarrDictStore(ZarrBase):
                 await var.isel(**indexer).load_async()
 
 
+@overload
+def get_xr_obj(store: ZarrStoreABC, cls_name: Literal["Variable"]) -> Variable: ...
+
+
+@overload
+def get_xr_obj(store: ZarrStoreABC, cls_name: Literal["DataArray"]) -> DataArray: ...
+
+
+@overload
+def get_xr_obj(store: ZarrStoreABC, cls_name: Literal["Dataset"]) -> Dataset: ...
+
+
+@overload
 def get_xr_obj(
-    store: zarr.abc.store.Store, cls_name: Literal["Variable", "DataArray", "Dataset"]
-):
+    store: ZarrStoreABC, cls_name: Literal["Variable", "DataArray", "Dataset"]
+) -> Variable | DataArray | Dataset: ...
+
+
+def get_xr_obj(
+    store: ZarrStoreABC, cls_name: Literal["Variable", "DataArray", "Dataset"]
+) -> Variable | DataArray | Dataset:
     ds = xr.open_zarr(store, consolidated=False, chunks=None)
 
     match cls_name:
@@ -5112,6 +5163,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
     def test_write_inconsistent_chunks(self) -> None:
         # Construct two variables with the same dimensions, but different
         # chunk sizes.
+        da = dask_array_api
         x = da.zeros((100, 100), dtype="f4", chunks=(50, 100))
         x = DataArray(data=x, dims=("lat", "lon"), name="x")
         x.encoding["chunksizes"] = (50, 100)
@@ -5205,16 +5257,28 @@ def test_memoryview_write_netcdf4_read_h5netcdf() -> None:
 @requires_h5netcdf_ros3
 class TestH5NetCDFDataRos3Driver(TestCommon):
     engine: T_NetcdfEngine = "h5netcdf"
-    test_remote_dataset: str = "https://archive.unidata.ucar.edu/software/netcdf/examples/OMI-Aura_L2-example.nc"
+    test_remote_dataset: str = "https://dandiarchive.s3.amazonaws.com/ros3test.hdf5"
+
+    @property
+    def ros3_kwargs(self) -> dict:
+        from h5py import version as h5ver
+
+        return (
+            {} if h5ver.hdf5_version_tuple < (2, 0, 0) else {"aws_region": b"us-east-2"}
+        )
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list(self) -> None:
         with open_dataset(
             self.test_remote_dataset,
             engine="h5netcdf",
-            backend_kwargs={"driver": "ros3"},
+            backend_kwargs={
+                "driver": "ros3",
+                "driver_kwds": self.ros3_kwargs,
+                "phony_dims": "access",
+            },
         ) as actual:
-            assert "Temperature" in list(actual)
+            assert "mydataset" in list(actual)
 
     @pytest.mark.filterwarnings("ignore:Duplicate dimension names")
     def test_get_variable_list_empty_driver_kwds(self) -> None:
@@ -5222,12 +5286,17 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             "secret_id": b"",
             "secret_key": b"",
         }
-        backend_kwargs = {"driver": "ros3", "driver_kwds": driver_kwds}
+        driver_kwds.update(self.ros3_kwargs)
+        backend_kwargs = {
+            "driver": "ros3",
+            "driver_kwds": driver_kwds,
+            "phony_dims": "access",
+        }
 
         with open_dataset(
             self.test_remote_dataset, engine="h5netcdf", backend_kwargs=backend_kwargs
         ) as actual:
-            assert "Temperature" in list(actual)
+            assert "mydataset" in list(actual)
 
 
 @pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "zarr"])
@@ -5745,7 +5814,7 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset(
                     [tmp1, tmp2], concat_dim="x", combine="nested"
                 ) as actual:
-                    assert isinstance(actual.foo.variable.data, da.Array)
+                    assert isinstance(actual.foo.variable.data, dask_array_type)
                     assert actual.foo.variable.data.chunks == ((5, 5),)
                     assert_identical(original, actual)
                 with open_mfdataset(
@@ -5781,7 +5850,10 @@ class TestDask(DatasetIOBase):
                             combine="nested",
                             concat_dim=["y", "x"],
                         ) as actual:
-                            assert isinstance(actual.foo.variable.data, da.Array)
+                            assert isinstance(
+                                actual.foo.variable.data,
+                                dask_array_type,
+                            )
                             assert actual.foo.variable.data.chunks == ((5, 5), (4, 4))
                             assert_identical(original, actual)
                         with open_mfdataset(
@@ -6141,7 +6213,7 @@ class TestDask(DatasetIOBase):
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
             with open_dataset(tmp, chunks={"x": 5}) as actual:
-                assert isinstance(actual.foo.variable.data, da.Array)
+                assert isinstance(actual.foo.variable.data, dask_array_type)
                 assert actual.foo.variable.data.chunks == ((5, 5),)
                 assert_identical(original, actual)
             with open_dataset(tmp, chunks=5) as actual:
@@ -6213,7 +6285,7 @@ class TestDask(DatasetIOBase):
             {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]},
         )
         with self.roundtrip(original, open_kwargs={"chunks": "auto"}) as actual:
-            assert isinstance(actual.time_bnds.variable.data, da.Array)
+            assert isinstance(actual.time_bnds.variable.data, dask_array_type)
             assert _contains_cftime_datetimes(actual.time)
             assert_identical(original, actual)
 
@@ -6304,6 +6376,7 @@ class TestDask(DatasetIOBase):
         ON_WINDOWS,
         reason="counting number of tasks in graph fails on windows for some reason",
     )
+    @pytest.mark.skip_with_dask_array
     def test_inline_array(self) -> None:
         with create_tmp_file() as tmp:
             original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -6794,6 +6867,7 @@ def test_source_encoding_always_present_with_pathlib() -> None:
 
 @requires_h5netcdf
 @requires_fsspec
+@requires_dask  # TODO remove after https://github.com/pydata/xarray/issues/9038
 def test_source_encoding_always_present_with_fsspec() -> None:
     import fsspec
 
@@ -7008,6 +7082,41 @@ def test_encode_zarr_attr_value() -> None:
 
 
 @requires_zarr
+@pytest.mark.parametrize("dtype", [complex, np.complex64, np.complex128])
+def test_fill_value_coder_complex(dtype) -> None:
+    """Test that FillValueCoder round-trips complex fill values."""
+    from xarray.backends.zarr import FillValueCoder
+
+    for value in [dtype(1 + 2j), dtype(-3.5 + 4.5j), dtype(complex("nan+nanj"))]:
+        encoded = FillValueCoder.encode(value, np.dtype(dtype))
+        decoded = FillValueCoder.decode(encoded, np.dtype(dtype))
+        np.testing.assert_equal(np.array(decoded, dtype=dtype), np.array(value))
+
+
+@requires_zarr
+@pytest.mark.parametrize(
+    "value,dtype",
+    [
+        (np.float32(np.inf), np.float32),
+        (np.float32(-np.inf), np.float32),
+        (np.float64(np.inf), np.float64),
+        (np.float64(-np.inf), np.float64),
+        (np.float32(np.nan), np.float32),
+        (np.float64(np.nan), np.float64),
+    ],
+)
+def test_fill_value_coder_inf_nan(value, dtype) -> None:
+    """Test that FillValueCoder round-trips inf and nan fill values."""
+    from xarray.backends.zarr import FillValueCoder
+
+    encoded = FillValueCoder.encode(value, np.dtype(dtype))
+    decoded = FillValueCoder.decode(encoded, np.dtype(dtype))
+    np.testing.assert_equal(
+        np.array(decoded, dtype=dtype), np.array(value, dtype=dtype)
+    )
+
+
+@requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
     var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
@@ -7109,7 +7218,7 @@ def test_load_single_value_h5netcdf(tmp_path: Path) -> None:
 )
 def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
     encoded_chunks = 100
-    dask_arr = da.from_array(
+    dask_arr = dask_array_api.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
     ds = xr.Dataset(
@@ -7139,7 +7248,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
 @pytest.mark.filterwarnings("ignore:The specified chunks separate")
 def test_chunking_consistency(chunks, tmp_path: Path) -> None:
     encoded_chunks: dict[str, Any] = {}
-    dask_arr = da.from_array(
+    dask_arr = dask_array_api.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
     ds = xr.Dataset(
@@ -7964,6 +8073,7 @@ class TestZarrRegionAuto:
 
 @requires_h5netcdf
 @requires_fsspec
+@requires_dask  # TODO remove after https://github.com/pydata/xarray/issues/9038
 def test_h5netcdf_storage_options() -> None:
     with create_tmp_files(2, allow_cleanup_failure=ON_WINDOWS) as (f1, f2):
         ds1 = create_test_data()
@@ -7982,3 +8092,14 @@ def test_h5netcdf_storage_options() -> None:
             storage_options={"skip_instance_cache": False},
         ) as ds:
             assert_identical(xr.concat([ds1, ds2], dim="time", data_vars="all"), ds)
+
+
+def test_get_mtime_non_file_paths() -> None:
+    """_get_mtime should not raise on non-file paths (gh#11386)."""
+    from xarray.backends.api import _get_mtime
+
+    # Non-existent local path should return None, not crash
+    assert _get_mtime("/nonexistent/path.nc") is None
+
+    # GDAL virtual filesystem paths are not real files
+    assert _get_mtime("/vsicurl/https://example.com/file.nc") is None

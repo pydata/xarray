@@ -4,7 +4,7 @@ import functools
 import inspect
 import warnings
 from collections.abc import Callable, Hashable, Iterable
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from xarray.plot import dataarray_plot
 from xarray.plot.facetgrid import _easy_facetgrid
@@ -65,8 +65,10 @@ row : Hashable or None, optional
     If passed, make row faceted plots on this dimension name.
 col : Hashable or None, optional
     If passed, make column faceted plots on this dimension name.
-col_wrap : int, optional
-    Use together with ``col`` to wrap faceted plots.
+col_wrap : int, None or "auto", optional
+    "Wrap" the grid for the column variable after this number of columns,
+    adding rows if ``col_wrap`` is less than the number of facets.
+    If "auto" align the grid to the figsize or keep it as square as possible.
 ax : matplotlib axes object or None, optional
     If ``None``, use the current axes. Not applicable when using facets.
 figsize : Iterable[float] or None, optional
@@ -169,7 +171,7 @@ levels : int or array-like, optional
         hue_style: HueStyleOptions = None,
         row: Hashable | None = None,
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
@@ -336,7 +338,7 @@ def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -373,7 +375,7 @@ def quiver(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -410,7 +412,7 @@ def quiver(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -487,7 +489,7 @@ def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -524,7 +526,7 @@ def streamplot(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -561,7 +563,7 @@ def streamplot(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -767,7 +769,7 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_legend: bool | None = None,
@@ -808,7 +810,7 @@ def scatter(
     ax: Axes | None = None,
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_legend: bool | None = None,
@@ -849,7 +851,7 @@ def scatter(
     ax: Axes | None = None,
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_legend: bool | None = None,
@@ -890,7 +892,7 @@ def scatter(
     ax: Axes | None = None,
     row: Hashable | None = None,
     col: Hashable | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_legend: bool | None = None,

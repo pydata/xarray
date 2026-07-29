@@ -20,6 +20,7 @@ from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
+    dask_array_api,
     has_dask,
     has_scipy,
     has_scipy_ge_1_13,
@@ -1129,7 +1130,7 @@ def test_interp_non_numeric_nd() -> None:
 @requires_scipy
 def test_interp_vectorized_dask() -> None:
     # Synthetic dataset chunked in the two interpolation dimensions
-    import dask.array as da
+    da = dask_array_api
 
     nt = 10
     nlat = 20
