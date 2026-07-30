@@ -229,9 +229,11 @@ def _possibly_convert_objects(values):
         result = pd.to_datetime(values.ravel()).to_numpy().reshape(values.shape)
     elif inferred == "timedelta":
         result = pd.to_timedelta(values.ravel()).to_numpy().reshape(values.shape)
-    else:
+    elif inferred in ["datetime64", "timedelta64"]:
         as_series = pd.Series(values.ravel(), copy=False)
         result = np.asarray(as_series).reshape(values.shape)
+    else:
+        result = values
 
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
