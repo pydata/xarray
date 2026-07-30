@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from collections import OrderedDict
-from collections.abc import Mapping
+from collections import OrderedDict, deque
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from functools import lru_cache, partial
 from html import escape
@@ -478,12 +478,14 @@ class _DataTreeDisplay:
     disabled: bool
 
 
-def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
+def _build_datatree_displays_from_nodes(
+    nodes: Iterable[DataTree], *, has_root: bool
+) -> dict[str, _DataTreeDisplay]:
     displayed_line_count = 0
     html_line_count = 0
     displays: dict[str, _DataTreeDisplay] = {}
     item_count_cache: dict[int, int] = {}
-    root = True
+    root = has_root
     collapsed = False
     disabled = False
 
@@ -497,7 +499,7 @@ def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
         span_grid=True,
     )
 
-    for node in tree.subtree:  # breadth-first
+    for node in nodes:
         parent = node.parent
         if parent is not None:
             parent_display = displays.get(parent.path)
@@ -537,6 +539,26 @@ def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
                     displays[child.path].collapsed = True
 
     return displays
+
+
+def _build_datatree_displays(tree: DataTree) -> dict[str, _DataTreeDisplay]:
+    return _build_datatree_displays_from_nodes(tree.subtree, has_root=True)
+
+
+def _children_subtree(children: Mapping[str, DataTree]) -> Iterator[DataTree]:
+    queue = deque(children.values())
+    while queue:
+        node = queue.popleft()
+        yield node
+        queue.extend(node.children.values())
+
+
+def _build_datatree_children_displays(
+    children: Mapping[str, DataTree],
+) -> dict[str, _DataTreeDisplay]:
+    return _build_datatree_displays_from_nodes(
+        _children_subtree(children), has_root=False
+    )
 
 
 def _ellipsis_element() -> str:
@@ -659,3 +681,15 @@ def datatree_repr(node: DataTree) -> str:
         header_components.append(f"<div class='xr-obj-name'>{name}</div>")
     sections = datatree_sections(node, displays)
     return _obj_repr(node, header_components, sections)
+
+
+def datatree_children_repr(children: Mapping[str, DataTree]) -> str:
+    displays = _build_datatree_children_displays(children)
+    for child in children.values():
+        displays[child.path].collapsed = True
+
+    header_components = [
+        "<div class='xr-obj-type'>xarray.DataTree children</div>",
+    ]
+    sections = [children_section(children, displays)] if children else []
+    return _obj_repr(children, header_components, sections)
