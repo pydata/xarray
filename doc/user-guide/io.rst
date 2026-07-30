@@ -1110,6 +1110,15 @@ For example:
     Not all native zarr compression and filtering options have been tested with
     xarray.
 
+.. note::
+
+    When a variable is read from a Zarr store, xarray also stores the array's
+    complete Zarr metadata document (as returned by
+    ``zarr.Array.metadata.to_dict()``) on ``encoding["zarr_array_metadata"]``.
+    This is provided for provenance and introspection only: it is read-only, so
+    it is dropped when writing and is not used to control how the array is
+    written.
+
 .. _io.zarr.appending:
 
 Modifying existing Zarr stores

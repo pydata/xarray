@@ -4,8 +4,8 @@ import base64
 import json
 import os
 import struct
-from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal, Self, cast
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, Self, TypedDict, cast
 
 import numpy as np
 import pandas as pd
@@ -122,8 +122,108 @@ ZARR_V3_ENCODING_KEYS: frozenset[str] = ZARR_V2_ENCODING_KEYS | {"fill_value"}
 # originate from other backends) but that must never be forwarded to zarr on
 # write. These are dropped silently.
 ZARR_READ_ONLY_ENCODING_KEYS: frozenset[str] = frozenset(
-    {"source", "original_shape", "preferred_chunks"}
+    {"source", "original_shape", "preferred_chunks", "zarr_array_metadata"}
 )
+
+
+class _ZarrV2ArrayMetadata(TypedDict):
+    """A Zarr format 2 array metadata document.
+
+    The keys mirror ``zarr_metadata.ZarrV2ArrayMetadataJSON``; the value types
+    are deliberately wide, since xarray only relies on the key names.
+    """
+
+    zarr_format: Literal[2]
+    shape: Sequence[int]
+    chunks: Sequence[int]
+    dtype: object
+    compressor: object
+    fill_value: object
+    order: object
+    filters: object
+    dimension_separator: NotRequired[object]
+    attributes: NotRequired[Mapping[str, object]]
+
+
+class _ZarrV3ArrayMetadata(TypedDict):
+    """A Zarr format 3 array metadata document.
+
+    The keys mirror ``zarr_metadata.ZarrV3ArrayMetadataJSON``; the value types
+    are deliberately wide, since xarray only relies on the key names.
+    """
+
+    zarr_format: Literal[3]
+    node_type: Literal["array"]
+    data_type: object
+    shape: Sequence[int]
+    chunk_grid: object
+    chunk_key_encoding: object
+    fill_value: object
+    codecs: Sequence[object]
+    attributes: NotRequired[Mapping[str, object]]
+    storage_transformers: NotRequired[Sequence[object]]
+    dimension_names: NotRequired[Sequence[str | None]]
+
+
+def _array_zarr_format(zarr_array: ZarrArray) -> ZarrFormat:
+    """Return the Zarr format of an array.
+
+    This is the single place where xarray reads the format from a zarr-python
+    array object, so a change to zarr-python's array or metadata API only
+    needs to be accommodated here.
+    """
+    zarr_format = zarr_array.metadata.zarr_format
+    if zarr_format not in (2, 3):
+        raise ValueError(f"unsupported Zarr format: {zarr_format!r}")
+    return zarr_format
+
+
+def _v2_array_metadata(zarr_array: ZarrArray) -> _ZarrV2ArrayMetadata:
+    """Emit the format 2 metadata document for a zarr array.
+
+    This function and ``_v3_array_metadata`` are the only places where xarray
+    reads a zarr-python array's metadata document, so a change to zarr-python's
+    array or metadata API only needs to be accommodated here. The keys are read
+    individually so that the result always has the declared shape and a missing
+    key fails loudly.
+    """
+    raw = zarr_array.metadata.to_dict()
+    document = {
+        "zarr_format": raw["zarr_format"],
+        "shape": raw["shape"],
+        "chunks": raw["chunks"],
+        "dtype": raw["dtype"],
+        "compressor": raw["compressor"],
+        "fill_value": raw["fill_value"],
+        "order": raw["order"],
+        "filters": raw["filters"],
+    }
+    for key in ("dimension_separator", "attributes"):
+        if key in raw:
+            document[key] = raw[key]
+    return cast("_ZarrV2ArrayMetadata", document)
+
+
+def _v3_array_metadata(zarr_array: ZarrArray) -> _ZarrV3ArrayMetadata:
+    """Emit the format 3 metadata document for a zarr array.
+
+    See ``_v2_array_metadata`` for the role these two functions play.
+    """
+    raw = zarr_array.metadata.to_dict()
+    document = {
+        "zarr_format": raw["zarr_format"],
+        "node_type": raw["node_type"],
+        "data_type": raw["data_type"],
+        "shape": raw["shape"],
+        "chunk_grid": raw["chunk_grid"],
+        "chunk_key_encoding": raw["chunk_key_encoding"],
+        "fill_value": raw["fill_value"],
+        "codecs": raw["codecs"],
+    }
+    for key in ("attributes", "storage_transformers", "dimension_names"):
+        if key in raw:
+            document[key] = raw[key]
+    return cast("_ZarrV3ArrayMetadata", document)
 
 
 class FillValueCoder:
@@ -903,6 +1003,13 @@ class ZarrStore(AbstractWritableDataStore):
         )
         if self.zarr_group.metadata.zarr_format == 3:
             encoding.update({"serializer": zarr_array.serializer})
+        # Store the source array's full metadata document for provenance and
+        # introspection. This is read-only: it is dropped on write (see
+        # ``ZARR_READ_ONLY_ENCODING_KEYS``) and is not consumed by the writer.
+        if _array_zarr_format(zarr_array) == 3:
+            encoding["zarr_array_metadata"] = _v3_array_metadata(zarr_array)
+        else:
+            encoding["zarr_array_metadata"] = _v2_array_metadata(zarr_array)
 
         if self._use_zarr_fill_value_as_mask:
             # Setting this attribute triggers CF decoding for missing values

@@ -4503,6 +4503,29 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             assert mock.call_count == call_count
 
 
+@requires_zarr
+@pytest.mark.parametrize(
+    "zarr_format, layout_key",
+    [(2, "chunks"), (3, "codecs")],
+)
+def test_zarr_array_metadata_stored_on_read(tmp_path, zarr_format, layout_key) -> None:
+    # The source array's full metadata document is stored on read for
+    # provenance / introspection. It is a read-only encoding key: dropped on
+    # write and never forwarded to the zarr array-creation call.
+    ds = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0, 4.0])})
+    ds.to_zarr(tmp_path / "s.zarr", zarr_format=zarr_format, mode="w")
+
+    opened = xr.open_zarr(tmp_path / "s.zarr")
+    frag = opened["a"].encoding["zarr_array_metadata"]
+    assert frag["zarr_format"] == zarr_format
+    assert layout_key in frag
+
+    # rewriting the opened dataset must succeed (the read-only key is dropped,
+    # not passed to zarr's create) and reproduce the original data
+    opened.to_zarr(tmp_path / "s2.zarr", zarr_format=zarr_format, mode="w")
+    assert_identical(xr.open_zarr(tmp_path / "s2.zarr"), ds)
+
+
 @requires_scipy
 class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only, InMemoryNetCDF):
     engine: T_NetcdfEngine = "scipy"
