@@ -293,6 +293,32 @@ attr_section = partial(
 )
 
 
+def summarize_accessors(accessors) -> str:
+    accessors_dl = "".join(
+        f"<dt><span>{escape(str(k))} :</span></dt><dd>{escape(repr(v))}</dd>"
+        for k, v in accessors.items()
+    )
+    return f"<dl class='xr-attrs'>{accessors_dl}</dl>"
+
+
+accessor_section = partial(
+    _mapping_section,
+    name="Accessors",
+    details_func=summarize_accessors,
+    max_items_collapse=5,
+    expand_option_name="display_expand_accessors",
+)
+
+
+def _accessors_section(obj) -> str | None:
+    from xarray.core.extensions import get_accessors_for_repr
+
+    accessors = get_accessors_for_repr(obj)
+    if not accessors:
+        return None
+    return accessor_section(accessors)
+
+
 def _get_indexes_dict(indexes):
     return {
         tuple(index_vars.keys()): idx for idx, index_vars in indexes.group_by_index()
@@ -358,6 +384,9 @@ def array_repr(arr) -> str:
             indexes = _get_indexes_dict(arr.xindexes)
             sections.append(index_section(indexes))
 
+    if accessors_html := _accessors_section(arr):
+        sections.append(accessors_html)
+
     if arr.attrs:
         sections.append(attr_section(arr.attrs))
 
@@ -386,6 +415,9 @@ def dataset_repr(ds) -> str:
     )
     if xindexes:
         sections.append(index_section(xindexes))
+
+    if accessors_html := _accessors_section(ds):
+        sections.append(accessors_html)
 
     if ds.attrs:
         sections.append(attr_section(ds.attrs))
@@ -435,6 +467,11 @@ def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]
         sections.append(datavar_section(ds.data_vars))
     if xindexes:
         sections.append(index_section(xindexes))
+    from xarray.core.extensions import get_accessors_for_repr
+
+    accessors = get_accessors_for_repr(node)
+    if accessors:
+        sections.append(accessor_section(accessors))
     if ds.attrs:
         sections.append(attr_section(ds.attrs))
 
@@ -448,6 +485,8 @@ def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]
         + len(ds.data_vars)
         + int(bool(xindexes))
         + len(xindexes)
+        + int(bool(accessors))
+        + len(accessors)
         + int(bool(ds.attrs))
         + len(ds.attrs)
     )

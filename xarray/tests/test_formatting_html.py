@@ -42,6 +42,7 @@ assert_consistent_text_and_html_dataarray = partial(
     section_headers=[
         "Coordinates",
         "Indexes",
+        "Accessors",
         "Attributes",
     ],
 )
@@ -54,6 +55,7 @@ assert_consistent_text_and_html_dataset = partial(
         "Coordinates",
         "Data variables",
         "Indexes",
+        "Accessors",
         "Attributes",
     ],
 )
@@ -67,6 +69,7 @@ assert_consistent_text_and_html_datatree = partial(
         "Inherited coordinates",
         "Data variables",
         "Indexes",
+        "Accessors",
         "Attributes",
     ],
 )
@@ -448,3 +451,22 @@ class TestDataTreeInheritance:
         html = dt._repr_html_()
         assert html.count("<style>") == 1
         assert html.count("<pre class='xr-text-repr-fallback'>") == 1
+
+
+def test_html_repr_includes_custom_accessor() -> None:
+    @xr.register_dataset_accessor("repr_demo_html")
+    class ReprDemoHtml:
+        def __init__(self, obj):
+            self._obj = obj
+
+        def __repr__(self) -> str:
+            return "ReprDemoHtml(<tag>)"
+
+    try:
+        html = xarray_html_only_repr(xr.Dataset({"x": 1}))
+        assert "Accessors" in html
+        assert "repr_demo_html" in html
+        # escaped angle brackets from __repr__
+        assert "ReprDemoHtml(&lt;tag&gt;)" in html
+    finally:
+        del xr.Dataset.repr_demo_html  # type: ignore[attr-defined]
