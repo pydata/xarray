@@ -4,8 +4,8 @@ import base64
 import json
 import os
 import struct
-from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal, Self, cast
+from collections.abc import Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, Self, TypedDict, cast
 
 import numpy as np
 import pandas as pd
@@ -96,6 +96,134 @@ def _choose_default_mode(
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 ZarrFormat = Literal[2, 3]
+
+# --- Zarr encoding keys -----------------------------------------------------
+# The variable ``.encoding`` dict is xarray's channel for storage-level
+# metadata. The sets below are the single source of truth for the keys the
+# Zarr backend accepts on write and forwards to zarr's array-creation routine.
+ZARR_V2_ENCODING_KEYS: frozenset[str] = frozenset(
+    {
+        "chunks",
+        "shards",
+        "compressors",
+        "filters",
+        "serializer",
+        "cache_metadata",
+        "write_empty_chunks",
+        "chunk_key_encoding",
+    }
+)
+
+# Format 3 additionally accepts ``fill_value``; in format 2 the array fill
+# value is carried by the ``_FillValue`` attribute instead.
+ZARR_V3_ENCODING_KEYS: frozenset[str] = ZARR_V2_ENCODING_KEYS | {"fill_value"}
+
+# Informational keys that xarray populates in ``.encoding`` on read (or that
+# originate from other backends) but that must never be forwarded to zarr on
+# write. These are dropped silently.
+ZARR_READ_ONLY_ENCODING_KEYS: frozenset[str] = frozenset(
+    {"source", "original_shape", "preferred_chunks", "zarr_array_metadata"}
+)
+
+
+class _ZarrV2ArrayMetadata(TypedDict):
+    """A Zarr format 2 array metadata document.
+
+    The keys mirror ``zarr_metadata.ZarrV2ArrayMetadataJSON``; the value types
+    are deliberately wide, since xarray only relies on the key names.
+    """
+
+    zarr_format: Literal[2]
+    shape: Sequence[int]
+    chunks: Sequence[int]
+    dtype: object
+    compressor: object
+    fill_value: object
+    order: object
+    filters: object
+    dimension_separator: NotRequired[object]
+    attributes: NotRequired[Mapping[str, object]]
+
+
+class _ZarrV3ArrayMetadata(TypedDict):
+    """A Zarr format 3 array metadata document.
+
+    The keys mirror ``zarr_metadata.ZarrV3ArrayMetadataJSON``; the value types
+    are deliberately wide, since xarray only relies on the key names.
+    """
+
+    zarr_format: Literal[3]
+    node_type: Literal["array"]
+    data_type: object
+    shape: Sequence[int]
+    chunk_grid: object
+    chunk_key_encoding: object
+    fill_value: object
+    codecs: Sequence[object]
+    attributes: NotRequired[Mapping[str, object]]
+    storage_transformers: NotRequired[Sequence[object]]
+    dimension_names: NotRequired[Sequence[str | None]]
+
+
+def _array_zarr_format(zarr_array: ZarrArray) -> ZarrFormat:
+    """Return the Zarr format of an array.
+
+    This is the single place where xarray reads the format from a zarr-python
+    array object, so a change to zarr-python's array or metadata API only
+    needs to be accommodated here.
+    """
+    zarr_format = zarr_array.metadata.zarr_format
+    if zarr_format not in (2, 3):
+        raise ValueError(f"unsupported Zarr format: {zarr_format!r}")
+    return zarr_format
+
+
+def _v2_array_metadata(zarr_array: ZarrArray) -> _ZarrV2ArrayMetadata:
+    """Emit the format 2 metadata document for a zarr array.
+
+    This function and ``_v3_array_metadata`` are the only places where xarray
+    reads a zarr-python array's metadata document, so a change to zarr-python's
+    array or metadata API only needs to be accommodated here. The keys are read
+    individually so that the result always has the declared shape and a missing
+    key fails loudly.
+    """
+    raw = zarr_array.metadata.to_dict()
+    document = {
+        "zarr_format": raw["zarr_format"],
+        "shape": raw["shape"],
+        "chunks": raw["chunks"],
+        "dtype": raw["dtype"],
+        "compressor": raw["compressor"],
+        "fill_value": raw["fill_value"],
+        "order": raw["order"],
+        "filters": raw["filters"],
+    }
+    for key in ("dimension_separator", "attributes"):
+        if key in raw:
+            document[key] = raw[key]
+    return cast("_ZarrV2ArrayMetadata", document)
+
+
+def _v3_array_metadata(zarr_array: ZarrArray) -> _ZarrV3ArrayMetadata:
+    """Emit the format 3 metadata document for a zarr array.
+
+    See ``_v2_array_metadata`` for the role these two functions play.
+    """
+    raw = zarr_array.metadata.to_dict()
+    document = {
+        "zarr_format": raw["zarr_format"],
+        "node_type": raw["node_type"],
+        "data_type": raw["data_type"],
+        "shape": raw["shape"],
+        "chunk_grid": raw["chunk_grid"],
+        "chunk_key_encoding": raw["chunk_key_encoding"],
+        "fill_value": raw["fill_value"],
+        "codecs": raw["codecs"],
+    }
+    for key in ("attributes", "storage_transformers", "dimension_names"):
+        if key in raw:
+            document[key] = raw[key]
+    return cast("_ZarrV3ArrayMetadata", document)
 
 
 class FillValueCoder:
@@ -438,6 +566,39 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
     return dimensions, attributes
 
 
+def _validate_zarr_variable_encoding(
+    encoding: Mapping[str, object],
+    *,
+    raise_on_invalid: bool,
+    zarr_format: ZarrFormat,
+) -> dict[str, object]:
+    """Filter an encoding mapping down to the keys the Zarr backend accepts.
+
+    Read-only/informational keys (``ZARR_READ_ONLY_ENCODING_KEYS``) are always
+    dropped. Remaining keys are checked against the writable key set for
+    ``zarr_format``: when ``raise_on_invalid`` is True any unrecognized key
+    raises ``ValueError``; otherwise unrecognized keys are dropped silently.
+
+    Returns a new dict; the input mapping is never mutated.
+    """
+    valid_keys = ZARR_V3_ENCODING_KEYS if zarr_format == 3 else ZARR_V2_ENCODING_KEYS
+    encoding = {
+        k: v for k, v in encoding.items() if k not in ZARR_READ_ONLY_ENCODING_KEYS
+    }
+
+    invalid = [k for k in encoding if k not in valid_keys]
+    if len(invalid) > 0 and raise_on_invalid:
+        msg = (
+            " Use `_FillValue` to set the Zarr array `fill_value`"
+            if "fill_value" in invalid and zarr_format == 2
+            else ""
+        )
+        raise ValueError(
+            f"unexpected encoding parameters for zarr backend:  {invalid!r}." + msg
+        )
+    return {k: v for k, v in encoding.items() if k not in invalid}
+
+
 def extract_zarr_variable_encoding(
     variable,
     raise_on_invalid=False,
@@ -460,41 +621,9 @@ def extract_zarr_variable_encoding(
         Zarr encoding for `variable`
     """
 
-    encoding = variable.encoding.copy()
-
-    safe_to_drop = {"source", "original_shape", "preferred_chunks"}
-    valid_encodings = {
-        "chunks",
-        "shards",
-        "compressors",
-        "filters",
-        "serializer",
-        "cache_metadata",
-        "write_empty_chunks",
-        "chunk_key_encoding",
-    }
-    if zarr_format == 3:
-        valid_encodings.add("fill_value")
-
-    for k in safe_to_drop:
-        if k in encoding:
-            del encoding[k]
-
-    if raise_on_invalid:
-        invalid = [k for k in encoding if k not in valid_encodings]
-        if "fill_value" in invalid and zarr_format == 2:
-            msg = " Use `_FillValue` to set the Zarr array `fill_value`"
-        else:
-            msg = ""
-
-        if invalid:
-            raise ValueError(
-                f"unexpected encoding parameters for zarr backend:  {invalid!r}." + msg
-            )
-    else:
-        for k in list(encoding):
-            if k not in valid_encodings:
-                del encoding[k]
+    encoding = _validate_zarr_variable_encoding(
+        variable.encoding, raise_on_invalid=raise_on_invalid, zarr_format=zarr_format
+    )
 
     chunks = _determine_zarr_chunks(
         enc_chunks=encoding.get("chunks"),
@@ -874,6 +1003,13 @@ class ZarrStore(AbstractWritableDataStore):
         )
         if self.zarr_group.metadata.zarr_format == 3:
             encoding.update({"serializer": zarr_array.serializer})
+        # Store the source array's full metadata document for provenance and
+        # introspection. This is read-only: it is dropped on write (see
+        # ``ZARR_READ_ONLY_ENCODING_KEYS``) and is not consumed by the writer.
+        if _array_zarr_format(zarr_array) == 3:
+            encoding["zarr_array_metadata"] = _v3_array_metadata(zarr_array)
+        else:
+            encoding["zarr_array_metadata"] = _v2_array_metadata(zarr_array)
 
         if self._use_zarr_fill_value_as_mask:
             # Setting this attribute triggers CF decoding for missing values
@@ -1104,38 +1240,58 @@ class ZarrStore(AbstractWritableDataStore):
         return cast(ZarrArray, zarr_array)
 
     def _create_new_array(
-        self, *, name, shape, dtype, fill_value, encoding, attrs
+        self, *, name, dims, shape, dtype, fill_value, encoding, attrs
     ) -> ZarrArray:
         if coding.strings.check_vlen_dtype(dtype) is str:
             dtype = str
 
+        # Zarr array creation takes the variable's storage `encoding` together
+        # with store-level parameters (overwrite, dimension names, write-empty
+        # policy). Collect them in their own dict so that `encoding` remains a
+        # plain description of the variable's storage, separate from the
+        # arguments accepted by zarr's `create()`.
+        create_kwargs = dict(encoding)
+        create_kwargs["overwrite"] = self._mode == "w"
+
+        # Zarr format 3 stores dimension names natively in the array metadata.
+        # Format 2 has no such field, so xarray records them in the hidden
+        # _ARRAY_DIMENSIONS attribute instead.
+        if self.zarr_group.metadata.zarr_format == 3:
+            create_kwargs["dimension_names"] = dims
+        else:
+            attrs = dict(attrs)
+            attrs[DIMENSION_KEY] = dims
+
         if self._write_empty is not None:
             if (
-                "write_empty_chunks" in encoding
-                and encoding["write_empty_chunks"] != self._write_empty
+                "write_empty_chunks" in create_kwargs
+                and create_kwargs["write_empty_chunks"] != self._write_empty
             ):
                 raise ValueError(
-                    'Differing "write_empty_chunks" values in encoding and parameters'
-                    f'Got {encoding["write_empty_chunks"] = } and {self._write_empty = }'
+                    'Differing "write_empty_chunks" values in encoding and parameters. '
+                    f"Got write_empty_chunks={create_kwargs['write_empty_chunks']!r} in "
+                    f"encoding and write_empty_chunks={self._write_empty!r} as a parameter."
                 )
             else:
-                encoding["write_empty_chunks"] = self._write_empty
+                create_kwargs["write_empty_chunks"] = self._write_empty
 
-        # zarr v3 passes write_empty_chunks and order via the config argument
-        encoding["config"] = {}
-        for c in ("write_empty_chunks", "order"):
-            if c in encoding:
-                encoding["config"][c] = encoding.pop(c)
+        # zarr-python 3 expects write_empty_chunks in the config argument
+        # rather than as a top-level parameter
+        create_kwargs["config"] = {}
+        if "write_empty_chunks" in create_kwargs:
+            create_kwargs["config"]["write_empty_chunks"] = create_kwargs.pop(
+                "write_empty_chunks"
+            )
 
         # fill_value is passed explicitly; remove from encoding to avoid duplicates
-        encoding.pop("fill_value", None)
+        create_kwargs.pop("fill_value", None)
 
         zarr_array = self.zarr_group.create(
             name,
             shape=shape,
             dtype=dtype,
             fill_value=fill_value,
-            **encoding,
+            **create_kwargs,
         )
         zarr_array = _put_attrs(zarr_array, attrs)
         return zarr_array
@@ -1271,16 +1427,9 @@ class ZarrStore(AbstractWritableDataStore):
             if self._mode == "w" or name not in existing_keys:
                 # new variable
                 encoded_attrs = {k: self.encode_attribute(v) for k, v in attrs.items()}
-                # the magic for storing the hidden dimension data
-                if is_zarr_v3_format:
-                    encoding["dimension_names"] = dims
-                else:
-                    encoded_attrs[DIMENSION_KEY] = dims
-
-                encoding["overwrite"] = self._mode == "w"
-
                 zarr_array = self._create_new_array(
                     name=name,
+                    dims=dims,
                     dtype=dtype,
                     shape=shape,
                     fill_value=fill_value,

@@ -4503,6 +4503,29 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             assert mock.call_count == call_count
 
 
+@requires_zarr
+@pytest.mark.parametrize(
+    "zarr_format, layout_key",
+    [(2, "chunks"), (3, "codecs")],
+)
+def test_zarr_array_metadata_stored_on_read(tmp_path, zarr_format, layout_key) -> None:
+    # The source array's full metadata document is stored on read for
+    # provenance / introspection. It is a read-only encoding key: dropped on
+    # write and never forwarded to the zarr array-creation call.
+    ds = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0, 4.0])})
+    ds.to_zarr(tmp_path / "s.zarr", zarr_format=zarr_format, mode="w")
+
+    opened = xr.open_zarr(tmp_path / "s.zarr")
+    frag = opened["a"].encoding["zarr_array_metadata"]
+    assert frag["zarr_format"] == zarr_format
+    assert layout_key in frag
+
+    # rewriting the opened dataset must succeed (the read-only key is dropped,
+    # not passed to zarr's create) and reproduce the original data
+    opened.to_zarr(tmp_path / "s2.zarr", zarr_format=zarr_format, mode="w")
+    assert_identical(xr.open_zarr(tmp_path / "s2.zarr"), ds)
+
+
 @requires_scipy
 class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only, InMemoryNetCDF):
     engine: T_NetcdfEngine = "scipy"
@@ -7117,25 +7140,96 @@ def test_fill_value_coder_inf_nan(value, dtype) -> None:
 
 
 @requires_zarr
-def test_extract_zarr_variable_encoding() -> None:
-    var = xr.Variable("x", [1, 2])
+@pytest.mark.parametrize(
+    "encoding, expected_chunks",
+    [({}, "auto"), ({"chunks": (1,)}, (1,))],
+)
+def test_extract_zarr_encoding_resolves_chunks(encoding, expected_chunks) -> None:
+    var = xr.Variable("x", [1, 2], encoding=encoding)
     actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
-    assert "chunks" in actual
-    assert actual["chunks"] == "auto"
+    assert actual["chunks"] == expected_chunks
 
-    var = xr.Variable("x", [1, 2], encoding={"chunks": (1,)})
-    actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
-    assert actual["chunks"] == (1,)
 
-    # does not raise on invalid
+@requires_zarr
+def test_extract_zarr_encoding_drops_invalid_key() -> None:
     var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
     actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
+    assert "foo" not in actual
 
-    # raises on invalid
+
+@requires_zarr
+def test_extract_zarr_encoding_raises_on_invalid_key() -> None:
     var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
     with pytest.raises(ValueError, match=r"unexpected encoding parameters"):
-        actual = backends.zarr.extract_zarr_variable_encoding(
+        backends.zarr.extract_zarr_variable_encoding(
             var, raise_on_invalid=True, zarr_format=3
+        )
+
+
+@requires_zarr
+@pytest.mark.parametrize(
+    "read_only_key", ["preferred_chunks", "source", "original_shape"]
+)
+def test_validate_zarr_encoding_drops_read_only_key(read_only_key) -> None:
+    validate = backends.zarr._validate_zarr_variable_encoding
+    src = {"chunks": (1,), read_only_key: "value"}
+    out = validate(src, raise_on_invalid=False, zarr_format=3)
+    assert out == {"chunks": (1,)}
+    assert read_only_key in src  # input is not mutated
+
+
+@requires_zarr
+def test_validate_zarr_encoding_drops_unknown_key_when_not_raising() -> None:
+    validate = backends.zarr._validate_zarr_variable_encoding
+    out = validate({"foo": 1, "chunks": (1,)}, raise_on_invalid=False, zarr_format=3)
+    assert out == {"chunks": (1,)}
+
+
+@requires_zarr
+def test_validate_zarr_encoding_raises_on_unknown_key() -> None:
+    validate = backends.zarr._validate_zarr_variable_encoding
+    with pytest.raises(ValueError, match=r"unexpected encoding parameters"):
+        validate({"foo": 1}, raise_on_invalid=True, zarr_format=3)
+
+
+@requires_zarr
+def test_validate_zarr_encoding_accepts_fill_value_for_v3() -> None:
+    validate = backends.zarr._validate_zarr_variable_encoding
+    out = validate({"fill_value": 0}, raise_on_invalid=True, zarr_format=3)
+    assert out == {"fill_value": 0}
+
+
+@requires_zarr
+def test_validate_zarr_encoding_rejects_fill_value_for_v2() -> None:
+    validate = backends.zarr._validate_zarr_variable_encoding
+    with pytest.raises(ValueError, match=r"Use `_FillValue`"):
+        validate({"fill_value": 0}, raise_on_invalid=True, zarr_format=2)
+
+
+@requires_zarr
+def test_valid_zarr_encoding_keys_fill_value_is_v3_only() -> None:
+    # fill_value is the only format-specific encoding key: valid for v3 only,
+    # since in format 2 the fill value is carried by the _FillValue attribute.
+    v3_only = backends.zarr.ZARR_V3_ENCODING_KEYS - backends.zarr.ZARR_V2_ENCODING_KEYS
+    assert v3_only == {"fill_value"}
+
+
+@requires_zarr
+def test_read_only_encoding_keys_are_not_writable() -> None:
+    read_only = backends.zarr.ZARR_READ_ONLY_ENCODING_KEYS
+    assert read_only.isdisjoint(backends.zarr.ZARR_V3_ENCODING_KEYS)
+
+
+@requires_zarr
+def test_write_empty_chunks_conflict_raises(tmp_path) -> None:
+    # conflicting write_empty_chunks settings via encoding and via parameter
+    ds = xr.Dataset({"a": ("x", [1.0, 2.0])})
+    with pytest.raises(ValueError, match=r'Differing "write_empty_chunks"'):
+        ds.to_zarr(
+            tmp_path / "s.zarr",
+            mode="w",
+            write_empty_chunks=True,
+            encoding={"a": {"write_empty_chunks": False}},
         )
 
 

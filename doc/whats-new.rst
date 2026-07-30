@@ -61,6 +61,12 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Refactor how the Zarr backend validates the variable ``encoding`` dict on
+  write: the accepted keys are now defined by the module-level constants
+  ``ZARR_V2_ENCODING_KEYS`` and ``ZARR_V3_ENCODING_KEYS`` in
+  ``xarray.backends.zarr``. Behavior is unchanged, except that the error raised
+  for conflicting ``write_empty_chunks`` settings now has a correctly formatted
+  message. By `Davis Bennett <https://github.com/d-v-b>`_.
 
 .. _whats-new.2026.07.0:
 
@@ -162,7 +168,6 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
 
 .. _whats-new.2026.04.0:
 
