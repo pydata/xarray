@@ -711,11 +711,10 @@ class TestZarrDatatreeIO:
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
-            compressor_key = "compressors"
             if zarr_format == 3:
                 # zarr v3 BloscCodec auto-tunes typesize and shuffle on write,
                 # so we only check the attributes we explicitly set
-                rt_codec = roundtrip_dt["/set2/a"].encoding[compressor_key][0]
+                rt_codec = roundtrip_dt["/set2/a"].encoding["compressors"][0]
                 # DEPR: backwards compatibility with zarr <= 3.2.1
                 # This will become a string in the future.
                 # Once we can drop zarr <= 3.2.1, the assertion can become
@@ -724,8 +723,8 @@ class TestZarrDatatreeIO:
                 assert rt_codec.clevel == 3
             else:
                 assert (
-                    roundtrip_dt["/set2/a"].encoding[compressor_key]
-                    == comp[compressor_key]
+                    roundtrip_dt["/set2/a"].encoding["compressors"]
+                    == comp["compressors"]
                 )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]

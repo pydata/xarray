@@ -460,7 +460,7 @@ class TestDataArrayRolling:
             .rolling(t=72, min_periods=72, center=center)
         )
 
-        with set_options(use_numbagg=False):
+        with set_options(use_numbagg=False, use_bottleneck=True):
             expected = getattr(unchunked, name)()
             actual = getattr(chunked, name)()
         actual_block = actual.data.blocks[0, 0].compute()

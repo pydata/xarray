@@ -146,10 +146,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
 def default_zarr_format(request) -> Generator[None, None]:
-    if has_zarr:
-        with zarr.config.set(default_zarr_format=request.param):
-            yield
-    else:
+    with zarr.config.set(default_zarr_format=request.param):
         yield
 
 
@@ -1134,7 +1131,7 @@ class CFEncodedBase(DatasetIOBase):
     )
     @pytest.mark.parametrize("dtype", [np.dtype("float64"), np.dtype("float32")])
     def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn, dtype) -> None:
-        if hasattr(self, "zarr_version") and dtype == np.float32:
+        if hasattr(self, "DIMENSION_KEY") and dtype == np.float32:
             pytest.skip("float32 will be treated as float64 in zarr")
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
@@ -2652,7 +2649,6 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 @pytest.mark.usefixtures("default_zarr_format")
 class ZarrBase(CFEncodedBase):
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
-    zarr_version = 2
     version_kwargs: dict[str, Any] = {}
 
     def create_zarr_target(self):
@@ -2732,21 +2728,6 @@ class ZarrBase(CFEncodedBase):
         ]
         with pytest.raises(FileNotFoundError, match=f"({'|'.join(patterns)})"):
             xr.open_zarr(f"{uuid.uuid4()}")
-
-    @pytest.mark.skip(reason="chunk_store not implemented in zarr v3")
-    def test_with_chunkstore(self) -> None:
-        expected = create_test_data()
-        with (
-            self.create_zarr_target() as store_target,
-            self.create_zarr_target() as chunk_store,
-        ):
-            save_kwargs = {"chunk_store": chunk_store}
-            self.save(expected, store_target, **save_kwargs)
-            # the chunk store must have been populated with some entries
-            assert len(chunk_store) > 0
-            open_kwargs = {"backend_kwargs": {"chunk_store": chunk_store}}
-            with self.open(store_target, **open_kwargs) as ds:
-                assert_equal(ds, expected)
 
     @requires_dask
     def test_auto_chunk(self) -> None:
@@ -3892,9 +3873,6 @@ class TestInstrumentedZarrStore:
 
     @contextlib.contextmanager
     def create_zarr_target(self):
-        if Version(zarr.__version__) < Version("2.18.0"):
-            pytest.skip("Instrumented tests only work on latest Zarr.")
-
         store = KVStore({}, read_only=False)  # type: ignore[arg-type,unused-ignore]
         yield store
 
@@ -3944,8 +3922,6 @@ class TestInstrumentedZarrStore:
             self.check_requests(expected, patches)
 
             patches = self.make_patches(store)
-            # v2024.03.0: {'iter': 6, 'contains': 2, 'setitem': 5, 'getitem': 10, 'listdir': 6, 'list_prefix': 0}
-            # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
             expected = {
                 "set": 4,
                 "get": 9,  # TODO: fixme upstream (should be 8)
@@ -3991,8 +3967,6 @@ class TestInstrumentedZarrStore:
                 ds.to_zarr(store, mode="w", compute=False)
             self.check_requests(expected, patches)
 
-            # v2024.03.0: {'iter': 5, 'contains': 2, 'setitem': 1, 'getitem': 6, 'listdir': 5, 'list_prefix': 0}
-            # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 5, 'listdir': 4, 'list_prefix': 0}
             expected = {
                 "set": 1,
                 "get": 3,
@@ -4005,8 +3979,6 @@ class TestInstrumentedZarrStore:
                 ds.to_zarr(store, region={"x": slice(None)})
             self.check_requests(expected, patches)
 
-            # v2024.03.0: {'iter': 6, 'contains': 4, 'setitem': 1, 'getitem': 11, 'listdir': 6, 'list_prefix': 0}
-            # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 7, 'listdir': 4, 'list_prefix': 0}
             expected = {
                 "set": 1,
                 "get": 4,
@@ -4079,7 +4051,7 @@ class TestZarrDictStore(ZarrBase):
             original.to_zarr(store, zarr_format=3, consolidated=False)
 
             with patch.object(
-                target_class, method_name, wraps=original_method, autospec=True
+                target_class, method_name, side_effect=original_method, autospec=True
             ) as mocked_meth:
                 # blocks upon loading the coordinate variables here
                 ds = xr.open_zarr(store, consolidated=False, chunks=None)
@@ -4116,7 +4088,7 @@ class TestZarrDictStore(ZarrBase):
             original.to_zarr(store, consolidated=False, zarr_format=3)
 
             with patch.object(
-                target_class, method_name, wraps=original_method, autospec=True
+                target_class, method_name, side_effect=original_method, autospec=True
             ) as mocked_meth:
                 xr_obj = get_xr_obj(store, cls_name)
 
@@ -4217,7 +4189,7 @@ class TestZarrDictStore(ZarrBase):
             original.to_zarr(store, consolidated=False, zarr_format=3)
 
             with patch.object(
-                target_class, method_name, wraps=original_method, autospec=True
+                target_class, method_name, side_effect=original_method, autospec=True
             ) as mocked_meth:
                 xr_obj = get_xr_obj(store, cls_name)
 
@@ -4235,13 +4207,6 @@ class TestZarrDictStore(ZarrBase):
     @pytest.mark.parametrize(
         ("indexer", "expected_err_msg"),
         [
-            pytest.param(
-                {"dim2": 2},
-                "basic async indexing",
-                marks=pytest.mark.skip(
-                    reason="current version of zarr has basic async indexing"
-                ),
-            ),  # tests basic indexing
             pytest.param(
                 {"dim2": [1, 3]},
                 "orthogonal async indexing",
@@ -4519,8 +4484,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         # Use of side_effect means that calls are passed through to the original method
         # rather than a mocked method.
 
-        Group: Any
-        Group = zarr.AsyncGroup
+        Group: Any = zarr.AsyncGroup
         patched = patch.object(
             Group, "getitem", side_effect=Group.getitem, autospec=True
         )
@@ -4537,34 +4501,6 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             # we assert that the number of calls has not increased after fetchhing the array
             xrds.test.compute(scheduler="sync")
             assert mock.call_count == call_count
-
-
-@requires_zarr
-@requires_fsspec
-@pytest.mark.skip(reason="Difficult to test.")
-def test_zarr_storage_options() -> None:
-    pytest.importorskip("aiobotocore")
-    ds = create_test_data()
-    store_target = "memory://test.zarr"
-    ds.to_zarr(store_target, storage_options={"test": "zarr_write"})
-    ds_a = xr.open_zarr(store_target, storage_options={"test": "zarr_read"})
-    assert_identical(ds, ds_a)
-
-
-@requires_zarr
-def test_zarr_version_deprecated() -> None:
-    ds = create_test_data()
-    store: Any
-    store = KVStore()
-
-    with pytest.warns(FutureWarning, match="zarr_version"):
-        ds.to_zarr(store=store, zarr_version=2)
-
-    with pytest.warns(FutureWarning, match="zarr_version"):
-        xr.open_zarr(store=store, zarr_version=2)
-
-    with pytest.raises(ValueError, match="zarr_format"):
-        xr.open_zarr(store=store, zarr_version=2, zarr_format=3)
 
 
 @requires_scipy
