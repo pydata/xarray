@@ -230,6 +230,8 @@ def _possibly_convert_objects(values):
     elif inferred == "timedelta":
         result = pd.to_timedelta(values.ravel()).to_numpy().reshape(values.shape)
     elif inferred in ["datetime64", "timedelta64"]:
+        # Casting drops unit info for these cases;
+        # fall back to pd.Series which preserves them.
         as_series = pd.Series(values.ravel(), copy=False)
         result = np.asarray(as_series).reshape(values.shape)
     else:
