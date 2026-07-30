@@ -70,6 +70,9 @@ def var():
     [
         np.array(["a", "bc", "def"], dtype=object),
         np.array(["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[ns]"),
+        np.array([datetime(2000, 1, 1), datetime(2000, 1, 2)], dtype=object),
+        np.array([timedelta(seconds=1), timedelta(seconds=2)], dtype=object),
+        np.array([1, "a"], dtype=object),
     ],
 )
 def test_as_compatible_data_writeable(data):
