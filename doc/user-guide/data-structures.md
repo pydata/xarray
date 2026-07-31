@@ -58,11 +58,12 @@ The {py:class}`~xarray.DataArray` constructor takes:
 - `data`: a multi-dimensional array of values (e.g., a numpy ndarray,
   a {ref}`numpy-like array <userguide.duckarrays>`, {py:class}`~pandas.Series`,
   {py:class}`~pandas.DataFrame` or `pandas.Panel`)
-- `coords`: a list or dictionary of coordinates. If a list, it should be a
-  list of tuples where the first element is the dimension name and the second
-  element is the corresponding coordinate array_like object.
-- `dims`: a list of dimension names. If omitted and `coords` is a list of
-  tuples, dimension names are taken from `coords`.
+- `coords`: a list or dictionary of coordinates. A list may contain tuples whose
+  first element is the dimension name and whose second element is the corresponding
+  coordinate array-like object. It may also contain coordinate arrays when `dims`
+  is provided; in that case, coordinates are matched to dimensions by position.
+- `dims`: a list of dimension names. If omitted and `coords` is a list of tuples,
+  dimension names are taken from `coords`.
 - `attrs`: a dictionary of attributes to add to the instance
 - `name`: a string that names the instance
 
