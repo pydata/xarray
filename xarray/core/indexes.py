@@ -1038,7 +1038,9 @@ class PandasMultiIndex(PandasIndex):
         # default index level names
         names = []
         for i, idx in enumerate(self.index.levels):
-            name = idx.name or f"{dim}_level_{i}"
+            # only unnamed levels get a synthetic name: ``""``, ``False`` and
+            # ``0`` are all valid (if unusual) level names
+            name = idx.name if idx.name is not None else f"{dim}_level_{i}"
             if name == dim:
                 raise ValueError(
                     f"conflicting multi-index level name {name!r} with dimension {dim!r}"
