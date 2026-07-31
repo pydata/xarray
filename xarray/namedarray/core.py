@@ -835,7 +835,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                 for dim_number, dim in enumerate(self.dims)
                 if dim in chunks
             }
-            # Runs the same iteration as before, could extract to a shared helper
+            # Runs the same iteration as above, could extract to a shared helper
             if any(val == "auto" for val in chunks.values()):
                 # If any chunks are "auto", we can add extra "auto" chunks for any
                 # zero-length dimensions to avoid dask errors. Need at least one existing
