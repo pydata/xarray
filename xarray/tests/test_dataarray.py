@@ -4922,8 +4922,7 @@ class TestDataArray:
         def exp_decay(t, n0, tau=1):
             return n0 * np.exp(-t / tau)
 
-        from xarray.computation.fit import (_get_func_args,
-                                            _initialize_curvefit_params)
+        from xarray.computation.fit import _get_func_args, _initialize_curvefit_params
 
         params, func_args = _get_func_args(exp_decay, [])
         assert params == ["n0", "tau"]
