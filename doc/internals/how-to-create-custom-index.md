@@ -81,6 +81,20 @@ coordinate or dimension names. In the case of `PandasIndex`, we rename the
 underlying `pandas.Index` object and/or update the `PandasIndex.dim`
 attribute since the associated dimension name has been changed.
 
+## Inline representations
+
+Xarray uses the optional `_repr_inline_(max_width)` method when it needs a compact,
+one-line representation of an index while formatting a Dataset or DataArray. A
+custom index can implement this method to expose the information most useful for
+identifying it. The method should return a string; `max_width` is provided so an
+implementation can limit the amount of detail when appropriate.
+
+For example, a range-like custom index might include its bounds in the inline
+representation while keeping the full details in `__repr__`::
+
+    def _repr_inline_(self, max_width: int) -> str:
+        return f"{self.__class__.__name__} (start={self.start}, stop={self.stop})"
+
 ## Wrap index data as coordinate data
 
 In some cases it is possible to reuse the index's underlying object or structure
