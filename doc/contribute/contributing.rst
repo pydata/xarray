@@ -392,25 +392,21 @@ Some other important things to know about the docs:
   for a detailed explanation, or look at some of the existing functions to
   extend it in a similar manner.
 
-- The documentation makes heavy use of the `jupyter-sphinx extension
-  <https://jupyter-sphinx.readthedocs.io>`_.
-  The ``jupyter-execute`` directive lets you put code in the documentation which will be run
-  during the doc build. For example:
+- The documentation makes heavy use of `MyST-NB <https://myst-nb.readthedocs.io>`_.
+  Documentation pages that contain executable code are written as
+  MyST Markdown files (``.md``) using the ``{code-cell}`` directive,
+  which is run during the doc build. For example:
 
-  .. code:: rst
+  .. code:: md
 
-      .. jupyter-execute::
+      ```{code-cell} python
+      tags: [remove-input]
 
-          x = 2
-          x**3
-
-  will be rendered as:
-
-  .. jupyter-execute::
-
-       x = 2
-       x**3
-
+      x = 2
+      x**3
+      ```
+  
+  Note the ``tags: [remove-input]`` line above - this line is optional, and these tags allows us to control how the cell is displayed (in this case, it hides the code but still displays the output). See `this page <https://myst-nb.readthedocs.io/en/latest/configuration.html#cell-tags>`_ for a list of these tags.
   Almost all code examples in the docs are run (and the output saved) during the
   doc build. This approach means that code examples will always be up to date,
   but it does make building the docs a bit more complex.
