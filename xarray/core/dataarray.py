@@ -1501,16 +1501,6 @@ class DataArray(
         else:
             chunk_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
-        if all(val == "auto" for val in chunk_mapping.values()):
-            # If all chunks are "auto", we can add extra "auto" chunks for any
-            # zero-length dimensions to avoid dask errors.
-            extra_autos = {
-                chunk: "auto"
-                for chunk in self.dims
-                if chunk not in chunk_mapping and self.sizes[chunk] == 0
-            }
-            chunk_mapping = {**chunk_mapping, **extra_autos}
-
         ds = self._to_temp_dataset().chunk(
             chunk_mapping,
             name_prefix=name_prefix,
