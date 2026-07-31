@@ -185,7 +185,6 @@ def either_dict_or_kwargs(
     pos_kwargs: Mapping[Any, T] | None,
     kw_kwargs: Mapping[str, T],
     func_name: str,
-    arr_dims: Iterable[_Dim] | None = None,
 ) -> Mapping[Hashable, T]:
     if pos_kwargs is None or pos_kwargs == {}:
         # Need an explicit cast to appease mypy due to invariance; see
@@ -198,11 +197,6 @@ def either_dict_or_kwargs(
         raise ValueError(
             f"cannot specify both keyword and positional arguments to .{func_name}"
         )
-
-    if arr_dims is not None:
-        # Attach auto to all unspecified dims... Is this a good idea. Probably not.
-        arr_dims = (d for d in arr_dims if d not in pos_kwargs)
-        pos_kwargs = {**pos_kwargs, **{d: "auto" for d in arr_dims}}
     return pos_kwargs
 
 
