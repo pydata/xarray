@@ -728,14 +728,14 @@ class WritableCFDataStore(AbstractWritableDataStore):
 class BackendEntrypoint:
     """
     ``BackendEntrypoint`` is a class container and it is the main interface
-    for the backend plugins, see :ref:`RST backend_entrypoint`.
+    for the backend plugins, see :ref:`rst-backend-entrypoint`.
     It shall implement:
 
     - ``open_dataset`` method: it shall implement reading from file, variables
       decoding and it returns an instance of :py:class:`~xarray.Dataset`.
       It shall take in input at least ``filename_or_obj`` argument and
       ``drop_variables`` keyword argument.
-      For more details see :ref:`RST open_dataset`.
+      For more details see :ref:`rst-open-dataset`.
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.

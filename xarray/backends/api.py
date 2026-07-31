@@ -442,7 +442,7 @@ def open_dataset(
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays or when large arrays are sliced before computation.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -686,7 +686,7 @@ def open_dataarray(
         - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -912,7 +912,7 @@ def open_datatree(
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -1158,7 +1158,7 @@ def open_groups(
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
