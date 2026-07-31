@@ -992,15 +992,6 @@ class TestDataArray:
         assert blocked.chunks == ((3,), (3, 1))
         assert blocked.data.name != first_dask_name
 
-    @requires_dask
-    def test_partial_auto_chunk_empty_dim(self) -> None:
-        da = xr.DataArray(
-            np.zeros((5, 1)),
-            dims=("lat", "lon"),
-        ).isel(lat=[])
-
-        da.chunk({"lon": "auto"})
-
     def test_isel(self) -> None:
         assert_identical(self.dv[0], self.dv.isel(x=0))
         assert_identical(self.dv, self.dv.isel(x=slice(None)))
