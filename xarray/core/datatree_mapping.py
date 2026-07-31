@@ -52,11 +52,11 @@ def map_over_datasets(
     the trees. The returned trees will have the same structure as the supplied
     trees.
 
-    ``func`` needs to return a Dataset, tuple of Dataset objects or None in order
-    to be able to rebuild the subtrees after mapping, as each result will be
-    assigned to its respective node of a new tree via `DataTree.from_dict`. Any
-    returned value that is one of these types will be stacked into a separate
-    tree before returning all of them.
+    ``func`` may return a ``Dataset`` or ``None`` to produce one output tree, or a
+    tuple of ``Dataset`` objects and/or ``None`` values to produce multiple output
+    trees. Each tuple position is collected into its own tree; a ``None`` value
+    leaves that node without a dataset in the corresponding tree. The return value
+    is used to rebuild the subtrees via `DataTree.from_dict`.
 
     ``map_over_datasets`` is essentially syntactic sugar for the combination of
     ``group_subtrees`` and ``DataTree.from_dict``. For example, in the case of
@@ -72,9 +72,11 @@ def map_over_datasets(
     func : callable
         Function to apply to datasets with signature:
 
-        `func(*args: Dataset, **kwargs) -> Union[Dataset, tuple[Dataset, ...]]`.
+        `func(*args: Dataset, **kwargs) -> Dataset | None | tuple[Dataset | None, ...]`.
 
-        (i.e. func must accept at least one Dataset and return at least one Dataset.)
+        A single ``Dataset`` or ``None`` produces one ``DataTree``. A tuple produces
+        one ``DataTree`` per tuple position, and each position may contain a ``Dataset``
+        or ``None``.
     *args : tuple, optional
         Positional arguments passed on to `func`. Any DataTree arguments will be
         converted to Dataset objects via `.dataset`.
