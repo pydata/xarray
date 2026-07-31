@@ -208,7 +208,7 @@ jobs:
       - name: Check if generate_aggregations.py changed
         id: filter
         run: |
-          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q 'xarray/util/generate_aggregations.py'; then
+          if git diff --name-only origin/${GITHUB_BASE_REF}...HEAD | grep -q 'xarray/util/generate_aggregations.py'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
