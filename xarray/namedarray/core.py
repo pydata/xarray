@@ -6,7 +6,15 @@ import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from itertools import starmap
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import numpy as np
 
