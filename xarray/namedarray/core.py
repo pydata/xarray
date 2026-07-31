@@ -821,22 +821,24 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         if is_dict_like(chunks):
-            if any(val == "auto" for val in chunks.values()):
-                # If any chunks are "auto", we can add extra "auto" chunks for any
-                # zero-length dimensions to avoid dask errors. Need at least one existing
-                # auto or we might try to auto object dtype arrays incorrectly.
-                extra_autos = {
-                    chunk: "auto"
-                    for chunk in self.dims
-                    if chunk not in chunks and self.sizes[chunk] == 0
-                }
-                chunks = {**chunks, **extra_autos}
             # This method of iteration allows for duplicated dimension names, GH8579
             chunks = {
                 dim_number: chunks[dim]
                 for dim_number, dim in enumerate(self.dims)
                 if dim in chunks
             }
+            # Runs the same iteration as before, could extract to a shared helper
+            if any(val == "auto" for val in chunks.values()):
+                # If any chunks are "auto", we can add extra "auto" chunks for any
+                # zero-length dimensions to avoid dask errors. Need at least one existing
+                # auto or we might try to auto object dtype arrays incorrectly.
+                extra_autos = {
+                    dim_number: "auto"
+                    for dim_number, dim in enumerate(self.dims)
+                    if dim_number not in chunks  # keys are dim numbers now
+                    and self.sizes[dim] == 0
+                }
+                chunks = {**chunks, **extra_autos}
 
         chunkmanager = guess_chunkmanager(chunked_array_type)
 
