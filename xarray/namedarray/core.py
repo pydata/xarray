@@ -6,15 +6,7 @@ import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from itertools import starmap
 from types import EllipsisType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Literal,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast, overload
 
 import numpy as np
 
@@ -838,7 +830,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
                     for chunk in self.dims
                     if chunk not in chunks and self.sizes[chunk] == 0
                 }
-            chunks = {**chunks, **extra_autos}
+                chunks = {**chunks, **extra_autos}
             # This method of iteration allows for duplicated dimension names, GH8579
             chunks = {
                 dim_number: chunks[dim]
