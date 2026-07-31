@@ -1,0 +1,3 @@
+# Dependencies intentionally not exercised in GitHub Actions.
+requires cupy
+requires h5netcdf>=1.3.0 and h5py with ros3 support
