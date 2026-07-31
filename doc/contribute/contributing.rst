@@ -400,12 +400,12 @@ Some other important things to know about the docs:
   .. code:: md
 
       ```{code-cell} python
-      tags: [remove-input]
+      tags: [remove - input]
 
       x = 2
       x**3
       ```
-  
+
   Note the ``tags: [remove-input]`` line above - this line is optional, and these tags allows us to control how the cell is displayed (in this case, it hides the code but still displays the output). See `this page <https://myst-nb.readthedocs.io/en/latest/configuration.html#cell-tags>`_ for a list of these tags.
   Almost all code examples in the docs are run (and the output saved) during the
   doc build. This approach means that code examples will always be up to date,
