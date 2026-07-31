@@ -615,7 +615,7 @@ AGGREGATION_METHODS = (
     # Scans:
     Method(
         "cumsum",
-        long_name="Cumulative Sum",
+        long_name="cumulative sum",
         extra_kwargs=(skipna,),
         numeric_only=True,
         see_also_methods=("cumulative",),
@@ -625,7 +625,7 @@ AGGREGATION_METHODS = (
     ),
     Method(
         "cumprod",
-        long_name="Cumulative Product",
+        long_name="cumulative product",
         extra_kwargs=(skipna,),
         numeric_only=True,
         see_also_methods=("cumulative",),

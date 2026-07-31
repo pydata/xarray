@@ -62,8 +62,12 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.count()
+        <xarray.NamedArray ()> Size: 8B
+        array(5)
         """
         out = self.reduce(
             duck_array_ops.count,
@@ -112,8 +116,12 @@ class NamedArrayAggregations:
         ...     "x", np.array([True, True, True, True, True, False], dtype=bool)
         ... )
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 6B
+        array([ True,  True,  True,  True,  True, False])
 
         >>> na.all()
+        <xarray.NamedArray ()> Size: 1B
+        array(False)
         """
         out = self.reduce(
             duck_array_ops.array_all,
@@ -162,8 +170,12 @@ class NamedArrayAggregations:
         ...     "x", np.array([True, True, True, True, True, False], dtype=bool)
         ... )
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 6B
+        array([ True,  True,  True,  True,  True, False])
 
         >>> na.any()
+        <xarray.NamedArray ()> Size: 1B
+        array(True)
         """
         out = self.reduce(
             duck_array_ops.array_any,
@@ -217,12 +229,18 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.max()
+        <xarray.NamedArray ()> Size: 8B
+        array(3.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.max(skipna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(nan)
         """
         out = self.reduce(
             duck_array_ops.max,
@@ -277,12 +295,18 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.min()
+        <xarray.NamedArray ()> Size: 8B
+        array(0.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.min(skipna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(nan)
         """
         out = self.reduce(
             duck_array_ops.min,
@@ -341,12 +365,18 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.mean()
+        <xarray.NamedArray ()> Size: 8B
+        array(1.6)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.mean(skipna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(nan)
         """
         out = self.reduce(
             duck_array_ops.mean,
@@ -412,16 +442,24 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.prod()
+        <xarray.NamedArray ()> Size: 8B
+        array(0.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.prod(skipna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(nan)
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> na.prod(skipna=True, min_count=2)
+        <xarray.NamedArray ()> Size: 8B
+        array(0.)
         """
         out = self.reduce(
             duck_array_ops.prod,
@@ -488,16 +526,24 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.sum()
+        <xarray.NamedArray ()> Size: 8B
+        array(8.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.sum(skipna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(nan)
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> na.sum(skipna=True, min_count=2)
+        <xarray.NamedArray ()> Size: 8B
+        array(8.)
         """
         out = self.reduce(
             duck_array_ops.sum,
@@ -561,16 +607,24 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.std()
+        <xarray.NamedArray ()> Size: 8B
+        array(1.0198039)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.std(skipna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(nan)
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> na.std(skipna=True, ddof=1)
+        <xarray.NamedArray ()> Size: 8B
+        array(1.14017543)
         """
         out = self.reduce(
             duck_array_ops.std,
@@ -634,16 +688,24 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.var()
+        <xarray.NamedArray ()> Size: 8B
+        array(1.04)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.var(skipna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(nan)
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> na.var(skipna=True, ddof=1)
+        <xarray.NamedArray ()> Size: 8B
+        array(1.3)
         """
         out = self.reduce(
             duck_array_ops.var,
@@ -703,12 +765,18 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.median()
+        <xarray.NamedArray ()> Size: 8B
+        array(2.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.median(skipna=False)
+        <xarray.NamedArray ()> Size: 8B
+        array(nan)
         """
         out = self.reduce(
             duck_array_ops.median,
@@ -726,7 +794,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``Cumulative Sum`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``cumulative sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -772,12 +840,18 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.cumsum()
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([1., 3., 6., 6., 8., 8.])
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.cumsum(skipna=False)
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  3.,  6.,  6.,  8., nan])
         """
         out = self.reduce(
             duck_array_ops.cumsum,
@@ -795,7 +869,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``Cumulative Product`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``cumulative product`` along some dimension(s).
 
         Parameters
         ----------
@@ -841,12 +915,18 @@ class NamedArrayAggregations:
         >>> from xarray.namedarray.core import NamedArray
         >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  3.,  0.,  2., nan])
 
         >>> na.cumprod()
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([1., 2., 6., 0., 0., 0.])
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> na.cumprod(skipna=False)
+        <xarray.NamedArray (x: 6)> Size: 48B
+        array([ 1.,  2.,  6.,  0.,  0., nan])
         """
         out = self.reduce(
             duck_array_ops.cumprod,
