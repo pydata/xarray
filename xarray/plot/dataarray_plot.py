@@ -517,43 +517,29 @@ def line(
 
     _ensure_plottable(xplt_val, yplt_val)
 
-    # When plotting 2D data with hue, group lines by hue value so that
-    # lines sharing the same hue are drawn with the same color. Without
-    # this, ax.plot draws each column as a separate line with a new color
-    # from the cycle, causing duplicate hue values to get different colors.
-    # The 2D array can be xplt_val or yplt_val depending on orientation.
-    _has_2d_data = xplt_val.ndim == 2 or yplt_val.ndim == 2
-    if hueplt is not None and _has_2d_data:
-        import matplotlib as mpl
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
+    # ax.plot draws each column of a 2D array with the next color from the
+    # axes' property cycle, so duplicate hue values get distinct colors.
+    # Recolor so lines sharing a hue value share a color: the k-th hue value
+    # (in order of first appearance) takes the k-th color the axes assigned,
+    # which leaves palettes unchanged whenever the hue values are already
+    # unique and inherits whatever property cycle the axes carries. Skipped
+    # when the caller pinned a color, since every line already shares it.
+    if (
+        hueplt is not None
+        and len(primitive) == hueplt.size
+        and "color" not in kwargs
+        and "c" not in kwargs
+    ):
         hue_values = hueplt.to_numpy()
-        # Unique values in order of first appearance
         unique_hues = list(dict.fromkeys(hue_values))
-
-        # Only assign per-hue colors if the caller didn't set one explicitly
-        user_set_color = "color" in kwargs or "c" in kwargs
-        if not user_set_color:
-            prop_cycle = mpl.rcParams["axes.prop_cycle"]
-            cycle_colors = [p["color"] for p in prop_cycle]
-
-        primitive = []
-        legend_handles = []
-        for idx, hue_val in enumerate(unique_hues):
-            plot_kwargs = dict(kwargs)
-            if not user_set_color:
-                plot_kwargs["color"] = cycle_colors[idx % len(cycle_colors)]
-            # Find all columns belonging to this hue group
-            col_indices = [i for i, h in enumerate(hue_values) if h == hue_val]
-            for col_idx in col_indices:
-                x_vals = xplt_val[:, col_idx] if xplt_val.ndim == 2 else xplt_val
-                y_vals = yplt_val[:, col_idx] if yplt_val.ndim == 2 else yplt_val
-                lines = ax.plot(x_vals, y_vals, *args, **plot_kwargs)
-                primitive.extend(lines)
-                # Keep only the first line per group for the legend
-                if col_idx == col_indices[0]:
-                    legend_handles.extend(lines)
-    else:
-        primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+        color_by_hue: dict[Hashable, Any] = {
+            hue_value: primitive[k].get_color()
+            for k, hue_value in enumerate(unique_hues)
+        }
+        for line2d, hue_value in zip(primitive, hue_values, strict=True):
+            line2d.set_color(color_by_hue[hue_value])
 
     if _labels:
         if xlabel is not None:
@@ -566,11 +552,14 @@ def line(
 
     if darray.ndim == 2 and add_legend:
         assert hueplt is not None
-        hue_values = hueplt.to_numpy()
-        unique_hues = list(dict.fromkeys(hue_values))
+        # One legend entry per hue value, keyed to the first line drawn with
+        # it, so duplicate hue values don't produce duplicate entries.
+        first_line_by_hue: dict[Hashable, Any] = {}
+        for line2d, hue_value in zip(primitive, hueplt.to_numpy(), strict=False):
+            first_line_by_hue.setdefault(hue_value, line2d)
         ax.legend(
-            handles=legend_handles,
-            labels=[str(h) for h in unique_hues],
+            handles=list(first_line_by_hue.values()),
+            labels=list(first_line_by_hue.keys()),
             title=hue_label,
         )
 
