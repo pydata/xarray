@@ -5234,6 +5234,8 @@ class DataArray(
         https://numpy.org/doc/stable/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
         followed by the 2nd key, etc.
+        Sorting is stable: when all sort keys compare equal, the original order is
+        preserved.
 
         Parameters
         ----------
