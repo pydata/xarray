@@ -574,6 +574,12 @@ def open_dataset(
 
     Notes
     -----
+    For files with multiple groups, ``open_dataset`` reads only the selected
+    group (the root group by default). Use ``open_datatree`` to load the groups
+    into a tree, or ``open_groups`` to load each group into a dictionary. To
+    open one non-root group with ``open_dataset``, pass its path with the
+    ``group`` keyword argument.
+
     ``open_dataset`` opens the file with read-only access. When you modify
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
