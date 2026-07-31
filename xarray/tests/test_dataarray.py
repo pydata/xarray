@@ -992,6 +992,15 @@ class TestDataArray:
         assert blocked.chunks == ((3,), (3, 1))
         assert blocked.data.name != first_dask_name
 
+    @requires_dask
+    def test_partial_auto_chunk_empty_dim(self) -> None:
+        da = xr.DataArray(
+            np.zeros((5, 1)),
+            dims=("lat", "lon"),
+        ).isel(lat=[])
+
+        da.chunk({"lon": "auto"})
+
     def test_isel(self) -> None:
         assert_identical(self.dv[0], self.dv.isel(x=0))
         assert_identical(self.dv, self.dv.isel(x=slice(None)))
@@ -4913,7 +4922,8 @@ class TestDataArray:
         def exp_decay(t, n0, tau=1):
             return n0 * np.exp(-t / tau)
 
-        from xarray.computation.fit import _get_func_args, _initialize_curvefit_params
+        from xarray.computation.fit import (_get_func_args,
+                                            _initialize_curvefit_params)
 
         params, func_args = _get_func_args(exp_decay, [])
         assert params == ["n0", "tau"]
