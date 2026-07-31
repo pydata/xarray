@@ -1499,7 +1499,9 @@ class DataArray(
                 )
             chunk_mapping = dict(zip(self.dims, chunks, strict=True))
         else:
-            chunk_mapping = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunk_mapping = either_dict_or_kwargs(
+                chunks, chunks_kwargs, "chunk", self.dims
+            )
 
         ds = self._to_temp_dataset().chunk(
             chunk_mapping,
