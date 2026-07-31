@@ -769,9 +769,21 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             self.figlegend = _add_legend(**kwargs)
         else:
             assert self._hue_var is not None
+            handles: Any = self._mappables[-1]
+            labels = list(self._hue_var.to_numpy())
+            # DataArray.plot.line draws one line per position along the hue
+            # coordinate, so repeated hue values would otherwise appear
+            # multiple times in the legend (GH10998). Keep the first handle
+            # drawn for each hue value, matching the non-faceted line legend.
+            if isinstance(handles, list) and len(handles) == len(labels):
+                first_handle_by_hue: dict[Hashable, Any] = {}
+                for handle, hue_value in zip(handles, labels, strict=True):
+                    first_handle_by_hue.setdefault(hue_value, handle)
+                handles = list(first_handle_by_hue.values())
+                labels = list(first_handle_by_hue.keys())
             self.figlegend = self.fig.legend(
-                handles=self._mappables[-1],
-                labels=list(self._hue_var.to_numpy()),
+                handles=handles,
+                labels=labels,
                 title=label if label is not None else label_from_attrs(self._hue_var),
                 loc=kwargs.pop("loc", "center right"),
                 **kwargs,
