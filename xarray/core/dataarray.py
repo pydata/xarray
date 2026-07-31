@@ -327,7 +327,7 @@ class DataArray(
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
-        (see FAQ, :ref:`approach to metadata`)
+        (see FAQ, :ref:`approach-to-metadata`)
     indexes : :py:class:`~xarray.Indexes` or dict-like, optional
         For internal use only. For passing indexes objects to the
         new DataArray, use the ``coords`` argument instead with a
@@ -5172,7 +5172,7 @@ class DataArray(
         Notes
         -----
         This method automatically aligns coordinates by their values (not their order).
-        See :ref:`math automatic alignment` and :py:func:`xarray.dot` for more details.
+        See :ref:`math-automatic-alignment` and :py:func:`xarray.dot` for more details.
 
         Examples
         --------
