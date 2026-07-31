@@ -222,7 +222,6 @@ iris = "*"
 ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
-nbsphinx = "*"
 ncdata = "*"
 pydata-sphinx-theme = "*"
 pyproj = "*"
@@ -240,8 +239,8 @@ sphinx-remove-toctrees = "*"
 sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
-myst-parser = "*"
 make = "*"
+myst-nb = ">=1.4.0,<2"
 
 [feature.doc.tasks]
 doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation." }
