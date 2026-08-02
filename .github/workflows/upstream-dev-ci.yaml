@@ -68,7 +68,7 @@ jobs:
       - uses: keewis/pixi-lock/create-and-cache@8b09e68b19c793ac209fc8184838db2c78e42892 # zizmor: ignore[stale-action-refs]
         id: pixi-lock
         with:
-          manifest-path: ci/nightly
+          manifest-path: ci/nightly/pixi.toml
           hash-files: |
             ci/nightly/pixi.toml
             pyproject.toml
@@ -94,7 +94,7 @@ jobs:
 
     env:
       ENV: ${{ matrix.pixi-env }}
-      MANIFEST_PATH: ci/nightly
+      MANIFEST_PATH: ci/nightly/pixi.toml
 
     outputs:
       log-file: ${{ steps.determine-log-path.outputs.log-file }}
