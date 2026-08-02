@@ -519,7 +519,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -625,7 +625,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -741,7 +741,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -854,7 +854,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -967,7 +967,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1076,7 +1076,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1176,7 +1176,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -1286,7 +1286,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -1814,6 +1814,10 @@ class DatasetAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1911,7 +1915,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2019,7 +2023,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2124,7 +2128,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2229,7 +2233,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2330,7 +2334,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2423,7 +2427,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -2526,7 +2530,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -3003,6 +3007,10 @@ class DataArrayAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3092,7 +3100,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3190,7 +3198,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3285,7 +3293,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3380,7 +3388,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3471,7 +3479,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3556,7 +3564,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -3651,7 +3659,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -4306,6 +4314,8 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4428,7 +4438,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4564,7 +4574,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4697,7 +4707,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4830,7 +4840,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4959,7 +4969,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -5062,7 +5072,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -5187,7 +5197,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -5850,6 +5860,8 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5972,7 +5984,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6108,7 +6120,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6241,7 +6253,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6374,7 +6386,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6503,7 +6515,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6606,7 +6618,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -6731,7 +6743,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -7355,6 +7367,8 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -7468,7 +7482,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7593,7 +7607,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7715,7 +7729,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7837,7 +7851,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7955,7 +7969,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -8050,7 +8064,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -8166,7 +8180,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -8782,6 +8796,8 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -8895,7 +8911,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9020,7 +9036,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9142,7 +9158,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9264,7 +9280,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9382,7 +9398,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9477,7 +9493,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -9593,7 +9609,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
