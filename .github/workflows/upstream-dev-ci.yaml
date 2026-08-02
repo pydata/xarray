@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: keewis/pixi-lock/create-and-cache@319b93a7b21fdc6ea28223bd7cf85366893b8a41 # zizmor: ignore[stale-action-refs]
+      - uses: keewis/pixi-lock/create-and-cache@1ae1ad7d68a96caa53f7de7763783fed7e48cd9b # zizmor: ignore[stale-action-refs]
         id: pixi-lock
         with:
           manifest-path: ci/nightly/pixi.toml
@@ -109,7 +109,7 @@ jobs:
         run: |
           echo "log-file=output-${ENV}-log.jsonl" >> $GITHUB_OUTPUT;
       - name: Restore cached pixi lockfile
-        uses: keewis/pixi-lock/restore@319b93a7b21fdc6ea28223bd7cf85366893b8a41 # zizmor: ignore[stale-action-refs]
+        uses: keewis/pixi-lock/restore@1ae1ad7d68a96caa53f7de7763783fed7e48cd9b # zizmor: ignore[stale-action-refs]
         with:
           manifest-path: ${{ env.MANIFEST_PATH }}
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
