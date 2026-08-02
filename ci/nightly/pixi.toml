@@ -52,7 +52,7 @@ opt_einsum = { git = "https://github.com/dgasmith/opt_einsum" }
 # sparse = { git = "https://github.com/pydata/sparse"}
 
 [feature.nightly.target.unix.pypi-dependencies]
-xarray = { path = "..", editable = true }
+xarray = { path = "../..", editable = true }
 numpy = "*"
 pandas = "*"
 matplotlib = "*"
