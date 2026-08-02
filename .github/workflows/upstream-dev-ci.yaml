@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: keewis/pixi-lock/create-and-cache@6cc8e72145323fbe6f6afc5223d69a8d4697c733 # dev
+      - uses: keewis/pixi-lock/create-and-cache@8b09e68b19c793ac209fc8184838db2c78e42892
         id: pixi-lock
         with:
           manifest-path: ci/nightly
