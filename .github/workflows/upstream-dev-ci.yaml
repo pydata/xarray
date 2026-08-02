@@ -119,7 +119,7 @@ jobs:
           pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python xarray/util/print_versions.py
       - name: Import xarray
         run: |
-          pixi run -e "$MANIFEST_PATH" -e $ENV -- python -c 'import xarray'
+          pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python -c 'import xarray'
       - name: Run Tests
         if: success()
         id: status
