@@ -36,7 +36,8 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Use ``jupyterlite-sphinx`` to provide interactive examples (:pull:`10299`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -295,9 +296,6 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- Use ``jupyterlite-sphinx`` to provide interactive examples (:pull:`10299`).
-  By `Justus Magin <https://github.com/keewis>`_.
-
 - Add AI policy (:pull:`11257`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Update documentation and team guide to promote Zulip. Remove mentions of Discord (:pull:`11246`, :pull:`11254`).
