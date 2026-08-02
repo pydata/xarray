@@ -1,5 +1,4 @@
 """Mixin classes with reduction operations."""
-
 # This file was generated using xarray.util.generate_aggregations. Do not edit manually.
 
 from __future__ import annotations
@@ -70,11 +69,12 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 8B
         array(5)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.count,
             dim=dim,
             **kwargs,
         )
+        return out
 
     def all(
         self,
@@ -123,11 +123,12 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 1B
         array(False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_all,
             dim=dim,
             **kwargs,
         )
+        return out
 
     def any(
         self,
@@ -176,11 +177,12 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 1B
         array(True)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_any,
             dim=dim,
             **kwargs,
         )
+        return out
 
     def max(
         self,
@@ -240,12 +242,13 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 8B
         array(nan)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.max,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def min(
         self,
@@ -305,12 +308,13 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 8B
         array(nan)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.min,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def mean(
         self,
@@ -352,6 +356,10 @@ class NamedArrayAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
@@ -370,12 +378,13 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 8B
         array(nan)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.mean,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def prod(
         self,
@@ -426,7 +435,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -452,13 +461,14 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 8B
         array(0.)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.prod,
             dim=dim,
             skipna=skipna,
             min_count=min_count,
             **kwargs,
         )
+        return out
 
     def sum(
         self,
@@ -509,7 +519,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -535,13 +545,14 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 8B
         array(8.)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.sum,
             dim=dim,
             skipna=skipna,
             min_count=min_count,
             **kwargs,
         )
+        return out
 
     def std(
         self,
@@ -589,7 +600,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -615,13 +626,14 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 8B
         array(1.14017543)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
             ddof=ddof,
             **kwargs,
         )
+        return out
 
     def var(
         self,
@@ -669,7 +681,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -695,13 +707,14 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 8B
         array(1.3)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
             ddof=ddof,
             **kwargs,
         )
+        return out
 
     def median(
         self,
@@ -745,7 +758,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -765,12 +778,13 @@ class NamedArrayAggregations:
         <xarray.NamedArray ()> Size: 8B
         array(nan)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -815,7 +829,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -839,12 +853,13 @@ class NamedArrayAggregations:
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  3.,  6.,  6.,  8., nan])
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def cumprod(
         self,
@@ -889,7 +904,7 @@ class NamedArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -913,9 +928,10 @@ class NamedArrayAggregations:
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  6.,  0.,  0., nan])
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
