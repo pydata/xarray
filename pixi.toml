@@ -213,8 +213,24 @@ pytz = "*"
 hypothesis = "*"
 coveralls = "*"
 
+[feature.test.pypi-dependencies]
+pytest-accept = ">=0.2.2, <0.3" # needed for task generate-aggregations
+
 [feature.test.tasks]
 test = { cmd = "pytest", description = "Run the test suite with pytest." }
+
+# The second run of pytest is deliberate, since the first will return an error while replacing the doctests
+generate-aggregations = { cmd = """python xarray/util/generate_aggregations.py &&\
+! pytest --doctest-modules xarray/core/_aggregations.py --accept &&\
+pytest --doctest-modules xarray/core/_aggregations.py &&\
+! pytest --doctest-modules xarray/namedarray/_aggregations.py --accept  &&\
+pytest --doctest-modules xarray/namedarray/_aggregations.py &&\
+echo 'Aggregations generated successfully!'
+""", description = "Generate module and stub file for arithmetic operators of various xarray classes." }
+generate-aggregations-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success! Generate-aggregations matches the committed tree" || echo "Failure :( . Generate-aggregations does not match the committed files"', depends-on = [
+  'generate-aggregations',
+  'pre-commit',
+] }
 
 [feature.doc.dependencies]
 kerchunk = "*"
@@ -307,7 +323,7 @@ mypy = { cmd = "mypy --install-types --non-interactive --cobertura-xml-report my
 pre-commit = "*"
 
 [feature.pre-commit.tasks]
-pre-commit = { cmd = "pre-commit", description = "Run pre-commit hooks and linters." }
+pre-commit = { cmd = "pre-commit run --all-files || true", description = "Run pre-commit hooks and linters." } # `|| true` so that this can be used as a task dependency
 
 [feature.release.dependencies]
 gitpython = "*"
@@ -319,9 +335,6 @@ release-contributors = { cmd = "python ci/release_contributors.py", description 
 [feature.dev.dependencies]
 ipython = ">=9.8.0,<10"
 black = ">=25.1.0,<26"
-
-[feature.dev.pypi-dependencies]
-pytest-accept = ">=0.2.2, <0.3"
 
 [feature.policy.pypi-dependencies]
 xarray-minimum-dependency-policy = "*"
