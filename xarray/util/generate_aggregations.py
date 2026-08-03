@@ -4,6 +4,7 @@ For internal xarray development use only.
 
 Usage:
     pixi run generate-aggregations
+    pixi run pre-commit
 """
 
 import textwrap
