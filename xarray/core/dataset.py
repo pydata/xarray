@@ -277,7 +277,7 @@ class Dataset(
 
     attrs : dict-like, optional
         Global attributes to save on this dataset.
-        (see FAQ, :ref:`approach to metadata`)
+        (see FAQ, :ref:`approach-to-metadata`)
 
     Examples
     --------
@@ -8124,6 +8124,8 @@ class Dataset(
         https://numpy.org/doc/stable/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
         followed by the 2nd key, etc.
+        Sorting is stable: when all sort keys compare equal, the original order is
+        preserved.
 
         Parameters
         ----------
