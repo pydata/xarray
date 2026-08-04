@@ -60,7 +60,7 @@ class EncodedStringCoder(VariableCoder):
         # which all backends support natively (GH11199)
         if data.dtype.kind == "T":
             data = np.asarray(data, dtype=object)
-            data[data == None] = ""  # noqa: E711
+            data[data == None] = ""
             data = np.asarray(data, dtype="U")
             variable = Variable(dims, data, attrs, encoding)
 
