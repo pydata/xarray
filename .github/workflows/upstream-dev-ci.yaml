@@ -58,6 +58,10 @@ jobs:
         )
       )
 
+    env:
+      MANIFEST_PATH: ci/nightly/pixi.toml
+      LOCK_PATH: ci/nightly/pixi.lock
+
     outputs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
       pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
@@ -68,14 +72,14 @@ jobs:
       - uses: Parcels-code/pixi-lock/create-and-cache@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         id: pixi-lock
         with:
-          manifest-path: ci/nightly/pixi.toml
+          manifest-path: ${{ env.MANIFEST_PATH }}
           hash-files: |
-            ci/nightly/pixi.toml
+            ${{ env.MANIFEST_PATH }}
             pyproject.toml
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pixi-lock
-          path: pixi.lock
+          path: ${{ env.LOCK_PATH }}
 
   upstream-dev:
     name: upstream-dev
