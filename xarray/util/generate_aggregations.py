@@ -3,16 +3,8 @@
 For internal xarray development use only.
 
 Usage:
-    python xarray/util/generate_aggregations.py
-    pytest --doctest-modules xarray/core/_aggregations.py --accept
-    pytest --doctest-modules xarray/core/_aggregations.py
-    pytest --doctest-modules xarray/namedarray/_aggregations.py --accept
-    pytest --doctest-modules xarray/namedarray/_aggregations.py
-
-This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
-The second run of pytest is deliberate, since the first will return an error
-while replacing the doctests.
-
+    pixi run generate-aggregations
+    pixi run pre-commit
 """
 
 import textwrap
