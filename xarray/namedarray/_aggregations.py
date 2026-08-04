@@ -192,7 +192,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``max`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -258,7 +258,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``min`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -395,7 +395,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``prod`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -563,7 +563,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``std`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -644,7 +644,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``var`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -794,7 +794,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -869,7 +869,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
