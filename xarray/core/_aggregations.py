@@ -291,7 +291,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``maximum`` along some dimension(s).
+        Reduce this DataTree's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -386,7 +386,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``minimum`` along some dimension(s).
+        Reduce this DataTree's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -581,7 +581,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``product`` along some dimension(s).
+        Reduce this DataTree's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -813,7 +813,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``standard deviation`` along some dimension(s).
+        Reduce this DataTree's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -926,7 +926,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``variance`` along some dimension(s).
+        Reduce this DataTree's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -1137,7 +1137,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``cumulative sum`` along some dimension(s).
+        Reduce this DataTree's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -1247,7 +1247,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``cumulative product`` along some dimension(s).
+        Reduce this DataTree's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -1603,7 +1603,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``maximum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -1691,7 +1691,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``minimum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -1872,7 +1872,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``product`` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -2088,7 +2088,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``standard deviation`` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -2193,7 +2193,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``variance`` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -2389,7 +2389,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``cumulative sum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -2492,7 +2492,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``cumulative product`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -2812,7 +2812,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``maximum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -2892,7 +2892,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``minimum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -3057,7 +3057,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``product`` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -3253,7 +3253,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``standard deviation`` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -3348,7 +3348,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``variance`` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -3526,7 +3526,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``cumulative sum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -3621,7 +3621,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``cumulative product`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -4041,7 +4041,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -4156,7 +4156,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -4389,7 +4389,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -4661,7 +4661,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -4794,7 +4794,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -5028,7 +5028,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -5153,7 +5153,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -5587,7 +5587,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -5702,7 +5702,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -5935,7 +5935,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -6207,7 +6207,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -6340,7 +6340,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -6574,7 +6574,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -6699,7 +6699,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -7112,7 +7112,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -7218,7 +7218,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -7433,7 +7433,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -7683,7 +7683,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -7805,7 +7805,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -8020,7 +8020,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -8136,7 +8136,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -8541,7 +8541,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -8647,7 +8647,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -8862,7 +8862,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -9112,7 +9112,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -9234,7 +9234,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -9449,7 +9449,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -9565,7 +9565,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------

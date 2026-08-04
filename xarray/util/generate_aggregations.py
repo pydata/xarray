@@ -186,7 +186,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this {obj}'s data by applying ``{long_name}`` along some dimension(s).
+        Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
 
         Parameters
         ----------'''
@@ -200,7 +200,7 @@ TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
         **kwargs: Any,
     ) -> {obj}:
         """
-        Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
+        Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
 
         Parameters
         ----------'''
@@ -334,7 +334,7 @@ class Method:
     ):
         self.name = name
 
-        self.long_name = name if long_name is None else long_name
+        self.long_name = long_name
         self.extra_kwargs = extra_kwargs
         self.numeric_only = numeric_only
         self.see_also_modules = see_also_modules
@@ -351,6 +351,12 @@ class Method:
         else:
             self.array_method = name
             self.np_example_array = """np.array([1, 2, 3, 0, 2, np.nan])"""
+
+    @property
+    def clarification(self):
+        if self.long_name is None:
+            return ""
+        return f"(i.e., {self.long_name}) "
 
 
 @dataclass
@@ -385,7 +391,7 @@ class AggregationGenerator:
         template_kwargs = dict(
             obj=self.datastructure.name,
             method=method.name,
-            long_name=method.long_name,
+            clarification=method.clarification,
             keep_attrs=(
                 "\n        keep_attrs: bool | None = None,"
                 if self.has_keep_attrs
