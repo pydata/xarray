@@ -333,7 +333,6 @@ class Method:
         aggregation_type: Literal["reduce", "scan"] = "reduce",
     ):
         self.name = name
-
         self.long_name = long_name
         self.extra_kwargs = extra_kwargs
         self.numeric_only = numeric_only
