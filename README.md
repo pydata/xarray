@@ -1,4 +1,4 @@
-# xarray: N-D labeled arrays and datasets - Desenvolvimento Gabriel
+# xarray: N-D labeled arrays and datasets - add-support-gpu
 
 [![Xarray](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydata/xarray/refs/heads/main/doc/badge.json)](https://xarray.dev)
 [![Powered by Pixi](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json)](https://pixi.sh)
