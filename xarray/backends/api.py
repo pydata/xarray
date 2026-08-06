@@ -401,7 +401,7 @@ def open_dataset(
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
     decode_times: (
-        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
+        bool | str | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] | None
     ) = None,
     decode_timedelta: (
         bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
@@ -471,10 +471,15 @@ def open_dataset(
         be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
-    decode_times : bool, CFDatetimeCoder or dict-like, optional
-        If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or leave them
-        encoded as numbers.
+    decode_times : str, bool, CFDatetimeCoder or dict-like, optional.
+        Decode times encoded in the standard NetCDF datetime format
+        into datetime objects.
+        If "raise", an Exception will be raised if any time variable cannot be decoded.
+        If "warn", a Warning will be emitted if any time variable cannot be decoded.
+        If "ignore", any time variables that cannot be decoded will pass through unchanged.
+        If False, no time variables will be decoded.
+        True is the same as raise.
+        If a :py:class:`coders.CFDatetimeCoder`, it will be used to decode time variables.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
