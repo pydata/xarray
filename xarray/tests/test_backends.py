@@ -4850,6 +4850,50 @@ class TestH5NetCDFData(NetCDF4Base):
                     with open_dataset(tmp_file, engine=read_engine) as actual:
                         assert_identical(data, actual)
 
+    def test_roundtrip_string_sequence_attrs(self) -> None:
+        # GH10275: netCDF stores a single string as NC_CHAR and a sequence of
+        # strings as NC_STRING, so a length-1 sequence should not come back as
+        # a bare string.
+        original = Dataset(
+            {"x": ("t", [1.0], {"attr": ["one_item_only"]})},
+            attrs={
+                "one": ["one_item_only"],
+                "two": ["one_item", "two_items"],
+                "scalar": "plain",
+            },
+        )
+        with self.roundtrip(original) as actual:
+            assert actual.attrs["one"] == ["one_item_only"]
+            assert actual.attrs["two"] == ["one_item", "two_items"]
+            # a scalar string is not a sequence and must stay a scalar
+            assert actual.attrs["scalar"] == "plain"
+            assert actual["x"].attrs["attr"] == ["one_item_only"]
+
+    def test_roundtrip_empty_list_attr(self) -> None:
+        # GH10275: a zero length attribute cannot be a scalar whatever its
+        # dataspace, so it is restored as an empty list rather than handed back
+        # as the empty float64 array h5netcdf types it as. This holds for files
+        # written by the netCDF4 engine too, which stores it as a null dataspace.
+        original = Dataset({"x": ("t", [1.0], {"attr": []})}, attrs={"empty": []})
+        with self.roundtrip(original) as actual:
+            assert actual.attrs["empty"] == []
+            assert actual["x"].attrs["attr"] == []
+
+        with create_tmp_file() as tmp_file:
+            original.to_netcdf(tmp_file, engine="netcdf4")
+            with open_dataset(tmp_file, engine="h5netcdf") as actual:
+                assert actual.attrs["empty"] == []
+
+    def test_numeric_attrs_are_not_turned_into_lists(self) -> None:
+        # netcdf-c stores a scalar number as a length-1 vector, so 1 and [1] are
+        # the same bytes on disk. Guessing "sequence" would turn the scale_factor
+        # of every existing file into a list, so numbers are left alone (GH10275).
+        original = Dataset(attrs={"scale_factor": 0.01, "flags": [1, 2]})
+        with self.roundtrip(original, open_kwargs={"decode_cf": False}) as actual:
+            assert actual.attrs["scale_factor"] == 0.01
+            assert not isinstance(actual.attrs["scale_factor"], list)
+            assert_array_equal(actual.attrs["flags"], [1, 2])
+
     def test_read_byte_attrs_as_unicode(self) -> None:
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, "w") as nc:
