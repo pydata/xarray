@@ -723,6 +723,27 @@ ds.plot.streamplot(x="x", y="y", u="A", v="B", col="w", row="z");
 
 (plot-maps)=
 
+## DataTree
+
+Xarray has support for plotting DataTree variables from different nodes against each other.
+In order to plot, variables must have the same name along every node in the DataTree.
+Currently the only supported plotting methods are scatter plots.
+
+Consider this DataTree
+
+```{code-cell}
+dt = xr.tutorial.open_datatree('precipitation.nc4')
+dt
+```
+
+### Scatter
+
+Let’s plot the "precipitation" variable in the "observed" and "reanalysis" groups.
+
+```{code-cell}
+dt.plot.scatter('precipitation')
+```
+
 ## Maps
 
 To follow this section you'll need to have Cartopy installed and working.
