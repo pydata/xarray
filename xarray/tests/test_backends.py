@@ -2717,7 +2717,7 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target:
             zg = zarr.open_group(store_target, mode="w")
             data_int8 = original["x"].values.astype("i1")
-            is_v3_format = has_zarr_v3 and zg.metadata.zarr_format == 3
+            is_v3_format = zg.metadata.zarr_format == 3
             if is_v3_format:
                 arr = zg.create_array(
                     "x",

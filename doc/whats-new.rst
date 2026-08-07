@@ -63,6 +63,12 @@ Bug Fixes
 - :py:func:`polyval` now propagates ``NaN`` for ``NaT`` entries in ``timedelta64``
   coordinates instead of returning a large sentinel value (:issue:`11462`).
   By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
+- The zarr backend now writes boolean arrays with native ``bool`` dtype instead
+  of converting them to ``int8``. Zarr supports ``bool`` natively, so the
+  ``BooleanCoder`` (which was designed for NetCDF compatibility) is now skipped
+  for zarr writes. Existing zarr stores written with the old ``int8`` encoding
+  are still read correctly. (:issue:`2937`, :pull:`11318`)
+  By `Evan Lyall <https://github.com/elyall>`_.
 
 
 Documentation
@@ -140,12 +146,6 @@ Bug Fixes
 - :py:meth:`~xarray.indexes.RangeIndex.linspace` now handles ``num=1`` like
   :py:func:`numpy.linspace` (:issue:`11397`, :pull:`11401`).
   By `S Anand <https://github.com/sanand0>`_.
-- The zarr backend now writes boolean arrays with native ``bool`` dtype instead
-  of converting them to ``int8``. Zarr supports ``bool`` natively, so the
-  ``BooleanCoder`` (which was designed for NetCDF compatibility) is now skipped
-  for zarr writes. Existing zarr stores written with the old ``int8`` encoding
-  are still read correctly. (:issue:`2937`, :pull:`11318`)
-  By `Evan Lyall <https://github.com/elyall>`_.
 - Fix a major performance regression in :py:meth:`Coordinates.to_index` (and
   consequently :py:meth:`Dataset.to_dataframe`) caused by converting the cached
   code ndarrays into Python lists (:issue:`11305`).
