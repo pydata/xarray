@@ -54,8 +54,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "jupyter_sphinx",
-    "myst_parser",
-    "nbsphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",
     "sphinxext.opengraph",
@@ -65,6 +63,7 @@ extensions = [
     "sphinx_inline_tabs",
     "sphinx_remove_toctrees",
     "sphinx_llm.txt",
+    "myst_nb",
 ]
 
 
@@ -78,29 +77,7 @@ extlinks = {
 copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: "
 copybutton_prompt_is_regexp = True
 
-# NBSphinx configuration
-nbsphinx_timeout = 600
-nbsphinx_execute = "always"
-nbsphinx_allow_errors = False
-nbsphinx_requirejs_path = ""
-#  png2x/retina rendering of figues in docs would also need to modify custom.css:
-# https://github.com/spatialaudio/nbsphinx/issues/464#issuecomment-652729126
-#  .rst-content .image-reference img {
-#   max-width: unset;
-#   width: 100% !important;
-#   height: auto !important;
-#  }
-# nbsphinx_execute_arguments = [
-#     "--InlineBackend.figure_formats=['png2x']",
-# ]
-nbsphinx_prolog = """
-{% set docname = env.doc2path(env.docname, base=None) %}
-
-You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/main?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/main/doc/{{ docname }}>`_.
-
-.. |Binder| image:: https://mybinder.org/badge.svg
-   :target: https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/{{ docname }}
-"""
+nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
 
 # AutoDoc configuration
 autosummary_generate = True

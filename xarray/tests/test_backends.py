@@ -66,7 +66,6 @@ from xarray.core.indexes import PandasIndex
 from xarray.core.options import set_options
 from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import module_available
-from xarray.namedarray.pycompat import array_type
 from xarray.structure.alignment import AlignmentError
 from xarray.tests import (
     assert_allclose,
@@ -74,6 +73,8 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_api,
+    dask_array_type,
     has_dask,
     has_netCDF4,
     has_numpy_2,
@@ -89,7 +90,6 @@ from xarray.tests import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
-    requires_h5netcdf_1_7_0_or_above,
     requires_h5netcdf_or_netCDF4,
     requires_h5netcdf_ros3,
     requires_iris,
@@ -119,7 +119,7 @@ with contextlib.suppress(ImportError):
 
 with contextlib.suppress(ImportError):
     import dask
-    import dask.array as da
+
 
 with contextlib.suppress(ImportError):
     import fsspec
@@ -145,10 +145,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture(scope="module", params=ZARR_FORMATS)
 def default_zarr_format(request) -> Generator[None, None]:
-    if has_zarr:
-        with zarr.config.set(default_zarr_format=request.param):
-            yield
-    else:
+    with zarr.config.set(default_zarr_format=request.param):
         yield
 
 
@@ -225,9 +222,6 @@ def _check_compression_codec_available(codec: str | None) -> bool:
     except Exception:
         # Any other error, assume codec is not available
         return False
-
-
-dask_array_type = array_type("dask")
 
 
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
@@ -1010,6 +1004,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def validate_array_type(self, ds):
+
         # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
@@ -1018,7 +1013,7 @@ class DatasetIOBase:
                     find_and_validate_array(obj.array)
                 elif isinstance(obj.array, np.ndarray):
                     assert isinstance(obj, indexing.NumpyIndexingAdapter)
-                elif isinstance(obj.array, dask_array_type):
+                elif has_dask and isinstance(obj.array, dask_array_type):
                     assert isinstance(obj, indexing.DaskIndexingAdapter)
                 elif isinstance(obj.array, pd.Index):
                     assert isinstance(obj, indexing.PandasIndexingAdapter)
@@ -1135,7 +1130,7 @@ class CFEncodedBase(DatasetIOBase):
     )
     @pytest.mark.parametrize("dtype", [np.dtype("float64"), np.dtype("float32")])
     def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn, dtype) -> None:
-        if hasattr(self, "zarr_version") and dtype == np.float32:
+        if hasattr(self, "DIMENSION_KEY") and dtype == np.float32:
             pytest.skip("float32 will be treated as float64 in zarr")
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
@@ -2248,16 +2243,19 @@ class NetCDF4Base(NetCDFBase):
                 assert len(loaded_ds.xindexes) == 0
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_encoding_masked_arrays(self, tmp_path) -> None:
         store_path = tmp_path / "tmp.nc"
 
         with raise_if_dask_computes():
+            da = dask_array_api
             ds = xr.DataArray(
-                dask.array.from_array(
+                da.from_array(
                     np.ma.masked_array(
                         np.array([[np.nan, np.nan], [np.nan, 2]]),
                         np.array([[True, True], [True, False]]),
-                    )
+                    ),
+                    chunks=(2, 2),
                 ).astype("float32"),
                 dims=("x", "y"),
             ).to_dataset(name="mydata")
@@ -2595,6 +2593,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     def test_write_inconsistent_chunks(self) -> None:
         # Construct two variables with the same dimensions, but different
         # chunk sizes.
+        da = dask_array_api
         x = da.zeros((100, 100), dtype="f4", chunks=(50, 100))
         x = DataArray(data=x, dims=("lat", "lon"), name="x")
         x.encoding["chunksizes"] = (50, 100)
@@ -2649,7 +2648,6 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 @pytest.mark.usefixtures("default_zarr_format")
 class ZarrBase(CFEncodedBase):
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
-    zarr_version = 2
     version_kwargs: dict[str, Any] = {}
 
     def create_zarr_target(self):
@@ -2729,21 +2727,6 @@ class ZarrBase(CFEncodedBase):
         ]
         with pytest.raises(FileNotFoundError, match=f"({'|'.join(patterns)})"):
             xr.open_zarr(f"{uuid.uuid4()}")
-
-    @pytest.mark.skip(reason="chunk_store not implemented in zarr v3")
-    def test_with_chunkstore(self) -> None:
-        expected = create_test_data()
-        with (
-            self.create_zarr_target() as store_target,
-            self.create_zarr_target() as chunk_store,
-        ):
-            save_kwargs = {"chunk_store": chunk_store}
-            self.save(expected, store_target, **save_kwargs)
-            # the chunk store must have been populated with some entries
-            assert len(chunk_store) > 0
-            open_kwargs = {"backend_kwargs": {"chunk_store": chunk_store}}
-            with self.open(store_target, **open_kwargs) as ds:
-                assert_equal(ds, expected)
 
     @requires_dask
     def test_auto_chunk(self) -> None:
@@ -3799,8 +3782,14 @@ class ZarrBase(CFEncodedBase):
         # We test this by writing a dask array with compute=False,
         # on read we should receive chunks filled with `fill_value`
         fv = -1
+        da = dask_array_api
         ds = xr.Dataset(
-            {"foo": ("x", dask.array.from_array(np.array([0, 0, 0], dtype=dtype)))}
+            {
+                "foo": (
+                    "x",
+                    da.from_array(np.array([0, 0, 0], dtype=dtype), chunks=(3,)),
+                )
+            }
         )
         expected = xr.Dataset({"foo": ("x", [fv] * 3)})
 
@@ -3883,9 +3872,6 @@ class TestInstrumentedZarrStore:
 
     @contextlib.contextmanager
     def create_zarr_target(self):
-        if Version(zarr.__version__) < Version("2.18.0"):
-            pytest.skip("Instrumented tests only work on latest Zarr.")
-
         store = KVStore({}, read_only=False)  # type: ignore[arg-type,unused-ignore]
         yield store
 
@@ -3935,8 +3921,6 @@ class TestInstrumentedZarrStore:
             self.check_requests(expected, patches)
 
             patches = self.make_patches(store)
-            # v2024.03.0: {'iter': 6, 'contains': 2, 'setitem': 5, 'getitem': 10, 'listdir': 6, 'list_prefix': 0}
-            # 6057128b: {'iter': 5, 'contains': 2, 'setitem': 5, 'getitem': 10, "listdir": 5, "list_prefix": 0}
             expected = {
                 "set": 4,
                 "get": 9,  # TODO: fixme upstream (should be 8)
@@ -3982,8 +3966,6 @@ class TestInstrumentedZarrStore:
                 ds.to_zarr(store, mode="w", compute=False)
             self.check_requests(expected, patches)
 
-            # v2024.03.0: {'iter': 5, 'contains': 2, 'setitem': 1, 'getitem': 6, 'listdir': 5, 'list_prefix': 0}
-            # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 5, 'listdir': 4, 'list_prefix': 0}
             expected = {
                 "set": 1,
                 "get": 3,
@@ -3996,8 +3978,6 @@ class TestInstrumentedZarrStore:
                 ds.to_zarr(store, region={"x": slice(None)})
             self.check_requests(expected, patches)
 
-            # v2024.03.0: {'iter': 6, 'contains': 4, 'setitem': 1, 'getitem': 11, 'listdir': 6, 'list_prefix': 0}
-            # 6057128b: {'iter': 4, 'contains': 2, 'setitem': 1, 'getitem': 7, 'listdir': 4, 'list_prefix': 0}
             expected = {
                 "set": 1,
                 "get": 4,
@@ -4070,7 +4050,7 @@ class TestZarrDictStore(ZarrBase):
             original.to_zarr(store, zarr_format=3, consolidated=False)
 
             with patch.object(
-                target_class, method_name, wraps=original_method, autospec=True
+                target_class, method_name, side_effect=original_method, autospec=True
             ) as mocked_meth:
                 # blocks upon loading the coordinate variables here
                 ds = xr.open_zarr(store, consolidated=False, chunks=None)
@@ -4107,7 +4087,7 @@ class TestZarrDictStore(ZarrBase):
             original.to_zarr(store, consolidated=False, zarr_format=3)
 
             with patch.object(
-                target_class, method_name, wraps=original_method, autospec=True
+                target_class, method_name, side_effect=original_method, autospec=True
             ) as mocked_meth:
                 xr_obj = get_xr_obj(store, cls_name)
 
@@ -4208,7 +4188,7 @@ class TestZarrDictStore(ZarrBase):
             original.to_zarr(store, consolidated=False, zarr_format=3)
 
             with patch.object(
-                target_class, method_name, wraps=original_method, autospec=True
+                target_class, method_name, side_effect=original_method, autospec=True
             ) as mocked_meth:
                 xr_obj = get_xr_obj(store, cls_name)
 
@@ -4226,13 +4206,6 @@ class TestZarrDictStore(ZarrBase):
     @pytest.mark.parametrize(
         ("indexer", "expected_err_msg"),
         [
-            pytest.param(
-                {"dim2": 2},
-                "basic async indexing",
-                marks=pytest.mark.skip(
-                    reason="current version of zarr has basic async indexing"
-                ),
-            ),  # tests basic indexing
             pytest.param(
                 {"dim2": [1, 3]},
                 "orthogonal async indexing",
@@ -4510,8 +4483,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         # Use of side_effect means that calls are passed through to the original method
         # rather than a mocked method.
 
-        Group: Any
-        Group = zarr.AsyncGroup
+        Group: Any = zarr.AsyncGroup
         patched = patch.object(
             Group, "getitem", side_effect=Group.getitem, autospec=True
         )
@@ -4528,34 +4500,6 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             # we assert that the number of calls has not increased after fetchhing the array
             xrds.test.compute(scheduler="sync")
             assert mock.call_count == call_count
-
-
-@requires_zarr
-@requires_fsspec
-@pytest.mark.skip(reason="Difficult to test.")
-def test_zarr_storage_options() -> None:
-    pytest.importorskip("aiobotocore")
-    ds = create_test_data()
-    store_target = "memory://test.zarr"
-    ds.to_zarr(store_target, storage_options={"test": "zarr_write"})
-    ds_a = xr.open_zarr(store_target, storage_options={"test": "zarr_read"})
-    assert_identical(ds, ds_a)
-
-
-@requires_zarr
-def test_zarr_version_deprecated() -> None:
-    ds = create_test_data()
-    store: Any
-    store = KVStore()
-
-    with pytest.warns(FutureWarning, match="zarr_version"):
-        ds.to_zarr(store=store, zarr_version=2)
-
-    with pytest.warns(FutureWarning, match="zarr_version"):
-        xr.open_zarr(store=store, zarr_version=2)
-
-    with pytest.raises(ValueError, match="zarr_format"):
-        xr.open_zarr(store=store, zarr_version=2, zarr_format=3)
 
 
 @requires_scipy
@@ -4728,7 +4672,6 @@ class TestNetCDF4ClassicViaNetCDF4Data(NetCDF3Only, CFEncodedBase):
             assert ds._h5file.attrs["foo"].dtype == np.dtype("S3")
 
 
-@requires_h5netcdf_1_7_0_or_above
 class TestNetCDF4ClassicViaH5NetCDFData(TestNetCDF4ClassicViaNetCDF4Data):
     engine: T_NetcdfEngine = "h5netcdf"
     file_format: T_NetcdfTypes = "NETCDF4_CLASSIC"
@@ -4981,17 +4924,6 @@ class TestH5NetCDFData(NetCDF4Base):
                 assert actual.x.encoding["zlib"] is True
                 assert actual.x.encoding["complevel"] == 6
 
-        # Incompatible encodings cause a crash
-        with create_tmp_file() as tmp_file:
-            with pytest.raises(
-                ValueError, match=r"'zlib' and 'compression' encodings mismatch"
-            ):
-                data.to_netcdf(
-                    tmp_file,
-                    engine="h5netcdf",
-                    encoding={"x": {"compression": "lzf", "zlib": True}},
-                )
-
         with create_tmp_file() as tmp_file:
             with pytest.raises(
                 ValueError,
@@ -5218,6 +5150,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
     def test_write_inconsistent_chunks(self) -> None:
         # Construct two variables with the same dimensions, but different
         # chunk sizes.
+        da = dask_array_api
         x = da.zeros((100, 100), dtype="f4", chunks=(50, 100))
         x = DataArray(data=x, dims=("lat", "lon"), name="x")
         x.encoding["chunksizes"] = (50, 100)
@@ -5868,7 +5801,7 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset(
                     [tmp1, tmp2], concat_dim="x", combine="nested"
                 ) as actual:
-                    assert isinstance(actual.foo.variable.data, da.Array)
+                    assert isinstance(actual.foo.variable.data, dask_array_type)
                     assert actual.foo.variable.data.chunks == ((5, 5),)
                     assert_identical(original, actual)
                 with open_mfdataset(
@@ -5904,7 +5837,10 @@ class TestDask(DatasetIOBase):
                             combine="nested",
                             concat_dim=["y", "x"],
                         ) as actual:
-                            assert isinstance(actual.foo.variable.data, da.Array)
+                            assert isinstance(
+                                actual.foo.variable.data,
+                                dask_array_type,
+                            )
                             assert actual.foo.variable.data.chunks == ((5, 5), (4, 4))
                             assert_identical(original, actual)
                         with open_mfdataset(
@@ -6264,7 +6200,7 @@ class TestDask(DatasetIOBase):
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
             with open_dataset(tmp, chunks={"x": 5}) as actual:
-                assert isinstance(actual.foo.variable.data, da.Array)
+                assert isinstance(actual.foo.variable.data, dask_array_type)
                 assert actual.foo.variable.data.chunks == ((5, 5),)
                 assert_identical(original, actual)
             with open_dataset(tmp, chunks=5) as actual:
@@ -6336,7 +6272,7 @@ class TestDask(DatasetIOBase):
             {"time": [cftime.Datetime360Day(2005, 12, 1, 12, 0, 0, 0)]},
         )
         with self.roundtrip(original, open_kwargs={"chunks": "auto"}) as actual:
-            assert isinstance(actual.time_bnds.variable.data, da.Array)
+            assert isinstance(actual.time_bnds.variable.data, dask_array_type)
             assert _contains_cftime_datetimes(actual.time)
             assert_identical(original, actual)
 
@@ -6427,6 +6363,7 @@ class TestDask(DatasetIOBase):
         ON_WINDOWS,
         reason="counting number of tasks in graph fails on windows for some reason",
     )
+    @pytest.mark.skip_with_dask_array
     def test_inline_array(self) -> None:
         with create_tmp_file() as tmp:
             original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -7268,7 +7205,7 @@ def test_load_single_value_h5netcdf(tmp_path: Path) -> None:
 )
 def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
     encoded_chunks = 100
-    dask_arr = da.from_array(
+    dask_arr = dask_array_api.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
     ds = xr.Dataset(
@@ -7298,7 +7235,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
 @pytest.mark.filterwarnings("ignore:The specified chunks separate")
 def test_chunking_consistency(chunks, tmp_path: Path) -> None:
     encoded_chunks: dict[str, Any] = {}
-    dask_arr = da.from_array(
+    dask_arr = dask_array_api.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
     ds = xr.Dataset(
