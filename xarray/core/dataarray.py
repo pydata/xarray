@@ -9,7 +9,6 @@ from collections.abc import (
     Hashable,
     Iterable,
     Mapping,
-    MutableMapping,
     Sequence,
 )
 from functools import partial
@@ -328,7 +327,7 @@ class DataArray(
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
-        (see FAQ, :ref:`approach to metadata`)
+        (see FAQ, :ref:`approach-to-metadata`)
     indexes : :py:class:`~xarray.Indexes` or dict-like, optional
         For internal use only. For passing indexes objects to the
         new DataArray, use the ``coords`` argument instead with a
@@ -4280,9 +4279,7 @@ class DataArray(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         *,
         encoding: Mapping | None = None,
@@ -4293,7 +4290,6 @@ class DataArray(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -4304,9 +4300,7 @@ class DataArray(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,
@@ -4317,7 +4311,6 @@ class DataArray(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -4326,9 +4319,7 @@ class DataArray(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,
@@ -4339,7 +4330,6 @@ class DataArray(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -4364,9 +4354,6 @@ class DataArray(
         ----------
         store : zarr.storage.StoreLike, optional
             Store or path to directory in local or remote file system.
-        chunk_store : MutableMapping, str or path-like, optional
-            Store or path to directory in local or remote file system only for Zarr
-            array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "a-", r+", None}, optional
             Persistence mode:
 
@@ -4384,8 +4371,6 @@ class DataArray(
                 When modifying an existing Zarr array that is lazily opened, the "w"
                 behavior can be surprising since the underlying file that is being
                 lazily read from might get deleted before the data is computed.
-        synchronizer : object, optional
-            Zarr array synchronizer.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
         encoding : dict, optional
@@ -4403,8 +4388,6 @@ class DataArray(
             write consolidated metadata and attempt to read consolidated
             metadata for existing stores (falling back to non-consolidated).
 
-            When the experimental ``zarr_version=3``, ``consolidated`` must be
-            either be ``None`` or ``False``.
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overridden variables must remain the same size.
@@ -4460,11 +4443,6 @@ class DataArray(
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
-        zarr_version : int or None, optional
-
-            .. deprecated:: 2024.9.1
-            Use ``zarr_format`` instead.
-
         zarr_format : int or None, optional
             The desired zarr format to target (currently 2 or 3). The default
             of None will attempt to determine the zarr version from ``store`` when
@@ -4539,9 +4517,7 @@ class DataArray(
         return to_zarr(  # type: ignore[call-overload,misc]
             dataset,
             store=store,
-            chunk_store=chunk_store,
             mode=mode,
-            synchronizer=synchronizer,
             group=group,
             encoding=encoding,
             compute=compute,
@@ -4551,7 +4527,6 @@ class DataArray(
             safe_chunks=safe_chunks,
             align_chunks=align_chunks,
             storage_options=storage_options,
-            zarr_version=zarr_version,
             zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
             chunkmanager_store_kwargs=chunkmanager_store_kwargs,
@@ -5210,7 +5185,7 @@ class DataArray(
         Notes
         -----
         This method automatically aligns coordinates by their values (not their order).
-        See :ref:`math automatic alignment` and :py:func:`xarray.dot` for more details.
+        See :ref:`math-automatic-alignment` and :py:func:`xarray.dot` for more details.
 
         Examples
         --------
@@ -5272,6 +5247,8 @@ class DataArray(
         https://numpy.org/doc/stable/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
         followed by the 2nd key, etc.
+        Sorting is stable: when all sort keys compare equal, the original order is
+        preserved.
 
         Parameters
         ----------

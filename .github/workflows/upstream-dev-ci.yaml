@@ -31,7 +31,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 2
           persist-credentials: false
@@ -58,19 +58,28 @@ jobs:
         )
       )
 
+    env:
+      MANIFEST_PATH: ci/nightly/pixi.toml
+      LOCK_PATH: ci/nightly/pixi.lock
+
     outputs:
       cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
       pixi-version: ${{ steps.pixi-lock.outputs.pixi-version }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Parcels-code/pixi-lock/create-and-cache@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
+      - uses: Parcels-code/pixi-lock/create-and-cache@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         id: pixi-lock
+        with:
+          manifest-path: ${{ env.MANIFEST_PATH }}
+          hash-files: |
+            ${{ env.MANIFEST_PATH }}
+            pyproject.toml
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pixi-lock
-          path: pixi.lock
+          path: ${{ env.LOCK_PATH }}
 
   upstream-dev:
     name: upstream-dev
@@ -89,12 +98,13 @@ jobs:
 
     env:
       ENV: ${{ matrix.pixi-env }}
+      MANIFEST_PATH: ci/nightly/pixi.toml
 
     outputs:
       log-file: ${{ steps.determine-log-path.outputs.log-file }}
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
           persist-credentials: false
@@ -102,31 +112,35 @@ jobs:
         id: determine-log-path
         run: |
           echo "log-file=output-${ENV}-log.jsonl" >> $GITHUB_OUTPUT;
-          cat $GITHUB_OUTPUT
       - name: Restore cached pixi lockfile
-        uses: Parcels-code/pixi-lock/restore@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
+        uses: Parcels-code/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
+          manifest-path: ${{ env.MANIFEST_PATH }}
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ matrix.pixi-env }}
+          manifest-path: ${{ env.MANIFEST_PATH }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
       - name: Version info
         run: |
-          pixi run -e $ENV -- python xarray/util/print_versions.py
+          pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python xarray/util/print_versions.py
       - name: Import xarray
         run: |
-          pixi run -e $ENV -- python -c 'import xarray'
+          pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python -c 'import xarray'
       - name: Run Tests
         if: success()
         id: status
         env:
           LOG_PATH: ${{ steps.determine-log-path.outputs.log-file }}
         run: |
-          pixi run -e $ENV -- python -m pytest --timeout=60 -rf -nauto \
-            --report-log "$LOG_PATH"
+          pixi run \
+            --manifest-path "$MANIFEST_PATH" \
+            -e $ENV \
+            -- \
+            python -m pytest --timeout=60 -rf -nauto --report-log "$LOG_PATH"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
@@ -152,7 +166,7 @@ jobs:
           name: log file
           path: logs/
       - name: Generate and publish the report
-        uses: scientific-python/issue-from-pytest-log-action@87351a8f864e969567cda22a25a2f214cbe2340f # v1.6.0
+        uses: scientific-python/issue-from-pytest-log-action@35b4e0a9e06f8e7e261778289cf4b968b722662d # v1.6.2
         with:
           log-path: logs/${{ needs.upstream-dev.outputs.log-file }}
 
@@ -174,34 +188,37 @@ jobs:
 
     env:
       ENV: ${{ matrix.pixi-env }}
+      MANIFEST_PATH: ci/nightly/pixi.toml
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
           persist-credentials: false
 
       - name: Restore cached pixi lockfile
-        uses: Parcels-code/pixi-lock/restore@38495788b79a5ff26009aecc15daa9a8310b8832 # v0.1.0
+        uses: Parcels-code/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
+          manifest-path: ${{ env.MANIFEST_PATH }}
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
-      - uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ matrix.pixi-env }}
+          manifest-path: ${{ env.MANIFEST_PATH }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=$(pixi run -e $ENV -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
       - name: Version info
         run: |
-          pixi run -e $ENV -- python xarray/util/print_versions.py
+          pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python xarray/util/print_versions.py
       - name: Run mypy
         run: |
-          pixi run -e $ENV -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run --manifest-path "$MANIFEST_PATH" -e $ENV -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
