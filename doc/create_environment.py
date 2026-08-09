@@ -6,12 +6,9 @@ import pathlib
 def main():
     root = pathlib.Path(__file__).parent
 
-    local_channel = root.parent / "local_channel"
-    package_paths = list(local_channel.joinpath("noarch").glob("xarray*.conda"))
-    if len(package_paths) != 1:
-        raise RuntimeError(f"zero or more than one package found: {package_paths}")
-
-    package_path = package_paths[0]
+    package_root = root.parent / "dist"
+    package_paths = sorted(package_root.glob("xarray*.conda"))
+    package_path = package_paths[-1]
 
     template_path = root / "environment_template.yml"
     env_path = root / "environment.yml"
