@@ -325,7 +325,6 @@ rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
 [feature.build-package.dependencies]
 vcs_versioning = "*"
 cytoolz = "*"
-rattler-build = "*"
 
 [feature.build-package.tasks]
 prepare-recipe = { cmd = "python ci/recipe/prepare_recipe.py", cwd = "." }
