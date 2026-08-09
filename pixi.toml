@@ -327,23 +327,11 @@ vcs_versioning = "*"
 cytoolz = "*"
 rattler-build = "*"
 
-[feature.build-package.tasks.prepare-recipe]
-cmd = "python ci/recipe/prepare_recipe.py"
-cwd = "."
-
-[feature.build-package.tasks.build]
-cmd = [
-  "rattler-build",
-  "build",
-  "-c",
-  "conda-forge",
-  "--recipe",
-  "ci/recipe/recipe.yaml",
-  "--output-dir",
-  "local_channel",
-]
-cwd = "."
-depends-on = ["prepare-recipe"]
+[feature.build-package.tasks]
+prepare-recipe = { cmd = "python ci/recipe/prepare_recipe.py", cwd = "." }
+build-package = { cmd = "pixi publish --path ci/recipe/pixi.toml --target-dir dist/", cwd = ".", depends-on = [
+  "prepare-recipe",
+] }
 
 [tasks]
 build-and-host-doc = [
