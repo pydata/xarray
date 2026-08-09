@@ -20,7 +20,7 @@ build:
       - git fetch --unshallow || true
     install:
       - pixi install -e build-package
-      - pixi install --concurrent-solves 2 -e doc
+      - pixi install -e doc
     build:
       html:
         - pixi run --frozen build-package
