@@ -22,5 +22,5 @@ build:
       - pixi install --concurrent-solves 2 -e doc
     build:
       html:
-        - pixi run build-package
-        - pixi run doc BUILDDIR=$READTHEDOCS_OUTPUT
+        - pixi run --frozen build-package
+        - pixi run --frozen doc BUILDDIR=$READTHEDOCS_OUTPUT
