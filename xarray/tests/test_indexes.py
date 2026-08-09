@@ -429,6 +429,20 @@ class TestPandasMultiIndex:
                 "z",
             )
 
+    @pytest.mark.parametrize("dim", ["", False, 0], ids=["empty_str", "false", "zero"])
+    def test_stack_falsy_level_names(self, dim: Hashable) -> None:
+        # falsy names are valid hashables and must not be replaced by a
+        # synthetic "<dim>_level_<i>" name, see GH9969
+        prod_vars = {
+            dim: xr.Variable((dim,), pd.Index(["b", "a"])),
+            "y": xr.Variable("y", pd.Index([1, 2])),
+        }
+
+        index_xr = PandasMultiIndex.stack(prod_vars, "z")
+
+        assert list(index_xr.index.names) == [dim, "y"]
+        assert set(index_xr.create_variables()) == {"z", dim, "y"}
+
     def test_stack_non_unique(self) -> None:
         prod_vars = {
             "x": xr.Variable("x", pd.Index(["b", "a"]), attrs={"foo": "bar"}),

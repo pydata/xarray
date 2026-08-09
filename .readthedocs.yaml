@@ -14,6 +14,7 @@ build:
       - asdf plugin add pixi
       - asdf install pixi latest
       - asdf global pixi latest
+      - pixi lock --no-install
     post_checkout:
       - (git --no-pager log --pretty="tformat:%s" -1 | grep -vqF "[skip-rtd]") || exit 183
       - git fetch --unshallow || true
