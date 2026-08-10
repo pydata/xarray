@@ -3330,15 +3330,20 @@ class ZarrBase(CFEncodedBase):
         ds["static"] = (("lat", "lon"), np.zeros((3, 3)))
         ds_to_append["static"] = (("lat", "lon"), np.ones((3, 3)))
 
-        concat_kwargs = {
-            "data_vars": "minimal",
-            "coords": "minimal",
-            "compat": "override",
-        }
+        # "static" is taken from the first dataset rather than concatenated
+        def concat(objs):
+            return xr.concat(
+                objs,
+                dim="time",
+                data_vars="minimal",
+                coords="minimal",
+                compat="override",
+            )
+
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
-            original = xr.concat([ds, ds_to_append], dim="time", **concat_kwargs)
-            original2 = xr.concat([original, ds_to_append], dim="time", **concat_kwargs)
+            original = concat([ds, ds_to_append])
+            original2 = concat([original, ds_to_append])
 
             # for mode='a-', "static" will not get written to the store
             # because it does not have the append_dim as a dim
