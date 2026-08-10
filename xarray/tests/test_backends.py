@@ -3324,30 +3324,167 @@ class ZarrBase(CFEncodedBase):
 
     def test_append_with_append_dim_no_overwrite(self) -> None:
         ds, ds_to_append, _ = create_append_test_data()
+        # a variable without the append_dim among its dimensions. Dimension
+        # coordinates cannot be used here: a mismatched one is rejected outright,
+        # see test_append_with_mismatched_dim_coord_raises.
+        ds["static"] = (("lat", "lon"), np.zeros((3, 3)))
+        ds_to_append["static"] = (("lat", "lon"), np.ones((3, 3)))
+
+        concat_kwargs = {
+            "data_vars": "minimal",
+            "coords": "minimal",
+            "compat": "override",
+        }
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
-            original = xr.concat([ds, ds_to_append], dim="time")
-            original2 = xr.concat([original, ds_to_append], dim="time")
+            original = xr.concat([ds, ds_to_append], dim="time", **concat_kwargs)
+            original2 = xr.concat([original, ds_to_append], dim="time", **concat_kwargs)
 
-            # overwrite a coordinate;
-            # for mode='a-', this will not get written to the store
+            # for mode='a-', "static" will not get written to the store
             # because it does not have the append_dim as a dim
-            lon = ds_to_append.lon.to_numpy().copy()
-            lon[:] = -999
-            ds_to_append["lon"] = lon
             ds_to_append.to_zarr(
                 store_target, mode="a-", append_dim="time", **self.version_kwargs
             )
             actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
             assert_identical(original, actual)
 
-            # by default, mode="a" will overwrite all coordinates.
+            # by default, mode="a" will overwrite it
             ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
             actual = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
-            lon = original2.lon.to_numpy().copy()
-            lon[:] = -999
-            original2["lon"] = lon
+            original2["static"] = ds_to_append["static"]
             assert_identical(original2, actual)
+
+    @pytest.mark.parametrize("mode", [None, "a", "a-"])
+    def test_append_with_mismatched_dim_coord_raises(self, mode) -> None:
+        # regression test for GH11101. Appending writes the new block in the
+        # order of the dataset being written, so a dimension coordinate that
+        # disagrees with the store mislabels either the data already in the
+        # store (mode="a") or the data being appended (mode="a-").
+        ds = Dataset(
+            {"var": (("time", "level"), np.arange(5).reshape(1, 5))},
+            coords={"time": [0], "level": [0, 1, 2, 3, 4]},
+        )
+        flipped = ds.isel(level=slice(None, None, -1)).assign_coords(time=[1])
+
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
+            with pytest.raises(ValueError, match="would silently mislabel data"):
+                flipped.to_zarr(
+                    store_target,
+                    mode=mode,
+                    append_dim="time",
+                    **self.version_kwargs,
+                )
+            # the write is refused before anything is written
+            with self.open(store_target) as actual:
+                assert_identical(ds, actual)
+
+    @pytest.mark.parametrize("kind", ["non-dim-index", "multi-dim", "chunked"])
+    def test_append_with_mismatched_coord_raises(self, kind) -> None:
+        # GH11101 applies to every coordinate that labels existing data, not just
+        # the dimension coordinates
+        if kind == "non-dim-index":
+            ds = Dataset(
+                {"var": (("time", "pos"), np.zeros((1, 3)))},
+                coords={"time": [0], "pf": ("pos", [1.0, 2.0, 3.0])},
+            ).set_xindex("pf")
+            mismatched = ds.assign_coords(pf=("pos", [3.0, 2.0, 1.0]))
+        elif kind == "multi-dim":
+            ds = Dataset(
+                {"var": (("time", "y", "x"), np.zeros((1, 2, 2)))},
+                coords={"time": [0], "lat": (("y", "x"), np.zeros((2, 2)))},
+            )
+            mismatched = ds.assign_coords(lat=(("y", "x"), np.ones((2, 2))))
+        else:
+            ds = Dataset(
+                {"var": (("time", "level"), np.zeros((1, 4)))},
+                coords={"time": [0], "level": [0, 1, 2, 3]},
+            )
+            # a dimension coordinate only reaches the store chunked once its index
+            # has been dropped; comparing it must not be skipped
+            mismatched = (
+                ds.assign_coords(level=("level", np.array([3, 2, 1, 0])))
+                .drop_indexes("level")
+                .chunk({"level": -1})
+            )
+
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
+            with pytest.raises(ValueError, match="would silently mislabel data"):
+                mismatched.assign_coords(time=[1]).to_zarr(
+                    store_target, append_dim="time", **self.version_kwargs
+                )
+
+    def test_append_with_region_and_mismatched_coord_raises(self) -> None:
+        # ``region`` and ``append_dim`` on different dimensions: the coordinate is
+        # compared against the region of the store it is written into
+        def build(xc):
+            return Dataset(
+                {"var": (("time", "x"), np.zeros((1, 4)))}, coords={"xc": ("x", xc)}
+            )
+
+        kwargs = {"append_dim": "time", "region": {"x": slice(0, 4)}, "mode": "a"}
+        with self.create_zarr_target() as store_target:
+            build([0.0, 1.0, 2.0, 3.0]).to_zarr(
+                store_target, mode="w", **self.version_kwargs
+            )
+            build([0.0, 1.0, 2.0, 3.0]).to_zarr(
+                store_target, **kwargs, **self.version_kwargs
+            )
+            with pytest.raises(ValueError, match="would silently mislabel data"):
+                build([9.0, 9.0, 9.0, 9.0]).to_zarr(
+                    store_target, **kwargs, **self.version_kwargs
+                )
+
+    @pytest.mark.parametrize(
+        "level",
+        [
+            pytest.param(np.array([0.0, 1.0, np.nan]), id="float-nan"),
+            pytest.param(
+                np.array(["2001-01-01", "NaT", "2001-01-03"], dtype="datetime64[ns]"),
+                id="datetime-nat",
+            ),
+            pytest.param(np.array(["a", "bc", "def"], dtype=object), id="object-str"),
+        ],
+    )
+    def test_append_with_matching_dim_coord(self, level) -> None:
+        # the GH11101 check must not fire when the coordinate is unchanged,
+        # including for values that are not equal to themselves. The datetime
+        # case also pins the comparison to the *encoded* on-disk values: it
+        # fails if the check is pointed at the CF-decoded ones instead.
+        ds = Dataset(
+            {"var": (("time", "level"), np.zeros((1, 3)))},
+            coords={"time": [0], "level": level},
+        )
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
+            appended = ds.assign_coords(time=[1])
+            appended.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+            with self.open(store_target) as actual:
+                assert_identical(xr.concat([ds, appended], dim="time"), actual)
+
+    def test_append_with_lossy_dim_coord_encoding(self) -> None:
+        # the store holds float32 while the dataset holds float64 values that do
+        # not round-trip exactly. The values on disk are unchanged by the append,
+        # so this must not raise: the GH11101 check compares the coordinate as it
+        # will be encoded, not as it is held in memory.
+        ds = Dataset(
+            {"var": (("time", "level"), np.zeros((1, 3)))},
+            coords={"time": [0], "level": np.array([0.1, 0.2, 0.3])},
+        )
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(
+                store_target,
+                mode="w",
+                encoding={"level": {"dtype": "float32"}},
+                **self.version_kwargs,
+            )
+            ds.assign_coords(time=[1]).to_zarr(
+                store_target, append_dim="time", **self.version_kwargs
+            )
+            with self.open(store_target) as actual:
+                assert actual.sizes["time"] == 2
+                assert actual.level.dtype == np.float32
 
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self) -> None:

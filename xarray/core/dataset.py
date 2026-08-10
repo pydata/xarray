@@ -2317,6 +2317,10 @@ class Dataset(
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overridden variables must remain the same size.
+            The data is appended in the order given by this dataset and is not
+            aligned to the store, so any existing coordinate that does not have
+            ``append_dim`` among its dimensions must match the one already in the
+            store; a mismatch raises a ``ValueError``.
         region : dict or "auto", optional
             Optional mapping from dimension names to either a) ``"auto"``, or b) integer
             slices, indicating the region of existing zarr array(s) in which to write

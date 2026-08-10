@@ -41,6 +41,12 @@ Breaking Changes
   the compatibility features with ``netCDF4`` that the harmonized encoding relies
   on (:issue:`10657`, :pull:`11067`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+- :py:meth:`Dataset.to_zarr` with ``append_dim`` now raises ``ValueError`` when an
+  existing coordinate that does not have ``append_dim`` among its dimensions
+  disagrees with the store, instead of silently mislabelling data. This applies to
+  both ``mode="a"`` and ``mode="a-"``. Align the dataset to the store before
+  appending, e.g. with :py:meth:`Dataset.reindex_like` (:issue:`11101`).
+  By `Aman Kumar <https://github.com/ghostiee-11>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -63,6 +69,11 @@ Bug Fixes
 - :py:func:`polyval` now propagates ``NaN`` for ``NaT`` entries in ``timedelta64``
   coordinates instead of returning a large sentinel value (:issue:`11462`).
   By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
+- Fixed :py:meth:`Dataset.to_zarr` with ``append_dim`` silently corrupting a store
+  when a coordinate without ``append_dim`` differed from the one already written:
+  ``mode="a"`` relabelled the existing data and ``mode="a-"`` mislabelled the
+  appended data. Both now raise (:issue:`11101`). See Breaking Changes.
+  By `Aman Kumar <https://github.com/ghostiee-11>`_.
 
 
 Documentation

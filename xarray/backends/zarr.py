@@ -24,7 +24,7 @@ from xarray.backends.common import (
     ensure_dtype_not_object,
 )
 from xarray.backends.store import StoreBackendEntrypoint
-from xarray.core import indexing
+from xarray.core import duck_array_ops, indexing
 from xarray.core.treenode import NodePath
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
@@ -612,6 +612,47 @@ def _validate_and_transpose_existing_dims(
     return new_var
 
 
+def _coordinate_names(variables, attributes):
+    """Names of the variables that are written to the store as coordinates."""
+    names = {k for k, v in variables.items() if v.dims == (k,)}
+    names.update(attributes.get("coordinates", "").split())
+    for var in variables.values():
+        names.update(var.attrs.get("coordinates", "").split())
+    return names
+
+
+def _validate_existing_coord_values(
+    var_name, new_var, existing_var, region, append_dim
+):
+    """Raise if appending would mislabel data.
+
+    ``to_zarr`` writes the appended block in the order given by the dataset being
+    written, and does not align it to the store. A coordinate without ``append_dim``
+    among its dimensions is therefore either overwritten (``mode="a"``, relabelling
+    the data already in the store) or kept while the new block is written in a
+    different order (``mode="a-"``, mislabelling the data being appended). Values
+    are compared as encoded, so a lossy or value-changing encoding does not raise
+    spuriously.
+    """
+    if append_dim in new_var.dims:
+        return
+    if region:
+        existing_var = existing_var[
+            tuple(region.get(dim, slice(None)) for dim in existing_var.dims)
+        ]
+    if not duck_array_ops.array_equiv(new_var.values, existing_var.values):
+        raise ValueError(
+            f"cannot append along {append_dim!r}: coordinate {var_name!r} already "
+            f"exists in the Zarr store with different values, and does not have "
+            f"{append_dim!r} among its dimensions. to_zarr() writes appended data "
+            f"in the order given by the dataset being written and does not align "
+            f"it to the store, so appending would silently mislabel data. Align "
+            f"the dataset to the store before appending, e.g. ``ds = "
+            f"ds.reindex_like(xr.open_zarr(store))``, or write the new coordinate "
+            f"values in a separate call with mode='r+'."
+        )
+
+
 def _put_attrs(zarr_obj, attrs):
     """Raise a more informative error message for invalid attrs."""
     try:
@@ -970,6 +1011,9 @@ class ZarrStore(AbstractWritableDataStore):
         else:
             zarr = attempt_import("zarr")
 
+        # read before ``attributes`` is reassigned by ``self.encode`` below
+        coord_names = _coordinate_names(variables, attributes)
+
         if self._mode == "w":
             # always overwrite, so we don't care about existing names,
             # and consistency of encoding
@@ -1015,10 +1059,11 @@ class ZarrStore(AbstractWritableDataStore):
             # To do so, we decode variables directly to access the proper encoding,
             # without going via xarray.Dataset to avoid needing to load
             # index variables into memory.
+            existing_store_vars = {
+                k: self.open_store_variable(name=k) for k in existing_variable_names
+            }
             existing_vars, _, _ = conventions.decode_cf_variables(
-                variables={
-                    k: self.open_store_variable(name=k) for k in existing_variable_names
-                },
+                variables=existing_store_vars,
                 # attributes = {} since we don't care about parsing the global
                 # "coordinates" attribute
                 attributes={},
@@ -1042,6 +1087,14 @@ class ZarrStore(AbstractWritableDataStore):
                     self._write_region,
                     self._append_dim,
                 )
+                if self._append_dim is not None and var_name in coord_names:
+                    _validate_existing_coord_values(
+                        var_name,
+                        variables_encoded[var_name],
+                        existing_store_vars[var_name],
+                        self._write_region,
+                        self._append_dim,
+                    )
 
         if self._mode not in ["r", "r+"]:
             self.set_attributes(attributes)
