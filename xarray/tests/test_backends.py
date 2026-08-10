@@ -3384,7 +3384,15 @@ class ZarrBase(CFEncodedBase):
             with self.open(store_target) as actual:
                 assert_identical(ds, actual)
 
-    @pytest.mark.parametrize("kind", ["non-dim-index", "multi-dim", "chunked"])
+    def _assert_append_rejects(self, ds, mismatched) -> None:
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
+            with pytest.raises(ValueError, match="would silently mislabel data"):
+                mismatched.assign_coords(time=[1]).to_zarr(
+                    store_target, append_dim="time", **self.version_kwargs
+                )
+
+    @pytest.mark.parametrize("kind", ["non-dim-index", "multi-dim"])
     def test_append_with_mismatched_coord_raises(self, kind) -> None:
         # GH11101 applies to every coordinate that labels existing data, not just
         # the dimension coordinates
@@ -3394,31 +3402,30 @@ class ZarrBase(CFEncodedBase):
                 coords={"time": [0], "pf": ("pos", [1.0, 2.0, 3.0])},
             ).set_xindex("pf")
             mismatched = ds.assign_coords(pf=("pos", [3.0, 2.0, 1.0]))
-        elif kind == "multi-dim":
+        else:
             ds = Dataset(
                 {"var": (("time", "y", "x"), np.zeros((1, 2, 2)))},
                 coords={"time": [0], "lat": (("y", "x"), np.zeros((2, 2)))},
             )
             mismatched = ds.assign_coords(lat=(("y", "x"), np.ones((2, 2))))
-        else:
-            ds = Dataset(
-                {"var": (("time", "level"), np.zeros((1, 4)))},
-                coords={"time": [0], "level": [0, 1, 2, 3]},
-            )
-            # a dimension coordinate only reaches the store chunked once its index
-            # has been dropped; comparing it must not be skipped
-            mismatched = (
-                ds.assign_coords(level=("level", np.array([3, 2, 1, 0])))
-                .drop_indexes("level")
-                .chunk({"level": -1})
-            )
 
-        with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
-            with pytest.raises(ValueError, match="would silently mislabel data"):
-                mismatched.assign_coords(time=[1]).to_zarr(
-                    store_target, append_dim="time", **self.version_kwargs
-                )
+        self._assert_append_rejects(ds, mismatched)
+
+    @requires_dask
+    def test_append_with_mismatched_chunked_coord_raises(self) -> None:
+        # a dimension coordinate only reaches the store chunked once its index has
+        # been dropped; comparing it must not be skipped
+        ds = Dataset(
+            {"var": (("time", "level"), np.zeros((1, 4)))},
+            coords={"time": [0], "level": [0, 1, 2, 3]},
+        )
+        mismatched = (
+            ds.assign_coords(level=("level", np.array([3, 2, 1, 0])))
+            .drop_indexes("level")
+            .chunk({"level": -1})
+        )
+
+        self._assert_append_rejects(ds, mismatched)
 
     def test_append_with_region_and_mismatched_coord_raises(self) -> None:
         # ``region`` and ``append_dim`` on different dimensions: the coordinate is
