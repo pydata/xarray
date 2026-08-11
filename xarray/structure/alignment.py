@@ -559,9 +559,7 @@ class Aligner(Generic[T_Alignable]):
             obj_idx = matching_indexes.get(key)
             if obj_idx is not None and not self.reindex[key]:
                 for dim in {
-                    d
-                    for var in self.aligned_index_vars[key].values()
-                    for d in var.dims
+                    d for var in self.aligned_index_vars[key].values() for d in var.dims
                 }:
                     unchanged_dim_index.setdefault(dim, obj_idx)
 
