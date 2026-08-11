@@ -120,6 +120,12 @@ Bug Fixes
 - Fixed a bug that caused rechunking a multi-dimensional cftime array along a
   subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:func:`align` now raises ``AlignmentError`` when one index would reorder a
+  dimension that another, already aligned, index shares. Previously an index
+  requiring no reindexing was skipped by the conflict check, so conflicting
+  indexes aligned silently and the mismatched index was used to combine the data
+  (:issue:`10714`).
+  By `Kayvan Zahiri <https://github.com/Kayvan-Zahiri>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
