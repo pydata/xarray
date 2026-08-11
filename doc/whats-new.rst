@@ -63,6 +63,12 @@ Bug Fixes
 - :py:func:`polyval` now propagates ``NaN`` for ``NaT`` entries in ``timedelta64``
   coordinates instead of returning a large sentinel value (:issue:`11462`).
   By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
+- :py:func:`align` now raises ``AlignmentError`` when one index would reorder a
+  dimension that another, already aligned, index shares. Previously an index
+  requiring no reindexing was skipped by the conflict check, so conflicting
+  indexes aligned silently and the mismatched index was used to combine the data
+  (:issue:`10714`).
+  By `Kayvan Zahiri <https://github.com/Kayvan-Zahiri>`_.
 
 
 Documentation
