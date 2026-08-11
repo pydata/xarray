@@ -4916,3 +4916,4 @@ v0.1 (2 May 2014)
 
 Initial release.
 - Fixed bug where merge(combine_attrs='override') was not copying attrs but instead referencing attrs from the first object. (:issue:)
+- Fixed bug where ``merge(combine_attrs='override')`` was not copying attrs but instead referencing attrs from the first object. (:issue:`4629`)
