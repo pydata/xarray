@@ -1888,6 +1888,30 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"cannot supply both"):
             v.mean(dim="x", axis=0)
 
+    def test_reduce_keeps_object_dtype_on_full_reduction(self):
+        """
+        Regression test for
+        https://github.com/pydata/xarray/issues/5024
+
+        Summing (or otherwise fully reducing) an object-dtype Variable
+        over all axes must preserve the object dtype, not silently
+        convert it to a numpy fixed-width string/unicode dtype.
+        """
+        v = Variable(["x", "y"], np.full((3, 3), "a", dtype=object))
+
+        full_reduction = v.sum()
+        assert full_reduction.dtype == object
+        assert full_reduction.item() == "a" * 9
+
+        # Partial reduction already preserved dtype correctly before
+        # this fix; confirm it still does.
+        partial_reduction = v.sum("x")
+        assert partial_reduction.dtype == object
+
+        # Sanity check: numeric full reductions are unaffected.
+        numeric = Variable(["x", "y"], np.arange(9, dtype=float).reshape(3, 3))
+        assert numeric.sum().dtype == np.float64
+
     @requires_bottleneck
     @pytest.mark.parametrize("compute_backend", ["bottleneck"], indirect=True)
     def test_reduce_use_bottleneck(self, monkeypatch, compute_backend):
