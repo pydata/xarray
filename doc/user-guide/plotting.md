@@ -741,7 +741,7 @@ dt
 Let’s plot the "precipitation" variable in the "observed" and "reanalysis" groups.
 
 ```{code-cell}
-dt.plot.scatter('precipitation')
+dt.plot.scatter('precipitation', add_legend=True)
 ```
 
 ## Maps

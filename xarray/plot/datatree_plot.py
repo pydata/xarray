@@ -430,6 +430,7 @@ def scatter(
     locals_.pop("variable")
     (locals_.pop("ax"),)
     locals_.pop("fig_kw")
+    locals_.pop("add_legend")
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(**fig_kw)
@@ -444,5 +445,5 @@ def scatter(
             label=node.name,
             **locals_,
         )
-        if add_legend:
-            ax.legend()
+    if add_legend:
+        ax.legend()
