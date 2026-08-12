@@ -1292,14 +1292,13 @@ class DataTreePlotAccessor:
         )
 
     @overload
-    def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
+    def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(s: DataTree,
         self,
         *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
