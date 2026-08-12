@@ -542,7 +542,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
             flox_available
             and OPTIONS["use_flox"]"""
             + (min_version_check if method.min_flox_version is not None else "")
-            + f"""
+            + """
             and contains_only_chunked_or_numpy(self._obj)
         ):"""
             + flox_defaults
