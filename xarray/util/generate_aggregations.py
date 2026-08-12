@@ -508,7 +508,7 @@ class GroupByAggregationGenerator(AggregationGenerator):
             return ""
 
         # cumprod isn't enabled yet, since flox doesn't implement it.
-        method_is_not_flox_supported = method.name in ("cumprod",)
+        method_is_not_flox_supported = method.name == "cumprod"
         if method_is_not_flox_supported:
             extra_kwargs = render_kwargs(extra_kwargs, 12)
         else:
