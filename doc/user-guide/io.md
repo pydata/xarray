@@ -1121,9 +1121,16 @@ single call to `to_zarr()` will write all of your data in parallel.
 ```
 
 ```{warning}
-Alignment of coordinates is currently not checked when modifying an
-existing Zarr store. It is up to the user to ensure that coordinates are
-consistent.
+Appending does not align the new data to the store: it is written in the order
+given by the object being written. Xarray therefore refuses to append when an
+existing coordinate that does not have `append_dim` among its dimensions
+disagrees with the store, since either the existing data or the newly appended
+data would end up mislabelled. Align explicitly before appending, e.g. with
+{py:meth}`Dataset.reindex_like`.
+
+Data variables are not checked: `mode='a'` overwrites them and `mode='a-'` leaves
+them alone, as documented above. `region` writes without `append_dim` are not
+checked either. It remains up to the user to ensure those are consistent.
 ```
 
 To add or overwrite entire variables, simply call {py:meth}`~Dataset.to_zarr`
