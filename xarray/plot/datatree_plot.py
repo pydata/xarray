@@ -67,6 +67,44 @@ def _update_doc_to_datatree(dataarray_plotfunc: Callable) -> Callable[[F], F]:
 
 
 @overload
+def scatter(
+    dt: DataTree,
+    variable: str,
+    ax: Axes | None = None,
+    *,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    markersize: Hashable | None = None,
+    row: Hashable | None = None,
+    col: Hashable | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    fig_kw: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> FacetGrid[DataArray]: ...
+
+
+@overload
 def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(s: DataTree,
     dt: DataTree,
     variable: str,
@@ -99,89 +137,13 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(s: DataTr
     norm: Normalize | None = None,
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
-    fig_kw: Hashable | None = None,
+    fig_kw: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> PathCollection: ...
 
 
-@overload
-def scatter(
-    dt: DataTree,
-    variable: str,
-    ax: Axes | None = None,
-    *,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    z: Hashable | None = None,
-    hue: Hashable | None = None,
-    markersize: Hashable | None = None,
-    row: Hashable | None = None,
-    col: Hashable | None = None,
-    col_wrap: int | Literal["auto"] | None = None,
-    xincrease: bool | None = True,
-    yincrease: bool | None = True,
-    add_legend: bool | None = None,
-    add_colorbar: bool | None = None,
-    add_labels: bool | Iterable[bool] = True,
-    add_title: bool = True,
-    subplot_kws: dict[str, Any] | None = None,
-    xscale: ScaleOptions = None,
-    yscale: ScaleOptions = None,
-    xticks: ArrayLike | None = None,
-    yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
-    cmap: str | Colormap | None = None,
-    vmin: float | None = None,
-    vmax: float | None = None,
-    norm: Normalize | None = None,
-    extend: ExtendOptions = None,
-    levels: ArrayLike | None = None,
-    fig_kw: Hashable | None = None,
-    **kwargs: Any,
-) -> FacetGrid[DataArray]: ...
-
-
-@overload
-def scatter(
-    dt: DataTree,
-    variable: str,
-    ax: Axes | None = None,
-    *,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    z: Hashable | None = None,
-    hue: Hashable | None = None,
-    markersize: Hashable | None = None,
-    row: Hashable | None = None,
-    col: Hashable | None = None,
-    col_wrap: int | Literal["auto"] | None = None,
-    xincrease: bool | None = True,
-    yincrease: bool | None = True,
-    add_legend: bool | None = None,
-    add_colorbar: bool | None = None,
-    add_labels: bool | Iterable[bool] = True,
-    add_title: bool = True,
-    subplot_kws: dict[str, Any] | None = None,
-    xscale: ScaleOptions = None,
-    yscale: ScaleOptions = None,
-    xticks: ArrayLike | None = None,
-    yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
-    cmap: str | Colormap | None = None,
-    vmin: float | None = None,
-    vmax: float | None = None,
-    norm: Normalize | None = None,
-    extend: ExtendOptions = None,
-    levels: ArrayLike | None = None,
-    fig_kw: Hashable | None = None,
-    **kwargs: Any,
-) -> FacetGrid[DataArray]: ...
-
-
 @_update_doc_to_datatree(dataarray_plot.scatter)
-def scatter(
+def scatter(  # type: ignore[return]
     dt: DataTree,
     variable: str,
     ax: Axes | None = None,
@@ -213,10 +175,10 @@ def scatter(
     norm: Normalize | None = None,
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
-    fig_kw: Hashable | None = None,
+    fig_kw: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> PathCollection | FacetGrid[DataArray]:
-    """Scat plot DataTree data variables against each other."""
+    """Scatter DataTree data variables with the same node against each other."""
 
     if fig_kw is None:
         fig_kw = {}
