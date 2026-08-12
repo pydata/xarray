@@ -60,9 +60,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -229,9 +227,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -297,9 +293,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -369,9 +363,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -448,9 +440,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -534,9 +524,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -617,9 +605,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -700,9 +686,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -779,9 +763,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -856,9 +838,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
@@ -933,9 +913,7 @@ class NamedArrayAggregations:
         Examples
         --------
         >>> from xarray.namedarray.core import NamedArray
-        >>> na = NamedArray(
-        ...     "x", np.array([1, 2, 3, 0, 2, np.nan])
-        ... )
+        >>> na = NamedArray("x", np.array([1, 2, 3, 0, 2, np.nan]))
         >>> na
         <xarray.NamedArray (x: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
