@@ -67,11 +67,12 @@ class NamedArrayAggregations:
 
         >>> na.count()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.count,
             dim=dim,
             **kwargs,
         )
+        return out
 
     def all(
         self,
@@ -116,11 +117,12 @@ class NamedArrayAggregations:
 
         >>> na.all()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_all,
             dim=dim,
             **kwargs,
         )
+        return out
 
     def any(
         self,
@@ -165,11 +167,12 @@ class NamedArrayAggregations:
 
         >>> na.any()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_any,
             dim=dim,
             **kwargs,
         )
+        return out
 
     def max(
         self,
@@ -179,7 +182,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``max`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -225,12 +228,13 @@ class NamedArrayAggregations:
 
         >>> na.max(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.max,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def min(
         self,
@@ -240,7 +244,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``min`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -286,12 +290,13 @@ class NamedArrayAggregations:
 
         >>> na.min(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.min,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def mean(
         self,
@@ -351,12 +356,13 @@ class NamedArrayAggregations:
 
         >>> na.mean(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.mean,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def prod(
         self,
@@ -367,7 +373,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``prod`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -427,13 +433,14 @@ class NamedArrayAggregations:
 
         >>> na.prod(skipna=True, min_count=2)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.prod,
             dim=dim,
             skipna=skipna,
             min_count=min_count,
             **kwargs,
         )
+        return out
 
     def sum(
         self,
@@ -504,13 +511,14 @@ class NamedArrayAggregations:
 
         >>> na.sum(skipna=True, min_count=2)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.sum,
             dim=dim,
             skipna=skipna,
             min_count=min_count,
             **kwargs,
         )
+        return out
 
     def std(
         self,
@@ -521,7 +529,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``std`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -578,13 +586,14 @@ class NamedArrayAggregations:
 
         >>> na.std(skipna=True, ddof=1)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
             ddof=ddof,
             **kwargs,
         )
+        return out
 
     def var(
         self,
@@ -595,7 +604,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``var`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -652,13 +661,14 @@ class NamedArrayAggregations:
 
         >>> na.var(skipna=True, ddof=1)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
             ddof=ddof,
             **kwargs,
         )
+        return out
 
     def median(
         self,
@@ -718,12 +728,13 @@ class NamedArrayAggregations:
 
         >>> na.median(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -733,7 +744,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -788,12 +799,13 @@ class NamedArrayAggregations:
 
         >>> na.cumsum(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out
 
     def cumprod(
         self,
@@ -803,7 +815,7 @@ class NamedArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this NamedArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this NamedArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -858,9 +870,10 @@ class NamedArrayAggregations:
 
         >>> na.cumprod(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
             **kwargs,
         )
+        return out

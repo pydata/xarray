@@ -279,7 +279,7 @@ def test_lazy_import() -> None:
         "numbagg",
         "pint",
         "pydap",
-        # "scipy",  # TODO: xarray.backends.scipy_ is currently not lazy
+        "scipy",
         "sparse",
         "zarr",
     ]

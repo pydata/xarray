@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from xarray.core import duck_array_ops
@@ -13,6 +13,7 @@ from xarray.core.types import Dims, Self
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
+    from xarray.core.coordinates import DatasetCoordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -88,13 +89,14 @@ class DataTreeAggregations:
 
         >>> dt.count()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.count,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def all(
         self,
@@ -150,13 +152,14 @@ class DataTreeAggregations:
 
         >>> dt.all()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_all,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def any(
         self,
@@ -212,13 +215,14 @@ class DataTreeAggregations:
 
         >>> dt.any()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_any,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def max(
         self,
@@ -229,7 +233,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``max`` along some dimension(s).
+        Reduce this DataTree's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -284,7 +288,7 @@ class DataTreeAggregations:
 
         >>> dt.max(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.max,
             dim=dim,
             skipna=skipna,
@@ -292,6 +296,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def min(
         self,
@@ -302,7 +307,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``min`` along some dimension(s).
+        Reduce this DataTree's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -357,7 +362,7 @@ class DataTreeAggregations:
 
         >>> dt.min(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.min,
             dim=dim,
             skipna=skipna,
@@ -365,6 +370,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def mean(
         self,
@@ -434,7 +440,7 @@ class DataTreeAggregations:
 
         >>> dt.mean(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.mean,
             dim=dim,
             skipna=skipna,
@@ -442,6 +448,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def prod(
         self,
@@ -453,7 +460,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``prod`` along some dimension(s).
+        Reduce this DataTree's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -522,7 +529,7 @@ class DataTreeAggregations:
 
         >>> dt.prod(skipna=True, min_count=2)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.prod,
             dim=dim,
             skipna=skipna,
@@ -531,6 +538,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def sum(
         self,
@@ -611,7 +619,7 @@ class DataTreeAggregations:
 
         >>> dt.sum(skipna=True, min_count=2)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.sum,
             dim=dim,
             skipna=skipna,
@@ -620,6 +628,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def std(
         self,
@@ -631,7 +640,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``std`` along some dimension(s).
+        Reduce this DataTree's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -697,7 +706,7 @@ class DataTreeAggregations:
 
         >>> dt.std(skipna=True, ddof=1)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
@@ -706,6 +715,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def var(
         self,
@@ -717,7 +727,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``var`` along some dimension(s).
+        Reduce this DataTree's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -783,7 +793,7 @@ class DataTreeAggregations:
 
         >>> dt.var(skipna=True, ddof=1)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
@@ -792,6 +802,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def median(
         self,
@@ -861,7 +872,7 @@ class DataTreeAggregations:
 
         >>> dt.median(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -869,6 +880,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -879,7 +891,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataTree's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -943,7 +955,7 @@ class DataTreeAggregations:
 
         >>> dt.cumsum(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -951,6 +963,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumprod(
         self,
@@ -961,7 +974,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataTree's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -1025,7 +1038,7 @@ class DataTreeAggregations:
 
         >>> dt.cumprod(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -1033,6 +1046,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
 
 class DatasetAggregations:
@@ -1047,6 +1061,17 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
+    ) -> Self:
+        raise NotImplementedError()
+
+    @property
+    def coords(self) -> DatasetCoordinates:
+        raise NotImplementedError()
+
+    def assign_coords(
+        self,
+        coords: Mapping | None = None,
+        **coords_kwargs: Any,
     ) -> Self:
         raise NotImplementedError()
 
@@ -1103,13 +1128,14 @@ class DatasetAggregations:
 
         >>> ds.count()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.count,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def all(
         self,
@@ -1164,13 +1190,14 @@ class DatasetAggregations:
 
         >>> ds.all()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_all,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def any(
         self,
@@ -1225,13 +1252,14 @@ class DatasetAggregations:
 
         >>> ds.any()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_any,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def max(
         self,
@@ -1242,7 +1270,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -1296,7 +1324,7 @@ class DatasetAggregations:
 
         >>> ds.max(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.max,
             dim=dim,
             skipna=skipna,
@@ -1304,6 +1332,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def min(
         self,
@@ -1314,7 +1343,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -1368,7 +1397,7 @@ class DatasetAggregations:
 
         >>> ds.min(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.min,
             dim=dim,
             skipna=skipna,
@@ -1376,6 +1405,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def mean(
         self,
@@ -1444,7 +1474,7 @@ class DatasetAggregations:
 
         >>> ds.mean(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.mean,
             dim=dim,
             skipna=skipna,
@@ -1452,6 +1482,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def prod(
         self,
@@ -1463,7 +1494,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -1531,7 +1562,7 @@ class DatasetAggregations:
 
         >>> ds.prod(skipna=True, min_count=2)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.prod,
             dim=dim,
             skipna=skipna,
@@ -1540,6 +1571,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def sum(
         self,
@@ -1619,7 +1651,7 @@ class DatasetAggregations:
 
         >>> ds.sum(skipna=True, min_count=2)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.sum,
             dim=dim,
             skipna=skipna,
@@ -1628,6 +1660,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def std(
         self,
@@ -1639,7 +1672,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -1704,7 +1737,7 @@ class DatasetAggregations:
 
         >>> ds.std(skipna=True, ddof=1)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
@@ -1713,6 +1746,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def var(
         self,
@@ -1724,7 +1758,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -1789,7 +1823,7 @@ class DatasetAggregations:
 
         >>> ds.var(skipna=True, ddof=1)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
@@ -1798,6 +1832,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def median(
         self,
@@ -1866,7 +1901,7 @@ class DatasetAggregations:
 
         >>> ds.median(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -1874,6 +1909,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -1884,7 +1920,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -1947,7 +1983,7 @@ class DatasetAggregations:
 
         >>> ds.cumsum(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -1955,6 +1991,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self.coords)
 
     def cumprod(
         self,
@@ -1965,7 +2002,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -2028,7 +2065,7 @@ class DatasetAggregations:
 
         >>> ds.cumprod(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -2036,6 +2073,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self.coords)
 
 
 class DataArrayAggregations:
@@ -2105,12 +2143,13 @@ class DataArrayAggregations:
 
         >>> da.count()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.count,
             dim=dim,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def all(
         self,
@@ -2164,12 +2203,13 @@ class DataArrayAggregations:
 
         >>> da.all()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_all,
             dim=dim,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def any(
         self,
@@ -2223,12 +2263,13 @@ class DataArrayAggregations:
 
         >>> da.any()
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_any,
             dim=dim,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def max(
         self,
@@ -2239,7 +2280,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -2292,13 +2333,14 @@ class DataArrayAggregations:
 
         >>> da.max(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.max,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def min(
         self,
@@ -2309,7 +2351,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -2362,13 +2404,14 @@ class DataArrayAggregations:
 
         >>> da.min(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.min,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def mean(
         self,
@@ -2436,13 +2479,14 @@ class DataArrayAggregations:
 
         >>> da.mean(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.mean,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def prod(
         self,
@@ -2454,7 +2498,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -2521,7 +2565,7 @@ class DataArrayAggregations:
 
         >>> da.prod(skipna=True, min_count=2)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.prod,
             dim=dim,
             skipna=skipna,
@@ -2529,6 +2573,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def sum(
         self,
@@ -2607,7 +2652,7 @@ class DataArrayAggregations:
 
         >>> da.sum(skipna=True, min_count=2)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.sum,
             dim=dim,
             skipna=skipna,
@@ -2615,6 +2660,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def std(
         self,
@@ -2626,7 +2672,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -2690,7 +2736,7 @@ class DataArrayAggregations:
 
         >>> da.std(skipna=True, ddof=1)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
@@ -2698,6 +2744,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def var(
         self,
@@ -2709,7 +2756,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -2773,7 +2820,7 @@ class DataArrayAggregations:
 
         >>> da.var(skipna=True, ddof=1)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
@@ -2781,6 +2828,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def median(
         self,
@@ -2848,13 +2896,14 @@ class DataArrayAggregations:
 
         >>> da.median(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -2865,7 +2914,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -2927,13 +2976,14 @@ class DataArrayAggregations:
 
         >>> da.cumsum(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumprod(
         self,
@@ -2944,7 +2994,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -3006,13 +3056,14 @@ class DataArrayAggregations:
 
         >>> da.cumprod(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
 
 class DatasetGroupByAggregations:
@@ -3033,6 +3084,17 @@ class DatasetGroupByAggregations:
     def _flox_reduce(
         self,
         dim: Dims,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
         raise NotImplementedError()
@@ -3112,13 +3174,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -3195,13 +3258,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -3278,13 +3342,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -3295,7 +3360,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -3372,7 +3437,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -3380,6 +3445,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -3390,7 +3456,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -3467,7 +3533,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -3475,6 +3541,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -3564,7 +3631,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -3572,6 +3639,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -3583,7 +3651,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -3673,7 +3741,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -3682,6 +3750,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -3783,7 +3852,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -3792,6 +3861,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -3803,7 +3873,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -3890,7 +3960,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -3899,6 +3969,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -3910,7 +3981,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -3997,7 +4068,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -4006,6 +4077,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -4097,7 +4169,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.median,
                 dim=dim,
                 skipna=skipna,
@@ -4105,6 +4177,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def cumsum(
         self,
@@ -4115,7 +4188,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -4184,7 +4257,7 @@ class DatasetGroupByAggregations:
 
         >>> ds.groupby("labels").cumsum(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -4192,6 +4265,7 @@ class DatasetGroupByAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -4202,7 +4276,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -4271,7 +4345,7 @@ class DatasetGroupByAggregations:
 
         >>> ds.groupby("labels").cumprod(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -4279,6 +4353,7 @@ class DatasetGroupByAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
 
 class DatasetResampleAggregations:
@@ -4299,6 +4374,17 @@ class DatasetResampleAggregations:
     def _flox_reduce(
         self,
         dim: Dims,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
         raise NotImplementedError()
@@ -4378,13 +4464,14 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -4461,13 +4548,14 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -4544,13 +4632,14 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -4561,7 +4650,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -4638,7 +4727,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -4646,6 +4735,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -4656,7 +4746,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -4733,7 +4823,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -4741,6 +4831,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -4830,7 +4921,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -4838,6 +4929,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -4849,7 +4941,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -4939,7 +5031,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -4948,6 +5040,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -5049,7 +5142,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -5058,6 +5151,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -5069,7 +5163,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -5156,7 +5250,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -5165,6 +5259,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -5176,7 +5271,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -5263,7 +5358,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -5272,6 +5367,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -5363,7 +5459,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.median,
                 dim=dim,
                 skipna=skipna,
@@ -5371,6 +5467,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def cumsum(
         self,
@@ -5381,7 +5478,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -5450,7 +5547,7 @@ class DatasetResampleAggregations:
 
         >>> ds.resample(time="3ME").cumsum(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -5458,6 +5555,7 @@ class DatasetResampleAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -5468,7 +5566,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -5537,7 +5635,7 @@ class DatasetResampleAggregations:
 
         >>> ds.resample(time="3ME").cumprod(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -5545,6 +5643,7 @@ class DatasetResampleAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
 
 class DataArrayGroupByAggregations:
@@ -5565,6 +5664,17 @@ class DataArrayGroupByAggregations:
     def _flox_reduce(
         self,
         dim: Dims,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
@@ -5642,12 +5752,13 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -5722,12 +5833,13 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -5802,12 +5914,13 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -5818,7 +5931,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -5893,13 +6006,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -5910,7 +6024,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -5985,13 +6099,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -6079,13 +6194,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -6097,7 +6213,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -6185,7 +6301,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -6193,6 +6309,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -6292,7 +6409,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -6300,6 +6417,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -6311,7 +6429,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -6396,7 +6514,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -6404,6 +6522,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -6415,7 +6534,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -6500,7 +6619,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -6508,6 +6627,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -6597,13 +6717,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.median,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def cumsum(
         self,
@@ -6614,7 +6735,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -6682,13 +6803,14 @@ class DataArrayGroupByAggregations:
 
         >>> da.groupby("labels").cumsum(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -6699,7 +6821,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -6767,13 +6889,14 @@ class DataArrayGroupByAggregations:
 
         >>> da.groupby("labels").cumprod(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
 
 class DataArrayResampleAggregations:
@@ -6794,6 +6917,17 @@ class DataArrayResampleAggregations:
     def _flox_reduce(
         self,
         dim: Dims,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
+
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
@@ -6871,12 +7005,13 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -6951,12 +7086,13 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -7031,12 +7167,13 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -7047,7 +7184,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -7122,13 +7259,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -7139,7 +7277,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -7214,13 +7352,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -7308,13 +7447,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -7326,7 +7466,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -7414,7 +7554,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -7422,6 +7562,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -7521,7 +7662,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -7529,6 +7670,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -7540,7 +7682,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -7625,7 +7767,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -7633,6 +7775,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -7644,7 +7787,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -7729,7 +7872,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -7737,6 +7880,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -7826,13 +7970,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.median,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def cumsum(
         self,
@@ -7843,7 +7988,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -7911,13 +8056,14 @@ class DataArrayResampleAggregations:
 
         >>> da.resample(time="3ME").cumsum(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -7928,7 +8074,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -7996,10 +8142,11 @@ class DataArrayResampleAggregations:
 
         >>> da.resample(time="3ME").cumprod(skipna=False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)

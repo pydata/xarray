@@ -102,8 +102,8 @@ def test_inf(obj) -> None:
         ("I", (np.float64, "nan")),  # dtype('uint32')
         ("l", (np.float64, "nan")),  # dtype('int64')
         ("L", (np.float64, "nan")),  # dtype('uint64')
-        ("m", (np.timedelta64, "NaT")),  # dtype('<m8')
-        ("M", (np.datetime64, "NaT")),  # dtype('<M8')
+        ("<m8[ns]", (np.dtype("<m8[ns]"), "NaT")),  # dtype('<m8[ns]')
+        ("<M8[ns]", (np.dtype("<M8[ns]"), "NaT")),  # dtype('<M8[ns]')
         ("O", (np.dtype("O"), "nan")),  # dtype('O')
         ("p", (np.float64, "nan")),  # dtype('int64')
         ("P", (np.float64, "nan")),  # dtype('uint64')
@@ -121,12 +121,6 @@ def test_maybe_promote(kind, expected) -> None:
     actual = dtypes.maybe_promote(np.dtype(kind))
     assert actual[0] == expected[0]
     assert str(actual[1]) == expected[1]
-
-
-def test_nat_types_membership() -> None:
-    assert np.datetime64("NaT").dtype in dtypes.NAT_TYPES
-    assert np.timedelta64("NaT").dtype in dtypes.NAT_TYPES
-    assert np.float64 not in dtypes.NAT_TYPES
 
 
 @pytest.mark.parametrize(

@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from functools import partial
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
 
 import numpy as np
 import pandas as pd
@@ -238,7 +238,7 @@ def _possibly_convert_objects(values):
         and values.dtype.kind == "O"
         and Version(pd.__version__) >= Version("3.0.0dev0")
     ):
-        result.dtype = values.dtype
+        result = result.view(values.dtype)
     return result
 
 
@@ -387,7 +387,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         attrs : dict_like or None, optional
             Attributes to assign to the new variable. If None (default), an
             empty attribute dictionary is initialized.
-            (see FAQ, :ref:`approach to metadata`)
+            (see FAQ, :ref:`approach-to-metadata`)
         encoding : dict_like or None, optional
             Dictionary specifying how to encode this array's data into a
             serialized format like netCDF4. Currently used keys (for netCDF)
@@ -582,7 +582,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         return self.to_index_variable().to_index()
 
     def to_dict(
-        self, data: bool | str = "list", encoding: bool = False
+        self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
         """Dictionary representation of variable."""
         item: dict[str, Any] = {
@@ -634,6 +634,18 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             positions.
         """
         key = self._item_key_to_tuple(key)  # key is a tuple
+        # Fast path: key is already a tuple of the right length with only
+        # ints and slices (the common case from Variable.isel)
+        if (
+            isinstance(key, tuple)
+            and len(key) == self.ndim
+            and all(
+                not isinstance(k, bool) and isinstance(k, BASIC_INDEXING_TYPES)
+                for k in key
+            )
+        ):
+            return self._broadcast_indexes_basic(key)
+
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
         # Convert a scalar Variable to a 0d-array
@@ -971,7 +983,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
-            data = copy.copy(self._data)
+            # Only copy data when it is actually being changed.
+            # Many callers (e.g. drop_encoding) only change encoding/attrs,
+            # and a full data copy is expensive for large arrays.
+            data = self._data
         if attrs is _default:
             attrs = copy.copy(self._attrs)
         if encoding is _default:
@@ -2078,11 +2093,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Dataset.rank, DataArray.rank
         """
         # This could / should arguably be implemented at the DataArray & Dataset level
-        if not OPTIONS["use_bottleneck"]:
-            raise RuntimeError(
-                "rank requires bottleneck to be enabled."
-                " Call `xr.set_options(use_bottleneck=True)` to enable it."
-            )
+        if not module_available("bottleneck"):
+            raise ImportError("rank requires bottleneck to be installed.")
 
         import bottleneck as bn
 

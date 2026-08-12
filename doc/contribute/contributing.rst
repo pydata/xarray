@@ -15,13 +15,14 @@ Overview
 We welcome your skills and enthusiasm at the xarray project!. There are numerous opportunities to
 contribute beyond just writing code.
 All contributions, including bug reports, bug fixes, documentation improvements, enhancement suggestions,
-and other ideas are welcome.
+and other ideas are welcome. LLM generated contributions are welcome, but they must follow :doc:`our AI policy <ai-policy>`.
 
 If you have any questions on the process or how to fix something feel free to ask us!
-The recommended place to ask a question is  on `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
-, but we also have a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
-`mailing list <https://groups.google.com/g/xarray>`_. There is also a
-`"python-xarray" tag on Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`_ which we monitor for questions.
+The recommended places to ask questions are `GitHub Discussions <https://github.com/pydata/xarray/discussions>`_
+or the Xarray channel in the `OSSci Zulip <https://ossci.zulipchat.com/#narrow/channel/582428-Xarray>`_.
+
+In the past, we had a `Discord <https://discord.com/invite/wEKPCt4PDu>`_ and a
+`mailing list <https://groups.google.com/g/xarray>`_. Feel free to browse historical conversations there.
 
 We also have a biweekly community call, details of which are announced on the
 `Developers meeting <https://docs.xarray.dev/en/stable/developers-meeting.html>`_.
@@ -391,25 +392,21 @@ Some other important things to know about the docs:
   for a detailed explanation, or look at some of the existing functions to
   extend it in a similar manner.
 
-- The documentation makes heavy use of the `jupyter-sphinx extension
-  <https://jupyter-sphinx.readthedocs.io>`_.
-  The ``jupyter-execute`` directive lets you put code in the documentation which will be run
-  during the doc build. For example:
+- The documentation makes heavy use of `MyST-NB <https://myst-nb.readthedocs.io>`_.
+  Documentation pages that contain executable code are written as
+  MyST Markdown files (``.md``) using the ``{code-cell}`` directive,
+  which is run during the doc build. For example:
 
-  .. code:: rst
+  .. code:: md
 
-      .. jupyter-execute::
+      ```{code-cell} python
+      tags: [...]
 
-          x = 2
-          x**3
+      x = 2
+      x**3
+      ```
 
-  will be rendered as:
-
-  .. jupyter-execute::
-
-       x = 2
-       x**3
-
+  Note the ``tags: [...]`` line above - this line is optional, and you can place tags here to control how the cell is displayed (e.g., ``tags: [remove-input]`` hides the code but still displays the output). See `this page <https://myst-nb.readthedocs.io/en/latest/configuration.html#cell-tags>`_ for a list of these tags.
   Almost all code examples in the docs are run (and the output saved) during the
   doc build. This approach means that code examples will always be up to date,
   but it does make building the docs a bit more complex.
