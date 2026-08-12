@@ -1,6 +1,6 @@
 [workspace]
 preview = ["pixi-build"]
-channels = ["conda-forge", "nodefaults"]
+channels = ["conda-forge", "nodefaults", "https://prefix.dev/keewis-oss"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 requires-pixi = ">=0.63.2,!=0.68.0"
 
@@ -194,19 +194,29 @@ sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-inline-tabs = "*"
 sphinx-llm = ">=0.2.1"
-sphinx = ">=6,<8"
+sphinx = ">=8,<9"
 sphinxcontrib-mermaid = "*"
 sphinxcontrib-srclinks = "*"
 sphinx-remove-toctrees = "*"
 sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
+# use the official version once https://github.com/jupyterlite/jupyterlite-sphinx/pull/346 has been resolved
+jupyterlite-sphinx = ">=0.23.0"
+jupyterlite-xeus = ">=4.4.1"
 make = "*"
 myst-nb = ">=1.4.0,<2"
 
 [feature.doc.tasks]
-doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation." }
-doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch." }
+_prepare-environment = { cmd = "python create_environment.py", cwd = "doc" }
+doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation.", depends-on = [
+  "_prepare-environment",
+] }
+doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch.", depends-on = [
+  "build",
+  "_prepare-environment",
+] }
+host-static-doc = { cmd = "python -m http.server -b 127.0.0.1 -d _build/html 5455", cwd = "doc", description = "serve the static documentation" }
 linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in documentation." }
 
 
@@ -311,6 +321,23 @@ rst-to-myst = { version = "*", extras = ["sphinx"] }
 
 [feature.tools.tasks]
 rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
+
+[feature.build-package.dependencies]
+vcs_versioning = "*"
+cytoolz = "*"
+
+[feature.build-package.tasks]
+prepare-recipe = { cmd = "python ci/recipe/prepare_recipe.py", cwd = "." }
+build-package = { cmd = "pixi publish --path ci/recipe/pixi.toml --target-dir dist/", cwd = ".", depends-on = [
+  "prepare-recipe",
+] }
+
+[tasks]
+build-and-host-doc = [
+  { task = "build" },
+  { task = "doc" },
+  { task = "host-static-doc" },
+]
 
 [feature.numpydoc-lint.dependencies]
 numpydoc = "*"
@@ -427,6 +454,7 @@ doc = { features = [
   "accel",
   "viz",
   "extras",
+  "numba",
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 release = { features = ["release"], no-default-feature = true }
@@ -444,4 +472,8 @@ default = { features = [
 policy = { features = ["policy"], no-default-feature = true }
 numpydoc-lint = { features = ["numpydoc-lint"] }
 tools = { features = ["tools"], no-default-feature = true }
+build-package = { features = [
+  "build-package",
+  "release",
+], no-default-feature = true }
 test-nightly = { features = ["nightly"], no-default-feature = true }

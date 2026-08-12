@@ -63,10 +63,18 @@ Bug Fixes
 - :py:func:`polyval` now propagates ``NaN`` for ``NaT`` entries in ``timedelta64``
   coordinates instead of returning a large sentinel value (:issue:`11462`).
   By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
+- The zarr backend now writes boolean arrays with native ``bool`` dtype instead
+  of converting them to ``int8``. Zarr supports ``bool`` natively, so the
+  ``BooleanCoder`` (which was designed for NetCDF compatibility) is now skipped
+  for zarr writes. Existing zarr stores written with the old ``int8`` encoding
+  are still read correctly. (:issue:`2937`, :pull:`11318`)
+  By `Evan Lyall <https://github.com/elyall>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
+- Use ``jupyterlite-sphinx`` to provide interactive examples (:pull:`10299`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 - Migrated from nbsphinx/jupyter-execute to myst-nb (:issue:`7924`, :pull:`11456`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
@@ -329,7 +337,6 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
 - Add AI policy (:pull:`11257`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Update documentation and team guide to promote Zulip. Remove mentions of Discord (:pull:`11246`, :pull:`11254`).
