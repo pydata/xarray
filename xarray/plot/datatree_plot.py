@@ -4,7 +4,6 @@ import functools
 from collections.abc import Callable, Hashable, Iterable
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
-from xarray.plot import dataarray_plot
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
     _add_colorbar,
@@ -155,7 +154,7 @@ fig_kw : Hashable or None, optional
             for arg in ["meta_data", "kwargs", "dt"]:
                 del allargs[arg]
 
-            return _easy_facetgrid(kind="datatree", **allargs, **kwargs)
+            return _easy_facetgrid(kind="dataarray", **allargs, **kwargs)
 
         figsize = kwargs.pop("figsize", None)
         ax = get_axis(figsize)
@@ -383,7 +382,8 @@ def scatter(
 ) -> FacetGrid[DataArray]: ...
 
 
-@_update_doc_to_datatree(dataarray_plot.scatter)
+# @_update_doc_to_datatree(dataarray_plot.scatter)
+@_dtplot
 def scatter(
     dt: DataTree,
     variable: str,

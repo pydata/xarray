@@ -1364,7 +1364,7 @@ class DataTreePlotAccessor:
         levels: ArrayLike | None = None,
         fig_kw: Hashable | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataTree]: ...
+    ) -> FacetGrid[DataArray]: ...
 
     @overload
     def scatter(
@@ -1399,8 +1399,8 @@ class DataTreePlotAccessor:
         levels: ArrayLike | None = None,
         fig_kw: Hashable | None = None,
         **kwargs: Any,
-    ) -> FacetGrid[DataTree]: ...
+    ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(datatree_plot.scatter, assigned=("__doc__",))
-    def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[DataTree]:
+    def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[DataArray]:
         return datatree_plot.scatter(self._dt, *args, **kwargs)
