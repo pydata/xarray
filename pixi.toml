@@ -202,7 +202,7 @@ sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
 # use the official version once https://github.com/jupyterlite/jupyterlite-sphinx/pull/346 has been resolved
-jupyterlite-sphinx = { version = "*", channel = "https://prefix.dev/keewis-oss" }
+jupyterlite-sphinx = ">=0.23.0"
 jupyterlite-xeus = ">=4.4.1"
 make = "*"
 myst-nb = ">=1.4.0,<2"
