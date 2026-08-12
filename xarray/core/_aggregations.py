@@ -5015,12 +5015,12 @@ class DatasetGroupByAggregations:
             and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
+            kwargs.setdefault("method", "blockwise")
             return self._flox_reduce(
                 func="median",
                 dim=dim,
                 skipna=skipna,
                 numeric_only=True,
-                method="blockwise",
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
                 **kwargs,
@@ -6578,12 +6578,12 @@ class DatasetResampleAggregations:
             and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
+            kwargs.setdefault("method", "blockwise")
             return self._flox_reduce(
                 func="median",
                 dim=dim,
                 skipna=skipna,
                 numeric_only=True,
-                method="blockwise",
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
                 **kwargs,
@@ -8042,11 +8042,11 @@ class DataArrayGroupByAggregations:
             and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
+            kwargs.setdefault("method", "blockwise")
             return self._flox_reduce(
                 func="median",
                 dim=dim,
                 skipna=skipna,
-                method="blockwise",
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
                 **kwargs,
@@ -9487,11 +9487,11 @@ class DataArrayResampleAggregations:
             and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
+            kwargs.setdefault("method", "blockwise")
             return self._flox_reduce(
                 func="median",
                 dim=dim,
                 skipna=skipna,
-                method="blockwise",
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
                 **kwargs,

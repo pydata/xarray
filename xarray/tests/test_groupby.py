@@ -328,6 +328,9 @@ def test_dask_da_groupby_median() -> None:
     assert mocked.call_args.kwargs["method"] == "blockwise"
     assert_identical(expected, actual)
 
+    actual = array.chunk(x=1).groupby("x").median(method="blockwise")
+    assert_identical(expected, actual)
+
     # will work blockwise with flox
     actual = array.chunk(x=3).groupby("x").median()
     assert_identical(expected, actual)

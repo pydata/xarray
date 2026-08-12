@@ -329,7 +329,6 @@ class Method:
         see_also_modules=("numpy", "dask.array"),
         see_also_methods=(),
         min_flox_version=None,
-        flox_call_kwargs=tuple(),
         additional_notes="",
         aggregation_type: Literal["reduce", "scan"] = "reduce",
     ):
@@ -340,7 +339,6 @@ class Method:
         self.see_also_modules = see_also_modules
         self.see_also_methods = see_also_methods
         self.min_flox_version = min_flox_version
-        self.flox_call_kwargs = flox_call_kwargs
         self.additional_notes = additional_notes
         self.aggregation_type = aggregation_type
         if bool_reduce:
@@ -500,20 +498,17 @@ class GroupByAggregationGenerator(AggregationGenerator):
         if self.datastructure.numeric_only:
             extra_kwargs.append(f"numeric_only={method.numeric_only},")
 
-        flox_call_kwargs = [*extra_kwargs, *method.flox_call_kwargs]
-
-        def render_kwargs(kwargs, indent):
-            if kwargs:
-                return textwrap.indent("\n" + "\n".join(kwargs), indent * " ")
-            return ""
-
         # cumprod isn't enabled yet, since flox doesn't implement it.
         method_is_not_flox_supported = method.name == "cumprod"
         if method_is_not_flox_supported:
-            extra_kwargs = render_kwargs(extra_kwargs, 12)
+            indent = 12
         else:
-            flox_call_kwargs = render_kwargs(flox_call_kwargs, 16)
-            extra_kwargs = render_kwargs(extra_kwargs, 16)
+            indent = 16
+
+        if extra_kwargs:
+            extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), indent * " ")
+        else:
+            extra_kwargs = ""
 
         if method.aggregation_type == "scan":
             # Scans retain dimensions.
@@ -534,6 +529,13 @@ class GroupByAggregationGenerator(AggregationGenerator):
         min_version_check = f"""
             and module_available("flox", minversion="{method.min_flox_version}")"""
 
+        flox_defaults = (
+            """
+            kwargs.setdefault("method", "blockwise")"""
+            if method.name == "median"
+            else ""
+        )
+
         return (
             """\
         if (
@@ -542,10 +544,12 @@ class GroupByAggregationGenerator(AggregationGenerator):
             + (min_version_check if method.min_flox_version is not None else "")
             + f"""
             and contains_only_chunked_or_numpy(self._obj)
-        ):
+        ):"""
+            + flox_defaults
+            + f"""
             return self._flox_{method.aggregation_type}(
                 func="{method.name}",
-                dim=dim,{flox_call_kwargs}
+                dim=dim,{extra_kwargs}
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
                 **kwargs,
@@ -611,11 +615,7 @@ AGGREGATION_METHODS = (
     ),
     Method("var", long_name="variance", extra_kwargs=(skipna, ddof), numeric_only=True),
     Method(
-        "median",
-        extra_kwargs=(skipna,),
-        numeric_only=True,
-        min_flox_version="0.9.2",
-        flox_call_kwargs=('method="blockwise",',),
+        "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
     ),
     # Scans:
     Method(
