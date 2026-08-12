@@ -67,6 +67,8 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Use ``jupyterlite-sphinx`` to provide interactive examples (:pull:`10299`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 - Migrated from nbsphinx/jupyter-execute to myst-nb (:issue:`7924`, :pull:`11456`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
@@ -329,7 +331,6 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
 - Add AI policy (:pull:`11257`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 - Update documentation and team guide to promote Zulip. Remove mentions of Discord (:pull:`11246`, :pull:`11254`).
