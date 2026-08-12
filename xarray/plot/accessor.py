@@ -1328,6 +1328,7 @@ class DataTreePlotAccessor:
         norm: Normalize | None = None,
         extend=None,
         levels=None,
+        fig_kw: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> PathCollection: ...
 
@@ -1362,7 +1363,7 @@ class DataTreePlotAccessor:
         norm: Normalize | None = None,
         extend=None,
         levels: ArrayLike | None = None,
-        fig_kw: Hashable | None = None,
+        fig_kw: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> FacetGrid[DataArray]: ...
 
@@ -1397,7 +1398,7 @@ class DataTreePlotAccessor:
         norm: Normalize | None = None,
         extend=None,
         levels: ArrayLike | None = None,
-        fig_kw: Hashable | None = None,
+        fig_kw: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> FacetGrid[DataArray]: ...
 
