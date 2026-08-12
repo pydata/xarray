@@ -12,7 +12,7 @@ How do I ...
    * - How do I...
      - Solution
    * - add a DataArray to my dataset as a new variable
-     - ``my_dataset[varname] = my_dataArray`` or :py:meth:`Dataset.assign` (see also :ref:`dictionary_like_methods`)
+     - ``my_dataset[varname] = my_dataArray`` or :py:meth:`Dataset.assign` (see also :ref:`dictionary-like-methods`)
    * - add variables from other datasets to my dataset
      - :py:meth:`Dataset.merge`
    * - add a new dimension and/or coordinate
@@ -66,9 +66,9 @@ How do I ...
    * - replace NaNs with other values
      - :py:meth:`Dataset.fillna`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill`, :py:meth:`Dataset.interpolate_na`, :py:meth:`DataArray.fillna`, :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`DataArray.interpolate_na`
    * - extract the year, month, day or similar from a DataArray of time values
-     - ``obj.dt.month`` for example where ``obj`` is a :py:class:`~xarray.DataArray` containing ``datetime64`` or ``cftime`` values. See :ref:`dt_accessor` for more.
+     - ``obj.dt.month`` for example where ``obj`` is a :py:class:`~xarray.DataArray` containing ``datetime64`` or ``cftime`` values. See :ref:`dt-accessor` for more.
    * - round off time values to a specified frequency
-     - ``obj.dt.ceil``, ``obj.dt.floor``, ``obj.dt.round``. See :ref:`dt_accessor` for more.
+     - ``obj.dt.ceil``, ``obj.dt.floor``, ``obj.dt.round``. See :ref:`dt-accessor` for more.
    * - make a mask that is ``True`` where an object contains any of the values in an array
      - :py:meth:`Dataset.isin`, :py:meth:`DataArray.isin`
    * - Index using a boolean mask

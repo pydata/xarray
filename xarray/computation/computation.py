@@ -521,7 +521,7 @@ def dot(
     Coordinates are aligned by their **values**, not their order. By default, xarray uses
     an inner join, so only overlapping coordinate values are included. With the default
     ``arithmetic_join="inner"``, ``dot(a, b)`` is mathematically equivalent to ``(a * b).sum()``
-    over the specified dimensions. See :ref:`math automatic alignment` for more details.
+    over the specified dimensions. See :ref:`math-automatic-alignment` for more details.
 
     Examples
     --------
@@ -947,8 +947,9 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
                 data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns"),
             )
         elif x.dtype.kind == "m":
-            # timedeltas
-            return duck_array_ops.astype(x, dtype=float)
+            # timedeltas: a plain astype(float) maps NaT to a large sentinel value
+            # (e.g. -1.8e19) instead of NaN, so mask those positions back to NaN.
+            return duck_array_ops.astype(x, dtype=float).where(x.notnull())
         return x
 
     if isinstance(data, Dataset):

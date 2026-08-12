@@ -5,6 +5,8 @@ updates:
     schedule:
       # Check for updates once a week
       interval: "weekly"
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns:

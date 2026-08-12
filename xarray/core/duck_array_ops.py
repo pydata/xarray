@@ -92,11 +92,20 @@ def _dask_or_eager_func(
 
     def f(*args, **kwargs):
         if dask_available and any(is_duck_dask_array(a) for a in args):
-            mod = (
-                import_module(dask_module)
-                if isinstance(dask_module, str)
-                else dask_module
-            )
+            chunkmanager = get_chunked_array_type(*args)
+            mod = chunkmanager.array_api
+            if not hasattr(mod, name):
+                from xarray.namedarray.daskmanager import DaskManager
+
+                if not isinstance(chunkmanager, DaskManager):
+                    raise NotImplementedError(
+                        f"{name!r} is not available on the active dask chunk manager"
+                    )
+                mod = (
+                    import_module(dask_module)
+                    if isinstance(dask_module, str)
+                    else dask_module
+                )
             wrapped = getattr(mod, name)
             for kwarg in numpy_only_kwargs:
                 kwargs.pop(kwarg, None)

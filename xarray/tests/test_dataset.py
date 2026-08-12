@@ -22,7 +22,6 @@ try:
 except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
-import contextlib
 
 from pandas.errors import UndefinedVariableError
 
@@ -61,6 +60,8 @@ from xarray.tests import (
     assert_no_warnings,
     assert_writeable,
     create_test_data,
+    dask_array_api,
+    dask_array_type,
     has_cftime,
     has_dask,
     has_pyarrow,
@@ -77,9 +78,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import ScalarIndex, XYIndex
-
-with contextlib.suppress(ImportError):
-    import dask.array as da
 
 # from numpy version 2.0 trapz is deprecated and renamed to trapezoid
 # remove once numpy 2.0 is the oldest supported version
@@ -493,6 +491,14 @@ class TestDataset:
         expected = Dataset({"x": x1, "z": z})
         actual = Dataset({"z": expected["z"]})
         assert_identical(expected, actual)
+
+    def test_constructor_dataset_as_data_vars_raises(self) -> None:
+        ds = Dataset({"x": ("x", [1, 2, 3])}, attrs={"key": "value"})
+        with pytest.raises(
+            TypeError,
+            match=r"Passing a Dataset as `data_vars`.*Use `ds\.copy\(\)`",
+        ):
+            Dataset(ds)
 
     def test_constructor_1d(self) -> None:
         expected = Dataset({"x": (["x"], 5.0 + np.arange(5))})
@@ -1148,8 +1154,6 @@ class TestDataset:
         ],
     )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
-        import dask.array
-
         N = 365 + 365  # 2 years - 1 day
         time = xr.date_range(
             "2000-01-01", periods=N, freq="D", use_cftime=use_cftime, calendar=calendar
@@ -1157,8 +1161,18 @@ class TestDataset:
 
         ds = Dataset(
             {
-                "pr": ("time", dask.array.random.random((N), chunks=(20))),
-                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "pr": (
+                    "time",
+                    DataArray(np.random.random(N), dims="time")
+                    .chunk({"time": 20})
+                    .data,
+                ),
+                "pr2d": (
+                    ("x", "time"),
+                    DataArray(np.random.random((10, N)), dims=("x", "time"))
+                    .chunk({"time": 20})
+                    .data,
+                ),
                 "ones": ("time", np.ones((N,))),
             },
             coords={"time": time},
@@ -1254,7 +1268,7 @@ class TestDataset:
             if k in reblocked.dims:
                 assert isinstance(v.data, np.ndarray)
             else:
-                assert isinstance(v.data, da.Array)
+                assert isinstance(v.data, dask_array_type)
 
         expected_chunks: dict[Hashable, tuple[int, ...]] = {
             "dim1": (8,),
@@ -1318,8 +1332,6 @@ class TestDataset:
     @pytest.mark.parametrize("freq", ["D", "W", "5ME", "YE"])
     @pytest.mark.parametrize("add_gap", [True, False])
     def test_chunk_by_frequency(self, freq: str, calendar: str, add_gap: bool) -> None:
-        import dask.array
-
         N = 365 * 2
         ΔN = 28  # noqa: PLC2401
         time = xr.date_range(
@@ -1327,15 +1339,25 @@ class TestDataset:
         ).to_numpy(copy=True)
         if add_gap:
             # introduce an empty bin
-            time[31 : 31 + ΔN] = np.datetime64("NaT")
+            time[31 : 31 + ΔN] = np.datetime64("NaT", "us")
             time = time[~np.isnat(time)]
         else:
             time = time[:N]
 
         ds = Dataset(
             {
-                "pr": ("time", dask.array.random.random((N), chunks=(20))),
-                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "pr": (
+                    "time",
+                    DataArray(np.random.random(N), dims="time")
+                    .chunk({"time": 20})
+                    .data,
+                ),
+                "pr2d": (
+                    ("x", "time"),
+                    DataArray(np.random.random((10, N)), dims=("x", "time"))
+                    .chunk({"time": 20})
+                    .data,
+                ),
                 "ones": ("time", np.ones((N,))),
             },
             coords={"time": time},
@@ -1729,7 +1751,7 @@ class TestDataset:
         times = pd.date_range("2000-01-01", periods=3)
         assert_equal(data.isel(time=slice(3)), data.sel(time=times))
         assert_equal(
-            data.isel(time=slice(3)), data.sel(time=(data["time.dayofyear"] <= 3))
+            data.isel(time=slice(3)), data.sel(time=(data["time.day_of_year"] <= 3))
         )
 
         td = pd.to_timedelta(np.arange(3), unit="days")
@@ -4553,6 +4575,71 @@ class TestDataset:
         assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
+    def test_copy_listed_preserves_multi_coord_index(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/11215
+        # Multi-coordinate indexes spanning multiple dims should be preserved
+        # when subsetting a Dataset by variable names via ds[["var"]].
+        class MultiDimIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = MultiDimIndex()
+        coords = Coordinates(
+            coords={
+                "node_x": ("nodes", [0.0, 1.0, 2.0]),
+                "node_y": ("nodes", [0.0, 0.0, 1.0]),
+                "face_x": ("faces", [0.5, 1.5]),
+                "face_y": ("faces", [0.5, 0.5]),
+            },
+            indexes=dict.fromkeys(["node_x", "node_y", "face_x", "face_y"], idx),
+        )
+        ds = Dataset(
+            {
+                "node_data": (("nodes",), [1.0, 2.0, 3.0]),
+                "face_data": (("faces",), [10.0, 20.0]),
+            },
+            coords=coords,
+        )
+
+        node_subset = ds[["node_data"]]
+        face_subset = ds[["face_data"]]
+
+        for ds_sub in [node_subset, face_subset]:
+            for name in ["node_x", "node_y", "face_x", "face_y"]:
+                assert name in ds_sub.coords
+                assert isinstance(ds_sub.xindexes[name], MultiDimIndex)
+
+    def test_to_dataarray_preserves_multi_coord_index(self) -> None:
+        # Regression test for https://github.com/pydata/xarray/issues/11215
+        # Multi-coordinate indexes spanning multiple dims should be preserved
+        # when converting a Dataset to a DataArray via to_dataarray().
+        class MultiDimIndex(Index):
+            def should_add_coord_to_array(self, name, var, dims):
+                return True
+
+        idx = MultiDimIndex()
+        coords = Coordinates(
+            coords={
+                "node_x": ("nodes", [0.0, 1.0, 2.0]),
+                "node_y": ("nodes", [0.0, 0.0, 1.0]),
+                "face_x": ("faces", [0.5, 1.5]),
+                "face_y": ("faces", [0.5, 0.5]),
+            },
+            indexes=dict.fromkeys(["node_x", "node_y", "face_x", "face_y"], idx),
+        )
+        ds = Dataset(
+            {
+                "node_data": (("nodes",), [1.0, 2.0, 3.0]),
+            },
+            coords=coords,
+        )
+
+        da = ds.to_dataarray()
+
+        for name in ["node_x", "node_y", "face_x", "face_y"]:
+            assert name in da.coords
+            assert isinstance(da.xindexes[name], MultiDimIndex)
+
     def test_virtual_variables_default_coords(self) -> None:
         dataset = Dataset({"foo": ("x", range(10))})
         expected1 = DataArray(range(10), dims="x", name="x")
@@ -4572,11 +4659,11 @@ class TestDataset:
         assert_array_equal(data["time.month"].values, index.month)
         assert_array_equal(data["time.season"].values, "DJF")
         # test virtual variable math
-        assert_array_equal(data["time.dayofyear"] + 1, 2 + np.arange(20))
-        assert_array_equal(np.sin(data["time.dayofyear"]), np.sin(1 + np.arange(20)))
+        assert_array_equal(data["time.day_of_year"] + 1, 2 + np.arange(20))
+        assert_array_equal(np.sin(data["time.day_of_year"]), np.sin(1 + np.arange(20)))
         # ensure they become coordinates
-        expected = Dataset({}, {"dayofyear": data["time.dayofyear"]})
-        actual = data[["time.dayofyear"]]
+        expected = Dataset({}, {"day_of_year": data["time.day_of_year"]})
+        actual = data[["time.day_of_year"]]
         assert_equal(expected, actual)
         # non-coordinate variables
         ds = Dataset({"t": ("x", pd.date_range("2000-01-01", periods=3))})
@@ -4599,9 +4686,10 @@ class TestDataset:
     def test_slice_virtual_variable(self) -> None:
         data = create_test_data()
         assert_equal(
-            data["time.dayofyear"][:10].variable, Variable(["time"], 1 + np.arange(10))
+            data["time.day_of_year"][:10].variable,
+            Variable(["time"], 1 + np.arange(10)),
         )
-        assert_equal(data["time.dayofyear"][0].variable, Variable([], 1))
+        assert_equal(data["time.day_of_year"][0].variable, Variable([], 1))
 
     def test_setitem(self) -> None:
         # assign a variable
@@ -6124,38 +6212,50 @@ class TestDataset:
         ):
             data.mean(dim="bad_dim")
 
-    def test_reduce_cumsum(self) -> None:
-        data = xr.Dataset(
-            {"a": 1, "b": ("x", [1, 2]), "c": (("x", "y"), [[np.nan, 3], [0, 4]])}
-        )
-        assert_identical(data.fillna(0), data.cumsum("y"))
-
-        expected = xr.Dataset(
-            {"a": 1, "b": ("x", [1, 3]), "c": (("x", "y"), [[0, 3], [0, 7]])}
-        )
-        assert_identical(expected, data.cumsum())
-
     @pytest.mark.parametrize(
-        "reduct, expected",
+        "method, dim, expected_data_vars",
         [
-            ("dim1", ["dim2", "dim3", "time", "dim1"]),
-            ("dim2", ["dim3", "time", "dim1", "dim2"]),
-            ("dim3", ["dim2", "time", "dim1", "dim3"]),
-            ("time", ["dim2", "dim3", "dim1"]),
+            (
+                "cumsum",
+                ...,
+                {"a": 1, "b": ("x", [2, 6]), "c": (("x", "y"), [[0, 3], [0, 7]])},
+            ),
+            (
+                "cumsum",
+                "y",
+                {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[0, 3], [0, 4]])},
+            ),
+            (
+                "cumsum",
+                "x",
+                {"a": 1, "b": ("x", [2, 6]), "c": (("x", "y"), [[0, 3], [0, 7]])},
+            ),
+            (
+                "cumprod",
+                ...,
+                {"a": 1, "b": ("x", [2, 8]), "c": (("x", "y"), [[1, 3], [0, 0]])},
+            ),
+            (
+                "cumprod",
+                "y",
+                {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[1, 3], [0, 0]])},
+            ),
+            (
+                "cumprod",
+                "x",
+                {"a": 1, "b": ("x", [2, 8]), "c": (("x", "y"), [[1, 3], [0, 12]])},
+            ),
         ],
     )
-    @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
-    def test_reduce_cumsum_test_dims(self, reduct, expected, func) -> None:
-        data = create_test_data()
-        with pytest.raises(
-            ValueError,
-            match=re.escape("Dimension(s) 'bad_dim' do not exist"),
-        ):
-            getattr(data, func)(dim="bad_dim")
-
-        # ensure dimensions are correct
-        actual = getattr(data, func)(dim=reduct).dims
-        assert list(actual) == expected
+    def test_scans(self, method: str, dim: str, expected_data_vars: dict) -> None:
+        coords = {"x": ("x", [0, 1]), "y": ("y", [2, 3])}
+        ds = xr.Dataset(
+            {"a": 1, "b": ("x", [2, 4]), "c": (("x", "y"), [[np.nan, 3], [0, 4]])},
+            coords=coords,
+        )
+        expected = xr.Dataset(expected_data_vars, coords=coords)
+        actual = getattr(ds, method)(dim)
+        assert_identical(expected, actual)
 
     def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44, use_extension_array=True)
@@ -6418,12 +6518,6 @@ class TestDataset:
         ):
             x.rank("invalid_dim")
 
-    def test_rank_use_bottleneck(self) -> None:
-        ds = Dataset({"a": ("x", [0, np.nan, 2]), "b": ("y", [4, 6, 3, 4])})
-        with xr.set_options(use_bottleneck=False):
-            with pytest.raises(RuntimeError):
-                ds.rank("x")
-
     def test_count(self) -> None:
         ds = Dataset({"x": ("a", [np.nan, 1]), "y": 0, "z": np.nan})
         expected = Dataset({"x": 1, "y": 1, "z": 0})
@@ -6653,10 +6747,11 @@ class TestDataset:
             ds += ds[["bar"]]
 
         # verify we can rollback in-place operations if something goes wrong
-        # nb. inplace datetime64 math actually will work with an integer array
-        # but not floats thanks to numpy's inconsistent handling
-        other = DataArray(np.datetime64("2000-01-01"), coords={"c": 2})
+        # (datetime64 math works with timedelta64 values stored in "bar", but
+        # not floats stored in "foo").
+        other = DataArray(np.datetime64("2000-01-01", "ns"), coords={"c": 2})
         actual = ds.copy(deep=True)
+        actual["bar"] = actual.bar.astype("timedelta64[ns]")
         with pytest.raises(TypeError):
             actual += other
         assert_identical(actual, ds)
@@ -7587,6 +7682,7 @@ class TestDataset:
                 },
             )
         elif backend == "dask":
+            da = dask_array_api
             ds = Dataset(
                 {
                     "a": ("x", da.from_array(a, chunks=3)),
@@ -7594,7 +7690,10 @@ class TestDataset:
                     "c": ("y", da.from_array(c, chunks=7)),
                     "d": ("z", da.from_array(d, chunks=12)),
                     "e": (("x", "y"), da.from_array(e, chunks=(3, 7))),
-                    "f": (("x", "y", "z"), da.from_array(f, chunks=(3, 7, 12))),
+                    "f": (
+                        ("x", "y", "z"),
+                        da.from_array(f, chunks=(3, 7, 12)),
+                    ),
                 },
                 coords={
                     "a2": ("x", a),
