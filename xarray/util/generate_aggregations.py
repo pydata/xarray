@@ -507,8 +507,8 @@ class GroupByAggregationGenerator(AggregationGenerator):
                 return textwrap.indent("\n" + "\n".join(kwargs), indent * " ")
             return ""
 
-        # cumulative operations aren't enabled yet.
-        method_is_not_flox_supported = method.name in ("cumsum", "cumprod")
+        # cumprod isn't enabled yet, since flox doesn't implement it.
+        method_is_not_flox_supported = method.name in ("cumprod",)
         if method_is_not_flox_supported:
             extra_kwargs = render_kwargs(extra_kwargs, 12)
         else:
