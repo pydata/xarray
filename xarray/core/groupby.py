@@ -1071,6 +1071,16 @@ class GroupBy(Generic[T_Xarray]):
         import flox
         from flox.xarray import xarray_reduce
 
+        if "keepdims" in kwargs:
+            warnings.warn(
+                "Reductions are applied along the rolling dimension. "
+                "Passing the 'keepdims' kwarg to reduction is not "
+                "supported and will be ignored.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            del kwargs["keepdims"]
+
         from xarray.core.dataset import Dataset
 
         obj = self._original_obj
