@@ -308,6 +308,7 @@ def test_dask_da_groupby_quantile() -> None:
 
 
 @requires_dask
+@requires_flox
 def test_dask_da_groupby_median() -> None:
     expected = xr.DataArray(data=[2, 5], coords={"x": [1, 2]}, dims="x")
     array = xr.DataArray(
@@ -318,7 +319,16 @@ def test_dask_da_groupby_median() -> None:
     assert_identical(expected, actual)
 
     with xr.set_options(use_flox=True):
-        actual = array.chunk(x=1).groupby("x").median()
+        grouped = array.chunk(x=1).groupby("x")
+        with mock.patch.object(
+            grouped, "_flox_reduce", wraps=grouped._flox_reduce
+        ) as mocked:
+            actual = grouped.median()
+    assert mocked.call_args is not None
+    assert mocked.call_args.kwargs["method"] == "blockwise"
+    assert_identical(expected, actual)
+
+    actual = array.chunk(x=1).groupby("x").median(method="blockwise")
     assert_identical(expected, actual)
 
     # will work blockwise with flox
@@ -327,6 +337,27 @@ def test_dask_da_groupby_median() -> None:
 
     # will work blockwise with flox
     actual = array.chunk(x=-1).groupby("x").median()
+    assert_identical(expected, actual)
+
+
+@requires_dask
+@requires_flox
+def test_dask_da_resample_median() -> None:
+    times = xr.date_range("2000-01-01", freq="6h", periods=10)
+    array = xr.DataArray(np.arange(10), coords={"time": times}, dims="time")
+
+    with xr.set_options(use_flox=False):
+        expected = array.chunk(time=1).resample(time="1D").median()
+
+    with xr.set_options(use_flox=True):
+        resampled = array.chunk(time=1).resample(time="1D")
+        with mock.patch.object(
+            resampled, "_flox_reduce", wraps=resampled._flox_reduce
+        ) as mocked:
+            actual = resampled.median()
+
+    assert mocked.call_args is not None
+    assert mocked.call_args.kwargs["method"] == "blockwise"
     assert_identical(expected, actual)
 
 
