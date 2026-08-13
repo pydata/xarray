@@ -1,6 +1,6 @@
 [workspace]
 preview = ["pixi-build"]
-channels = ["conda-forge", "nodefaults"]
+channels = ["conda-forge", "nodefaults", "https://prefix.dev/keewis-oss"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 requires-pixi = ">=0.63.2,!=0.68.0"
 
@@ -143,62 +143,6 @@ toolz = "1.0.*"
 zarr = "3.0.*"
 pyarrow = "*"        # required by dask.dataframe
 
-# TODO: Remove `target.unix` restriction once pandas nightly has win-64 wheels again.
-# Without this, `pixi lock` fails because it can't solve the nightly feature for win-64,
-# which breaks RTD builds (RTD has no lock file cache, unlike GitHub Actions CI).
-[feature.nightly.target.unix.dependencies]
-python = "*"
-
-[feature.nightly.pypi-options.dependency-overrides]
-numpy = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
-scipy = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
-matplotlib = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
-pandas = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
-pyarrow = { version = "*", index = "https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" }
-
-dask = { git = "https://github.com/dask/dask" }
-distributed = { git = "https://github.com/dask/distributed" }
-zarr = { git = "https://github.com/zarr-developers/zarr-python" }
-# numcodecs = { git = "https://github.com/zarr-developers/numcodecs" }  #? compilation fails currently, see #11437
-cftime = { git = "https://github.com/Unidata/cftime" }
-# packaging = { git = "https://github.com/pypa/packaging"} #? Pixi warns if this is enabled
-pint = { git = "https://github.com/hgrecco/pint" }
-bottleneck = { git = "https://github.com/pydata/bottleneck" }
-fsspec = { git = "https://github.com/intake/filesystem_spec" }
-nc-time-axis = { git = "https://github.com/SciTools/nc-time-axis" }
-flox = { git = "https://github.com/xarray-contrib/flox" }
-h5netcdf = { git = "https://github.com/h5netcdf/h5netcdf" }
-opt_einsum = { git = "https://github.com/dgasmith/opt_einsum" }
-# sparse = { git = "https://github.com/pydata/sparse"}
-
-[feature.nightly.target.unix.pypi-dependencies]
-xarray = { path = ".", editable = true }
-
-numpy = "*"
-pandas = "*"
-matplotlib = "*"
-scipy = "*"
-pyarrow = "*"
-
-dask = "*"
-distributed = "*"
-zarr = "*"
-numcodecs = "*"
-cftime = "*"
-packaging = "*"
-pint = "*"
-bottleneck = "*"
-fsspec = "*"
-nc-time-axis = "*"
-flox = "*"
-# h5netcdf = "*"
-# h5py = "*"
-opt_einsum = "*"
-netcdf4 = "*"
-scitools-iris = "*"
-pydap = "*"
-cartopy = "*"
-seaborn = "*"
 
 [feature.test.dependencies]
 pytest = "!=9.1.0"
@@ -250,19 +194,29 @@ sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-inline-tabs = "*"
 sphinx-llm = ">=0.2.1"
-sphinx = ">=6,<8"
+sphinx = ">=8,<9"
 sphinxcontrib-mermaid = "*"
 sphinxcontrib-srclinks = "*"
 sphinx-remove-toctrees = "*"
 sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
+# use the official version once https://github.com/jupyterlite/jupyterlite-sphinx/pull/346 has been resolved
+jupyterlite-sphinx = ">=0.23.0"
+jupyterlite-xeus = ">=4.4.1"
 make = "*"
 myst-nb = ">=1.4.0,<2"
 
 [feature.doc.tasks]
-doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation." }
-doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch." }
+_prepare-environment = { cmd = "python create_environment.py", cwd = "doc" }
+doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentation.", depends-on = [
+  "_prepare-environment",
+] }
+doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch.", depends-on = [
+  "build",
+  "_prepare-environment",
+] }
+host-static-doc = { cmd = "python -m http.server -b 127.0.0.1 -d _build/html 5455", cwd = "doc", description = "serve the static documentation" }
 linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in documentation." }
 
 
@@ -297,22 +251,6 @@ types-pexpect = "*"
 # overrides (pixi cannot override a conda dep with a PyPI one) — that conflict is
 # why the `typing` feature used to be excluded from `test-nightly` entirely.
 [feature.typing-stubs.dependencies]
-pandas-stubs = "<=2.3.3.251219"
-scipy-stubs = ">=1.17.1.2"
-
-# Stubs sourced from PyPI rather than conda, used only by the `mypy-upstream`
-# environment. That env pairs the `nightly` feature (which overrides numpy/scipy
-# to PyPI nightly wheels) with type stubs; conda stubs would pull conda
-# numpy/scipy that pixi cannot reconcile with those PyPI overrides, so they must
-# come from PyPI here.
-#
-# NOTE: these stubs cap numpy below the nightly wheel (scipy-stubs via optype ->
-# numpy-typing-compat needs numpy<2.5; pandas-stubs needs numpy<=2.3.5), so numpy
-# in `mypy-upstream` resolves to the latest release. We accept that: dropping the
-# stubs to free up numpy would leave pandas/scipy untyped and flood mypy with
-# import-untyped errors. The upstream *test* job (`test-nightly`) is kept separate
-# precisely so it still gets the genuine nightly numpy.
-[feature.typing-stubs-nightly.pypi-dependencies]
 pandas-stubs = "<=2.3.3.251219"
 scipy-stubs = ">=1.17.1.2"
 
@@ -384,6 +322,23 @@ rst-to-myst = { version = "*", extras = ["sphinx"] }
 [feature.tools.tasks]
 rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
 
+[feature.build-package.dependencies]
+vcs_versioning = "*"
+cytoolz = "*"
+
+[feature.build-package.tasks]
+prepare-recipe = { cmd = "python ci/recipe/prepare_recipe.py", cwd = "." }
+build-package = { cmd = "pixi publish --path ci/recipe/pixi.toml --target-dir dist/", cwd = ".", depends-on = [
+  "prepare-recipe",
+] }
+
+[tasks]
+build-and-host-doc = [
+  { task = "build" },
+  { task = "doc" },
+  { task = "host-static-doc" },
+]
+
 [feature.numpydoc-lint.dependencies]
 numpydoc = "*"
 
@@ -392,6 +347,9 @@ numpydoc-lint = { cmd = "python ci/numpydoc-public-api.py" }
 
 [feature.nodask.constraints]
 dask-core = "<0.0a0"
+
+[feature.nightly.dependencies]
+python = "*"
 
 [environments]
 # Testing
@@ -435,28 +393,6 @@ test-py314 = { features = [
   "viz",
   "extras",
 ] }
-test-nightly = { features = [
-  "py313",
-  "nightly",
-  "test",
-  # Deliberately no "typing": type stubs cap numpy<2.5 and would displace the
-  # nightly numpy wheel this env's pytest job needs. Type checking against the
-  # dev stack lives in the separate `mypy-upstream` environment below.
-], no-default-feature = true }
-
-# Type-checking against the development stack (used by the `mypy-upstream-dev` CI
-# job). Same as `test-nightly` plus the typing toolchain and PyPI-sourced stubs.
-# numpy resolves to the latest release here (the stubs cap it below the nightly
-# wheel); every other dependency still comes from the nightly wheels / git, so
-# this catches typing breakage from upstream development versions.
-mypy-upstream = { features = [
-  "py313",
-  "nightly",
-  "test",
-  "typing",
-  "typing-stubs-nightly",
-], no-default-feature = true }
-
 
 test-py311 = { features = [
   "py311",
@@ -518,6 +454,7 @@ doc = { features = [
   "accel",
   "viz",
   "extras",
+  "numba",
 ] }
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 release = { features = ["release"], no-default-feature = true }
@@ -535,3 +472,8 @@ default = { features = [
 policy = { features = ["policy"], no-default-feature = true }
 numpydoc-lint = { features = ["numpydoc-lint"] }
 tools = { features = ["tools"], no-default-feature = true }
+build-package = { features = [
+  "build-package",
+  "release",
+], no-default-feature = true }
+test-nightly = { features = ["nightly"], no-default-feature = true }
