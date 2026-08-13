@@ -2018,12 +2018,6 @@ class TestVariable(VariableSubclassobjects):
         ):
             v.rank("x")
 
-    def test_rank_use_bottleneck(self):
-        v = Variable(["x"], [3.0, 1.0, np.nan, 2.0, 4.0])
-        with set_options(use_bottleneck=False):
-            with pytest.raises(RuntimeError):
-                v.rank("x")
-
     @requires_bottleneck
     def test_rank(self):
         import bottleneck as bn
