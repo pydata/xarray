@@ -149,6 +149,9 @@ else:
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
+# Since min zarr is now >=3.0, these are aliases for has_zarr/requires_zarr.
+# Kept to avoid a large diff across test files.
+has_zarr_v3 = has_zarr
 requires_zarr_v3 = requires_zarr
 has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
 has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", "3.1.2")
@@ -242,10 +245,6 @@ def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
 has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3(has_h5netcdf)
 has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
     "netCDF4", "1.6.2"
-)
-
-has_h5netcdf_1_7_0_or_above, requires_h5netcdf_1_7_0_or_above = _importorskip(
-    "h5netcdf", "1.7.0.dev"
 )
 
 has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(

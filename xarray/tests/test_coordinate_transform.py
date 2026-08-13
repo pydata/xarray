@@ -188,6 +188,17 @@ def test_coordinate_transform_transpose() -> None:
     np.testing.assert_array_equal(actual, expected)
 
 
+def test_coordinate_transform_transpose_non_square() -> None:
+    coords = create_coords(scale=2.0, shape=(2, 3))
+
+    actual = coords["x"].transpose()
+
+    assert actual.dims == ("x", "y")
+    assert actual.shape == (3, 2)
+    expected = [[0.0, 0.0], [2.0, 2.0], [4.0, 4.0]]
+    np.testing.assert_array_equal(actual.values, expected)
+
+
 def test_coordinate_transform_equals() -> None:
     ds1 = create_coords(scale=2.0, shape=(2, 2)).to_dataset()
     ds2 = create_coords(scale=2.0, shape=(2, 2)).to_dataset()
