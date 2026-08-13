@@ -2009,6 +2009,51 @@ class TestDataArray:
         assert filled.dtype == srs.dtype
         assert (filled.values == srs.values[1:]).all()
 
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.array([1, 2, 3], dtype="Int64"), id="Int64"),
+            pytest.param(pd.array([1.5, 2.5, 3.5], dtype="Float64"), id="Float64"),
+            pytest.param(pd.array([True, False, True], dtype="boolean"), id="boolean"),
+        ],
+    )
+    def test_shift_extension_array(self, extension_array) -> None:
+        # GH #10301: shift on a nullable/extension dtype used to raise because the
+        # NA fill value could not be inserted into a numpy-coerced array.
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        shifted = da.shift(index=1)
+        assert shifted.dtype == da.dtype
+        pd.testing.assert_extension_array_equal(
+            shifted.data,
+            extension_array._from_sequence(
+                [pd.NA, extension_array[0], extension_array[1]],
+                dtype=extension_array.dtype,
+            ),
+        )
+
+    @pytest.mark.parametrize(
+        "extension_array",
+        [
+            pytest.param(pd.array([1, 2, 3], dtype="Int64"), id="Int64"),
+            pytest.param(pd.array([1.5, 2.5, 3.5], dtype="Float64"), id="Float64"),
+            pytest.param(pd.array([True, False, True], dtype="boolean"), id="boolean"),
+        ],
+    )
+    def test_pad_extension_array(self, extension_array) -> None:
+        # GH #10301: pad on a nullable/extension dtype keeps the dtype + native NA.
+        srs: pd.Series = pd.Series(index=np.array([1, 2, 3]), data=extension_array)
+        da = srs.to_xarray()
+        padded = da.pad(index=(1, 1))
+        assert padded.dtype == da.dtype
+        pd.testing.assert_extension_array_equal(
+            padded.data,
+            extension_array._from_sequence(
+                [pd.NA, *list(extension_array), pd.NA],
+                dtype=extension_array.dtype,
+            ),
+        )
+
     def test_rename(self) -> None:
         da = xr.DataArray(
             [1, 2, 3], dims="dim", name="name", coords={"coord": ("dim", [5, 6, 7])}
