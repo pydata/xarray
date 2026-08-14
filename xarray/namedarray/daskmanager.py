@@ -78,7 +78,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         ):
             chunks = data.shape
 
-        return da.from_array(data, chunks, **kwargs)
+        return da.from_array(data, chunks, **kwargs)  # type: ignore[no-untyped-call]
 
     def compute(
         self, *data: Any, **kwargs: Any
