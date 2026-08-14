@@ -173,6 +173,27 @@ class TestEncodeCFVariable:
             "invalid value encountered in cast" in msg for msg in warning_messages
         )
 
+    def test_missing_fillvalue_coordinate_variable(self) -> None:
+        # regression test for GH10305
+        # CF coordinate variables cannot have missing values, so they do not
+        # need a _FillValue and should not warn about one being absent
+        v = Variable(["x"], np.array([0.0, 1.0, 2.0]), encoding={"dtype": "int16"})
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            encoded = conventions.encode_cf_variable(v, name="x")
+        assert encoded.dtype == np.dtype("int16")
+
+    def test_missing_fillvalue_non_coordinate_variable(self) -> None:
+        # data variables and multidimensional (auxiliary) coordinates may hold
+        # missing values, so they still warn
+        v = Variable(["x"], np.array([0.0, 1.0, 2.0]), encoding={"dtype": "int16"})
+        with pytest.warns(SerializationWarning, match="floating point data"):
+            conventions.encode_cf_variable(v, name="data")
+
+        v2d = Variable(["y", "x"], np.zeros((2, 3)), encoding={"dtype": "int16"})
+        with pytest.warns(SerializationWarning, match="floating point data"):
+            conventions.encode_cf_variable(v2d, name="lat")
+
     def test_multidimensional_coordinates(self) -> None:
         # regression test for GH1763
         # Set up test case with coordinates that have overlapping (but not
