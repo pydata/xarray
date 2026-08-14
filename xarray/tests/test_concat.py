@@ -1491,6 +1491,19 @@ def test_concat_index_not_same_dim() -> None:
         concat([ds1, ds2], dim="x")
 
 
+def test_concat_pandas_index_string_dtype() -> None:
+    # Regression test for GH#11317. When pandas yields a StringDtype-backed
+    # Index (e.g. with ``future.infer_string`` enabled), passing it as the
+    # new concat dim must not break a subsequent concat against a coord with
+    # a numpy string dtype.
+    with pd.option_context("future.infer_string", True):
+        da = DataArray([0], dims=["dim_a"], coords={"dim_a": ["a"]})
+        db = DataArray([0], dims=["dim_b"], coords={"dim_b": ["b"]})
+        db2 = concat([db], pd.Index(["b"], name="dim_a"))
+        result = concat([da, db2], dim="dim_a")
+    assert list(result["dim_a"].values) == ["a", "b"]
+
+
 class TestNewDefaults:
     def test_concat_second_empty_with_scalar_data_var_only_on_first(self) -> None:
         ds1 = Dataset(data_vars={"a": ("y", [0.1]), "b": 0.1}, coords={"x": 0.1})
