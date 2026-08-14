@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Mapping
 
 import numpy as np
 
@@ -71,11 +71,10 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             # lazily loaded backend array classes should use NumPy array operations.
             kwargs["meta"] = np.ndarray
 
-        return da.from_array(
-            data,
-            chunks,
-            **kwargs,
-        )  # type: ignore[no-untyped-call]
+        if isinstance(chunks, tuple) and set(("auto", 0)).issubset(set(chunks)):
+            chunks = data.shape
+
+        return da.from_array(data, chunks, **kwargs)
 
     def compute(
         self, *data: Any, **kwargs: Any
@@ -270,3 +269,27 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         from dask.utils import parse_bytes
 
         return parse_bytes(dask_config.get("array.chunk-size"))
+
+    def rechunk(
+        self, data: Any, chunks: T_Chunks | _NormalizedChunks, **kwargs: Any
+    ) -> Any:
+        """
+        If we have a zero-length dimensions and any per-dim chunks are auto, dask
+        will rase a DivideByZero error. To workaround, we can just replace the
+        chunks with a manual specification of the whole array size, which will
+        occupy zero bytes anyway.
+        """
+        if (
+            isinstance(chunks, tuple)
+            and any(c == "auto" for c in chunks)
+            and any(s == 0 for s in data.shape)
+        ):
+            chunks = data.shape
+        if (
+            isinstance(chunks, Mapping)
+            and any(c == "auto" for c in chunks.values())
+            and any(s == 0 for s in data.shape)
+        ):
+            chunks = data.shape
+
+        return super().rechunk(data, chunks, **kwargs)  # type: ignore
