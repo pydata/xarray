@@ -5021,7 +5021,11 @@ class TestDataset:
         mx = xr.Coordinates.from_pandas_multiindex(
             pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["d", "e"]), "z"
         )
-        ds = Dataset(dict(var1=var), coords=dict(y=idx, z=mx)).assign_attrs(a=1, b=2)
+        ds = (
+            Dataset(dict(var1=var), coords=dict(y=idx))
+            .assign_coords(mx)
+            .assign_attrs(a=1, b=2)
+        )
         assert ds.attrs != {}
         assert ds["var1"].attrs != {}
         assert ds["y"].attrs != {}
