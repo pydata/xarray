@@ -26,6 +26,7 @@ from xarray.core.utils import (
     is_allowed_extension_array_dtype,
     is_dict_like,
     is_scalar,
+    is_valid_numpy_dtype,
 )
 
 if TYPE_CHECKING:
@@ -610,7 +611,7 @@ def _asarray_tuplesafe(values):
 
 def _is_nested_tuple(possible_tuple):
     return isinstance(possible_tuple, tuple) and any(
-        isinstance(value, tuple | list | slice) for value in possible_tuple
+        isinstance(value, list | slice) for value in possible_tuple
     )
 
 
@@ -784,8 +785,12 @@ class PandasIndex(Index):
             indexes_coord_dtypes = {idx.coord_dtype for idx in indexes}
             if len(indexes_coord_dtypes) == 1:
                 coord_dtype = next(iter(indexes_coord_dtypes))
-            else:
+            # Check if all dtypes are valid numpy dtypes before using np.result_type
+            # (e.g., pandas StringDtype is not a valid numpy dtype, GH#11317)
+            elif all(is_valid_numpy_dtype(dt) for dt in indexes_coord_dtypes):
                 coord_dtype = np.result_type(*indexes_coord_dtypes)
+            else:
+                coord_dtype = np.dtype("O")
 
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
@@ -914,7 +919,12 @@ class PandasIndex(Index):
             index = self.index.intersection(other.index)
         if is_allowed_extension_array_dtype(index.dtype):
             return type(self)(index, self.dim)
-        coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
+        if is_valid_numpy_dtype(self.coord_dtype) and is_valid_numpy_dtype(
+            other.coord_dtype
+        ):
+            coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
+        else:
+            coord_dtype = np.dtype("O")
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
     def reindex_like(
