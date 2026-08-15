@@ -8020,7 +8020,10 @@ class TestDataset:
 # pytest tests — new tests should go here, rather than in the class.
 
 
-@pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
+@pytest.mark.parametrize(
+    "test_elements",
+    ([1, 2], np.array([1, 2]), DataArray([1, 2]), {1, 2}, frozenset({1, 2})),
+)
 def test_isin(test_elements, use_dask: bool) -> None:
     expected = Dataset(
         data_vars={

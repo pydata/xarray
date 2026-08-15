@@ -422,6 +422,11 @@ Bug Fixes
   variables, the ``netCDF4`` engine silently returned a wrongly-sized array, and
   ``pydap`` raised ``ValueError`` (:issue:`9075`, :issue:`11625`, :pull:`11626`).
   By `Aniruddha Adak <https://github.com/aniruddhaadak80>`_.
+- :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` now
+  accept sets, frozensets and other set-like objects such as ``dict.keys()``.
+  Previously these were turned into a 0-dimensional object array by numpy, so
+  the result was ``False`` everywhere (:issue:`10022`).
+  By `Chandan P <https://github.com/NoiceHax>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
