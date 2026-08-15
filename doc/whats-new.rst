@@ -343,6 +343,14 @@ Bug Fixes
 - Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
   round trips (:issue:`11466`, :pull:`11474`).
   By `stanbot8 <https://github.com/stanbot8>`_.
+- :py:func:`~xarray.open_dataset` now raises an error pointing at
+  :py:func:`~xarray.open_mfdataset` when it is given a list or tuple of paths,
+  instead of reporting that no IO backend matched the input (:issue:`6510`).
+  By `NoiceHax <https://github.com/NoiceHax>`_.
+- Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
+  which caused ``AsyncMock`` objects to leak through instead of real array data
+  (:pull:`11232`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs (:pull:`11449`).
