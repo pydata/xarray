@@ -73,7 +73,7 @@ Bug Fixes
   passed as a coordinate value, e.g. ``ds.assign_coords({"x": coords})``, instead
   of silently creating a broken coordinate. Pass the object directly with
   ``ds.assign_coords(coords)`` (:issue:`10194`).
-  By `NoiceHax <https://github.com/NoiceHax>`_.
+  By `NoiceHex <https://github.com/NoiceHax>`_.
 
 
 Documentation
