@@ -73,7 +73,7 @@ Bug Fixes
   encoding a CF coordinate variable (a 1D variable named after its dimension) to
   an integer dtype. CF forbids missing values in coordinate variables, so a
   ``_FillValue`` is not expected there (:issue:`10305`).
-  By `NoiceHex <https://github.com/NoiceHax>`_.
+  By `NoiceHax <https://github.com/NoiceHax>`_.
 
 
 Documentation
