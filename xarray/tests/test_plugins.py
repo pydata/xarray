@@ -250,6 +250,16 @@ def test_guess_engine_file_not_found() -> None:
         plugins.guess_engine("https://example.com/missing.h5")
 
 
+@mock.patch(
+    "xarray.backends.plugins.list_engines",
+    mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
+)
+@pytest.mark.parametrize("paths", [["a.nc", "b.nc"], ("a.nc", "b.nc")])
+def test_guess_engine_sequence_of_paths(paths) -> None:
+    with pytest.raises(ValueError, match=r"Use open_mfdataset"):
+        plugins.guess_engine(paths)
+
+
 @pytest.mark.parametrize("engine", common.BACKEND_ENTRYPOINTS.keys())
 def test_get_backend_fastpath_skips_list_engines(engine: str) -> None:
     """Test that built-in engines skip list_engines (fastpath)."""

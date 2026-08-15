@@ -49,6 +49,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:func:`~xarray.open_dataset` now raises an error pointing at
+  :py:func:`~xarray.open_mfdataset` when it is given a list or tuple of paths,
+  instead of reporting that no IO backend matched the input (:issue:`6510`).
+  By `NoiceHax <https://github.com/NoiceHax>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
