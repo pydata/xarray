@@ -69,6 +69,11 @@ Bug Fixes
   for zarr writes. Existing zarr stores written with the old ``int8`` encoding
   are still read correctly. (:issue:`2937`, :pull:`11318`)
   By `Evan Lyall <https://github.com/elyall>`_.
+- :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` now
+  accept sets, frozensets and other set-like objects such as ``dict.keys()``.
+  Previously these were turned into a 0-dimensional object array by numpy, so
+  the result was ``False`` everywhere (:issue:`10022`).
+  By `Chandan P <https://github.com/NoiceHax>`_.
 
 
 Documentation

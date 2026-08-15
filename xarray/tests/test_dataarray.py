@@ -7018,6 +7018,13 @@ def test_isin(da) -> None:
     result = da.isin([2, 3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
 
+    # set-like objects give the same answer as the equivalent list, GH10022
+    result = da.isin({2, 3}).sel(y=list("de"), z=0)
+    assert_equal(result, expected)
+
+    result = da.isin({2: "a", 3: "b"}.keys()).sel(y=list("de"), z=0)
+    assert_equal(result, expected)
+
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
