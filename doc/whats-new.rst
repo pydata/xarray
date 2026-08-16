@@ -132,6 +132,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Expose ``coord_pad_mode`` and associated parameters in ``Dataset.pad`` and
+  ``DataArray.pad`` (:issue:`3868` :issue:`6425` :pull:`11213`). By `Ian Cooke
+  <https://github.com/ircwaves>`_.
 
 - :py:meth:`Dataset.drop_encoding` and :py:meth:`DataArray.drop_encoding` no
   longer copy the underlying data, avoiding excessive memory use on large
