@@ -133,6 +133,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`DataArray.pad`, :py:meth:`Dataset.pad` and :py:meth:`Variable.pad`
+  no longer raise when padding an integer array with an explicit non-finite
+  ``constant_values`` such as ``np.nan``; the dtype is now promoted so the fill
+  value can be represented, as already happens for the default fill value
+  (:issue:`6431`).
 - :py:meth:`Dataset.drop_encoding` and :py:meth:`DataArray.drop_encoding` no
   longer copy the underlying data, avoiding excessive memory use on large
   datasets (:issue:`11390`, :pull:`11394`).
