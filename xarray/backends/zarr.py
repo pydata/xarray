@@ -858,7 +858,7 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_array, DIMENSION_KEY, try_nczarr
         )
         attributes = dict(attributes)
-        preferred_chunks = zarr_array.shards or zarr_array.chunks
+        preferred_chunks = zarr_array.shards if zarr_array.shards is not None else zarr_array.chunks
 
         encoding = {
             "chunks": zarr_array.chunks,
