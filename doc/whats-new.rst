@@ -74,6 +74,14 @@ Bug Fixes
   of silently creating a broken coordinate. Pass the object directly with
   ``ds.assign_coords(coords)`` (:issue:`10194`).
   By `NoiceHex <https://github.com/NoiceHax>`_.
+- :py:meth:`DataArray.to_series` and :py:meth:`Dataset.to_dataframe` no longer
+  call ``.todense()`` on ``sparse.COO``-backed variables, which could raise
+  ``MemoryError`` for large, genuinely sparse arrays, or (for
+  ``Dataset.to_dataframe``) crash outright since ``sparse.COO`` refuses to
+  densify implicitly. ``to_series`` now returns only the array's stored
+  entries; ``to_dataframe`` indexes by the union of stored entries across all
+  sparse variables sharing the same dims (:issue:`4007`).
+  By `patnr <https://github.com/patnr>`_.
 
 
 Documentation

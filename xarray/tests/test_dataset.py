@@ -5442,6 +5442,68 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    @requires_sparse
+    def test_to_dataframe_sparse_crash_regression(self) -> None:
+        # `Dataset.to_dataframe()` used to unconditionally call `.values` on
+        # every variable, which crashes for a sparse.COO-backed variable
+        # (sparse arrays refuse to densify implicitly) instead of raising a
+        # clear error or, preferably, working.
+        import sparse
+
+        ds = Dataset(
+            {"u": (("x", "y"), sparse.COO.from_numpy(np.array([[0, 1], [0, 0]])))},
+            coords={"x": ["a", "b"], "y": ["c", "d"]},
+        )
+        ds.to_dataframe()  # should not raise
+
+    @requires_sparse
+    def test_to_dataframe_sparse(self) -> None:
+        import sparse
+
+        x = ["a", "b", "c"]
+        y = ["w", "x", "y", "z"]
+
+        # Two sparse variables with different, non-overlapping-except-once
+        # sparsity patterns, plus one fully dense variable, so the test
+        # covers: per-column fill values, union-of-coordinates alignment,
+        # and mixing sparse with dense columns in one DataFrame.
+        dense_u = np.array([[0, 0, 3, 0], [0, 0, 0, 9], [7, 0, 0, 0]])
+        dense_v = np.array([[0, 11, 0, 0], [0, 0, 0, 0], [0, 0, 0, 22]])
+        dense_w = np.arange(12).reshape(3, 4)
+
+        ds = Dataset(
+            {
+                "u": (("x", "y"), sparse.COO.from_numpy(dense_u)),
+                "v": (("x", "y"), sparse.COO.from_numpy(dense_v)),
+                "w": (("x", "y"), dense_w),
+            },
+            coords={"x": x, "y": y},
+        )
+        ds_dense = Dataset(
+            {
+                "u": (("x", "y"), dense_u),
+                "v": (("x", "y"), dense_v),
+                "w": (("x", "y"), dense_w),
+            },
+            coords={"x": x, "y": y},
+        )
+
+        actual = ds.to_dataframe()
+        expected_full = ds_dense.to_dataframe()
+
+        # Rows where every sparse column is at its fill value are dropped
+        # rather than materialized - the whole point of not densifying.
+        stored = (dense_u.reshape(-1) != 0) | (dense_v.reshape(-1) != 0)
+        assert len(actual) == stored.sum()
+        assert expected_full.loc[actual.index].equals(actual)
+
+        # dim_order permutation: sparse columns must line up on the same
+        # (relabeled) index as everything else, not just their native order.
+        actual_t = ds.to_dataframe(dim_order=["y", "x"])
+        expected_t = ds_dense.to_dataframe(dim_order=["y", "x"])
+        assert expected_t.loc[actual_t.index].equals(actual_t)
+        assert len(actual_t) == stored.sum()
+
     def test_from_dataframe_categorical_dtype_index(self) -> None:
         cat = pd.CategoricalIndex(list("abcd"))
         df = pd.DataFrame({"f": [0, 1, 2, 3]}, index=cat)
