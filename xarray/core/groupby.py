@@ -1939,7 +1939,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
                 dim=dim,
                 axis=axis,
                 keep_attrs=keep_attrs,
-                keepdims=keepdims,
+                keepdims=False,
                 **kwargs,
             )
 
