@@ -12,7 +12,14 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
+from xarray import (
+    Coordinates,
+    DataArray,
+    Dataset,
+    IndexVariable,
+    Variable,
+    set_options,
+)
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.extension_array import PandasExtensionArray
@@ -1272,6 +1279,10 @@ class TestVariable(VariableSubclassobjects):
 
         with pytest.raises(TypeError):
             as_variable(("x", DataArray([])))
+
+        # GH10194
+        with pytest.raises(TypeError, match=r"Using a Coordinates object"):
+            as_variable(Coordinates({"x": [1, 2, 3]}), name="x")
 
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
