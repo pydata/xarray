@@ -201,7 +201,7 @@ _DATETIMEINDEX_COMPONENTS = [
 
 
 def _sparse_coo_to_index(
-    coo, dims: Sequence[Hashable], get_index: Callable[[Hashable], pd.Index]
+    coo, dims: tuple[Hashable, ...], get_index: Callable[[Hashable], pd.Index]
 ) -> pd.Index:
     """Build a pandas Index (a MultiIndex if ``len(dims) > 1``) over exactly
     the stored (non-fill-value) entries of a ``sparse.COO`` array.
@@ -7435,7 +7435,11 @@ class Dataset(
         same set of dims.
         """
         index = _sparse_coo_to_index(variable.data, variable.dims, self.get_index)
-        if len(ordered_dims) > 1 and variable.dims != ordered_dims:
+        if (
+            len(ordered_dims) > 1
+            and variable.dims != ordered_dims
+            and isinstance(index, pd.MultiIndex)
+        ):
             index = index.reorder_levels(ordered_dims)
         return index
 
