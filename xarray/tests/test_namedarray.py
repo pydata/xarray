@@ -35,22 +35,22 @@ if TYPE_CHECKING:
         _DType,
         _IndexKeyLike,
         _IntOrUnknown,
-        _Shape,
         _ShapeLike,
+        _ShapeType,
         duckarray,
     )
 
 
 class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
-    def __init__(self, array: duckarray[Any, _DType_co]) -> None:
-        self.array: duckarray[Any, _DType_co] = array
+    def __init__(self, array: duckarray[_ShapeType_co, _DType_co]) -> None:
+        self.array: duckarray[_ShapeType_co, _DType_co] = array
 
     @property
     def dtype(self) -> _DType_co:
         return self.array.dtype
 
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> _ShapeType_co:
         return self.array.shape
 
 
@@ -88,9 +88,11 @@ class CustomArrayIndexable(
         return np
 
 
-def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType]:
+def check_duck_array_typevar(
+    a: duckarray[_ShapeType, _DType]
+) -> duckarray[_ShapeType, _DType]:
     # Mypy checks a is valid:
-    b: duckarray[Any, _DType] = a
+    b: duckarray[_ShapeType, _DType] = a
 
     # Runtime check if valid:
     if isinstance(b, _arrayfunction_or_api):
