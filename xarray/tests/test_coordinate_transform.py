@@ -214,8 +214,8 @@ def test_coordinate_transform_align_transposed() -> None:
         actual1, actual2 = xr.align(ds1, ds2, join=join)
         assert actual1.dims == ds1.dims
         assert actual2.dims == ds2.dims
-        assert actual1.equals(ds1)
-        assert actual2.equals(ds2)
+        assert assert_identical(actual1, ds1)
+        assert assert_identical(actual2, ds2)
 
     # a genuinely different grid (different scale) must still be rejected, even
     # when it also differs from `ds1` by dims order (exercising the cross-group
