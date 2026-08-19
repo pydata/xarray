@@ -2267,6 +2267,13 @@ class TestFacetGrid(PlotTestCase):
         self.darray = DataArray(d, dims=["y", "x", "z"], coords={"z": ["a", "b", "c"]})
         self.g = xplt.FacetGrid(self.darray, col="z")
 
+    def test_map_dataarray_rejects_scalar_axis(self) -> None:
+        with pytest.raises(
+            ValueError,
+            match="x must be a dimension or a non-scalar coordinate",
+        ):
+            self.g.map_dataarray(xplt.pcolormesh, "z", "y")
+
     @pytest.mark.slow
     def test_no_args(self) -> None:
         self.g.map_dataarray(xplt.contourf, "x", "y")
