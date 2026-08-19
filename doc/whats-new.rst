@@ -114,6 +114,11 @@ Documentation
 - Migrated from nbsphinx/jupyter-execute to myst-nb (:issue:`7924`, :pull:`11456`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
 
+- Fixed the ``kwargs`` entry in the :py:meth:`Dataset.curvefit` and
+  :py:meth:`DataArray.curvefit` docstrings: both take a ``kwargs`` dict, not
+  ``**kwargs`` (:issue:`6891`).
+  By `Advit Arora <https://github.com/advitrocks9>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
