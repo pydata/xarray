@@ -201,6 +201,12 @@ class TestStoreDatasets:
         with pytest.raises(TypeError):
             DataTree(name="mary", dataset="junk")  # type: ignore[arg-type]
 
+        with pytest.raises(
+            TypeError,
+            match=r"data object is not an xarray.Dataset, Coordinates, or None: \{\}",
+        ):
+            DataTree(name="mary", dataset={})  # type: ignore[arg-type]
+
     def test_set_data(self) -> None:
         john = DataTree(name="john")
         dat = xr.Dataset({"a": 0})
