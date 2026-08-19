@@ -74,6 +74,27 @@ Bug Fixes
   an integer dtype. CF forbids missing values in coordinate variables, so a
   ``_FillValue`` is not expected there (:issue:`10305`).
   By `NoiceHax <https://github.com/NoiceHax>`_.
+- Raise an informative ``TypeError`` when a :py:class:`~xarray.Coordinates` object is
+  passed as a coordinate value, e.g. ``ds.assign_coords({"x": coords})``, instead
+  of silently creating a broken coordinate. Pass the object directly with
+  ``ds.assign_coords(coords)`` (:issue:`10194`).
+  By `NoiceHex <https://github.com/NoiceHax>`_.
+- Fixed two bugs affecting a :py:class:`~xarray.indexes.CoordinateTransformIndex`-backed
+  coordinate after ``.transpose()``: :py:meth:`~xarray.indexes.CoordinateTransformIndex.create_variables`
+  (used by, e.g., ``.copy()`` and ``.reindex_like()``-based alignment) discarded the
+  transposed dims order and silently reverted to the transform's original order; and
+  ``xr.align(..., join="exact")`` raised a spurious ``AlignmentError`` for two objects
+  sharing an equal multi-dimensional index whose associated coordinate variables
+  simply had a different dims order (:issue:`11530`).
+  By `Samuel Le Meur-Diebolt <https://github.com/sdiebolt>`_.
+- :py:meth:`DataArray.to_series` and :py:meth:`Dataset.to_dataframe` no longer
+  call ``.todense()`` on ``sparse.COO``-backed variables, which could raise
+  ``MemoryError`` for large, genuinely sparse arrays, or (for
+  ``Dataset.to_dataframe``) crash outright since ``sparse.COO`` refuses to
+  densify implicitly. ``to_series`` now returns only the array's stored
+  entries; ``to_dataframe`` indexes by the union of stored entries across all
+  sparse variables sharing the same dims (:issue:`4007`).
+  By `patnr <https://github.com/patnr>`_.
 
 
 Documentation
