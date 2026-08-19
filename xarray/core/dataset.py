@@ -7343,12 +7343,8 @@ class Dataset(
             ]
 
         if sparse_columns:
-            # Avoid densifying sparse variables (which could raise
-            # MemoryError, and - unlike a plain ndarray - sparse.COO never
-            # does this implicitly): index the DataFrame by the union of
-            # their stored (non-fill-value) coordinates instead of the full
-            # Cartesian product, and fill each column - sparse or dense -
-            # from only that reduced set of positions.
+            # Avoid densifying sparse variables.
+            # Instead index the DataFrame by the stored coordinates.
             sparse_indexes = [
                 self._sparse_column_index(self._variables[k], ordered_dim_names)
                 for k in sparse_columns
