@@ -1722,7 +1722,6 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
-        keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
     ) -> DataArray:
@@ -1886,7 +1885,6 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
-        keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
     ) -> Dataset:
