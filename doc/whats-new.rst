@@ -46,6 +46,18 @@ Deprecations
 ~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+
+- Fix performance regression in :py:meth:`DataArray.interp` and
+  :py:meth:`Dataset.interp` introduced in :pull:`9881`. When the target coordinate
+  varied along a dimension of the interpolated object, ``np.vectorize`` looped in
+  Python over every remaining non-core dimension as well, so interpolating an
+  array with dimensions ``(t, r, z)`` along ``z`` at targets varying with ``t``
+  made ``t * r`` calls into the interpolator instead of ``t`` (:issue:`10683`).
+  By `Osho Kothari <https://github.com/oshokothari07-ai>`_.
+
+
 Bug Fixes
 ~~~~~~~~~
 
