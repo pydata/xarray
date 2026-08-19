@@ -8,14 +8,11 @@ functions.
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import numpy as np
 
 from xarray.core import dtypes, duck_array_ops
-
-if TYPE_CHECKING:
-    pass
 
 try:
     import bottleneck as bn

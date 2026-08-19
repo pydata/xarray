@@ -24,7 +24,7 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.16.1
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
@@ -37,12 +37,12 @@ repos:
         # make sure this is the most recent version of black
         additional_dependencies: ["black==25.11.0"]
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.9.4
+    rev: v3.9.6
     hooks:
       - id: prettier
         args: ["--cache-location=.prettier_cache/cache"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.1.0
+    rev: v2.3.0
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -80,7 +80,7 @@ repos:
     hooks:
       - id: typos
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.26.1
+    rev: v1.29.0
     hooks:
       - id: zizmor
         args: ["--offline"]

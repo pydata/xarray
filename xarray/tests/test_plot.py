@@ -1685,7 +1685,7 @@ class Common2dMixin:
     def test_facetgrid_col_wrap_auto(
         self,
         n: int,
-        figsize: None | tuple[int, int],
+        figsize: tuple[int, int] | None,
         aspect: int,
         expected_shape: tuple[int, int],
     ) -> None:
