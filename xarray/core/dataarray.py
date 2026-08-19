@@ -6563,7 +6563,7 @@ class DataArray(
             If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
             raise an exception. If 'ignore', the coefficients and covariances for the
             coordinates where the fitting failed will be NaN.
-        **kwargs : optional
+        kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
