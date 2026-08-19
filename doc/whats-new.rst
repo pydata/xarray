@@ -78,6 +78,11 @@ Bug Fixes
   for zarr writes. Existing zarr stores written with the old ``int8`` encoding
   are still read correctly. (:issue:`2937`, :pull:`11318`)
   By `Evan Lyall <https://github.com/elyall>`_.
+- No longer emit a ``SerializationWarning`` about a missing ``_FillValue`` when
+  encoding a CF coordinate variable (a 1D variable named after its dimension) to
+  an integer dtype. CF forbids missing values in coordinate variables, so a
+  ``_FillValue`` is not expected there (:issue:`10305`).
+  By `NoiceHax <https://github.com/NoiceHax>`_.
 - Raise an informative ``TypeError`` when a :py:class:`~xarray.Coordinates` object is
   passed as a coordinate value, e.g. ``ds.assign_coords({"x": coords})``, instead
   of silently creating a broken coordinate. Pass the object directly with
