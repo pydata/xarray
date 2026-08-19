@@ -929,6 +929,21 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             else:
                 data = func(self.data, **kwargs)
 
+            if self.dtype == object and not hasattr(data, "dtype"):
+                # A full reduction (e.g. .sum() with no remaining axes)
+                # over an object-dtype array can return a raw Python
+                # scalar rather than a 0-d array (e.g. np.sum() on an
+                # array of strings returns a plain str). Left as-is,
+                # this raw scalar would later be wrapped by
+                # from_array()'s generic np.asarray(data) fallback,
+                # which infers a dtype from the scalar itself (e.g.
+                # numpy unicode dtype for a str) instead of preserving
+                # the original object dtype. Explicitly wrap it in a
+                # 0-d object array here, while we still know the
+                # original dtype, using the same helper already used
+                # for tuple inputs in from_array(). See GH #5024.
+                data = to_0d_object_array(data)
+
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims
         else:
