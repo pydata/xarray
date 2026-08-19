@@ -234,19 +234,24 @@ class ZarrArrayWrapper(BackendArray):
         self._array = zarr_array
         self.shape = self._array.shape
 
-        # preserve vlen string object dtype (GH 7328)
+        # preserve vlen string object dtype (GH 7328), but keep a native StringDType
+        dtype = self._array.dtype
         if (
-            self._array.serializer
+            dtype.kind != "T"
+            and self._array.serializer
             and self._array.serializer.to_dict()["name"] == "vlen-utf8"
         ):
             dtype = coding.strings.create_vlen_dtype(str)
-        else:
-            dtype = self._array.dtype
 
         self.dtype = dtype
 
     def get_array(self):
         return self._array
+
+    def _preserve_string_dtype(self, value):
+        if self.dtype.kind == "T" and isinstance(value, str):
+            return np.asarray(value, dtype=self.dtype)
+        return value
 
     def _oindex(self, key):
         return self._array.oindex[key]
@@ -287,12 +292,10 @@ class ZarrArrayWrapper(BackendArray):
             method = self._vindex
         elif isinstance(key, indexing.OuterIndexer):
             method = self._oindex
-        return indexing.explicit_indexing_adapter(
+        value = indexing.explicit_indexing_adapter(
             key, array.shape, indexing.IndexingSupport.VECTORIZED, method
         )
-
-        # if self.ndim == 0:
-        # could possibly have a work-around for 0d data here
+        return self._preserve_string_dtype(value)
 
     async def async_getitem(self, key):
         array = self._array
@@ -302,9 +305,10 @@ class ZarrArrayWrapper(BackendArray):
             method = self._async_vindex
         elif isinstance(key, indexing.OuterIndexer):
             method = self._async_oindex
-        return await indexing.async_explicit_indexing_adapter(
+        value = await indexing.async_explicit_indexing_adapter(
             key, array.shape, indexing.IndexingSupport.VECTORIZED, method
         )
+        return self._preserve_string_dtype(value)
 
 
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
@@ -511,7 +515,9 @@ def extract_zarr_variable_encoding(
 
 # Function below is copied from conventions.encode_cf_variable.
 # The only change is to raise an error for object dtypes.
-def encode_zarr_variable(var, needs_copy=True, name=None):
+def encode_zarr_variable(
+    var, needs_copy=True, name=None, *, zarr_format: ZarrFormat | None = None
+):
     """
     Converts a Variable into another Variable which follows some
     of the CF conventions:
@@ -533,6 +539,13 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     """
     var = conventions.encode_cf_variable(var, name=name, coders=ZARR_CODERS)
     var = ensure_dtype_not_object(var, name=name)
+
+    if (
+        zarr_format == 3
+        and var.dtype.kind == "T"
+        and var.dtype == np.dtypes.StringDType()
+    ):
+        return var
 
     # zarr allows unicode, but not variable-length strings, so it's both
     # simpler and more compact to always encode as UTF-8 explicitly.
@@ -853,17 +866,20 @@ class ZarrStore(AbstractWritableDataStore):
 
     def open_store_variable(self, name):
         zarr_array = self.members[name]
-        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
         try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
             zarr_array, DIMENSION_KEY, try_nczarr
         )
         attributes = dict(attributes)
+        array_wrapper = ZarrArrayWrapper(zarr_array)
+        data = indexing.LazilyIndexedArray(array_wrapper)
 
         encoding = {
             "chunks": zarr_array.chunks,
             "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
         }
+        if array_wrapper.dtype.kind == "T":
+            encoding["dtype"] = array_wrapper.dtype
 
         encoding.update(
             {
@@ -929,7 +945,8 @@ class ZarrStore(AbstractWritableDataStore):
         _put_attrs(self.zarr_group, attributes)
 
     def encode_variable(self, variable, name=None):
-        variable = encode_zarr_variable(variable, name=name)
+        zarr_format = self.zarr_group.metadata.zarr_format
+        variable = encode_zarr_variable(variable, name=name, zarr_format=zarr_format)
         return variable
 
     def encode_attribute(self, a):
