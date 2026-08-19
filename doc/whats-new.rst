@@ -82,6 +82,14 @@ Bug Fixes
   sharing an equal multi-dimensional index whose associated coordinate variables
   simply had a different dims order (:issue:`11530`).
   By `Samuel Le Meur-Diebolt <https://github.com/sdiebolt>`_.
+- :py:meth:`DataArray.to_series` and :py:meth:`Dataset.to_dataframe` no longer
+  call ``.todense()`` on ``sparse.COO``-backed variables, which could raise
+  ``MemoryError`` for large, genuinely sparse arrays, or (for
+  ``Dataset.to_dataframe``) crash outright since ``sparse.COO`` refuses to
+  densify implicitly. ``to_series`` now returns only the array's stored
+  entries; ``to_dataframe`` indexes by the union of stored entries across all
+  sparse variables sharing the same dims (:issue:`4007`).
+  By `patnr <https://github.com/patnr>`_.
 
 
 Documentation
