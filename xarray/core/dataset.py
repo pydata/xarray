@@ -200,6 +200,32 @@ _DATETIMEINDEX_COMPONENTS = [
 ]
 
 
+def _sparse_coo_to_index(
+    coo, dims: tuple[Hashable, ...], get_index: Callable[[Hashable], pd.Index]
+) -> pd.Index:
+    """Build a pandas Index (a MultiIndex if ``len(dims) > 1``) over exactly
+    the stored (non-fill-value) entries of a ``sparse.COO`` array.
+
+    ``coo.coords`` gives, per dimension, the integer position of each stored
+    entry — not the dimension's actual coordinate labels. Those integer
+    positions are also not guaranteed to be a 0..n-1 range: whichever unique
+    positions happen to occur become the codes/levels of an initial
+    `pandas.MultiIndex.from_arrays`, in the order `factorize` assigns them.
+    `set_levels` is then used to map each level's codes back to the real
+    coordinate values through `get_index`, rather than assuming (as one
+    could naively) that the codes already run in coordinate order. This is
+    the read-side inverse of `Dataset._set_sparse_data_from_dataframe`.
+    """
+    mindex = pd.MultiIndex.from_arrays(coo.coords, names=dims)
+    mindex = mindex.set_levels(
+        [
+            get_index(dim).values[np.asarray(level)]
+            for dim, level in zip(dims, mindex.levels, strict=True)
+        ]
+    )
+    return mindex.get_level_values(0) if len(dims) == 1 else mindex
+
+
 class Dataset(
     DataWithCoords,
     DatasetAggregations,
@@ -7295,11 +7321,49 @@ class Dataset(
             for k in extension_array_columns
             if k not in extension_array_columns_different_index
         ]
-        data = [
-            self._variables[k].set_dims(ordered_dims).values.reshape(-1)
+        ordered_dim_names = tuple(ordered_dims)
+        sparse_columns = [
+            k
             for k in non_extension_array_columns
+            if isinstance(self._variables[k].data, array_type("sparse"))
         ]
-        index = self.coords.to_index([*ordered_dims])
+        if sparse_columns:
+            from sparse import COO
+
+            # Other SparseArray subclasses (e.g. DOK) lack the .coords/.data
+            # attributes _sparse_coo_to_index relies on, and a variable whose
+            # dims need broadcasting to reach ordered_dim_names would have
+            # to be densified to do that anyway - both fall back to the
+            # dense path below, same as before this feature existed.
+            sparse_columns = [
+                k
+                for k in sparse_columns
+                if isinstance(self._variables[k].data, COO)
+                and set(self._variables[k].dims) == set(ordered_dim_names)
+            ]
+
+        if sparse_columns:
+            # Avoid densifying sparse variables.
+            # Instead index the DataFrame by the stored coordinates.
+            sparse_indexes = [
+                self._sparse_column_index(self._variables[k], ordered_dim_names)
+                for k in sparse_columns
+            ]
+            index = sparse_indexes[0]
+            for other in sparse_indexes[1:]:
+                index = index.union(other)
+            data = [
+                self._to_dataframe_sparse_column(
+                    self._variables[k], ordered_dim_names, index
+                )
+                for k in non_extension_array_columns
+            ]
+        else:
+            data = [
+                self._variables[k].set_dims(ordered_dims).values.reshape(-1)
+                for k in non_extension_array_columns
+            ]
+            index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(
             {
                 **dict(zip(non_extension_array_columns, data, strict=True)),
@@ -7357,6 +7421,55 @@ class Dataset(
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         return self._to_dataframe(ordered_dims=ordered_dims)
+
+    def _sparse_column_index(
+        self, variable: Variable, ordered_dims: tuple[Hashable, ...]
+    ) -> pd.Index:
+        """`_sparse_coo_to_index` for `variable.data`, a `sparse.COO` array,
+        reordered (a metadata-only operation - no densifying) to match
+        ``ordered_dims`` when `variable.dims` uses some other order over the
+        same set of dims.
+        """
+        index = _sparse_coo_to_index(variable.data, variable.dims, self.get_index)
+        if (
+            len(ordered_dims) > 1
+            and variable.dims != ordered_dims
+            and isinstance(index, pd.MultiIndex)
+        ):
+            index = index.reorder_levels(ordered_dims)
+        return index
+
+    def _to_dataframe_sparse_column(
+        self,
+        variable: Variable,
+        ordered_dims: tuple[Hashable, ...],
+        index: pd.Index,
+    ) -> np.ndarray | pd.Series:
+        """Compute one `_to_dataframe` column, densifying only where
+        needed: a ``sparse.COO`` variable over the same set of dims as
+        ``ordered_dims`` (in any order) is turned into its own (partial)
+        index via `_sparse_column_index` and reindexed onto the combined
+        ``index`` using its own fill value; anything else still goes
+        through the original dense `.values.reshape(-1)` path (a no-op for
+        already-dense variables, and unchanged - already broken, see
+        `_to_dataframe` - behavior for sparse variables that need
+        broadcasting) and is aligned onto ``index`` positionally or via
+        reindexing.
+        """
+        from sparse import COO
+
+        data = variable.data
+        if isinstance(data, COO) and set(variable.dims) == set(ordered_dims):
+            sparse_index = self._sparse_column_index(variable, ordered_dims)
+            return pd.Series(data.data, index=sparse_index).reindex(
+                index, fill_value=data.fill_value
+            )
+
+        flat = variable.set_dims(ordered_dims).values.reshape(-1)
+        if len(flat) == len(index):
+            return flat
+        full_index = self.coords.to_index(list(ordered_dims))
+        return pd.Series(flat, index=full_index).reindex(index)
 
     def _set_sparse_data_from_dataframe(
         self, idx: pd.Index, arrays: list[tuple[Hashable, np.ndarray]], dims: tuple

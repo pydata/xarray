@@ -79,6 +79,8 @@ copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: 
 copybutton_prompt_is_regexp = True
 
 nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
+# RTD does not publish the .err.log report, so print tracebacks in the build log
+nb_execution_show_tb = True
 
 # AutoDoc configuration
 autosummary_generate = True
@@ -166,7 +168,7 @@ import xarray as xr
 np.random.seed(0)
 """.strip()
 
-jupyterlite_silence = False
+jupyterlite_silence = True
 jupyterlite_bind_ipynb_suffix = False
 
 jupyterlite_content_dir = "_build/contents"

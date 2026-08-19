@@ -1210,6 +1210,18 @@ def test_auto_chunk_da(obj):
     assert actual.chunks == expected.chunks
 
 
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_partial_auto_chunk_zero_len_dim(obj):
+    obj = obj.isel(x=[])
+    obj.chunk({"y": "auto"})
+
+
+@pytest.mark.parametrize("obj", [make_ds()])
+def test_partial_auto_chunk_zero_len_dim_variable(obj):
+    obj = obj.isel(x=[])["a"].variable
+    obj.chunk({"y": "auto"})
+
+
 def test_auto_chunk_da_cftime():
     yrs = np.arange(2000, 2120)
     cftime_dates = xr.date_range(

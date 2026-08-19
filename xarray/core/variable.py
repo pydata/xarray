@@ -127,6 +127,7 @@ def as_variable(
         The newly created variable.
 
     """
+    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
 
     # TODO: consider extending this method to automatically handle Iris and
@@ -160,6 +161,12 @@ def as_variable(
         obj = Variable([], obj)
     elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
         obj = Variable(obj.name, obj)
+    elif isinstance(obj, Coordinates):
+        raise TypeError(
+            f"Variable {name!r}: Using a Coordinates object to construct a variable is "
+            "ambiguous, please pass the Coordinates object directly instead, e.g., "
+            "`obj.assign_coords(coords)` instead of `obj.assign_coords({name: coords})`."
+        )
     elif isinstance(obj, set | dict):
         raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
     elif name is not None:

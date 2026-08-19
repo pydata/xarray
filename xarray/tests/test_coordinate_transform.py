@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
+from xarray import AlignmentError
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexes import CoordinateTransformIndex
 from xarray.tests import assert_equal, assert_identical
@@ -197,6 +198,39 @@ def test_coordinate_transform_transpose_non_square() -> None:
     assert actual.shape == (3, 2)
     expected = [[0.0, 0.0], [2.0, 2.0], [4.0, 4.0]]
     np.testing.assert_array_equal(actual.values, expected)
+
+
+def test_coordinate_transform_align_transposed() -> None:
+    # regression test: two Dataset objects sharing the same (equal)
+    # CoordinateTransformIndex but with a differently-transposed dim order
+    # for their coordinate variables used to raise a spurious "conflicting
+    # indexes" AlignmentError, because indexes are grouped for comparison by
+    # (coordinate name, dims order) before Index.equals() is ever called.
+    ds1 = create_coords(scale=2.0, shape=(2, 3)).to_dataset()
+    ds1["data"] = (("y", "x"), np.arange(6).reshape(2, 3))
+    ds2 = ds1.transpose("x", "y")
+
+    for join in ("exact", "outer", "inner"):
+        actual1, actual2 = xr.align(ds1, ds2, join=join)
+        assert actual1.dims == ds1.dims
+        assert actual2.dims == ds2.dims
+        assert_identical(actual1, ds1, check_default_indexes=False)
+        assert_identical(actual2, ds2, check_default_indexes=False)
+
+    # a genuinely different grid (different scale) must still be rejected, even
+    # when it also differs from `ds1` by dims order (exercising the cross-group
+    # comparison the fix above adds to `update_dicts`).
+    ds3 = create_coords(scale=4.0, shape=(2, 3)).to_dataset().transpose("x", "y")
+    with pytest.raises(
+        AlignmentError, match=r"cannot align objects.*conflicting indexes"
+    ):
+        xr.align(ds1, ds3, join="exact")
+
+    # same scale, same dims order as `ds1`: still correctly rejected through the
+    # pre-existing (same-group) "not equal" path.
+    ds4 = create_coords(scale=4.0, shape=(2, 3)).to_dataset()
+    with pytest.raises(AlignmentError, match=r"cannot align objects"):
+        xr.align(ds1, ds4, join="exact")
 
 
 def test_coordinate_transform_equals() -> None:
