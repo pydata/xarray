@@ -5504,6 +5504,38 @@ class TestDataset:
         assert expected_t.loc[actual_t.index].equals(actual_t)
         assert len(actual_t) == stored.sum()
 
+    @requires_sparse
+    def test_to_dataframe_sparse_disjoint_union(self) -> None:
+        # Regression test for a question raised in review of gh-11528: two
+        # sparse columns with zero overlapping stored positions, together
+        # covering every cell - the union of their stored coordinates is the
+        # full Cartesian product, so this exercises the case where indexing
+        # by that union saves no memory over just densifying, while still
+        # having to remain correct (not raise, not drop or misplace rows).
+        import sparse
+
+        dense_u = np.array([[1, 0, 2], [0, 3, 0]])
+        dense_v = np.array([[0, 4, 0], [5, 0, 6]])
+        assert not np.any((dense_u != 0) & (dense_v != 0))  # disjoint
+        assert np.all((dense_u != 0) | (dense_v != 0))  # covers every cell
+
+        ds = Dataset(
+            {
+                "u": (("x", "y"), sparse.COO.from_numpy(dense_u)),
+                "v": (("x", "y"), sparse.COO.from_numpy(dense_v)),
+            },
+            coords={"x": ["a", "b"], "y": ["p", "q", "r"]},
+        )
+        ds_dense = Dataset(
+            {"u": (("x", "y"), dense_u), "v": (("x", "y"), dense_v)},
+            coords={"x": ["a", "b"], "y": ["p", "q", "r"]},
+        )
+
+        actual = ds.to_dataframe()
+        expected = ds_dense.to_dataframe()
+        assert len(actual) == dense_u.size
+        assert expected.loc[actual.index].equals(actual)
+
     def test_from_dataframe_categorical_dtype_index(self) -> None:
         cat = pd.CategoricalIndex(list("abcd"))
         df = pd.DataFrame({"f": [0, 1, 2, 3]}, index=cat)
