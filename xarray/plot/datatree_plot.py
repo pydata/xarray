@@ -23,20 +23,23 @@ if TYPE_CHECKING:
 
 F = TypeVar("F", bound=Callable)
 
+# TODO Eni
+# Added back _dtplot accessor for documentation specific to datatree
 
-def _update_doc_to_datatree(dataarray_plotfunc: Callable) -> Callable[[F], F]:
+
+def _update_doc_to_datatree(datatree_plotfunc: Callable) -> Callable[[F], F]:
     """
     Add a common docstring by reusing the DataArray one.
 
     Parameters
     ----------
-    dataarray_plotfunc : Callable
+    datatree_plotfunc : Callable
         Function that returns a finished plot primitive.
     """
 
     # Build on the original docstring
-    da_doc = dataarray_plotfunc.__doc__
-    if da_doc is None:
+    dt_doc = datatree_plotfunc.__doc__
+    if dt_doc is None:
         raise NotImplementedError("DataArray plot method requires a docstring")
 
     da_str = """
@@ -53,12 +56,12 @@ def _update_doc_to_datatree(dataarray_plotfunc: Callable) -> Callable[[F], F]:
  : DataTree
     """
     # TODO: improve this?
-    if da_str in da_doc:
-        dt_doc = da_doc.replace(da_str, dt_str).replace("darray", "dt")
-    else:
-        dt_doc = da_doc
+    # if dt_str in dt_doc:
+    #     dt_doc = dt_doc.replace(dt_str, dt_str).replace("darray", "dt")
+    # else:
+    #     dt_doc = dt_doc
 
-    @functools.wraps(dataarray_plotfunc)
+    @functools.wraps(datatree_plotfunc)
     def wrapper(datatree_plotfunc: F) -> F:
         datatree_plotfunc.__doc__ = dt_doc
         return datatree_plotfunc
