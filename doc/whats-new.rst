@@ -13,6 +13,10 @@ v2026.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added `PyArrowCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
+  to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
+  export to pyarrow, polars or duckdb.
+  By `Jules Chéron <https://github.com/jules-ch>`_.
 
 - The ``h5netcdf`` backend now reports compression and filter settings in the
   variable ``encoding`` consistently with the ``netCDF4`` backend (using
@@ -57,6 +61,11 @@ Bug Fixes
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs.
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
+- Fix :py:func:`~xarray.plot.utils.label_from_attrs` breaking LaTeX axis labels
+  when ``textwrap.wrap`` splits the string between adjacent ``$...$`` blocks,
+  producing invalid ``$$`` sequences that matplotlib cannot render
+  (:issue:`11452`).
+  By `Gen Richez <https://github.com/genrichez>`_.
 - Fixed :py:meth:`Dataset.stack` raising ``KeyError`` when a stacked dimension
   has a falsy but valid name such as ``""``, ``False`` or ``0`` (:issue:`9969`).
   By `JOhnsonKC201 <https://github.com/JOhnsonKC201>`_.
@@ -69,11 +78,32 @@ Bug Fixes
   for zarr writes. Existing zarr stores written with the old ``int8`` encoding
   are still read correctly. (:issue:`2937`, :pull:`11318`)
   By `Evan Lyall <https://github.com/elyall>`_.
+- No longer emit a ``SerializationWarning`` about a missing ``_FillValue`` when
+  encoding a CF coordinate variable (a 1D variable named after its dimension) to
+  an integer dtype. CF forbids missing values in coordinate variables, so a
+  ``_FillValue`` is not expected there (:issue:`10305`).
+  By `NoiceHax <https://github.com/NoiceHax>`_.
 - Raise an informative ``TypeError`` when a :py:class:`~xarray.Coordinates` object is
   passed as a coordinate value, e.g. ``ds.assign_coords({"x": coords})``, instead
   of silently creating a broken coordinate. Pass the object directly with
   ``ds.assign_coords(coords)`` (:issue:`10194`).
   By `NoiceHex <https://github.com/NoiceHax>`_.
+- Fixed two bugs affecting a :py:class:`~xarray.indexes.CoordinateTransformIndex`-backed
+  coordinate after ``.transpose()``: :py:meth:`~xarray.indexes.CoordinateTransformIndex.create_variables`
+  (used by, e.g., ``.copy()`` and ``.reindex_like()``-based alignment) discarded the
+  transposed dims order and silently reverted to the transform's original order; and
+  ``xr.align(..., join="exact")`` raised a spurious ``AlignmentError`` for two objects
+  sharing an equal multi-dimensional index whose associated coordinate variables
+  simply had a different dims order (:issue:`11530`).
+  By `Samuel Le Meur-Diebolt <https://github.com/sdiebolt>`_.
+- :py:meth:`DataArray.to_series` and :py:meth:`Dataset.to_dataframe` no longer
+  call ``.todense()`` on ``sparse.COO``-backed variables, which could raise
+  ``MemoryError`` for large, genuinely sparse arrays, or (for
+  ``Dataset.to_dataframe``) crash outright since ``sparse.COO`` refuses to
+  densify implicitly. ``to_series`` now returns only the array's stored
+  entries; ``to_dataframe`` indexes by the union of stored entries across all
+  sparse variables sharing the same dims (:issue:`4007`).
+  By `patnr <https://github.com/patnr>`_.
 
 
 Documentation
@@ -138,6 +168,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Treat a full ``MultiIndex`` key with tuple-valued levels as scalar selection,
+  so ``.sel`` no longer preserves a length-1 dimension for nested tuple keys
+  that identify a single row (:issue:`11341`).
 - :py:meth:`Dataset.drop_encoding` and :py:meth:`DataArray.drop_encoding` no
   longer copy the underlying data, avoiding excessive memory use on large
   datasets (:issue:`11390`, :pull:`11394`).

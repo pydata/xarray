@@ -635,10 +635,14 @@ class NonStringCoder(VariableCoder):
             dtype = np.dtype(encoding.pop("dtype"))
             if dtype != variable.dtype:
                 if np.issubdtype(dtype, np.integer):
+                    # CF coordinate variables are not allowed to have missing values, so
+                    # they do not need a _FillValue. For simplicity we don't warn with 1D dimension coordinates.
+                    # http://cfconventions.org/cf-conventions/cf-conventions.html#missing-data
                     if (
                         np.issubdtype(variable.dtype, np.floating)
                         and "_FillValue" not in variable.attrs
                         and "missing_value" not in variable.attrs
+                        and dims != (name,)
                     ):
                         warnings.warn(
                             f"saving variable {name} with floating "

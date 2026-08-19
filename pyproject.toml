@@ -47,6 +47,7 @@ io = [
   "cftime",
   "pooch",
 ]
+arrow = ["pyarrow"]
 etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
 viz = ["cartopy>=0.24", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
@@ -159,6 +160,7 @@ module = [
   "opt_einsum.*",
   "pint.*",
   "pooch.*",
+  "polars.*",
   "pyarrow.*",
   "pydap.*",
   "seaborn.*",
@@ -425,6 +427,7 @@ Celles = "Celles"
 slowy = "slowy"
 Commun = "Commun"
 Noice = "Noice"
+Hax = "Hax"
 
 # Tests
 Ome = "Ome"
