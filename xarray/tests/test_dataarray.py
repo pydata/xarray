@@ -3872,6 +3872,66 @@ class TestDataArray:
 
         np.testing.assert_equal(actual_coords, expected_coords)
 
+    @requires_sparse
+    def test_to_series_sparse(self) -> None:
+        import sparse
+
+        # A sparsity pattern where no dimension has every one of its labels
+        # represented in the stored entries, and the missing labels aren't
+        # all at the same (e.g. trailing) position - this is the case a
+        # naive positional mapping from `sparse.COO.coords` to per-dimension
+        # coordinate labels gets wrong.
+        dense = np.array(
+            [
+                [0, 0, 3, 0],
+                [0, 0, 0, 9],
+                [7, 0, 0, 0],
+            ]
+        )
+        da = DataArray(
+            sparse.COO.from_numpy(dense),
+            dims=["x", "y"],
+            coords={"x": list("abc"), "y": list("wxyz")},
+            name="foo",
+        )
+        actual = da.to_series()
+
+        dense_da = DataArray(
+            dense,
+            dims=["x", "y"],
+            coords={"x": list("abc"), "y": list("wxyz")},
+            name="foo",
+        )
+        expected = dense_da.to_series()
+        expected = expected[expected != 0]
+
+        assert_array_equal(actual.sort_index().index, expected.sort_index().index)
+        assert_array_equal(actual.sort_index().values, expected.sort_index().values)
+        assert actual.name == "foo"
+        # only the stored entries are present - the full Cartesian product
+        # (which to_series() never materializes for sparse data) is not
+        assert len(actual) == dense[dense != 0].size
+
+    @requires_sparse
+    def test_to_series_sparse_1d(self) -> None:
+        import sparse
+
+        dense = np.array([0, 0, 5, 0, 7])
+        da = DataArray(
+            sparse.COO.from_numpy(dense),
+            dims=["x"],
+            coords={"x": list("pqrst")},
+            name="foo",
+        )
+        actual = da.to_series()
+
+        # a single dim should give a plain Index, matching the dense/non
+        # -sparse behavior of to_series(), not a length-1-level MultiIndex
+        assert isinstance(actual.index, pd.Index)
+        assert not isinstance(actual.index, pd.MultiIndex)
+        assert_array_equal(actual.sort_index().index, ["r", "t"])
+        assert_array_equal(actual.sort_index().values, [5, 7])
+
     def test_nbytes_does_not_load_data(self) -> None:
         array = InaccessibleArray(np.zeros((3, 3), dtype="uint8"))
         da = xr.DataArray(array, dims=["x", "y"])

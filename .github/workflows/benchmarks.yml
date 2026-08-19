@@ -28,7 +28,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@d6abac32e3a0d16ca7161790b7c20e0167cfdae8 # v3.2.0
+        uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
         with:
           micromamba-version: "1.5.10-0"
           environment-file: ${{env.CONDA_ENV_FILE}}

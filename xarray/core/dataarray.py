@@ -36,7 +36,7 @@ from xarray.core.coordinates import (
     create_coords_with_default_indexes,
     validate_dataarray_coords,
 )
-from xarray.core.dataset import Dataset
+from xarray.core.dataset import Dataset, _sparse_coo_to_index
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
@@ -73,7 +73,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.structure import alignment
@@ -4147,6 +4147,12 @@ class DataArray(
         The Series is indexed by the Cartesian product of index coordinates
         (in the form of a :py:class:`pandas.MultiIndex`).
 
+        If the underlying data is a :py:class:`sparse.COO` array, the result
+        instead only contains that array's stored (non-fill-value) entries,
+        indexed by their coordinates - the full Cartesian product is never
+        materialized, which avoids a `.todense()` call that could raise
+        MemoryError for large, genuinely sparse data.
+
         Returns
         -------
         result : Series
@@ -4157,6 +4163,15 @@ class DataArray(
         DataArray.to_pandas
         DataArray.to_dataframe
         """
+        if isinstance(self.data, array_type("sparse")):
+            from sparse import COO
+
+            if isinstance(self.data, COO):
+                index = _sparse_coo_to_index(self.data, self.dims, self.get_index)
+                return pd.Series(self.data.data, index=index, name=self.name)
+            # TODO: other SparseArray subclasses, e.g. DOK, lack the
+            # .coords/.data attributes _sparse_coo_to_index relies on.
+
         index = self.coords.to_index()
         return pd.Series(self.values.reshape(-1), index=index, name=self.name)
 

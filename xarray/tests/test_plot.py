@@ -562,11 +562,11 @@ class TestPlot(PlotTestCase):
         # Check for 2d arrays
         x = np.logspace(-4, 3, 8)
         y = np.linspace(-5, 5, 11)
-        x, y = np.meshgrid(x, y)
+        x2d, _ = np.meshgrid(x, y)
         expected_interval_breaks = np.vstack([10 ** np.linspace(-4.5, 3.5, 9)] * 12)
-        x = _infer_interval_breaks(x, axis=1, scale="log")
-        x = _infer_interval_breaks(x, axis=0, scale="log")
-        np.testing.assert_allclose(x, expected_interval_breaks)
+        x2d = _infer_interval_breaks(x2d, axis=1, scale="log")
+        x2d = _infer_interval_breaks(x2d, axis=0, scale="log")
+        np.testing.assert_allclose(x2d, expected_interval_breaks)
 
     def test__infer_interval_breaks_logscale_invalid_coords(self) -> None:
         """
