@@ -158,6 +158,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Treat a full ``MultiIndex`` key with tuple-valued levels as scalar selection,
+  so ``.sel`` no longer preserves a length-1 dimension for nested tuple keys
+  that identify a single row (:issue:`11341`).
 - :py:meth:`Dataset.drop_encoding` and :py:meth:`DataArray.drop_encoding` no
   longer copy the underlying data, avoiding excessive memory use on large
   datasets (:issue:`11390`, :pull:`11394`).
