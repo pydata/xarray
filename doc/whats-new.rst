@@ -61,6 +61,11 @@ Bug Fixes
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs.
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
+- Fix :py:func:`~xarray.plot.utils.label_from_attrs` breaking LaTeX axis labels
+  when ``textwrap.wrap`` splits the string between adjacent ``$...$`` blocks,
+  producing invalid ``$$`` sequences that matplotlib cannot render
+  (:issue:`11452`).
+  By `Gen Richez <https://github.com/genrichez>`_.
 - Fixed :py:meth:`Dataset.stack` raising ``KeyError`` when a stacked dimension
   has a falsy but valid name such as ``""``, ``False`` or ``0`` (:issue:`9969`).
   By `JOhnsonKC201 <https://github.com/JOhnsonKC201>`_.
