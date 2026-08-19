@@ -1773,7 +1773,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
                 dim=dim,
                 axis=axis,
                 keep_attrs=keep_attrs,
-                keepdims=keepdims,
+                keepdims=False,
                 **kwargs,
             )
 
