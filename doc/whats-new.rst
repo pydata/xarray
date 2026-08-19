@@ -13,6 +13,10 @@ v2026.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added `PyArrowCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
+  to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
+  export to pyarrow, polars or duckdb.
+  By `Jules Chéron <https://github.com/jules-ch>`_.
 
 - The ``h5netcdf`` backend now reports compression and filter settings in the
   variable ``encoding`` consistently with the ``netCDF4`` backend (using
