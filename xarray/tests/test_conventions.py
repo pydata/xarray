@@ -23,6 +23,7 @@ from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 from xarray.tests import (
     assert_array_equal,
+    dask_array_type,
     requires_cftime,
     requires_dask,
     requires_netCDF4,
@@ -40,6 +41,26 @@ class TestBoolTypeArray:
         x = np.array([[1, 0, 1], [0, 1, 0]], dtype="i1")
         bx = coding.variables.BoolTypeArray(x)
         assert_array_equal(bx.transpose((1, 0)), x.transpose((1, 0)))
+
+
+class TestEncodeCfVariableCoders:
+    def test_empty_coders_is_identity(self) -> None:
+        var = Variable(["x"], np.array([True, False, True]), {"units": "test"})
+        result = conventions.encode_cf_variable(var, coders=[])
+        assert result.dtype == bool
+        assert_array_equal(result.values, var.values)
+
+    def test_custom_coders_excludes_boolean_coder(self) -> None:
+        var = Variable(["x"], np.array([True, False, True]))
+        result = conventions.encode_cf_variable(var, coders=conventions.ZARR_CODERS)
+        assert result.dtype == bool
+        assert "dtype" not in result.attrs
+
+    def test_default_coders_encodes_bool_to_int8(self) -> None:
+        var = Variable(["x"], np.array([True, False, True]))
+        result = conventions.encode_cf_variable(var)
+        assert result.dtype == np.int8
+        assert result.attrs.get("dtype") == "bool"
 
 
 class TestNativeEndiannessArray:
@@ -488,8 +509,6 @@ class TestDecodeCF:
 
     @requires_dask
     def test_decode_cf_with_dask(self) -> None:
-        import dask.array as da
-
         original = Dataset(
             {
                 "t": ("t", [0, 1, 2], {"units": "days since 2000-01-01"}),
@@ -501,7 +520,7 @@ class TestDecodeCF:
         ).chunk()
         decoded = conventions.decode_cf(original)
         assert all(
-            isinstance(var.data, da.Array)
+            isinstance(var.data, dask_array_type)
             for name, var in decoded.variables.items()
             if name not in decoded.xindexes
         )

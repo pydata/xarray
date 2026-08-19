@@ -30,3 +30,7 @@ policy:
   # these packages don't fail the CI, but will be printed in the report
   ignored_violations:
     - array-api-strict
+    # h5netcdf 1.8.0 introduced compatibility features with netcdf4 that we
+    # rely on, so we intentionally require a newer minimum than the policy
+    # https://github.com/pydata/xarray/issues/10657#issuecomment-3711095986
+    - h5netcdf

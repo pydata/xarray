@@ -1038,7 +1038,9 @@ class PandasMultiIndex(PandasIndex):
         # default index level names
         names = []
         for i, idx in enumerate(self.index.levels):
-            name = idx.name or f"{dim}_level_{i}"
+            # only unnamed levels get a synthetic name: ``""``, ``False`` and
+            # ``0`` are all valid (if unusual) level names
+            name = idx.name if idx.name is not None else f"{dim}_level_{i}"
             if name == dim:
                 raise ValueError(
                     f"conflicting multi-index level name {name!r} with dimension {dim!r}"
@@ -1520,15 +1522,23 @@ class CoordinateTransformIndex(Index):
         for name in self.transform.coord_names:
             # copy attributes, if any
             attrs: Mapping[Hashable, Any] | None
+            dims = self.transform.dims
 
             if variables is not None and name in variables:
                 var = variables[name]
                 attrs = var.attrs
+                # preserve a dims order that only differs from the transform's own
+                # by a transpose (e.g. set by a prior `Variable.transpose()` call),
+                # instead of silently reverting to the transform's original order.
+                # `CoordinateTransform.dims` is always `tuple[str, ...]`, so a
+                # `var.dims` matching it as a set is too.
+                if set(var.dims) == set(dims):
+                    dims = cast(tuple[str, ...], var.dims)
             else:
                 attrs = None
 
-            data = CoordinateTransformIndexingAdapter(self.transform, name)
-            new_variables[name] = Variable(self.transform.dims, data, attrs=attrs)
+            data = CoordinateTransformIndexingAdapter(self.transform, name, dims)
+            new_variables[name] = Variable(dims, data, attrs=attrs)
 
         return new_variables
 

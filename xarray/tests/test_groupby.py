@@ -39,18 +39,18 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     create_test_data,
+    dask_array_api,
     has_cftime,
     has_dask,
+    has_dask_array_expr,
     has_dask_ge_2024_08_1,
     has_flox,
-    has_pandas_ge_2_2,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
     requires_dask_ge_2024_08_1,
     requires_flox,
     requires_flox_0_9_12,
-    requires_pandas_ge_2_2,
     requires_scipy,
 )
 
@@ -153,15 +153,10 @@ def test_multi_index_groupby_sum() -> None:
         )
         assert_equal(expected, ds)
 
-    if not has_pandas_ge_2_2:
-        # the next line triggers a mysterious multiindex error on pandas 2.0
-        return
-
     actual = ds.stack(space=["x", "y"]).groupby("space").sum(...).unstack("space")
     assert_equal(expected, actual)
 
 
-@requires_pandas_ge_2_2
 def test_multi_index_propagation() -> None:
     # regression test for GH9648
     times = pd.date_range("2023-01-01", periods=4)
@@ -291,6 +286,9 @@ def test_da_groupby_empty() -> None:
 
 
 @requires_dask
+@pytest.mark.xfail_with_dask_array(
+    reason="flox groupby currently builds legacy dask arrays"
+)
 def test_dask_da_groupby_quantile() -> None:
     # Scalar quantile
     expected = xr.DataArray(
@@ -310,6 +308,7 @@ def test_dask_da_groupby_quantile() -> None:
 
 
 @requires_dask
+@requires_flox
 def test_dask_da_groupby_median() -> None:
     expected = xr.DataArray(data=[2, 5], coords={"x": [1, 2]}, dims="x")
     array = xr.DataArray(
@@ -320,7 +319,16 @@ def test_dask_da_groupby_median() -> None:
     assert_identical(expected, actual)
 
     with xr.set_options(use_flox=True):
-        actual = array.chunk(x=1).groupby("x").median()
+        grouped = array.chunk(x=1).groupby("x")
+        with mock.patch.object(
+            grouped, "_flox_reduce", wraps=grouped._flox_reduce
+        ) as mocked:
+            actual = grouped.median()
+    assert mocked.call_args is not None
+    assert mocked.call_args.kwargs["method"] == "blockwise"
+    assert_identical(expected, actual)
+
+    actual = array.chunk(x=1).groupby("x").median(method="blockwise")
     assert_identical(expected, actual)
 
     # will work blockwise with flox
@@ -329,6 +337,27 @@ def test_dask_da_groupby_median() -> None:
 
     # will work blockwise with flox
     actual = array.chunk(x=-1).groupby("x").median()
+    assert_identical(expected, actual)
+
+
+@requires_dask
+@requires_flox
+def test_dask_da_resample_median() -> None:
+    times = xr.date_range("2000-01-01", freq="6h", periods=10)
+    array = xr.DataArray(np.arange(10), coords={"time": times}, dims="time")
+
+    with xr.set_options(use_flox=False):
+        expected = array.chunk(time=1).resample(time="1D").median()
+
+    with xr.set_options(use_flox=True):
+        resampled = array.chunk(time=1).resample(time="1D")
+        with mock.patch.object(
+            resampled, "_flox_reduce", wraps=resampled._flox_reduce
+        ) as mocked:
+            actual = resampled.median()
+
+    assert mocked.call_args is not None
+    assert mocked.call_args.kwargs["method"] == "blockwise"
     assert_identical(expected, actual)
 
 
@@ -664,6 +693,8 @@ def test_groupby_repr_datetime(obj) -> None:
     ],
 )
 def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None:
+    if chunk and has_dask_array_expr:
+        pytest.xfail("flox groupby currently builds legacy dask arrays")
     if shuffle and chunk and not has_dask_ge_2024_08_1:
         pytest.skip()
     # GH2383
@@ -2643,6 +2674,9 @@ def test_groupby_scans(
     if use_dask and not has_dask:
         pytest.skip("requires dask")
 
+    if use_dask and use_flox and has_dask_array_expr:
+        pytest.xfail("flox groupby scans currently mix legacy dask arrays")
+
     if use_flox:
         if not has_flox:
             pytest.skip("requires flox")
@@ -2987,6 +3021,9 @@ def test_multiple_groupers_string(as_dataset) -> None:
 @pytest.mark.parametrize("shuffle", [True, False])
 @pytest.mark.parametrize("use_flox", [True, False])
 def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
+    if use_flox and has_dask_array_expr:
+        pytest.xfail("flox multiple-groupers currently mix legacy dask arrays")
+
     da = DataArray(
         np.array([1, 2, 3, 0, 2, np.nan]),
         dims="d",
@@ -3082,6 +3119,10 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
         assert is_chunked_array(gb.encoded.codes.data)
         assert not gb.encoded.group_indices
         if has_flox:
+            if has_dask_array_expr:
+                pytest.xfail(
+                    "flox lazy multiple-groupers currently mix legacy dask arrays"
+                )
             with raise_if_dask_computes(max_computes=1):
                 assert_identical(gb.count(), expected)
         else:
@@ -3167,6 +3208,9 @@ def test_groupby_preserve_dtype(reduction):
 @requires_dask
 @requires_flox_0_9_12
 @pytest.mark.parametrize("reduction", ["any", "all", "count"])
+@pytest.mark.xfail_with_dask_array(
+    reason="flox resample currently mixes legacy dask arrays"
+)
 def test_gappy_resample_reductions(reduction):
     # GH8090
     dates = (("1988-12-01", "1990-11-30"), ("2000-12-01", "2001-11-30"))
@@ -3215,11 +3259,11 @@ def test_groupby_transpose() -> None:
     ],
 )
 def test_lazy_grouping(grouper, expect_index):
-    import dask.array
+    da = dask_array_api
 
     data = DataArray(
         dims=("x", "y"),
-        data=dask.array.arange(20, chunks=3).reshape((4, 5)),
+        data=da.arange(20, chunks=3).reshape((4, 5)),
         name="zoo",
     )
     with raise_if_dask_computes():
@@ -3240,6 +3284,8 @@ def test_lazy_grouping(grouper, expect_index):
     assert_identical(eager, expected)
 
     if has_flox:
+        if has_dask_array_expr:
+            pytest.xfail("flox lazy grouping currently mixes legacy dask arrays")
         lazy = (
             xr.Dataset({"foo": data}, coords={"zoo": data}).groupby(zoo=grouper).count()
         )
@@ -3248,13 +3294,13 @@ def test_lazy_grouping(grouper, expect_index):
 
 @requires_dask
 def test_lazy_grouping_errors() -> None:
-    import dask.array
+    da = dask_array_api
 
     data = DataArray(
         dims=("x",),
-        data=dask.array.arange(20, chunks=3),
+        data=da.arange(20, chunks=3),
         name="foo",
-        coords={"y": ("x", dask.array.arange(20, chunks=3))},
+        coords={"y": ("x", da.arange(20, chunks=3))},
     )
 
     gb = data.groupby(y=UniqueGrouper(labels=np.arange(5, 10)))
@@ -3272,11 +3318,11 @@ def test_lazy_grouping_errors() -> None:
 
 @requires_dask
 def test_lazy_int_bins_error() -> None:
-    import dask.array
+    da = dask_array_api
 
     with pytest.raises(ValueError, match="Bin edges must be provided"):
         with raise_if_dask_computes():
-            _ = BinGrouper(bins=4).factorize(DataArray(dask.array.arange(3)))
+            _ = BinGrouper(bins=4).factorize(DataArray(da.arange(3)))
 
 
 def test_time_grouping_seasons_specified() -> None:
@@ -3361,11 +3407,11 @@ def test_groupby_multiple_bin_grouper_missing_groups() -> None:
 
 @requires_dask_ge_2024_08_1
 def test_shuffle_simple() -> None:
-    import dask
+    array_api = dask_array_api
 
     da = xr.DataArray(
         dims="x",
-        data=dask.array.from_array([1, 2, 3, 4, 5, 6], chunks=2),
+        data=array_api.from_array([1, 2, 3, 4, 5, 6], chunks=2),
         coords={"label": ("x", ["a", "b", "c", "a", "b", "c"])},
     )
     actual = da.groupby(label=UniqueGrouper()).shuffle_to_chunks()
@@ -3385,11 +3431,11 @@ def test_shuffle_simple() -> None:
     ],
 )
 def test_shuffle_by(chunks, expected_chunks):
-    import dask.array
+    array_api = dask_array_api
 
     da = xr.DataArray(
         dims="x",
-        data=dask.array.arange(10, chunks=chunks),
+        data=array_api.arange(10, chunks=chunks),
         coords={"x": [1, 2, 3, 1, 2, 3, 1, 2, 3, 0]},
         name="a",
     )
@@ -3398,6 +3444,10 @@ def test_shuffle_by(chunks, expected_chunks):
     for obj in [ds, da]:
         actual = obj.groupby(x=UniqueGrouper()).shuffle_to_chunks()
         assert_identical(actual, obj.sortby("x"))
+        if chunks == (1,) and has_dask_array_expr:
+            pytest.xfail(
+                "dask-array shuffle_to_chunks does not preserve group chunks yet"
+            )
         assert actual.chunksizes["x"] == expected_chunks
 
 

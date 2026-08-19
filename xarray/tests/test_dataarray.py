@@ -48,6 +48,8 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_api,
+    dask_array_type,
     has_dask,
     has_dask_ge_2025_1_0,
     has_pyarrow,
@@ -501,10 +503,13 @@ class TestDataArray:
     @requires_dask
     def test_constructor_dask_coords(self) -> None:
         # regression test for GH1684
-        import dask.array as da
-
-        coord = da.arange(8, chunks=(4,))
-        data = da.random.random((8, 8), chunks=(4, 4)) + 1
+        coord = DataArray(np.arange(8), dims="x").chunk({"x": 4}).data
+        data = (
+            DataArray(np.random.random((8, 8)), dims=["x", "y"])
+            .chunk({"x": 4, "y": 4})
+            .data
+            + 1
+        )
         actual = DataArray(data, coords={"x": coord, "y": coord}, dims=["x", "y"])
 
         ecoord = np.arange(8)
@@ -978,10 +983,8 @@ class TestDataArray:
         assert blocked.load().chunks is None
 
         # Check that kwargs are passed
-        import dask.array as da
-
         blocked = unblocked.chunk(name_prefix="testname_")
-        assert isinstance(blocked.data, da.Array)
+        assert isinstance(blocked.data, dask_array_type)
         assert "testname_" in blocked.data.name
 
         # test kwargs form of chunks
@@ -3882,6 +3885,66 @@ class TestDataArray:
 
         np.testing.assert_equal(actual_coords, expected_coords)
 
+    @requires_sparse
+    def test_to_series_sparse(self) -> None:
+        import sparse
+
+        # A sparsity pattern where no dimension has every one of its labels
+        # represented in the stored entries, and the missing labels aren't
+        # all at the same (e.g. trailing) position - this is the case a
+        # naive positional mapping from `sparse.COO.coords` to per-dimension
+        # coordinate labels gets wrong.
+        dense = np.array(
+            [
+                [0, 0, 3, 0],
+                [0, 0, 0, 9],
+                [7, 0, 0, 0],
+            ]
+        )
+        da = DataArray(
+            sparse.COO.from_numpy(dense),
+            dims=["x", "y"],
+            coords={"x": list("abc"), "y": list("wxyz")},
+            name="foo",
+        )
+        actual = da.to_series()
+
+        dense_da = DataArray(
+            dense,
+            dims=["x", "y"],
+            coords={"x": list("abc"), "y": list("wxyz")},
+            name="foo",
+        )
+        expected = dense_da.to_series()
+        expected = expected[expected != 0]
+
+        assert_array_equal(actual.sort_index().index, expected.sort_index().index)
+        assert_array_equal(actual.sort_index().values, expected.sort_index().values)
+        assert actual.name == "foo"
+        # only the stored entries are present - the full Cartesian product
+        # (which to_series() never materializes for sparse data) is not
+        assert len(actual) == dense[dense != 0].size
+
+    @requires_sparse
+    def test_to_series_sparse_1d(self) -> None:
+        import sparse
+
+        dense = np.array([0, 0, 5, 0, 7])
+        da = DataArray(
+            sparse.COO.from_numpy(dense),
+            dims=["x"],
+            coords={"x": list("pqrst")},
+            name="foo",
+        )
+        actual = da.to_series()
+
+        # a single dim should give a plain Index, matching the dense/non
+        # -sparse behavior of to_series(), not a length-1-level MultiIndex
+        assert isinstance(actual.index, pd.Index)
+        assert not isinstance(actual.index, pd.MultiIndex)
+        assert_array_equal(actual.sort_index().index, ["r", "t"])
+        assert_array_equal(actual.sort_index().values, [5, 7])
+
     def test_nbytes_does_not_load_data(self) -> None:
         array = InaccessibleArray(np.zeros((3, 3), dtype="uint8"))
         da = xr.DataArray(array, dims=["x", "y"])
@@ -4837,8 +4900,7 @@ class TestDataArray:
         dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
         if backend == "dask":
-            import dask.array as da
-
+            da = dask_array_api
             aa = aa.copy(data=da.from_array(a, chunks=3))
             bb = bb.copy(data=da.from_array(b, chunks=3))
             cc = cc.copy(data=da.from_array(c, chunks=7))

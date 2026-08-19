@@ -2187,7 +2187,7 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
 
     @property
     def shape(self) -> tuple[int, ...]:
-        return tuple(self._transform.dim_size.values())
+        return tuple(self._transform.dim_size[dim] for dim in self._dims)
 
     @property
     def _in_memory(self) -> bool:
