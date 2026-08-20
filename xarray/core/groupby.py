@@ -31,10 +31,7 @@ from xarray.core.common import (
 from xarray.core.coordinates import Coordinates, coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
-from xarray.core.indexes import (
-    PandasMultiIndex,
-    filter_indexes_from_coords,
-)
+from xarray.core.indexes import PandasMultiIndex, filter_indexes_from_coords
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,
@@ -1765,6 +1762,16 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
+
+        if "keepdims" in kwargs:
+            warnings.warn(
+                "Reductions are applied along the rolling dimension. "
+                "Passing the 'keepdims' kwarg to reduction is not "
+                "supported and will be ignored.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            del kwargs["keepdims"]
 
         def reduce_array(ar: DataArray) -> DataArray:
             return ar.reduce(

@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
-from typing import Literal, cast
+from typing import Callable, Literal, cast
 from unittest import mock
 
 import numpy as np
@@ -14,11 +14,7 @@ from packaging.version import Version
 import xarray as xr
 from xarray import DataArray, Dataset, Variable, date_range
 from xarray.core.groupby import _consolidate_slices
-from xarray.core.types import (
-    InterpOptions,
-    PDDatetimeUnitOptions,
-    ResampleCompatible,
-)
+from xarray.core.types import InterpOptions, PDDatetimeUnitOptions, ResampleCompatible
 from xarray.core.utils import module_available
 from xarray.groupers import (
     BinGrouper,
@@ -1909,6 +1905,22 @@ class TestDataArrayGroupBy:
         with xr.set_options(use_flox=use_flox):
             assert_identical(fwd.sum(), array)
             assert_identical(rev.sum(), array_rev)
+
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_groupby_ignores_keepdims(self, use_flox: bool, func) -> None:
+        times = pd.date_range("2000-01-01", "2001-01-01", freq="MS")
+        vals = np.random.rand(len(times))
+        da = DataArray(vals, coords={"time": times}, dims="time")
+
+        with (
+            pytest.warns(
+                FutureWarning,
+                match="Reductions are applied along the rolling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+            ),
+            xr.set_options(use_flox=use_flox),
+        ):
+            getattr(da.groupby("time.month"), func)(keepdims=True)
 
 
 class TestDataArrayResample:
