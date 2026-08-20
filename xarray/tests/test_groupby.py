@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
-from typing import Callable, Literal, cast
+from typing import Literal, cast
 from unittest import mock
 
 import numpy as np
@@ -2380,6 +2380,22 @@ class TestDataArrayResample:
         expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_resample_ignores_keepdims(self, use_flox: bool, func) -> None:
+        times = pd.date_range("2000-01-01", "2001-01-01", freq="MS")
+        vals = np.random.rand(len(times))
+        da = DataArray(vals, coords={"time": times}, dims="time")
+
+        with (
+            pytest.warns(
+                FutureWarning,
+                match="Reductions are applied along the rolling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+            ),
+            xr.set_options(use_flox=use_flox),
+        ):
+            getattr(da.resample(time="MS"), func)(keepdims=True)
+
 
 class TestDatasetResample:
     @pytest.mark.parametrize(
@@ -2598,7 +2614,7 @@ class TestDatasetResample:
     def test_resample_ignores_keepdims(self, use_flox: bool, func) -> None:
         times = pd.date_range("2000-01-01", "2001-01-01", freq="MS")
         vals = np.random.rand(len(times))
-        da = DataArray(vals, coords={"time": times}, dims="time")
+        ds = Dataset({"foo": ("time", vals), "time": times})
 
         with (
             pytest.warns(
@@ -2607,7 +2623,7 @@ class TestDatasetResample:
             ),
             xr.set_options(use_flox=use_flox),
         ):
-            getattr(da.resample(time="MS"), func)(keepdims=True)
+            getattr(ds.resample(time="MS"), func)(keepdims=True)
 
 
 @pytest.mark.parametrize("use_lazy_group_idx", [True, False])

@@ -1938,6 +1938,16 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
+        if "keepdims" in kwargs:
+            warnings.warn(
+                "Reductions are applied along the rolling dimension. "
+                "Passing the 'keepdims' kwarg to reduction is not "
+                "supported and will be ignored.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            del kwargs["keepdims"]
+
         def reduce_dataset(ds: Dataset) -> Dataset:
             return ds.reduce(
                 func=func,
