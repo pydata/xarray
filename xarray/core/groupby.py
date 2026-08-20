@@ -31,7 +31,10 @@ from xarray.core.common import (
 from xarray.core.coordinates import Coordinates, coordinates_from_variable
 from xarray.core.duck_array_ops import where
 from xarray.core.formatting import format_array_flat
-from xarray.core.indexes import PandasMultiIndex, filter_indexes_from_coords
+from xarray.core.indexes import (
+    PandasMultiIndex,
+    filter_indexes_from_coords,
+)
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import (
     Dims,
