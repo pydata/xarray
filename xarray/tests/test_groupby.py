@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import operator
 import warnings
-from typing import Callable, Literal, cast
+from typing import Literal, cast
 from unittest import mock
 
 import numpy as np
