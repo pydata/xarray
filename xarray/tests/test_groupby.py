@@ -1920,7 +1920,7 @@ class TestDataArrayGroupBy:
         with (
             pytest.warns(
                 FutureWarning,
-                match="Reductions are applied along the rolling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+                match="Passing the 'keepdims' kwarg",
             ),
             xr.set_options(use_flox=use_flox),
         ):
