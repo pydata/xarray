@@ -936,6 +936,16 @@ class TestDatasetRolling:
         expected = getattr(getattr(ds.rolling(time=4), name)().rolling(x=3), name)()
         assert_allclose(actual, expected)
 
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    def test_rolling_keepdims_warns(self, func) -> None:
+        ds = Dataset({"da": ("x", np.arange(10))})
+        with pytest.warns(
+            FutureWarning,
+            match="Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+        ):
+            ds = ds.rolling(x=3)
+            getattr(ds, func)(keepdims=True)
+
 
 @requires_numbagg
 class TestDatasetRollingExp:
