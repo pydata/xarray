@@ -2593,6 +2593,22 @@ class TestDatasetResample:
         actual = ds.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_resample_ignores_keepdims(self, use_flox: bool, func) -> None:
+        times = pd.date_range("2000-01-01", "2001-01-01", freq="MS")
+        vals = np.random.rand(len(times))
+        da = DataArray(vals, coords={"time": times}, dims="time")
+
+        with (
+            pytest.warns(
+                FutureWarning,
+                match="Reductions are applied along the rolling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+            ),
+            xr.set_options(use_flox=use_flox),
+        ):
+            getattr(da.resample(time="MS"), func)(keepdims=True)
+
 
 @pytest.mark.parametrize("use_lazy_group_idx", [True, False])
 @pytest.mark.parametrize("use_dask", [True, False])
