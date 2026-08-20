@@ -493,8 +493,7 @@ class TestDataArrayRolling:
             FutureWarning,
             match="Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
         ):
-            da = da.rolling(x=3)
-            getattr(da, func)(keepdims=True)
+            getattr(da.rolling(x=3), func)(keepdims=True)
 
 
 @requires_numbagg
@@ -943,8 +942,7 @@ class TestDatasetRolling:
             FutureWarning,
             match="Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
         ):
-            ds = ds.rolling(x=3)
-            getattr(ds, func)(keepdims=True)
+            getattr(ds.rolling(x=3), func)(keepdims=True)
 
 
 @requires_numbagg
