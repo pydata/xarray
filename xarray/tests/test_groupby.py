@@ -2394,7 +2394,7 @@ class TestDataArrayResample:
         with (
             pytest.warns(
                 FutureWarning,
-                match="Reductions are applied along the rolling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+                match="Reductions are applied along the grouping or resampling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
             ),
             xr.set_options(use_flox=use_flox),
         ):
@@ -2623,7 +2623,7 @@ class TestDatasetResample:
         with (
             pytest.warns(
                 FutureWarning,
-                match="Reductions are applied along the rolling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+                match="Reductions are applied along the grouping or resampling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
             ),
             xr.set_options(use_flox=use_flox),
         ):

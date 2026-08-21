@@ -1768,7 +1768,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 
         if "keepdims" in kwargs:
             warnings.warn(
-                "Reductions are applied along the rolling dimension. "
+                "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
@@ -1943,7 +1943,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
         if "keepdims" in kwargs:
             warnings.warn(
-                "Reductions are applied along the rolling dimension. "
+                "Reductions are applied along the grouping or resampling dimension. "
                 "Passing the 'keepdims' kwarg to reduction is not "
                 "supported and will be ignored.",
                 FutureWarning,
