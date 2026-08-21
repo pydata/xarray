@@ -109,6 +109,14 @@ def _get_mtime(filename_or_obj):
     return mtime
 
 
+def _protect_dataarray_variables_inplace(dataarray: DataArray, cache: bool) -> None:
+    data: indexing.ExplicitlyIndexedNDArrayMixin
+    data = indexing.CopyOnWriteArray(dataarray._data)
+    if cache:
+        data = indexing.MemoryCachedArray(data)
+    dataarray.data = data
+
+
 def _protect_dataset_variables_inplace(dataset: Dataset, cache: bool) -> None:
     for name, variable in dataset.variables.items():
         if name not in dataset._indexes:
@@ -358,12 +366,7 @@ def _dataarray_from_backend_dataarray(
             f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
         )
 
-    # Protect data inplace
-    data: indexing.ExplicitlyIndexedNDArrayMixin
-    data = indexing.CopyOnWriteArray(backend_da._data)
-    if cache:
-        data = indexing.MemoryCachedArray(data)
-    backend_da.data = data
+    _protect_dataarray_variables_inplace(backend_da, cache)
 
     if create_default_indexes:
         da = _maybe_create_default_indexes(backend_da)
