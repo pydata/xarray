@@ -213,7 +213,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     try:
         result_type = dtypes.result_type(*original_coords)
-    except (TypeError, ValueError):
+    except ValueError:
         pass
     else:
         if result_type.kind in "SU":
