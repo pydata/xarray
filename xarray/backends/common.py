@@ -775,6 +775,18 @@ class BackendEntrypoint:
             txt += f"\n  Learn more at {self.url}"
         return txt
 
+    def open_dataarray(
+        self,
+        filename_or_obj: T_PathFileOrDataStore,
+        *,
+        drop_variables: str | Iterable[str] | None = None,
+    ) -> Dataset:
+        """
+        Backend open_dataarray method used by Xarray in :py:func:`~xarray.open_dataarray`.
+        """
+
+        raise NotImplementedError()
+
     def open_dataset(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -782,7 +794,7 @@ class BackendEntrypoint:
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
         """
-        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
+        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset` and :py:func:`~xarray.open_dataarray` of open_dataarray si not implemented.
         """
 
         raise NotImplementedError()

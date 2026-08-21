@@ -220,6 +220,67 @@ def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
         return dt.load()
 
 
+def _chunk_da(
+    backend_da,
+    filename_or_obj,
+    engine,
+    chunks,
+    overwrite_encoded_chunks,
+    inline_array,
+    chunked_array_type,
+    from_array_kwargs,
+    name=None,
+    chunkmanager=None,
+    token=(None,),
+    name_prefix=None,
+    **extra_tokens,
+):
+
+    if chunkmanager is None:
+        chunkmanager = guess_chunkmanager(chunked_array_type)
+
+        # TODO refactor to move this dask-specific logic inside the DaskManager class
+        is_dask_chunkmanager = isinstance(chunkmanager, DaskManager) or any(
+            name == "dask" and manager is chunkmanager
+            for name, manager in list_chunkmanagers().items()
+        )
+        if is_dask_chunkmanager:
+            from dask.base import tokenize
+
+            mtime = _get_mtime(filename_or_obj)
+            token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+            name_prefix = "open_dataset-"
+        else:
+            # not used
+            token = (None,)
+            name_prefix = None
+
+    if backend_da._in_memory:
+        return backend_da
+    var_chunks = _get_chunk(
+        backend_da._data,
+        chunks,
+        chunkmanager,
+        preferred_chunks=backend_da.encoding.get("preferred_chunks", {}),
+        dims=backend_da.dims,
+    )
+    if name is None and hasattr(backend_da, "name"):
+        name = backend_da.name
+
+    return _maybe_chunk(
+        name,
+        backend_da,
+        var_chunks,
+        overwrite_encoded_chunks=overwrite_encoded_chunks,
+        name_prefix=name_prefix,
+        token=token,
+        inline_array=inline_array,
+        chunked_array_type=chunkmanager,
+        from_array_kwargs=from_array_kwargs.copy(),
+        just_use_token=True,
+    )
+
+
 def _chunk_ds(
     backend_ds,
     filename_or_obj,
@@ -251,28 +312,22 @@ def _chunk_ds(
 
     variables = {}
     for name, var in backend_ds.variables.items():
-        if var._in_memory:
-            variables[name] = var
-            continue
-        var_chunks = _get_chunk(
-            var._data,
-            chunks,
-            chunkmanager,
-            preferred_chunks=var.encoding.get("preferred_chunks", {}),
-            dims=var.dims,
-        )
-        variables[name] = _maybe_chunk(
-            name,
+        variables[name] = _chunk_da(
             var,
-            var_chunks,
-            overwrite_encoded_chunks=overwrite_encoded_chunks,
-            name_prefix=name_prefix,
+            filename_or_obj,
+            engine,
+            chunks,
+            overwrite_encoded_chunks,
+            inline_array,
+            chunked_array_type,
+            from_array_kwargs,
+            name=name,
+            chunkmanager=chunkmanager,
             token=token,
-            inline_array=inline_array,
-            chunked_array_type=chunkmanager,
-            from_array_kwargs=from_array_kwargs.copy(),
-            just_use_token=True,
+            name_prefix=name_prefix,
+            **extra_tokens,
         )
+
     return backend_ds._replace(variables)
 
 
@@ -283,6 +338,61 @@ def _maybe_create_default_indexes(ds):
         if coord.dims == (name,) and name not in ds.xindexes
     }
     return ds.assign_coords(Coordinates(to_index))
+
+
+def _dataarray_from_backend_dataarray(
+    backend_da,
+    filename_or_obj,
+    engine,
+    chunks,
+    cache,
+    overwrite_encoded_chunks,
+    inline_array,
+    chunked_array_type,
+    from_array_kwargs,
+    create_default_indexes,
+    **extra_tokens,
+):
+    if not isinstance(chunks, int | dict) and chunks not in {None, "auto"}:
+        raise ValueError(
+            f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
+        )
+
+    # Protect data inplace
+    data: indexing.ExplicitlyIndexedNDArrayMixin
+    data = indexing.CopyOnWriteArray(backend_da._data)
+    if cache:
+        data = indexing.MemoryCachedArray(data)
+    backend_da.data = data
+
+    if create_default_indexes:
+        da = _maybe_create_default_indexes(backend_da)
+    else:
+        da = backend_da
+
+    if chunks is not None:
+        da = _chunk_da(
+            da,
+            filename_or_obj,
+            engine,
+            chunks,
+            overwrite_encoded_chunks,
+            inline_array,
+            chunked_array_type,
+            from_array_kwargs,
+            **extra_tokens,
+        )
+
+    da.set_close(backend_da._close)
+
+    # Ensure source filename always stored in dataset object
+    if "source" not in da.encoding:
+        path = getattr(filename_or_obj, "path", filename_or_obj)
+
+        if isinstance(path, str | os.PathLike):
+            da.encoding["source"] = _normalize_path(path)
+
+    return da
 
 
 def _dataset_from_backend_dataset(
@@ -822,6 +932,58 @@ def open_dataarray(
     --------
     open_dataset
     """
+
+    try:
+        if cache is None:
+            cache = chunks is None
+
+        if backend_kwargs is not None:
+            kwargs.update(backend_kwargs)
+
+        if engine is None:
+            engine = plugins.guess_engine(filename_or_obj)
+
+        if from_array_kwargs is None:
+            from_array_kwargs = {}
+
+        backend = plugins.get_backend(engine)
+
+        decoders = _resolve_decoders_kwargs(
+            decode_cf,
+            open_backend_dataset_parameters=backend.open_dataset_parameters,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            decode_timedelta=decode_timedelta,
+            concat_characters=concat_characters,
+            use_cftime=use_cftime,
+            decode_coords=decode_coords,
+        )
+
+        overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+        backend_da = backend.open_dataarray(
+            filename_or_obj,
+            drop_variables=drop_variables,
+            **decoders,
+            **kwargs,
+        )
+        da = _dataarray_from_backend_dataarray(
+            backend_da,
+            filename_or_obj,
+            engine,
+            chunks,
+            cache,
+            overwrite_encoded_chunks,
+            inline_array,
+            chunked_array_type,
+            from_array_kwargs,
+            drop_variables=drop_variables,
+            create_default_indexes=create_default_indexes,
+            **decoders,
+            **kwargs,
+        )
+        return da
+    except NotImplementedError:
+        pass
 
     dataset = open_dataset(
         filename_or_obj,
