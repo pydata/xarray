@@ -27,26 +27,26 @@ class DataTreeCalled(ArgsCalled):
 
 
 class DummyBackendEntrypointDataset(BackendEntrypoint):
-    def open_dataset(filename_or_obj, *args, **kwargs):  # type: ignore[override]
+    def open_dataset(filename_or_obj, *args, **kwargs):
         raise DatasetCalled(*args, **kwargs)
 
 
 class DummyBackendEntrypointDatasetDataTree(BackendEntrypoint):
-    def open_dataset(filename_or_obj, *args, **kwargs):  # type: ignore[override]
+    def open_dataset(filename_or_obj, *args, **kwargs):
         raise DatasetCalled(*args, **kwargs)
 
-    def open_datatree(filename_or_obj, *args, **kwargs):  # type: ignore[override]
+    def open_datatree(filename_or_obj, *args, **kwargs):
         raise DataTreeCalled(*args, **kwargs)
 
 
 class DummyBackendEntrypointAll(BackendEntrypoint):
-    def open_dataarray(filename_or_obj, *args, **kwargs):  # type: ignore[override]
+    def open_dataarray(filename_or_obj, *args, **kwargs):
         raise DataArrayCalled(*args, **kwargs)
 
-    def open_dataset(filename_or_obj, *args, **kwargs):  # type: ignore[override]
+    def open_dataset(filename_or_obj, *args, **kwargs):
         raise DatasetCalled(*args, **kwargs)
 
-    def open_datatree(filename_or_obj, *args, **kwargs):  # type: ignore[override]
+    def open_datatree(filename_or_obj, *args, **kwargs):
         raise DataTreeCalled(*args, **kwargs)
 
 

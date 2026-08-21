@@ -39,6 +39,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
+    from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.types import NestedSequence
 
@@ -780,7 +781,7 @@ class BackendEntrypoint:
         filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
-    ) -> Dataset:
+    ) -> DataArray:
         """
         Backend open_dataarray method used by Xarray in :py:func:`~xarray.open_dataarray`.
         """
