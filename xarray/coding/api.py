@@ -79,6 +79,8 @@ def cf_coders(
     decode, encode
     decode_cf
     """
+    # TODO: default CF-style coders
+    pass
 
 
 def encode(
