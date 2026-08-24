@@ -176,6 +176,15 @@ class Rolling(Generic[T_Xarray]):
 
         def method(self, keep_attrs=None, **kwargs):
             keep_attrs = self._get_keep_attrs(keep_attrs)
+            if "keepdims" in kwargs:
+                warnings.warn(
+                    "Reductions are applied along the rolling dimension. "
+                    "Passing the 'keepdims' kwarg to reduction is not "
+                    "supported and will be ignored.",
+                    FutureWarning,
+                    stacklevel=3,
+                )
+                del kwargs["keepdims"]
 
             return self._array_reduce(
                 array_agg_func=array_agg_func,
