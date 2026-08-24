@@ -104,6 +104,9 @@ Bug Fixes
   entries; ``to_dataframe`` indexes by the union of stored entries across all
   sparse variables sharing the same dims (:issue:`4007`).
   By `patnr <https://github.com/patnr>`_.
+- Allow non-mapping arguments such as ``"auto"`` or an integer to
+  :py:meth:`DataTree.chunk`, matching :py:meth:`Dataset.chunk` (:issue:`11315`).
+  By `Sai Asish Y <https://github.com/SAY-5>`_.
 
 
 Documentation
@@ -215,6 +218,7 @@ Bug Fixes
   ``"dayofweek"``, and ``"week"``, respectively; now they return objects named
   ``"days_in_month"``, ``"weekday"``, and ``"weekofyear"`` (:pull:`11270`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~

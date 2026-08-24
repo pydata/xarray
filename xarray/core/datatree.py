@@ -4,6 +4,7 @@ import functools
 import io
 import itertools
 import textwrap
+import warnings
 from collections import ChainMap, defaultdict
 from collections.abc import (
     Callable,
@@ -60,6 +61,7 @@ from xarray.core.utils import (
     _default,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     maybe_wrap_array,
     parse_dims_as_set,
 )
@@ -2650,14 +2652,28 @@ class DataTree(
         xarray.unify_chunks
         dask.array.from_array
         """
-        # don't support deprecated ways of passing chunks
-        if not isinstance(chunks, Mapping):
-            raise TypeError(
-                f"invalid type for chunks: {type(chunks)}. Only mappings are supported."
+        if chunks is None and not chunks_kwargs:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+                stacklevel=2,
             )
-        combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            chunks = {}
 
         all_dims = self._get_all_dims()
+
+        combined_chunks: Mapping[Any, Any]
+        if not isinstance(chunks, Mapping) and chunks is not None:
+            if isinstance(chunks, tuple | list):
+                emit_user_level_warning(
+                    "Supplying chunks as dimension-order tuples is deprecated. "
+                    "It will raise an error in the future. Instead use a dict with dimensions as keys.",
+                    category=FutureWarning,
+                )
+            combined_chunks = dict.fromkeys(all_dims, chunks)
+        else:
+            combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         bad_dims = combined_chunks.keys() - all_dims
         if bad_dims:
