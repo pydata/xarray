@@ -662,9 +662,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self, name, variable: Variable, check_encoding=False, unlimited_dims=None
     ):
         _ensure_no_forward_slash_in_name(name)
-        attrs = {
-            k: _force_native_endianness_attr(v) for k, v in variable.attrs.items()
-        }
+        attrs = {k: _force_native_endianness_attr(v) for k, v in variable.attrs.items()}
         fill_value = attrs.pop("_FillValue", None)
         datatype: np.dtype | ncEnumType | h5EnumType
         datatype = _get_datatype(
