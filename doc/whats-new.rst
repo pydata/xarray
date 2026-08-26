@@ -105,6 +105,15 @@ Bug Fixes
   sparse variables sharing the same dims (:issue:`4007`).
   By `patnr <https://github.com/patnr>`_.
 
+- :py:meth:`DataArray.idxmax` / :py:meth:`DataArray.idxmin` and the
+  :py:class:`Dataset` equivalents no longer promote the dtype of the returned
+  label coordinate when no ``fill_value`` is needed. Previously, on floating-point
+  data with at least one fully-valid reduction slice, the integer coordinate
+  labels were silently cast to ``float64`` (e.g. ``idxmax(dim="y")`` returned
+  ``float64`` labels even when ``y`` was ``int64``). The coordinate dtype is now
+  preserved unless a slice is actually all-``NaN`` and gets filled
+  (:issue:`7527`).
+  By `Shurong Cao <https://github.com/CAOShurong>`_.
 
 Documentation
 ~~~~~~~~~~~~~

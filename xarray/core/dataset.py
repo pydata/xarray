@@ -9417,13 +9417,13 @@ class Dataset(
             int      int64 8B 4
             float    (y) int64 24B 4 0 2
         >>> ds.idxmin(dim="x")
-        <xarray.Dataset> Size: 52B
+        <xarray.Dataset> Size: 40B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
         Data variables:
             int      <U1 4B 'e'
-            float    (y) object 24B 'e' 'a' 'c'
+            float    (y) <U1 12B 'e' 'a' 'c'
         """
         return self.map(
             methodcaller(
@@ -9515,13 +9515,13 @@ class Dataset(
             int      int64 8B 1
             float    (y) int64 24B 0 2 2
         >>> ds.idxmax(dim="x")
-        <xarray.Dataset> Size: 52B
+        <xarray.Dataset> Size: 40B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
         Data variables:
             int      <U1 4B 'b'
-            float    (y) object 24B 'a' 'c' 'c'
+            float    (y) <U1 12B 'a' 'c' 'c'
         """
         return self.map(
             methodcaller(
