@@ -1024,9 +1024,7 @@ def _calc_idxminmax(
         # `allna.any()` would force an extra `compute()` and break dask's
         # compute-budget.  The dtype promotion is harmless there (the coord is
         # already wrapped in a delayed expression).
-        if is_chunked_array(allna.data):
-            res = res.where(~allna, fill_value)
-        elif allna.any():
+        if is_chunked_array(allna.data) or allna.any():
             res = res.where(~allna, fill_value)
 
     # Copy attributes from argmin/argmax, if any
