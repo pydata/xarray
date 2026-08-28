@@ -104,6 +104,11 @@ Bug Fixes
   entries; ``to_dataframe`` indexes by the union of stored entries across all
   sparse variables sharing the same dims (:issue:`4007`).
   By `patnr <https://github.com/patnr>`_.
+- ``get_chunked_array_type`` no longer raises ``TypeError`` when a ``Dataset`` holds
+  several chunked array types that one chunk manager recognizes. Arrays are now grouped
+  by the chunk manager that claims them rather than by their type, so the error is
+  raised only for a genuine mix of frameworks such as dask and cubed (:issue:`11539`).
+  By `Clay Dugo <https://github.com/claydugo>`_.
 
 
 Documentation
