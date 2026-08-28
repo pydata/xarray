@@ -69,7 +69,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Parcels-code/pixi-lock/create-and-cache@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
+      - uses: xarray-contrib/pixi-lock/create-and-cache@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         id: pixi-lock
         with:
           manifest-path: ${{ env.MANIFEST_PATH }}
@@ -113,7 +113,7 @@ jobs:
         run: |
           echo "log-file=output-${ENV}-log.jsonl" >> $GITHUB_OUTPUT;
       - name: Restore cached pixi lockfile
-        uses: Parcels-code/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
+        uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
           manifest-path: ${{ env.MANIFEST_PATH }}
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
@@ -197,7 +197,7 @@ jobs:
           persist-credentials: false
 
       - name: Restore cached pixi lockfile
-        uses: Parcels-code/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
+        uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
           manifest-path: ${{ env.MANIFEST_PATH }}
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
