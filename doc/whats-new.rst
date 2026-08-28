@@ -104,6 +104,12 @@ Bug Fixes
   entries; ``to_dataframe`` indexes by the union of stored entries across all
   sparse variables sharing the same dims (:issue:`4007`).
   By `patnr <https://github.com/patnr>`_.
+- :py:func:`align` now raises ``AlignmentError`` when one index would reorder a
+  dimension that another, already aligned, index shares. Previously an index
+  requiring no reindexing was skipped by the conflict check, so conflicting
+  indexes aligned silently and the mismatched index was used to combine the data
+  (:issue:`10714`).
+  By `Kayvan Zahiri <https://github.com/Kayvan-Zahiri>`_.
 
 
 Documentation

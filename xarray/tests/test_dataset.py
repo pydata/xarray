@@ -2729,6 +2729,23 @@ class TestDataset:
         with pytest.raises(AlignmentError, match=r".*conflicting re-indexers"):
             align(a, c)
 
+    def test_align_multiple_indexes_common_dim_no_reindex(self) -> None:
+        # An index that needs no reindexing produces no re-indexer, so it used to
+        # escape the conflict check entirely and a second index sharing its
+        # dimension could silently reorder it. See GH10714.
+        a = Dataset(coords={"x": [1, 2, 3], "xb": ("x", [4, 5, 6])}).set_xindex("xb")
+        # "x" is equal in both and needs no reindexing; only "xb" conflicts
+        b = Dataset(coords={"x": [1, 2, 3], "xb": ("x", [4, 6, 5])}).set_xindex("xb")
+
+        with pytest.raises(AlignmentError, match=r".*would reorder another index"):
+            align(a, b)
+
+        # reordering a dimension is still fine when nothing else pins it
+        d = Dataset(coords={"x": [3, 1, 2], "xb": ("x", [6, 4, 5])}).set_xindex("xb")
+        (a2, d2) = align(a, d)
+        assert_identical(a2, a, check_default_indexes=False)
+        assert_identical(d2, a, check_default_indexes=False)
+
     def test_align_conflicting_indexes(self) -> None:
         class CustomIndex(PandasIndex): ...
 

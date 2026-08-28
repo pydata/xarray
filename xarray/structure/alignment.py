@@ -561,6 +561,19 @@ class Aligner(Generic[T_Alignable]):
         dim_pos_indexers: dict[Hashable, Any] = {}
         dim_index: dict[Hashable, Index] = {}
 
+        # An index that needs no reindexing is equal across all objects, so it pins
+        # its dimensions in place. It never produces an indexer of its own, which
+        # means the conflict check below would otherwise never see it and a second
+        # index sharing the same dimension could silently reorder it.
+        unchanged_dim_index: dict[Hashable, Index] = {}
+        for key in self.aligned_indexes:
+            obj_idx = matching_indexes.get(key)
+            if obj_idx is not None and not self.reindex[key]:
+                for dim in {
+                    d for var in self.aligned_index_vars[key].values() for d in var.dims
+                }:
+                    unchanged_dim_index.setdefault(dim, obj_idx)
+
         for key, aligned_idx in self.aligned_indexes.items():
             obj_idx = matching_indexes.get(key)
             if obj_idx is not None and self.reindex[key]:
@@ -572,6 +585,19 @@ class Aligner(Generic[T_Alignable]):
                             "it is explicitly excluded from alignment. This is likely caused by "
                             "wrong results returned by the `reindex_like` method of this index:\n"
                             f"{obj_idx!r}"
+                        )
+                    idxer_arr = np.asarray(idxer)
+                    reorders = not (
+                        idxer_arr.ndim == 1
+                        and np.array_equal(idxer_arr, np.arange(idxer_arr.size))
+                    )
+                    if dim in unchanged_dim_index and reorders:
+                        raise AlignmentError(
+                            f"cannot reindex or align along dimension {dim!r} because "
+                            "it would reorder another index that is already aligned along "
+                            "that dimension\n"
+                            f"first index: {obj_idx!r}\n"
+                            f"second index: {unchanged_dim_index[dim]!r}\n"
                         )
                     if dim in dim_pos_indexers and not np.array_equal(
                         idxer, dim_pos_indexers[dim]
