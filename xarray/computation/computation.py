@@ -1015,8 +1015,10 @@ def _calc_idxminmax(
     res = index._replace(coord[(index.variable,)]).rename(dim)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
-        # Put the NaN values back in after removing them
-        res = res.where(~allna, fill_value)
+        # Put the NaN values back in after removing them.
+        # We attempt to preserve dtype where we can.
+        if is_chunked_array(allna.data) or allna.any():
+            res = res.where(~allna, fill_value)
 
     # Copy attributes from argmin/argmax, if any
     res.attrs = index.attrs

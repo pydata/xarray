@@ -7972,3 +7972,33 @@ class TestArrowPyCapsule:
         np.testing.assert_array_equal(
             table["data"].to_pylist(), np.arange(6, dtype=float)
         )
+
+
+class TestIdxminmaxCoordDtype:
+    def test_idxmax_preserves_coord_dtype(self) -> None:
+        # Regression test for GH#7527: idxmax/idxmin should not promote the
+        # coordinate dtype of the returned labels when no fill value is needed.
+        array = xr.DataArray(
+            [
+                [2.0, 1.0, 2.0, 0.0, -2.0],
+                [-4.0, np.nan, 2.0, np.nan, -2.0],
+                [np.nan, np.nan, 1.0, np.nan, np.nan],
+            ],
+            dims=["y", "x"],
+            coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
+        )
+        # No fully-masked slices, so the integer coordinate dtype is kept.
+        # The result is named after the reduced dimension and carries its
+        # (integer) label dtype.
+        assert array.idxmax(dim="y").dtype == np.int64
+        assert array.idxmin(dim="y").dtype == np.int64
+        # x is already a float64 coordinate, so reducing over it stays float64
+        assert array.idxmin(dim="x").dtype == np.float64
+        # Targeted fill only happens for the all-NaN slices, and the result is
+        # still float there (fill_value default is NaN).
+        allna = xr.DataArray(
+            [np.nan, np.nan],
+            dims=["x"],
+            coords={"x": np.array([1, 2], dtype=np.int64)},
+        )
+        assert allna.idxmax().dtype == np.float64
