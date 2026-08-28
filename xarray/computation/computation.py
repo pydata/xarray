@@ -1015,15 +1015,8 @@ def _calc_idxminmax(
     res = index._replace(coord[(index.variable,)]).rename(dim)
 
     if skipna or (skipna is None and array.dtype.kind in na_dtypes):
-        # Put the NaN values back in after removing them.  For non-chunked
-        # inputs we only call `where` when a slice is actually all-NaN:
-        # calling `where` unconditionally (even for fully-valid slices) silently
-        # promoted the integer coordinate dtype of the returned labels to the
-        # float dtype of the default fill value, see GH#7527.  For chunked
-        # (dask) inputs we keep the original unconditional `where`, because
-        # `allna.any()` would force an extra `compute()` and break dask's
-        # compute-budget.  The dtype promotion is harmless there (the coord is
-        # already wrapped in a delayed expression).
+        # Put the NaN values back in after removing them. 
+        # We attempt to preserve dtype where we can.
         if is_chunked_array(allna.data) or allna.any():
             res = res.where(~allna, fill_value)
 
