@@ -308,6 +308,7 @@ def test_dask_da_groupby_quantile() -> None:
 
 
 @requires_dask
+@requires_flox
 def test_dask_da_groupby_median() -> None:
     expected = xr.DataArray(data=[2, 5], coords={"x": [1, 2]}, dims="x")
     array = xr.DataArray(
@@ -318,7 +319,16 @@ def test_dask_da_groupby_median() -> None:
     assert_identical(expected, actual)
 
     with xr.set_options(use_flox=True):
-        actual = array.chunk(x=1).groupby("x").median()
+        grouped = array.chunk(x=1).groupby("x")
+        with mock.patch.object(
+            grouped, "_flox_reduce", wraps=grouped._flox_reduce
+        ) as mocked:
+            actual = grouped.median()
+    assert mocked.call_args is not None
+    assert mocked.call_args.kwargs["method"] == "blockwise"
+    assert_identical(expected, actual)
+
+    actual = array.chunk(x=1).groupby("x").median(method="blockwise")
     assert_identical(expected, actual)
 
     # will work blockwise with flox
@@ -327,6 +337,27 @@ def test_dask_da_groupby_median() -> None:
 
     # will work blockwise with flox
     actual = array.chunk(x=-1).groupby("x").median()
+    assert_identical(expected, actual)
+
+
+@requires_dask
+@requires_flox
+def test_dask_da_resample_median() -> None:
+    times = xr.date_range("2000-01-01", freq="6h", periods=10)
+    array = xr.DataArray(np.arange(10), coords={"time": times}, dims="time")
+
+    with xr.set_options(use_flox=False):
+        expected = array.chunk(time=1).resample(time="1D").median()
+
+    with xr.set_options(use_flox=True):
+        resampled = array.chunk(time=1).resample(time="1D")
+        with mock.patch.object(
+            resampled, "_flox_reduce", wraps=resampled._flox_reduce
+        ) as mocked:
+            actual = resampled.median()
+
+    assert mocked.call_args is not None
+    assert mocked.call_args.kwargs["method"] == "blockwise"
     assert_identical(expected, actual)
 
 
@@ -1879,6 +1910,22 @@ class TestDataArrayGroupBy:
             assert_identical(fwd.sum(), array)
             assert_identical(rev.sum(), array_rev)
 
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_groupby_ignores_keepdims(self, use_flox: bool, func) -> None:
+        times = pd.date_range("2000-01-01", "2001-01-01", freq="MS")
+        vals = np.random.rand(len(times))
+        da = DataArray(vals, coords={"time": times}, dims="time")
+
+        with (
+            pytest.warns(
+                FutureWarning,
+                match="Passing the 'keepdims' kwarg",
+            ),
+            xr.set_options(use_flox=use_flox),
+        ):
+            getattr(da.groupby("time.month"), func)(keepdims=True)
+
 
 class TestDataArrayResample:
     @pytest.mark.parametrize("shuffle", [True, False])
@@ -2337,6 +2384,22 @@ class TestDataArrayResample:
         expected = DataArray(array.to_series().resample("24h", origin=origin).mean())
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_resample_ignores_keepdims(self, use_flox: bool, func) -> None:
+        times = pd.date_range("2000-01-01", "2001-01-01", freq="MS")
+        vals = np.random.rand(len(times))
+        da = DataArray(vals, coords={"time": times}, dims="time")
+
+        with (
+            pytest.warns(
+                FutureWarning,
+                match="Reductions are applied along the grouping or resampling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+            ),
+            xr.set_options(use_flox=use_flox),
+        ):
+            getattr(da.resample(time="MS"), func)(keepdims=True)
+
 
 class TestDatasetResample:
     @pytest.mark.parametrize(
@@ -2549,6 +2612,22 @@ class TestDatasetResample:
         expected = xr.Dataset({"foo": ("time", [3.0, 3.0, 3.0]), "time": times})
         actual = ds.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    @pytest.mark.parametrize("use_flox", [True, False])
+    def test_resample_ignores_keepdims(self, use_flox: bool, func) -> None:
+        times = pd.date_range("2000-01-01", "2001-01-01", freq="MS")
+        vals = np.random.rand(len(times))
+        ds = Dataset({"foo": ("time", vals), "time": times})
+
+        with (
+            pytest.warns(
+                FutureWarning,
+                match="Reductions are applied along the grouping or resampling dimension. Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+            ),
+            xr.set_options(use_flox=use_flox),
+        ):
+            getattr(ds.resample(time="MS"), func)(keepdims=True)
 
 
 @pytest.mark.parametrize("use_lazy_group_idx", [True, False])

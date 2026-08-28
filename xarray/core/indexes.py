@@ -1368,10 +1368,15 @@ class PandasMultiIndex(PandasIndex):
                 indexer = _query_slice(self.index, label, coord_name)
 
             elif isinstance(label, tuple):
-                if _is_nested_tuple(label):
+                if len(label) == self.index.nlevels:
+                    try:
+                        indexer = self.index.get_loc(label)
+                    except (KeyError, TypeError, pd.errors.InvalidIndexError):
+                        if not _is_nested_tuple(label):
+                            raise
+                        indexer = self.index.get_locs(label)
+                elif _is_nested_tuple(label):
                     indexer = self.index.get_locs(label)
-                elif len(label) == self.index.nlevels:
-                    indexer = self.index.get_loc(label)
                 else:
                     levels = [self.index.names[i] for i in range(len(label))]
                     indexer, new_index = self.index.get_loc_level(label, level=levels)
@@ -1517,15 +1522,23 @@ class CoordinateTransformIndex(Index):
         for name in self.transform.coord_names:
             # copy attributes, if any
             attrs: Mapping[Hashable, Any] | None
+            dims = self.transform.dims
 
             if variables is not None and name in variables:
                 var = variables[name]
                 attrs = var.attrs
+                # preserve a dims order that only differs from the transform's own
+                # by a transpose (e.g. set by a prior `Variable.transpose()` call),
+                # instead of silently reverting to the transform's original order.
+                # `CoordinateTransform.dims` is always `tuple[str, ...]`, so a
+                # `var.dims` matching it as a set is too.
+                if set(var.dims) == set(dims):
+                    dims = cast(tuple[str, ...], var.dims)
             else:
                 attrs = None
 
-            data = CoordinateTransformIndexingAdapter(self.transform, name)
-            new_variables[name] = Variable(self.transform.dims, data, attrs=attrs)
+            data = CoordinateTransformIndexingAdapter(self.transform, name, dims)
+            new_variables[name] = Variable(dims, data, attrs=attrs)
 
         return new_variables
 

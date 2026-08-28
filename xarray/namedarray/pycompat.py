@@ -144,7 +144,7 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
     elif is_duck_array(data):
         return data
     else:
-        return np.asarray(data)  # type: ignore[return-value]
+        return np.asarray(data)  # type: ignore[return-value, unused-ignore]
 
 
 async def async_to_duck_array(

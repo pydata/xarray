@@ -47,6 +47,7 @@ io = [
   "cftime",
   "pooch",
 ]
+arrow = ["pyarrow"]
 etc = ["sparse>=0.15"]
 parallel = ["dask[complete]"]
 viz = ["cartopy>=0.24", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
@@ -103,12 +104,12 @@ dask = "xarray.namedarray.daskmanager:DaskManager"
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=77.0.3", "setuptools-scm>=8"]
+requires = ["setuptools>=80", "setuptools-scm>=10", "vcs_versioning"]
 
 [tool.setuptools.packages.find]
 include = ["xarray*"]
 
-[tool.setuptools_scm]
+[tool.vcs-versioning]
 fallback_version = "9999"
 
 [tool.coverage.run]
@@ -159,6 +160,7 @@ module = [
   "opt_einsum.*",
   "pint.*",
   "pooch.*",
+  "polars.*",
   "pyarrow.*",
   "pydap.*",
   "seaborn.*",
@@ -424,6 +426,8 @@ Claus = "Claus"
 Celles = "Celles"
 slowy = "slowy"
 Commun = "Commun"
+Noice = "Noice"
+Hax = "Hax"
 
 # Tests
 Ome = "Ome"
