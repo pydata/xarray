@@ -294,6 +294,10 @@ class ZarrArrayWrapper(BackendArray):
         value = indexing.explicit_indexing_adapter(
             key, array.shape, indexing.IndexingSupport.VECTORIZED, method
         )
+
+        # if self.ndim == 0:
+        # could possibly have a work-around for 0d data here
+
         return self._preserve_string_dtype(value)
 
     async def async_getitem(self, key):
