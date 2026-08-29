@@ -9,14 +9,14 @@ import pytest
 
 import xarray as xr
 from xarray.coding.cftime_offsets import (
-    CFTIME_TICKS,
     Day,
+    Tick,
     to_offset,
 )
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.resample_cftime import CFTimeGrouper
 from xarray.core.types import PDDatetimeUnitOptions
-from xarray.tests import has_pandas_3
+from xarray.tests import has_pandas_3_1
 
 cftime = pytest.importorskip("cftime")
 
@@ -60,9 +60,11 @@ FREQS = [
 
 
 def has_tick_resample_freq(freqs):
-    resample_freq, _ = freqs
+    _, resample_freq = freqs
     resample_freq_as_offset = to_offset(resample_freq)
-    return isinstance(resample_freq_as_offset, CFTIME_TICKS)
+    # As of pandas 3.1, in the context of resampling a timezone-naive index,
+    # Day is treated like a Tick frequency (pandas-dev/pandas#64793).
+    return isinstance(resample_freq_as_offset, (Tick, Day))
 
 
 def has_non_tick_resample_freq(freqs):
@@ -137,6 +139,9 @@ def da(index) -> xr.DataArray:
 @pytest.mark.parametrize("offset", [None, "5s"], ids=lambda x: f"{x}")
 def test_resample_with_tick_resample_freq(freqs, closed, label, offset) -> None:
     initial_freq, resample_freq = freqs
+    resample_freq_as_offset = to_offset(resample_freq)
+    if isinstance(resample_freq_as_offset, Day) and not has_pandas_3_1:
+        pytest.skip("Only valid for pandas >= 3.1")
     start = "2000-01-01T12:07:01"
     origin = "start"
 
@@ -165,9 +170,6 @@ def test_resample_with_tick_resample_freq(freqs, closed, label, offset) -> None:
 @pytest.mark.parametrize("label", [None, "left", "right"])
 def test_resample_with_non_tick_resample_freq(freqs, closed, label) -> None:
     initial_freq, resample_freq = freqs
-    resample_freq_as_offset = to_offset(resample_freq)
-    if isinstance(resample_freq_as_offset, Day) and not has_pandas_3:
-        pytest.skip("Only valid for pandas >= 3.0")
     start = "2000-01-01T12:07:01"
 
     # Set offset and origin to their default values since they have no effect
