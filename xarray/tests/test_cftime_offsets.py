@@ -202,6 +202,18 @@ def test_to_offset_offset_input(offset):
 
 
 @pytest.mark.parametrize(
+    ("pandas_offset", "expected"),
+    [
+        (pd.offsets.Second(n=3), Second(n=3)),
+        (pd.offsets.MonthBegin(n=3), MonthBegin(n=3)),
+    ],
+    ids=_id_func,
+)
+def test_to_offset_pandas_offset_input(pandas_offset, expected):
+    assert to_offset(pandas_offset) == expected
+
+
+@pytest.mark.parametrize(
     ("freq", "expected"),
     [
         ("M", MonthEnd()),
