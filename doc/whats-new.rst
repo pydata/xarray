@@ -104,7 +104,14 @@ Bug Fixes
   entries; ``to_dataframe`` indexes by the union of stored entries across all
   sparse variables sharing the same dims (:issue:`4007`).
   By `patnr <https://github.com/patnr>`_.
+- Following `pandas-dev/pandas#64793`_, ensure that resampling an array to a
+  ``Day`` frequency along a :py:class:`xarray.CFTimeIndex` produces the same
+  results as resampling to an equivalent ``Hour`` frequency, including with the
+  use of ``origin`` and ``offset`` options (:pull:`11546`). This effectively
+  rolls back the resample-related changes introduced in :pull:`10650`. By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
+.. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
 Documentation
 ~~~~~~~~~~~~~
