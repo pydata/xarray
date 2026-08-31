@@ -20,6 +20,7 @@ from xarray.computation.apply_ufunc import (
     ordered_set_union,
     unified_dim_sizes,
 )
+from xarray.core.treenode import TreeIsomorphismError
 from xarray.core.utils import result_name
 from xarray.structure.alignment import broadcast
 from xarray.tests import (
@@ -122,6 +123,108 @@ def test_apply_identity() -> None:
     assert_identical(data_array, apply_identity(data_array.groupby("x")))
     assert_identical(dataset, apply_identity(dataset))
     assert_identical(dataset, apply_identity(dataset.groupby("x")))
+
+
+def test_apply_identity_datatree() -> None:
+    tree = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [1, 2])}, coords={"n": [10, 20]}),
+            "/child": xr.Dataset({"x": ("n", [3, 4])}),
+        },
+        name="tree",
+    )
+
+    actual = apply_ufunc(identity, tree)
+
+    assert_identical(tree, actual)
+
+
+def test_apply_datatree_with_core_dims_and_scalar() -> None:
+    tree = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [1, 2])}),
+            "/child": xr.Dataset({"x": ("n", [3, 4])}),
+        }
+    )
+    expected = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": 7}),
+            "/child": xr.Dataset({"x": 15}),
+        }
+    )
+
+    actual = apply_ufunc(
+        lambda values, factor, offset: values.sum(axis=-1) * factor + offset,
+        tree,
+        2,
+        input_core_dims=[["n"], []],
+        kwargs={"offset": 1},
+    )
+
+    assert_identical(expected, actual)
+
+
+def test_apply_non_isomorphic_datatrees() -> None:
+    left = xr.DataTree.from_dict({"/child": xr.Dataset({"x": 1})})
+    right = xr.DataTree.from_dict({"/other": xr.Dataset({"x": 2})})
+
+    with pytest.raises(
+        TreeIsomorphismError, match="children at root node do not match"
+    ):
+        apply_ufunc(operator.add, left, right)
+
+
+def test_apply_two_datatrees() -> None:
+    left = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [1, 2])}),
+            "/child": xr.Dataset({"x": ("n", [3, 4])}),
+        }
+    )
+    right = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [10, 20])}),
+            "/child": xr.Dataset({"x": ("n", [30, 40])}),
+        }
+    )
+    expected = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [11, 22])}),
+            "/child": xr.Dataset({"x": ("n", [33, 44])}),
+        }
+    )
+
+    actual = apply_ufunc(operator.add, left, right)
+
+    assert_identical(expected, actual)
+
+
+def test_apply_datatree_two_outputs() -> None:
+    tree = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [1, 2])}),
+            "/child": xr.Dataset({"x": ("n", [3, 4])}),
+        },
+        name="tree",
+    )
+
+    actual_min, actual_max = apply_ufunc(
+        lambda values: (values.min(axis=-1), values.max(axis=-1)),
+        tree,
+        input_core_dims=[["n"]],
+        output_core_dims=[[], []],
+    )
+
+    expected_min = xr.DataTree.from_dict(
+        {"/": xr.Dataset({"x": 1}), "/child": xr.Dataset({"x": 3})},
+        name="tree",
+    )
+    expected_max = xr.DataTree.from_dict(
+        {"/": xr.Dataset({"x": 2}), "/child": xr.Dataset({"x": 4})},
+        name="tree",
+    )
+    assert_identical(expected_min, actual_min)
+    assert_identical(expected_max, actual_max)
 
 
 def add(a, b):
