@@ -2045,6 +2045,22 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         xp = duck_array_ops.get_array_namespace(self.data)
 
         def _wrapper(npa, **kwargs):
+            if npa.size == 0:
+                # Every quantile here is undefined, which is the nan that
+                # mean, median and pandas already return. Neither backing
+                # function can supply it in the expected shape: nanquantile
+                # drops the leading q axis whenever the result is empty, and
+                # quantile raises outright. The empty axis need not be one of
+                # the reduced ones for that to happen.
+                reduced_axes = {axis % npa.ndim for axis in kwargs["axis"]}
+                kept_shape = tuple(
+                    size
+                    for axis, size in enumerate(npa.shape)
+                    if axis not in reduced_axes
+                )
+                return xp.full(
+                    kept_shape + (len(kwargs["q"]),), np.nan, dtype=np.float64
+                )
             # move quantile axis to end. required for apply_ufunc
             return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 

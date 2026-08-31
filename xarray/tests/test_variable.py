@@ -2011,6 +2011,36 @@ class TestVariable(VariableSubclassobjects):
         ):
             v.quantile(q, dim="x")
 
+    @pytest.mark.parametrize("skipna", [True, False, None])
+    @pytest.mark.parametrize("q", [0.5, [0.5], [0.25, 0.75]])
+    def test_quantile_empty_dim(self, q, skipna):
+        # An empty reduction is nan for mean, median and std, and pandas
+        # agrees for quantile. numpy does not: nanquantile drops the leading
+        # q axis and quantile raises.
+        v = Variable(["x"], np.array([], dtype=np.float64))
+
+        actual = v.quantile(q, dim="x", skipna=skipna)
+
+        assert actual.shape == (() if np.isscalar(q) else (len(q),))
+        assert np.isnan(actual.values).all()
+
+    @pytest.mark.parametrize("skipna", [True, False, None])
+    def test_quantile_empty_dim_is_not_the_reduced_one(self, skipna):
+        # Reducing over y, which has length 3. Only x is empty, and the
+        # result is empty because of it.
+        v = Variable(["x", "y"], np.zeros((0, 3), dtype=np.float64))
+
+        actual = v.quantile([0.25, 0.75], dim="y", skipna=skipna)
+
+        assert actual.dims == ("quantile", "x")
+        assert actual.shape == (2, 0)
+
+    def test_quantile_empty_dim_agrees_with_median(self):
+        v = Variable(["x"], np.array([], dtype=np.float64))
+
+        assert np.isnan(v.quantile(0.5, dim="x").values)
+        assert np.isnan(v.median("x").values)
+
     @requires_dask
     @requires_bottleneck
     def test_rank_dask(self):

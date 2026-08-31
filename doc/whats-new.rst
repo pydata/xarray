@@ -53,6 +53,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fixed :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and
+  :py:meth:`Variable.quantile` raising on an empty result, where
+  :py:meth:`~xarray.DataArray.mean`, :py:meth:`~xarray.DataArray.median` and
+  pandas all return ``NaN`` (:issue:`11549`).
+  By `Chirag Gupta <https://github.com/chiruu12>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
