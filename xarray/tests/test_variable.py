@@ -2054,6 +2054,20 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"(Q|q)uantiles must be in the range"):
             v.quantile(q, dim="x")
 
+    @pytest.mark.parametrize("dtype", ["Int64", "Float64"])
+    def test_quantile_empty_dim_with_an_extension_dtype(self, dtype):
+        # numpy cannot build an array from a pandas extension dtype, so the
+        # empty path must not try to and must still agree with the non-empty
+        # one about succeeding.
+        empty = Variable(["x"], pd.array([], dtype=dtype))
+        non_empty = Variable(["x"], pd.array([1, 3], dtype=dtype))
+
+        assert np.isnan(empty.quantile(0.5, dim="x").values)
+        assert non_empty.quantile(0.5, dim="x").values == 2.0
+
+        with pytest.raises(ValueError, match=r"(Q|q)uantiles must be in the range"):
+            empty.quantile(1.5, dim="x")
+
     def test_quantile_empty_dim_still_rejects_an_unknown_method(self):
         v = Variable(["x"], np.array([], dtype=np.float64))
 

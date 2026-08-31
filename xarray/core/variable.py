@@ -2057,7 +2057,15 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 # bad q, method or dtype is rejected with numpy's own message.
                 # Whether an argument is valid must not depend on how much
                 # data it was handed.
-                _quantile_func(np.zeros((1,) * npa.ndim, dtype=npa.dtype), **kwargs)
+                try:
+                    probe = np.zeros((1,) * npa.ndim, dtype=npa.dtype)
+                except TypeError:
+                    # A pandas extension dtype, which numpy cannot build an
+                    # array from. q and method do not depend on the dtype, so
+                    # check those and leave the dtype itself to the non-empty
+                    # path, which accepts these anyway.
+                    probe = np.zeros((1,) * npa.ndim)
+                _quantile_func(probe, **kwargs)
                 reduced_axes = {axis % npa.ndim for axis in kwargs["axis"]}
                 kept_shape = tuple(
                     size
