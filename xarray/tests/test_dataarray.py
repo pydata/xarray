@@ -3229,6 +3229,16 @@ class TestDataArray:
 
         assert actual.attrs == self.attrs
 
+    @pytest.mark.parametrize("q", [0.5, [0.25, 0.75]])
+    def test_quantile_empty_dim(self, q) -> None:
+        # nan, like mean and median, rather than the AxisError numpy raises.
+        da = DataArray(np.array([], dtype=np.float64), dims="x", coords={"x": []})
+
+        actual = da.quantile(q, dim="x")
+
+        assert np.isnan(actual.values).all()
+        assert np.isnan(da.median("x").values)
+
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_method(self, method) -> None:
         q = [0.25, 0.5, 0.75]

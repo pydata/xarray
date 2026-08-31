@@ -20,7 +20,7 @@ from xarray import (
     Variable,
     set_options,
 )
-from xarray.core import dtypes, duck_array_ops, indexing
+from xarray.core import dtypes, duck_array_ops, indexing, utils
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
@@ -2012,7 +2012,7 @@ class TestVariable(VariableSubclassobjects):
             v.quantile(q, dim="x")
 
     @pytest.mark.parametrize("skipna", [True, False, None])
-    @pytest.mark.parametrize("q", [0.5, [0.5], [0.25, 0.75]])
+    @pytest.mark.parametrize("q", [0.5, np.array(0.5), [0.5], [0.25, 0.75]])
     def test_quantile_empty_dim(self, q, skipna):
         # An empty reduction is nan for mean, median and std, and pandas
         # agrees for quantile. numpy does not: nanquantile drops the leading
@@ -2021,25 +2021,44 @@ class TestVariable(VariableSubclassobjects):
 
         actual = v.quantile(q, dim="x", skipna=skipna)
 
-        assert actual.shape == (() if np.isscalar(q) else (len(q),))
-        assert np.isnan(actual.values).all()
+        expected_shape = () if utils.is_scalar(q) else (len(q),)
+        assert actual.shape == expected_shape
+        np.testing.assert_equal(actual.values, np.full(expected_shape, np.nan))
 
     @pytest.mark.parametrize("skipna", [True, False, None])
-    def test_quantile_empty_dim_is_not_the_reduced_one(self, skipna):
-        # Reducing over y, which has length 3. Only x is empty, and the
-        # result is empty because of it.
+    def test_quantile_empty_dim_not_reduced(self, skipna):
+        # Reducing over y, which has length 3: only x is empty. The result is
+        # empty because of x, which is what makes nanquantile drop the q axis
+        # even though the reduced axis is not the empty one.
         v = Variable(["x", "y"], np.zeros((0, 3), dtype=np.float64))
 
         actual = v.quantile([0.25, 0.75], dim="y", skipna=skipna)
 
-        assert actual.dims == ("quantile", "x")
-        assert actual.shape == (2, 0)
+        expected = Variable(
+            ["quantile", "x"], np.empty((2, 0), dtype=np.float64), attrs=actual.attrs
+        )
+        assert_identical(actual, expected)
 
     def test_quantile_empty_dim_agrees_with_median(self):
         v = Variable(["x"], np.array([], dtype=np.float64))
 
         assert np.isnan(v.quantile(0.5, dim="x").values)
         assert np.isnan(v.median("x").values)
+
+    @pytest.mark.parametrize("q", [1.5, -0.5])
+    def test_quantile_empty_dim_still_rejects_an_out_of_range_q(self, q):
+        # An empty dimension says nothing about whether q is a quantile, so
+        # the same call must fail the same way it does with data.
+        v = Variable(["x"], np.array([], dtype=np.float64))
+
+        with pytest.raises(ValueError, match=r"(Q|q)uantiles must be in the range"):
+            v.quantile(q, dim="x")
+
+    def test_quantile_empty_dim_still_rejects_an_unknown_method(self):
+        v = Variable(["x"], np.array([], dtype=np.float64))
+
+        with pytest.raises(ValueError, match="not a valid method"):
+            v.quantile(0.5, dim="x", method="not-a-method")
 
     @requires_dask
     @requires_bottleneck

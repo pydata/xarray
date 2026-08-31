@@ -2052,6 +2052,12 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 # drops the leading q axis whenever the result is empty, and
                 # quantile raises outright. The empty axis need not be one of
                 # the reduced ones for that to happen.
+                #
+                # Run the same call over one element first, purely so that a
+                # bad q, method or dtype is rejected with numpy's own message.
+                # Whether an argument is valid must not depend on how much
+                # data it was handed.
+                _quantile_func(np.zeros((1,) * npa.ndim, dtype=npa.dtype), **kwargs)
                 reduced_axes = {axis % npa.ndim for axis in kwargs["axis"]}
                 kept_shape = tuple(
                     size
