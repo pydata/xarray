@@ -2062,8 +2062,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 except TypeError:
                     # A pandas extension dtype, which numpy cannot build an
                     # array from. q and method do not depend on the dtype, so
-                    # check those and leave the dtype itself to the non-empty
-                    # path, which accepts these anyway.
+                    # check those here and leave the dtype to the non-empty
+                    # path. An extension dtype that path rejects is therefore
+                    # still accepted when empty, as it already is for object
+                    # arrays.
                     probe = np.zeros((1,) * npa.ndim)
                 _quantile_func(probe, **kwargs)
                 reduced_axes = {axis % npa.ndim for axis in kwargs["axis"]}
@@ -2072,8 +2074,19 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                     for axis, size in enumerate(npa.shape)
                     if axis not in reduced_axes
                 )
+                # Datetimes and timedeltas keep their own dtype and their
+                # own NA, which is what the non-empty path, median and
+                # groupby over an empty bin all return. Handing back float64
+                # nan there would make concat of an empty and a non-empty
+                # result fail to promote.
+                if npa.dtype.kind in "mM":
+                    fill_value = np.array("NaT", dtype=npa.dtype)
+                    result_dtype = npa.dtype
+                else:
+                    fill_value = np.nan
+                    result_dtype = np.float64
                 return xp.full(
-                    kept_shape + (len(kwargs["q"]),), np.nan, dtype=np.float64
+                    kept_shape + (len(kwargs["q"]),), fill_value, dtype=result_dtype
                 )
             # move quantile axis to end. required for apply_ufunc
             return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)

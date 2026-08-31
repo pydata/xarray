@@ -2034,9 +2034,7 @@ class TestVariable(VariableSubclassobjects):
 
         actual = v.quantile([0.25, 0.75], dim="y", skipna=skipna)
 
-        expected = Variable(
-            ["quantile", "x"], np.empty((2, 0), dtype=np.float64), attrs=actual.attrs
-        )
+        expected = Variable(["quantile", "x"], np.empty((2, 0), dtype=np.float64))
         assert_identical(actual, expected)
 
     def test_quantile_empty_dim_agrees_with_median(self):
@@ -2067,6 +2065,18 @@ class TestVariable(VariableSubclassobjects):
 
         with pytest.raises(ValueError, match=r"(Q|q)uantiles must be in the range"):
             empty.quantile(1.5, dim="x")
+
+    @pytest.mark.parametrize("dtype", ["M8[ns]", "m8[ns]"])
+    def test_quantile_empty_dim_keeps_datetime_dtype(self, dtype):
+        # NaT, not a float64 nan: the non-empty path, median and groupby over
+        # an empty bin all keep the dtype, and concat of an empty and a
+        # non-empty result would not promote otherwise.
+        v = Variable(["x"], np.array([], dtype=dtype))
+
+        actual = v.quantile(0.5, dim="x")
+
+        assert actual.dtype == np.dtype(dtype)
+        assert np.isnat(actual.values)
 
     def test_quantile_empty_dim_still_rejects_an_unknown_method(self):
         v = Variable(["x"], np.array([], dtype=np.float64))
