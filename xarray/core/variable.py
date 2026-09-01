@@ -2080,7 +2080,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 # nan there would make concat of an empty and a non-empty
                 # result fail to promote.
                 if npa.dtype.kind in "mM":
-                    fill_value = np.array("NaT", dtype=npa.dtype)
+                    fill_value = npa.dtype.type("NaT")
                     result_dtype = npa.dtype
                 else:
                     fill_value = np.nan

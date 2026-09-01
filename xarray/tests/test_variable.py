@@ -2078,11 +2078,21 @@ class TestVariable(VariableSubclassobjects):
         assert actual.dtype == np.dtype(dtype)
         assert np.isnat(actual.values)
 
+    @requires_dask
+    @pytest.mark.parametrize("dtype", ["float64", "M8[ns]", "m8[ns]"])
+    def test_quantile_empty_dim_chunked(self, dtype):
+        v = Variable(["x"], np.array([], dtype=dtype)).chunk({"x": 1})
+
+        actual = v.quantile([0.25, 0.75], dim="x")
+
+        assert actual.dtype == np.dtype(dtype)
+        assert actual.shape == (2,)
+
     def test_quantile_empty_dim_still_rejects_an_unknown_method(self):
         v = Variable(["x"], np.array([], dtype=np.float64))
 
         with pytest.raises(ValueError, match="not a valid method"):
-            v.quantile(0.5, dim="x", method="not-a-method")
+            v.quantile(0.5, dim="x", method="not-a-method")  # type: ignore[arg-type]
 
     @requires_dask
     @requires_bottleneck
