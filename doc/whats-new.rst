@@ -110,6 +110,10 @@ Bug Fixes
   use of ``origin`` and ``offset`` options (:pull:`11546`). This effectively
   rolls back the resample-related changes introduced in :pull:`10650`. By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fixed :py:meth:`DataArray.coarsen()` and :py:meth:`Dataset.coarsen()` raising a
+  type error when applying reduction methods, due to the reduction methods being
+  dynamically generated (:issue:`8136`).
+  By `Andrew Scherer <https://github.com/andrew-s28>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
