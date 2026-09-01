@@ -2080,7 +2080,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 # nan there would make concat of an empty and a non-empty
                 # result fail to promote.
                 if npa.dtype.kind in "mM":
-                    fill_value = npa.dtype.type("NaT")
+                    # Indexed to a scalar, but built through an array so that
+                    # it keeps the unit. dtype.type("NaT") drops it, and a
+                    # unitless datetime64 is deprecated in numpy.
+                    fill_value = np.array("NaT", dtype=npa.dtype)[()]
                     result_dtype = npa.dtype
                 else:
                     fill_value = np.nan
