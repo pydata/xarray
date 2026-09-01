@@ -1162,6 +1162,7 @@ class Coarsen(Generic[T_Xarray]):
         )
         return f"{self.__class__.__name__} [{attrs}]"
 
+    @staticmethod
     def _reduce_method_impl(name: str, include_skipna: bool) -> Callable[..., T_Xarray]:
         """Creates methods that mirror the implementation in Rolling."""
 
