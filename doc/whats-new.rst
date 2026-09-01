@@ -278,10 +278,6 @@ Bug Fixes
   :py:meth:`~xarray.DataArray.median` and pandas, and datetime and timedelta
   data gives ``NaT`` (:issue:`11549`).
   By `Chirag Gupta <https://github.com/chiruu12>`_.
-- Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
-  which caused ``AsyncMock`` objects to leak through instead of real array data
-  (:pull:`11232`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs (:pull:`11449`).
