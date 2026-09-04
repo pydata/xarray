@@ -113,6 +113,10 @@ Bug Fixes
 - Fix regression where accessing an object-dtype index eagerly attempts to
   import cftime, slowing down operations.
   By `Peter Hron <https://github.com/peterhron>`_.
+- Fixed :py:meth:`DataArray.coarsen()` and :py:meth:`Dataset.coarsen()` raising a
+  type error when applying reduction methods, due to the reduction methods being
+  dynamically generated (:issue:`8136`).
+  By `Andrew Scherer <https://github.com/andrew-s28>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
