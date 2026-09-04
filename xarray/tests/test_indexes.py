@@ -9,7 +9,9 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.coding import cftimeindex
 from xarray.coding.cftimeindex import CFTimeIndex
+from xarray.core import indexes
 from xarray.core.indexes import (
     Hashable,
     Index,
@@ -736,6 +738,34 @@ def test_safe_cast_to_index_datetime_datetime():
     actual = safe_cast_to_index(np.array(dates))
     assert_array_equal(expected, actual)
     assert isinstance(actual, pd.Index)
+
+
+def test_safe_cast_to_index_does_not_import_missing_cftime(monkeypatch):
+    original_module_available = indexes.utils.module_available
+    original_attempt_import = cftimeindex.attempt_import
+
+    def mock_cftime_not_available(module: str, minversion: str | None = None) -> bool:
+        if module == "cftime":
+            return False
+        return original_module_available(module, minversion)
+
+    cftime_imports = 0
+
+    def cftime_import_counter(module: str):
+        nonlocal cftime_imports
+        if module == "cftime":
+            cftime_imports += 1
+        return original_attempt_import(module)
+
+    monkeypatch.setattr(indexes.utils, "module_available", mock_cftime_not_available)
+    monkeypatch.setattr(cftimeindex, "attempt_import", cftime_import_counter)
+
+    values = np.array(["a", "b", "c"], dtype=object)
+    for _ in range(3):
+        safe_cast_to_index(values)
+
+    # module_available returns False, so import should not be attempted
+    assert cftime_imports == 0
 
 
 @pytest.mark.parametrize("dtype", ["int32", "float32"])
