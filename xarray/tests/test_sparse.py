@@ -784,8 +784,8 @@ class TestSparseDataArrayAndDataset:
     def test_coarsen(self):
         a1 = self.ds_xr
         a2 = self.sp_xr
-        m1 = a1.coarsen(x=2, boundary="trim").mean()  # type: ignore[attr-defined]
-        m2 = a2.coarsen(x=2, boundary="trim").mean()  # type: ignore[attr-defined]
+        m1 = a1.coarsen(x=2, boundary="trim").mean()
+        m2 = a2.coarsen(x=2, boundary="trim").mean()
 
         assert isinstance(m2.data, sparse.SparseArray)
         assert np.allclose(m1.data, m2.data.todense())
