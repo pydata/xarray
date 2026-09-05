@@ -25,6 +25,9 @@ New Features
   silently being written uncompressed (:issue:`10657`, :pull:`11067`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
+- Added :py:meth:`~xarray.DataTree.subset` to index variables on all nodes of a datatree (:pull:`10400`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
