@@ -114,6 +114,10 @@ Bug Fixes
   type error when applying reduction methods, due to the reduction methods being
   dynamically generated (:issue:`8136`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- :py:meth:`DataArray.get_index` and :py:meth:`Dataset.get_index` now return a
+  shallow copy of the stored index, so setting ``.name`` on the result no longer
+  renames the coordinate of the object it came from (:issue:`2949`).
+  By `Chirag Gupta <https://github.com/chiruu12>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
