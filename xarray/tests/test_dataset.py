@@ -6565,6 +6565,15 @@ class TestDataset:
         expected = Dataset({"a": value}, coords={"quantile": q})
         assert_identical(result, expected)
 
+    @pytest.mark.parametrize("q", [0.5, [0.25, 0.75]])
+    def test_quantile_empty_dim(self, q) -> None:
+        ds = Dataset({"a": ("x", np.array([], dtype=np.float64))}, coords={"x": []})
+
+        actual = ds.quantile(q, dim="x")
+
+        assert np.isnan(actual["a"].values).all()
+        assert np.isnan(ds.median("x")["a"].values)
+
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
     def test_quantile_method(self, method) -> None:
         ds = create_test_data(seed=123)
