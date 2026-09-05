@@ -252,6 +252,15 @@ def _force_native_endianness(var):
     return var
 
 
+def _force_native_endianness_attr(value):
+    # netCDF4-python writes non-native-endian attribute arrays without
+    # byte-swapping, silently corrupting the stored values (variable data
+    # is handled by _force_native_endianness above).
+    if isinstance(value, np.ndarray) and value.dtype.byteorder not in ("=", "|"):
+        value = value.astype(value.dtype.newbyteorder("="))
+    return value
+
+
 def _extract_nc4_variable_encoding(
     variable: Variable,
     raise_on_invalid=False,
@@ -632,6 +641,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.ds.createDimension(name, size=dim_length)
 
     def set_attribute(self, key, value):
+        value = _force_native_endianness_attr(value)
         if self.format != "NETCDF4":
             value = encode_nc3_attr_value(value)
         if _is_list_of_strings(value):
@@ -652,7 +662,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self, name, variable: Variable, check_encoding=False, unlimited_dims=None
     ):
         _ensure_no_forward_slash_in_name(name)
-        attrs = variable.attrs.copy()
+        attrs = {k: _force_native_endianness_attr(v) for k, v in variable.attrs.items()}
         fill_value = attrs.pop("_FillValue", None)
         datatype: np.dtype | ncEnumType | h5EnumType
         datatype = _get_datatype(
