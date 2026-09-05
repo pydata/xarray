@@ -181,6 +181,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Expose ``coord_pad_mode`` and associated parameters in ``Dataset.pad`` and
+  ``DataArray.pad`` (:issue:`3868` :issue:`6425` :pull:`11213`). By `Ian Cooke
+  <https://github.com/ircwaves>`_.
 
 - Treat a full ``MultiIndex`` key with tuple-valued levels as scalar selection,
   so ``.sel`` no longer preserves a length-1 dimension for nested tuple keys
