@@ -778,6 +778,15 @@ class TestDataset:
         with pytest.raises(TypeError, match=r"cannot directly convert"):
             np.asarray(ds)
 
+    def test_get_index_is_not_a_view_of_the_stored_index(self) -> None:
+        # GH2949, the Dataset half: get_index is inherited from
+        # DataWithCoords, so Dataset handed out the stored index too.
+        ds = Dataset({"v": ("x", np.zeros(2))}, coords={"x": ["a", "b"]})
+
+        ds.get_index("x").name = "renamed"
+
+        assert ds.get_index("x").name == "x"
+
     def test_get_index(self) -> None:
         ds = Dataset({"foo": (("x", "y"), np.zeros((2, 3)))}, coords={"x": ["a", "b"]})
         assert ds.get_index("x").equals(pd.Index(["a", "b"]))
