@@ -463,7 +463,7 @@ array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
 ```python
 # shall support integers
-backend_array._raw_indexing_method(1, 1)
+backend_array._raw_indexing_method((1, 1))
 ```
 
 ```
@@ -495,7 +495,7 @@ array([[0, 1, 2], [4, 5, 6]])
 
 ```python
 # shall support integers
-backend_array._raw_indexing_method(1, 1)
+backend_array._raw_indexing_method((1, 1))
 ```
 
 ```
