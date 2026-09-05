@@ -366,6 +366,45 @@ class TestPlot(PlotTestCase):
         assert legend is not None
         assert legend.get_title().get_text() == "dim_1"
 
+    def test_2d_line_duplicate_hue_shares_color(self) -> None:
+        # GH10998: lines sharing a hue value must share a color, and the
+        # legend must carry one entry per hue value, matching scatter.
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "a", "b", "b"], "x": [0, 1, 2]},
+        )
+        lines = da.plot.line(hue="category", x="x")
+        colors = [line.get_color() for line in lines]
+        assert colors[0] == colors[1]
+        assert colors[2] == colors[3]
+        assert colors[0] != colors[2]
+
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert [t.get_text() for t in legend.get_texts()] == ["a", "b"]
+
+    def test_2d_line_unique_hue_palette_unchanged(self) -> None:
+        # With unique hue values the recoloring must be a no-op: each line
+        # keeps the color the axes' property cycle assigned it.
+        da = xr.DataArray(
+            np.arange(9).reshape(3, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "b", "c"], "x": [0, 1, 2]},
+        )
+        prop_cycle = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
+        lines = da.plot.line(hue="category", x="x")
+        assert [line.get_color() for line in lines] == prop_cycle[:3]
+
+    def test_2d_line_duplicate_hue_respects_user_color(self) -> None:
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "a", "b", "b"], "x": [0, 1, 2]},
+        )
+        lines = da.plot.line(hue="category", x="x", color="green")
+        assert all(line.get_color() == "green" for line in lines)
+
     def test_2d_coords_line_plot(self) -> None:
         lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
         lon += lat / 10

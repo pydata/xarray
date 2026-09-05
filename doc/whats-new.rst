@@ -53,6 +53,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`DataArray.plot.line` now draws lines sharing a hue value with the
+  same color and deduplicates their legend entries, consistent with
+  :py:meth:`DataArray.plot.scatter` (:issue:`10998`, :pull:`11164`).
+  By `Harikrishna KP <https://github.com/Mr-Neutr0n>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
