@@ -1944,8 +1944,10 @@ class StringAccessor(Generic[T_DataArray]):
 
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
-            func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=max(i_n, 0)
+            # ``re.sub`` interprets ``count=0`` as "replace every occurrence",
+            # so ``n=0`` has to be special-cased to mean "replace nothing".
+            func = lambda x, ipat, irepl, i_n: (
+                x if i_n == 0 else ipat.sub(repl=irepl, string=x, count=max(i_n, 0))
             )
         else:
             pat = self._stringify(pat)
