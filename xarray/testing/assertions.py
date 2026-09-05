@@ -372,7 +372,15 @@ def _assert_indexes_invariants_checks(
             for k, v in possible_coord_variables.items()
             if isinstance(v, IndexVariable)
         }
-        assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+        only_default_indexes = {
+            name: index
+            for name, index in indexes.items()
+            if isinstance(index, PandasIndex)
+        }
+        assert only_default_indexes.keys() <= index_vars, (
+            set(only_default_indexes),
+            index_vars,
+        )
         assert all(
             k in index_vars
             for k, v in possible_coord_variables.items()
@@ -416,9 +424,17 @@ def _assert_indexes_invariants_checks(
 
     if check_default:
         defaults = default_indexes(possible_coord_variables, dims)
-        assert indexes.keys() == defaults.keys(), (set(indexes), set(defaults))
-        assert all(v.equals(defaults[k]) for k, v in indexes.items()), (
-            indexes,
+        only_default_indexes = {
+            name: index
+            for name, index in indexes.items()
+            if isinstance(index, PandasIndex)
+        }
+        assert only_default_indexes.keys() == defaults.keys(), (
+            set(indexes),
+            set(defaults),
+        )
+        assert all(v.equals(defaults[k]) for k, v in only_default_indexes.items()), (
+            only_default_indexes,
             defaults,
         )
 
