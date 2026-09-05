@@ -195,21 +195,18 @@ class Weighted(Generic[T_Xarray]):
     def _check_dim(self, dim: Dims):
         """raise an error if any dimension is missing"""
 
-        dims, all_dims = self._all_dims(dim)
-        missing_dims = set(dims) - all_dims
-        if missing_dims:
-            raise ValueError(
-                f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
-            )
-
-    def _all_dims(self, dim: Dims) -> tuple[list[Hashable], set[Hashable]]:
         dims: list[Hashable]
         if isinstance(dim, str) or not isinstance(dim, Iterable):
             dims = [dim] if dim else []
         else:
             dims = list(dim)
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
-        return dims, all_dims
+
+        missing_dims = set(dims) - all_dims
+        if missing_dims:
+            raise ValueError(
+                f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
+            )
 
     @staticmethod
     def _reduce(
@@ -554,15 +551,8 @@ class DataArrayWeighted(Weighted["DataArray"]):
 class DatasetWeighted(Weighted["Dataset"]):
     def _expand_weights(self, dim: Dims):
         """expand weights to include any missing dimensions"""
-        dims, all_dims = self._all_dims(dim)
 
-        if set(self.obj.dims) == set(self.weights.dims):
-            return
-
-        if not dims:
-            return
-
-        if not (missing_weightdims := (set(all_dims) - set(dims))):
+        if not (missing_weightdims := set(self.obj.dims) - set(self.weights.dims)):
             return
 
         exp_dims = {k: self.obj.sizes.get(k, None) for k in missing_weightdims}
