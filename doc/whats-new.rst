@@ -110,6 +110,9 @@ Bug Fixes
   use of ``origin`` and ``offset`` options (:pull:`11546`). This effectively
   rolls back the resample-related changes introduced in :pull:`10650`. By
   `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix regression where accessing an object-dtype index eagerly attempts to
+  import cftime, slowing down operations.
+  By `Peter Hron <https://github.com/peterhron>`_.
 - Fixed :py:meth:`DataArray.coarsen()` and :py:meth:`Dataset.coarsen()` raising a
   type error when applying reduction methods, due to the reduction methods being
   dynamically generated (:issue:`8136`).
