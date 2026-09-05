@@ -548,8 +548,19 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 
 class DatasetWeighted(Weighted["Dataset"]):
+    def _expand_weights(self, dim: Dims):
+        """expand weights to include any missing dimensions"""
+
+        if not (missing_weightdims := set(self.obj.dims) - set(self.weights.dims)):
+            return
+
+        exp_dims = {k: self.obj.sizes.get(k, None) for k in missing_weightdims}
+        exp_dims = {k: v for k, v in exp_dims.items() if v is not None}
+        self.weights = self.weights.expand_dims(dim=exp_dims)
+
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
+        self._expand_weights(dim)
         return self.obj.map(func, dim=dim, **kwargs)
 
 
