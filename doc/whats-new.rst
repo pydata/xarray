@@ -72,6 +72,12 @@ Bug Fixes
 - :py:func:`polyval` now propagates ``NaN`` for ``NaT`` entries in ``timedelta64``
   coordinates instead of returning a large sentinel value (:issue:`11462`).
   By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
+- :py:meth:`DataArray.mean`, :py:meth:`DataArray.median`, :py:meth:`DataArray.std`,
+  :py:meth:`DataArray.var`, :py:meth:`DataArray.max` and :py:meth:`DataArray.min`
+  no longer raise when reducing over an empty dimension. They now return ``NaN``
+  for numeric dtypes and ``NaT`` for ``datetime64`` / ``timedelta64`` dtypes,
+  matching :py:func:`pandas.Series` behaviour (:issue:`11554`).
+  By `Karl-Axel Hill <https://github.com/karlhillx>`_.
 - The zarr backend now writes boolean arrays with native ``bool`` dtype instead
   of converting them to ``int8``. Zarr supports ``bool`` natively, so the
   ``BooleanCoder`` (which was designed for NetCDF compatibility) is now skipped
