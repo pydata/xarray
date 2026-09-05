@@ -276,6 +276,14 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
             isinstance(key, tuple) and len(key) == 1
         ):  # pyarrow type arrays can't handle single-length tuples
             (key,) = key
+        # Pandas extension arrays are 1-D and don't support Ellipsis-based
+        # 0-d indexing. NumpyIndexingAdapter appends Ellipsis to force 0-d
+        # slices, but this causes issues with IntervalArray and similar types.
+        # Strip trailing Ellipsis for 1-D extension arrays (GH#11300).
+        if isinstance(key, tuple) and key[-1] is Ellipsis:
+            key = tuple(k for k in key if k is not Ellipsis)
+            if len(key) == 1:
+                (key,) = key
         item = self.array[key]
         if is_allowed_extension_array(item):
             return PandasExtensionArray(item)
