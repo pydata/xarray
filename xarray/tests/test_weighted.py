@@ -8,13 +8,9 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset
-from xarray.tests import (
-    assert_allclose,
-    assert_equal,
-    raise_if_dask_computes,
-    requires_cftime,
-    requires_dask,
-)
+from xarray.tests import (assert_allclose, assert_equal,
+                          raise_if_dask_computes, requires_cftime,
+                          requires_dask)
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
@@ -527,6 +523,7 @@ def expected_weighted(da, weights, dim, skipna, operation):
     Generate expected result using ``*`` and ``sum``. This is checked against
     the result of da.weighted which uses ``dot``
     """
+    breakpoint()
 
     weighted_sum = (da * weights).sum(dim=dim, skipna=skipna)
 
