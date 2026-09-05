@@ -720,11 +720,28 @@ def interpolate_variable(
     # so it is in exclude_dims.
     vectorize_dims = (result_dims - all_in_core_dims) & set(var.dims)
 
+    # When vectorizing, apply_ufunc uses np.vectorize, which loops in Python over
+    # *every* non-core dimension, not just the ones that actually need vectorizing.
+    # In the example above, `q` is a core dimension and `lat`, `lon` are vectorized,
+    # but any remaining dimension of `var` is also peeled off one element at a time
+    # purely because it is not a core dimension. For
+    # `da[t, r, z].interp(z=target[t])` that means t*r calls instead of t (GH10683).
+    # Declaring those dimensions core hands them to the interpolator in bulk;
+    # _interpnd already supports leading "constant" dimensions.
+    #
+    # Only do this for in-memory arrays: making a dimension a core dimension forces
+    # dask to rechunk along it, which can blow up memory for chunked inputs.
+    bulk_dims: tuple[Hashable, ...] = ()
+    if vectorize_dims and not is_chunked_array(var._data):
+        bulk_dims = tuple(
+            d for d in var.dims if d not in all_in_core_dims and d not in vectorize_dims
+        )
+
     # remove any output broadcast dimensions from the list of core dimensions
     output_core_dims = tuple(d for d in result_dims if d not in vectorize_dims)
     input_core_dims = (
         # all coordinates on the input that we interpolate along
-        [tuple(indexes_coords)]
+        [bulk_dims + tuple(indexes_coords)]
         # the input coordinates are always 1D at the moment, so we just need to list out their names
         + [tuple(_.dims) for _ in in_coords]
         # The last set of inputs are the coordinates we are interpolating to.
@@ -734,6 +751,7 @@ def interpolate_variable(
         ]
     )
     output_sizes = {k: result_sizes[k] for k in output_core_dims}
+    output_core_dims = bulk_dims + output_core_dims
 
     # scipy.interpolate.interp1d always forces to float.
     dtype = float if not issubclass(var.dtype.type, np.inexact) else var.dtype
