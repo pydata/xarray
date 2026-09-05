@@ -562,10 +562,12 @@ class DatasetWeighted(Weighted["Dataset"]):
         if not dims:
             return
 
-        if missing_weightdims := (set(all_dims) - set(dims)):
-            exp_dims = {k: self.obj.sizes.get(k, None) for k in missing_weightdims}
-            exp_dims = {k: v for k, v in exp_dims.items() if v is not None}
-            self.weights = self.weights.expand_dims(dims=exp_dims)
+        if not (missing_weightdims := (set(all_dims) - set(dims))):
+            return
+
+        exp_dims = {k: self.obj.sizes.get(k, None) for k in missing_weightdims}
+        exp_dims = {k: v for k, v in exp_dims.items() if v is not None}
+        self.weights = self.weights.expand_dims(dim=exp_dims)
 
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
