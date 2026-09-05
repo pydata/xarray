@@ -160,10 +160,13 @@ class TreeNode:
         """Detach this node from its parent."""
         self._set_parent(new_parent=None)
 
+    def _children_view(self) -> Mapping[str, Self]:
+        return Frozen(self._children)
+
     @property
     def children(self) -> Mapping[str, Self]:
         """Child nodes of this node, stored under a mapping via their names."""
-        return Frozen(self._children)
+        return self._children_view()
 
     @children.setter
     def children(self, children: Mapping[str, Self]) -> None:
