@@ -8145,3 +8145,64 @@ def test_get_mtime_non_file_paths() -> None:
 
     # GDAL virtual filesystem paths are not real files
     assert _get_mtime("/vsicurl/https://example.com/file.nc") is None
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "shape, enc_chunks, enc_shards",
+    [
+        (
+            (10, 10),
+            (2, 2),
+            (4, 4),
+        ),
+        (
+            (100, 10),
+            (2, 2),
+            (4, 4),
+        ),
+        (
+            (100, 10, 1),
+            (2, 2, 1),
+            (4, 4, 1),
+        ),
+    ],
+)
+def test_zarr_shard_roundtrip(shape, enc_chunks, enc_shards, tmp_path):
+
+    dimensions = {f"dim_{i}" for i in range(len(shape))}
+    sizes = dict(zip(dimensions, shape, strict=True))
+
+    data_values = np.arange(np.prod(shape)).reshape(shape)
+    coords = {dim: np.arange(sizes[dim]) for dim in dimensions}
+
+    chunks = dict(zip(dimensions, enc_chunks, strict=True))
+    shards = dict(zip(dimensions, enc_shards, strict=True))
+
+    ds = xr.Dataset(
+        {
+            "data": (dimensions, data_values),
+        },
+        coords=coords,
+    )
+
+    # Make the xarray chunks match the zarr shards
+    ds_sharded = ds.chunk(shards)
+    encoding = {
+        dim: {"chunks": (chunks[dim],), "shards": (shards[dim],)} for dim in dimensions
+    }
+    encoding["data"] = {"chunks": enc_shards, "shards": enc_shards}
+
+    store = tmp_path / "test.zarr"
+    ds_sharded.to_zarr(
+        store,
+        mode="w",
+        encoding=encoding,
+        zarr_format=3,
+        consolidated=False,
+    )
+
+    # reopen dataset and store it back
+    reopend_ds = xr.open_zarr(store, consolidated=False)
+    reopend_ds.to_zarr(store, mode="a")
+    assert reopend_ds.chunks == ds_sharded.chunks
