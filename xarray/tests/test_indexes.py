@@ -740,7 +740,7 @@ def test_safe_cast_to_index_datetime_datetime():
     assert isinstance(actual, pd.Index)
 
 
-def test_safe_cast_to_index_does_not_import_missing_cftime(monkeypatch):
+def test_safe_cast_to_index_does_not_import_missing_cftime(monkeypatch) -> None:
     original_module_available = indexes.utils.module_available
     original_attempt_import = cftimeindex.attempt_import
 
