@@ -193,6 +193,15 @@ def test_is_remote_uri():
     assert utils.is_remote_uri("https://example.com")
     assert not utils.is_remote_uri(" http://example.com")
     assert not utils.is_remote_uri("example.nc")
+    assert utils.is_remote_uri("s3://bucket/example.nc")
+
+
+def test_is_http_url():
+    assert utils.is_http_url("http://example.com")
+    assert utils.is_http_url("https://example.com")
+    assert not utils.is_http_url(" http://example.com")
+    assert not utils.is_http_url("example.nc")
+    assert not utils.is_http_url("s3://bucket/example.nc")
 
 
 class Test_is_uniform_and_sorted:
