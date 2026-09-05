@@ -173,10 +173,10 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
             if chunkmanager.is_chunked_array(a)
         ]
         if not recognising:
-            if (
-                maybe_lib := type(a).__module__.split(".")[0]
-            ) in KNOWN_CHUNKMANAGERS:
-                suggestion = f"Please try installing {KNOWN_CHUNKMANAGERS[maybe_lib]!r}."
+            if (maybe_lib := type(a).__module__.split(".")[0]) in KNOWN_CHUNKMANAGERS:
+                suggestion = (
+                    f"Please try installing {KNOWN_CHUNKMANAGERS[maybe_lib]!r}."
+                )
             else:
                 suggestion = "This is usually the result of a missing dependency."
             raise TypeError(
