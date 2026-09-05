@@ -508,7 +508,11 @@ class DataWithCoords(AttrAccessMixin):
             raise KeyError(key)
 
         try:
-            return self._indexes[key].to_pandas_index()
+            # Shallow copy so that renaming the returned index, which pandas
+            # allows in place, cannot reach back into this object's own index.
+            # It shares the underlying data, and xarray already relies on that
+            # being free (see IndexVariable._to_index).
+            return self._indexes[key].to_pandas_index().copy(deep=False)
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
