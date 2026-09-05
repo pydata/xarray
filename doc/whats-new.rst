@@ -25,6 +25,11 @@ New Features
   silently being written uncompressed (:issue:`10657`, :pull:`11067`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
+- ``xarray.BackendEntrypoint`` now supports implementing ``open_dataarray``.
+  Previously ``open_dataset`` was used when ``xarray.open_dataarray(file, engine='my-engine')`` was called.
+  Now, if ``BackendEntrypoint.open_dataarray`` is implemented, it will be used. (:issue:`10562`, :pull:`11537`).
+  By `Duncan McDougall <https://github.com/dncnmcdougall>`_.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
