@@ -140,7 +140,9 @@ def _to_new_dataset(data: Dataset | Coordinates | None) -> Dataset:
     elif data is None:
         ds = Dataset()
     else:
-        raise TypeError(f"data object is not an xarray.Dataset, xarray.Coordinates, or None: {data}")
+        raise TypeError(
+            f"data object is not an xarray.Dataset, xarray.Coordinates, or None: {data}"
+        )
     return ds
 
 
