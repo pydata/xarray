@@ -66,6 +66,12 @@ def module_available(module: str, minversion: str | None = None) -> bool:
 
 
 def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
+    # Fast path: a plain numpy ndarray never satisfies __dask_graph__; skip
+    # the dask dispatch. Exact-type check (not isinstance) so any hypothetical
+    # ndarray subclass that *did* implement __dask_graph__ would still fall
+    # through to the real check.
+    if type(x) is np.ndarray:
+        return False
     if module_available("dask"):
         from dask.base import is_dask_collection
 
