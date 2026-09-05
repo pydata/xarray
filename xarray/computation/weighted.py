@@ -201,7 +201,6 @@ class Weighted(Generic[T_Xarray]):
         else:
             dims = list(dim)
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
-
         missing_dims = set(dims) - all_dims
         if missing_dims:
             raise ValueError(
