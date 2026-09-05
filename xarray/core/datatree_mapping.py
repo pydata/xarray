@@ -39,7 +39,7 @@ def map_over_datasets(
 
 
 def map_over_datasets(
-    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+    func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:

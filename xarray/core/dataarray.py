@@ -3684,13 +3684,13 @@ class DataArray(
         limit: int | None = None,
         use_coordinate: bool | str = True,
         max_gap: (
-            None
-            | int
+            int
             | float
             | str
             | pd.Timedelta
             | np.timedelta64
             | datetime.timedelta
+            | None
         ) = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
