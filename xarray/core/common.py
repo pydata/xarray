@@ -6,7 +6,16 @@ from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    Literal,
+    ParamSpec,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -925,6 +934,7 @@ class DataWithCoords(AttrAccessMixin):
         offset: pd.Timedelta | datetime.timedelta | str | None,
         origin: str | DatetimeLike,
         restore_coord_dims: bool | None,
+        boundaries: Literal["exact", "trim"] | None = None,
         **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> T_Resample:
         """Returns a Resample object for performing resampling operations.
@@ -960,6 +970,11 @@ class DataWithCoords(AttrAccessMixin):
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
+        boundaries : {"exact", "trim"}, optional
+            How to handle boundaries when the data doesn't evenly fit the resampling
+            frequency. If 'exact', a ValueError will be raised if the data doesn't
+            evenly fit. If 'trim', incomplete periods are dropped. If None (default),
+            uses the current behavior (includes incomplete periods).
         **indexer_kwargs : {dim: freq}
             The keyword arguments form of ``indexer``.
             One of indexer or indexer_kwargs must be provided.
@@ -1107,7 +1122,12 @@ class DataWithCoords(AttrAccessMixin):
         grouper: Resampler
         if isinstance(freq, ResampleCompatible):
             grouper = TimeResampler(
-                freq=freq, closed=closed, label=label, origin=origin, offset=offset
+                freq=freq,
+                closed=closed,
+                label=label,
+                origin=origin,
+                offset=offset,
+                boundaries=boundaries,
             )
         elif isinstance(freq, Resampler):
             grouper = freq
