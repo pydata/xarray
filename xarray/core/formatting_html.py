@@ -401,6 +401,33 @@ inherited_coord_section = partial(
     expand_option_name="display_expand_coords",
 )
 
+inherited_index_section = partial(
+    _mapping_section,
+    name="Inherited indexes",
+    details_func=summarize_indexes,
+    max_items_collapse=0,
+    expand_option_name="display_expand_indexes",
+)
+
+
+def _split_node_indexes(node: DataTree) -> tuple[dict, dict]:
+    """Split a node's indexes into node-local and inherited groups.
+
+    Each dict maps ``tuple_of_coord_names`` to its underlying Index. An entry
+    lands in the inherited mapping when every coord name in the tuple comes
+    from an ancestor node.
+    """
+    inherited_names = set(inherited_vars(node._indexes))
+    all_indexes = _get_indexes_dict(node.xindexes)
+    node_indexes: dict = {}
+    inherited_indexes: dict = {}
+    for names, idx in all_indexes.items():
+        if names and all(name in inherited_names for name in names):
+            inherited_indexes[names] = idx
+        else:
+            node_indexes[names] = idx
+    return node_indexes, inherited_indexes
+
 
 def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]:
     from xarray.core.coordinates import Coordinates
@@ -420,8 +447,12 @@ def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]
     display_default_indexes = _get_boolean_with_default(
         "display_default_indexes", False
     )
-    xindexes = filter_nondefault_indexes(
-        _get_indexes_dict(ds.xindexes), not display_default_indexes
+    node_xindexes, inherited_xindexes = _split_node_indexes(node)
+    node_xindexes = filter_nondefault_indexes(
+        node_xindexes, not display_default_indexes
+    )
+    inherited_xindexes = filter_nondefault_indexes(
+        inherited_xindexes, not display_default_indexes
     )
 
     sections = []
@@ -433,8 +464,10 @@ def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]
         sections.append(inherited_coord_section(inherited_coords))
     if ds.data_vars:
         sections.append(datavar_section(ds.data_vars))
-    if xindexes:
-        sections.append(index_section(xindexes))
+    if node_xindexes:
+        sections.append(index_section(node_xindexes))
+    if root and inherited_xindexes:
+        sections.append(inherited_index_section(inherited_xindexes))
     if ds.attrs:
         sections.append(attr_section(ds.attrs))
 
@@ -446,8 +479,9 @@ def _datatree_node_sections(node: DataTree, root: bool) -> tuple[list[str], int]
         + int(root) * (int(bool(inherited_coords)) + len(inherited_coords))
         + int(bool(ds.data_vars))
         + len(ds.data_vars)
-        + int(bool(xindexes))
-        + len(xindexes)
+        + int(bool(node_xindexes))
+        + len(node_xindexes)
+        + int(root) * (int(bool(inherited_xindexes)) + len(inherited_xindexes))
         + int(bool(ds.attrs))
         + len(ds.attrs)
     )

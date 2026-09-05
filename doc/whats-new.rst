@@ -117,6 +117,11 @@ Bug Fixes
   type error when applying reduction methods, due to the reduction methods being
   dynamically generated (:issue:`8136`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- The text and HTML reprs of :py:class:`DataTree` now split indexes into
+  ``Indexes:`` (defined at this node) and ``Inherited indexes:`` (inherited from
+  an ancestor), mirroring the existing treatment of ``Coordinates`` versus
+  ``Inherited coordinates`` (:issue:`10578`).
+  By `mokashang <https://github.com/mokashang>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 

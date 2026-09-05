@@ -1433,6 +1433,36 @@ class TestRepr:
         ).strip()
         assert result == expected
 
+    def test_repr_inherited_indexes(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/10578
+        from xarray.indexes import RangeIndex
+
+        coords = xr.Coordinates.from_xindex(RangeIndex.arange(0, 4, 1, dim="x"))
+        tree = DataTree.from_dict(
+            {
+                "/": Dataset(coords=coords),
+                "/child": Dataset({"data": ("x", [10.0, 20.0, 30.0, 40.0])}),
+            }
+        )
+
+        # In the whole-tree text repr, the child inherits from its parent, so
+        # the child's inherited indexes are not repeated (root=False for it).
+        # The root shows its local indexes under "Indexes:".
+        full_result = repr(tree)
+        assert "Indexes:" in full_result
+        assert "Inherited indexes" not in full_result
+
+        # When the child is treated as the root of its own view, we expect
+        # "Inherited indexes:" to appear alongside "Inherited coordinates:".
+        child_result = repr(tree["child"])
+        assert "Inherited coordinates:" in child_result
+        assert "Inherited indexes:" in child_result
+        assert "RangeIndex" in child_result
+
+        child_html = tree["child"]._repr_html_()
+        assert "Inherited coordinates" in child_html
+        assert "Inherited indexes" in child_html
+
     @pytest.mark.skipif(
         ON_WINDOWS, reason="windows (pre NumPy2) uses int32 instead of int64"
     )

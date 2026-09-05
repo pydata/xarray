@@ -1182,6 +1182,39 @@ def inherited_vars(mapping: ChainMap) -> dict:
     return {k: v for k, v in mapping.parents.items() if k not in mapping.maps[0]}
 
 
+def _split_node_indexes(node: DataTree) -> tuple[dict, dict]:
+    """Split a node's indexes into those defined locally and those inherited.
+
+    Returns dicts of the form ``{tuple_of_coord_names: Index}`` as produced by
+    :func:`_get_indexes_dict`, split so that entries where every coord name is
+    inherited from an ancestor land in the "inherited" mapping and everything
+    else in the "node" mapping.
+    """
+    inherited_names = set(inherited_vars(node._indexes))
+    all_indexes = _get_indexes_dict(node.xindexes)
+    node_indexes = {}
+    inherited_indexes = {}
+    for names, idx in all_indexes.items():
+        if names and all(name in inherited_names for name in names):
+            inherited_indexes[names] = idx
+        else:
+            node_indexes[names] = idx
+    return node_indexes, inherited_indexes
+
+
+def inherited_indexes_repr(node: DataTree, max_rows=None) -> str:
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    _, inherited_indexes = _split_node_indexes(node)
+    inherited_indexes = filter_nondefault_indexes(
+        inherited_indexes, not display_default_indexes
+    )
+    if not inherited_indexes:
+        return ""
+    return indexes_repr(inherited_indexes, max_rows=max_rows, title="Inherited indexes")
+
+
 def _datatree_node_repr(node: DataTree, root: bool) -> str:
     summary = [f"Group: {node.path}"]
 
@@ -1228,16 +1261,18 @@ def _datatree_node_repr(node: DataTree, root: bool) -> str:
             data_vars_repr(node._data_variables, col_width=col_width, max_rows=max_rows)
         )
 
-    # TODO: only show indexes defined at this node, with a separate section for
-    # inherited indexes (if root=True)
     display_default_indexes = _get_boolean_with_default(
         "display_default_indexes", False
     )
-    xindexes = filter_nondefault_indexes(
-        _get_indexes_dict(node.xindexes), not display_default_indexes
-    )
-    if xindexes:
-        summary.append(indexes_repr(xindexes, max_rows=max_rows))
+    node_indexes, _ = _split_node_indexes(node)
+    node_indexes = filter_nondefault_indexes(node_indexes, not display_default_indexes)
+    if node_indexes:
+        summary.append(indexes_repr(node_indexes, max_rows=max_rows))
+
+    if root:
+        inherited_indexes_str = inherited_indexes_repr(node, max_rows=max_rows)
+        if inherited_indexes_str:
+            summary.append(inherited_indexes_str)
 
     if node.attrs:
         summary.append(attrs_repr(node.attrs, max_rows=max_rows))
