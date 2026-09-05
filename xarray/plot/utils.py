@@ -428,6 +428,13 @@ def _infer_xy_labels(
         ):
             raise ValueError("x and y cannot be levels of the same MultiIndex")
 
+    for name, label in (("x", x), ("y", y)):
+        if darray[label].ndim == 0:
+            raise ValueError(
+                f"{name} must be a dimension or a non-scalar coordinate. "
+                f"Received {label!r} instead."
+            )
+
     return x, y
 
 
