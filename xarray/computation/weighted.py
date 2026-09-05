@@ -201,11 +201,22 @@ class Weighted(Generic[T_Xarray]):
         else:
             dims = list(dim)
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
-        missing_dims = set(dims) - all_dims
-        if missing_dims:
+        if missing_obj_dims := (set(dims) - all_dims):
             raise ValueError(
-                f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
+                f"Dimensions {tuple(missing_obj_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
             )
+
+        if set(self.obj.dims) == set(self.weights.dims):
+            return
+
+        if not dims:
+            return
+
+        if missing_weightdims := (set(all_dims) - set(dims)):
+            exp_dims = {k: self.obj.sizes.get(k, None) for k in missing_weightdims}
+            exp_dims = {k: v for k, v in exp_dims.items() if v is not None}
+            self.weights = self.weights.expand_dims(dims=exp_dims)
+            # ^expand_dims - sequence of hashable - should this be a list, not a tuple
 
     @staticmethod
     def _reduce(
