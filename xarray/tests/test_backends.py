@@ -102,6 +102,7 @@ from xarray.tests import (
     requires_scipy_or_netCDF4,
     requires_zarr,
     requires_zarr_v3,
+    requires_zarr_v3_dtypes,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
@@ -4056,6 +4057,48 @@ class TestInstrumentedZarrStore:
                 with open_dataset(store, engine="zarr") as actual:
                     assert_identical(actual, ds)
             self.check_requests(expected, patches)
+
+
+@requires_zarr_v3_dtypes
+@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+def test_roundtrip_stringdtype_zarr_v3() -> None:
+    dtype = np.dtypes.StringDType()
+    data = np.array(["a", "bb", "ccc"], dtype=dtype)
+    expected = Dataset(
+        {
+            "data": ("dim", data.copy()),
+            "scalar": np.array("a", dtype=dtype),
+        },
+        coords={
+            "dim": ("dim", data.copy()),
+            "nondim": ("dim", data.copy()),
+        },
+    )
+    store = zarr.storage.MemoryStore({}, read_only=False)
+
+    with assert_no_warnings():
+        expected.to_zarr(store, zarr_format=3, consolidated=False)
+    actual = xr.open_zarr(store, consolidated=False).load()
+
+    for name in expected.variables:
+        assert zarr.open_array(store=store, path=str(name), mode="r").dtype == dtype
+        assert actual[name].dtype == dtype
+    assert_identical(expected, actual)
+
+
+@requires_zarr_v3_dtypes
+@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+def test_stringdtype_with_na_object_uses_the_compatibility_path() -> None:
+    dtype = np.dtypes.StringDType(na_object=np.nan)
+    data = np.array(["a", "bb", "ccc"], dtype=dtype)
+    expected = Dataset({"data": ("dim", data.copy())})
+    store = zarr.storage.MemoryStore({}, read_only=False)
+
+    expected.to_zarr(store, zarr_format=3, consolidated=False)
+    actual = xr.open_zarr(store, consolidated=False).load()
+
+    assert zarr.open_array(store=store, path="data", mode="r").dtype.kind != "T"
+    assert (actual["data"].values == data.astype(object)).all()
 
 
 @requires_zarr
