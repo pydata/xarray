@@ -180,7 +180,7 @@ generate-aggregations-ci = { cmd = 'test -z "$(git status --porcelain)" && echo 
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
-iris = "*"
+iris = "!=3.16.0"                  # avoid ncdata failing. See https://github.com/SciTools/ncdata/issues/255
 ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
