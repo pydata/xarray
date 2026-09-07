@@ -565,15 +565,13 @@ class DatasetWeighted(Weighted["Dataset"]):
         existing_dims = {dim for v in ds.variables.values() for dim in v.dims}
         dims_to_restore = set(self.obj.dims) - set(dims) - existing_dims
 
-        dims_to_restore = {d: self.obj.coords[d] for d in dims_to_restore}
-        ds = ds.assign_coords(dims_to_restore)
-        return ds
+        coords = {d: self.obj.coords[d] for d in dims_to_restore}
+        return ds.assign_coords(coords)
 
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
         mapped_ds = self.obj.map(func, dim=dim, **kwargs)
-        mapped_ds = self._restore_dims(dim, mapped_ds)
-        return mapped_ds
+        return self._restore_dims(dim, mapped_ds)
 
 
 def _inject_docstring(cls, cls_name):
