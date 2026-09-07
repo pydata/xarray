@@ -89,7 +89,7 @@ class CachingFileManager(FileManager[T_File]):
         *args: Any,
         mode: Any = _OMIT_MODE,
         kwargs: Mapping[str, Any] | None = None,
-        lock: Lock | None | Literal[False] = None,
+        lock: Lock | Literal[False] | None = None,
         cache: MutableMapping[Any, T_File] | None = None,
         manager_id: Hashable | None = None,
         ref_counts: dict[Any, int] | None = None,
@@ -355,7 +355,7 @@ class PickleableFileManager(FileManager[T_File]):
         opener: Callable[..., T_File],
         *args: Any,
         mode: Any = _OMIT_MODE,
-        lock: Lock | None | Literal[False] = None,
+        lock: Lock | Literal[False] | None = None,
         kwargs: Mapping[str, Any] | None = None,
     ):
         kwargs = {} if kwargs is None else dict(kwargs)
@@ -458,7 +458,7 @@ class DummyFileManager(FileManager[T_File]):
         value: T_File,
         *,
         close: Callable[[], None] | None = None,
-        lock: Lock | None | Literal[False] = None,
+        lock: Lock | Literal[False] | None = None,
     ):
         if close is None:
             close = value.close

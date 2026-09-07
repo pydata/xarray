@@ -276,7 +276,7 @@ def combine_locks(locks: Sequence[Lock]) -> Lock:
         return DummyLock()
 
 
-def ensure_lock(lock: Lock | None | Literal[False]) -> Lock:
+def ensure_lock(lock: Lock | Literal[False] | None) -> Lock:
     """Ensure that the given object is a lock."""
     if lock is None or lock is False:
         return DummyLock()

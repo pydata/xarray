@@ -801,7 +801,7 @@ def _datatree_to_netcdf(
     compute: bool = True,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> None | memoryview | Delayed:
+) -> memoryview | Delayed | None:
     """Implementation of `DataTree.to_netcdf`."""
 
     if format not in [None, *get_args(T_DataTreeNetcdfTypes)]:

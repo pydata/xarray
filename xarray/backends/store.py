@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
 
 from xarray import conventions
 from xarray.backends.common import (
@@ -12,9 +11,6 @@ from xarray.backends.common import (
 )
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataset import Dataset
-
-if TYPE_CHECKING:
-    pass
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
