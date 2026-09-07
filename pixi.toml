@@ -477,6 +477,3 @@ build-package = { features = [
   "release",
 ], no-default-feature = true }
 test-nightly = { features = ["nightly"], no-default-feature = true }
-
-[pypi-dependencies]
-pdbpp = ">=0.12.1, <0.13"
