@@ -2613,9 +2613,10 @@ class DataTree(
 
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+        chunks : int, "auto" or mapping of hashable to int or a TimeResampler, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
             ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
+            A single value is applied to every dimension in the tree.
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2650,14 +2651,23 @@ class DataTree(
         xarray.unify_chunks
         dask.array.from_array
         """
-        # don't support deprecated ways of passing chunks
-        if not isinstance(chunks, Mapping):
-            raise TypeError(
-                f"invalid type for chunks: {type(chunks)}. Only mappings are supported."
-            )
-        combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
-
         all_dims = self._get_all_dims()
+
+        combined_chunks: Mapping[Any, T_ChunkDimFreq]
+        if not isinstance(chunks, Mapping):
+            # don't support deprecated ways of passing chunks: sequences of
+            # dimension-order sizes are deprecated for Dataset.chunk, and are
+            # additionally ambiguous for a tree whose groups need not share an
+            # ordering of their dimensions
+            if chunks is None or isinstance(chunks, tuple | list):
+                raise TypeError(
+                    f"invalid type for chunks: {type(chunks)}. Only mappings and "
+                    'single chunk specifications (e.g. 5 or "auto") to be applied '
+                    "to every dimension are supported."
+                )
+            combined_chunks = dict.fromkeys(all_dims, chunks)
+        else:
+            combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         bad_dims = combined_chunks.keys() - all_dims
         if bad_dims:
