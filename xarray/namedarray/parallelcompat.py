@@ -359,12 +359,12 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         if _contains_cftime_datetimes(data):
             preferred_chunks = dict(enumerate(data.chunks))
             chunks2 = _get_chunk(
-                data,
+                data,  # type: ignore[arg-type]
                 chunks,
                 self,
                 preferred_chunks=preferred_chunks,
                 dims=preferred_chunks.keys(),
-            )  # type: ignore[arg-type]
+            )
         else:
             chunks2 = chunks  # type: ignore[assignment]
         return data.rechunk(chunks2, **kwargs)
