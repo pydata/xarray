@@ -1000,3 +1000,63 @@ class TestDatasetRollingExp:
             match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect.",
         ):
             ds.rolling_exp(time=10, keep_attrs=True)
+
+
+@pytest.mark.parametrize("dim_arg", ["x", ["x"]])
+def test_cumulative_on_empty_dimension(dim_arg) -> None:
+    """cumulative derives its window from the data, so length 0 is not a bad window.
+
+    cumsum returns an empty result for the same input. Before the fix the
+    derived window of 0 hit Rolling's window guard, and the user saw
+    "window must be > 0" about a window they never chose.
+    """
+    da = xr.DataArray(
+        np.arange(6.0).reshape(2, 3),
+        dims=("x", "y"),
+        coords={"x": [0, 1], "y": [0, 1, 2]},
+    )
+    empty = da.isel(x=slice(0, 0))
+
+    actual = empty.cumulative(dim_arg).sum()
+
+    assert actual.shape == (0, 3)
+    assert_allclose(actual, empty.cumsum("x"))
+
+
+def test_cumulative_on_empty_dimension_dataset() -> None:
+    ds = xr.Dataset(
+        {"v": (("x", "y"), np.arange(6.0).reshape(2, 3))},
+        coords={"x": [0, 1], "y": [0, 1, 2]},
+    )
+    empty = ds.isel(x=slice(0, 0))
+
+    actual = empty.cumulative("x").sum()
+
+    assert actual["v"].shape == (0, 3)
+    assert_allclose(actual, empty.cumsum("x"))
+
+
+@pytest.mark.parametrize("window", [1, 3])
+@pytest.mark.parametrize("center", [True, False])
+def test_rolling_on_empty_dimension(window, center) -> None:
+    """A window wider than an empty dimension yields no windows, not an error."""
+    da = xr.DataArray(
+        np.arange(6.0).reshape(2, 3),
+        dims=("x", "y"),
+        coords={"x": [0, 1], "y": [0, 1, 2]},
+    )
+    empty = da.isel(x=slice(0, 0))
+
+    assert empty.rolling(x=window, center=center).mean().shape == (0, 3)
+    assert empty.rolling(x=window, center=center).construct("w").shape == (0, 3, window)
+
+
+def test_rolling_on_two_empty_dimensions() -> None:
+    da = xr.DataArray(
+        np.arange(6.0).reshape(2, 3),
+        dims=("x", "y"),
+        coords={"x": [0, 1], "y": [0, 1, 2]},
+    )
+    empty = da.isel(x=slice(0, 0), y=slice(0, 0))
+
+    assert empty.cumulative(["x", "y"]).sum().shape == (0, 0)
