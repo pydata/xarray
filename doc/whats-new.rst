@@ -87,6 +87,11 @@ Bug Fixes
   changes if a slice is all-``NaN`` and has to be filled with ``fill_value``
   (:issue:`7527`, :pull:`11544`).
   By `Shurong Cao <https://github.com/CAOShurong>`_.
+- :py:meth:`DataTree.chunk` now accepts a single chunk specification such as
+  ``"auto"`` or an integer and applies it to every dimension in the tree, as
+  :py:meth:`Dataset.chunk` does, instead of raising ``TypeError``
+  (:issue:`11315`, :pull:`11569`).
+  By `fredrikblau <https://github.com/fredrikblau>`_.
 
 
 Documentation
