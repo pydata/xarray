@@ -4,14 +4,7 @@ import copy
 import datetime
 import json
 import warnings
-from collections.abc import (
-    Callable,
-    Collection,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-)
+from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
 from functools import partial
 from os import PathLike
 from types import EllipsisType
@@ -4778,6 +4771,10 @@ class DataArray(
         Dataset.from_dataframe
         """
         temp_name = "__temporary_name"
+        if temp_name == series.index.name:
+            # See properties/test_pandas_roundtrip.py:
+            # @reproduce_failure('6.155.2', b'AEEAQQBBAQFBAEEBAJBfX3RlbXBvcmFyeV9uYW1l')
+            temp_name = "__temporary_name_fallback"
         df = pd.DataFrame({temp_name: series})
         ds = Dataset.from_dataframe(df, sparse=sparse)
         result = ds[temp_name]
