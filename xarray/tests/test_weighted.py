@@ -808,3 +808,31 @@ def test_weighted_bad_dim(operation, as_dataset):
         ),
     ):
         getattr(data.weighted(weights), operation)(**kwargs)
+
+
+def test_dataset_weighted_mean_preserves_orphaned_dims():
+    """
+    Can't test against `check_weighted_operations` - this is an edge case where
+    the dataset has a dimension not present in the weights dataarray or on any
+    of it's variables.
+    """
+    data = Dataset(
+        {
+            "a": (("x", "y"), np.random.randn(2, 2)),
+        },
+        coords={
+            "x": ("x", [0, 1]),
+            "y": ("y", [0, 1]),
+            "t": ("t", [0, 1]),
+        },
+    )
+    weights = DataArray(np.random.randn(2), dims="x")
+
+    weighted_mean = data.weighted(weights).mean(dim="x")
+    mean = data.mean(dim="x")
+
+    # Don't promote dims *on the dataarray*
+    assert weighted_mean["a"].dims == mean["a"].dims
+    # Retain orphaned dims on the dataset
+    assert set(weighted_mean.dims) == set(mean.dims)
+    assert set(weighted_mean.dims) == set(mean.dims)

@@ -195,17 +195,22 @@ class Weighted(Generic[T_Xarray]):
     def _check_dim(self, dim: Dims):
         """raise an error if any dimension is missing"""
 
-        dims: list[Hashable]
-        if isinstance(dim, str) or not isinstance(dim, Iterable):
-            dims = [dim] if dim else []
-        else:
-            dims = list(dim)
+        dims = self._dims_to_list(dim)
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
         missing_dims = set(dims) - all_dims
         if missing_dims:
             raise ValueError(
                 f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
             )
+
+    def _dims_to_list(self, dim: Dims) -> list[Hashable]:
+        dims: list[Hashable]
+        if isinstance(dim, str) or not isinstance(dim, Iterable):
+            dims = [dim] if dim else []
+        else:
+            dims = list(dim)
+
+        return dims
 
     @staticmethod
     def _reduce(
@@ -548,20 +553,27 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 
 class DatasetWeighted(Weighted["Dataset"]):
-    def _expand_weights(self, dim: Dims):
-        """expand weights to include any missing dimensions"""
+    def _restore_dims(self, dim: Dims, ds: Dataset) -> Dataset:
+        """self.obj.map will drop orphaned coordinates & dims that are not in
+        the weights DataArray. This restores them.
+        """
+        if dim is None:
+            return ds
 
-        if not (missing_weightdims := set(self.obj.dims) - set(self.weights.dims)):
-            return
+        dims = self._dims_to_list(dim)
 
-        exp_dims = {k: self.obj.sizes.get(k, None) for k in missing_weightdims}
-        exp_dims = {k: v for k, v in exp_dims.items() if v is not None}
-        self.weights = self.weights.expand_dims(dim=exp_dims)
+        existing_dims = {dim for v in ds.variables.values() for dim in v.dims}
+        dims_to_restore = set(self.obj.dims) - set(dims) - existing_dims
+
+        dims_to_restore = {d: self.obj.coords[d] for d in dims_to_restore}
+        ds = ds.assign_coords(dims_to_restore)
+        return ds
 
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
-        self._expand_weights(dim)
-        return self.obj.map(func, dim=dim, **kwargs)
+        res = self.obj.map(func, dim=dim, **kwargs)
+        res = self._restore_dims(dim, res)
+        return res
 
 
 def _inject_docstring(cls, cls_name):
