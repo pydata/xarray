@@ -272,6 +272,15 @@ Bug Fixes
 - Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
   round trips (:issue:`11466`, :pull:`11474`).
   By `stanbot8 <https://github.com/stanbot8>`_.
+- :py:meth:`DataArray.cumulative` and :py:meth:`Dataset.cumulative` no longer raise
+  ``ValueError: window must be > 0`` on a dimension of length 0, and
+  :py:meth:`DataArray.rolling` no longer raises on one either. Both now return an
+  empty result, matching :py:meth:`DataArray.cumsum` (:pull:`PRNUM`).
+  By `Chirag Gupta <https://github.com/chiruu12>`_.
+- Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
+  which caused ``AsyncMock`` objects to leak through instead of real array data
+  (:pull:`11232`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs (:pull:`11449`).
