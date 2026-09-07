@@ -571,9 +571,9 @@ class DatasetWeighted(Weighted["Dataset"]):
 
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
-        res = self.obj.map(func, dim=dim, **kwargs)
-        res = self._restore_dims(dim, res)
-        return res
+        mapped_ds = self.obj.map(func, dim=dim, **kwargs)
+        mapped_ds = self._restore_dims(dim, mapped_ds)
+        return mapped_ds
 
 
 def _inject_docstring(cls, cls_name):
