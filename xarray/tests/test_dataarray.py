@@ -6696,7 +6696,7 @@ class TestReduce3D(TestReduce):
 
         minindices_x = {
             key: xr.where(
-                nanindices_x[key] == None,  # noqa: E711
+                nanindices_x[key] == None,
                 minindices_x[key],
                 nanindices_x[key],
             )
@@ -6714,7 +6714,7 @@ class TestReduce3D(TestReduce):
 
         minindices_y = {
             key: xr.where(
-                nanindices_y[key] == None,  # noqa: E711
+                nanindices_y[key] == None,
                 minindices_y[key],
                 nanindices_y[key],
             )
@@ -6732,7 +6732,7 @@ class TestReduce3D(TestReduce):
 
         minindices_z = {
             key: xr.where(
-                nanindices_z[key] == None,  # noqa: E711
+                nanindices_z[key] == None,
                 minindices_z[key],
                 nanindices_z[key],
             )
@@ -6750,7 +6750,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None,  # noqa: E711
+                nanindices_xy[key] == None,
                 minindices_xy[key],
                 nanindices_xy[key],
             )
@@ -6768,7 +6768,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None,  # noqa: E711
+                nanindices_xz[key] == None,
                 minindices_xz[key],
                 nanindices_xz[key],
             )
@@ -6786,7 +6786,7 @@ class TestReduce3D(TestReduce):
 
         minindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None,  # noqa: E711
+                nanindices_yz[key] == None,
                 minindices_yz[key],
                 nanindices_yz[key],
             )
@@ -6804,7 +6804,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None,  # noqa: E711
+                nanindices_xyz[key] == None,
                 minindices_xyz[key],
                 nanindices_xyz[key],
             )
@@ -6935,7 +6935,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_x = {
             key: xr.where(
-                nanindices_x[key] == None,  # noqa: E711
+                nanindices_x[key] == None,
                 maxindices_x[key],
                 nanindices_x[key],
             )
@@ -6953,7 +6953,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_y = {
             key: xr.where(
-                nanindices_y[key] == None,  # noqa: E711
+                nanindices_y[key] == None,
                 maxindices_y[key],
                 nanindices_y[key],
             )
@@ -6971,7 +6971,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_z = {
             key: xr.where(
-                nanindices_z[key] == None,  # noqa: E711
+                nanindices_z[key] == None,
                 maxindices_z[key],
                 nanindices_z[key],
             )
@@ -6989,7 +6989,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None,  # noqa: E711
+                nanindices_xy[key] == None,
                 maxindices_xy[key],
                 nanindices_xy[key],
             )
@@ -7007,7 +7007,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None,  # noqa: E711
+                nanindices_xz[key] == None,
                 maxindices_xz[key],
                 nanindices_xz[key],
             )
@@ -7025,7 +7025,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None,  # noqa: E711
+                nanindices_yz[key] == None,
                 maxindices_yz[key],
                 nanindices_yz[key],
             )
@@ -7043,7 +7043,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None,  # noqa: E711
+                nanindices_xyz[key] == None,
                 maxindices_xyz[key],
                 nanindices_xyz[key],
             )

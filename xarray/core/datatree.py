@@ -1811,7 +1811,7 @@ class DataTree(
 
     def map_over_datasets(
         self,
-        func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+        func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
@@ -2034,7 +2034,7 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ) -> None | memoryview | Delayed:
+    ) -> memoryview | Delayed | None:
         """
         Write datatree contents to a netCDF file.
 
