@@ -119,7 +119,7 @@ Bug Fixes
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
 - Fix DatasetWeighted dropping coordinates/dimensions which are not affected by 
   the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
-  By `Charles Turner` <https://github.com/charles-turner-1>
+  By `Charles Turner <https://github.com/charles-turner-1>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
