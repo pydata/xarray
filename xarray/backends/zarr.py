@@ -27,7 +27,7 @@ from xarray.backends.store import StoreBackendEntrypoint
 from xarray.conventions import ZARR_CODERS
 from xarray.core import indexing
 from xarray.core.treenode import NodePath
-from xarray.core.types import T_Chunks, ZarrWriteModes
+from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
     FrozenDict,
     HiddenKeyDict,
@@ -1405,7 +1405,7 @@ class ZarrStore(AbstractWritableDataStore):
 def open_zarr(
     store,
     group=None,
-    chunks: T_Chunks | Literal[_default] = _default,
+    chunks: int | dict | None | Literal["auto", _default] = _default,
     decode_cf=True,
     mask_and_scale=True,
     decode_times=True,
