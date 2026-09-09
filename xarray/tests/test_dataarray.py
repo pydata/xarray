@@ -200,6 +200,17 @@ class TestDataArray:
         with pytest.raises(KeyError):
             array.get_index("z")
 
+    def test_get_index_is_not_a_view_of_the_stored_index(self) -> None:
+        # GH2949: a pandas index lets its name be set in place, so handing out
+        # the stored object let a caller rename this array's own coordinate.
+        array = DataArray(np.zeros(2), coords={"x": ["a", "b"]}, dims=["x"])
+
+        array.get_index("x").name = "renamed"
+        array.to_index().name = "renamed too"
+        array.to_series().index.name = "and again"
+
+        assert array.get_index("x").name == "x"
+
     def test_get_index_size_zero(self) -> None:
         array = DataArray(np.zeros((0,)), dims=["x"])
         actual = array.get_index("x")
