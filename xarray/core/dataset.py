@@ -966,7 +966,7 @@ class Dataset(
     ) -> Self:
         """Fastpath constructor for internal use.
 
-        Returns an object with optionally with replaced attributes.
+        Returns an object with optionally replaced attributes.
 
         Explicitly passed arguments are *not* copied when placed on the new
         dataset. It is up to the caller to ensure that they have the right type

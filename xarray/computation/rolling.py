@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 import numpy as np
 
 from xarray.compat import dask_array_ops
-from xarray.computation.arithmetic import CoarsenArithmetic
 from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
@@ -51,6 +50,43 @@ Returns
 reduced : same type as caller
     New object with `{name}` applied along its rolling dimension.
 """
+
+_COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
+Reduce this object's data by applying `{name}` along some dimension(s).
+
+Parameters
+----------
+{skip_na_docs}{min_count_docs}
+keep_attrs : bool, optional
+    If True, the attributes (`attrs`) will be copied from the original
+    object to the new one.  If False (default), the new object will be
+    returned without attributes.
+**kwargs : dict
+    Additional keyword arguments passed on to the appropriate array
+    function for calculating `{name}` on this object's data.
+
+Returns
+-------
+reduced : same type as caller
+    New object with `{name}` applied to its data and the
+    indicated dimension(s) removed.
+"""
+
+_SKIPNA_DOCSTRING = """
+skipna : bool, optional
+    If True, skip missing values (as marked by NaN). By default, only
+    skips missing values for float dtypes; other dtypes either do not
+    have a sentinel missing value (int) or skipna=True has not been
+    implemented (object, datetime64 or timedelta64)."""
+
+_MINCOUNT_DOCSTRING = """
+min_count : int, default: None
+    The required number of valid values to perform the operation. If
+    fewer than min_count non-NA values are present the result will be
+    NA. Only used if skipna is set to True or defaults to True for the
+    array's dtype. New in version 0.10.8: Added with the default being
+    None. Changed in version 0.17.0: if specified on an integer array
+    and skipna=True, the result will be a float array."""
 
 
 class Rolling(Generic[T_Xarray]):
@@ -1035,7 +1071,7 @@ class DatasetRolling(Rolling["Dataset"]):
         return Dataset(dataset, coords=coords, attrs=attrs)
 
 
-class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
+class Coarsen(Generic[T_Xarray]):
     """A object that implements the coarsen.
 
     See Also
@@ -1125,6 +1161,46 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
             if getattr(self, k, None) is not None
         )
         return f"{self.__class__.__name__} [{attrs}]"
+
+    @staticmethod
+    def _reduce_method_impl(name: str, include_skipna: bool) -> Callable[..., T_Xarray]:
+        """Creates methods that mirror the implementation in Rolling."""
+
+        kwargs: dict[str, Any] = {}
+        if include_skipna:
+            kwargs["skipna"] = None
+
+        func = getattr(duck_array_ops, name)
+
+        available_min_count = getattr(func, "available_min_count", False)
+        skip_na_docs = _SKIPNA_DOCSTRING if include_skipna else ""
+        min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ""
+
+        def method(self, keep_attrs: bool | None = None, **kwargs) -> T_Xarray:
+            return self._reduce_method(
+                func,
+                **kwargs,
+            )(self, keep_attrs=keep_attrs, **kwargs)
+
+        method.__name__ = name
+        method.__doc__ = _COARSEN_REDUCE_DOCSTRING_TEMPLATE.format(
+            name=name,
+            skip_na_docs=skip_na_docs,
+            min_count_docs=min_count_docs,
+        )
+        return method
+
+    any = _reduce_method_impl("array_any", include_skipna=False)
+    all = _reduce_method_impl("array_all", include_skipna=False)
+    max = _reduce_method_impl("max", include_skipna=True)
+    min = _reduce_method_impl("min", include_skipna=True)
+    mean = _reduce_method_impl("mean", include_skipna=True)
+    prod = _reduce_method_impl("prod", include_skipna=True)
+    sum = _reduce_method_impl("sum", include_skipna=True)
+    std = _reduce_method_impl("std", include_skipna=True)
+    var = _reduce_method_impl("var", include_skipna=True)
+    median = _reduce_method_impl("median", include_skipna=True)
+    count = _reduce_method_impl("count", include_skipna=False)
 
     def construct(
         self,

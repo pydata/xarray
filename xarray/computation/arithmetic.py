@@ -6,7 +6,7 @@ import numbers
 
 import numpy as np
 
-from xarray.computation.ops import IncludeNumpySameMethods, IncludeReduceMethods
+from xarray.computation.ops import IncludeNumpySameMethods
 
 # _typed_ops.py is a generated file
 from xarray.core._typed_ops import (
@@ -137,8 +137,4 @@ class DatasetGroupbyArithmetic(
     SupportsArithmetic,
     DatasetGroupByOpsMixin,
 ):
-    __slots__ = ()
-
-
-class CoarsenArithmetic(IncludeReduceMethods):
     __slots__ = ()
