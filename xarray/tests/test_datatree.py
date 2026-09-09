@@ -2784,3 +2784,20 @@ class TestDask:
 
         with pytest.raises(ValueError, match="not found in data dimensions"):
             tree.chunk({"u": 2})
+
+    @pytest.mark.parametrize("chunks", ["auto", 5, "20B"])
+    def test_chunk_single_spec(self, chunks):
+        ds1 = xr.Dataset({"a": ("x", np.arange(10))})
+        ds2 = xr.Dataset({"b": ("y", np.arange(6))})
+
+        tree = xr.DataTree.from_dict({"/": ds1, "/group1": ds2})
+        actual = tree.chunk(chunks)
+
+        expected = xr.DataTree.from_dict(
+            {"/": ds1.chunk(chunks), "/group1": ds2.chunk(chunks)}
+        )
+
+        assert_identical(actual, expected)
+        assert actual.chunksizes == expected.chunksizes
+        assert set(actual.chunksizes["/"]) == {"x"}
+        assert set(actual.chunksizes["/group1"]) == {"y"}

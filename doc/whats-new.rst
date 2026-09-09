@@ -117,6 +117,11 @@ Bug Fixes
   type error when applying reduction methods, due to the reduction methods being
   dynamically generated (:issue:`8136`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- :py:meth:`DataTree.chunk` now accepts a single chunk specification such as
+  ``"auto"`` or an integer and applies it to every dimension in the tree, as
+  :py:meth:`Dataset.chunk` does, instead of raising ``TypeError``
+  (:issue:`11315`, :pull:`11569`).
+  By `fredrikblau <https://github.com/fredrikblau>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
