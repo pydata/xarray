@@ -1723,9 +1723,11 @@ async def open_zarr_async(
     )
     owns_store = root.store is not store
     try:
-        opened = root
-        if consolidated is not False and group and group != "/":
-            opened = await root.getitem(group.removeprefix("/"))
+        opened = (
+            await root.getitem(group.removeprefix("/"))
+            if consolidated is not False and group and group != "/"
+            else root
+        )
         if not isinstance(opened, AsyncGroup):
             raise TypeError(f"Expected a Zarr group at {group!r}")
         if use_zarr_fill_value_as_mask is None:
@@ -1798,9 +1800,9 @@ async def open_zarr_async(
             use_cftime=use_cftime,
         )
         if create_default_indexes:
-            for name, coord in ds.coords.items():
-                if coord.dims == (name,) and name not in ds.xindexes:
-                    await ds.variables[name].load_async()
+            for coord_name, coord in ds.coords.items():
+                if coord.dims == (coord_name,) and coord_name not in ds.xindexes:
+                    await ds.variables[coord_name].load_async()
             ds = _maybe_create_default_indexes(ds)
         ds.set_close(backend.close)
         return _dataset_from_backend_dataset(

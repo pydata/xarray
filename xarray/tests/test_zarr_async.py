@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 
 import xarray as xr
 from xarray.testing import assert_identical
+
+if TYPE_CHECKING:
+    from zarr.core.common import JSON
 
 zarr = pytest.importorskip("zarr", minversion="3.0")
 pytestmark = pytest.mark.asyncio
@@ -41,11 +45,12 @@ async def make_store(zarr_format=3, consolidated=False):
     store = zarr.storage.MemoryStore()
     root = await za.open_group(store, mode="w", zarr_format=zarr_format)
     group = await root.create_group("nested", attributes={"title": "async"})
-    for name, data, dims, attrs in [
+    variables: list[tuple[str, np.ndarray, tuple[str, ...], dict[str, JSON]]] = [
         ("x", np.arange(4), ("x",), {}),
         ("value", np.arange(4, dtype="int16"), ("x",), {"scale_factor": 2.0}),
         ("time", np.arange(4), ("x",), {"units": "days since 2000-01-01"}),
-    ]:
+    ]
+    for name, data, dims, attrs in variables:
         if zarr_format == 2:
             attrs = dict(attrs, _ARRAY_DIMENSIONS=list(dims))
         array = await group.create_array(
