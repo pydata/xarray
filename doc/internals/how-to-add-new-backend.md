@@ -35,6 +35,8 @@ it should implement the following attributes and methods:
 - the `guess_can_open` method (optional)
 - the `description` attribute (optional)
 - the `url` attribute (optional).
+- the `open_dataarray` method (optional)
+- the `open_datatree` method (optional)
 
 This is what a `BackendEntrypoint` subclass should look like:
 
@@ -143,6 +145,29 @@ parameter or explicitly using the syntax `**kwargs`.
 If you don't want to support the lazy loading, then the
 {py:class}`~xarray.Dataset` shall contain values as a {py:class}`numpy.ndarray`
 and your work is almost done.
+
+(rst-open-dataarray)=
+
+### open_dataarray
+
+The backend `open_dataarray` may shall reading from file, the variables
+decoding and it shall instantiate the output Xarray class {py:class}`~xarray.DataArray`.
+
+If `MyBackendEntrypoint.open_dataarray` is not implemented and `xarray.open_dataarray(engine='my_engine')` is called then `MyBackendEntrypoint.open_dataset` is used instead.
+If `open_dataset` is used to open a `DataArray`, if the `Dataset` contains a single variable, that is returned. If the `Dataset` contains multiple variables then a `ValueError` is raised.
+
+All other processing and requirements are the same as for {ref}`rst-open_dataset`.
+
+(rst-open-datatree)=
+
+### open_datatree
+
+The backend `open_datatree` may shall reading from file, the variables
+decoding and it shall instantiate the output Xarray class {py:class}`~xarray.DataTree`.
+
+If `MyBackendEntrypoint.open_datatree` is not implemented and `xarray.open_datatree(engine='my_engine')` is called a `NotImplementedError` is raised.
+
+All other processing and requirements are the same as for {ref}`rst-open_dataset`.
 
 (rst-open-dataset-parameters)=
 
