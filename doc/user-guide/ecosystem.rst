@@ -40,6 +40,7 @@ Geosciences
 - `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats.
 - `SARXarray <https://tudelftgeodesy.github.io/sarxarray/>`_: xarray extension for reading and processing large Synthetic Aperture Radar (SAR) data stacks.
 - `shxarray <https://shxarray.wobbly.earth/>`_: Convert, filter,and map geodesy related spherical harmonic representations of gravity and terrestrial water storage through an xarray extension.
+- `spharmgrid <https://spharmgrid.readthedocs.io/>`_: Spherical harmonic tools for atmospheric science, including scalar and vector filtering, regridding, differential operators, and kinematics. Built on `DUCC <https://gitlab.mpcdf.mpg.de/mtr/ducc>`_, implementing most of `NCL <https://www.ncl.ucar.edu/>`_'s high-level spherical harmonic operations.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
 - `TOAD <https://github.com/tipmip-methods/toad/>`_: TOAD (Tipping and Other Abrupt events Detector) detects and clusters abrupt shifts in gridded Earth system data and operates directly on xarray datasets.
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
