@@ -195,17 +195,22 @@ class Weighted(Generic[T_Xarray]):
     def _check_dim(self, dim: Dims):
         """raise an error if any dimension is missing"""
 
-        dims: list[Hashable]
-        if isinstance(dim, str) or not isinstance(dim, Iterable):
-            dims = [dim] if dim else []
-        else:
-            dims = list(dim)
+        dims = self._dims_to_list(dim)
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
         missing_dims = set(dims) - all_dims
         if missing_dims:
             raise ValueError(
                 f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
             )
+
+    def _dims_to_list(self, dim: Dims) -> list[Hashable]:
+        dims: list[Hashable]
+        if isinstance(dim, str) or not isinstance(dim, Iterable):
+            dims = [dim] if dim else []
+        else:
+            dims = list(dim)
+
+        return dims
 
     @staticmethod
     def _reduce(
@@ -548,9 +553,25 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 
 class DatasetWeighted(Weighted["Dataset"]):
+    def _restore_dims(self, dim: Dims, ds: Dataset) -> Dataset:
+        """self.obj.map will drop orphaned coordinates & dims that are not in
+        the weights DataArray. This restores them.
+        """
+        if dim is None:
+            return ds
+
+        dims = self._dims_to_list(dim)
+
+        existing_dims = {dim for v in ds.variables.values() for dim in v.dims}
+        dims_to_restore = set(self.obj.dims) - set(dims) - existing_dims
+
+        coords = {d: self.obj.coords[d] for d in dims_to_restore}
+        return ds.assign_coords(coords)
+
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
-        return self.obj.map(func, dim=dim, **kwargs)
+        mapped_ds = self.obj.map(func, dim=dim, **kwargs)
+        return self._restore_dims(dim, mapped_ds)
 
 
 def _inject_docstring(cls, cls_name):
