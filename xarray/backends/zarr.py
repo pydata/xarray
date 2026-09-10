@@ -1691,7 +1691,9 @@ async def open_zarr_async(
     --------
     Open metadata, select a region lazily, then await its data:
 
-    >>> ds = await xr.open_zarr_async(store, create_default_indexes=False)  # doctest: +SKIP
+    >>> ds = await xr.open_zarr_async(
+    ...     store, create_default_indexes=False
+    ... )  # doctest: +SKIP
     >>> subset = await ds.isel(x=slice(0, 100)).load_async()  # doctest: +SKIP
 
     See Also
