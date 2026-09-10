@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
+from xarray.backends.zarr import has_zarr_async_index
 from xarray.testing import assert_identical
 
 if TYPE_CHECKING:
@@ -107,8 +108,8 @@ async def test_raw_drop_and_missing(request):
     )
     assert "time" not in ds
     assert ds["value"].attrs["scale_factor"] == 2.0
-    result = await ds.isel(x=[3, 1]).load_async()
-    np.testing.assert_array_equal(result["value"], [3, 1])
+    result = await ds.isel(x=slice(1, 3)).load_async()
+    np.testing.assert_array_equal(result["value"], [1, 2])
     with pytest.raises((KeyError, FileNotFoundError)):
         await xr.open_zarr_async(store, group="missing")
     with pytest.raises(TypeError, match="Expected a Zarr group"):
@@ -141,7 +142,7 @@ async def test_store_reads_stay_on_callers_loop(request):
     request.getfixturevalue("forbid_sync")
     request.getfixturevalue("forbid_threads")
     ds = await xr.open_zarr_async(
-        LoopBoundStore(store),
+        LoopBoundStore(store.with_read_only(True)),
         group="nested",
         decode_times=False,
         create_default_indexes=False,
@@ -201,3 +202,18 @@ async def test_nczarr_dimensions(valid, request):
         with pytest.raises(KeyError, match="missing dimension metadata"):
             await xr.open_zarr_async(store, consolidated=False)
     assert store._is_open
+
+
+@pytest.mark.skipif(
+    not has_zarr_async_index(),
+    reason="Async orthogonal indexing requires Zarr >= 3.1.2",
+)
+async def test_async_fancy_indexing(request):
+    store = await make_store()
+    request.getfixturevalue("forbid_sync")
+    request.getfixturevalue("forbid_threads")
+    ds = await xr.open_zarr_async(
+        store, group="nested", decode_cf=False, create_default_indexes=False
+    )
+    result = await ds.isel(x=[3, 1]).load_async()
+    np.testing.assert_array_equal(result["value"], [3, 1])
