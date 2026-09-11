@@ -507,6 +507,38 @@ def _ignore_warnings_if(condition):
         yield
 
 
+def _empty_axis_fill_value(values, axis):
+    """Return a fill-value array for a reduction over an empty axis.
+
+    For datetime/timedelta dtypes the result preserves dtype with a NaT
+    fill. For floating/complex dtypes the result preserves dtype with a
+    NaN fill. For integer (and other numeric) dtypes the result is
+    float64 with a NaN fill, matching pandas / NumPy mean-on-empty
+    behaviour.
+
+    See https://github.com/pydata/xarray/issues/11554.
+    """
+    if axis is None:
+        out_shape: tuple[int, ...] = ()
+    elif isinstance(axis, (tuple, list)):
+        axes = tuple(a if a >= 0 else values.ndim + a for a in axis)
+        out_shape = tuple(s for i, s in enumerate(values.shape) if i not in axes)
+    else:
+        a = axis if axis >= 0 else values.ndim + axis
+        out_shape = tuple(s for i, s in enumerate(values.shape) if i != a)
+
+    dtype = values.dtype
+    if dtypes.is_datetime_like(dtype):
+        scalar = np.array("NaT", dtype=dtype)
+    elif np.issubdtype(dtype, np.floating) or np.issubdtype(dtype, np.complexfloating):
+        scalar = np.array(np.nan, dtype=dtype)
+    else:
+        # Integer and other numeric: promote to float64 to hold NaN.
+        scalar = np.array(np.nan, dtype=np.float64)
+
+    return np.broadcast_to(scalar, out_shape)
+
+
 def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
@@ -523,6 +555,13 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
 
         if coerce_strings and dtypes.is_string(values.dtype):
             values = astype(values, object)
+
+        # Handle reductions over an empty axis. Several numpy reductions
+        # raise on zero-size input (e.g. max, min, median, std, var);
+        # xarray instead returns the appropriate fill value to match
+        # pandas. See GH #11554.
+        if values.size == 0:
+            return _empty_axis_fill_value(values, axis)
 
         func = None
         if skipna or (
@@ -616,6 +655,10 @@ def _datetime_nanreduce(array, func):
     """
     dtype = array.dtype
     assert dtypes.is_datetime_like(dtype)
+    if array.size == 0:
+        # Returning NaT here keeps the public mean() path consistent
+        # with the empty-axis fix in _create_nan_agg_method. See GH #11554.
+        return np.array("NaT", dtype=dtype)
     # (NaT).astype(float) does not produce NaN...
     array = where(pandas_isnull(array), np.nan, array.astype(float))
     array = func(array, skipna=True)

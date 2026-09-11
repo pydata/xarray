@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-from numpy import array, nan
+from numpy import array, isnat, nan
 
 from xarray import DataArray, Dataset, concat, date_range
 from xarray.coding.times import _NS_PER_TIME_DELTA
@@ -255,6 +255,57 @@ class TestOps:
     @pytest.mark.filterwarnings("error")
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))
+
+    def test_reduction_on_empty_numeric(self):
+        # GH 11554: numeric reductions on empty input should return NaN
+        # (matching pandas), not raise.
+        empty_f8 = np.array([], dtype="float64")
+        empty_i8 = np.array([], dtype="int64")
+        for f in (
+            duck_array_ops.mean,
+            duck_array_ops.median,
+            duck_array_ops.std,
+            duck_array_ops.var,
+        ):
+            assert np.isnan(f(empty_f8))
+            assert np.isnan(f(empty_i8))
+        for f in (duck_array_ops.max, duck_array_ops.min):
+            assert np.isnan(f(empty_f8))
+            assert np.isnan(f(empty_i8))
+
+    def test_reduction_on_empty_datetime(self):
+        # GH 11554: datetime/timedelta reductions on empty input should
+        # return NaT, matching pandas. Numeric datetime unit "ns".
+        empty_dt = np.array([], dtype="M8[ns]")
+        empty_td = np.array([], dtype="m8[ns]")
+        for f in (duck_array_ops.min, duck_array_ops.max):
+            result_dt = f(empty_dt)
+            result_td = f(empty_td)
+            assert result_dt.dtype == empty_dt.dtype
+            assert result_td.dtype == empty_td.dtype
+            assert isnat(result_dt) and isnat(result_td)
+        # mean on datetime/timedelta also returns NaT
+        mean_dt = mean(empty_dt)
+        mean_td = mean(empty_td)
+        assert mean_dt.dtype == empty_dt.dtype
+        assert mean_td.dtype == empty_td.dtype
+        assert isnat(mean_dt) and isnat(mean_td)
+        # median on datetime returns NaT (timedelta median already worked)
+        med_dt = duck_array_ops.median(empty_dt)
+        med_td = duck_array_ops.median(empty_td)
+        assert med_dt.dtype == empty_dt.dtype
+        assert med_td.dtype == empty_td.dtype
+        assert isnat(med_dt) and isnat(med_td)
+
+    def test_datetime_nanreduce_empty(self):
+        # GH 11554: _datetime_nanreduce should short-circuit on empty
+        # input rather than route through the float conversion path.
+        from xarray.core.duck_array_ops import _datetime_nanreduce
+
+        empty_dt = np.array([], dtype="M8[ns]")
+        result_min = _datetime_nanreduce(empty_dt, duck_array_ops.min)
+        assert result_min.dtype == empty_dt.dtype
+        assert isnat(result_min)
 
 
 @requires_dask
