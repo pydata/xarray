@@ -13,6 +13,9 @@ v2026.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add :py:func:`open_zarr_async` to open Zarr datasets on the caller's event loop,
+  including asynchronous coordinate loading, without the synchronous Zarr bridge.
+
 - Added `PyArrowCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
   to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
   export to pyarrow, polars or duckdb.
