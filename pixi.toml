@@ -334,7 +334,7 @@ build-package = { cmd = "pixi publish --path ci/recipe/pixi.toml --target-dir di
 
 [tasks]
 build-and-host-doc = [
-  { task = "build" },
+  { task = "build-package" },
   { task = "doc" },
   { task = "host-static-doc" },
 ]
