@@ -261,6 +261,22 @@ class TestGetChunkedArrayType:
         with pytest.raises(TypeError, match="received multiple types"):
             get_chunked_array_type(*[dask_arr, dummy_arr])
 
+    @requires_dask
+    def test_subclass_of_chunked_array_type(self, register_dummy_chunkmanager) -> None:
+        # Regression test for #11539: two arrays recognised by the same
+        # chunk manager (e.g. dask.Array and a subclass of it) must not be
+        # treated as a mix of chunked array types.
+        import dask.array as da
+
+        class SubDaskArray(da.Array):
+            pass
+
+        plain = da.from_array([1, 2, 3], chunks=(1,))
+        subclass = SubDaskArray(plain.dask, plain.name, plain.chunks, plain.dtype)
+
+        manager = get_chunked_array_type(plain, subclass)
+        assert isinstance(manager, DaskManager)
+
 
 def test_bogus_entrypoint() -> None:
     # Create a bogus entry-point as if the user broke their setup.cfg
