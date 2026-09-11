@@ -177,6 +177,7 @@ generate-aggregations-ci = { cmd = 'test -z "$(git status --porcelain)" && echo 
 ] }
 
 [feature.doc.dependencies]
+python-gil = "3.14.*"
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
