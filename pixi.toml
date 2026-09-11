@@ -213,7 +213,6 @@ doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentat
   "_prepare-environment",
 ] }
 doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch.", depends-on = [
-  "build",
   "_prepare-environment",
 ] }
 host-static-doc = { cmd = "python -m http.server -b 127.0.0.1 -d _build/html 5455", cwd = "doc", description = "serve the static documentation" }
