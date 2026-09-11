@@ -357,7 +357,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         from xarray.namedarray.utils import _get_chunk
 
         if _contains_cftime_datetimes(data):
-            chunks2 = _get_chunk(data, chunks, self, preferred_chunks={})  # type: ignore[arg-type]
+            preferred_chunks = dict(enumerate(data.chunks))
+            chunks2 = _get_chunk(
+                data,  # type: ignore[arg-type]
+                chunks,
+                self,
+                preferred_chunks=preferred_chunks,
+                dims=preferred_chunks.keys(),
+            )
         else:
             chunks2 = chunks  # type: ignore[assignment]
         return data.rechunk(chunks2, **kwargs)
