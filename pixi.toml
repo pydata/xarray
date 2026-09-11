@@ -177,10 +177,11 @@ generate-aggregations-ci = { cmd = 'test -z "$(git status --porcelain)" && echo 
 ] }
 
 [feature.doc.dependencies]
+python = "3.12.*"
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
-iris = "*"
+iris = "!=3.16.0"                  # avoid ncdata failing. See https://github.com/SciTools/ncdata/issues/255
 ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
@@ -213,7 +214,6 @@ doc = { cmd = "make html", cwd = "doc", description = "Build the HTML documentat
   "_prepare-environment",
 ] }
 doc-clean = { cmd = "make clean && make html", cwd = "doc", description = "Clean build artifacts and rebuild the HTML documentation from scratch.", depends-on = [
-  "build",
   "_prepare-environment",
 ] }
 host-static-doc = { cmd = "python -m http.server -b 127.0.0.1 -d _build/html 5455", cwd = "doc", description = "serve the static documentation" }
@@ -334,7 +334,7 @@ build-package = { cmd = "pixi publish --path ci/recipe/pixi.toml --target-dir di
 
 [tasks]
 build-and-host-doc = [
-  { task = "build" },
+  { task = "build-package" },
   { task = "doc" },
   { task = "host-static-doc" },
 ]

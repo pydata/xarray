@@ -78,6 +78,7 @@ extlinks = {
 copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: "
 copybutton_prompt_is_regexp = True
 
+# myst-nb
 nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
 # RTD does not publish the .err.log report, so print tracebacks in the build log
 nb_execution_show_tb = True
