@@ -11,7 +11,6 @@ from xarray.core.groupby import GroupBy
 
 def _walk_array_namespaces(obj, namespaces):
     if isinstance(obj, xr.DataTree):
-        # TODO: DataTree doesn't actually support ufuncs yet
         for node in obj.subtree:
             _walk_array_namespaces(node.dataset, namespaces)
     elif isinstance(obj, xr.Dataset):
