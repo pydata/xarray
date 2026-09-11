@@ -7452,14 +7452,19 @@ class DataArray(
                 raise ValueError(
                     f"Dimension {dim} not found in data dimensions: {self.dims}"
                 )
-            dim = {dim: self.sizes[dim]}
+            # A window of the dimension's own size, floored at 1. Rolling
+            # refuses a window of 0, but that guard is for a window the caller
+            # chose; here it is derived from the data, and an empty selection
+            # is ordinary. cumsum returns an empty result for the same input,
+            # and a window of 1 over 0 elements returns one too.
+            dim = {dim: max(self.sizes[dim], 1)}
         else:
             missing_dims = set(dim) - set(self.dims)
             if missing_dims:
                 raise ValueError(
                     f"Dimensions {missing_dims} not found in data dimensions: {self.dims}"
                 )
-            dim = {d: self.sizes[d] for d in dim}
+            dim = {d: max(self.sizes[d], 1) for d in dim}
 
         return DataArrayRolling(self, dim, min_periods=min_periods, center=False)
 

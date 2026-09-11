@@ -276,6 +276,17 @@ class Rolling(Generic[T_Xarray]):
 
     count.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="count")
 
+    @property
+    def _rolls_an_empty_dim(self) -> bool:
+        """Whether any rolled dimension has length 0.
+
+        Both accelerated paths reject a window wider than the axis, which a
+        window over 0 elements always is: numbagg raises "window not in valid
+        range" and bottleneck has its own limit. The result is empty either
+        way, so the generic path handles it.
+        """
+        return any(self.obj.sizes[d] == 0 for d in self.dim)
+
     def _mapping_to_list(
         self,
         arg: _T | Mapping[Any, _T],
@@ -775,6 +786,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             # Numbagg doesn't handle object arrays and generally has dtype consistency,
             # so doesn't deal well with bool arrays which are expected to change type.
             and self.obj.data.dtype.kind not in "ObMm"
+            and not self._rolls_an_empty_dim
             # TODO: we could also allow this, probably as part of a refactoring of this
             # module, so we can use the machinery in `self.reduce`.
             and self.ndim == 1
@@ -802,6 +814,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             )
             and self.ndim == 1
             and xp is np
+            and not self._rolls_an_empty_dim
         ):
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs

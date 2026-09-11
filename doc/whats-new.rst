@@ -53,6 +53,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`DataArray.cumulative` and :py:meth:`Dataset.cumulative` no longer raise
+  ``ValueError: window must be > 0`` on a dimension of length 0, and
+  :py:meth:`DataArray.rolling` no longer raises on one either. Both now return an
+  empty result, matching :py:meth:`DataArray.cumsum` (:pull:`11572`).
+  By `Chirag Gupta <https://github.com/chiruu12>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).

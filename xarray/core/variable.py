@@ -2240,15 +2240,30 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             else:
                 pads[d] = (win - 1, 0)
 
+        # A dimension of length 0 yields 0 windows, but the left pad of
+        # ``win - 1`` leaves fewer elements than the window, and
+        # sliding_window_view refuses that outright. Padding it out to a full
+        # window produces one window instead of none, so the extra is sliced
+        # back off below. Doing it this way keeps the array in its own
+        # namespace rather than reaching for an empty numpy array.
+        empty_dims = {d for d in dim if self.sizes[d] == 0}
+        for d, win in zip(dim, window, strict=True):
+            if d in empty_dims:
+                start, end = pads[d]
+                pads[d] = (start, end + win)
+
         padded = var.pad(pads, mode="constant", constant_values=fill_value)
         axis = self.get_axis_num(dim)
         new_dims = self.dims + tuple(window_dim)
-        return Variable(
-            new_dims,
-            duck_array_ops.sliding_window_view(
-                padded.data, window_shape=window, axis=axis, **kwargs
-            ),
+        windowed = duck_array_ops.sliding_window_view(
+            padded.data, window_shape=window, axis=axis, **kwargs
         )
+        if empty_dims:
+            trim = tuple(
+                slice(0, 0) if d in empty_dims else slice(None) for d in self.dims
+            )
+            windowed = windowed[trim]
+        return Variable(new_dims, windowed)
 
     def coarsen(
         self, windows, func, boundary="exact", side="left", keep_attrs=None, **kwargs
