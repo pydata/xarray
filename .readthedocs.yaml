@@ -8,7 +8,7 @@ build:
   os: ubuntu-lts-latest
   tools:
     # just so RTD stops complaining
-    python: "latest"
+    python: "3.14"
   jobs:
     create_environment:
       - asdf plugin add pixi
@@ -24,4 +24,4 @@ build:
     build:
       html:
         - pixi run --frozen build-package
-        - pixi run --frozen doc BUILDDIR=$READTHEDOCS_OUTPUT
+        - pixi run --frozen --verbose doc BUILDDIR=$READTHEDOCS_OUTPUT
