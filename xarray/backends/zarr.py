@@ -462,7 +462,6 @@ def extract_zarr_variable_encoding(
     """
 
     encoding = variable.encoding.copy()
-
     safe_to_drop = {"source", "original_shape", "preferred_chunks"}
     valid_encodings = {
         "chunks",
@@ -859,10 +858,13 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_array, DIMENSION_KEY, try_nczarr
         )
         attributes = dict(attributes)
+        preferred_chunks = (
+            zarr_array.shards if zarr_array.shards is not None else zarr_array.chunks
+        )
 
         encoding = {
             "chunks": zarr_array.chunks,
-            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
+            "preferred_chunks": dict(zip(dimensions, preferred_chunks, strict=True)),
         }
 
         encoding.update(
