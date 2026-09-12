@@ -180,15 +180,15 @@ generate-aggregations-ci = { cmd = 'test -z "$(git status --porcelain)" && echo 
 python = "3.14.*"
 kerchunk = "*"
 ipykernel = "*"
-ipywidgets = "*"          # silence nbsphinx warning
-iris = "!=3.16.0"         # avoid ncdata failing. See https://github.com/SciTools/ncdata/issues/255
+ipywidgets = "*"                   # silence nbsphinx warning
+iris = "!=3.16.0"                  # avoid ncdata failing. See https://github.com/SciTools/ncdata/issues/255
 ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
 ncdata = "*"
 pydata-sphinx-theme = "*"
 pyproj = "*"
-rich = "*"                # for Zarr tree()
+rich = "*"                         # for Zarr tree()
 setuptools = "*"
 sphinx-autosummary-accessors = "*"
 sphinx-copybutton = "*"
