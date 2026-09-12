@@ -8,7 +8,7 @@ build:
   os: ubuntu-lts-latest
   tools:
     # just so RTD stops complaining
-    python: "3.14"
+    python: "latest"
   jobs:
     create_environment:
       - asdf plugin add pixi
