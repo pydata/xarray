@@ -519,6 +519,28 @@ def line(
 
     primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
+    # ax.plot draws each column of a 2D array with the next color from the
+    # axes' property cycle, so duplicate hue values get distinct colors.
+    # Recolor so lines sharing a hue value share a color: the k-th hue value
+    # (in order of first appearance) takes the k-th color the axes assigned,
+    # which leaves palettes unchanged whenever the hue values are already
+    # unique and inherits whatever property cycle the axes carries. Skipped
+    # when the caller pinned a color, since every line already shares it.
+    if (
+        hueplt is not None
+        and len(primitive) == hueplt.size
+        and "color" not in kwargs
+        and "c" not in kwargs
+    ):
+        hue_values = hueplt.to_numpy()
+        unique_hues = list(dict.fromkeys(hue_values))
+        color_by_hue: dict[Hashable, Any] = {
+            hue_value: primitive[k].get_color()
+            for k, hue_value in enumerate(unique_hues)
+        }
+        for line2d, hue_value in zip(primitive, hue_values, strict=True):
+            line2d.set_color(color_by_hue[hue_value])
+
     if _labels:
         if xlabel is not None:
             ax.set_xlabel(xlabel)
@@ -530,7 +552,16 @@ def line(
 
     if darray.ndim == 2 and add_legend:
         assert hueplt is not None
-        ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
+        # One legend entry per hue value, keyed to the first line drawn with
+        # it, so duplicate hue values don't produce duplicate entries.
+        first_line_by_hue: dict[Hashable, Any] = {}
+        for line2d, hue_value in zip(primitive, hueplt.to_numpy(), strict=False):
+            first_line_by_hue.setdefault(hue_value, line2d)
+        ax.legend(
+            handles=list(first_line_by_hue.values()),
+            labels=list(first_line_by_hue.keys()),
+            title=hue_label,
+        )
 
     if isinstance(xplt.dtype, np.dtype) and np.issubdtype(xplt.dtype, np.datetime64):  # type: ignore[redundant-expr]
         _set_concise_date(ax, axis="x")
