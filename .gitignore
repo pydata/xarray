@@ -10,6 +10,7 @@ __pycache__
 doc/*.nc
 doc/auto_gallery
 doc/rasm.zarr
+doc/user-guide/saved_on_disk.h5
 
 # C extensions
 *.so
