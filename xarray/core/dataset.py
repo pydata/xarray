@@ -7509,6 +7509,8 @@ class Dataset(
     ) -> None:
         if not isinstance(idx, pd.MultiIndex):
             for name, values in arrays:
+                if not values.flags.writeable:
+                    values = values.copy()
                 self[name] = (dims, values)
             return
 

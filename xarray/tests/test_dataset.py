@@ -5536,6 +5536,18 @@ class TestDataset:
         assert len(actual) == dense_u.size
         assert expected.loc[actual.index].equals(actual)
 
+    @pytest.mark.parametrize("dtype", [np.int64, np.float64])
+    def test_from_dataframe_writable(self, dtype) -> None:
+        frame = pd.DataFrame(
+            {"value": np.array([1, 2], dtype=dtype)},
+            index=pd.Index(["a", "b"], name="location"),
+        )
+        actual = Dataset.from_dataframe(frame)
+
+        actual["value"].loc[{"location": "a"}] = 3
+
+        assert_array_equal(actual["value"], [3, 2])
+
     def test_from_dataframe_categorical_dtype_index(self) -> None:
         cat = pd.CategoricalIndex(list("abcd"))
         df = pd.DataFrame({"f": [0, 1, 2, 3]}, index=cat)
