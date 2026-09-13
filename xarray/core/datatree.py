@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import io
 import itertools
-import math
 import textwrap
 from collections import ChainMap, defaultdict
 from collections.abc import (
@@ -1818,7 +1817,7 @@ class DataTree(
 
     def map_over_datasets(
         self,
-        func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+        func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
@@ -2041,7 +2040,7 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ) -> None | memoryview | Delayed:
+    ) -> memoryview | Delayed | None:
         """
         Write datatree contents to a netCDF file.
 
@@ -2779,10 +2778,9 @@ class DataTree(
         Dataset.squeeze
         numpy.squeeze
         """
-        all_sizes = {}
-        for node in self.subtree:
-            for d, s in node.sizes.items():
-                all_sizes[d] = s
+        all_sizes: dict[Any, int] = {
+            d: s for node in self.subtree for d, s in node.sizes.items()
+        }
 
         if axis is not None:
             if dim is not None:
@@ -2846,6 +2844,10 @@ class DataTree(
         --------
         Dataset.dropna
         """
+        import math
+
+        import numpy as np
+
         all_dims = self._get_all_dims()
         if dim not in all_dims:
             raise ValueError(
@@ -3035,7 +3037,7 @@ class DataTree(
         result = {}
         for path, node in self.subtree_with_keys:
             node_ds = node.to_dataset()
-            if isinstance(other, type(self)):
+            if isinstance(other, DataTree):
                 target = (
                     other.to_dataset()
                     if path == "."
