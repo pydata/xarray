@@ -46,6 +46,8 @@ from xarray.tests import (
     _STANDARD_CALENDARS,
     DuckArrayWrapper,
     FirstElementAccessibleArray,
+    InaccessibleArray,
+    UnexpectedDataAccess,
     _all_cftime_date_types,
     arm_xfail,
     assert_array_equal,
@@ -2215,3 +2217,74 @@ def test_roundtrip_empty_datetime64_array(time_unit: PDDatetimeUnitOptions) -> N
     )
     assert_identical(variable, roundtripped)
     assert roundtripped.dtype == variable.dtype
+
+
+class TestInferDtypeOptIn:
+    """Coverage for the ``infer_dtype="metadata"`` opt-in on CFDatetimeCoder.
+
+    With ``infer_dtype="data"`` (default), the coder reads the first and
+    last values of the encoded array to verify they decode successfully —
+    this is the legacy behavior covered elsewhere in this module.
+
+    With ``infer_dtype="metadata"``, dtype is inferred from
+    ``(units, calendar, use_cftime, time_unit)`` alone, with no data
+    reads. The tests below exercise the metadata path and prove no data
+    access happens by wrapping the variable in ``InaccessibleArray``.
+    """
+
+    @staticmethod
+    def _inaccessible_variable(
+        units: str,
+        calendar: str | None = None,
+        dtype: str = "int64",
+        shape: tuple[int, ...] = (3,),
+    ) -> Variable:
+        attrs: dict[str, str] = {"units": units}
+        if calendar is not None:
+            attrs["calendar"] = calendar
+        return Variable(
+            ("t",), InaccessibleArray(np.zeros(shape, dtype=dtype)), attrs=attrs
+        )
+
+    def test_metadata_use_cftime_true_no_reads(self):
+        # ``use_cftime=True`` short-circuits to object dtype without
+        # calling decode_cf_datetime, so it works even when cftime is
+        # not installed.
+        variable = self._inaccessible_variable("days since 2000-01-01", "standard")
+        coder = CFDatetimeCoder(use_cftime=True, infer_dtype="metadata")
+        assert coder.decode(variable).dtype == np.dtype("object")
+
+    @requires_cftime
+    def test_metadata_nonstandard_calendar_no_reads(self):
+        variable = self._inaccessible_variable("days since 2000-01-01", "noleap")
+        coder = CFDatetimeCoder(infer_dtype="metadata")
+        assert coder.decode(variable).dtype == np.dtype("object")
+
+    @pytest.mark.parametrize("time_unit", ["s", "ms", "us", "ns"])
+    def test_metadata_standard_calendar_no_reads(self, time_unit):
+        variable = self._inaccessible_variable("days since 2000-01-01", "standard")
+        coder = CFDatetimeCoder(time_unit=time_unit, infer_dtype="metadata")
+        assert coder.decode(variable).dtype.kind == "M"
+
+    def test_metadata_invalid_units_raises_value_error(self):
+        # "nonsense" is not a valid unit but contains "since", so the
+        # coder enters the CF-datetime branch and the metadata path
+        # surfaces the parse error.
+        variable = self._inaccessible_variable("nonsense since whenever", "standard")
+        coder = CFDatetimeCoder(infer_dtype="metadata")
+        with pytest.raises(ValueError, match="unable to decode time units"):
+            coder.decode(variable)
+
+    def test_invalid_infer_dtype_raises(self):
+        with pytest.raises(
+            ValueError, match="infer_dtype must be 'data' or 'metadata'"
+        ):
+            CFDatetimeCoder(infer_dtype="bogus")  # type: ignore[arg-type]
+
+    def test_data_default_still_reads_first_and_last(self):
+        # Backwards-compat guarantee: the default path inspects the
+        # data, so wrapping in InaccessibleArray raises.
+        variable = self._inaccessible_variable("days since 2000-01-01", "standard")
+        coder = CFDatetimeCoder()
+        with pytest.raises(UnexpectedDataAccess):
+            coder.decode(variable)
