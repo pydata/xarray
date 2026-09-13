@@ -2823,7 +2823,9 @@ class TestDataTreeManipulationMethods:
             dt.transpose(..., "nonexistent", missing_dims="warn")
 
         # Error if list passed instead of unpacked args
-        with pytest.raises(TypeError, match="requires dim to be passed as multiple arguments"):
+        with pytest.raises(
+            TypeError, match="requires dim to be passed as multiple arguments"
+        ):
             dt.transpose(["y", "x"])  # type: ignore[arg-type]
 
     def test_squeeze(self):
@@ -2841,7 +2843,9 @@ class TestDataTreeManipulationMethods:
         assert sq_x["/"].to_dataset()["a"].dims == ("y",)
 
         # Error if dim length > 1
-        with pytest.raises(ValueError, match="cannot select a dimension to squeeze with length = 3 > 1"):
+        with pytest.raises(
+            ValueError, match="cannot select a dimension to squeeze with length = 3 > 1"
+        ):
             dt.squeeze(dim="y")
 
         # Error if dim not present
@@ -2864,7 +2868,9 @@ class TestDataTreeManipulationMethods:
 
         # how='any'
         dropped_any = dt.dropna(dim="x", how="any")
-        np.testing.assert_array_equal(dropped_any["/"].to_dataset()["a"].values, [1.0, 4.0])
+        np.testing.assert_array_equal(
+            dropped_any["/"].to_dataset()["a"].values, [1.0, 4.0]
+        )
         np.testing.assert_array_equal(
             dropped_any["child"].to_dataset()["b"].values,
             [[1.0, 2.0], [7.0, 8.0]],
@@ -2878,7 +2884,9 @@ class TestDataTreeManipulationMethods:
 
         # thresh
         dropped_thresh = dt.dropna(dim="x", thresh=3)
-        np.testing.assert_array_equal(dropped_thresh["/"].to_dataset()["a"].values, [1.0, 4.0])
+        np.testing.assert_array_equal(
+            dropped_thresh["/"].to_dataset()["a"].values, [1.0, 4.0]
+        )
 
         # Dimension missing from tree
         with pytest.raises(ValueError, match="Dimension 'unknown' not found"):
@@ -2891,13 +2899,21 @@ class TestDataTreeManipulationMethods:
 
         # Scalar fillna
         filled = dt.fillna(0.0)
-        np.testing.assert_array_equal(filled["/"].to_dataset()["a"].values, [1.0, 0.0, 3.0])
-        np.testing.assert_array_equal(filled["child"].to_dataset()["b"].values, [0.0, 2.0, 0.0])
+        np.testing.assert_array_equal(
+            filled["/"].to_dataset()["a"].values, [1.0, 0.0, 3.0]
+        )
+        np.testing.assert_array_equal(
+            filled["child"].to_dataset()["b"].values, [0.0, 2.0, 0.0]
+        )
 
         # Dict fillna
         filled_dict = dt.fillna({"a": 99.0, "b": -1.0})
-        np.testing.assert_array_equal(filled_dict["/"].to_dataset()["a"].values, [1.0, 99.0, 3.0])
-        np.testing.assert_array_equal(filled_dict["child"].to_dataset()["b"].values, [-1.0, 2.0, -1.0])
+        np.testing.assert_array_equal(
+            filled_dict["/"].to_dataset()["a"].values, [1.0, 99.0, 3.0]
+        )
+        np.testing.assert_array_equal(
+            filled_dict["child"].to_dataset()["b"].values, [-1.0, 2.0, -1.0]
+        )
 
     def test_clip(self):
         ds1 = xr.Dataset({"a": ("x", [1.0, 5.0, 10.0])})
@@ -2905,8 +2921,12 @@ class TestDataTreeManipulationMethods:
         dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
 
         clipped = dt.clip(min=2.0, max=8.0)
-        np.testing.assert_array_equal(clipped["/"].to_dataset()["a"].values, [2.0, 5.0, 8.0])
-        np.testing.assert_array_equal(clipped["child"].to_dataset()["b"].values, [2.0, 6.0, 8.0])
+        np.testing.assert_array_equal(
+            clipped["/"].to_dataset()["a"].values, [2.0, 5.0, 8.0]
+        )
+        np.testing.assert_array_equal(
+            clipped["child"].to_dataset()["b"].values, [2.0, 6.0, 8.0]
+        )
 
     def test_isin(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2, 3])})
@@ -2914,8 +2934,12 @@ class TestDataTreeManipulationMethods:
         dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
 
         in_tree = dt.isin([2, 4])
-        np.testing.assert_array_equal(in_tree["/"].to_dataset()["a"].values, [False, True, False])
-        np.testing.assert_array_equal(in_tree["child"].to_dataset()["b"].values, [False, True, False])
+        np.testing.assert_array_equal(
+            in_tree["/"].to_dataset()["a"].values, [False, True, False]
+        )
+        np.testing.assert_array_equal(
+            in_tree["child"].to_dataset()["b"].values, [False, True, False]
+        )
 
     def test_where(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2, 3])})
@@ -2924,7 +2948,9 @@ class TestDataTreeManipulationMethods:
 
         filtered = dt.where(dt > 2, other=0)
         np.testing.assert_array_equal(filtered["/"].to_dataset()["a"].values, [0, 0, 3])
-        np.testing.assert_array_equal(filtered["child"].to_dataset()["b"].values, [4, 5, 6])
+        np.testing.assert_array_equal(
+            filtered["child"].to_dataset()["b"].values, [4, 5, 6]
+        )
 
     def test_broadcast_like(self):
         ds1 = xr.Dataset({"a": ("x", [1, 2])}, coords={"x": [10, 20]})
@@ -2949,16 +2975,24 @@ class TestDataTreeManipulationMethods:
 
         # Pad
         padded = dt.pad(x=(1, 1), constant_values=0)
-        np.testing.assert_array_equal(padded["/"].to_dataset()["a"].values, [0.0, 1.0, 2.0, 3.0, 0.0])
-        np.testing.assert_array_equal(padded["child"].to_dataset()["b"].values, [0.0, 10.0, 20.0, 30.0, 0.0])
+        np.testing.assert_array_equal(
+            padded["/"].to_dataset()["a"].values, [0.0, 1.0, 2.0, 3.0, 0.0]
+        )
+        np.testing.assert_array_equal(
+            padded["child"].to_dataset()["b"].values, [0.0, 10.0, 20.0, 30.0, 0.0]
+        )
 
         # Roll
         rolled = dt.roll(x=1, roll_coords=False)
-        np.testing.assert_array_equal(rolled["/"].to_dataset()["a"].values, [3.0, 1.0, 2.0])
+        np.testing.assert_array_equal(
+            rolled["/"].to_dataset()["a"].values, [3.0, 1.0, 2.0]
+        )
 
         # Shift
         shifted = dt.shift(x=1, fill_value=99.0)
-        np.testing.assert_array_equal(shifted["/"].to_dataset()["a"].values, [99.0, 1.0, 2.0])
+        np.testing.assert_array_equal(
+            shifted["/"].to_dataset()["a"].values, [99.0, 1.0, 2.0]
+        )
 
     def test_assign_coords(self):
         # Test GH9472 and GH10015
@@ -2999,7 +3033,9 @@ class TestDataTreeManipulationMethods:
         assert "c" in dropped["child"].to_dataset().data_vars
 
         # errors='raise' when var not found
-        with pytest.raises(ValueError, match="These variables cannot be found in this DataTree"):
+        with pytest.raises(
+            ValueError, match="These variables cannot be found in this DataTree"
+        ):
             dt.drop_vars("nonexistent")
 
         # errors='ignore'
@@ -3016,7 +3052,9 @@ class TestDataTreeManipulationMethods:
         assert "b" in dropped["/"].to_dataset().data_vars
         assert "c" not in dropped["child"].to_dataset().data_vars
 
-        with pytest.raises(ValueError, match="These dimensions cannot be found in this DataTree"):
+        with pytest.raises(
+            ValueError, match="These dimensions cannot be found in this DataTree"
+        ):
             dt.drop_dims("nonexistent")
 
         ignored = dt.drop_dims("nonexistent", errors="ignore")

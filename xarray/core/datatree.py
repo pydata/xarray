@@ -5,8 +5,6 @@ import io
 import itertools
 import math
 import textwrap
-
-import numpy as np
 from collections import ChainMap, defaultdict
 from collections.abc import (
     Callable,
@@ -30,6 +28,8 @@ from typing import (
     Union,
     overload,
 )
+
+import numpy as np
 
 from xarray.core import dtypes, utils
 from xarray.core._aggregations import DataTreeAggregations
@@ -2742,7 +2742,9 @@ class DataTree(
                 node_dims = [d for d in dim if d in node.dims or d is ...]
                 if ... not in node_dims:
                     node_dims.append(...)
-                result[path] = node.to_dataset().transpose(*node_dims, missing_dims="ignore")
+                result[path] = node.to_dataset().transpose(
+                    *node_dims, missing_dims="ignore"
+                )
 
         return type(self).from_dict(result, name=self.name)
 
@@ -2808,7 +2810,9 @@ class DataTree(
         if not dims_to_squeeze:
             return self.copy()
 
-        return self.isel(indexers={d: 0 for d in dims_to_squeeze}, drop=drop, missing_dims="ignore")
+        return self.isel(
+            indexers=dict.fromkeys(dims_to_squeeze, 0), drop=drop, missing_dims="ignore"
+        )
 
     def dropna(
         self,
@@ -2988,11 +2992,19 @@ class DataTree(
         for path, node in self.subtree_with_keys:
             node_ds = node.to_dataset()
             if isinstance(cond, type(self)):
-                node_cond = cond.to_dataset() if path == "." else (cond[path].to_dataset() if path in cond else cond)
+                node_cond = (
+                    cond.to_dataset()
+                    if path == "."
+                    else (cond[path].to_dataset() if path in cond else cond)
+                )
             else:
                 node_cond = cond
             if isinstance(other, type(self)):
-                node_other = other.to_dataset() if path == "." else (other[path].to_dataset() if path in other else other)
+                node_other = (
+                    other.to_dataset()
+                    if path == "."
+                    else (other[path].to_dataset() if path in other else other)
+                )
             else:
                 node_other = other
             result[path] = node_ds.where(node_cond, other=node_other, drop=drop)
@@ -3027,7 +3039,11 @@ class DataTree(
                 target = (
                     other.to_dataset()
                     if path == "."
-                    else (other[path].to_dataset() if path in other else other.to_dataset())
+                    else (
+                        other[path].to_dataset()
+                        if path in other
+                        else other.to_dataset()
+                    )
                 )
                 result[path] = node_ds.broadcast_like(target, exclude=exclude)
             else:
@@ -3110,7 +3126,9 @@ class DataTree(
         result = {}
         for path, node in self.subtree_with_keys:
             node_ds = node.to_dataset()
-            node_shifts = {d: s for d, s in combined_shifts.items() if d in node_ds.dims}
+            node_shifts = {
+                d: s for d, s in combined_shifts.items() if d in node_ds.dims
+            }
             if node_shifts:
                 result[path] = node_ds.roll(
                     node_shifts,
@@ -3149,7 +3167,9 @@ class DataTree(
         result = {}
         for path, node in self.subtree_with_keys:
             node_ds = node.to_dataset()
-            node_shifts = {d: s for d, s in combined_shifts.items() if d in node_ds.dims}
+            node_shifts = {
+                d: s for d, s in combined_shifts.items() if d in node_ds.dims
+            }
             if node_shifts:
                 result[path] = node_ds.shift(
                     node_shifts,
@@ -3187,7 +3207,9 @@ class DataTree(
         """
         coords_combined = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
-        calc_results = {k: v(data) if callable(v) else v for k, v in coords_combined.items()}
+        calc_results = {
+            k: v(data) if callable(v) else v for k, v in coords_combined.items()
+        }
         data.coords.update(calc_results)
         return data
 
@@ -3234,7 +3256,9 @@ class DataTree(
 
     def drop_vars(
         self,
-        names: Hashable | Iterable[Hashable] | Callable[[Dataset], Hashable | Iterable[Hashable]],
+        names: Hashable
+        | Iterable[Hashable]
+        | Callable[[Dataset], Hashable | Iterable[Hashable]],
         *,
         errors: ErrorOptions = "raise",
     ) -> Self:
