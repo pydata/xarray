@@ -2784,3 +2784,240 @@ class TestDask:
 
         with pytest.raises(ValueError, match="not found in data dimensions"):
             tree.chunk({"u": 2})
+
+
+class TestDataTreeManipulationMethods:
+    def test_transpose(self):
+        ds1 = xr.Dataset(
+            {"a": (("x", "y"), np.ones((2, 3)))},
+            coords={"x": [1, 2], "y": [10, 20, 30]},
+        )
+        ds2 = xr.Dataset({"b": (("x", "y"), np.ones((2, 3)))})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        # Reverse order without args
+        dt_rev = dt.transpose()
+        assert dt_rev["/"].to_dataset()["a"].dims == ("y", "x")
+        assert dt_rev["child"].to_dataset()["b"].dims == ("y", "x")
+
+        # Specific order
+        dt_tr = dt.transpose("y", "x")
+        assert dt_tr["/"].to_dataset()["a"].dims == ("y", "x")
+        assert dt_tr["child"].to_dataset()["b"].dims == ("y", "x")
+
+        # Varying dimensions across groups
+        ds3 = xr.Dataset({"c": (("x", "z"), np.ones((2, 4)))})
+        dt_multi = xr.DataTree.from_dict({"/": ds1, "/sub": ds3})
+        dt_multi_tr = dt_multi.transpose("y", "x", "z")
+        assert dt_multi_tr["/"].to_dataset()["a"].dims == ("y", "x")
+        assert dt_multi_tr["sub"].to_dataset()["c"].dims == ("x", "z")
+
+        # Missing dims handling
+        with pytest.raises(ValueError, match="do not exist"):
+            dt.transpose("nonexistent")
+
+        dt_ignored = dt.transpose(..., "nonexistent", missing_dims="ignore")
+        assert dt_ignored["/"].to_dataset()["a"].dims == ("x", "y")
+
+        with pytest.warns(UserWarning, match="do not exist"):
+            dt.transpose(..., "nonexistent", missing_dims="warn")
+
+        # Error if list passed instead of unpacked args
+        with pytest.raises(TypeError, match="requires dim to be passed as multiple arguments"):
+            dt.transpose(["y", "x"])  # type: ignore[arg-type]
+
+    def test_squeeze(self):
+        ds1 = xr.Dataset({"a": (("x", "y"), np.ones((1, 3)))})
+        ds2 = xr.Dataset({"b": (("x", "z"), np.ones((1, 4)))})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        # Squeeze all length-1 dims
+        sq = dt.squeeze()
+        assert sq["/"].to_dataset()["a"].dims == ("y",)
+        assert sq["child"].to_dataset()["b"].dims == ("z",)
+
+        # Squeeze specific dim
+        sq_x = dt.squeeze(dim="x")
+        assert sq_x["/"].to_dataset()["a"].dims == ("y",)
+
+        # Error if dim length > 1
+        with pytest.raises(ValueError, match="cannot select a dimension to squeeze with length = 3 > 1"):
+            dt.squeeze(dim="y")
+
+        # Error if dim not present
+        with pytest.raises(KeyError, match="does not exist in DataTree"):
+            dt.squeeze(dim="nonexistent")
+
+        # Squeeze with axis
+        sq_axis = dt.squeeze(axis=0)
+        assert sq_axis["/"].to_dataset()["a"].dims == ("y",)
+
+    def test_dropna(self):
+        ds1 = xr.Dataset(
+            {"a": ("x", [1.0, np.nan, 3.0, 4.0])},
+            coords={"x": [10, 20, 30, 40]},
+        )
+        ds2 = xr.Dataset(
+            {"b": (("x", "y"), [[1.0, 2.0], [3.0, 4.0], [np.nan, 6.0], [7.0, 8.0]])}
+        )
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        # how='any'
+        dropped_any = dt.dropna(dim="x", how="any")
+        np.testing.assert_array_equal(dropped_any["/"].to_dataset()["a"].values, [1.0, 4.0])
+        np.testing.assert_array_equal(
+            dropped_any["child"].to_dataset()["b"].values,
+            [[1.0, 2.0], [7.0, 8.0]],
+        )
+        # Verify inherited coordinates remain aligned
+        np.testing.assert_array_equal(dropped_any["child"].coords["x"].values, [10, 40])
+
+        # how='all'
+        dropped_all = dt.dropna(dim="x", how="all")
+        assert dropped_all.sizes["x"] == 4
+
+        # thresh
+        dropped_thresh = dt.dropna(dim="x", thresh=3)
+        np.testing.assert_array_equal(dropped_thresh["/"].to_dataset()["a"].values, [1.0, 4.0])
+
+        # Dimension missing from tree
+        with pytest.raises(ValueError, match="Dimension 'unknown' not found"):
+            dt.dropna(dim="unknown")
+
+    def test_fillna(self):
+        ds1 = xr.Dataset({"a": ("x", [1.0, np.nan, 3.0])})
+        ds2 = xr.Dataset({"b": ("x", [np.nan, 2.0, np.nan])})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        # Scalar fillna
+        filled = dt.fillna(0.0)
+        np.testing.assert_array_equal(filled["/"].to_dataset()["a"].values, [1.0, 0.0, 3.0])
+        np.testing.assert_array_equal(filled["child"].to_dataset()["b"].values, [0.0, 2.0, 0.0])
+
+        # Dict fillna
+        filled_dict = dt.fillna({"a": 99.0, "b": -1.0})
+        np.testing.assert_array_equal(filled_dict["/"].to_dataset()["a"].values, [1.0, 99.0, 3.0])
+        np.testing.assert_array_equal(filled_dict["child"].to_dataset()["b"].values, [-1.0, 2.0, -1.0])
+
+    def test_clip(self):
+        ds1 = xr.Dataset({"a": ("x", [1.0, 5.0, 10.0])})
+        ds2 = xr.Dataset({"b": ("x", [0.0, 6.0, 15.0])})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        clipped = dt.clip(min=2.0, max=8.0)
+        np.testing.assert_array_equal(clipped["/"].to_dataset()["a"].values, [2.0, 5.0, 8.0])
+        np.testing.assert_array_equal(clipped["child"].to_dataset()["b"].values, [2.0, 6.0, 8.0])
+
+    def test_isin(self):
+        ds1 = xr.Dataset({"a": ("x", [1, 2, 3])})
+        ds2 = xr.Dataset({"b": ("x", [3, 4, 5])})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        in_tree = dt.isin([2, 4])
+        np.testing.assert_array_equal(in_tree["/"].to_dataset()["a"].values, [False, True, False])
+        np.testing.assert_array_equal(in_tree["child"].to_dataset()["b"].values, [False, True, False])
+
+    def test_where(self):
+        ds1 = xr.Dataset({"a": ("x", [1, 2, 3])})
+        ds2 = xr.Dataset({"b": ("x", [4, 5, 6])})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        filtered = dt.where(dt > 2, other=0)
+        np.testing.assert_array_equal(filtered["/"].to_dataset()["a"].values, [0, 0, 3])
+        np.testing.assert_array_equal(filtered["child"].to_dataset()["b"].values, [4, 5, 6])
+
+    def test_broadcast_like(self):
+        ds1 = xr.Dataset({"a": ("x", [1, 2])}, coords={"x": [10, 20]})
+        ds2 = xr.Dataset({"b": ("x", [3, 4])})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        target_ds = xr.Dataset(coords={"x": [10, 20], "y": [100, 200, 300]})
+        bc = dt.broadcast_like(target_ds)
+        assert bc["/"].to_dataset()["a"].shape == (2, 3)
+        assert bc["child"].to_dataset()["b"].shape == (2, 3)
+
+        # Broadcast against another DataTree
+        dt_target = xr.DataTree.from_dict({"/": target_ds, "/child": target_ds})
+        bc_tree = dt.broadcast_like(dt_target)
+        assert bc_tree["/"].to_dataset()["a"].shape == (2, 3)
+        assert bc_tree["child"].to_dataset()["b"].shape == (2, 3)
+
+    def test_pad_roll_shift(self):
+        ds1 = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0])})
+        ds2 = xr.Dataset({"b": ("x", [10.0, 20.0, 30.0])})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        # Pad
+        padded = dt.pad(x=(1, 1), constant_values=0)
+        np.testing.assert_array_equal(padded["/"].to_dataset()["a"].values, [0.0, 1.0, 2.0, 3.0, 0.0])
+        np.testing.assert_array_equal(padded["child"].to_dataset()["b"].values, [0.0, 10.0, 20.0, 30.0, 0.0])
+
+        # Roll
+        rolled = dt.roll(x=1, roll_coords=False)
+        np.testing.assert_array_equal(rolled["/"].to_dataset()["a"].values, [3.0, 1.0, 2.0])
+
+        # Shift
+        shifted = dt.shift(x=1, fill_value=99.0)
+        np.testing.assert_array_equal(shifted["/"].to_dataset()["a"].values, [99.0, 1.0, 2.0])
+
+    def test_assign_coords(self):
+        # Test GH9472 and GH10015
+        dt = xr.DataTree()
+        dt["child"] = xr.DataTree()
+
+        # Assigning indexed coord to root inherits to child
+        new_dt = dt.assign_coords({"x": [1, 2, 3]})
+        assert "x" in new_dt.coords
+        assert "x" in new_dt["child"].coords
+
+        # Assigning to child node does not crash (fixes GH9472)
+        child = dt["child"]
+        new_child = child.assign_coords({"c": 11})
+        assert "c" in new_child.coords
+
+    def test_assign_and_drop_attrs(self):
+        dt = xr.DataTree()
+        new_dt = dt.assign_attrs(version="1.0", author="test")
+        assert new_dt.attrs["version"] == "1.0"
+        assert new_dt.attrs["author"] == "test"
+        assert len(dt.attrs) == 0  # original unaltered
+
+        cleared_dt = new_dt.drop_attrs()
+        assert len(cleared_dt.attrs) == 0
+
+    def test_drop_vars(self):
+        # Test GH9336 and GH10015
+        ds1 = xr.Dataset({"a": ("x", [1, 2]), "b": ("x", [3, 4])})
+        ds2 = xr.Dataset({"b": ("x", [5, 6]), "c": ("x", [7, 8])})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        # Drop existing var across nodes
+        dropped = dt.drop_vars("b")
+        assert "b" not in dropped["/"].to_dataset().data_vars
+        assert "b" not in dropped["child"].to_dataset().data_vars
+        assert "a" in dropped["/"].to_dataset().data_vars
+        assert "c" in dropped["child"].to_dataset().data_vars
+
+        # errors='raise' when var not found
+        with pytest.raises(ValueError, match="These variables cannot be found in this DataTree"):
+            dt.drop_vars("nonexistent")
+
+        # errors='ignore'
+        ignored = dt.drop_vars("nonexistent", errors="ignore")
+        assert "a" in ignored["/"].to_dataset().data_vars
+
+    def test_drop_dims(self):
+        ds1 = xr.Dataset({"a": (("x", "y"), np.ones((2, 3))), "b": ("y", np.ones(3))})
+        ds2 = xr.Dataset({"c": (("x", "z"), np.ones((2, 4)))})
+        dt = xr.DataTree.from_dict({"/": ds1, "/child": ds2})
+
+        dropped = dt.drop_dims("x")
+        assert "a" not in dropped["/"].to_dataset().data_vars
+        assert "b" in dropped["/"].to_dataset().data_vars
+        assert "c" not in dropped["child"].to_dataset().data_vars
+
+        with pytest.raises(ValueError, match="These dimensions cannot be found in this DataTree"):
+            dt.drop_dims("nonexistent")
+
+        ignored = dt.drop_dims("nonexistent", errors="ignore")
+        assert "a" in ignored["/"].to_dataset().data_vars

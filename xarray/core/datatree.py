@@ -3,7 +3,10 @@ from __future__ import annotations
 import functools
 import io
 import itertools
+import math
 import textwrap
+
+import numpy as np
 from collections import ChainMap, defaultdict
 from collections.abc import (
     Callable,
@@ -28,7 +31,7 @@ from typing import (
     overload,
 )
 
-from xarray.core import utils
+from xarray.core import dtypes, utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
@@ -60,12 +63,14 @@ from xarray.core.utils import (
     _default,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
+    is_scalar,
     maybe_wrap_array,
     parse_dims_as_set,
 )
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import is_chunked_array
+from xarray.namedarray.pycompat import is_chunked_array, to_numpy
+from xarray.namedarray.utils import infix_dims
 from xarray.structure.alignment import align
 from xarray.structure.merge import dataset_update_method
 
@@ -89,6 +94,8 @@ if TYPE_CHECKING:
         ErrorOptionsWithWarn,
         NestedDict,
         NetcdfWriteModes,
+        PadModeOptions,
+        PadReflectOptions,
         T_ChunkDimFreq,
         T_ChunksFreq,
         ZarrStoreLike,
@@ -2683,3 +2690,643 @@ class DataTree(
         }
 
         return self.from_dict(rechunked_groups, name=self.name)
+
+    def transpose(
+        self,
+        *dim: Hashable,
+        missing_dims: ErrorOptionsWithWarn = "raise",
+    ) -> Self:
+        """Return a new DataTree object with all array dimensions transposed in all groups.
+
+        Although the order of dimensions on each array will change, the
+        dimensions themselves will remain in fixed order.
+
+        Parameters
+        ----------
+        *dim : hashable, optional
+            By default, reverse the dimensions on each array. Otherwise,
+            reorder the dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be transposed are not present in the
+            DataTree:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
+
+        Returns
+        -------
+        transposed : DataTree
+            Each array in the datatree (including coordinates) will be
+            transposed to the given order.
+
+        See Also
+        --------
+        Dataset.transpose
+        numpy.transpose
+        """
+        if len(dim) > 0 and isinstance(dim[0], list):
+            list_fix = [f"{x!r}" if isinstance(x, str) else f"{x}" for x in dim[0]]
+            raise TypeError(
+                f"transpose requires dim to be passed as multiple arguments. Expected `{', '.join(list_fix)}`. Received `{dim[0]}` instead"
+            )
+
+        all_dims = self._get_all_dims()
+        if len(dim) != 0:
+            _ = list(infix_dims(dim, all_dims, missing_dims))
+
+        result = {}
+        for path, node in self.subtree_with_keys:
+            if len(dim) == 0:
+                result[path] = node.to_dataset().transpose()
+            else:
+                node_dims = [d for d in dim if d in node.dims or d is ...]
+                if ... not in node_dims:
+                    node_dims.append(...)
+                result[path] = node.to_dataset().transpose(*node_dims, missing_dims="ignore")
+
+        return type(self).from_dict(result, name=self.name)
+
+    def squeeze(
+        self,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        drop: bool = False,
+        axis: int | Iterable[int] | None = None,
+    ) -> Self:
+        """Return a new DataTree with squeezed data in all groups.
+
+        Parameters
+        ----------
+        dim : None or Hashable or iterable of Hashable, optional
+            Selects a subset of the length one dimensions. If a dimension is
+            selected with length greater than one, an error is raised. If
+            None, all length one dimensions are squeezed.
+        drop : bool, default: False
+            If ``drop=True``, drop squeezed coordinates instead of making them
+            scalar.
+        axis : None or int or iterable of int, optional
+            Like dim, but positional with respect to dimensions in the DataTree.
+
+        Returns
+        -------
+        squeezed : DataTree
+            This DataTree, but with all or a subset of the dimensions of
+            length 1 removed.
+
+        See Also
+        --------
+        Dataset.squeeze
+        numpy.squeeze
+        """
+        all_sizes = {}
+        for node in self.subtree:
+            for d, s in node.sizes.items():
+                all_sizes[d] = s
+
+        if axis is not None:
+            if dim is not None:
+                raise ValueError("cannot specify both 'dim' and 'axis'")
+            all_dims_list = list(all_sizes.keys())
+            if isinstance(axis, int):
+                axis = [axis]
+            dim = [all_dims_list[ax] for ax in axis]
+
+        if dim is None:
+            dims_to_squeeze = [d for d, s in all_sizes.items() if s == 1]
+        elif isinstance(dim, (str, bytes)) or not isinstance(dim, Iterable):
+            dims_to_squeeze = [dim]
+        else:
+            dims_to_squeeze = list(dim)
+
+        for d in dims_to_squeeze:
+            if d not in all_sizes:
+                raise KeyError(f"dimension {d!r} does not exist in DataTree")
+            if all_sizes[d] > 1:
+                raise ValueError(
+                    f"cannot select a dimension to squeeze with length = {all_sizes[d]} > 1: {d!r}"
+                )
+
+        if not dims_to_squeeze:
+            return self.copy()
+
+        return self.isel(indexers={d: 0 for d in dims_to_squeeze}, drop=drop, missing_dims="ignore")
+
+    def dropna(
+        self,
+        dim: Hashable,
+        *,
+        how: Literal["any", "all"] = "any",
+        thresh: int | None = None,
+        subset: Iterable[Hashable] | None = None,
+    ) -> Self:
+        """Returns a new DataTree with dropped labels for missing values along
+        the provided dimension.
+
+        Parameters
+        ----------
+        dim : hashable
+            Dimension along which to drop missing values.
+        how : {"any", "all"}, default: "any"
+            - any : if any NA values are present in checked variables, drop that label
+            - all : if all values are NA in checked variables, drop that label
+        thresh : int or None, optional
+            If supplied, require this many non-NA values across checked variables.
+        subset : iterable of hashable or None, optional
+            Which variables to check for missing values across the DataTree.
+            By default, all data variables across groups containing `dim` are checked.
+
+        Returns
+        -------
+        dropped : DataTree
+
+        See Also
+        --------
+        Dataset.dropna
+        """
+        all_dims = self._get_all_dims()
+        if dim not in all_dims:
+            raise ValueError(
+                f"Dimension {dim!r} not found in data dimensions {tuple(all_dims)}"
+            )
+
+        dim_size = self.sizes[dim]
+        count = np.zeros(dim_size, dtype=np.int64)
+        total_size = 0
+
+        for node in self.subtree:
+            if dim in node.dims:
+                vars_to_check = subset if subset is not None else node.data_vars
+                for k in vars_to_check:
+                    if k in node.variables:
+                        var = node.variables[k]
+                        if dim in var.dims:
+                            other_dims = [d for d in var.dims if d != dim]
+                            count += to_numpy(var.count(other_dims).data)
+                            total_size += math.prod([node.sizes[d] for d in other_dims])
+
+        if thresh is not None:
+            mask = count >= thresh
+        elif how == "any":
+            mask = count == total_size
+        elif how == "all":
+            mask = count > 0
+        elif how is not None:
+            raise ValueError(f"invalid how option: {how}")
+        else:
+            raise TypeError("must specify how or thresh")
+
+        return self.isel({dim: mask})
+
+    def fillna(self, value: Any) -> Self:
+        """Fill missing values in this DataTree.
+
+        Parameters
+        ----------
+        value : scalar, ndarray, DataArray, dict or Dataset
+            Used to fill all matching missing values in each node's data variables.
+
+        Returns
+        -------
+        filled : DataTree
+
+        See Also
+        --------
+        Dataset.fillna
+        """
+        result = {}
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset()
+            if isinstance(value, Mapping):
+                node_val = {k: v for k, v in value.items() if k in node_ds.data_vars}
+                if node_val:
+                    result[path] = node_ds.fillna(node_val)
+                else:
+                    result[path] = node_ds
+            else:
+                result[path] = node_ds.fillna(value)
+        return type(self).from_dict(result, name=self.name)
+
+    def clip(
+        self,
+        min: Any = None,
+        max: Any = None,
+        *,
+        keep_attrs: bool | None = None,
+    ) -> Self:
+        """Return a DataTree whose values are limited to ``[min, max]``.
+
+        Parameters
+        ----------
+        min : scalar, array-like or None, optional
+            Minimum value. If None, no lower clipping is performed.
+        max : scalar, array-like or None, optional
+            Maximum value. If None, no upper clipping is performed.
+        keep_attrs : bool or None, optional
+            If True, attributes will be preserved.
+
+        Returns
+        -------
+        clipped : DataTree
+
+        See Also
+        --------
+        Dataset.clip
+        numpy.clip
+        """
+        result = {
+            path: node.to_dataset().clip(min=min, max=max, keep_attrs=keep_attrs)
+            for path, node in self.subtree_with_keys
+        }
+        return type(self).from_dict(result, name=self.name)
+
+    def isin(self, test_elements: Any) -> Self:
+        """Tests each value in the DataTree for whether it is in `test_elements`.
+
+        Parameters
+        ----------
+        test_elements : array_like
+            The values against which to test each value.
+
+        Returns
+        -------
+        isin : DataTree
+            Has the same structure and variables as the caller, but with boolean values.
+
+        See Also
+        --------
+        Dataset.isin
+        numpy.isin
+        """
+        result = {
+            path: node.to_dataset().isin(test_elements)
+            for path, node in self.subtree_with_keys
+        }
+        return type(self).from_dict(result, name=self.name)
+
+    def where(self, cond: Any, other: Any = dtypes.NA, drop: bool = False) -> Self:
+        """Filter elements from this DataTree according to a condition.
+
+        Parameters
+        ----------
+        cond : DataArray, Dataset, DataTree, or boolean array
+            Locations at which to preserve this object's values.
+        other : scalar, DataArray, Dataset, DataTree, optional
+            Value to use for locations in this object where ``cond`` is False.
+            By default, these locations are filled with NaN.
+        drop : bool, default: False
+            If True, coordinate labels that only correspond to False values of
+            the condition are dropped from the result.
+
+        Returns
+        -------
+        filtered : DataTree
+
+        See Also
+        --------
+        Dataset.where
+        """
+        result = {}
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset()
+            if isinstance(cond, type(self)):
+                node_cond = cond.to_dataset() if path == "." else (cond[path].to_dataset() if path in cond else cond)
+            else:
+                node_cond = cond
+            if isinstance(other, type(self)):
+                node_other = other.to_dataset() if path == "." else (other[path].to_dataset() if path in other else other)
+            else:
+                node_other = other
+            result[path] = node_ds.where(node_cond, other=node_other, drop=drop)
+        return type(self).from_dict(result, name=self.name)
+
+    def broadcast_like(
+        self,
+        other: DataTree | Dataset | DataArray,
+        exclude: Iterable[Hashable] | None = None,
+    ) -> Self:
+        """Broadcast this DataTree against another object.
+
+        Parameters
+        ----------
+        other : DataTree, Dataset, or DataArray
+            Object with dimensions to broadcast against.
+        exclude : iterable of hashable, optional
+            Dimensions that should not be broadcasted.
+
+        Returns
+        -------
+        broadcasted : DataTree
+
+        See Also
+        --------
+        Dataset.broadcast_like
+        """
+        result = {}
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset()
+            if isinstance(other, type(self)):
+                target = (
+                    other.to_dataset()
+                    if path == "."
+                    else (other[path].to_dataset() if path in other else other.to_dataset())
+                )
+                result[path] = node_ds.broadcast_like(target, exclude=exclude)
+            else:
+                result[path] = node_ds.broadcast_like(other, exclude=exclude)
+        return type(self).from_dict(result, name=self.name)
+
+    def pad(
+        self,
+        pad_width: Mapping[Any, Any] | None = None,
+        mode: PadModeOptions = "constant",
+        stat_length: Any = None,
+        constant_values: Any = None,
+        end_values: Any = None,
+        reflect_type: PadReflectOptions = None,
+        **pad_width_kwargs: Any,
+    ) -> Self:
+        """Pad this DataTree along specified dimensions.
+
+        Parameters
+        ----------
+        pad_width : mapping of hashable to tuple of int, optional
+            Mapping with the form of {dim: (pad_before, pad_after)}
+        mode : str, default: "constant"
+            Padding mode (e.g. "constant", "edge", "reflect").
+        **pad_width_kwargs
+            The keyword arguments form of ``pad_width``.
+
+        Returns
+        -------
+        padded : DataTree
+
+        See Also
+        --------
+        Dataset.pad
+        """
+        combined_pad = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
+        result = {}
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset()
+            node_pad = {d: pw for d, pw in combined_pad.items() if d in node_ds.dims}
+            if node_pad:
+                result[path] = node_ds.pad(
+                    node_pad,
+                    mode=mode,
+                    stat_length=stat_length,
+                    constant_values=constant_values,
+                    end_values=end_values,
+                    reflect_type=reflect_type,
+                )
+            else:
+                result[path] = node_ds
+        return type(self).from_dict(result, name=self.name)
+
+    def roll(
+        self,
+        shifts: Mapping[Any, int] | None = None,
+        roll_coords: bool = False,
+        **shifts_kwargs: int,
+    ) -> Self:
+        """Roll DataTree values along specified dimensions.
+
+        Parameters
+        ----------
+        shifts : mapping of hashable to int, optional
+            Mapping with the form of {dim: offset}
+        roll_coords : bool, default: False
+            Whether to roll coordinates along with the data.
+        **shifts_kwargs
+            The keyword arguments form of ``shifts``.
+
+        Returns
+        -------
+        rolled : DataTree
+
+        See Also
+        --------
+        Dataset.roll
+        """
+        combined_shifts = either_dict_or_kwargs(shifts, shifts_kwargs, "roll")
+        result = {}
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset()
+            node_shifts = {d: s for d, s in combined_shifts.items() if d in node_ds.dims}
+            if node_shifts:
+                result[path] = node_ds.roll(
+                    node_shifts,
+                    roll_coords=roll_coords,
+                )
+            else:
+                result[path] = node_ds
+        return type(self).from_dict(result, name=self.name)
+
+    def shift(
+        self,
+        shifts: Mapping[Any, int] | None = None,
+        fill_value: Any = dtypes.NA,
+        **shifts_kwargs: int,
+    ) -> Self:
+        """Shift DataTree values along specified dimensions.
+
+        Parameters
+        ----------
+        shifts : mapping of hashable to int, optional
+            Mapping with the form of {dim: offset}
+        fill_value : scalar, optional
+            Value to use for newly introduced missing values.
+        **shifts_kwargs
+            The keyword arguments form of ``shifts``.
+
+        Returns
+        -------
+        shifted : DataTree
+
+        See Also
+        --------
+        Dataset.shift
+        """
+        combined_shifts = either_dict_or_kwargs(shifts, shifts_kwargs, "shift")
+        result = {}
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset()
+            node_shifts = {d: s for d, s in combined_shifts.items() if d in node_ds.dims}
+            if node_shifts:
+                result[path] = node_ds.shift(
+                    node_shifts,
+                    fill_value=fill_value,
+                )
+            else:
+                result[path] = node_ds
+        return type(self).from_dict(result, name=self.name)
+
+    def assign_coords(
+        self,
+        coords: Mapping | None = None,
+        **coords_kwargs: Any,
+    ) -> Self:
+        """Assign new coordinates to this node in the DataTree.
+
+        Returns a new DataTree with all original data in addition to the new
+        coordinates assigned to this node. Child nodes will inherit these
+        coordinates.
+
+        Parameters
+        ----------
+        coords : mapping of dim to coord, optional
+            Mapping of coordinate names to coordinates.
+        **coords_kwargs
+            The keyword arguments form of ``coords``.
+
+        Returns
+        -------
+        assigned : DataTree
+
+        See Also
+        --------
+        Dataset.assign_coords
+        """
+        coords_combined = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
+        data = self.copy(deep=False)
+        calc_results = {k: v(data) if callable(v) else v for k, v in coords_combined.items()}
+        data.coords.update(calc_results)
+        return data
+
+    def assign_attrs(self, *args: Any, **kwargs: Any) -> Self:
+        """Assign new attrs to this node in the DataTree.
+
+        Returns a new DataTree with updated attributes on this node.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed into ``attrs.update``.
+        **kwargs
+            Keyword arguments passed into ``attrs.update``.
+
+        Returns
+        -------
+        assigned : DataTree
+
+        See Also
+        --------
+        Dataset.assign_attrs
+        """
+        new_dt = self.copy(deep=False)
+        new_dt.attrs.update(*args, **kwargs)
+        return new_dt
+
+    def drop_attrs(self) -> Self:
+        """Drop attributes from this node in the DataTree.
+
+        Returns a new DataTree with empty attributes on this node.
+
+        Returns
+        -------
+        dropped : DataTree
+
+        See Also
+        --------
+        Dataset.drop_attrs
+        """
+        new_dt = self.copy(deep=False)
+        new_dt.attrs.clear()
+        return new_dt
+
+    def drop_vars(
+        self,
+        names: Hashable | Iterable[Hashable] | Callable[[Dataset], Hashable | Iterable[Hashable]],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> Self:
+        """Drop variables from the DataTree.
+
+        Parameters
+        ----------
+        names : hashable or iterable of hashables
+            Name(s) of variables to drop from all groups in the DataTree.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError if any of the variable names are not
+            present in at least one group of the DataTree.
+
+        Returns
+        -------
+        dropped : DataTree
+
+        See Also
+        --------
+        Dataset.drop_vars
+        """
+        if callable(names):
+            names = names(self.to_dataset())
+        if is_scalar(names) or not isinstance(names, Iterable):
+            names_set = {names}
+        else:
+            names_set = set(names)
+
+        found = set()
+        result = {}
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset()
+            node_names = [n for n in names_set if n in node_ds.variables]
+            found.update(node_names)
+            if node_names:
+                result[path] = node_ds.drop_vars(node_names, errors="ignore")
+            else:
+                result[path] = node_ds
+
+        if errors == "raise":
+            missing = names_set - found
+            if missing:
+                raise ValueError(
+                    f"These variables cannot be found in this DataTree: {sorted(missing, key=str)}"
+                )
+
+        return type(self).from_dict(result, name=self.name)
+
+    def drop_dims(
+        self,
+        drop_dims: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> Self:
+        """Drop dimensions and any variables indexing them from the DataTree.
+
+        Parameters
+        ----------
+        drop_dims : hashable or iterable of hashables
+            Dimension(s) to drop from the DataTree.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError if any dimension is not present in
+            the DataTree.
+
+        Returns
+        -------
+        dropped : DataTree
+
+        See Also
+        --------
+        Dataset.drop_dims
+        """
+        if is_scalar(drop_dims) or not isinstance(drop_dims, Iterable):
+            dims_set = {drop_dims}
+        else:
+            dims_set = set(drop_dims)
+
+        all_dims = self._get_all_dims()
+        if errors == "raise":
+            missing = dims_set - all_dims
+            if missing:
+                raise ValueError(
+                    f"These dimensions cannot be found in this DataTree: {sorted(missing, key=str)}"
+                )
+
+        result = {}
+        for path, node in self.subtree_with_keys:
+            node_ds = node.to_dataset()
+            node_d = [d for d in dims_set if d in node_ds.dims]
+            if node_d:
+                result[path] = node_ds.drop_dims(node_d, errors="ignore")
+            else:
+                result[path] = node_ds
+
+        return type(self).from_dict(result, name=self.name)
