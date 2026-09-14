@@ -1652,8 +1652,9 @@ def test_map_blocks_coords_distinct_when_variables_differ():
 
     different_length = make(np.arange(20) * 1.0), make(np.arange(40) * 1.0)
     different_values = make(np.arange(20) * 1.0), make(np.arange(20) * 7.0)
-    different_dtype = make(np.arange(20, dtype="float64")), make(
-        np.arange(20, dtype="int64")
+    different_dtype = (
+        make(np.arange(20, dtype="float64")),
+        make(np.arange(20, dtype="int64")),
     )
     for first, second in (different_length, different_values, different_dtype):
         assert not (coord_keys(first) & coord_keys(second))
