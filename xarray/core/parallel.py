@@ -157,7 +157,7 @@ def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping
 
 
 def subset_dataset_to_block(
-    graph: dict, gname: str, dataset: Dataset, input_chunk_bounds, chunk_index
+    graph: dict, gname: str, dataset: Dataset, input_chunk_bounds, chunk_index, tokens
 ):
     """
     Creates a task that subsets an xarray dataset to a block determined by chunk_index.
@@ -204,8 +204,11 @@ def subset_dataset_to_block(
             else:
                 this_var_chunk_tuple = chunk_tuple
 
+            # Keyed on the variable's own token, not gname: gname varies with
+            # func/args/kwargs, none of which affect a coordinate slice, so
+            # including it gives every call its own copy of the coordinates.
             chunk_variable_task = (
-                f"{name}-{gname}-{dask.base.tokenize(subsetter)}",
+                f"{name}-{tokens[name]}-{dask.base.tokenize(subsetter)}",
             ) + this_var_chunk_tuple
             # We are including a dimension coordinate,
             # minimize duplication by not copying it in the graph for every chunk.
@@ -592,6 +595,19 @@ def map_blocks(
             dataset_to_dataarray=dataset_to_dataarray,
         )  # type: ignore[return-value]
 
+    # Tokenizing a coordinate hashes its whole array, so do it once per
+    # argument rather than once per chunk.
+    arg_tokens = [
+        {
+            name: tokenize(variable)
+            for name, variable in arg.variables.items()
+            if not is_dask_collection(variable.data)
+        }
+        if isxr
+        else None
+        for isxr, arg in zip(is_xarray, npargs, strict=True)
+    ]
+
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
         # mapping from dimension name to chunk index
@@ -600,12 +616,12 @@ def map_blocks(
         blocked_args = [
             (
                 subset_dataset_to_block(
-                    graph, gname, arg, input_chunk_bounds, chunk_index
+                    graph, gname, arg, input_chunk_bounds, chunk_index, tokens
                 )
                 if isxr
                 else arg
             )
-            for isxr, arg in zip(is_xarray, npargs, strict=True)
+            for isxr, arg, tokens in zip(is_xarray, npargs, arg_tokens, strict=True)
         ]
 
         # only include new or modified indexes to minimize duplication of data

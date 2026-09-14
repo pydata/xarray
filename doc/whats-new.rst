@@ -50,6 +50,22 @@ Deprecations
 ~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+
+- :py:func:`map_blocks` now shares coordinate tasks between calls over the same
+  object, instead of putting a private copy of the coordinates in the graph for
+  every call. The task key for a coordinate slice previously included a name
+  derived from ``func`` and the user's ``args``/``kwargs``, so repeatedly calling
+  ``map_blocks`` on one grid grew the graph linearly in the number of calls even
+  though the coordinate data was identical. On a real Sentinel-1 mosaicking
+  graph making 59 such calls over a 45000x45000 grid chunked at 2250, this cuts
+  the coordinate tasks from 2,543 to 125 and the serialized graph from 117.6 MB
+  to 73.8 MB (-37%), with no other change to the graph
+  (:issue:`11588`, :pull:`11589`).
+  By `Ben Ritchie <https://github.com/benritchie>`_.
+
+
 Bug Fixes
 ~~~~~~~~~
 
