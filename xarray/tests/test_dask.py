@@ -1237,6 +1237,20 @@ def test_auto_chunk_da_cftime():
     assert actual.chunks == expected.chunks
 
 
+@pytest.mark.parametrize(
+    ("chunks", "expected"),
+    [({"x": 2, "y": 3}, ((2,), (3,))), ({"x": 2}, ((2,), (1, 1, 1)))],
+    ids=lambda x: f"{x}",
+)
+def test_rechunk_multi_dimensional_da_cftime(chunks, expected):
+    times = xr.date_range("2000", periods=6, use_cftime=True)
+    times = times.to_numpy().reshape((2, 3))
+    da = xr.DataArray(times, dims=["x", "y"])
+    da = da.chunk({"x": 1, "y": 1})
+    result = da.chunk(chunks).chunks
+    assert result == expected
+
+
 def test_map_blocks_error(map_da, map_ds):
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]
