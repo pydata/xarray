@@ -7182,59 +7182,134 @@ def test_extract_zarr_variable_encoding() -> None:
         )
 
 
+def _create_rectilinear_zarr_array(store_path, shape, chunks, dimension_names, dtype):
+    """Create an array with the given (possibly rectilinear) chunk grid.
+
+    xarray does not yet support *writing* rectilinear chunks, so tests create
+    the store with zarr-python directly and only exercise xarray's read path.
+    """
+    import zarr
+
+    root = zarr.open_group(store_path, mode="w", zarr_format=3)
+    arr = root.create(
+        "var",
+        shape=shape,
+        # older zarr stubs (<3.2) don't include rectilinear chunk types
+        chunks=chunks,  # type: ignore[arg-type, unused-ignore]
+        dtype=dtype,
+        dimension_names=dimension_names,
+    )
+    return arr
+
+
 @requires_zarr_rectilinear_chunks
 def test_rectilinear_chunks_read(tmp_path: Path) -> None:
-    """Read a rectilinear (variable-sized chunk) array created directly by zarr.
-
-    xarray does not yet support *writing* rectilinear chunks, so the store
-    here is created with zarr-python directly.
-    """
+    """Read a rectilinear (variable-sized chunk) array, without dask."""
     import zarr
 
     store_path = tmp_path / "zarr_native.zarr"
     data = np.arange(60, dtype="float32")
 
     with zarr.config.set({"array.rectilinear_chunks": True}):
-        root = zarr.open_group(store_path, mode="w", zarr_format=3)
-        arr = root.create(
-            "var",
+        arr = _create_rectilinear_zarr_array(
+            store_path,
             shape=(60,),
-            # older zarr stubs (<3.2) don't include rectilinear chunk types
-            chunks=((10, 20, 30),),  # type: ignore[arg-type, unused-ignore]
+            chunks=((10, 20, 30),),
             dtype="float32",
             dimension_names=("x",),
         )
         arr[:] = data
 
-        roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
-        assert roundtrip.chunks["x"] == (10, 20, 30)
+        roundtrip = xr.open_zarr(
+            store_path, zarr_format=3, consolidated=False, chunks=None
+        )
         assert roundtrip["var"].encoding["chunks"] == ((10, 20, 30),)
         assert roundtrip["var"].encoding["preferred_chunks"] == {"x": (10, 20, 30)}
+        assert isinstance(roundtrip["var"].data, np.ndarray)
         np.testing.assert_array_equal(roundtrip["var"].values, data)
 
 
 @requires_zarr_rectilinear_chunks
-def test_rectilinear_chunks_read_multidim(tmp_path: Path) -> None:
-    """Read a multi-dimensional array with a mix of regular and rectilinear dims."""
+def test_rectilinear_chunks_read_mixed_dims(tmp_path: Path) -> None:
+    """Read a multi-dimensional array with a mix of regular and rectilinear dims,
+    without dask."""
     import zarr
 
     store_path = tmp_path / "zarr_native_2d.zarr"
     data = np.arange(120, dtype="float64").reshape(6, 20)
 
     with zarr.config.set({"array.rectilinear_chunks": True}):
-        root = zarr.open_group(store_path, mode="w", zarr_format=3)
-        arr = root.create(
-            "var",
+        arr = _create_rectilinear_zarr_array(
+            store_path,
             shape=(6, 20),
-            chunks=(2, (5, 10, 5)),  # type: ignore[arg-type, unused-ignore]
+            chunks=(2, (5, 10, 5)),
+            dtype="float64",
+            dimension_names=("x", "y"),
+        )
+        arr[:] = data
+
+        roundtrip = xr.open_zarr(
+            store_path, zarr_format=3, consolidated=False, chunks=None
+        )
+        assert roundtrip["var"].encoding["chunks"] == (2, (5, 10, 5))
+        assert roundtrip["var"].encoding["preferred_chunks"] == {
+            "x": 2,
+            "y": (5, 10, 5),
+        }
+        assert isinstance(roundtrip["var"].data, np.ndarray)
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+
+@requires_zarr_rectilinear_chunks
+@requires_dask
+def test_rectilinear_chunks_read_dask(tmp_path: Path) -> None:
+    """Reading a rectilinear array into dask arrays picks up the exact,
+    variable-sized chunks as the dask chunks (not just xarray's `chunks`
+    property, but the underlying dask array's own chunking)."""
+    import zarr
+
+    store_path = tmp_path / "zarr_native_dask.zarr"
+    data = np.arange(60, dtype="float32")
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        arr = _create_rectilinear_zarr_array(
+            store_path,
+            shape=(60,),
+            chunks=((10, 20, 30),),
+            dtype="float32",
+            dimension_names=("x",),
+        )
+        arr[:] = data
+
+        roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+        assert isinstance(roundtrip["var"].data, dask_array_type)
+        assert roundtrip["var"].data.chunks == ((10, 20, 30),)
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+
+@requires_zarr_rectilinear_chunks
+@requires_dask
+def test_rectilinear_chunks_read_dask_mixed_dims(tmp_path: Path) -> None:
+    """Same as above, but for a 2D array with one regular and one rectilinear
+    dimension."""
+    import zarr
+
+    store_path = tmp_path / "zarr_native_2d_dask.zarr"
+    data = np.arange(120, dtype="float64").reshape(6, 20)
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        arr = _create_rectilinear_zarr_array(
+            store_path,
+            shape=(6, 20),
+            chunks=(2, (5, 10, 5)),
             dtype="float64",
             dimension_names=("x", "y"),
         )
         arr[:] = data
 
         roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
-        assert roundtrip.chunks["x"] == (2, 2, 2)
-        assert roundtrip.chunks["y"] == (5, 10, 5)
+        assert isinstance(roundtrip["var"].data, dask_array_type)
+        assert roundtrip["var"].data.chunks == ((2, 2, 2), (5, 10, 5))
         np.testing.assert_array_equal(roundtrip["var"].values, data)
 
 
