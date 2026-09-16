@@ -860,9 +860,21 @@ class ZarrStore(AbstractWritableDataStore):
         )
         attributes = dict(attributes)
 
+        try:
+            # Regular chunk grid: a single uniform chunk size per dimension,
+            # e.g. (10,) for a 60-element axis chunked into 10s.
+            chunks = tuple(zarr_array.chunks)
+        except NotImplementedError:
+            # Rectilinear chunk grid (zarr-python >= 3.2): chunk sizes vary
+            # along an axis, so there is no single chunk size. `.chunks`
+            # raises and we instead read the explicit per-chunk listing,
+            # e.g. ((10, 20, 30),).
+            chunks = zarr_array.write_chunk_sizes
+        preferred_chunks = dict(zip(dimensions, chunks, strict=True))
+
         encoding = {
-            "chunks": zarr_array.chunks,
-            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
+            "chunks": chunks,
+            "preferred_chunks": preferred_chunks,
         }
 
         encoding.update(

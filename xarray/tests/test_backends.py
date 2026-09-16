@@ -101,6 +101,7 @@ from xarray.tests import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
+    requires_zarr_rectilinear_chunks,
     requires_zarr_v3,
 )
 from xarray.tests.test_coding_times import (
@@ -7179,6 +7180,62 @@ def test_extract_zarr_variable_encoding() -> None:
         actual = backends.zarr.extract_zarr_variable_encoding(
             var, raise_on_invalid=True, zarr_format=3
         )
+
+
+@requires_zarr_rectilinear_chunks
+def test_rectilinear_chunks_read(tmp_path: Path) -> None:
+    """Read a rectilinear (variable-sized chunk) array created directly by zarr.
+
+    xarray does not yet support *writing* rectilinear chunks, so the store
+    here is created with zarr-python directly.
+    """
+    import zarr
+
+    store_path = tmp_path / "zarr_native.zarr"
+    data = np.arange(60, dtype="float32")
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        root = zarr.open_group(store_path, mode="w", zarr_format=3)
+        arr = root.create(
+            "var",
+            shape=(60,),
+            # older zarr stubs (<3.2) don't include rectilinear chunk types
+            chunks=((10, 20, 30),),  # type: ignore[arg-type, unused-ignore]
+            dtype="float32",
+            dimension_names=("x",),
+        )
+        arr[:] = data
+
+        roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+        assert roundtrip.chunks["x"] == (10, 20, 30)
+        assert roundtrip["var"].encoding["chunks"] == ((10, 20, 30),)
+        assert roundtrip["var"].encoding["preferred_chunks"] == {"x": (10, 20, 30)}
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+
+@requires_zarr_rectilinear_chunks
+def test_rectilinear_chunks_read_multidim(tmp_path: Path) -> None:
+    """Read a multi-dimensional array with a mix of regular and rectilinear dims."""
+    import zarr
+
+    store_path = tmp_path / "zarr_native_2d.zarr"
+    data = np.arange(120, dtype="float64").reshape(6, 20)
+
+    with zarr.config.set({"array.rectilinear_chunks": True}):
+        root = zarr.open_group(store_path, mode="w", zarr_format=3)
+        arr = root.create(
+            "var",
+            shape=(6, 20),
+            chunks=(2, (5, 10, 5)),  # type: ignore[arg-type, unused-ignore]
+            dtype="float64",
+            dimension_names=("x", "y"),
+        )
+        arr[:] = data
+
+        roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+        assert roundtrip.chunks["x"] == (2, 2, 2)
+        assert roundtrip.chunks["y"] == (5, 10, 5)
+        np.testing.assert_array_equal(roundtrip["var"].values, data)
 
 
 @requires_zarr
