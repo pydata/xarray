@@ -16,7 +16,8 @@ New Features
 - Support reading Zarr V3 arrays with rectilinear (variable-sized) chunk
   grids, requiring ``zarr-python >= 3.2`` with
   ``zarr.config.set({"array.rectilinear_chunks": True})``. Writing
-  rectilinear chunks from xarray is not yet supported (:pull:`11279`).
+  rectilinear chunks from xarray is not yet supported (:pull:`11592`,
+  extracted from :pull:`11279`).
   By `Max Jones <https://github.com/maxrjones>`_ and
   `Tom Nicholas <https://github.com/TomNicholas>`_.
 

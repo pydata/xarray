@@ -367,6 +367,20 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
+            if isinstance(x, list | tuple):
+                raise TypeError(
+                    f"encoding['chunks']={enc_chunks_tuple!r} for variable "
+                    f"named {name!r} looks like a rectilinear (variable-sized) "
+                    "chunk grid, e.g. from a store opened with "
+                    "zarr.config.set({'array.rectilinear_chunks': True}). "
+                    "Writing rectilinear chunks is not yet supported by xarray "
+                    "(only reading them is). To write this variable with a "
+                    "regular chunk grid instead, clear its chunk encoding "
+                    "(`ds.drop_encoding()`, or "
+                    f"`del ds[{name!r}].encoding['chunks']`) *and* make sure "
+                    "its own chunks are uniform too, e.g. with "
+                    "`ds.chunk({dim: size})`."
+                )
             raise TypeError(
                 "zarr chunk sizes specified in `encoding['chunks']` "
                 "must be an int or a tuple of ints. "

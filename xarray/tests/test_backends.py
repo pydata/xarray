@@ -7313,6 +7313,33 @@ class TestZarrRectilinearChunksRead:
             assert roundtrip["var"].encoding["shards"] == ((1, 2),)
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
+    def test_write_after_read_gives_helpful_error(self, tmp_path) -> None:
+        """Writing isn't supported yet, so round-tripping (and region writes,
+        which go through the same encoding-extraction code path) should fail
+        with an error that names rectilinear chunks and a workaround, not a
+        generic "must be an int" message.
+
+        https://github.com/pydata/xarray/pull/11592#issuecomment-5703342460
+        """
+        import zarr
+
+        data = np.arange(60, dtype="float32")
+        store_path = tmp_path / "source.zarr"
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            arr = self.create_zarr_array(
+                store_path,
+                shape=(60,),
+                chunks=((10, 20, 30),),
+                dimension_names=("x",),
+                dtype="float32",
+            )
+            arr[:] = data
+
+            roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+            with pytest.raises(TypeError, match=r"rectilinear"):
+                roundtrip.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
+
 
 @requires_zarr
 @requires_fsspec

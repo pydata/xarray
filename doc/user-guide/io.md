@@ -1253,7 +1253,11 @@ with zarr.config.set({"array.rectilinear_chunks": True}):
 xarray can currently only *read* rectilinear-chunked Zarr V3 arrays, not
 write them. Rectilinear arrays must be created with `zarr-python` directly
 (or another tool, such as Icechunk) before being opened with `xr.open_zarr`.
-Write support is tracked in [GH11279](https://github.com/pydata/xarray/pull/11279).
+This also means a Dataset opened from a rectilinear-chunked store cannot be
+written back with {py:meth}`Dataset.to_zarr`, including writing to a
+`region` of the store -- both raise a `TypeError` naming the affected
+variable. Write support is tracked in
+[GH11279](https://github.com/pydata/xarray/pull/11279).
 ```
 
 ### Groups
