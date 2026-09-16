@@ -7191,7 +7191,9 @@ class TestZarrRectilinearChunksRead:
     """
 
     @staticmethod
-    def create_zarr_array(store_path, shape, chunks, dimension_names, dtype):
+    def create_zarr_array(
+        store_path, shape, chunks, dimension_names, dtype, shards=None
+    ):
         import zarr
 
         root = zarr.open_group(store_path, mode="w", zarr_format=3)
@@ -7200,6 +7202,7 @@ class TestZarrRectilinearChunksRead:
             shape=shape,
             # older zarr stubs (<3.2) don't include rectilinear chunk types
             chunks=chunks,  # type: ignore[arg-type, unused-ignore]
+            shards=shards,  # type: ignore[arg-type, unused-ignore]
             dtype=dtype,
             dimension_names=dimension_names,
         )
@@ -7278,6 +7281,36 @@ class TestZarrRectilinearChunksRead:
             roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
             assert isinstance(roundtrip["var"].data, dask_array_type)
             assert roundtrip["var"].data.chunks == expected_chunks
+            np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+    def test_read_rectilinear_shards(self, tmp_path) -> None:
+        """Regular (uniform) inner chunks, but rectilinear (variable-sized)
+        shards. `.shards` raises NotImplementedError here, same as `.chunks`
+        does for rectilinear chunk grids, so it needs the same fallback.
+
+        https://github.com/pydata/xarray/pull/11592#issuecomment-5703342460
+        """
+        import zarr
+
+        data = np.array([1.0, 2.0, 3.0], dtype="float32")
+        store_path = tmp_path / "source.zarr"
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            arr = self.create_zarr_array(
+                store_path,
+                shape=(3,),
+                chunks=(1,),
+                shards=((1, 2),),
+                dimension_names=("x",),
+                dtype="float32",
+            )
+            arr[:] = data
+
+            roundtrip = xr.open_zarr(
+                store_path, zarr_format=3, consolidated=False, chunks=None
+            )
+            assert roundtrip["var"].encoding["chunks"] == ((1, 1, 1),)
+            assert roundtrip["var"].encoding["shards"] == ((1, 2),)
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
 

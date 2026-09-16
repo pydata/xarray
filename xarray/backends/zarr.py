@@ -879,11 +879,23 @@ class ZarrStore(AbstractWritableDataStore):
             "preferred_chunks": preferred_chunks,
         }
 
+        try:
+            # Regular shard grid (or no sharding at all, in which case this is
+            # None): a single uniform shard size per dimension.
+            shards = zarr_array.shards
+        except NotImplementedError:
+            # Rectilinear shard grid: shard sizes vary along an axis, so
+            # there is no single shard size. `.shards` raises and we instead
+            # read the explicit per-shard listing, e.g. ((1, 2),).
+            # write_chunk_sizes (not read_chunk_sizes) gives the outer,
+            # storage-level (shard) sizes here.
+            shards = zarr_array.write_chunk_sizes
+
         encoding.update(
             {
                 "compressors": zarr_array.compressors,
                 "filters": zarr_array.filters,
-                "shards": zarr_array.shards,
+                "shards": shards,
             }
         )
         if self.zarr_group.metadata.zarr_format == 3:
