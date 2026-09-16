@@ -7204,15 +7204,19 @@ class TestZarrRectilinearChunksRead:
             dimension_names=dimension_names,
         )
 
+    # `expected_chunks` is the fully-expanded, dask-style tuple-of-tuples that
+    # zarr-python reports (via `read_chunk_sizes`) for any array whose chunk
+    # grid isn't purely regular, even along dimensions that happen to be
+    # uniformly chunked -- e.g. dimension "x" below is uniformly chunked but
+    # still reported as (2, 2, 2), not the compact form 2.
     cases = pytest.mark.parametrize(
-        "shape,chunks,dimension_names,dtype,expected_preferred_chunks,expected_dask_chunks",
+        "shape,chunks,dimension_names,dtype,expected_chunks",
         [
             pytest.param(
                 (60,),
                 ((10, 20, 30),),
                 ("x",),
                 "float32",
-                {"x": (10, 20, 30)},
                 ((10, 20, 30),),
                 id="1d-rectilinear",
             ),
@@ -7221,7 +7225,6 @@ class TestZarrRectilinearChunksRead:
                 (2, (5, 10, 5)),
                 ("x", "y"),
                 "float64",
-                {"x": 2, "y": (5, 10, 5)},
                 ((2, 2, 2), (5, 10, 5)),
                 id="mixed-regular-and-rectilinear",
             ),
@@ -7230,14 +7233,7 @@ class TestZarrRectilinearChunksRead:
 
     @cases
     def test_read(
-        self,
-        tmp_path,
-        shape,
-        chunks,
-        dimension_names,
-        dtype,
-        expected_preferred_chunks,
-        expected_dask_chunks,
+        self, tmp_path, shape, chunks, dimension_names, dtype, expected_chunks
     ) -> None:
         import zarr
 
@@ -7253,10 +7249,9 @@ class TestZarrRectilinearChunksRead:
             roundtrip = xr.open_zarr(
                 store_path, zarr_format=3, consolidated=False, chunks=None
             )
-            assert roundtrip["var"].encoding["chunks"] == chunks
-            assert (
-                roundtrip["var"].encoding["preferred_chunks"]
-                == expected_preferred_chunks
+            assert roundtrip["var"].encoding["chunks"] == expected_chunks
+            assert roundtrip["var"].encoding["preferred_chunks"] == dict(
+                zip(dimension_names, expected_chunks, strict=True)
             )
             assert isinstance(roundtrip["var"].data, np.ndarray)
             np.testing.assert_array_equal(roundtrip["var"].values, data)
@@ -7264,14 +7259,7 @@ class TestZarrRectilinearChunksRead:
     @cases
     @requires_dask
     def test_read_dask(
-        self,
-        tmp_path,
-        shape,
-        chunks,
-        dimension_names,
-        dtype,
-        expected_preferred_chunks,
-        expected_dask_chunks,
+        self, tmp_path, shape, chunks, dimension_names, dtype, expected_chunks
     ) -> None:
         """Reading into dask arrays picks up the exact, variable-sized chunks
         as the dask chunks (not just `Dataset.chunks`, but the underlying
@@ -7289,7 +7277,7 @@ class TestZarrRectilinearChunksRead:
 
             roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
             assert isinstance(roundtrip["var"].data, dask_array_type)
-            assert roundtrip["var"].data.chunks == expected_dask_chunks
+            assert roundtrip["var"].data.chunks == expected_chunks
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
 
