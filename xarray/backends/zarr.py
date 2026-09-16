@@ -868,8 +868,10 @@ class ZarrStore(AbstractWritableDataStore):
             # Rectilinear chunk grid (zarr-python >= 3.2): chunk sizes vary
             # along an axis, so there is no single chunk size. `.chunks`
             # raises and we instead read the explicit per-chunk listing,
-            # e.g. ((10, 20, 30),).
-            chunks = zarr_array.write_chunk_sizes
+            # e.g. ((10, 20, 30),). Use read_chunk_sizes (not
+            # write_chunk_sizes) so this matches `.chunks` above in
+            # returning the inner chunk shape when sharding is used.
+            chunks = zarr_array.read_chunk_sizes
         preferred_chunks = dict(zip(dimensions, chunks, strict=True))
 
         encoding = {
