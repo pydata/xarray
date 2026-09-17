@@ -60,11 +60,12 @@ def module_available(module: str, minversion: str | None = None) -> bool:
     if minversion is not None:
         version = importlib.metadata.version(module)
 
+        if version is None:
+            return False
+
         return Version(version) >= Version(minversion)
 
     return True
-
-
 def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     if module_available("dask"):
         from dask.base import is_dask_collection
