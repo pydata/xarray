@@ -7340,6 +7340,34 @@ class TestZarrRectilinearChunksRead:
             with pytest.raises(TypeError, match=r"rectilinear"):
                 roundtrip.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
 
+    def test_append_does_not_resize_before_erroring(self, tmp_path) -> None:
+        """Appending along a dimension of a rectilinear variable must fail
+        *before* the existing zarr array is resized. Otherwise the store is
+        left with a grown array whose new region was never written.
+        """
+        import zarr
+
+        data = np.arange(60, dtype="float32")
+        store_path = tmp_path / "source.zarr"
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            arr = self.create_zarr_array(
+                store_path,
+                shape=(60,),
+                chunks=((10, 20, 30),),
+                dimension_names=("x",),
+                dtype="float32",
+            )
+            arr[:] = data
+
+            ds = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+            with pytest.raises(TypeError, match=r"rectilinear"):
+                ds.to_zarr(
+                    store_path, append_dim="x", zarr_format=3, consolidated=False
+                )
+
+            assert zarr.open_array(store_path / "var").shape == (60,)
+
     def test_write_rectilinear_shards_blocked(self, tmp_path) -> None:
         """encoding["shards"] must be validated the same way encoding["chunks"]
         is: it is passed straight through to zarr's array creation otherwise,

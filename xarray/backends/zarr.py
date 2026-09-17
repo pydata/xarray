@@ -1262,6 +1262,23 @@ class ZarrStore(AbstractWritableDataStore):
                 else:
                     del v.encoding["_FillValue"]
 
+            # We need to do this for both new and existing variables to ensure we're not
+            # writing to a partial chunk, even though we don't use the `encoding` value
+            # when writing to an existing variable. See
+            # https://github.com/pydata/xarray/issues/8371 for details.
+            # Note: Ideally there should be two functions, one for validating the chunks and
+            # another one for extracting the encoding.
+            # This must happen *before* any resize of an existing array below: if
+            # the encoding is rejected (e.g. rectilinear chunks, which xarray can't
+            # write yet) after resizing, the store would be left with a grown array
+            # whose new region was never written.
+            encoding = extract_zarr_variable_encoding(
+                v,
+                raise_on_invalid=vn in check_encoding_set,
+                name=vn,
+                zarr_format=3 if is_zarr_v3_format else 2,
+            )
+
             zarr_shape = None
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
@@ -1286,19 +1303,6 @@ class ZarrStore(AbstractWritableDataStore):
 
                 zarr_shape = zarr_array.shape
             region = tuple(write_region[dim] for dim in dims)
-
-            # We need to do this for both new and existing variables to ensure we're not
-            # writing to a partial chunk, even though we don't use the `encoding` value
-            # when writing to an existing variable. See
-            # https://github.com/pydata/xarray/issues/8371 for details.
-            # Note: Ideally there should be two functions, one for validating the chunks and
-            # another one for extracting the encoding.
-            encoding = extract_zarr_variable_encoding(
-                v,
-                raise_on_invalid=vn in check_encoding_set,
-                name=vn,
-                zarr_format=3 if is_zarr_v3_format else 2,
-            )
 
             # When shards are specified, dask chunks must align with shard boundaries
             # (not just zarr chunk boundaries) to avoid data corruption during
