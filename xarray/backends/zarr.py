@@ -520,6 +520,27 @@ def extract_zarr_variable_encoding(
     if chunks is None:
         chunks = "auto"
     encoding["chunks"] = chunks
+
+    # `encoding["shards"]` isn't run through `_determine_zarr_chunks` above,
+    # so a rectilinear (variable-sized) shard spec -- e.g. read from a
+    # rectilinear-sharded store via `open_store_variable`, or set by hand --
+    # would otherwise pass straight through to zarr's array creation
+    # unchecked, silently writing a rectilinear shard grid that xarray
+    # doesn't otherwise support writing.
+    shards = encoding.get("shards")
+    if shards is not None and any(not isinstance(x, int) for x in shards):
+        raise TypeError(
+            f"encoding['shards']={shards!r} for variable named {name!r} "
+            "looks like a rectilinear (variable-sized) shard grid, e.g. "
+            "from a store opened with "
+            "zarr.config.set({'array.rectilinear_chunks': True}). Writing "
+            "rectilinear shards is not yet supported by xarray (only "
+            "reading them is). To write this variable with a regular shard "
+            "grid instead, clear its shard encoding (`ds.drop_encoding()`, "
+            f"or `del ds[{name!r}].encoding['shards']`) *and* make sure its "
+            "own chunks are uniform too, e.g. with `ds.chunk({dim: size})`."
+        )
+
     return encoding
 
 

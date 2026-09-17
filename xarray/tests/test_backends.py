@@ -7340,6 +7340,27 @@ class TestZarrRectilinearChunksRead:
             with pytest.raises(TypeError, match=r"rectilinear"):
                 roundtrip.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
 
+    def test_write_rectilinear_shards_blocked(self, tmp_path) -> None:
+        """encoding["shards"] must be validated the same way encoding["chunks"]
+        is: it is passed straight through to zarr's array creation otherwise,
+        so a rectilinear (variable-sized) shard spec -- whether read from a
+        store or set by hand -- would silently write a rectilinear-sharded
+        array, even though xarray doesn't support writing rectilinear
+        anything.
+
+        https://github.com/pydata/xarray/pull/11592#issuecomment-5703342460
+        """
+        data = np.arange(60, dtype="float32")
+        ds = xr.Dataset({"var": ("x", data)})
+        ds["var"].encoding["chunks"] = (10,)
+        ds["var"].encoding["shards"] = ((20, 10, 30),)
+
+        import zarr
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            with pytest.raises(TypeError, match=r"rectilinear"):
+                ds.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
+
 
 @requires_zarr
 @requires_fsspec
