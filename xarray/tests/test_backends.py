@@ -7361,6 +7361,20 @@ class TestZarrRectilinearChunksRead:
             with pytest.raises(TypeError, match=r"rectilinear"):
                 ds.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
 
+    def test_write_regular_shards_still_works(self, tmp_path) -> None:
+        """The rectilinear-shards guard must not choke on a plain regular
+        shard spec, including a bare int (applies to every dimension) rather
+        than a tuple -- iterating that directly raises `TypeError: 'int'
+        object is not iterable`.
+        """
+        data = np.arange(60, dtype="float32")
+
+        for shards in (20, (20,)):
+            ds = xr.Dataset({"var": ("x", data)})
+            ds["var"].encoding["chunks"] = 10
+            ds["var"].encoding["shards"] = shards
+            ds.to_zarr(tmp_path / f"dest-{shards}.zarr", zarr_format=3, mode="w")
+
 
 @requires_zarr
 @requires_fsspec

@@ -528,7 +528,11 @@ def extract_zarr_variable_encoding(
     # unchecked, silently writing a rectilinear shard grid that xarray
     # doesn't otherwise support writing.
     shards = encoding.get("shards")
-    if shards is not None and any(not isinstance(x, int) for x in shards):
+    if (
+        shards is not None
+        and not isinstance(shards, integer_types)
+        and any(not isinstance(x, int) for x in shards)
+    ):
         raise TypeError(
             f"encoding['shards']={shards!r} for variable named {name!r} "
             "looks like a rectilinear (variable-sized) shard grid, e.g. "
