@@ -7184,10 +7184,9 @@ def test_extract_zarr_variable_encoding() -> None:
 
 @requires_zarr_rectilinear_chunks
 class TestZarrRectilinearChunksRead:
-    """Tests for reading (not writing) rectilinear (variable-sized) zarr chunks.
+    """Reading rectilinear (variable-sized) zarr chunks.
 
-    xarray does not yet support *writing* rectilinear chunks, so these stores
-    are created directly with zarr-python rather than through `Dataset.to_zarr`.
+    xarray can't write these yet, so the stores are created with zarr directly.
     """
 
     @staticmethod
@@ -7207,13 +7206,9 @@ class TestZarrRectilinearChunksRead:
             dimension_names=dimension_names,
         )
 
-    # `expected_chunks` is what xarray reports in `encoding["chunks"]`: an int
-    # for every regularly-chunked dimension and the explicit per-chunk sizes
-    # for every rectilinear one. zarr-python itself reports these arrays
-    # differently from version to version (3.2 returns the mixed form from
-    # `.chunks`, 3.3 raises and `read_chunk_sizes` expands "x" to (2, 2, 2)),
-    # so xarray normalises. `expected_dask_chunks` is the fully expanded form
-    # dask uses.
+    # expected_chunks is what xarray puts in encoding["chunks"]: an int per
+    # regular dim, a tuple of sizes per rectilinear dim (zarr-python itself
+    # differs between versions here). expected_dask_chunks is the expanded form.
     cases = pytest.mark.parametrize(
         "shape,chunks,dimension_names,dtype,expected_chunks,expected_dask_chunks",
         [
@@ -7282,9 +7277,7 @@ class TestZarrRectilinearChunksRead:
         expected_chunks,
         expected_dask_chunks,
     ) -> None:
-        """Reading into dask arrays picks up the exact, variable-sized chunks
-        as the dask chunks (not just `Dataset.chunks`, but the underlying
-        dask array's own chunking)."""
+        """Dask arrays get the exact variable-sized chunks."""
         import zarr
 
         data = np.arange(np.prod(shape), dtype=dtype).reshape(shape)
@@ -7302,15 +7295,8 @@ class TestZarrRectilinearChunksRead:
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
     def test_read_rectilinear_shards(self, tmp_path) -> None:
-        """Regular (uniform) inner chunks, but rectilinear (variable-sized)
-        shards. `.shards` raises NotImplementedError here, same as `.chunks`
-        does for rectilinear chunk grids, so it needs the same fallback.
-        Whether `.chunks` raises for this array too depends on the zarr
-        version (it does on 3.2/3.3, not on 3.4), so the regular inner chunk
-        must be reported the same way, as a single int, either way.
-
-        https://github.com/pydata/xarray/pull/11592#issuecomment-5703342460
-        """
+        """Regular inner chunks with rectilinear shards. The regular chunks
+        must be reported as an int regardless of zarr-python version."""
         import zarr
 
         data = np.array([1.0, 2.0, 3.0], dtype="float32")
@@ -7335,13 +7321,8 @@ class TestZarrRectilinearChunksRead:
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
     def test_write_after_read_gives_helpful_error(self, tmp_path) -> None:
-        """Writing isn't supported yet, so round-tripping (and region writes,
-        which go through the same encoding-extraction code path) should fail
-        with an error that names rectilinear chunks and a workaround, not a
-        generic "must be an int" message.
-
-        https://github.com/pydata/xarray/pull/11592#issuecomment-5703342460
-        """
+        """Writing isn't supported yet; the error should say so, not just
+        "must be an int"."""
         import zarr
 
         data = np.arange(60, dtype="float32")
@@ -7362,10 +7343,7 @@ class TestZarrRectilinearChunksRead:
                 roundtrip.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
 
     def test_append_does_not_resize_before_erroring(self, tmp_path) -> None:
-        """Appending along a dimension of a rectilinear variable must fail
-        *before* the existing zarr array is resized. Otherwise the store is
-        left with a grown array whose new region was never written.
-        """
+        """A failed append must not leave the existing array resized."""
         import zarr
 
         data = np.arange(60, dtype="float32")
@@ -7390,15 +7368,7 @@ class TestZarrRectilinearChunksRead:
             assert zarr.open_array(store_path / "var").shape == (60,)
 
     def test_write_rectilinear_shards_blocked(self, tmp_path) -> None:
-        """encoding["shards"] must be validated the same way encoding["chunks"]
-        is: it is passed straight through to zarr's array creation otherwise,
-        so a rectilinear (variable-sized) shard spec -- whether read from a
-        store or set by hand -- would silently write a rectilinear-sharded
-        array, even though xarray doesn't support writing rectilinear
-        anything.
-
-        https://github.com/pydata/xarray/pull/11592#issuecomment-5703342460
-        """
+        """Rectilinear shards must be rejected on write, like rectilinear chunks."""
         data = np.arange(60, dtype="float32")
         ds = xr.Dataset({"var": ("x", data)})
         ds["var"].encoding["chunks"] = (10,)
@@ -7412,15 +7382,7 @@ class TestZarrRectilinearChunksRead:
 
     @pytest.mark.parametrize("shards", [20, (20,), "auto"], ids=repr)
     def test_write_regular_shards_still_works(self, tmp_path, shards) -> None:
-        """The rectilinear-shards guard must only fire on a sequence of
-        sequences. zarr also accepts a bare int, a tuple of ints and the
-        string "auto" for shards; iterating an int raises TypeError and
-        iterating "auto" yields non-int characters, so neither may be fed
-        to a naive element check.
-
-        A bare int is expanded to a tuple by xarray before reaching zarr,
-        which also sidesteps zarr-python 3.2.x crashing on an int shard spec.
-        """
+        """Every non-rectilinear shard spec zarr accepts must still write."""
         data = np.arange(60, dtype="float32")
         ds = xr.Dataset({"var": ("x", data)})
         ds["var"].encoding["chunks"] = 10

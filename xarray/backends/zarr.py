@@ -401,23 +401,15 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 def _compact_chunk_sizes(
     chunk_sizes: tuple[tuple[int, ...], ...],
 ) -> tuple[int | tuple[int, ...], ...]:
-    """Compact zarr's per-chunk size listing back to a chunk *shape* where possible.
+    """Replace a dask-style listing of chunk sizes with a single int along any
+    dimension where it describes a regular grid, e.g. ((10, 10, 5),) -> (10,).
 
-    zarr-python's ``read_chunk_sizes`` / ``write_chunk_sizes`` list every
-    chunk's size along each dimension, dask-style, e.g. ``((10, 10, 5),)``.
-    Along any dimension where that listing describes a regular grid (all
-    chunks equal except a possibly smaller final one) it is replaced by the
-    single chunk size, e.g. ``10``; genuinely variable-sized dimensions keep
-    their listing. This gives the same representation regardless of which
-    zarr-python version is installed: whether ``Array.chunks`` raises for a
-    given array, or returns a compact or partially compact tuple, has changed
-    between 3.2, 3.3 and 3.4.
+    Gives a consistent representation across zarr-python versions.
     """
     compacted: list[int | tuple[int, ...]] = []
     for sizes in chunk_sizes:
         sizes = tuple(sizes)
-        if not sizes:
-            # zero-length dimension: nothing to compact
+        if not sizes:  # zero-length dimension
             compacted.append(sizes)
         elif len(set(sizes[:-1])) <= 1 and sizes[-1] <= sizes[0]:
             compacted.append(sizes[0])
@@ -551,15 +543,8 @@ def extract_zarr_variable_encoding(
         chunks = "auto"
     encoding["chunks"] = chunks
 
-    # `encoding["shards"]` isn't run through `_determine_zarr_chunks` above,
-    # so a rectilinear (variable-sized) shard spec -- e.g. read from a
-    # rectilinear-sharded store via `open_store_variable`, or set by hand --
-    # would otherwise pass straight through to zarr's array creation
-    # unchecked, silently writing a rectilinear shard grid that xarray
-    # doesn't otherwise support writing.
-    # Only a sequence *of sequences* is rectilinear; zarr also accepts an int,
-    # a tuple of ints, the string "auto" and a config dict here, none of which
-    # should trip this check.
+    # Reject rectilinear shards (a sequence of sequences) like we do for chunks.
+    # Zarr also accepts an int, tuple of ints, "auto" or a dict here.
     shards = encoding.get("shards")
     if isinstance(shards, list | tuple) and any(
         isinstance(x, list | tuple) for x in shards
@@ -578,12 +563,7 @@ def extract_zarr_variable_encoding(
             "own chunks are uniform too, e.g. with `ds.chunk({dim: size})`."
         )
     if isinstance(shards, integer_types):
-        # Expand a bare int to one size per dimension, as zarr does for
-        # chunks. zarr-python 3.2.x crashes on an int shard spec
-        # ("'int' object is not iterable" from its metadata parsing), and a
-        # tuple also lets the dask/shard alignment checks in
-        # ZarrStore.set_variables see the shard grid, which they skip for
-        # anything that isn't a tuple.
+        # Expand to a tuple: zarr-python 3.2.x crashes on an int shard spec.
         encoding["shards"] = variable.ndim * (int(shards),)
 
     return encoding
@@ -941,21 +921,13 @@ class ZarrStore(AbstractWritableDataStore):
         attributes = dict(attributes)
 
         try:
-            # Regular chunk grid: a single uniform chunk size per dimension,
-            # e.g. (10,) for a 60-element axis chunked into 10s.
             chunks = tuple(zarr_array.chunks)
         except NotImplementedError:
-            # Rectilinear chunk grid (zarr-python >= 3.2): chunk sizes vary
-            # along an axis, so there is no single chunk size. `.chunks`
-            # raises and we instead read the explicit per-chunk listing,
-            # e.g. ((10, 20, 30),). Use read_chunk_sizes (not
-            # write_chunk_sizes) so this matches `.chunks` above in
-            # returning the inner chunk shape when sharding is used.
+            # Rectilinear chunk grid (zarr-python >= 3.2): `.chunks` raises, so
+            # read the per-chunk sizes instead, e.g. ((10, 20, 30),).
             chunks = zarr_array.read_chunk_sizes
-        # Which arrays make `.chunks` raise, and what it returns for a grid
-        # that is regular along only some dimensions, differs between
-        # zarr-python versions, so normalise to one representation: an int per
-        # regular dimension, a tuple of sizes per rectilinear one.
+        # Normalise to an int per regular dim and a tuple per rectilinear dim,
+        # since what zarr-python returns above varies between versions.
         chunks = _compact_chunk_sizes(
             tuple(x if isinstance(x, tuple) else (x,) for x in chunks)
         )
@@ -967,15 +939,10 @@ class ZarrStore(AbstractWritableDataStore):
         }
 
         try:
-            # Regular shard grid (or no sharding at all, in which case this is
-            # None): a single uniform shard size per dimension.
             shards = zarr_array.shards
         except NotImplementedError:
-            # Rectilinear shard grid: shard sizes vary along an axis, so
-            # there is no single shard size. `.shards` raises and we instead
-            # read the explicit per-shard listing, e.g. ((1, 2),).
-            # write_chunk_sizes (not read_chunk_sizes) gives the outer,
-            # storage-level (shard) sizes here.
+            # Rectilinear shard grid: `.shards` raises, so read the per-shard
+            # (i.e. outer/storage chunk) sizes instead, e.g. ((1, 2),).
             shards = _compact_chunk_sizes(zarr_array.write_chunk_sizes)
 
         encoding.update(
@@ -1316,10 +1283,8 @@ class ZarrStore(AbstractWritableDataStore):
             # https://github.com/pydata/xarray/issues/8371 for details.
             # Note: Ideally there should be two functions, one for validating the chunks and
             # another one for extracting the encoding.
-            # This must happen *before* any resize of an existing array below: if
-            # the encoding is rejected (e.g. rectilinear chunks, which xarray can't
-            # write yet) after resizing, the store would be left with a grown array
-            # whose new region was never written.
+            # Must run before any resize below, so a rejected encoding can't
+            # leave behind a resized array that was never written to.
             encoding = extract_zarr_variable_encoding(
                 v,
                 raise_on_invalid=vn in check_encoding_set,
