@@ -396,6 +396,34 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     return enc_chunks_tuple
 
 
+def _compact_chunk_sizes(
+    chunk_sizes: tuple[tuple[int, ...], ...],
+) -> tuple[int | tuple[int, ...], ...]:
+    """Compact zarr's per-chunk size listing back to a chunk *shape* where possible.
+
+    zarr-python's ``read_chunk_sizes`` / ``write_chunk_sizes`` list every
+    chunk's size along each dimension, dask-style, e.g. ``((10, 10, 5),)``.
+    Along any dimension where that listing describes a regular grid (all
+    chunks equal except a possibly smaller final one) it is replaced by the
+    single chunk size, e.g. ``10``; genuinely variable-sized dimensions keep
+    their listing. This gives the same representation regardless of which
+    zarr-python version is installed: whether ``Array.chunks`` raises for a
+    given array, or returns a compact or partially compact tuple, has changed
+    between 3.2, 3.3 and 3.4.
+    """
+    compacted: list[int | tuple[int, ...]] = []
+    for sizes in chunk_sizes:
+        sizes = tuple(sizes)
+        if not sizes:
+            # zero-length dimension: nothing to compact
+            compacted.append(sizes)
+        elif len(set(sizes[:-1])) <= 1 and sizes[-1] <= sizes[0]:
+            compacted.append(sizes[0])
+        else:
+            compacted.append(sizes)
+    return tuple(compacted)
+
+
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
     # Check for attributes and dimension name metadata as discussed in the Zarr encoding
     # specification https://docs.xarray.dev/en/stable/internals/zarr-encoding-spec.html
@@ -912,6 +940,13 @@ class ZarrStore(AbstractWritableDataStore):
             # write_chunk_sizes) so this matches `.chunks` above in
             # returning the inner chunk shape when sharding is used.
             chunks = zarr_array.read_chunk_sizes
+        # Which arrays make `.chunks` raise, and what it returns for a grid
+        # that is regular along only some dimensions, differs between
+        # zarr-python versions, so normalise to one representation: an int per
+        # regular dimension, a tuple of sizes per rectilinear one.
+        chunks = _compact_chunk_sizes(
+            tuple(x if isinstance(x, tuple) else (x,) for x in chunks)
+        )
         preferred_chunks = dict(zip(dimensions, chunks, strict=True))
 
         encoding = {
@@ -929,7 +964,7 @@ class ZarrStore(AbstractWritableDataStore):
             # read the explicit per-shard listing, e.g. ((1, 2),).
             # write_chunk_sizes (not read_chunk_sizes) gives the outer,
             # storage-level (shard) sizes here.
-            shards = zarr_array.write_chunk_sizes
+            shards = _compact_chunk_sizes(zarr_array.write_chunk_sizes)
 
         encoding.update(
             {

@@ -80,6 +80,7 @@ from xarray.tests import (
     has_numpy_2,
     has_scipy,
     has_zarr,
+    has_zarr_v3_3,
     has_zarr_v3_async_oindex,
     has_zarr_v3_dtypes,
     mock,
@@ -7207,19 +7208,22 @@ class TestZarrRectilinearChunksRead:
             dimension_names=dimension_names,
         )
 
-    # `expected_chunks` is the fully-expanded, dask-style tuple-of-tuples that
-    # zarr-python reports (via `read_chunk_sizes`) for any array whose chunk
-    # grid isn't purely regular, even along dimensions that happen to be
-    # uniformly chunked -- e.g. dimension "x" below is uniformly chunked but
-    # still reported as (2, 2, 2), not the compact form 2.
+    # `expected_chunks` is what xarray reports in `encoding["chunks"]`: an int
+    # for every regularly-chunked dimension and the explicit per-chunk sizes
+    # for every rectilinear one. zarr-python itself reports these arrays
+    # differently from version to version (3.2 returns the mixed form from
+    # `.chunks`, 3.3 raises and `read_chunk_sizes` expands "x" to (2, 2, 2)),
+    # so xarray normalises. `expected_dask_chunks` is the fully expanded form
+    # dask uses.
     cases = pytest.mark.parametrize(
-        "shape,chunks,dimension_names,dtype,expected_chunks",
+        "shape,chunks,dimension_names,dtype,expected_chunks,expected_dask_chunks",
         [
             pytest.param(
                 (60,),
                 ((10, 20, 30),),
                 ("x",),
                 "float32",
+                ((10, 20, 30),),
                 ((10, 20, 30),),
                 id="1d-rectilinear",
             ),
@@ -7228,6 +7232,7 @@ class TestZarrRectilinearChunksRead:
                 (2, (5, 10, 5)),
                 ("x", "y"),
                 "float64",
+                (2, (5, 10, 5)),
                 ((2, 2, 2), (5, 10, 5)),
                 id="mixed-regular-and-rectilinear",
             ),
@@ -7236,7 +7241,14 @@ class TestZarrRectilinearChunksRead:
 
     @cases
     def test_read(
-        self, tmp_path, shape, chunks, dimension_names, dtype, expected_chunks
+        self,
+        tmp_path,
+        shape,
+        chunks,
+        dimension_names,
+        dtype,
+        expected_chunks,
+        expected_dask_chunks,
     ) -> None:
         import zarr
 
@@ -7262,7 +7274,14 @@ class TestZarrRectilinearChunksRead:
     @cases
     @requires_dask
     def test_read_dask(
-        self, tmp_path, shape, chunks, dimension_names, dtype, expected_chunks
+        self,
+        tmp_path,
+        shape,
+        chunks,
+        dimension_names,
+        dtype,
+        expected_chunks,
+        expected_dask_chunks,
     ) -> None:
         """Reading into dask arrays picks up the exact, variable-sized chunks
         as the dask chunks (not just `Dataset.chunks`, but the underlying
@@ -7280,13 +7299,16 @@ class TestZarrRectilinearChunksRead:
 
             roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
             assert isinstance(roundtrip["var"].data, dask_array_type)
-            assert roundtrip["var"].data.chunks == expected_chunks
+            assert roundtrip["var"].data.chunks == expected_dask_chunks
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
     def test_read_rectilinear_shards(self, tmp_path) -> None:
         """Regular (uniform) inner chunks, but rectilinear (variable-sized)
         shards. `.shards` raises NotImplementedError here, same as `.chunks`
         does for rectilinear chunk grids, so it needs the same fallback.
+        Whether `.chunks` raises for this array too depends on the zarr
+        version (it does on 3.2/3.3, not on 3.4), so the regular inner chunk
+        must be reported the same way, as a single int, either way.
 
         https://github.com/pydata/xarray/pull/11592#issuecomment-5703342460
         """
@@ -7309,7 +7331,7 @@ class TestZarrRectilinearChunksRead:
             roundtrip = xr.open_zarr(
                 store_path, zarr_format=3, consolidated=False, chunks=None
             )
-            assert roundtrip["var"].encoding["chunks"] == ((1, 1, 1),)
+            assert roundtrip["var"].encoding["chunks"] == (1,)
             assert roundtrip["var"].encoding["shards"] == ((1, 2),)
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
@@ -7389,7 +7411,21 @@ class TestZarrRectilinearChunksRead:
             with pytest.raises(TypeError, match=r"rectilinear"):
                 ds.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
 
-    @pytest.mark.parametrize("shards", [20, (20,), "auto"], ids=repr)
+    @pytest.mark.parametrize(
+        "shards",
+        [
+            pytest.param(
+                20,
+                marks=pytest.mark.skipif(
+                    not has_zarr_v3_3,
+                    reason="zarr-python < 3.3 crashes on a bare int shards spec",
+                ),
+            ),
+            (20,),
+            "auto",
+        ],
+        ids=repr,
+    )
     def test_write_regular_shards_still_works(self, tmp_path, shards) -> None:
         """The rectilinear-shards guard must only fire on a sequence of
         sequences. zarr also accepts a bare int, a tuple of ints and the

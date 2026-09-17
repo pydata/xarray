@@ -162,6 +162,7 @@ has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", 
 has_zarr_rectilinear_chunks, requires_zarr_rectilinear_chunks = _importorskip(
     "zarr", "3.2.0"
 )
+has_zarr_v3_3, requires_zarr_v3_3 = _importorskip("zarr", "3.3.0")
 if has_zarr:
     import zarr
 
