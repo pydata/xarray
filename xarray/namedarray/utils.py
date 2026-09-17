@@ -66,6 +66,8 @@ def module_available(module: str, minversion: str | None = None) -> bool:
         return Version(version) >= Version(minversion)
 
     return True
+
+
 def is_dask_collection(x: object) -> TypeGuard[DaskCollection]:
     if module_available("dask"):
         from dask.base import is_dask_collection

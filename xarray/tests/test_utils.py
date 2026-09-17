@@ -178,7 +178,9 @@ def test_repr_object():
 
 def test_module_available_handles_missing_version_metadata():
     utils.module_available.cache_clear()
-    with patch("xarray.namedarray.utils.importlib.util.find_spec", return_value=object()):
+    with patch(
+        "xarray.namedarray.utils.importlib.util.find_spec", return_value=object()
+    ):
         with patch(
             "xarray.namedarray.utils.importlib.metadata.version", return_value=None
         ):
