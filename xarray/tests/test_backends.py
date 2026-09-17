@@ -7389,19 +7389,22 @@ class TestZarrRectilinearChunksRead:
             with pytest.raises(TypeError, match=r"rectilinear"):
                 ds.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
 
-    def test_write_regular_shards_still_works(self, tmp_path) -> None:
-        """The rectilinear-shards guard must not choke on a plain regular
-        shard spec, including a bare int (applies to every dimension) rather
-        than a tuple -- iterating that directly raises `TypeError: 'int'
-        object is not iterable`.
+    @pytest.mark.parametrize("shards", [20, (20,), "auto"], ids=repr)
+    def test_write_regular_shards_still_works(self, tmp_path, shards) -> None:
+        """The rectilinear-shards guard must only fire on a sequence of
+        sequences. zarr also accepts a bare int, a tuple of ints and the
+        string "auto" for shards; iterating an int raises TypeError and
+        iterating "auto" yields non-int characters, so neither may be fed
+        to a naive element check.
         """
         data = np.arange(60, dtype="float32")
-
-        for shards in (20, (20,)):
-            ds = xr.Dataset({"var": ("x", data)})
-            ds["var"].encoding["chunks"] = 10
-            ds["var"].encoding["shards"] = shards
-            ds.to_zarr(tmp_path / f"dest-{shards}.zarr", zarr_format=3, mode="w")
+        ds = xr.Dataset({"var": ("x", data)})
+        ds["var"].encoding["chunks"] = 10
+        ds["var"].encoding["shards"] = shards
+        ds.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
+        assert (
+            xr.open_zarr(tmp_path / "dest.zarr")["var"].encoding["shards"] is not None
+        )
 
 
 @requires_zarr
