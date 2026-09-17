@@ -577,6 +577,14 @@ def extract_zarr_variable_encoding(
             f"or `del ds[{name!r}].encoding['shards']`) *and* make sure its "
             "own chunks are uniform too, e.g. with `ds.chunk({dim: size})`."
         )
+    if isinstance(shards, integer_types):
+        # Expand a bare int to one size per dimension, as zarr does for
+        # chunks. zarr-python 3.2.x crashes on an int shard spec
+        # ("'int' object is not iterable" from its metadata parsing), and a
+        # tuple also lets the dask/shard alignment checks in
+        # ZarrStore.set_variables see the shard grid, which they skip for
+        # anything that isn't a tuple.
+        encoding["shards"] = variable.ndim * (int(shards),)
 
     return encoding
 

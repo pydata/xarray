@@ -80,7 +80,6 @@ from xarray.tests import (
     has_numpy_2,
     has_scipy,
     has_zarr,
-    has_zarr_v3_3,
     has_zarr_v3_async_oindex,
     has_zarr_v3_dtypes,
     mock,
@@ -7411,27 +7410,16 @@ class TestZarrRectilinearChunksRead:
             with pytest.raises(TypeError, match=r"rectilinear"):
                 ds.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
 
-    @pytest.mark.parametrize(
-        "shards",
-        [
-            pytest.param(
-                20,
-                marks=pytest.mark.skipif(
-                    not has_zarr_v3_3,
-                    reason="zarr-python < 3.3 crashes on a bare int shards spec",
-                ),
-            ),
-            (20,),
-            "auto",
-        ],
-        ids=repr,
-    )
+    @pytest.mark.parametrize("shards", [20, (20,), "auto"], ids=repr)
     def test_write_regular_shards_still_works(self, tmp_path, shards) -> None:
         """The rectilinear-shards guard must only fire on a sequence of
         sequences. zarr also accepts a bare int, a tuple of ints and the
         string "auto" for shards; iterating an int raises TypeError and
         iterating "auto" yields non-int characters, so neither may be fed
         to a naive element check.
+
+        A bare int is expanded to a tuple by xarray before reaching zarr,
+        which also sidesteps zarr-python 3.2.x crashing on an int shard spec.
         """
         data = np.arange(60, dtype="float32")
         ds = xr.Dataset({"var": ("x", data)})
