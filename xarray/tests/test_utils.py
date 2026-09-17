@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Hashable
 from types import EllipsisType
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -173,6 +174,18 @@ def test_repr_object():
     assert repr(obj) == "foo"
     assert isinstance(obj, Hashable)
     assert not isinstance(obj, str)
+
+
+def test_module_available_handles_missing_version_metadata():
+    utils.module_available.cache_clear()
+    with patch(
+        "xarray.namedarray.utils.importlib.util.find_spec", return_value=object()
+    ):
+        with patch(
+            "xarray.namedarray.utils.importlib.metadata.version", return_value=None
+        ):
+            assert not utils.module_available("numpy", minversion="2.0.0.dev0")
+    utils.module_available.cache_clear()
 
 
 def test_repr_object_magic_methods():
