@@ -101,6 +101,7 @@ from xarray.tests import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
+    requires_zarr_rectilinear_chunks,
     requires_zarr_v3,
 )
 from xarray.tests.test_coding_times import (
@@ -7178,6 +7179,217 @@ def test_extract_zarr_variable_encoding() -> None:
     with pytest.raises(ValueError, match=r"unexpected encoding parameters"):
         actual = backends.zarr.extract_zarr_variable_encoding(
             var, raise_on_invalid=True, zarr_format=3
+        )
+
+
+@requires_zarr_rectilinear_chunks
+class TestZarrRectilinearChunksRead:
+    """Reading rectilinear (variable-sized) zarr chunks.
+
+    xarray can't write these yet, so the stores are created with zarr directly.
+    """
+
+    @staticmethod
+    def create_zarr_array(
+        store_path, shape, chunks, dimension_names, dtype, shards=None
+    ):
+        import zarr
+
+        root = zarr.open_group(store_path, mode="w", zarr_format=3)
+        return root.create(
+            "var",
+            shape=shape,
+            # older zarr stubs (<3.2) don't include rectilinear chunk types
+            chunks=chunks,  # type: ignore[arg-type, unused-ignore]
+            shards=shards,  # type: ignore[arg-type, unused-ignore]
+            dtype=dtype,
+            dimension_names=dimension_names,
+        )
+
+    # expected_chunks is what xarray puts in encoding["chunks"]: an int per
+    # regular dim, a tuple of sizes per rectilinear dim (zarr-python itself
+    # differs between versions here). expected_dask_chunks is the expanded form.
+    cases = pytest.mark.parametrize(
+        "shape,chunks,dimension_names,dtype,expected_chunks,expected_dask_chunks",
+        [
+            pytest.param(
+                (60,),
+                ((10, 20, 30),),
+                ("x",),
+                "float32",
+                ((10, 20, 30),),
+                ((10, 20, 30),),
+                id="1d-rectilinear",
+            ),
+            pytest.param(
+                (6, 20),
+                (2, (5, 10, 5)),
+                ("x", "y"),
+                "float64",
+                (2, (5, 10, 5)),
+                ((2, 2, 2), (5, 10, 5)),
+                id="mixed-regular-and-rectilinear",
+            ),
+        ],
+    )
+
+    @cases
+    def test_read(
+        self,
+        tmp_path,
+        shape,
+        chunks,
+        dimension_names,
+        dtype,
+        expected_chunks,
+        expected_dask_chunks,
+    ) -> None:
+        import zarr
+
+        data = np.arange(np.prod(shape), dtype=dtype).reshape(shape)
+        store_path = tmp_path / "source.zarr"
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            arr = self.create_zarr_array(
+                store_path, shape, chunks, dimension_names, dtype
+            )
+            arr[:] = data
+
+            roundtrip = xr.open_zarr(
+                store_path, zarr_format=3, consolidated=False, chunks=None
+            )
+            assert roundtrip["var"].encoding["chunks"] == expected_chunks
+            assert roundtrip["var"].encoding["preferred_chunks"] == dict(
+                zip(dimension_names, expected_chunks, strict=True)
+            )
+            assert isinstance(roundtrip["var"].data, np.ndarray)
+            np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+    @cases
+    @requires_dask
+    def test_read_dask(
+        self,
+        tmp_path,
+        shape,
+        chunks,
+        dimension_names,
+        dtype,
+        expected_chunks,
+        expected_dask_chunks,
+    ) -> None:
+        """Dask arrays get the exact variable-sized chunks."""
+        import zarr
+
+        data = np.arange(np.prod(shape), dtype=dtype).reshape(shape)
+        store_path = tmp_path / "source.zarr"
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            arr = self.create_zarr_array(
+                store_path, shape, chunks, dimension_names, dtype
+            )
+            arr[:] = data
+
+            roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+            assert isinstance(roundtrip["var"].data, dask_array_type)
+            assert roundtrip["var"].data.chunks == expected_dask_chunks
+            np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+    def test_read_rectilinear_shards(self, tmp_path) -> None:
+        """Regular inner chunks with rectilinear shards. The regular chunks
+        must be reported as an int regardless of zarr-python version."""
+        import zarr
+
+        data = np.array([1.0, 2.0, 3.0], dtype="float32")
+        store_path = tmp_path / "source.zarr"
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            arr = self.create_zarr_array(
+                store_path,
+                shape=(3,),
+                chunks=(1,),
+                shards=((1, 2),),
+                dimension_names=("x",),
+                dtype="float32",
+            )
+            arr[:] = data
+
+            roundtrip = xr.open_zarr(
+                store_path, zarr_format=3, consolidated=False, chunks=None
+            )
+            assert roundtrip["var"].encoding["chunks"] == (1,)
+            assert roundtrip["var"].encoding["shards"] == ((1, 2),)
+            np.testing.assert_array_equal(roundtrip["var"].values, data)
+
+    def test_write_after_read_gives_helpful_error(self, tmp_path) -> None:
+        """Writing isn't supported yet; the error should say so, not just
+        "must be an int"."""
+        import zarr
+
+        data = np.arange(60, dtype="float32")
+        store_path = tmp_path / "source.zarr"
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            arr = self.create_zarr_array(
+                store_path,
+                shape=(60,),
+                chunks=((10, 20, 30),),
+                dimension_names=("x",),
+                dtype="float32",
+            )
+            arr[:] = data
+
+            roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+            with pytest.raises(TypeError, match=r"rectilinear"):
+                roundtrip.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
+
+    def test_append_does_not_resize_before_erroring(self, tmp_path) -> None:
+        """A failed append must not leave the existing array resized."""
+        import zarr
+
+        data = np.arange(60, dtype="float32")
+        store_path = tmp_path / "source.zarr"
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            arr = self.create_zarr_array(
+                store_path,
+                shape=(60,),
+                chunks=((10, 20, 30),),
+                dimension_names=("x",),
+                dtype="float32",
+            )
+            arr[:] = data
+
+            ds = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+            with pytest.raises(TypeError, match=r"rectilinear"):
+                ds.to_zarr(
+                    store_path, append_dim="x", zarr_format=3, consolidated=False
+                )
+
+            assert zarr.open_array(store_path / "var").shape == (60,)
+
+    def test_write_rectilinear_shards_blocked(self, tmp_path) -> None:
+        """Rectilinear shards must be rejected on write, like rectilinear chunks."""
+        data = np.arange(60, dtype="float32")
+        ds = xr.Dataset({"var": ("x", data)})
+        ds["var"].encoding["chunks"] = (10,)
+        ds["var"].encoding["shards"] = ((20, 10, 30),)
+
+        import zarr
+
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            with pytest.raises(TypeError, match=r"rectilinear"):
+                ds.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
+
+    @pytest.mark.parametrize("shards", [20, (20,), "auto"], ids=repr)
+    def test_write_regular_shards_still_works(self, tmp_path, shards) -> None:
+        """Every non-rectilinear shard spec zarr accepts must still write."""
+        data = np.arange(60, dtype="float32")
+        ds = xr.Dataset({"var": ("x", data)})
+        ds["var"].encoding["chunks"] = 10
+        ds["var"].encoding["shards"] = shards
+        ds.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
+        assert (
+            xr.open_zarr(tmp_path / "dest.zarr")["var"].encoding["shards"] is not None
         )
 
 
