@@ -851,13 +851,15 @@ class ZarrStore(AbstractWritableDataStore):
         # TODO: consider deprecating this in favor of zarr_group
         return self.zarr_group
 
-    def open_store_variable(self, name):
+    def open_store_variable(self, name, *, dimensions_and_attributes=None):
         zarr_array = self.members[name]
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
         try_nczarr = self._mode == "r"
-        dimensions, attributes = _get_zarr_dims_and_attrs(
-            zarr_array, DIMENSION_KEY, try_nczarr
-        )
+        if dimensions_and_attributes is None:
+            dimensions_and_attributes = _get_zarr_dims_and_attrs(
+                zarr_array, DIMENSION_KEY, try_nczarr
+            )
+        dimensions, attributes = dimensions_and_attributes
         attributes = dict(attributes)
 
         encoding = {
@@ -1601,6 +1603,224 @@ def open_zarr(
         use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
     )
     return ds
+
+
+class _AsyncOpenZarrStore(ZarrStore):
+    """A ZarrStore whose variables have been prepared on the caller's loop."""
+
+    __slots__ = ("_variables",)
+    _variables: dict[str, Variable]
+
+    def get_variables(self):
+        return self._variables
+
+
+async def open_zarr_async(
+    store,
+    group=None,
+    *,
+    decode_cf=True,
+    mask_and_scale=True,
+    decode_times=True,
+    concat_characters=True,
+    decode_coords: Literal["coordinates", "all"] | bool = True,
+    drop_variables=None,
+    consolidated=None,
+    storage_options=None,
+    decode_timedelta=None,
+    use_cftime=None,
+    zarr_format=None,
+    use_zarr_fill_value_as_mask=None,
+    create_default_indexes=True,
+) -> Dataset:
+    """Asynchronously open a Zarr dataset without a synchronous Zarr bridge.
+
+    Requires Zarr-Python 3. Metadata and any eager reads run on the caller's
+    event loop. Data variables remain lazy and can be selected with ``isel``
+    and read with ``await dataset.load_async()``. No Dask arrays are created.
+    Synchronous access to unloaded data still uses Zarr's synchronous API.
+
+    Parameters
+    ----------
+    store : str, PathLike or zarr.abc.store.Store
+        Zarr store or path to open in read-only mode.
+    group : str, optional
+        Group path within the store.
+    decode_cf : bool, default: True
+        Whether to decode CF conventions.
+    mask_and_scale : bool or dict-like, default: True
+        Apply missing-value masks and scale/offset decoding.
+    decode_times : bool, CFDatetimeCoder or dict-like, default: True
+        Decode CF datetimes. These variables are loaded asynchronously before
+        decoding, even with indexes disabled. Set to False to keep them lazy.
+    concat_characters : bool or dict-like, default: True
+        Concatenate character arrays into strings.
+    decode_coords : bool or {"coordinates", "all"}, default: True
+        Promote variables referenced by coordinate attributes to coordinates.
+    drop_variables : str or iterable of str, optional
+        Variables to exclude before decoding or reading their data.
+    consolidated : bool, optional
+        Require consolidated metadata if True, ignore it if False, or use it
+        when available if None. Root consolidated metadata is used for subgroups.
+    storage_options : dict, optional
+        Storage options passed to Zarr.
+    decode_timedelta : bool, CFTimedeltaCoder or dict-like, optional
+        Control timedelta decoding, as in :func:`open_zarr`.
+    use_cftime : bool, optional
+        Control cftime decoding, as in :func:`open_zarr`.
+    zarr_format : {2, 3}, optional
+        Zarr format. By default, infer it from the store.
+    use_zarr_fill_value_as_mask : bool, optional
+        Interpret the Zarr fill value as missing data. Defaults to True for
+        format 2 and False for format 3.
+    create_default_indexes : bool, default: True
+        Load dimension coordinates asynchronously and create pandas indexes.
+        Set to False to leave those coordinates lazy.
+
+    Returns
+    -------
+    Dataset
+        An opened dataset with lazy arrays and optional in-memory indexes.
+
+    Notes
+    -----
+    This function does not start worker threads. The store and codecs must
+    themselves support thread-free asynchronous I/O for use in WebAssembly.
+
+    Examples
+    --------
+    Open metadata, select a region lazily, then await its data:
+
+    >>> ds = await xr.open_zarr_async(
+    ...     store, create_default_indexes=False
+    ... )  # doctest: +SKIP
+    >>> subset = await ds.isel(x=slice(0, 100)).load_async()  # doctest: +SKIP
+
+    See Also
+    --------
+    open_zarr
+    Dataset.load_async
+    """
+    from zarr import Array, AsyncGroup, Group
+    from zarr.api import asynchronous as zarr_async
+
+    from xarray.backends.api import (
+        _dataset_from_backend_dataset,
+        _maybe_create_default_indexes,
+    )
+
+    store = _normalize_path(store)
+    if not getattr(store, "supports_consolidated_metadata", True):
+        consolidated = False
+    # Open the root first so consolidated metadata can describe a subgroup.
+    root = await zarr_async.open_group(
+        store,
+        mode="r",
+        path=group if consolidated is False else None,
+        storage_options=storage_options,
+        zarr_format=zarr_format,
+        use_consolidated=consolidated,
+    )
+    owns_store = root.store is not store
+    try:
+        opened = (
+            await root.getitem(group.removeprefix("/"))
+            if consolidated is not False and group and group != "/"
+            else root
+        )
+        if not isinstance(opened, AsyncGroup):
+            raise TypeError(f"Expected a Zarr group at {group!r}")
+        if use_zarr_fill_value_as_mask is None:
+            use_zarr_fill_value_as_mask = opened.metadata.zarr_format == 2
+        backend = _AsyncOpenZarrStore(
+            Group(opened),
+            mode="r",
+            close_store_on_close=owns_store,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+            cache_members=False,
+        )
+        # These synchronous wrappers only expose already-loaded metadata.
+        # All member discovery and subsequent data loading are awaited.
+        backend._members = {
+            name: Group(member) if isinstance(member, AsyncGroup) else Array(member)
+            async for name, member in opened.members()
+        }
+        backend._cache_members = True
+        backend._variables = {}
+        dropped = (
+            {drop_variables}
+            if isinstance(drop_variables, str)
+            else set(drop_variables or ())
+        )
+        for name in backend.array_keys():
+            if name in dropped:
+                continue
+            array = backend._members[name]
+            dimensions_and_attributes = None
+            if opened.metadata.zarr_format == 2 and DIMENSION_KEY not in array.attrs:
+                # NCZarr stores dimensions in .zarray rather than attributes.
+                buffer = await (opened.store_path / name / ".zarray").get()
+                metadata = json.loads(buffer.to_bytes()) if buffer is not None else {}
+                try:
+                    dimensions = [
+                        os.path.basename(dim)
+                        for dim in metadata["_NCZARR_ARRAY"]["dimrefs"]
+                    ]
+                except KeyError as error:
+                    raise KeyError(
+                        f"Zarr array {name!r} is missing dimension metadata"
+                    ) from error
+                attributes = {
+                    k: v
+                    for k, v in array.attrs.items()
+                    if not k.lower().startswith("_nc")
+                }
+                dimensions_and_attributes = dimensions, attributes
+            variable = backend.open_store_variable(
+                name, dimensions_and_attributes=dimensions_and_attributes
+            )
+            # CF datetime decoding probes values synchronously to infer dtype.
+            # Materialize these variables asynchronously before that step.
+            times = (
+                decode_times.get(name, True)
+                if isinstance(decode_times, Mapping)
+                else decode_times
+            )
+            units = variable.attrs.get("units")
+            if decode_cf and times and isinstance(units, str) and "since" in units:
+                await variable.load_async()
+            backend._variables[name] = variable
+        ds = StoreBackendEntrypoint().open_dataset(
+            backend,
+            mask_and_scale=mask_and_scale if decode_cf else False,
+            decode_times=decode_times if decode_cf else False,
+            concat_characters=concat_characters if decode_cf else False,
+            decode_coords=decode_coords if decode_cf else False,
+            decode_timedelta=decode_timedelta if decode_cf else False,
+            use_cftime=use_cftime,
+        )
+        if create_default_indexes:
+            for coord_name, coord in ds.coords.items():
+                if coord.dims == (coord_name,) and coord_name not in ds.xindexes:
+                    await ds.variables[coord_name].load_async()
+            ds = _maybe_create_default_indexes(ds)
+        ds.set_close(backend.close)
+        return _dataset_from_backend_dataset(
+            ds,
+            store,
+            "zarr",
+            chunks=None,
+            cache=False,
+            overwrite_encoded_chunks=False,
+            inline_array=False,
+            chunked_array_type=None,
+            from_array_kwargs={},
+            create_default_indexes=False,
+        )
+    except BaseException:
+        if owns_store:
+            root.store.close()
+        raise
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):

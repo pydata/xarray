@@ -13,6 +13,7 @@ Dataset methods
    open_dataset
    open_mfdataset
    open_zarr
+   open_zarr_async
    save_mfdataset
    Dataset.as_numpy
    Dataset.from_dataframe
