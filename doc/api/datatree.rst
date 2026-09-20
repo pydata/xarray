@@ -145,7 +145,7 @@ Manipulate the contents of all nodes in a ``DataTree`` simultaneously.
    .. DataTree.rename_vars
    .. DataTree.rename_dims
    .. DataTree.swap_dims
-   .. DataTree.expand_dims
+   DataTree.expand_dims
    .. DataTree.drop_vars
    .. DataTree.drop_dims
    .. DataTree.set_coords
@@ -217,34 +217,47 @@ Index into all nodes in the subtree simultaneously.
 ..    ``DataTree.loc``
 
 
-.. Missing Value Handling
-.. ----------------------
+Windowing and Coarsening
+------------------------
 
-.. .. autosummary::
-..    :toctree: ../generated/
+Windowed and coarsening operations on a ``DataTree``.
 
+.. autosummary::
+   :toctree: ../generated/
+
+   DataTree.rolling
+   DataTree.coarsen
+   core.datatree_rolling.DataTreeRolling
+   core.datatree_coarsen.DataTreeCoarsen
+
+Missing Value Handling
+----------------------
+
+.. autosummary::
+   :toctree: ../generated/
+
+   DataTree.ffill
+   DataTree.bfill
+   DataTree.interpolate_na
 ..    DataTree.isnull
 ..    DataTree.notnull
 ..    DataTree.combine_first
 ..    DataTree.dropna
 ..    DataTree.fillna
-..    DataTree.ffill
-..    DataTree.bfill
-..    DataTree.interpolate_na
 ..    DataTree.where
 ..    DataTree.isin
 
-.. Computation
-.. -----------
+Computation
+-----------
 
-.. Apply a computation to the data in all nodes in the subtree simultaneously.
+Apply a computation to the data in all nodes in the subtree simultaneously.
 
-.. .. autosummary::
-..    :toctree: ../generated/
+.. autosummary::
+   :toctree: ../generated/
 
+   DataTree.diff
 ..    DataTree.map
 ..    DataTree.reduce
-..    DataTree.diff
 ..    DataTree.quantile
 ..    DataTree.differentiate
 ..    DataTree.integrate
@@ -285,21 +298,21 @@ Methods copied from :py:class:`numpy.ndarray` objects, here applying to the data
    DataTree.conj
    DataTree.conjugate
    DataTree.round
-..    DataTree.astype
+   DataTree.astype
 ..    DataTree.clip
 ..    DataTree.rank
 
-.. Reshaping and reorganising
-.. --------------------------
+Reshaping and reorganising
+--------------------------
 
-.. Reshape or reorganise the data in all nodes in the subtree.
+Reshape or reorganise the data in all nodes in the subtree.
 
-.. .. autosummary::
-..    :toctree: ../generated/
+.. autosummary::
+   :toctree: ../generated/
 
+   DataTree.stack
+   DataTree.unstack
 ..    DataTree.transpose
-..    DataTree.stack
-..    DataTree.unstack
 ..    DataTree.shift
 ..    DataTree.roll
 ..    DataTree.pad
