@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Dataset, DataTree
+from xarray import Dataset, DataTree
 from xarray.testing import assert_identical
 
 
@@ -23,11 +23,13 @@ def sample_time_tree() -> DataTree:
         {"c": (("x",), np.arange(5, dtype=float))},
         coords={"x": np.arange(5)},
     )
-    dt = DataTree.from_dict({
-        "/": ds_root,
-        "/child": ds_child,
-        "/no_time": ds_no_time,
-    })
+    dt = DataTree.from_dict(
+        {
+            "/": ds_root,
+            "/child": ds_child,
+            "/no_time": ds_no_time,
+        }
+    )
     return dt
 
 
@@ -43,7 +45,9 @@ class TestDataTreeResample:
         assert_identical(res["/child"].to_dataset(), expected_child)
 
         # Data variable 'c' on node without time dimension remains untouched
-        assert_identical(res["/no_time"].to_dataset()["c"], dt["/no_time"].to_dataset()["c"])
+        assert_identical(
+            res["/no_time"].to_dataset()["c"], dt["/no_time"].to_dataset()["c"]
+        )
 
     def test_resample_reductions(self, sample_time_tree: DataTree) -> None:
         dt = sample_time_tree
@@ -113,4 +117,6 @@ class TestDataTreeMapBlocks:
         res = dt.map_blocks(scale_vars)
         assert np.allclose(res["/"]["a"].values, dt["/"]["a"].values * 2.0)
         assert np.allclose(res["/child"]["b"].values, dt["/child"]["b"].values * 2.0)
-        assert np.allclose(res["/no_time"]["c"].values, dt["/no_time"]["c"].values * 2.0)
+        assert np.allclose(
+            res["/no_time"]["c"].values, dt["/no_time"]["c"].values * 2.0
+        )

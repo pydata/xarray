@@ -68,7 +68,9 @@ class DataTreeResample:
         **indexer_kwargs: Any,
     ) -> None:
         self.datatree = datatree
-        self.indexer = either_dict_or_kwargs(indexer, indexer_kwargs, "DataTree.resample")
+        self.indexer = either_dict_or_kwargs(
+            indexer, indexer_kwargs, "DataTree.resample"
+        )
         self.resample_kwargs = {
             "skipna": skipna,
             "closed": closed,
@@ -89,7 +91,9 @@ class DataTreeResample:
 
         def _node_resample(ds: Dataset) -> Dataset:
             # Check if this node has any data variable depending on target_dims
-            has_var_dim = any(d in var.dims for var in ds.data_vars.values() for d in target_dims)
+            has_var_dim = any(
+                d in var.dims for var in ds.data_vars.values() for d in target_dims
+            )
             if not has_var_dim:
                 to_drop = [d for d in target_dims if d in ds.coords]
                 if to_drop:
@@ -97,7 +101,9 @@ class DataTreeResample:
                 return ds.copy()
 
             # Apply resample on this node's dataset
-            clean_kwargs = {k: v for k, v in self.resample_kwargs.items() if v is not None}
+            clean_kwargs = {
+                k: v for k, v in self.resample_kwargs.items() if v is not None
+            }
             resampled = ds.resample(self.indexer, **clean_kwargs)
             res_func = getattr(resampled, op_name)
             return res_func(*args, **kwargs)
@@ -168,7 +174,9 @@ class DataTreeResample:
         keep_attrs: bool | None = None,
     ) -> DataTree:
         """Compute standard deviation along resampled dimension across all nodes."""
-        return self._apply_op("std", dim=dim, skipna=skipna, ddof=ddof, keep_attrs=keep_attrs)
+        return self._apply_op(
+            "std", dim=dim, skipna=skipna, ddof=ddof, keep_attrs=keep_attrs
+        )
 
     def var(
         self,
@@ -178,7 +186,9 @@ class DataTreeResample:
         keep_attrs: bool | None = None,
     ) -> DataTree:
         """Compute variance along resampled dimension across all nodes."""
-        return self._apply_op("var", dim=dim, skipna=skipna, ddof=ddof, keep_attrs=keep_attrs)
+        return self._apply_op(
+            "var", dim=dim, skipna=skipna, ddof=ddof, keep_attrs=keep_attrs
+        )
 
     def sum(
         self,

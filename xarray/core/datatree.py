@@ -2855,7 +2855,9 @@ class DataTree(
 
         kw = {} if kwargs is None else kwargs
 
-        def _node_map_blocks(ds: Dataset, node_template: Dataset | None = None) -> Dataset:
+        def _node_map_blocks(
+            ds: Dataset, node_template: Dataset | None = None
+        ) -> Dataset:
             if len(ds.data_vars) == 0:
                 return ds.copy()
             tmpl = node_template if node_template is not None else None
