@@ -140,17 +140,13 @@ class DataTreeCoarsen:
         self, ddof: int = 0, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataTree:
         """Coarsened standard deviation across all eligible nodes."""
-        return self._apply_reduction(
-            "std", keep_attrs=keep_attrs, ddof=ddof, **kwargs
-        )
+        return self._apply_reduction("std", keep_attrs=keep_attrs, ddof=ddof, **kwargs)
 
     def var(
         self, ddof: int = 0, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataTree:
         """Coarsened variance across all eligible nodes."""
-        return self._apply_reduction(
-            "var", keep_attrs=keep_attrs, ddof=ddof, **kwargs
-        )
+        return self._apply_reduction("var", keep_attrs=keep_attrs, ddof=ddof, **kwargs)
 
     def min(self, keep_attrs: bool | None = None, **kwargs: Any) -> DataTree:
         """Coarsened minimum across all eligible nodes."""

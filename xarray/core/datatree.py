@@ -3032,9 +3032,7 @@ class DataTree(
             )
             matching = [d for d in dims_to_unstack if d in ds.dims]
             if matching:
-                return ds.unstack(
-                    dim=matching, fill_value=fill_value, sparse=sparse
-                )
+                return ds.unstack(dim=matching, fill_value=fill_value, sparse=sparse)
             return ds.copy()
 
         return map_over_datasets(_node_unstack, self)

@@ -132,17 +132,13 @@ class DataTreeRolling:
         self, ddof: int = 0, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataTree:
         """Rolling standard deviation across all nodes."""
-        return self._apply_reduction(
-            "std", keep_attrs=keep_attrs, ddof=ddof, **kwargs
-        )
+        return self._apply_reduction("std", keep_attrs=keep_attrs, ddof=ddof, **kwargs)
 
     def var(
         self, ddof: int = 0, keep_attrs: bool | None = None, **kwargs: Any
     ) -> DataTree:
         """Rolling variance across all nodes."""
-        return self._apply_reduction(
-            "var", keep_attrs=keep_attrs, ddof=ddof, **kwargs
-        )
+        return self._apply_reduction("var", keep_attrs=keep_attrs, ddof=ddof, **kwargs)
 
     def min(self, keep_attrs: bool | None = None, **kwargs: Any) -> DataTree:
         """Rolling minimum across all nodes."""

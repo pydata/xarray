@@ -25,11 +25,13 @@ def sample_tree() -> DataTree:
         {"c": ("y", np.arange(5, dtype=float))},
         coords={"y": np.arange(5)},
     )
-    return DataTree.from_dict({
-        "/": ds_root,
-        "/group1": ds_child1,
-        "/group2": ds_child2,
-    })
+    return DataTree.from_dict(
+        {
+            "/": ds_root,
+            "/group1": ds_child1,
+            "/group2": ds_child2,
+        }
+    )
 
 
 class TestDataTreeRolling:
@@ -129,20 +131,30 @@ class TestDataTreeCoarsen:
         assert_identical(res["/group1"].to_dataset(), expected_child1)
 
         # Data variable 'c' on node without 'x' unchanged
-        assert_identical(res["/group2"].to_dataset()["c"], dt["/group2"].to_dataset()["c"])
+        assert_identical(
+            res["/group2"].to_dataset()["c"], dt["/group2"].to_dataset()["c"]
+        )
 
     def test_coarsen_reductions(self, sample_tree: DataTree) -> None:
         dt = sample_tree
         c = dt.coarsen(x=2)
 
         # Sum
-        assert_identical(c.sum()["/"].to_dataset(), dt["/"].to_dataset().coarsen(x=2).sum())
+        assert_identical(
+            c.sum()["/"].to_dataset(), dt["/"].to_dataset().coarsen(x=2).sum()
+        )
         # Max
-        assert_identical(c.max()["/"].to_dataset(), dt["/"].to_dataset().coarsen(x=2).max())
+        assert_identical(
+            c.max()["/"].to_dataset(), dt["/"].to_dataset().coarsen(x=2).max()
+        )
         # Min
-        assert_identical(c.min()["/"].to_dataset(), dt["/"].to_dataset().coarsen(x=2).min())
+        assert_identical(
+            c.min()["/"].to_dataset(), dt["/"].to_dataset().coarsen(x=2).min()
+        )
         # Median
-        assert_identical(c.median()["/"].to_dataset(), dt["/"].to_dataset().coarsen(x=2).median())
+        assert_identical(
+            c.median()["/"].to_dataset(), dt["/"].to_dataset().coarsen(x=2).median()
+        )
 
     def test_coarsen_boundary(self, sample_tree: DataTree) -> None:
         dt = sample_tree
@@ -158,7 +170,9 @@ class TestDataTreeCoarsen:
         assert_identical(res["/"].to_dataset(), expected)
         assert "x_window" in res["/"].to_dataset().dims
         # Data variable 'c' on child node without 'x' remains untouched
-        assert_identical(res["/group2"].to_dataset()["c"], dt["/group2"].to_dataset()["c"])
+        assert_identical(
+            res["/group2"].to_dataset()["c"], dt["/group2"].to_dataset()["c"]
+        )
         assert res["/group2"].to_dataset()["c"].dims == ("y",)
 
     def test_coarsen_repr(self, sample_tree: DataTree) -> None:
@@ -175,7 +189,9 @@ class TestDataTreeAdvancedMethods:
         expected = dt["/"].to_dataset().diff(dim="x", n=1)
         assert_identical(res["/"].to_dataset(), expected)
         # Data variable 'c' on node without 'x' untouched
-        assert_identical(res["/group2"].to_dataset()["c"], dt["/group2"].to_dataset()["c"])
+        assert_identical(
+            res["/group2"].to_dataset()["c"], dt["/group2"].to_dataset()["c"]
+        )
 
     def test_expand_dims(self, sample_tree: DataTree) -> None:
         dt = sample_tree
@@ -215,7 +231,9 @@ class TestDataTreeAdvancedMethods:
         res = dt.interpolate_na(dim="x", method="linear")
         expected = ds.interpolate_na(dim="x", method="linear")
         assert_identical(res["/"].to_dataset(), expected)
-        assert np.array_equal(res["/"].to_dataset()["data"].values, [0.0, 1.0, 2.0, 3.0, 4.0])
+        assert np.array_equal(
+            res["/"].to_dataset()["data"].values, [0.0, 1.0, 2.0, 3.0, 4.0]
+        )
 
     def test_stack_unstack(self) -> None:
         ds = xr.Dataset(
