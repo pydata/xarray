@@ -230,6 +230,17 @@ Windowed and coarsening operations on a ``DataTree``.
    core.datatree_rolling.DataTreeRolling
    core.datatree_coarsen.DataTreeCoarsen
 
+Resampling
+----------
+
+Resample data across all nodes in the subtree.
+
+.. autosummary::
+   :toctree: ../generated/
+
+   DataTree.resample
+   core.datatree_resample.DataTreeResample
+
 Missing Value Handling
 ----------------------
 
@@ -256,12 +267,12 @@ Apply a computation to the data in all nodes in the subtree simultaneously.
    :toctree: ../generated/
 
    DataTree.diff
+   DataTree.map_blocks
 ..    DataTree.map
 ..    DataTree.reduce
 ..    DataTree.quantile
 ..    DataTree.differentiate
 ..    DataTree.integrate
-..    DataTree.map_blocks
 ..    DataTree.polyfit
 ..    DataTree.curvefit
 

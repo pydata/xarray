@@ -83,6 +83,7 @@ if TYPE_CHECKING:
 
     from xarray.backends import ZarrStore
     from xarray.core.datatree_coarsen import DataTreeCoarsen
+    from xarray.core.datatree_resample import DataTreeResample
     from xarray.core.datatree_rolling import DataTreeRolling
     from xarray.core.types import (
         CoarsenBoundaryOptions,
@@ -2766,6 +2767,103 @@ class DataTree(
             coord_func=coord_func,
             **dim_kwargs,
         )
+
+    def resample(
+        self,
+        indexer: Mapping[Any, Any] | None = None,
+        skipna: bool | None = None,
+        closed: SideOptions | None = None,
+        label: SideOptions | None = None,
+        base: int | None = None,
+        keep_attrs: bool | None = None,
+        loffset: Any | None = None,
+        restore_coord_dims: bool | None = None,
+        **indexer_kwargs: Any,
+    ) -> DataTreeResample:
+        """
+        Resample object for this DataTree.
+
+        Parameters
+        ----------
+        indexer : mapping of hashable to str, optional
+            A mapping from the dimension name to frequency string.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
+        closed : {"left", "right"}, optional
+            Which side of bin interval is closed.
+        label : {"left", "right"}, optional
+            Which bin edge label to label bucket with.
+        base : int, default: 0
+            For frequencies that evenly subdivide 1 day of elapsed time,
+            the "origin" of the aggregated intervals.
+        keep_attrs : bool, optional
+            Whether to copy attributes from the original object to the new one.
+        loffset : timedelta or str, optional
+            Adjust the resampled time labels.
+        restore_coord_dims : bool, optional
+            Whether to restore original coordinate dimensions.
+        **indexer_kwargs : str
+            The keyword arguments form of ``indexer``.
+
+        Returns
+        -------
+        DataTreeResample
+            Resample object to which reductions can be applied across all eligible nodes.
+        """
+        from xarray.core.datatree_resample import DataTreeResample
+
+        return DataTreeResample(
+            self,
+            indexer=indexer,
+            skipna=skipna,
+            closed=closed,
+            label=label,
+            base=base,
+            keep_attrs=keep_attrs,
+            loffset=loffset,
+            restore_coord_dims=restore_coord_dims,
+            **indexer_kwargs,
+        )
+
+    def map_blocks(
+        self,
+        func: Callable[..., Any],
+        args: Sequence[Any] = (),
+        kwargs: Mapping[str, Any] | None = None,
+        template: DataTree | None = None,
+    ) -> DataTree:
+        """
+        Apply a function to each node's dataset using block-parallel execution.
+
+        Parameters
+        ----------
+        func : callable
+            User-provided function to apply to each block in each node's dataset.
+        args : tuple, optional
+            Positional arguments passed to `func`.
+        kwargs : dict, optional
+            Keyword arguments passed to `func`.
+        template : DataTree, optional
+            Template DataTree whose node datasets describe the output of `func`.
+
+        Returns
+        -------
+        DataTree
+            DataTree with the mapped function applied to each node.
+        """
+        from xarray.core.parallel import map_blocks as _map_blocks
+
+        kw = {} if kwargs is None else kwargs
+
+        def _node_map_blocks(ds: Dataset, node_template: Dataset | None = None) -> Dataset:
+            if len(ds.data_vars) == 0:
+                return ds.copy()
+            tmpl = node_template if node_template is not None else None
+            return _map_blocks(func, ds, args=args, kwargs=kw, template=tmpl)
+
+        if template is not None:
+            return map_over_datasets(_node_map_blocks, self, template)
+        return map_over_datasets(_node_map_blocks, self)
 
     def diff(
         self,
