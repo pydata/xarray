@@ -11,6 +11,7 @@ from collections.abc import (
     Iterable,
     Iterator,
     Mapping,
+    Sequence,
 )
 from dataclasses import dataclass, field
 from html import escape
@@ -28,7 +29,7 @@ from typing import (
     overload,
 )
 
-from xarray.core import utils
+from xarray.core import dtypes, utils
 from xarray.core._aggregations import DataTreeAggregations
 from xarray.core._typed_ops import DataTreeOpsMixin
 from xarray.core.common import TreeAttrAccessMixin, get_chunksizes
@@ -81,14 +82,19 @@ if TYPE_CHECKING:
     from dask.delayed import Delayed
 
     from xarray.backends import ZarrStore
-    from xarray.backends.writers import T_DataTreeNetcdfEngine, T_DataTreeNetcdfTypes
+    from xarray.core.datatree_coarsen import DataTreeCoarsen
+    from xarray.core.datatree_resample import DataTreeResample
+    from xarray.core.datatree_rolling import DataTreeRolling
     from xarray.core.types import (
+        CoarsenBoundaryOptions,
         Dims,
         DtCompatible,
         ErrorOptions,
         ErrorOptionsWithWarn,
+        InterpOptions,
         NestedDict,
         NetcdfWriteModes,
+        SideOptions,
         T_ChunkDimFreq,
         T_ChunksFreq,
         ZarrStoreLike,
@@ -2683,3 +2689,450 @@ class DataTree(
         }
 
         return self.from_dict(rechunked_groups, name=self.name)
+
+    def rolling(
+        self,
+        dim: Mapping[Any, int] | None = None,
+        min_periods: int | None = None,
+        center: bool | Mapping[Any, bool] = False,
+        **dim_kwargs: int,
+    ) -> DataTreeRolling:
+        """
+        Rolling window object for this DataTree.
+
+        Parameters
+        ----------
+        dim : mapping of hashable to int, optional
+            A mapping from the dimension name to integer window size.
+        min_periods : int, default: None
+            Minimum number of observations in window required to have a value.
+        center : bool or mapping of hashable to bool, default: False
+            Set the labels at the center of the window.
+        **dim_kwargs : int
+            The keyword arguments form of ``dim``.
+
+        Returns
+        -------
+        DataTreeRolling
+            Rolling window object to which reductions can be applied across all eligible nodes.
+        """
+        from xarray.core.datatree_rolling import DataTreeRolling
+
+        return DataTreeRolling(
+            self,
+            dim=dim,
+            min_periods=min_periods,
+            center=center,
+            **dim_kwargs,
+        )
+
+    def coarsen(
+        self,
+        dim: Mapping[Any, int] | None = None,
+        boundary: CoarsenBoundaryOptions = "exact",
+        side: SideOptions | Mapping[Any, SideOptions] = "left",
+        coord_func: (
+            str | Callable[..., Any] | Mapping[Any, str | Callable[..., Any]]
+        ) = "mean",
+        **dim_kwargs: int,
+    ) -> DataTreeCoarsen:
+        """
+        Coarsen object for this DataTree.
+
+        Parameters
+        ----------
+        dim : mapping of hashable to int, optional
+            A mapping from the dimension name to integer block size.
+        boundary : {"exact", "trim", "pad"}, default: "exact"
+            How to handle the boundary when dimension length is not evenly divisible by block size.
+        side : {"left", "right"} or mapping, default: "left"
+            Which side to pad or trim.
+        coord_func : str or callable or mapping, default: "mean"
+            Function to apply to the coordinates.
+        **dim_kwargs : int
+            The keyword arguments form of ``dim``.
+
+        Returns
+        -------
+        DataTreeCoarsen
+            Coarsen object to which reductions can be applied across all eligible nodes.
+        """
+        from xarray.core.datatree_coarsen import DataTreeCoarsen
+
+        return DataTreeCoarsen(
+            self,
+            dim=dim,
+            boundary=boundary,
+            side=side,
+            coord_func=coord_func,
+            **dim_kwargs,
+        )
+
+    def resample(
+        self,
+        indexer: Mapping[Any, Any] | None = None,
+        skipna: bool | None = None,
+        closed: SideOptions | None = None,
+        label: SideOptions | None = None,
+        base: int | None = None,
+        keep_attrs: bool | None = None,
+        loffset: Any | None = None,
+        restore_coord_dims: bool | None = None,
+        **indexer_kwargs: Any,
+    ) -> DataTreeResample:
+        """
+        Resample object for this DataTree.
+
+        Parameters
+        ----------
+        indexer : mapping of hashable to str, optional
+            A mapping from the dimension name to frequency string.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
+        closed : {"left", "right"}, optional
+            Which side of bin interval is closed.
+        label : {"left", "right"}, optional
+            Which bin edge label to label bucket with.
+        base : int, default: 0
+            For frequencies that evenly subdivide 1 day of elapsed time,
+            the "origin" of the aggregated intervals.
+        keep_attrs : bool, optional
+            Whether to copy attributes from the original object to the new one.
+        loffset : timedelta or str, optional
+            Adjust the resampled time labels.
+        restore_coord_dims : bool, optional
+            Whether to restore original coordinate dimensions.
+        **indexer_kwargs : str
+            The keyword arguments form of ``indexer``.
+
+        Returns
+        -------
+        DataTreeResample
+            Resample object to which reductions can be applied across all eligible nodes.
+        """
+        from xarray.core.datatree_resample import DataTreeResample
+
+        return DataTreeResample(
+            self,
+            indexer=indexer,
+            skipna=skipna,
+            closed=closed,
+            label=label,
+            base=base,
+            keep_attrs=keep_attrs,
+            loffset=loffset,
+            restore_coord_dims=restore_coord_dims,
+            **indexer_kwargs,
+        )
+
+    def map_blocks(
+        self,
+        func: Callable[..., Any],
+        args: Sequence[Any] = (),
+        kwargs: Mapping[str, Any] | None = None,
+        template: DataTree | None = None,
+    ) -> DataTree:
+        """
+        Apply a function to each node's dataset using block-parallel execution.
+
+        Parameters
+        ----------
+        func : callable
+            User-provided function to apply to each block in each node's dataset.
+        args : tuple, optional
+            Positional arguments passed to `func`.
+        kwargs : dict, optional
+            Keyword arguments passed to `func`.
+        template : DataTree, optional
+            Template DataTree whose node datasets describe the output of `func`.
+
+        Returns
+        -------
+        DataTree
+            DataTree with the mapped function applied to each node.
+        """
+        from xarray.core.parallel import map_blocks as _map_blocks
+
+        kw = {} if kwargs is None else kwargs
+
+        def _node_map_blocks(
+            ds: Dataset, node_template: Dataset | None = None
+        ) -> Dataset:
+            if len(ds.data_vars) == 0:
+                return ds.copy()
+            tmpl = node_template if node_template is not None else None
+            return _map_blocks(func, ds, args=args, kwargs=kw, template=tmpl)
+
+        if template is not None:
+            return map_over_datasets(_node_map_blocks, self, template)
+        return map_over_datasets(_node_map_blocks, self)
+
+    def diff(
+        self,
+        dim: Hashable,
+        n: int = 1,
+        label: str = "upper",
+    ) -> Self:
+        """
+        Calculate the n-th order discrete difference along given dimension across all nodes.
+
+        Parameters
+        ----------
+        dim : Hashable
+            Dimension over which to calculate the finite difference.
+        n : int, default: 1
+            The number of times values are differenced.
+        label : {"upper", "lower"}, default: "upper"
+            The coordinate label to use for the differenced values.
+
+        Returns
+        -------
+        DataTree
+            New DataTree with discrete differences applied to eligible nodes.
+        """
+
+        def _node_diff(ds: Dataset) -> Dataset:
+            if len(ds) == 0 or dim not in ds.dims:
+                return ds.copy()
+            return ds.diff(dim=dim, n=n, label=label)
+
+        return map_over_datasets(_node_diff, self)
+
+    def expand_dims(
+        self,
+        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
+        axis: None | int | Sequence[int] = None,
+        **dim_kwargs: Any,
+    ) -> Self:
+        """
+        Expand the dimensions of each dataset in this tree.
+
+        Parameters
+        ----------
+        dim : Hashable, sequence of Hashable, or dict, optional
+            Dimensions to expand.
+        axis : int or sequence of int, optional
+            Axis position(s) where new dimension(s) should be inserted.
+        **dim_kwargs : Any
+            The keyword arguments form of ``dim``.
+
+        Returns
+        -------
+        DataTree
+            New DataTree with expanded dimensions on each node.
+        """
+        combined = either_dict_or_kwargs(dim, dim_kwargs, "expand_dims")
+
+        def _node_expand(ds: Dataset) -> Dataset:
+            if len(ds) == 0:
+                return ds.copy()
+            return ds.expand_dims(dim=combined, axis=axis)
+
+        return map_over_datasets(_node_expand, self)
+
+    def astype(
+        self,
+        dtype: Any,
+        *,
+        copy: bool = True,
+        keep_attrs: bool = True,
+    ) -> Self:
+        """
+        Cast variables in all nodes to a specified dtype.
+
+        Parameters
+        ----------
+        dtype : dtype or dict of {var: dtype}
+            Data type to which variables are cast.
+        copy : bool, default: True
+            Whether to copy arrays.
+        keep_attrs : bool, default: True
+            Whether to preserve attributes.
+
+        Returns
+        -------
+        DataTree
+            New DataTree with cast variables.
+        """
+
+        def _node_astype(ds: Dataset) -> Dataset:
+            if len(ds) == 0:
+                return ds.copy()
+            return ds.astype(dtype=dtype, copy=copy, keep_attrs=keep_attrs)
+
+        return map_over_datasets(_node_astype, self)
+
+    def bfill(self, dim: Hashable, limit: int | None = None) -> Self:
+        """
+        Backward fill missing values along a dimension across all nodes.
+
+        Parameters
+        ----------
+        dim : Hashable
+            Dimension along which to backward fill.
+        limit : int, optional
+            Maximum number of consecutive NaN values to backward fill.
+
+        Returns
+        -------
+        DataTree
+            New DataTree with backward filled values on eligible nodes.
+        """
+
+        def _node_bfill(ds: Dataset) -> Dataset:
+            if len(ds) == 0 or dim not in ds.dims:
+                return ds.copy()
+            return ds.copy().bfill(dim=dim, limit=limit)
+
+        return map_over_datasets(_node_bfill, self)
+
+    def ffill(self, dim: Hashable, limit: int | None = None) -> Self:
+        """
+        Forward fill missing values along a dimension across all nodes.
+
+        Parameters
+        ----------
+        dim : Hashable
+            Dimension along which to forward fill.
+        limit : int, optional
+            Maximum number of consecutive NaN values to forward fill.
+
+        Returns
+        -------
+        DataTree
+            New DataTree with forward filled values on eligible nodes.
+        """
+
+        def _node_ffill(ds: Dataset) -> Dataset:
+            if len(ds) == 0 or dim not in ds.dims:
+                return ds.copy()
+            return ds.copy().ffill(dim=dim, limit=limit)
+
+        return map_over_datasets(_node_ffill, self)
+
+    def interpolate_na(
+        self,
+        dim: Hashable,
+        method: InterpOptions = "linear",
+        limit: int | None = None,
+        use_coordinate: bool | str = True,
+        max_gap: int | str | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """
+        Interpolate values along a dimension for missing (NaN) data across all nodes.
+
+        Parameters
+        ----------
+        dim : Hashable
+            Dimension along which to interpolate.
+        method : InterpOptions, default: "linear"
+            Interpolation method to use.
+        limit : int, optional
+            Maximum number of consecutive NaN values to interpolate.
+        use_coordinate : bool or str, default: True
+            Whether to use coordinates for interpolation.
+        max_gap : int, str or None, optional
+            Maximum gap of consecutive NaNs to interpolate.
+        keep_attrs : bool, optional
+            Whether to preserve attributes.
+        **kwargs : Any
+            Additional keyword arguments passed to the interpolation function.
+
+        Returns
+        -------
+        DataTree
+            New DataTree with interpolated values on eligible nodes.
+        """
+
+        def _node_interp(ds: Dataset) -> Dataset:
+            if len(ds) == 0 or dim not in ds.dims:
+                return ds.copy()
+            return ds.copy().interpolate_na(
+                dim=dim,
+                method=method,
+                limit=limit,
+                use_coordinate=use_coordinate,
+                max_gap=max_gap,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+
+        return map_over_datasets(_node_interp, self)
+
+    def stack(
+        self,
+        dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
+        **dimensions_kwargs: Sequence[Hashable],
+    ) -> Self:
+        """
+        Stack dimensions into a multi-index on each node where dimensions exist.
+
+        Parameters
+        ----------
+        dimensions : mapping, optional
+            Mapping of the form {new_dim: (dim1, dim2, ...)}.
+        **dimensions_kwargs : sequence of Hashable
+            The keyword arguments form of ``dimensions``.
+
+        Returns
+        -------
+        DataTree
+            New DataTree with stacked dimensions on eligible nodes.
+        """
+        dims = either_dict_or_kwargs(dimensions, dimensions_kwargs, "stack")
+
+        def _node_stack(ds: Dataset) -> Dataset:
+            if len(ds) == 0:
+                return ds.copy()
+            node_dims = {}
+            for new_dim, old_dims in dims.items():
+                if all(d in ds.dims for d in old_dims):
+                    node_dims[new_dim] = old_dims
+            if node_dims:
+                return ds.stack(node_dims)
+            return ds.copy()
+
+        return map_over_datasets(_node_stack, self)
+
+    def unstack(
+        self,
+        dim: Hashable | Sequence[Hashable] | None = None,
+        fill_value: Any = dtypes.NA,
+        sparse: bool = False,
+    ) -> Self:
+        """
+        Unstack multi-index dimensions across all eligible nodes.
+
+        Parameters
+        ----------
+        dim : Hashable or sequence of Hashable, optional
+            Dimension(s) to unstack. If None, unstacks all multi-indexes.
+        fill_value : Any, default: dtypes.NA
+            Value to use for unaligned indices.
+        sparse : bool, default: False
+            Whether to return sparse arrays.
+
+        Returns
+        -------
+        DataTree
+            New DataTree with unstacked dimensions on eligible nodes.
+        """
+
+        def _node_unstack(ds: Dataset) -> Dataset:
+            if len(ds) == 0:
+                return ds.copy()
+            if dim is None:
+                return ds.unstack(fill_value=fill_value, sparse=sparse)
+            dims_to_unstack = (
+                [dim]
+                if isinstance(dim, Hashable) and not isinstance(dim, tuple)
+                else dim
+            )
+            matching = [d for d in dims_to_unstack if d in ds.dims]
+            if matching:
+                return ds.unstack(dim=matching, fill_value=fill_value, sparse=sparse)
+            return ds.copy()
+
+        return map_over_datasets(_node_unstack, self)

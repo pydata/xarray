@@ -25,6 +25,16 @@ New Features
   silently being written uncompressed (:issue:`10657`, :pull:`11067`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
+- Added :py:class:`core.datatree_rolling.DataTreeRolling`, :py:class:`core.datatree_coarsen.DataTreeCoarsen`,
+  and :py:class:`core.datatree_resample.DataTreeResample` supporting windowed aggregations, downsampling,
+  and time-series resampling across hierarchical :py:class:`DataTree` structures, as well as
+  advanced computation and parallelization methods: :py:meth:`DataTree.rolling`, :py:meth:`DataTree.coarsen`,
+  :py:meth:`DataTree.resample`, :py:meth:`DataTree.map_blocks`, :py:meth:`DataTree.diff`,
+  :py:meth:`DataTree.expand_dims`, :py:meth:`DataTree.astype`, :py:meth:`DataTree.bfill`,
+  :py:meth:`DataTree.ffill`, :py:meth:`DataTree.interpolate_na`, :py:meth:`DataTree.stack`,
+  and :py:meth:`DataTree.unstack` (:issue:`10015`).
+  By `Shikhar Kesharwani <https://github.com/Shikhar-Kesharwani>`_.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
