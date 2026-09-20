@@ -53,6 +53,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix :py:meth:`DataArray.reindex`, :py:meth:`Dataset.reindex`, and
+  :py:func:`align` with a :py:class:`pandas.MultiIndex` or its dimension coordinate
+  as an indexer, by retaining all MultiIndex level coordinates (:issue:`11368`).
+  By `guhou-hvi <https://github.com/guhou-hvi>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
