@@ -7972,3 +7972,31 @@ class TestArrowPyCapsule:
         np.testing.assert_array_equal(
             table["data"].to_pylist(), np.arange(6, dtype=float)
         )
+
+    @requires_pyarrow
+    def test_requested_schema_wrong_field_order_raises(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            [1, 2, 3], dims=["x"], coords={"x": [10, 20, 30]}, name="temperature"
+        )
+        # Swapped relative to da's own (x, temperature) column order.
+        wrong_order = pa.schema(
+            [pa.field("temperature", pa.int64()), pa.field("x", pa.int64())]
+        )
+
+        with pytest.raises(ValueError, match="field names"):
+            pa.RecordBatchReader.from_stream(da, schema=wrong_order)
+
+    @requires_pyarrow
+    def test_requested_schema_projection_raises(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            [1, 2, 3], dims=["x"], coords={"x": [10, 20, 30]}, name="temperature"
+        )
+        # Fewer fields than da actually has (no column projection support).
+        projected = pa.schema([pa.field("temperature", pa.int64())])
+
+        with pytest.raises(ValueError, match="field names"):
+            pa.RecordBatchReader.from_stream(da, schema=projected)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import datetime
 import json
+import math
 import warnings
 from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
 from functools import partial
@@ -80,6 +81,7 @@ from xarray.structure.merge import PANDAS_TYPES, MergeError
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
+    import pyarrow as pa
     from dask.dataframe import DataFrame as DaskDataFrame
     from dask.delayed import Delayed
     from iris.cube import Cube as iris_Cube
@@ -262,6 +264,76 @@ class _NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return super().default(obj)
+
+
+def _broadcast_to_dims(
+    variable: Variable,
+    dims: tuple[Hashable, ...],
+    shape: tuple[int, ...],
+) -> np.ndarray:
+    """Flatten and broadcast `variable` to `shape`, as a flat numpy array.
+
+    Uses fast paths for 1D coordinates; falls back to a general N-D
+    broadcast for multi-dimensional (e.g. curvilinear) and scalar
+    coordinates.
+
+    Returns
+    -------
+    numpy.ndarray
+        C-contiguous, flattened array.
+
+    Examples
+    --------
+    >>> coord = Variable("y", np.array([10, 20, 30]))
+    >>> _broadcast_to_dims(coord, dims=("x", "y"), shape=(2, 3))
+    array([10, 20, 30, 10, 20, 30])
+    """
+    if len(dims) != len(shape):
+        raise ValueError(
+            f"dims and shape must have the same length, got dims={dims!r} "
+            f"(length {len(dims)}) and shape={shape!r} (length {len(shape)})"
+        )
+    if not set(variable.dims) <= set(dims):
+        raise ValueError(
+            f"variable.dims must be a subset of dims, got variable.dims="
+            f"{variable.dims!r} and dims={dims!r}"
+        )
+
+    coord_values = variable.values
+
+    # PERF: Optimize 1D broadcasting reducing allocations
+    if variable.ndim == 1:
+        (dim,) = variable.dims
+        k = dims.index(dim)
+        inner = math.prod(shape[k + 1 :])
+        outer = math.prod(shape[:k])
+
+        if inner == 1 and outer == 1:
+            # Coordinate already matches the flattened data 1:1
+            # (e.g. a 1D DataArray with a single dimension coordinate).
+            return coord_values
+        if inner != 1 and outer != 1:
+            # Use tile + repeat on 1D coordinate
+            return np.tile(np.repeat(coord_values, inner), outer)
+
+    # General N-D path (curvilinear coordinates, scalar coordinates, etc.):
+    # broadcast the coordinate up to the full data shape so it flattens
+    # consistently with the data values.
+
+    # Order axes based on the target dims
+    dim_order = tuple(variable.dims.index(dim) for dim in dims if dim in variable.dims)
+
+    # Reorder coord values to the target dim order
+    ordered_coords = coord_values.transpose(dim_order)
+
+    # Expand coord dims: insert a length-1 axis for each target dim missing
+    # from the coordinate (slice(None) keeps an existing axis, np.newaxis
+    # adds one) - e.g. coord dims (x, y), target dims (x, y, z) -> (x, y, 1)
+    indexer = tuple(slice(None) if dim in variable.dims else np.newaxis for dim in dims)
+    expanded_coords = ordered_coords[indexer]
+
+    # Broadcast to full flattened shape (x, y, 1) -> (x, y, z)
+    return np.broadcast_to(expanded_coords, shape).ravel()
 
 
 class DataArray(
@@ -551,29 +623,7 @@ class DataArray(
 
         columns: dict[Hashable, pa.Array] = {}
         for name, coord in self._coords.items():
-            # Broadcast each coordinate up to the full data shape so that 1D
-            # dimension coordinates and N-D (e.g. curvilinear) coordinates
-            # flatten consistently with the data values.
-
-            # Order axes based on Variable dims
-            dim_order = tuple(
-                coord.dims.index(dim) for dim in dims if dim in coord.dims
-            )
-
-            # Reorder coords values to variable dim order
-            ordered_coords = coord.values.transpose(dim_order)
-
-            # Expand coord dims
-            # coord dims (x, y) variable dims (x,y,z) -> (x, y, 1)
-            # NOTE: Insert a length-1 axis for each data dim missing for coordinates
-            # (slice(None) keeps an existing axis, np.newaxis adds one)
-            indexer = tuple(
-                slice(None) if dim in coord.dims else np.newaxis for dim in dims
-            )
-            expanded_coords = ordered_coords[indexer]
-
-            # Broadcast to full flattened shape (x, y, 1) -> (x, y, z)
-            columns[name] = pa.array(np.broadcast_to(expanded_coords, shape).ravel())
+            columns[name] = pa.array(_broadcast_to_dims(coord, dims, shape))
 
         columns[values_column] = pa.array(np.ravel(values))
 
@@ -581,6 +631,16 @@ class DataArray(
 
         table = pa.table(columns, schema=schema)
         return table.__arrow_c_stream__(requested_schema)
+
+    def to_arrow(self) -> pa.Table:
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        return pa.table(self)
 
     @classmethod
     def _construct_direct(

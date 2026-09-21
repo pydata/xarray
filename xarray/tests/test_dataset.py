@@ -72,6 +72,7 @@ from xarray.tests import (
     requires_dask,
     requires_numexpr,
     requires_pint,
+    requires_polars,
     requires_pyarrow,
     requires_scipy,
     requires_sparse,
@@ -8496,6 +8497,174 @@ class TestNumpyCoercion:
         result = ds.as_numpy()
         expected = xr.Dataset({"a": ("x", arr)}, coords={"lat": ("x", arr * 2)})
         assert_identical(result, expected)
+
+
+class TestDatasetToArrow:
+    @requires_pyarrow
+    def test_to_arrow_1d(self) -> None:
+        import pyarrow as pa
+
+        ds = xr.Dataset(
+            {"temperature": ("x", [1.0, 2.0, 3.0])},
+            coords={"x": [10, 20, 30]},
+        )
+        table = ds.to_arrow()
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"x", "temperature"}
+        assert table.num_rows == 3
+        assert table.schema.field("x").type == pa.int64()
+        assert table.schema.field("temperature").type == pa.float64()
+        np.testing.assert_array_equal(table["x"].to_pylist(), [10, 20, 30])
+        np.testing.assert_array_equal(table["temperature"].to_pylist(), [1.0, 2.0, 3.0])
+
+    @requires_pyarrow
+    def test_to_arrow_2d_multiple_data_vars(self) -> None:
+        import pyarrow as pa
+
+        ds = xr.Dataset(
+            {
+                "temperature": (
+                    ["x", "y"],
+                    np.arange(6, dtype=float).reshape(2, 3),
+                ),
+                "precipitation": (
+                    ["x", "y"],
+                    np.arange(6, dtype=float).reshape(2, 3) * 2,
+                ),
+            },
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+        )
+        table = ds.to_arrow()
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"x", "y", "temperature", "precipitation"}
+        assert table.num_rows == 6
+        assert table.schema.field("x").type == pa.int64()
+        assert table.schema.field("y").type == pa.int64()
+        assert table.schema.field("temperature").type == pa.float64()
+        assert table.schema.field("precipitation").type == pa.float64()
+        np.testing.assert_array_equal(
+            table["temperature"].to_pylist(), list(np.arange(6, dtype=float))
+        )
+        np.testing.assert_array_equal(
+            table["precipitation"].to_pylist(), list(np.arange(6, dtype=float) * 2)
+        )
+        # x repeats for each y: [0,0,0,1,1,1]
+        np.testing.assert_array_equal(table["x"].to_pylist(), [0, 0, 0, 1, 1, 1])
+        # y cycles for each x: [10,20,30,10,20,30]
+        np.testing.assert_array_equal(table["y"].to_pylist(), [10, 20, 30, 10, 20, 30])
+
+    @requires_pyarrow
+    def test_to_arrow_no_coords(self) -> None:
+        import pyarrow as pa
+
+        ds = xr.Dataset({"data": ("x", [1, 2, 3])})
+        table = ds.to_arrow()
+
+        assert isinstance(table, pa.Table)
+        assert table.column_names == ["data"]
+        np.testing.assert_array_equal(table["data"].to_pylist(), [1, 2, 3])
+
+    @requires_pyarrow
+    def test_to_arrow_curvilinear_coords(self) -> None:
+        import pyarrow as pa
+
+        # non-dimension coordinates spanning multiple dims (e.g. a curvilinear
+        # grid with 2D lat/lon) should be supported
+        lat = np.array([[10.0, 11.0, 12.0], [13.0, 14.0, 15.0]])
+        lon = np.array([[20.0, 21.0, 22.0], [23.0, 24.0, 25.0]])
+        ds = xr.Dataset(
+            {"data": (["x", "y"], np.arange(6, dtype=float).reshape(2, 3))},
+            coords={"lat": (["x", "y"], lat), "lon": (["x", "y"], lon)},
+        )
+        table = ds.to_arrow()
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"lat", "lon", "data"}
+        assert table.num_rows == 6
+        np.testing.assert_array_equal(table["lat"].to_pylist(), lat.ravel())
+        np.testing.assert_array_equal(table["lon"].to_pylist(), lon.ravel())
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), np.arange(6, dtype=float)
+        )
+
+    @requires_pyarrow
+    def test_to_arrow_schema_metadata(self) -> None:
+        import json
+
+        ds = xr.Dataset(
+            {"temperature": ("x", [1.0, 2.0, 3.0])},
+            coords={"x": [10, 20, 30]},
+            attrs={"units": "K", "long_name": "temperature"},
+        )
+        table = ds.to_arrow()
+        schema = table.schema
+
+        assert schema.metadata[b"xarray:arrow_schema_version"] == b"v1"
+
+        xarray_meta = json.loads(schema.metadata[b"xarray"])
+        assert xarray_meta["dims"] == ["x"]
+        assert xarray_meta["shape"] == [3]
+        assert xarray_meta["attrs"] == {"units": "K", "long_name": "temperature"}
+        assert "x" in xarray_meta["coords"]
+
+    @requires_pyarrow
+    def test_to_arrow_matches_pa_table(self) -> None:
+        import pyarrow as pa
+
+        ds = xr.Dataset(
+            {"temperature": (["x", "y"], np.arange(6, dtype=float).reshape(2, 3))},
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+        )
+
+        assert ds.to_arrow().equals(pa.table(ds))
+
+    @requires_pyarrow
+    def test_requested_schema_wrong_field_order_raises(self) -> None:
+        import pyarrow as pa
+
+        ds = xr.Dataset(
+            {"temperature": ("x", [1, 2, 3])},
+            coords={"x": [10, 20, 30]},
+        )
+        # Swapped relative to ds's own (temperature, x) column order.
+        wrong_order = pa.schema(
+            [pa.field("x", pa.int64()), pa.field("temperature", pa.int64())]
+        )
+
+        with pytest.raises(ValueError, match="field names"):
+            pa.RecordBatchReader.from_stream(ds, schema=wrong_order)
+
+    @requires_pyarrow
+    def test_requested_schema_projection_raises(self) -> None:
+        import pyarrow as pa
+
+        ds = xr.Dataset(
+            {"temperature": ("x", [1, 2, 3])},
+            coords={"x": [10, 20, 30]},
+        )
+        # Fewer fields than ds actually has (no column projection support).
+        projected = pa.schema([pa.field("temperature", pa.int64())])
+
+        with pytest.raises(ValueError, match="field names"):
+            pa.RecordBatchReader.from_stream(ds, schema=projected)
+
+    @requires_polars
+    def test_to_arrow_polars_dataframe(self) -> None:
+        import polars as pl
+
+        ds = xr.Dataset(
+            {"temperature": ("x", [1.0, 2.0, 3.0])},
+            coords={"x": [10, 20, 30]},
+        )
+        df = pl.from_arrow(ds.to_arrow())
+
+        assert isinstance(df, pl.DataFrame)
+        assert set(df.columns) == {"x", "temperature"}
+        assert len(df) == 3
+        np.testing.assert_array_equal(df["x"].to_list(), [10, 20, 30])
+        np.testing.assert_array_equal(df["temperature"].to_list(), [1.0, 2.0, 3.0])
 
 
 def test_string_keys_typing() -> None:
