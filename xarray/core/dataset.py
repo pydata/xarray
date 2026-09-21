@@ -7508,11 +7508,6 @@ class Dataset(
     def __arrow_c_stream__(self, requested_schema: Any = None) -> Any:
         """Export the Dataset through the Arrow PyCapsule Interface.
 
-        Every variable (coordinate or data variable) is broadcast and
-        flattened to the Dataset's full shape, so rows line up across
-        columns the same way DataArray.__arrow_c_stream__ does for a
-        single variable.
-
         https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
         """
         try:
