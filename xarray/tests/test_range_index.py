@@ -338,6 +338,7 @@ def test_range_index_repr_datetime() -> None:
     )
     assert index._repr_inline_(max_width=70) == f"RangeIndex ({params_fmt})"
     assert f"RangeIndex ({params_fmt})" in repr(ds)
+    assert ds.time.dtype == ds.time.values.dtype == np.dtype("datetime64[ns]")
 
 
 def test_range_index_equals_floating_point_tolerance() -> None:

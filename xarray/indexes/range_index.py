@@ -35,7 +35,9 @@ class RangeCoordinateTransform(CoordinateTransform):
         step: float | None = None,
     ):
         if dtype is None:
-            dtype = np.dtype(np.float64)
+            # datetime64 / timedelta64 bounds keep their dtype
+            start_dtype = np.result_type(start)
+            dtype = start_dtype if start_dtype.kind in "mM" else np.dtype(np.float64)
 
         super().__init__([coord_name], {dim: size}, dtype=dtype)
 
