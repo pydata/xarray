@@ -141,6 +141,22 @@ class RangeCoordinateTransform(CoordinateTransform):
         )
 
 
+def _format_range_params(start: Any, stop: Any, step: Any) -> str:
+    """Format the ``start``, ``stop`` and ``step`` parameters of a range.
+
+    Values that do not support the ``g`` format code (e.g., datetime64 or
+    timedelta64 values) fall back to their string representation.
+    """
+
+    def fmt(value: Any) -> str:
+        try:
+            return f"{value:.3g}"
+        except (TypeError, ValueError):
+            return str(value)
+
+    return f"start={fmt(start)}, stop={fmt(stop)}, step={fmt(step)}"
+
+
 class RangeIndex(CoordinateTransformIndex):
     """Xarray index implementing a simple bounded 1-dimension interval with
     evenly spaced, monotonic floating-point values.
@@ -471,14 +487,12 @@ class RangeIndex(CoordinateTransformIndex):
         return pd.Index(values[self.dim])
 
     def _repr_inline_(self, max_width) -> str:
-        params_fmt = (
-            f"start={self.start:.3g}, stop={self.stop:.3g}, step={self.step:.3g}"
-        )
+        params_fmt = _format_range_params(self.start, self.stop, self.step)
         return f"{self.__class__.__name__} ({params_fmt})"
 
     def __repr__(self) -> str:
         params_fmt = (
-            f"start={self.start:.3g}, stop={self.stop:.3g}, step={self.step:.3g}, "
+            f"{_format_range_params(self.start, self.stop, self.step)}, "
             f"size={self.size}, coord_name={self.coord_name!r}, dim={self.dim!r}"
         )
         return f"{self.__class__.__name__} ({params_fmt})"

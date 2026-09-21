@@ -120,6 +120,10 @@ Bug Fixes
 - Fixed a bug that caused rechunking a multi-dimensional cftime array along a
   subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fixed ``repr`` of a :py:class:`~xarray.indexes.RangeIndex` built from
+  ``datetime64`` / ``timedelta64`` values, and of any object holding one, raising
+  ``ValueError: Unknown format code 'g'`` (:issue:`11598`, :pull:`XXXXX`).
+  By `Derrick Chambers <https://github.com/d-chambers>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 

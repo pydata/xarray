@@ -322,6 +322,23 @@ def test_range_index_repr_inline() -> None:
     assert actual == expected
 
 
+def test_range_index_repr_datetime() -> None:
+    start = np.datetime64("2023-01-01", "ns")
+    step = np.timedelta64(1, "s")
+    index = RangeIndex.arange(start, start + 10 * step, step, dim="time")
+    ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
+
+    params_fmt = (
+        "start=2023-01-01T00:00:00.000000000, "
+        "stop=2023-01-01T00:00:10.000000000, step=1 seconds"
+    )
+    assert repr(index) == (
+        f"RangeIndex ({params_fmt}, size=10, coord_name='time', dim='time')"
+    )
+    assert index._repr_inline_(max_width=70) == f"RangeIndex ({params_fmt})"
+    assert f"RangeIndex ({params_fmt})" in repr(ds)
+
+
 def test_range_index_equals_floating_point_tolerance() -> None:
     """Test that equals() handles floating point precision errors correctly.
 
