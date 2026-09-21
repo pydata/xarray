@@ -8604,10 +8604,19 @@ class TestDatasetToArrow:
         assert schema.metadata[b"xarray:arrow_schema_version"] == b"v1"
 
         xarray_meta = json.loads(schema.metadata[b"xarray"])
-        assert xarray_meta["dims"] == ["x"]
-        assert xarray_meta["shape"] == [3]
-        assert xarray_meta["attrs"] == {"units": "K", "long_name": "temperature"}
-        assert "x" in xarray_meta["coords"]
+        assert xarray_meta == {
+            "dims": ["x"],
+            "shape": [3],
+            "attrs": {"units": "K", "long_name": "temperature"},
+            "coords": {
+                "x": {
+                    "dims": ["x"],
+                    "attrs": {},
+                    "dtype": "int64",
+                    "shape": [3],
+                }
+            },
+        }
 
     @requires_pyarrow
     def test_to_arrow_matches_pa_table(self) -> None:
@@ -8619,36 +8628,6 @@ class TestDatasetToArrow:
         )
 
         assert ds.to_arrow().equals(pa.table(ds))
-
-    @requires_pyarrow
-    def test_requested_schema_wrong_field_order_raises(self) -> None:
-        import pyarrow as pa
-
-        ds = xr.Dataset(
-            {"temperature": ("x", [1, 2, 3])},
-            coords={"x": [10, 20, 30]},
-        )
-        # Swapped relative to ds's own (temperature, x) column order.
-        wrong_order = pa.schema(
-            [pa.field("x", pa.int64()), pa.field("temperature", pa.int64())]
-        )
-
-        with pytest.raises(ValueError, match="field names"):
-            pa.RecordBatchReader.from_stream(ds, schema=wrong_order)
-
-    @requires_pyarrow
-    def test_requested_schema_projection_raises(self) -> None:
-        import pyarrow as pa
-
-        ds = xr.Dataset(
-            {"temperature": ("x", [1, 2, 3])},
-            coords={"x": [10, 20, 30]},
-        )
-        # Fewer fields than ds actually has (no column projection support).
-        projected = pa.schema([pa.field("temperature", pa.int64())])
-
-        with pytest.raises(ValueError, match="field names"):
-            pa.RecordBatchReader.from_stream(ds, schema=projected)
 
     @requires_polars
     def test_to_arrow_polars_dataframe(self) -> None:

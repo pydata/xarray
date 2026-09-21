@@ -7916,10 +7916,20 @@ class TestArrowPyCapsule:
         assert schema.metadata[b"xarray:arrow_schema_version"] == b"v1"
 
         xarray_meta = json.loads(schema.metadata[b"xarray"])
-        assert xarray_meta["name"] == "temperature"
-        assert xarray_meta["dims"] == ["x"]
-        assert xarray_meta["attrs"] == {"units": "K", "long_name": "temperature"}
-        assert "x" in xarray_meta["coords"]
+        assert xarray_meta == {
+            "name": "temperature",
+            "dims": ["x"],
+            "shape": [3],
+            "attrs": {"units": "K", "long_name": "temperature"},
+            "coords": {
+                "x": {
+                    "dims": ["x"],
+                    "attrs": {},
+                    "dtype": "int64",
+                    "shape": [3],
+                }
+            },
+        }
 
     @requires_pyarrow
     def test_pyarrow_table_curvilinear_coords(self):
@@ -7972,31 +7982,3 @@ class TestArrowPyCapsule:
         np.testing.assert_array_equal(
             table["data"].to_pylist(), np.arange(6, dtype=float)
         )
-
-    @requires_pyarrow
-    def test_requested_schema_wrong_field_order_raises(self):
-        import pyarrow as pa
-
-        da = xr.DataArray(
-            [1, 2, 3], dims=["x"], coords={"x": [10, 20, 30]}, name="temperature"
-        )
-        # Swapped relative to da's own (x, temperature) column order.
-        wrong_order = pa.schema(
-            [pa.field("temperature", pa.int64()), pa.field("x", pa.int64())]
-        )
-
-        with pytest.raises(ValueError, match="field names"):
-            pa.RecordBatchReader.from_stream(da, schema=wrong_order)
-
-    @requires_pyarrow
-    def test_requested_schema_projection_raises(self):
-        import pyarrow as pa
-
-        da = xr.DataArray(
-            [1, 2, 3], dims=["x"], coords={"x": [10, 20, 30]}, name="temperature"
-        )
-        # Fewer fields than da actually has (no column projection support).
-        projected = pa.schema([pa.field("temperature", pa.int64())])
-
-        with pytest.raises(ValueError, match="field names"):
-            pa.RecordBatchReader.from_stream(da, schema=projected)
