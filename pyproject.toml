@@ -312,6 +312,7 @@ ban-relative-imports = "all"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
+xfail_strict = true
 addopts = [
   "--strict-config",
   "--strict-markers",
