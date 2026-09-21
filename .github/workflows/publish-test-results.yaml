@@ -21,6 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion != 'skipped'
 
+    permissions:
+      checks: write
+
+      # needed unless run with comment_mode: off
+      # pull-requests: write
+
     steps:
       - name: Download and extract artifacts
         env:
