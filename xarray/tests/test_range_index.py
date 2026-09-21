@@ -325,7 +325,8 @@ def test_range_index_repr_inline() -> None:
 def test_range_index_repr_datetime() -> None:
     start = np.datetime64("2023-01-01", "ns")
     step = np.timedelta64(1, "s")
-    index = RangeIndex.arange(start, start + 10 * step, step, dim="time")
+    # datetime bounds work, though arange is only annotated for floats
+    index = RangeIndex.arange(start, start + 10 * step, step, dim="time")  # type: ignore[arg-type]
     ds = xr.Dataset(coords=xr.Coordinates.from_xindex(index))
 
     params_fmt = (
