@@ -198,6 +198,70 @@ def __extension_duck_array__where(
     return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[call-overload]
 
 
+def _pad_pair(value: Any, default: Any = 0) -> tuple[Any, Any]:
+    """Normalize a numpy-pad-style per-axis argument to a ``(before, after)`` pair.
+
+    ``np.pad`` accepts ``pad_width`` / ``constant_values`` as a scalar (applied to
+    both sides), a ``(before, after)`` tuple, or a length-1 sequence wrapping such a
+    tuple (xarray passes one entry per axis, and extension arrays are 1d). This
+    collapses all of those forms to a single ``(before, after)`` pair.
+    """
+    if value is None:
+        value = default
+    # unwrap a length-1 per-axis sequence, e.g. [(before, after)]
+    if (
+        isinstance(value, list | tuple)
+        and len(value) == 1
+        and isinstance(value[0], list | tuple)
+    ):
+        value = value[0]
+    if isinstance(value, list | tuple):
+        before, after = value
+        return before, after
+    return value, value  # scalar -> same on both sides
+
+
+@implements(np.pad)
+def __extension_duck_array__pad(
+    array: T_ExtensionArray,
+    pad_width: Any,
+    mode: str = "constant",
+    **kwargs: Any,
+) -> T_ExtensionArray:
+    """Constant-mode padding for a 1d pandas extension array, preserving its dtype.
+
+    Building the result from the extension array itself (rather than letting numpy
+    coerce it to an ndarray) keeps the extension dtype and lets fill values such as
+    ``pd.NA`` round-trip with full type fidelity. Only constant mode is handled here;
+    the other modes reuse existing values and are routed through numpy by the caller
+    (:func:`xarray.core.duck_array_ops.pad`).
+    """
+    if mode != "constant":
+        raise NotImplementedError(
+            f"Only mode='constant' padding is implemented for pandas extension "
+            f"arrays, got mode={mode!r}."
+        )
+
+    before, after = _pad_pair(pad_width)
+    fill_before, fill_after = _pad_pair(kwargs.get("constant_values", 0))
+
+    # Build the padding as same-dtype extension arrays and concatenate, so the
+    # result keeps ``array.dtype`` and fill values (incl. ``pd.NA``) round-trip
+    # natively. Concatenating per-side honors ``constant_values=(before, after)``.
+    constructor = array.dtype.construct_array_type()
+    parts: list[ExtensionArray] = []
+    if before:
+        parts.append(
+            constructor._from_sequence([fill_before] * before, dtype=array.dtype)
+        )
+    parts.append(array)
+    if after:
+        parts.append(
+            constructor._from_sequence([fill_after] * after, dtype=array.dtype)
+        )
+    return type(array)._concat_same_type(parts)
+
+
 def _replace_duck(args, replacer: Callable[[PandasExtensionArray], Any]) -> list:
     args_as_list = list(args)
     for index, value in enumerate(args_as_list):
