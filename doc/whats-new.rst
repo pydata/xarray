@@ -25,6 +25,10 @@ New Features
   silently being written uncompressed (:issue:`10657`, :pull:`11067`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
+- :py:attr:`DataTree.children` now has a rich HTML representation that displays
+  child nodes as a collapsible forest instead of an inline mapping
+  (:issue:`11453`). By `Deepak Ganesh <https://github.com/deepakganesh78>`_.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

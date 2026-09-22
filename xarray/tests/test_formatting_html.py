@@ -448,3 +448,53 @@ class TestDataTreeInheritance:
         html = dt._repr_html_()
         assert html.count("<style>") == 1
         assert html.count("<pre class='xr-text-repr-fallback'>") == 1
+
+
+class TestDataTreeChildren:
+    def test_empty_repr_html(self) -> None:
+        html = xr.DataTree().children._repr_html_()  # type: ignore[attr-defined]
+        html_only = drop_fallback_text_repr(html)
+
+        assert "xarray.DataTree children" in html_only
+        assert "<div class='xr-children'>" not in html_only
+
+    def test_repr_html(self) -> None:
+        tree = xr.DataTree.from_dict(
+            {
+                "observed": xr.Dataset({"temperature": 1}),
+                "reanalysis/model": xr.Dataset({"temperature": 2}),
+            }
+        )
+
+        html = tree.children._repr_html_()  # type: ignore[attr-defined]
+        html_only = drop_fallback_text_repr(html)
+
+        assert html.count("<style>") == 1
+        assert html.count("<pre class='xr-text-repr-fallback'>") == 1
+        assert "xarray.DataTree children" in html_only
+        assert "/observed" in html_only
+        assert "/reanalysis" in html_only
+        assert "/reanalysis/model" in html_only
+        assert "type='checkbox' checked" in html_only
+
+    def test_repr_html_respects_global_element_limit(self) -> None:
+        tree = xr.DataTree.from_dict(
+            {
+                "observed": xr.Dataset({"temperature": 1}),
+                "reanalysis": xr.Dataset({"temperature": 2}),
+            }
+        )
+
+        with xr.set_options(display_max_html_elements=1):
+            html = tree.children._repr_html_()  # type: ignore[attr-defined]
+        html_only = drop_fallback_text_repr(html)
+
+        assert html_only.count("Too many items to display") == 2
+
+    def test_text_repr_unchanged(self) -> None:
+        tree = xr.DataTree.from_dict({"child": None})
+
+        assert repr(tree.children).startswith("Frozen({")
+        with xr.set_options(display_style="text"):
+            html = tree.children._repr_html_()  # type: ignore[attr-defined]
+        assert html.startswith("<pre>Frozen({")

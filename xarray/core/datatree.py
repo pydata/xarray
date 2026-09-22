@@ -46,6 +46,9 @@ from xarray.core.formatting import (
     dims_and_coords_repr,
 )
 from xarray.core.formatting_html import (
+    datatree_children_repr,
+)
+from xarray.core.formatting_html import (
     datatree_repr as datatree_repr_html,
 )
 from xarray.core.indexes import Index, Indexes
@@ -459,6 +462,18 @@ class _DatasetArgs:
     coords: dict[str, CoercibleValue] = field(default_factory=dict)
 
 
+class _DataTreeChildren(Frozen[str, "DataTree"]):
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return f"Frozen({self.mapping!r})"
+
+    def _repr_html_(self) -> str:
+        if XR_OPTS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
+        return datatree_children_repr(self)
+
+
 class DataTree(
     NamedNode,
     DataTreeAggregations,
@@ -559,6 +574,9 @@ class DataTree(
         self._encoding = dataset._encoding
         self._attrs = dataset._attrs
         self._close = dataset._close
+
+    def _children_view(self) -> Mapping[str, DataTree]:
+        return _DataTreeChildren(self._children)
 
     def _pre_attach(self: DataTree, parent: DataTree, name: str) -> None:
         super()._pre_attach(parent, name)
