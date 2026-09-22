@@ -1675,6 +1675,38 @@ We recommend installing cfgrib via conda:
 conda install -c conda-forge cfgrib
 ```
 
+(io.arrow)=
+
+## Arrow and Parquet
+
+Xarray supports conversion to `pyarrow.Table` through the [ArrowPyCapsule Interface].
+
+This interface lets you export data to [pyarrow] with almost no data copy.
+Through pyarrow, you can then write the
+data to any format that pyarrow supports, for example [Parquet].
+
+Use {py:meth}`Dataset.to_arrow` to convert a dataset to a
+{py:class}`pyarrow.Table`. Use {py:meth}`DataArray.to_arrow` to convert a
+data array in the same way.
+
+Write the table to Parquet via {py:func}`pyarrow.parquet.write_table`:
+
+```{code-cell}
+import pyarrow.parquet as pq
+
+ds = xr.Dataset(
+    {"temperature": (["x", "y"], np.arange(6, dtype=float).reshape(2, 3))},
+    coords={"x": [0, 1], "y": [10, 20, 30]},
+)
+
+table = ds.to_arrow()
+table
+```
+
+```{code-cell}
+pq.write_table(table, "example.parquet")
+```
+
 ## CSV and other formats supported by pandas
 
 For more options (tabular formats and CSV files in particular), consider
@@ -1688,6 +1720,7 @@ More formats are supported by extension libraries:
 - [xarray-mongodb](https://xarray-mongodb.readthedocs.io/en/latest/): Store xarray objects on MongoDB
 
 [amazon s3]: https://aws.amazon.com/s3/
+[arrow pycapsule interface]: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface
 [blog post]: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 [cf conventions]: https://cfconventions.org/
 [cf conventions on packed data]: https://cfconventions.org/cf-conventions/cf-conventions.html#packed-data
@@ -1705,6 +1738,8 @@ More formats are supported by extension libraries:
 [ncdata usage examples]: https://github.com/pp-mo/ncdata/tree/v0.1.2?tab=readme-ov-file#correct-a-miscoded-attribute-in-iris-input
 [netcdf faq]: https://docs.unidata.ucar.edu/netcdf-c/current/faq.html
 [obstore]: https://developmentseed.org/obstore/latest/
+[parquet]: https://parquet.apache.org/
+[pyarrow]: https://arrow.apache.org/docs/python/index.html
 [pyproj]: https://github.com/pyproj4/pyproj
 [rasterio]: https://rasterio.readthedocs.io/en/latest/
 [rioxarray]: https://corteva.github.io/rioxarray/stable/
