@@ -50,6 +50,7 @@ if TYPE_CHECKING:
         AspectOptions,
         ExtendOptions,
         HueStyleOptions,
+        NormOptions,
         ScaleOptions,
         T_DataArray,
     )
@@ -874,7 +875,7 @@ artist :
         cmap: str | Colormap | None = None,
         vmin: float | None = None,
         vmax: float | None = None,
-        norm: Normalize | None = None,
+        norm: NormOptions | Normalize | None = None,
         extend: ExtendOptions = None,
         levels: ArrayLike | None = None,
         **kwargs,
@@ -1151,7 +1152,7 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     cmap: str | Colormap | None = None,
     vmin: float | None = None,
     vmax: float | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
@@ -1192,7 +1193,7 @@ def scatter(
     cmap: str | Colormap | None = None,
     vmin: float | None = None,
     vmax: float | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
@@ -1233,7 +1234,7 @@ def scatter(
     cmap: str | Colormap | None = None,
     vmin: float | None = None,
     vmax: float | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs,
@@ -1449,7 +1450,7 @@ artist :
         yticks: ArrayLike | None = None,
         xlim: tuple[float, float] | None = None,
         ylim: tuple[float, float] | None = None,
-        norm: Normalize | None = None,
+        norm: NormOptions | Normalize | None = None,
         **kwargs: Any,
     ) -> Any:
         # All 2d plots in xarray share this function signature.
@@ -1704,7 +1705,7 @@ def imshow(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> AxesImage: ...
 
@@ -1744,7 +1745,7 @@ def imshow(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
@@ -1784,7 +1785,7 @@ def imshow(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
@@ -1921,7 +1922,7 @@ def contour(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> QuadContourSet: ...
 
@@ -1961,7 +1962,7 @@ def contour(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
@@ -2001,7 +2002,7 @@ def contour(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
@@ -2054,7 +2055,7 @@ def contourf(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> QuadContourSet: ...
 
@@ -2094,7 +2095,7 @@ def contourf(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
@@ -2134,7 +2135,7 @@ def contourf(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
@@ -2187,7 +2188,7 @@ def pcolormesh(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> QuadMesh: ...
 
@@ -2227,7 +2228,7 @@ def pcolormesh(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
@@ -2267,7 +2268,7 @@ def pcolormesh(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
@@ -2371,7 +2372,7 @@ def surface(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> Poly3DCollection: ...
 
@@ -2411,7 +2412,7 @@ def surface(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
@@ -2451,7 +2452,7 @@ def surface(
     yticks: ArrayLike | None = None,
     xlim: ArrayLike | None = None,
     ylim: ArrayLike | None = None,
-    norm: Normalize | None = None,
+    norm: NormOptions | Normalize | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArray]: ...
 
