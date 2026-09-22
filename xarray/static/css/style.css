@@ -506,6 +506,53 @@ dl.xr-attrs {
   word-break: break-all;
 }
 
+.xr-attr-item {
+  grid-column: 1/-1;
+}
+
+.xr-attr-item input {
+  display: none;
+}
+
+.xr-attr-item label.xr-attr-nested {
+  border: 0 !important;
+}
+
+.xr-attr label > span {
+  display: inline-block;
+  padding-left: 0.5em;
+}
+
+.xr-attr-item input + label.xr-attr-nested {
+  color: var(--xr-font-color0);
+}
+
+.xr-attr-in + label::before {
+  display: inline-block;
+  content: "►";
+  font-size: 11px;
+  width: 15px;
+  margin-left: -15px;
+  text-align: center;
+}
+
+.xr-attr-in:checked + label:before {
+  content: "▼";
+}
+
+.xr-attr-in:checked + label > span {
+  display: none;
+}
+
+.xr-attr-nested-inner {
+  display: none;
+  padding-left: 1em;
+}
+
+.xr-attr-in:checked ~ .xr-attr-nested-inner {
+  display: block;
+}
+
 .xr-icon-database,
 .xr-icon-file-text2,
 .xr-no-icon {
