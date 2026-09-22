@@ -95,6 +95,15 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     pal = _color_palette(cmap, n_colors)
 
     new_cmap, cnorm = mpl.colors.from_levels_and_colors(levels, pal, extend=extend)
+
+    # BoundaryNorm uses half-open intervals [a, b), so values exactly at the
+    # last boundary are excluded. When there's no "over" extension, nudge the
+    # upper boundary so vmax is included in the last bin. (GH10911)
+    if extend in ("neither", "min"):
+        boundaries = cnorm.boundaries.copy()
+        boundaries[-1] = np.nextafter(boundaries[-1], np.inf)
+        cnorm = mpl.colors.BoundaryNorm(boundaries, cnorm.Ncmap)
+
     # copy the old cmap name, for easier testing
     new_cmap.name = getattr(cmap, "name", cmap)
 
