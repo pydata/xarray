@@ -64,6 +64,13 @@ class TestMapOverSubTree:
         )
         assert_equal(result_tree, expected)
 
+    def test_single_tree_skip_empty_nodes(self, create_test_datatree):
+        dt = create_test_datatree()
+        expected = create_test_datatree(lambda ds: ds.rename(a="c"))
+        # this would fail on empty nodes
+        result_tree = map_over_datasets(lambda ds: ds.rename(a="c"), dt)
+        assert_equal(result_tree, expected)
+
     def test_multiple_tree_args(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
@@ -78,6 +85,33 @@ class TestMapOverSubTree:
         assert_equal(dt_min, expected_min)
         expected_max = create_test_datatree(modify=lambda ds: ds.max())
         assert_equal(dt_max, expected_max)
+
+    def test_return_multiple_trees_empty_input(self):
+        dt = expected = xr.DataTree.from_dict({"node": xr.Dataset()})
+
+        # not passing num_return_values
+        result = map_over_datasets(max, dt, dt)
+        assert isinstance(result, xr.DataTree)
+        xr.testing.assert_equal(result, expected)
+
+        result = map_over_datasets(max, dt, dt, default_num_return_values=1)
+        assert isinstance(result, tuple)
+        assert len(result) == 1
+        xr.testing.assert_equal(result[0], expected)
+
+        result = map_over_datasets(max, dt, dt, default_num_return_values=2)
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        xr.testing.assert_equal(result[0], expected)
+        xr.testing.assert_equal(result[1], expected)
+
+    def test_return_multiple_trees_empty_first_node(self):
+        # check result tree is constructed correctly even if first nodes are empty
+        ds = xr.Dataset(data_vars={"a": ("x", [1, 2, 3])})
+        dt = xr.DataTree.from_dict({"set1": None, "set2": ds})
+        res_min, res_max = xr.map_over_datasets(lambda ds: (ds.min(), ds.max()), dt)
+        assert_equal(res_min, dt.min())
+        assert_equal(res_max, dt.max())
 
     def test_return_wrong_type(self, simple_datatree):
         dt1 = simple_datatree
@@ -183,7 +217,6 @@ class TestMapOverSubTree:
     def test_error_contains_path_of_offending_node(self, create_test_datatree):
         dt = create_test_datatree()
         dt["set1"]["bad_var"] = 0
-        print(dt)
 
         def fail_on_specific_node(ds):
             if "bad_var" in ds:
