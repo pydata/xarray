@@ -14,7 +14,7 @@ import pytest
 
 import xarray as xr
 import xarray.plot as xplt
-from xarray import DataArray, Dataset
+from xarray import DataArray, Dataset, DataTree
 from xarray.namedarray.utils import module_available
 from xarray.plot.dataarray_plot import _infer_interval_breaks
 from xarray.plot.dataset_plot import _infer_meta_data
@@ -3649,3 +3649,43 @@ def test_facetgrid_figsize_rcparams() -> None:
             g = xplt.FacetGrid(da, col="z", figsize=explicit_size)
             actual_figsize = g.fig.get_size_inches()
             np.testing.assert_allclose(actual_figsize, explicit_size)
+
+
+@requires_matplotlib
+class TestDataTreeScatterPlots(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self) -> None:
+        das = [
+            DataArray(
+                np.random.randn(3, 3, 4, 4),
+                dims=["x", "row", "col", "hue"],
+                coords=[range(k) for k in [3, 3, 4, 4]],
+            )
+            for _ in [1, 2, 3]
+        ]
+        dt = DataTree.from_dict(
+            {
+                "/": Dataset(das[0].coords),
+                "/group_1": Dataset({"A": das[0], "B": das[1]}),
+                "/group_2": Dataset({"A": das[2]}),
+            }
+        )
+        dt.hue.name = "huename"
+        dt.hue.attrs["units"] = "hunits"
+        dt.x.attrs["units"] = "xunits"
+        dt.col.attrs["units"] = "colunits"
+        dt.row.attrs["units"] = "rowunits"
+        dt["group_1/A"].attrs["units"] = "Aunits"
+        dt["group_2/A"].attrs["units"] = "Aunits"
+        self.dt = dt
+
+    def test_accessor(self) -> None:
+        from xarray.plot.accessor import DataTreePlotAccessor
+
+        assert DataTree.plot is DataTreePlotAccessor
+        assert isinstance(self.dt.plot, DataTreePlotAccessor)
+
+    def test_key_error(self):
+        """Assert that a KeyError is raised when accessing a variable that doesn't exist in a node."""
+        with pytest.raises(KeyError):
+            self.dt.plot.scatter("B")

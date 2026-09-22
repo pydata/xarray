@@ -37,6 +37,14 @@ DataArray
    DataArray.plot.scatter
    DataArray.plot.surface
 
+DataTree
+---------
+
+.. autosummary::
+   :toctree: ../generated/
+   :template: autosummary/accessor_method.rst
+
+   DataTree.plot.scatter
 
 Faceting
 --------

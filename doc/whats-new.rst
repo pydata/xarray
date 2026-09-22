@@ -25,6 +25,9 @@ New Features
   silently being written uncompressed (:issue:`10657`, :pull:`11067`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
+- ``DataTree`` objects now have plotting functionality with the ``plot.scatter`` method
+  (:issue:`9348`, :pull:`11516`).
+  By `Eni Awowale <https://github.com/eni-awowale>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal, NoReturn, overload
 import numpy as np
 
 # Accessor methods have the same name as plotting methods, so we need a different namespace
-from xarray.plot import dataarray_plot, dataset_plot
+from xarray.plot import dataarray_plot, dataset_plot, datatree_plot
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.core.datatree import DataTree
     from xarray.core.types import AspectOptions, HueStyleOptions, ScaleOptions
     from xarray.plot.facetgrid import FacetGrid
 
@@ -1270,3 +1271,131 @@ class DatasetPlotAccessor:
     @functools.wraps(dataset_plot.streamplot, assigned=("__doc__",))
     def streamplot(self, *args, **kwargs) -> LineCollection | FacetGrid[Dataset]:
         return dataset_plot.streamplot(self._ds, *args, **kwargs)
+
+
+class DataTreePlotAccessor:
+    """
+    Enables use of xarray.plot functions as attributes on a DataTree.
+    For example, DataTree.plot.scatter
+    """
+
+    _dt: DataTree
+    __slots__ = ("_dt",)
+
+    def __init__(self, datatree: DataTree) -> None:
+        self._dt = datatree
+
+    def __call__(self, *args, **kwargs) -> NoReturn:
+        raise ValueError(
+            "DataTree.plot cannot be called directly. Use "
+            "an explicit plot method, e.g. dt.plot.scatter(...)"
+        )
+
+    @overload
+    def scatter(
+        self,
+        *args: Any,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        z: Hashable | None = None,
+        hue: Hashable | None = None,
+        markersize: Hashable | None = None,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        col_wrap: int | Literal["auto"] | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_legend: bool | None = None,
+        add_colorbar: bool | None = None,
+        add_labels: bool | Iterable[bool] = True,
+        add_title: bool = True,
+        subplot_kws: dict[str, Any] | None = None,
+        xscale: ScaleOptions = None,
+        yscale: ScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        cmap=None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        extend=None,
+        levels=None,
+        fig_kw: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid[DataArray]: ...
+
+    @overload
+    def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(s: DataTree,
+        self,
+        *args: Any,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        z: Hashable | None = None,
+        hue: Hashable | None = None,
+        markersize: Hashable | None = None,
+        row: Hashable | None = None,
+        col: Hashable,  # wrap -> FacetGrid
+        col_wrap: int | Literal["auto"] | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_legend: bool | None = None,
+        add_colorbar: bool | None = None,
+        add_labels: bool | Iterable[bool] = True,
+        add_title: bool = True,
+        subplot_kws: dict[str, Any] | None = None,
+        xscale: ScaleOptions = None,
+        yscale: ScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        cmap=None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        extend=None,
+        levels=None,
+        fig_kw: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> PathCollection: ...
+
+    @overload
+    def scatter(
+        self,
+        *args: Any,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        z: Hashable | None = None,
+        hue: Hashable | None = None,
+        markersize: Hashable | None = None,
+        row: Hashable,  # wrap -> FacetGrid
+        col: Hashable | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_legend: bool | None = None,
+        add_colorbar: bool | None = None,
+        add_labels: bool | Iterable[bool] = True,
+        add_title: bool = True,
+        subplot_kws: dict[str, Any] | None = None,
+        xscale: ScaleOptions = None,
+        yscale: ScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        cmap=None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        extend=None,
+        levels=None,
+        fig_kw: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid[DataArray] | PathCollection: ...
+
+    @functools.wraps(datatree_plot.scatter, assigned=("__doc__",))
+    def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[DataArray]:
+        return datatree_plot.scatter(self._dt, *args, **kwargs)

@@ -66,6 +66,7 @@ from xarray.core.utils import (
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
+from xarray.plot.accessor import DataTreePlotAccessor
 from xarray.structure.alignment import align
 from xarray.structure.merge import dataset_update_method
 
@@ -609,6 +610,8 @@ class DataTree(
             f"Invalid value for inherit: {inherit!r}. "
             "Expected True, False, 'indexes', or 'all'."
         )
+
+    plot = utils.UncachedAccessor(DataTreePlotAccessor)
 
     @property
     def _dims(self) -> ChainMap[Hashable, int]:
