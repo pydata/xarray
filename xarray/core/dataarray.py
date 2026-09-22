@@ -633,6 +633,38 @@ class DataArray(
         return table.__arrow_c_stream__(requested_schema)
 
     def to_arrow(self) -> pa.Table:
+        """Convert this DataArray into a pyarrow.Table.
+
+        .. warning::
+            This functionality is considered **experimental**. It may be removed or
+            changed at any point without it being considered a breaking change.
+
+        Returns
+        -------
+        pyarrow.Table
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     [1.0, 2.0, 3.0],
+        ...     dims=["x"],
+        ...     coords={"x": [10, 20, 30]},
+        ...     name="temperature",
+        ... )
+        >>> da.to_arrow()
+        pyarrow.Table
+        x: int64
+        temperature: double
+        ----
+        x: [[10,20,30]]
+        temperature: [[1,2,3]]
+
+        See Also
+        --------
+        xarray.Dataset.to_arrow
+        pandas.DataFrame.from_arrow
+        polars.from_arrow
+        """
         try:
             import pyarrow as pa
         except ImportError:
