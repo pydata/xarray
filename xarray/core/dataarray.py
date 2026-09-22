@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import datetime
 import json
+import math
 import warnings
 from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
 from functools import partial
@@ -272,6 +273,10 @@ def _broadcast_to_dims(
 ) -> np.ndarray:
     """Flatten and broadcast `variable` to `shape`, as a flat numpy array.
 
+    Uses fast paths for 1D coordinates; falls back to a general N-D
+    broadcast for multi-dimensional (e.g. curvilinear) and scalar
+    coordinates.
+
     Returns
     -------
     numpy.ndarray
@@ -295,6 +300,21 @@ def _broadcast_to_dims(
         )
 
     coord_values = variable.values
+
+    # PERF: Optimize 1D broadcasting reducing allocations
+    if variable.ndim == 1:
+        (dim,) = variable.dims
+        k = dims.index(dim)
+        inner = math.prod(shape[k + 1 :])
+        outer = math.prod(shape[:k])
+
+        if inner == 1 and outer == 1:
+            # Coordinate already matches the flattened data 1:1
+            # (e.g. a 1D DataArray with a single dimension coordinate).
+            return coord_values.ravel()
+        if inner != 1 and outer != 1:
+            # Use tile + repeat on 1D coordinate
+            return np.tile(np.repeat(coord_values, inner), outer)
 
     # General N-D path (curvilinear coordinates, scalar coordinates, etc.):
     # broadcast the coordinate up to the full data shape so it flattens
