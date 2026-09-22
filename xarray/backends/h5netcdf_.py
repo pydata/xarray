@@ -74,11 +74,68 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
             return array[key]
 
 
+#: Sentinel for an attribute whose dataspace we cannot inspect.
+_UNKNOWN_DATASPACE = object()
+
+
+def _attribute_dataspace_shape(h5attrs, key):
+    """Shape of the HDF5 dataspace backing attribute ``key``.
+
+    ``()`` is a scalar dataspace, holding exactly one value. ``(n,)`` is a
+    simple dataspace, holding a sequence of ``n``. ``None`` is a null dataspace,
+    which netcdf-c writes for a zero length attribute. Returns
+    :py:data:`_UNKNOWN_DATASPACE` when the dataspace cannot be inspected.
+
+    h5netcdf hands back an already-decoded value that hides this distinction,
+    because it collapses any length-1 attribute to a scalar to mirror
+    netcdf4-python (:issue:`10275`), so go to the underlying h5py attribute.
+    """
+    if h5attrs is None:
+        return _UNKNOWN_DATASPACE
+    try:
+        return h5attrs.get_id(key).shape
+    except (AttributeError, KeyError, TypeError):
+        # ``get_id`` is part of h5py's low level API, which the pyfive backend
+        # does not provide.
+        return _UNKNOWN_DATASPACE
+
+
+def _restore_sequence_attribute(value, shape):
+    """Undo h5netcdf's collapse of a length-1 or zero-length attribute.
+
+    Only the cases the file unambiguously records are restored:
+
+    * a sequence of strings, which netCDF stores as NC_STRING in a non-scalar
+      dataspace, as opposed to the single NC_CHAR string it stores in a scalar
+      one;
+    * a zero length attribute, which cannot be a scalar whatever its dataspace.
+
+    Numeric attributes are left alone. netcdf-c stores a scalar number as a
+    length-1 vector, so ``1`` and ``[1]`` are the same bytes on disk and there
+    is nothing to tell them apart -- guessing would turn every ``scale_factor``
+    in every existing file into a list.
+    """
+    if shape is _UNKNOWN_DATASPACE:
+        return value
+    if isinstance(value, str | bytes):
+        # a scalar dataspace holds one string; anything else holds a sequence.
+        # ``shape is None`` is the zero length _FillValue h5netcdf returns as
+        # b"", which is not a sequence of strings.
+        if shape is not None and len(shape) > 0:
+            return [value]
+    elif isinstance(value, np.ndarray) and value.size == 0:
+        return []
+    return value
+
+
 def _read_attributes(h5netcdf_var):
     # GH451
     # to ensure conventions decoding works properly on Python 3, decode all
     # bytes attributes to strings
     attrs = {}
+    # ``Attributes`` wraps the h5py attributes it decodes; we need the raw ones
+    # to tell a single value from a sequence of one -- see GH10275.
+    h5attrs = getattr(h5netcdf_var.attrs, "_h5attrs", None)
     for k, v in h5netcdf_var.attrs.items():
         if k not in ["_FillValue", "missing_value"] and isinstance(v, bytes):
             try:
@@ -90,6 +147,7 @@ def _read_attributes(h5netcdf_var):
                     f"returning bytes undecoded.",
                     UnicodeWarning,
                 )
+        v = _restore_sequence_attribute(v, _attribute_dataspace_shape(h5attrs, k))
         attrs[k] = v
     return attrs
 

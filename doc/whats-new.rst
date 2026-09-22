@@ -53,6 +53,22 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- The ``h5netcdf`` engine no longer collapses list-valued attributes when it
+  reads them. A ``["one"]`` written by ``engine="h5netcdf"`` came back as
+  ``"one"``, and an empty list as ``array([], dtype=float64)``; both now come
+  back as the lists they were written as (:issue:`10275`). h5netcdf collapses
+  every length-1 attribute to a scalar to mirror netcdf4-python, which hides two
+  things the file does record: netCDF stores one string as ``NC_CHAR`` in a
+  scalar HDF5 dataspace and a sequence of strings as ``NC_STRING`` in a
+  non-scalar one, and a zero length attribute cannot be a scalar at all. Nothing
+  about how xarray writes files changed, so existing files are unaffected.
+
+  Numeric attributes are deliberately left alone: netcdf-c stores a scalar
+  number as a length-1 vector, so ``1`` and ``[1]`` are the same bytes on disk
+  and cannot be told apart. The ``netcdf4`` engine is also unchanged, since
+  netcdf4-python collapses length-1 attributes before xarray sees them and
+  offers no way to ask for the length.
+  By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
