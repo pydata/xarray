@@ -218,6 +218,9 @@ class CombinedLock(Lock):
         self.locks = tuple(set(locks))  # remove duplicates
 
     def acquire(self, blocking=True):
+        assert blocking, (
+            "Without blocking you will never know which locks you have to unlock!"
+        )
         return all(acquire(lock, blocking=blocking) for lock in self.locks)
 
     def release(self):
