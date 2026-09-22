@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.core import indexing
+from xarray.core import indexing, missing
 from xarray.core.missing import (
     NumpyInterpolator,
     ScipyInterpolator,
@@ -799,3 +799,67 @@ def test_indexing_localize():
         ds["sigma_a"].interp(w=15000.5)
     actual_indexer = mock_func.mock_calls[0].args[1]._key
     assert actual_indexer == (slice(None), slice(None), slice(18404, 18408))
+
+
+def _interp_vectorize_example():
+    # da[t, r, z] interpolated along `z` at targets that vary with `t`.
+    # `t` is a genuine vectorize dimension; `r` is a free dimension.
+    n_t, n_r, n_z = 4, 3, 5
+    rng = np.random.default_rng(seed=0)
+    da = xr.DataArray(
+        rng.random((n_t, n_r, n_z)),
+        dims=["t", "r", "z"],
+        coords={
+            "t": np.arange(n_t),
+            "r": np.arange(n_r),
+            "z": np.linspace(0.0, 1.0, n_z),
+        },
+    )
+    target = xr.DataArray(np.linspace(0.1, 0.9, n_t), dims=["t"], coords={"t": da["t"]})
+    return da, target
+
+
+@requires_scipy
+def test_interp_vectorize_does_not_loop_over_free_dims():
+    # regression test for GH10683
+    # `da[t, r, z].interp(z=target[t])` must vectorize over `t` only. `r` is neither
+    # interpolated along nor varying with the target, so it should be handed to the
+    # interpolator in bulk rather than peeled off one element at a time by
+    # np.vectorize, which made this O(t * r) Python calls instead of O(t).
+    from scipy.interpolate import interp1d
+
+    da, target = _interp_vectorize_example()
+    n_t = da.sizes["t"]
+
+    with mock.patch.object(
+        missing, "_interpnd", side_effect=missing._interpnd, autospec=True
+    ) as mock_interpnd:
+        actual = da.interp(z=target)
+
+    assert mock_interpnd.call_count == n_t
+
+    # independent reference: interpolate each `t` separately with scipy
+    expected = np.stack(
+        [
+            interp1d(da["z"].values, da.values[i], axis=-1)(target.values[i])
+            for i in range(n_t)
+        ]
+    )
+    assert actual.dims == ("t", "r")
+    np.testing.assert_allclose(actual.values, expected)
+
+
+@requires_scipy
+@requires_dask
+def test_interp_vectorize_preserves_chunks_along_free_dims():
+    # companion to GH10683: the bulk-dimension optimization must not apply to chunked
+    # arrays. Declaring `r` a core dimension would force dask to rechunk along it,
+    # so a preserved chunk structure is what shows the optimization was skipped.
+    da, target = _interp_vectorize_example()
+
+    expected = da.interp(z=target)
+    actual = da.chunk({"r": 1}).interp(z=target)
+
+    assert actual.chunks is not None
+    assert actual.chunks[actual.dims.index("r")] == (1, 1, 1)
+    assert_allclose(actual.compute(), expected)
