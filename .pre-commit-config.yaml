@@ -2,6 +2,7 @@
 ci:
   autoupdate_schedule: monthly
   autoupdate_commit_msg: "Update pre-commit hooks"
+  autofix_commit_msg: "style: pre-commit fixes"
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
