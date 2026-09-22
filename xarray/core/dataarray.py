@@ -301,6 +301,9 @@ def _broadcast_to_dims(
 
     coord_values = variable.values
 
+    if (variable.dims, variable.shape) == (dims, shape):
+        return coord_values.ravel()
+
     # PERF: Optimize 1D broadcasting reducing allocations
     if variable.ndim == 1:
         (dim,) = variable.dims
@@ -308,11 +311,7 @@ def _broadcast_to_dims(
         inner = math.prod(shape[k + 1 :])
         outer = math.prod(shape[:k])
 
-        if inner == 1 and outer == 1:
-            # Coordinate already matches the flattened data 1:1
-            # (e.g. a 1D DataArray with a single dimension coordinate).
-            return coord_values.ravel()
-        if inner != 1 and outer != 1:
+        if inner > 1 and outer > 1:
             # Use tile + repeat on 1D coordinate
             return np.tile(np.repeat(coord_values, inner), outer)
 

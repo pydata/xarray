@@ -7520,7 +7520,8 @@ class Dataset(
         from xarray.core.dataarray import _broadcast_to_dims
 
         dims = tuple(self.dims)
-        shape = tuple(self.sizes[dim] for dim in dims)
+        sizes = self.sizes
+        shape = tuple(sizes[dim] for dim in dims)
 
         columns: dict[Hashable, pa.Array] = {
             name: pa.array(_broadcast_to_dims(variable, dims, shape))
