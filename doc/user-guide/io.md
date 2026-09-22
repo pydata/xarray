@@ -1720,7 +1720,7 @@ More formats are supported by extension libraries:
 - [xarray-mongodb](https://xarray-mongodb.readthedocs.io/en/latest/): Store xarray objects on MongoDB
 
 [amazon s3]: https://aws.amazon.com/s3/
-[arrow pycapsule interface]: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface
+[arrow pycapsule interface]: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
 [blog post]: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 [cf conventions]: https://cfconventions.org/
 [cf conventions on packed data]: https://cfconventions.org/cf-conventions/cf-conventions.html#packed-data
