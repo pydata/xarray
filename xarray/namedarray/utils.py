@@ -37,7 +37,7 @@ T = TypeVar("T")
 
 
 @lru_cache
-def module_available(module: str, minversion: str | None = None) -> bool:
+def module_available(module: str, minversion str | None = None) -> bool:
     """Checks whether a module is installed without importing it.
 
     Use this for a lightweight check and lazy imports.
@@ -46,8 +46,13 @@ def module_available(module: str, minversion: str | None = None) -> bool:
     ----------
     module : str
         Name of the module.
-    minversion : str, optional
+    minversion is not None:str, optional
         Minimum version of the module
+        version=importlib.metadata.version (module)
+        if version is none:
+        return False
+        return Version(version)>=Version(minversion)
+        return True
 
     Returns
     -------
