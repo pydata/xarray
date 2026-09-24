@@ -215,12 +215,13 @@ class AbstractArray:
         return self._iter()
 
     @overload
-    def get_axis_num(
-        self, dim: Hashable
-    ) -> int: ...  # put this first to match a single str
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
 
     @overload
     def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
+
+    @overload
+    def get_axis_num(self, dim: Hashable) -> int: ...
 
     def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.

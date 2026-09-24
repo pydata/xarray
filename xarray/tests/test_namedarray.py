@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import sys
 from abc import abstractmethod
-from collections.abc import Mapping
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
@@ -12,6 +12,7 @@ from packaging.version import Version
 
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.namedarray._typing import (
+    DimType_co,
     DType_co,
     ShapeType_co,
     _arrayfunction_or_api,
@@ -29,14 +30,13 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         AttrsLike,
         Default,
-        DimsLike,
+        DimType,
         DType,
         DuckArray,
         IndexKeyLike,
         IntOrUnknown,
         Shape,
         ShapeLike,
-        _Dim,
         duckarray,
     )
 
@@ -181,11 +181,11 @@ class NamedArraySubclassobjects:
 
 
 class TestNamedArray(NamedArraySubclassobjects):
-    def cls(self, *args: Any, **kwargs: Any) -> NamedArray[Any, Any]:
+    def cls(self, *args: Any, **kwargs: Any) -> NamedArray[Any, Any, Any]:
         return NamedArray(*args, **kwargs)
 
     @pytest.fixture
-    def target(self, data: np.ndarray[Any, Any]) -> NamedArray[Any, Any]:
+    def target(self, data: np.ndarray[Any, Any]) -> NamedArray[Any, Any, Any]:
         return NamedArray(["x", "y"], data)
 
     @pytest.mark.parametrize(
@@ -220,12 +220,12 @@ class TestNamedArray(NamedArraySubclassobjects):
     )
     def test_from_array(
         self,
-        dims: DimsLike,
+        dims: Iterable[Hashable],
         data: ArrayLike,
         expected: np.ndarray[Any, Any],
         raise_error: bool,
     ) -> None:
-        actual: NamedArray[Any, Any]
+        actual: NamedArray[Any, Any, Any]
         if raise_error:
             with pytest.raises(TypeError, match="already a Named array"):
                 actual = from_array(dims, data)
@@ -246,7 +246,7 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_from_array_with_0d_object(self) -> None:
         data = np.empty((), dtype=object)
         data[()] = (10, 12, 12)
-        narr: NamedArray[Any, Any] = from_array((), data)
+        narr: NamedArray[Any, Any, Any] = from_array((), data)
         np.array_equal(np.asarray(narr.data), data)
 
     # TODO: Make xr.core.indexing.ExplicitlyIndexed pass as a subclass of_arrayfunction_or_api
@@ -256,13 +256,13 @@ class TestNamedArray(NamedArraySubclassobjects):
     ) -> None:
         array: CustomArray[Any, Any]
         array = CustomArray(random_inputs)
-        output: NamedArray[Any, Any]
+        output: NamedArray[Any, Any, Any]
         output = from_array(("x", "y", "z"), array)
         assert isinstance(output.data, np.ndarray)
 
         array2: CustomArrayIndexable[Any, Any]
         array2 = CustomArrayIndexable(random_inputs)
-        output2: NamedArray[Any, Any]
+        output2: NamedArray[Any, Any, Any]
         output2 = from_array(("x", "y", "z"), array2)
         assert isinstance(output2.data, CustomArrayIndexable)
 
@@ -276,7 +276,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         arr: np.ndarray[Any, np.dtype[np.complex128]]
         arr = expected_real + 1j * expected_imag
 
-        named_array: NamedArray[Any, np.dtype[np.complex128]]
+        named_array: NamedArray[Any, np.dtype[np.complex128], Hashable]
         named_array = NamedArray(["x"], arr)
 
         actual_real: duckarray[Any, np.dtype[np.float64]] = named_array.real.data
@@ -296,7 +296,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         ],
     )
     def test_from_array_0d_string(self, data: Any, dtype: DTypeLike | None) -> None:
-        named_array: NamedArray[Any, Any]
+        named_array: NamedArray[Any, Any, Any]
         named_array = from_array([], data)
         assert named_array.data == data
         assert named_array.dims == ()
@@ -307,7 +307,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         assert named_array.dtype == dtype
 
     def test_from_array_0d_object(self) -> None:
-        named_array: NamedArray[Any, Any]
+        named_array: NamedArray[Any, Any, Any]
         named_array = from_array([], (10, 12, 12))
         expected_data = np.empty((), dtype=object)
         expected_data[()] = (10, 12, 12)
@@ -321,7 +321,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         assert named_array.dtype == np.dtype("O")
 
     def test_from_array_0d_datetime(self) -> None:
-        named_array: NamedArray[Any, Any]
+        named_array: NamedArray[Any, Any, Any]
         named_array = from_array([], np.datetime64("2000-01-01"))
         assert named_array.dtype == np.dtype("datetime64[D]")
 
@@ -342,7 +342,7 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_from_array_0d_timedelta(
         self, timedelta: np.timedelta64, expected_dtype: np.dtype[np.timedelta64]
     ) -> None:
-        named_array: NamedArray[Any, Any]
+        named_array: NamedArray[Any, Any, Any]
         named_array = from_array([], timedelta)
         assert named_array.dtype == expected_dtype
         assert named_array.data == timedelta
@@ -360,7 +360,7 @@ class TestNamedArray(NamedArraySubclassobjects):
     def test_dims_setter(
         self, dims: Any, data_shape: Any, new_dims: Any, raises: bool
     ) -> None:
-        named_array: NamedArray[Any, Any]
+        named_array: NamedArray[Any, Any, Any]
         named_array = NamedArray(dims, np.asarray(np.random.random(data_shape)))
         assert named_array.dims == tuple(dims)
         if raises:
@@ -394,40 +394,62 @@ class TestNamedArray(NamedArraySubclassobjects):
 
     def test_new_namedarray(self) -> None:
         dtype_float = np.dtype(np.float32)
-        narr_float: NamedArray[Any, np.dtype[np.float32]]
+        narr_float: NamedArray[Any, np.dtype[np.float32], Hashable]
         narr_float = NamedArray(("x",), np.array([1.5, 3.2], dtype=dtype_float))
         assert narr_float.dtype == dtype_float
 
         dtype_int = np.dtype(np.int8)
-        narr_int: NamedArray[Any, np.dtype[np.int8]]
+        narr_int: NamedArray[Any, np.dtype[np.int8], Hashable]
         narr_int = narr_float._new(("x",), np.array([1, 3], dtype=dtype_int))
         assert narr_int.dtype == dtype_int
 
         class Variable(
-            NamedArray[ShapeType_co, DType_co], Generic[ShapeType_co, DType_co]
+            NamedArray[ShapeType_co, DType_co, DimType_co],
+            Generic[ShapeType_co, DType_co, DimType_co],
         ):
             @overload
             def _new(
                 self,
-                dims: DimsLike | Default = ...,
+                dims: Default = ...,
                 data: duckarray[Any, DType] = ...,
                 attrs: AttrsLike | Default = ...,
-            ) -> Variable[Any, DType]: ...
+            ) -> Variable[Any, DType, DimType_co]: ...
 
             @overload
             def _new(
                 self,
-                dims: DimsLike | Default = ...,
+                dims: Iterable[DimType] = ...,
+                data: duckarray[Any, DType] = ...,
+                attrs: AttrsLike | Default = ...,
+            ) -> Variable[Any, DType, DimType]: ...
+
+            @overload
+            def _new(
+                self,
+                dims: Default = ...,
                 data: Default = ...,
                 attrs: AttrsLike | Default = ...,
-            ) -> Variable[ShapeType_co, DType_co]: ...
+            ) -> Variable[ShapeType_co, DType_co, DimType_co]: ...
+
+            @overload
+            def _new(
+                self,
+                dims: Iterable[DimType] = ...,
+                data: Default = ...,
+                attrs: AttrsLike | Default = ...,
+            ) -> Variable[ShapeType_co, DType_co, DimType]: ...
 
             def _new(
                 self,
-                dims: DimsLike | Default = _default,
+                dims: Iterable[DimType] | Default = _default,
                 data: duckarray[Any, DType] | Default = _default,
                 attrs: AttrsLike | Default = _default,
-            ) -> Variable[Any, DType] | Variable[ShapeType_co, DType_co]:
+            ) -> (
+                Variable[Any, DType, DimType_co]
+                | Variable[Any, DType, DimType]
+                | Variable[ShapeType_co, DType_co, DimType_co]
+                | Variable[ShapeType_co, DType_co, DimType]
+            ):
                 dims_ = copy.copy(self._dims) if dims is _default else dims
 
                 attrs_: Mapping[Any, Any] | None
@@ -437,15 +459,15 @@ class TestNamedArray(NamedArraySubclassobjects):
                     attrs_ = attrs
 
                 if data is _default:
-                    return type(self)(dims_, copy.copy(self._data), attrs_)
-                cls_ = cast("type[Variable[Any, DType]]", type(self))
-                return cls_(dims_, data, attrs_)
+                    return type(self)(dims_, copy.copy(self._data), attrs_)  # type: ignore[arg-type]
+                cls_ = cast("type[Variable[Any, DType, DimType]]", type(self))
+                return cls_(dims_, data, attrs_)  # type: ignore[arg-type]
 
-        var_float: Variable[Any, np.dtype[np.float32]]
+        var_float: Variable[Any, np.dtype[np.float32], Hashable]
         var_float = Variable(("x",), np.array([1.5, 3.2], dtype=dtype_float))
         assert var_float.dtype == dtype_float
 
-        var_int: Variable[Any, np.dtype[np.int8]]
+        var_int: Variable[Any, np.dtype[np.int8], Hashable]
         var_int = var_float._new(("x",), np.array([1, 3], dtype=dtype_int))
         assert var_int.dtype == dtype_int
 
@@ -456,39 +478,61 @@ class TestNamedArray(NamedArraySubclassobjects):
         np_val2: np.ndarray[Any, np.dtype[np.float32]]
         np_val2 = 2 * np_val
 
-        narr_float: NamedArray[Any, np.dtype[np.float32]]
+        narr_float: NamedArray[Any, np.dtype[np.float32], Hashable]
         narr_float = NamedArray(("x",), np_val)
         assert narr_float.dtype == dtype_float
 
-        narr_float2: NamedArray[Any, np.dtype[np.float32]]
+        narr_float2: NamedArray[Any, np.dtype[np.float32], Hashable]
         narr_float2 = NamedArray(("x",), np_val2)
         assert narr_float2.dtype == dtype_float
 
         class Variable(
-            NamedArray[ShapeType_co, DType_co], Generic[ShapeType_co, DType_co]
+            NamedArray[ShapeType_co, DType_co, DimType_co],
+            Generic[ShapeType_co, DType_co, DimType_co],
         ):
             @overload
             def _new(
                 self,
-                dims: DimsLike | Default = ...,
+                dims: Default = ...,
                 data: duckarray[Any, DType] = ...,
                 attrs: AttrsLike | Default = ...,
-            ) -> Variable[Any, DType]: ...
+            ) -> Variable[Any, DType, DimType_co]: ...
 
             @overload
             def _new(
                 self,
-                dims: DimsLike | Default = ...,
+                dims: Iterable[DimType] = ...,
+                data: duckarray[Any, DType] = ...,
+                attrs: AttrsLike | Default = ...,
+            ) -> Variable[Any, DType, DimType]: ...
+
+            @overload
+            def _new(
+                self,
+                dims: Default = ...,
                 data: Default = ...,
                 attrs: AttrsLike | Default = ...,
-            ) -> Variable[ShapeType_co, DType_co]: ...
+            ) -> Variable[ShapeType_co, DType_co, DimType_co]: ...
+
+            @overload
+            def _new(
+                self,
+                dims: Iterable[DimType] = ...,
+                data: Default = ...,
+                attrs: AttrsLike | Default = ...,
+            ) -> Variable[ShapeType_co, DType_co, DimType]: ...
 
             def _new(
                 self,
-                dims: DimsLike | Default = _default,
+                dims: Iterable[DimType] | Default = _default,
                 data: duckarray[Any, DType] | Default = _default,
                 attrs: AttrsLike | Default = _default,
-            ) -> Variable[Any, DType] | Variable[ShapeType_co, DType_co]:
+            ) -> (
+                Variable[Any, DType, DimType_co]
+                | Variable[Any, DType, DimType]
+                | Variable[ShapeType_co, DType_co, DimType_co]
+                | Variable[ShapeType_co, DType_co, DimType]
+            ):
                 dims_ = copy.copy(self._dims) if dims is _default else dims
 
                 attrs_: Mapping[Any, Any] | None
@@ -498,15 +542,15 @@ class TestNamedArray(NamedArraySubclassobjects):
                     attrs_ = attrs
 
                 if data is _default:
-                    return type(self)(dims_, copy.copy(self._data), attrs_)
-                cls_ = cast("type[Variable[Any, DType]]", type(self))
-                return cls_(dims_, data, attrs_)
+                    return type(self)(dims_, copy.copy(self._data), attrs_)  # type: ignore[arg-type]
+                cls_ = cast("type[Variable[Any, DType, DimType]]", type(self))
+                return cls_(dims_, data, attrs_)  # type: ignore[arg-type]
 
-        var_float: Variable[Any, np.dtype[np.float32]]
+        var_float: Variable[Any, np.dtype[np.float32], Hashable]
         var_float = Variable(("x",), np_val)
         assert var_float.dtype == dtype_float
 
-        var_float2: Variable[Any, np.dtype[np.float32]]
+        var_float2: Variable[Any, np.dtype[np.float32], Hashable]
         var_float2 = var_float._replace(("x",), np_val2)
         assert var_float2.dtype == dtype_float
 
@@ -520,11 +564,11 @@ class TestNamedArray(NamedArraySubclassobjects):
     )
     def test_expand_dims(
         self,
-        target: NamedArray[Any, np.dtype[np.float32]],
-        dim: _Dim | Default,
+        target: NamedArray[Any, np.dtype[np.float32], Hashable],
+        dim: Hashable | Default,
         expected_ndim: int,
         expected_shape: ShapeLike,
-        expected_dims: DimsLike,
+        expected_dims: tuple[Hashable, ...],
     ) -> None:
         result = target.expand_dims(dim=dim)
         assert result.ndim == expected_ndim
@@ -541,16 +585,16 @@ class TestNamedArray(NamedArraySubclassobjects):
     )
     def test_permute_dims(
         self,
-        target: NamedArray[Any, np.dtype[np.float32]],
-        dims: DimsLike,
-        expected_sizes: dict[_Dim, IntOrUnknown],
+        target: NamedArray[Any, np.dtype[np.float32], Hashable],
+        dims: Sequence[Hashable],
+        expected_sizes: dict[Hashable, IntOrUnknown],
     ) -> None:
         actual = target.permute_dims(*dims)
         assert actual.sizes == expected_sizes
 
     def test_permute_dims_errors(
         self,
-        target: NamedArray[Any, np.dtype[np.float32]],
+        target: NamedArray[Any, np.dtype[np.float32], Hashable],
     ) -> None:
         with pytest.raises(ValueError, match=r"'y'.*permuted list"):
             dims = ["y"]
@@ -566,8 +610,8 @@ class TestNamedArray(NamedArraySubclassobjects):
     )
     def test_broadcast_to(
         self,
-        target: NamedArray[Any, np.dtype[np.float32]],
-        broadcast_dims: Mapping[_Dim, int],
+        target: NamedArray[Any, np.dtype[np.float32], Hashable],
+        broadcast_dims: Mapping[Hashable, int],
         expected_ndim: int,
     ) -> None:
         expand_dims = set(broadcast_dims.keys()) - set(target.dims)
@@ -579,7 +623,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         assert result.sizes == broadcast_dims
 
     def test_broadcast_to_errors(
-        self, target: NamedArray[Any, np.dtype[np.float32]]
+        self, target: NamedArray[Any, np.dtype[np.float32], Hashable]
     ) -> None:
         with pytest.raises(
             ValueError,
@@ -595,7 +639,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             NamedArray(("x", "x"), np.arange(4).reshape(2, 2))
 
     def test_aggregation(self) -> None:
-        x: NamedArray[Any, np.dtype[np.int64]]
+        x: NamedArray[Any, np.dtype[np.int64], Hashable]
         x = NamedArray(("x", "y"), np.arange(4).reshape(2, 2))
 
         result = x.sum()
@@ -603,7 +647,7 @@ class TestNamedArray(NamedArraySubclassobjects):
 
 
 def test_repr() -> None:
-    x: NamedArray[Any, np.dtype[np.uint64]]
+    x: NamedArray[Any, np.dtype[np.uint64], Hashable]
     x = NamedArray(("x",), np.array([0], dtype=np.uint64))
 
     # Reprs should not crash:

@@ -132,10 +132,10 @@ def drop_missing_dims(
             msg = f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             if missing_dims == "raise":
                 raise ValueError(msg)
-            else:
-                warnings.warn(msg, stacklevel=2)
+            warnings.warn(msg, stacklevel=2)
 
-        return supplied_dims_tuple
+        if missing_dims == "raise":
+            return supplied_dims_tuple
 
     elif missing_dims != "ignore":
         raise ValueError(
@@ -169,7 +169,7 @@ def infix_dims(
                 yield d
     else:
         existing_dims = cast(
-            tuple[DimType, ...],
+            "tuple[DimType, ...]",
             drop_missing_dims(dims_supplied, dims_all, missing_dims),
         )
         if set(existing_dims) ^ set(dims_all):

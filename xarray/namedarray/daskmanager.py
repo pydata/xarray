@@ -275,7 +275,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         return parse_bytes(dask_config.get("array.chunk-size"))
 
     def rechunk(
-        self, data: Any, chunks: T_Chunks | _NormalizedChunks, **kwargs: Any
+        self, data: Any, chunks: T_Chunks | NormalizedChunks, **kwargs: Any
     ) -> Any:
         # If we have a zero-length dimensions and any per-dim chunks are auto, dask
         # will rase a DivideByZero error. To workaround, we can just replace the

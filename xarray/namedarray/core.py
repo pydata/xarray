@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import math
 import warnings
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from itertools import starmap
 from types import EllipsisType
 from typing import (
@@ -717,13 +717,16 @@ class NamedArray(
         return type(self)(self._dims, data, attrs=self._attrs)
 
     @overload
-    def get_axis_num(self, dim: DimType_co) -> int: ...  # type: ignore[misc]  # put this first to match a single str
+    def get_axis_num(self, dim: str) -> int: ...  # type: ignore[overload-overlap]
 
     @overload
     def get_axis_num(self, dim: Iterable[DimType_co]) -> tuple[int, ...]: ...
 
+    @overload
+    def get_axis_num(self, dim: DimType_co) -> int: ...  # type: ignore[misc]
+
     def get_axis_num(
-        self, dim: DimType_co | Iterable[DimType_co]
+        self, dim: str | DimType_co | Iterable[DimType_co]
     ) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
@@ -742,7 +745,7 @@ class NamedArray(
         else:
             return self._get_axis_num(dim)
 
-    def _get_axis_num(self, dim: DimType_co) -> int:  # type: ignore[misc]
+    def _get_axis_num(self, dim: Hashable) -> int:
         _raise_if_any_duplicate_dimensions(self.dims)
         try:
             return self.dims.index(dim)
