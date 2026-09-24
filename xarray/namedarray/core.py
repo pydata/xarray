@@ -94,24 +94,6 @@ if TYPE_CHECKING:
 
 @overload
 def _new(
-    x: NamedArray[Any, DType_co, DimType_co],
-    dims: Default = ...,
-    data: duckarray[ShapeType, DType] = ...,
-    attrs: AttrsLike | Default = ...,
-) -> NamedArray[ShapeType, DType, DimType_co]: ...
-
-
-@overload
-def _new(
-    x: NamedArray[Any, DType_co, DimType_co],
-    dims: Iterable[DimType] = ...,
-    data: duckarray[ShapeType, DType] = ...,
-    attrs: AttrsLike | Default = ...,
-) -> NamedArray[ShapeType, DType, DimType]: ...
-
-
-@overload
-def _new(
     x: NamedArray[ShapeType_co, DType_co, DimType_co],
     dims: Default = ...,
     data: Default = ...,
@@ -126,6 +108,24 @@ def _new(
     data: Default = ...,
     attrs: AttrsLike | Default = ...,
 ) -> NamedArray[ShapeType_co, DType_co, DimType]: ...
+
+
+@overload
+def _new(
+    x: NamedArray[Any, DType_co, DimType_co],
+    dims: Default = ...,
+    data: duckarray[ShapeType, DType] = ...,
+    attrs: AttrsLike | Default = ...,
+) -> NamedArray[ShapeType, DType, DimType_co]: ...
+
+
+@overload
+def _new(
+    x: NamedArray[Any, DType_co, DimType_co],
+    dims: Iterable[DimType] = ...,
+    data: duckarray[ShapeType, DType] = ...,
+    attrs: AttrsLike | Default = ...,
+) -> NamedArray[ShapeType, DType, DimType]: ...
 
 
 def _new(
@@ -290,22 +290,6 @@ class NamedArray(
     def _new(
         self,
         dims: Default = ...,
-        data: duckarray[ShapeType, DType] = ...,
-        attrs: AttrsLike | Default = ...,
-    ) -> NamedArray[ShapeType, DType, DimType_co]: ...
-
-    @overload
-    def _new(
-        self,
-        dims: Iterable[DimType] = ...,
-        data: duckarray[ShapeType, DType] = ...,
-        attrs: AttrsLike | Default = ...,
-    ) -> NamedArray[ShapeType, DType, DimType]: ...
-
-    @overload
-    def _new(
-        self,
-        dims: Default = ...,
         data: Default = ...,
         attrs: AttrsLike | Default = ...,
     ) -> NamedArray[ShapeType_co, DType_co, DimType_co]: ...
@@ -317,6 +301,22 @@ class NamedArray(
         data: Default = ...,
         attrs: AttrsLike | Default = ...,
     ) -> NamedArray[ShapeType_co, DType_co, DimType]: ...
+
+    @overload
+    def _new(
+        self,
+        dims: Default = ...,
+        data: duckarray[ShapeType, DType] = ...,
+        attrs: AttrsLike | Default = ...,
+    ) -> NamedArray[ShapeType, DType, DimType_co]: ...
+
+    @overload
+    def _new(
+        self,
+        dims: Iterable[DimType] = ...,
+        data: duckarray[ShapeType, DType] = ...,
+        attrs: AttrsLike | Default = ...,
+    ) -> NamedArray[ShapeType, DType, DimType]: ...
 
     def _new(
         self,

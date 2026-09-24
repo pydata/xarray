@@ -411,22 +411,6 @@ class TestNamedArray(NamedArraySubclassobjects):
             def _new(
                 self,
                 dims: Default = ...,
-                data: duckarray[Any, DType] = ...,
-                attrs: AttrsLike | Default = ...,
-            ) -> Variable[Any, DType, DimType_co]: ...
-
-            @overload
-            def _new(
-                self,
-                dims: Iterable[DimType] = ...,
-                data: duckarray[Any, DType] = ...,
-                attrs: AttrsLike | Default = ...,
-            ) -> Variable[Any, DType, DimType]: ...
-
-            @overload
-            def _new(
-                self,
-                dims: Default = ...,
                 data: Default = ...,
                 attrs: AttrsLike | Default = ...,
             ) -> Variable[ShapeType_co, DType_co, DimType_co]: ...
@@ -438,6 +422,22 @@ class TestNamedArray(NamedArraySubclassobjects):
                 data: Default = ...,
                 attrs: AttrsLike | Default = ...,
             ) -> Variable[ShapeType_co, DType_co, DimType]: ...
+
+            @overload
+            def _new(
+                self,
+                dims: Default = ...,
+                data: duckarray[Any, DType] = ...,
+                attrs: AttrsLike | Default = ...,
+            ) -> Variable[Any, DType, DimType_co]: ...
+
+            @overload
+            def _new(
+                self,
+                dims: Iterable[DimType] = ...,
+                data: duckarray[Any, DType] = ...,
+                attrs: AttrsLike | Default = ...,
+            ) -> Variable[Any, DType, DimType]: ...
 
             def _new(
                 self,
@@ -494,22 +494,6 @@ class TestNamedArray(NamedArraySubclassobjects):
             def _new(
                 self,
                 dims: Default = ...,
-                data: duckarray[Any, DType] = ...,
-                attrs: AttrsLike | Default = ...,
-            ) -> Variable[Any, DType, DimType_co]: ...
-
-            @overload
-            def _new(
-                self,
-                dims: Iterable[DimType] = ...,
-                data: duckarray[Any, DType] = ...,
-                attrs: AttrsLike | Default = ...,
-            ) -> Variable[Any, DType, DimType]: ...
-
-            @overload
-            def _new(
-                self,
-                dims: Default = ...,
                 data: Default = ...,
                 attrs: AttrsLike | Default = ...,
             ) -> Variable[ShapeType_co, DType_co, DimType_co]: ...
@@ -521,6 +505,22 @@ class TestNamedArray(NamedArraySubclassobjects):
                 data: Default = ...,
                 attrs: AttrsLike | Default = ...,
             ) -> Variable[ShapeType_co, DType_co, DimType]: ...
+
+            @overload
+            def _new(
+                self,
+                dims: Default = ...,
+                data: duckarray[Any, DType] = ...,
+                attrs: AttrsLike | Default = ...,
+            ) -> Variable[Any, DType, DimType_co]: ...
+
+            @overload
+            def _new(
+                self,
+                dims: Iterable[DimType] = ...,
+                data: duckarray[Any, DType] = ...,
+                attrs: AttrsLike | Default = ...,
+            ) -> Variable[Any, DType, DimType]: ...
 
             def _new(
                 self,

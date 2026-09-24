@@ -1,0 +1,202 @@
+- case: test_mypy_namedarray_init_str_dims
+  main: |
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    data = np.zeros((2, 3))
+
+    reveal_type(NamedArray(("x", "y"), data).dims)  # N: Revealed type is "builtins.tuple[builtins.str, ...]"
+    reveal_type(NamedArray(["x", "y"], data).dims)  # N: Revealed type is "builtins.tuple[builtins.str, ...]"
+    # a single str is also a valid dims argument
+    reveal_type(NamedArray("x", np.zeros(2)).dims)  # N: Revealed type is "builtins.tuple[builtins.str, ...]"
+
+- case: test_mypy_namedarray_init_tuple_dims
+  main: |
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    data = np.zeros((2, 3))
+
+    reveal_type(NamedArray((("a", 1), ("b", 2)), data).dims)  # N: Revealed type is "builtins.tuple[tuple[builtins.str, builtins.int], ...]"
+    reveal_type(NamedArray([("a", 1), ("b", 2)], data).dims)  # N: Revealed type is "builtins.tuple[tuple[builtins.str, builtins.int], ...]"
+
+- case: test_mypy_namedarray_init_literal_dims
+  main: |
+    from typing import Literal
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    dims: tuple[Literal["x", "y"], ...] = ("x", "y")
+
+    reveal_type(NamedArray(dims, np.zeros((2, 3))).dims)  # N: Revealed type is "builtins.tuple[Literal['x'] | Literal['y'], ...]"
+
+- case: test_mypy_namedarray_init_dtype_and_dims
+  main: |
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    reveal_type(NamedArray(("x",), np.zeros(2)))  # N: Revealed type is "xarray.namedarray.core.NamedArray[Never, numpy.dtype[numpy.float64], builtins.str]"
+
+- case: test_mypy_namedarray_from_array_dims
+  main: |
+    import numpy as np
+    from xarray.namedarray.core import from_array
+
+    reveal_type(from_array(("x", "y"), np.zeros((2, 3))).dims)  # N: Revealed type is "builtins.tuple[builtins.str, ...]"
+    # ArrayLike input
+    reveal_type(from_array([("a", 1), ("b", 2)], [[1, 2], [3, 4]]).dims)  # N: Revealed type is "builtins.tuple[tuple[builtins.str, builtins.int], ...]"
+
+- case: test_mypy_namedarray_dims_setter
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, Any, str] = NamedArray(("x",), np.zeros(2))
+    x.dims = ("y",)
+    x.dims = (1,)
+  out: |
+    main:8: error: Incompatible types in assignment (expression has type "tuple[int]", variable has type "Iterable[str]")  [assignment]
+
+- case: test_mypy_namedarray_sizes
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, Any, tuple[str, int]] = NamedArray((("a", 1),), np.zeros(2))
+
+    reveal_type(x.sizes)  # N: Revealed type is "builtins.dict[tuple[builtins.str, builtins.int], builtins.int]"
+    reveal_type(x.chunksizes)  # N: Revealed type is "typing.Mapping[tuple[builtins.str, builtins.int], builtins.tuple[builtins.int, ...]]"
+
+- case: test_mypy_namedarray_new_dims
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, np.dtype[np.float64], str] = NamedArray(("x",), np.zeros(2))
+
+    # keeps the dim type
+    reveal_type(x._new())  # N: Revealed type is "xarray.namedarray.core.NamedArray[Any, numpy.dtype[numpy.float64], builtins.str]"
+    reveal_type(x._new(data=np.zeros(2, dtype=np.int8)).dims)  # N: Revealed type is "builtins.tuple[builtins.str, ...]"
+    # changes the dim type
+    new_dims: list[tuple[str, int]] = [("a", 1)]
+    reveal_type(x._new(dims=new_dims))  # N: Revealed type is "xarray.namedarray.core.NamedArray[Any, numpy.dtype[numpy.float64], tuple[builtins.str, builtins.int]]"
+    reveal_type(x._new(dims=(1,), data=np.zeros(2)).dims)  # N: Revealed type is "builtins.tuple[builtins.int, ...]"
+
+- case: test_mypy_namedarray_get_axis_num
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, Any, tuple[str, int]] = NamedArray((("a", 1), ("b", 2)), np.zeros((2, 3)))
+
+    # a tuple dim is a single dim, not an iterable of dims
+    reveal_type(x.get_axis_num(("a", 1)))  # N: Revealed type is "builtins.int"
+    reveal_type(x.get_axis_num([("a", 1), ("b", 2)]))  # N: Revealed type is "builtins.tuple[builtins.int, ...]"
+    x.get_axis_num(1)
+  out: |
+    main:11: error: No overload variant of "get_axis_num" of "NamedArray" matches argument type "int"  [call-overload]
+    main:11: note: Possible overload variants:
+    main:11: note:     def get_axis_num(self, dim: str) -> int
+    main:11: note:     def get_axis_num(self, dim: Iterable[tuple[str, int]]) -> tuple[int, ...]
+    main:11: note:     def get_axis_num(self, dim: tuple[str, int]) -> int
+
+- case: test_mypy_namedarray_get_axis_num_str
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, Any, str] = NamedArray(("x", "y"), np.zeros((2, 3)))
+
+    reveal_type(x.get_axis_num("x"))  # N: Revealed type is "builtins.int"
+    reveal_type(x.get_axis_num(["x", "y"]))  # N: Revealed type is "builtins.tuple[builtins.int, ...]"
+
+- case: test_mypy_namedarray_aggregation_dims
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, Any, tuple[str, int]] = NamedArray((("a", 1), ("b", 2)), np.zeros((2, 3)))
+
+    reveal_type(x.sum([("a", 1)]).dims)  # N: Revealed type is "builtins.tuple[tuple[builtins.str, builtins.int], ...]"
+    reveal_type(x.mean(...).dims)  # N: Revealed type is "builtins.tuple[tuple[builtins.str, builtins.int], ...]"
+    x.sum(["a"])
+  out: |
+    main:10: error: List item 0 has incompatible type "str"; expected "tuple[str, int]"  [list-item]
+
+- case: test_mypy_namedarray_permute_dims
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, Any, int] = NamedArray((1, 2), np.zeros((2, 3)))
+
+    reveal_type(x.permute_dims(2, 1).dims)  # N: Revealed type is "builtins.tuple[builtins.int, ...]"
+    reveal_type(x.permute_dims(2, ...).dims)  # N: Revealed type is "builtins.tuple[builtins.int, ...]"
+    reveal_type(x.T.dims)  # N: Revealed type is "builtins.tuple[builtins.int, ...]"
+    x.permute_dims("y")
+  out: |
+    main:11: error: Argument 1 to "permute_dims" of "NamedArray" has incompatible type "str"; expected "int | EllipsisType"  [arg-type]
+
+- case: test_mypy_namedarray_expand_dims
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, Any, int] = NamedArray((1,), np.zeros(2))
+
+    reveal_type(x.expand_dims(2).dims)  # N: Revealed type is "builtins.tuple[builtins.int, ...]"
+    # the default new dim name is a str
+    reveal_type(x.expand_dims().dims)  # N: Revealed type is "builtins.tuple[builtins.int | builtins.str, ...]"
+
+- case: test_mypy_namedarray_broadcast_to
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, Any, int] = NamedArray((1,), np.zeros(2))
+
+    reveal_type(x.broadcast_to({1: 2}).dims)  # N: Revealed type is "builtins.tuple[builtins.int, ...]"
+    x.broadcast_to({"x": 2})
+  out: |
+    main:9: error: Dict entry 0 has incompatible type "str": "int"; expected "int": "int"  [dict-item]
+
+- case: test_mypy_namedarray_array_api_keeps_dims
+  main: |
+    from typing import Any
+
+    import numpy as np
+    from xarray.namedarray._array_api import astype
+    from xarray.namedarray.core import NamedArray
+
+    x: NamedArray[Any, Any, tuple[str, int]] = NamedArray((("a", 1),), np.zeros(2))
+
+    reveal_type(astype(x, np.dtype(np.int64)).dims)  # N: Revealed type is "builtins.tuple[tuple[builtins.str, builtins.int], ...]"
+
+- case: test_mypy_variable_dims_are_hashable
+  main: |
+    from xarray import Variable
+
+    v = Variable(("x",), [1, 2])
+
+    reveal_type(v.dims)  # N: Revealed type is "builtins.tuple[typing.Hashable, ...]"
+    reveal_type(v.get_axis_num("x"))  # N: Revealed type is "builtins.int"
+    reveal_type(v.get_axis_num(("x", "y")))  # N: Revealed type is "builtins.tuple[builtins.int, ...]"
