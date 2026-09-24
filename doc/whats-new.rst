@@ -45,6 +45,14 @@ Breaking Changes
   the compatibility features with ``netCDF4`` that the harmonized encoding relies
   on (:issue:`10657`, :pull:`11067`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
+- :py:class:`~xarray.NamedArray` now takes three type parameters instead of two.
+  Type annotations like ``NamedArray[Any, np.dtype[np.float64]]`` have to be
+  updated to ``NamedArray[Any, np.dtype[np.float64], str]`` (or ``Hashable`` as the
+  dimension type). In addition, the type variables and aliases in
+  ``xarray.namedarray._typing`` lost their leading underscore, e.g. ``_ShapeType``
+  is now ``ShapeType``, ``_DType`` is now ``DType`` and ``_Shape`` is now ``Shape``
+  (:pull:`11223`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -134,6 +142,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- :py:class:`~xarray.NamedArray` is now generic in its dimension type, i.e.
+  ``NamedArray[ShapeType, DType, DimType]``, so static type checkers can infer and
+  check the type of dimension names (:pull:`11223`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.07.0:
