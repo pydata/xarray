@@ -25,6 +25,10 @@ New Features
   silently being written uncompressed (:issue:`10657`, :pull:`11067`).
   By `Mark Harfouche <https://github.com/hmaarrfk>`_.
 
+- Dataset, DataArray, and DataTree text and HTML reprs can include an Accessors
+  section for accessors registered via ``register_*_accessor`` that define a
+  custom ``__repr__``.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
