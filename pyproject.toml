@@ -29,8 +29,8 @@ dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 accel = [
   "scipy>=1.15",
   "bottleneck",
-  "numbagg>=0.9",
-  "numba>=0.62",  # numba 0.62 added support for numpy 2.3
+  "numbagg>=0.9,!=0.9.5", # 0.9.5 breaks dask.array.nanmedian
+  "numba>=0.62",          # numba 0.62 added support for numpy 2.3
   "flox>=0.10",
   "opt_einsum",
 ]

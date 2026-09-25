@@ -58,7 +58,7 @@ aiobotocore = "*"
 
 [feature.numba.dependencies]
 numba = "*"
-numbagg = "*"
+numbagg = "!=0.9.5" # 0.9.5 rejects list axes passed by dask.array.nanmedian
 
 [feature.dask.dependencies]
 dask = "*"
