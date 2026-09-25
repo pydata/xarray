@@ -1599,8 +1599,8 @@ class TestVariable(VariableSubclassobjects):
 
         # test missing dimension, raise warning
         with pytest.warns(UserWarning):
-            v.transpose(..., "not_a_dim", missing_dims="warn")
-            assert_identical(expected_ell, actual)
+            actual = v.transpose(..., "not_a_dim", missing_dims="warn")
+        assert_identical(expected_ell, actual)
 
     def test_transpose_0d(self):
         for value in [

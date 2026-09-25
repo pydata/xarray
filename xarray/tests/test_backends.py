@@ -835,7 +835,7 @@ class DatasetIOBase:
         original.attrs["coordinates"] = "foo"
         with pytest.warns(SerializationWarning):
             _, attrs = encode_dataset_coordinates(original)
-            assert attrs["coordinates"] == "foo"
+        assert attrs["coordinates"] == "foo"
 
     def test_roundtrip_coordinates_with_space(self) -> None:
         original = Dataset(coords={"x": 0, "y z": 1})
@@ -2860,9 +2860,9 @@ class ZarrBase(CFEncodedBase):
             kwargs = {"chunks": chunks}
             with pytest.warns(UserWarning):
                 with self.roundtrip(original, open_kwargs=kwargs) as actual:
-                    for k, v in actual.variables.items():
-                        # only index variables should be in memory
-                        assert v._in_memory == (k in actual.dims)
+                    in_memory = {k: v._in_memory for k, v in actual.variables.items()}
+            # only index variables should be in memory
+            assert in_memory == {k: k in actual.dims for k in actual.variables}
 
         good_chunks: tuple[dict[str, Any], ...] = ({"dim2": 3}, {"dim3": (6, 4)}, {})
         for chunks in good_chunks:
@@ -3424,41 +3424,43 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(original, actual)
 
     @requires_dask
+    # whether appending also warns about the object dtype depends on the zarr format
+    @pytest.mark.filterwarnings(
+        "ignore:variable None has data in the form of a dask array with dtype=object"
+    )
     def test_to_zarr_append_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
 
         ds, ds_to_append, _ = create_append_test_data()
         ds, ds_to_append = ds.chunk(), ds_to_append.chunk()
 
-        with pytest.warns(SerializationWarning):
-            with self.create_zarr_target() as store:
+        with self.create_zarr_target() as store:
+            with pytest.warns(SerializationWarning):
                 delayed_obj = self.save(ds, store, compute=False, mode="w")
-                assert isinstance(delayed_obj, Delayed)
+            assert isinstance(delayed_obj, Delayed)
 
-                with pytest.raises(AssertionError):
-                    with self.open(store) as actual:
-                        assert_identical(ds, actual)
-
-                delayed_obj.compute()
-
+            with pytest.raises(AssertionError):
                 with self.open(store) as actual:
                     assert_identical(ds, actual)
 
-                delayed_obj = self.save(
-                    ds_to_append, store, compute=False, append_dim="time"
-                )
-                assert isinstance(delayed_obj, Delayed)
+            delayed_obj.compute()
 
-                with pytest.raises(AssertionError):
-                    with self.open(store) as actual:
-                        assert_identical(
-                            xr.concat([ds, ds_to_append], dim="time"), actual
-                        )
+            with self.open(store) as actual:
+                assert_identical(ds, actual)
 
-                delayed_obj.compute()
+            delayed_obj = self.save(
+                ds_to_append, store, compute=False, append_dim="time"
+            )
+            assert isinstance(delayed_obj, Delayed)
 
+            with pytest.raises(AssertionError):
                 with self.open(store) as actual:
                     assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
+
+            delayed_obj.compute()
+
+            with self.open(store) as actual:
+                assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
 
     @pytest.mark.parametrize("chunk", [False, True])
     def test_save_emptydim(self, chunk) -> None:
@@ -5017,8 +5019,8 @@ class TestH5NetCDFData(NetCDF4Base):
                 f.title = title
             with pytest.warns(UnicodeWarning, match="returning bytes undecoded") as w:
                 ds = xr.load_dataset(tmp_file, engine="h5netcdf")
-                assert ds.title == title
-                assert "attribute 'title' of h5netcdf object '/'" in str(w[0].message)
+            assert ds.title == title
+            assert "attribute 'title' of h5netcdf object '/'" in str(w[0].message)
 
     def test_byte_attrs(self, byte_attrs_dataset: dict[str, Any]) -> None:
         with pytest.raises(ValueError, match=byte_attrs_dataset["h5netcdf_error"]):
@@ -5785,10 +5787,11 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                     FutureWarning, match="will change from compat='no_conflicts'"
                 ):
                     with expectation:
-                        with open_mfdataset(
+                        ds = open_mfdataset(
                             files, combine=combine, concat_dim=concat_dim, **kwargs
-                        ) as ds:
-                            assert_identical(ds, ds_expect)
+                        )
+                with ds:
+                    assert_identical(ds, ds_expect)
 
 
 @requires_dask
@@ -5972,19 +5975,20 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_with_warn(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
-        with pytest.warns(UserWarning, match=r"Ignoring."):
-            with create_tmp_files(2) as (tmp1, tmp2):
-                ds1 = original.isel(x=slice(5))
-                ds2 = original.isel(x=slice(5, 10))
-                ds1.to_netcdf(tmp1)
-                ds2.to_netcdf(tmp2)
-                with open_mfdataset(
+        with create_tmp_files(2) as (tmp1, tmp2):
+            ds1 = original.isel(x=slice(5))
+            ds2 = original.isel(x=slice(5, 10))
+            ds1.to_netcdf(tmp1)
+            ds2.to_netcdf(tmp2)
+            with pytest.warns(UserWarning, match=r"Ignoring."):
+                actual = open_mfdataset(
                     [tmp1, "non-existent-file.nc", tmp2],
                     concat_dim="x",
                     combine="nested",
                     errors="warn",
-                ) as actual:
-                    assert_identical(original, actual)
+                )
+            with actual:
+                assert_identical(original, actual)
 
     def test_open_mfdataset_2d_with_ignore(self) -> None:
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
@@ -6003,19 +6007,20 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_2d_with_warn(self) -> None:
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
-        with pytest.warns(UserWarning, match=r"Ignoring."):
-            with create_tmp_files(4) as (tmp1, tmp2, tmp3, tmp4):
-                original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
-                original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)
-                original.isel(x=slice(5), y=slice(4, 8)).to_netcdf(tmp3)
-                original.isel(x=slice(5, 10), y=slice(4, 8)).to_netcdf(tmp4)
-                with open_mfdataset(
+        with create_tmp_files(4) as (tmp1, tmp2, tmp3, tmp4):
+            original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
+            original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)
+            original.isel(x=slice(5), y=slice(4, 8)).to_netcdf(tmp3)
+            original.isel(x=slice(5, 10), y=slice(4, 8)).to_netcdf(tmp4)
+            with pytest.warns(UserWarning, match=r"Ignoring."):
+                actual = open_mfdataset(
                     [[tmp1, tmp2, "non-existent-file.nc"], [tmp3, tmp4]],
                     combine="nested",
                     concat_dim=["y", "x"],
                     errors="warn",
-                ) as actual:
-                    assert_identical(original, actual)
+                )
+            with actual:
+                assert_identical(original, actual)
 
     def test_attrs_mfdataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
@@ -6985,9 +6990,10 @@ def test_use_cftime_standard_calendar_default_out_of_range(calendar) -> None:
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
         with pytest.warns(SerializationWarning):
-            with open_dataset(tmp_file) as ds:
-                assert_identical(expected_x, ds.x)
-                assert_identical(expected_time, ds.time)
+            ds = open_dataset(tmp_file)
+        with ds:
+            assert_identical(expected_x, ds.x)
+            assert_identical(expected_time, ds.time)
 
 
 @requires_cftime
