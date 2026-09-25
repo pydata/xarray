@@ -53,6 +53,12 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`Dataset.update` (also used by ``__setitem__`` and ``assign``) now keeps
+  the Dataset's own index and coordinate variable, including attributes and dtype,
+  when an incoming object supplies an equal indexed coordinate. Previously, an
+  incoming default index could silently replace a custom index. Explicit keys
+  in an update mapping still replace the coordinate (:pull:`11621`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).

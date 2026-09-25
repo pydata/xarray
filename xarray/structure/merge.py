@@ -703,6 +703,7 @@ def merge_core(
     indexes: Mapping[Any, Any] | None = None,
     fill_value: object = dtypes.NA,
     skip_align_args: list[int] | None = None,
+    priority_overrides: Iterable[Mapping[Hashable, MergeElement]] | None = None,
 ) -> _MergeResult:
     """Core logic for merging labeled objects.
 
@@ -730,6 +731,9 @@ def merge_core(
         Value to use for newly missing values
     skip_align_args : list of int, optional
         Optional arguments in `objects` that are not included in alignment.
+    priority_overrides : iterable of mappings, optional
+        Apply each index group all-or-nothing when its variables are broadcast-equal
+        to all collected variables of the same names, bypassing their compat check.
 
     Returns
     -------
@@ -767,6 +771,19 @@ def merge_core(
 
     collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
+    for group in priority_overrides or ():
+        if not any(len(collected.get(name, [])) > 1 for name in group):
+            prioritized.update(group)
+            continue
+        if all(
+            indexes_equal(index, other_index, variable, other_var)
+            if index is not None and other_index is not None
+            else other_var is variable or variable.broadcast_equals(other_var)
+            for name, (variable, index) in group.items()
+            # The first collected variable comes from the aligned Dataset.
+            for other_var, other_index in collected.get(name, [])[1:]
+        ):
+            prioritized.update(group)
     variables, out_indexes = merge_collected(
         collected,
         prioritized,
@@ -1201,8 +1218,10 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
+    explicit_keys: set[Hashable] = set()
     if not isinstance(other, Dataset):
         other = dict(other)
+        explicit_keys = set(other)
         for key, value in other.items():
             if isinstance(value, DataArray):
                 # drop conflicting coordinates
@@ -1218,6 +1237,12 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
                     value = value._replace(variable=variable)
                 other[key] = value
 
+    priority_overrides = [
+        {name: (variable, index) for name, variable in coords.items()}
+        for index, coords in dataset.xindexes.group_by_index()
+        if not explicit_keys.intersection(coords)
+    ]
+
     return merge_core(
         [dataset, other],
         compat="broadcast_equals",
@@ -1225,6 +1250,7 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
         priority_arg=1,
         indexes=dataset.xindexes,
         combine_attrs="override",
+        priority_overrides=priority_overrides,
     )
 
 
