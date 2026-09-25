@@ -85,7 +85,7 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     )
     with pytest.warns(SerializationWarning, match="has multiple fill"):
         actual = conventions.decode_cf_variable("t", var)
-        assert_identical(actual, expected)
+    assert_identical(actual, expected)
 
     expected = Variable(["t"], np.arange(10), {"units": "foobar"})
 
@@ -434,7 +434,7 @@ class TestDecodeCF:
             _vars, _attrs, coords = conventions.decode_cf_variables(
                 original.variables, {}, decode_coords="all"
             )
-            assert coords == {"lat", "lon", "crs", "crs2"}
+        assert coords == {"lat", "lon", "crs", "crs2"}
 
     def test_0d_int32_encoding(self) -> None:
         original = Variable((), np.int32(0), encoding={"dtype": "int64"})
@@ -447,7 +447,7 @@ class TestDecodeCF:
         expected = Variable(["t"], [np.nan, np.nan, 2], {})
         with pytest.warns(SerializationWarning, match="has multiple fill"):
             actual = conventions.decode_cf_variable("t", original)
-            assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_decode_cf_with_drop_variables(self) -> None:
         original = Dataset(
