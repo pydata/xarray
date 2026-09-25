@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, Union, overload
 import numpy as np
 import pandas as pd
 
+from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import dtypes, utils
 from xarray.core.coordinates import Coordinates
 from xarray.core.duck_array_ops import lazy_array_equiv
@@ -363,13 +364,11 @@ def _calc_concat_dim_index(
         else:
             (dim,) = dim_or_data.dims
         coord_dtype = getattr(dim_or_data, "dtype", None)
-        # pandas may produce a StringDtype-backed Index, which xarray does
-        # not treat as an allowed extension array dtype for coords. Let
-        # PandasIndex compute a valid numpy coord_dtype in that case so a
-        # subsequent concat against a numpy-string-dtype coord does not fail
-        # in ``np.result_type``. See GH#11317.
-        if isinstance(coord_dtype, pd.StringDtype):
-            coord_dtype = None
+        if HAS_STRING_DTYPE and isinstance(coord_dtype, pd.StringDtype):
+            # pandas 3 gives a string pd.Index a StringDtype, which is not a
+            # dtype PandasIndex would pick for itself, so map it to the numpy
+            # string dtype the same way PandasIndexingAdapter does (GH#11317)
+            coord_dtype = np.dtypes.StringDType(na_object=coord_dtype.na_value)
         index = PandasIndex(dim_or_data, dim, coord_dtype=coord_dtype)
 
     return dim, index
