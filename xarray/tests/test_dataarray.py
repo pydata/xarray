@@ -2920,6 +2920,11 @@ class TestDataArray:
     def test_squeeze(self) -> None:
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
 
+    def test_squeeze_non_str_dim_name(self) -> None:
+        array = DataArray(np.zeros((1, 3)), dims=[0, "y"])
+        expected = DataArray(np.zeros(3), dims=["y"])
+        assert_identical(array.squeeze(), expected)
+
     def test_squeeze_drop(self) -> None:
         array = DataArray([1], [("x", [0])])
         expected = DataArray(1)
