@@ -220,6 +220,17 @@ class TestPlot(PlotTestCase):
         da.attrs = dict(long_name=long_latex_name)
         assert label_from_attrs(da) == long_latex_name
 
+        # Regression test for GH#11452: LaTeX labels with units should not be
+        # broken by textwrap, which can produce invalid "$$" sequences when
+        # the wrap point falls between two adjacent $...$ blocks.
+        da.attrs = dict(
+            long_name=r"$\frac{\mathrm{x}}{\mathrm{A}}$",
+            units=r"$\mathrm{m~hello~very~long}$",
+        )
+        result = label_from_attrs(da)
+        assert "\n" not in result
+        assert "$$" not in result
+
     def test1d(self) -> None:
         self.darray[:, 0, 0].plot()  # type: ignore[call-arg]
 
@@ -562,11 +573,11 @@ class TestPlot(PlotTestCase):
         # Check for 2d arrays
         x = np.logspace(-4, 3, 8)
         y = np.linspace(-5, 5, 11)
-        x, y = np.meshgrid(x, y)
+        x2d, _ = np.meshgrid(x, y)
         expected_interval_breaks = np.vstack([10 ** np.linspace(-4.5, 3.5, 9)] * 12)
-        x = _infer_interval_breaks(x, axis=1, scale="log")
-        x = _infer_interval_breaks(x, axis=0, scale="log")
-        np.testing.assert_allclose(x, expected_interval_breaks)
+        x2d = _infer_interval_breaks(x2d, axis=1, scale="log")
+        x2d = _infer_interval_breaks(x2d, axis=0, scale="log")
+        np.testing.assert_allclose(x2d, expected_interval_breaks)
 
     def test__infer_interval_breaks_logscale_invalid_coords(self) -> None:
         """
@@ -1685,7 +1696,7 @@ class Common2dMixin:
     def test_facetgrid_col_wrap_auto(
         self,
         n: int,
-        figsize: None | tuple[int, int],
+        figsize: tuple[int, int] | None,
         aspect: int,
         expected_shape: tuple[int, int],
     ) -> None:
@@ -3485,16 +3496,16 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 
 @requires_matplotlib
 def test_facetgrid_axes_raises_deprecation_warning() -> None:
-    with pytest.warns(
-        FutureWarning,
-        match=(
-            "self.axes is deprecated since 2022.11 in order to align with "
-            "matplotlibs plt.subplots, use self.axs instead."
-        ),
-    ):
-        with figure_context():
-            ds = xr.tutorial.scatter_example_dataset()
-            g = ds.plot.scatter(x="A", y="B", col="x")
+    with figure_context():
+        ds = xr.tutorial.scatter_example_dataset()
+        g = ds.plot.scatter(x="A", y="B", col="x")
+        with pytest.warns(
+            FutureWarning,
+            match=(
+                "self.axes is deprecated since 2022.11 in order to align with "
+                "matplotlibs plt.subplots, use self.axs instead."
+            ),
+        ):
             _ = g.axes
 
 

@@ -486,6 +486,15 @@ class TestDataArrayRolling:
         result = bool_raster.rolling(x=3, center=True).mean()
         assert_allclose(result, expected)
 
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    def test_rolling_keepdims_warns(self, func) -> None:
+        da = DataArray(np.arange(10), dims="x")
+        with pytest.warns(
+            FutureWarning,
+            match="Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+        ):
+            getattr(da.rolling(x=3), func)(keepdims=True)
+
 
 @requires_numbagg
 class TestDataArrayRollingExp:
@@ -925,6 +934,15 @@ class TestDatasetRolling:
         actual = getattr(rolling_obj, name)()
         expected = getattr(getattr(ds.rolling(time=4), name)().rolling(x=3), name)()
         assert_allclose(actual, expected)
+
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    def test_rolling_keepdims_warns(self, func) -> None:
+        ds = Dataset({"da": ("x", np.arange(10))})
+        with pytest.warns(
+            FutureWarning,
+            match="Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+        ):
+            getattr(ds.rolling(x=3), func)(keepdims=True)
 
 
 @requires_numbagg

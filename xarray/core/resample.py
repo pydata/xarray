@@ -264,7 +264,6 @@ class DataArrayResample(
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
-        keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
     ) -> DataArray:
@@ -297,7 +296,6 @@ class DataArrayResample(
             dim=dim,
             axis=axis,
             keep_attrs=keep_attrs,
-            keepdims=keepdims,
             shortcut=shortcut,
             **kwargs,
         )
@@ -471,7 +469,6 @@ class DatasetResample(
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
-        keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
     ) -> Dataset:
@@ -504,7 +501,6 @@ class DatasetResample(
             dim=dim,
             axis=axis,
             keep_attrs=keep_attrs,
-            keepdims=keepdims,
             shortcut=shortcut,
             **kwargs,
         )

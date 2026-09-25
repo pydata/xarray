@@ -85,7 +85,7 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     )
     with pytest.warns(SerializationWarning, match="has multiple fill"):
         actual = conventions.decode_cf_variable("t", var)
-        assert_identical(actual, expected)
+    assert_identical(actual, expected)
 
     expected = Variable(["t"], np.arange(10), {"units": "foobar"})
 
@@ -172,6 +172,27 @@ class TestEncodeCFVariable:
         assert any(
             "invalid value encountered in cast" in msg for msg in warning_messages
         )
+
+    def test_missing_fillvalue_coordinate_variable(self) -> None:
+        # regression test for GH10305
+        # CF coordinate variables cannot have missing values, so they do not
+        # need a _FillValue and should not warn about one being absent
+        v = Variable(["x"], np.array([0.0, 1.0, 2.0]), encoding={"dtype": "int16"})
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            encoded = conventions.encode_cf_variable(v, name="x")
+        assert encoded.dtype == np.dtype("int16")
+
+    def test_missing_fillvalue_non_coordinate_variable(self) -> None:
+        # data variables and multidimensional (auxiliary) coordinates may hold
+        # missing values, so they still warn
+        v = Variable(["x"], np.array([0.0, 1.0, 2.0]), encoding={"dtype": "int16"})
+        with pytest.warns(SerializationWarning, match="floating point data"):
+            conventions.encode_cf_variable(v, name="data")
+
+        v2d = Variable(["y", "x"], np.zeros((2, 3)), encoding={"dtype": "int16"})
+        with pytest.warns(SerializationWarning, match="floating point data"):
+            conventions.encode_cf_variable(v2d, name="lat")
 
     def test_multidimensional_coordinates(self) -> None:
         # regression test for GH1763
@@ -413,7 +434,7 @@ class TestDecodeCF:
             _vars, _attrs, coords = conventions.decode_cf_variables(
                 original.variables, {}, decode_coords="all"
             )
-            assert coords == {"lat", "lon", "crs", "crs2"}
+        assert coords == {"lat", "lon", "crs", "crs2"}
 
     def test_0d_int32_encoding(self) -> None:
         original = Variable((), np.int32(0), encoding={"dtype": "int64"})
@@ -426,7 +447,7 @@ class TestDecodeCF:
         expected = Variable(["t"], [np.nan, np.nan, 2], {})
         with pytest.warns(SerializationWarning, match="has multiple fill"):
             actual = conventions.decode_cf_variable("t", original)
-            assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_decode_cf_with_drop_variables(self) -> None:
         original = Dataset(

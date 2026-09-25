@@ -550,9 +550,12 @@ def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
 
     # Treat `name` differently if it's a latex sequence
     if name.startswith("$") and (name.count("$") % 2 == 0):
-        return "$\n$".join(
-            textwrap.wrap(name + extra + units, 60, break_long_words=False)
-        )
+        # Don't wrap LaTeX strings — textwrap can break them at positions
+        # that produce invalid LaTeX (e.g., splitting between adjacent
+        # $...$ blocks creates "$$" sequences). The rendered width of LaTeX
+        # is typically much shorter than the source string length, so
+        # wrapping based on character count is misleading anyway.
+        return name + extra + units
     else:
         return "\n".join(textwrap.wrap(name + extra + units, 30))
 

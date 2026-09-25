@@ -289,6 +289,26 @@ class TestCoordinates:
         assert set(actual.dims) == {"x", "y"}
         assert set(actual.variables) == {"a", "u", "v"}
 
+    def test_coordinates_as_coord_value(self) -> None:
+        # a Coordinates object must be passed directly, not as a value of a
+        # mapping of coordinate names (GH10194)
+        ds = Dataset({"foo": ("x", [1, 2, 3])})
+        coords = Coordinates({"x": [4, 5, 6]})
+
+        with pytest.raises(TypeError, match=r"Using a Coordinates object"):
+            ds.assign_coords({"x": coords})
+        with pytest.raises(TypeError, match=r"Using a Coordinates object"):
+            ds.foo.assign_coords({"x": coords})
+        with pytest.raises(TypeError, match=r"Using a Coordinates object"):
+            Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": coords})
+        with pytest.raises(TypeError, match=r"Using a Coordinates object"):
+            DataArray([1, 2, 3], dims="x", coords={"x": coords})
+
+        # passing it directly still works and keeps the index
+        actual = ds.assign_coords(coords)
+        assert_identical(actual, Dataset({"foo": ("x", [1, 2, 3])}, coords=coords))
+        assert "x" in actual.xindexes
+
     def test_operator_merge(self) -> None:
         coords1 = Coordinates({"x": ("x", [0, 1, 2])})
         coords2 = Coordinates({"y": ("y", [3, 4, 5])})

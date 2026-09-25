@@ -12,7 +12,14 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
+from xarray import (
+    Coordinates,
+    DataArray,
+    Dataset,
+    IndexVariable,
+    Variable,
+    set_options,
+)
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.extension_array import PandasExtensionArray
@@ -1273,6 +1280,10 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(TypeError):
             as_variable(("x", DataArray([])))
 
+        # GH10194
+        with pytest.raises(TypeError, match=r"Using a Coordinates object"):
+            as_variable(Coordinates({"x": [1, 2, 3]}), name="x")
+
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
         v = v.astype(np.uint64)
@@ -1588,8 +1599,8 @@ class TestVariable(VariableSubclassobjects):
 
         # test missing dimension, raise warning
         with pytest.warns(UserWarning):
-            v.transpose(..., "not_a_dim", missing_dims="warn")
-            assert_identical(expected_ell, actual)
+            actual = v.transpose(..., "not_a_dim", missing_dims="warn")
+        assert_identical(expected_ell, actual)
 
     def test_transpose_0d(self):
         for value in [
@@ -1910,7 +1921,12 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim",
-        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
+        [
+            pytest.param(None, None, id="none"),
+            pytest.param(0, "x", id="x"),
+            pytest.param([0], ["x"], id="list-x"),
+            pytest.param([0, 1], ["x", "y"], id="list-x-y"),
+        ],
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()

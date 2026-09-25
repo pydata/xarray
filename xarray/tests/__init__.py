@@ -50,6 +50,10 @@ warnings.filterwarnings("ignore", "'urllib3.contrib.pyopenssl' module is depreca
 warnings.filterwarnings("ignore", "Deprecated call to `pkg_resources.declare_namespace")
 warnings.filterwarnings("ignore", "pkg_resources is deprecated as an API")
 warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
+# flox builds NaT dtypes at import time; numpy deprecated the generic timedelta unit
+warnings.filterwarnings(
+    "ignore", "The 'generic' unit for NumPy timedelta is deprecated"
+)
 
 arm_xfail = pytest.mark.xfail(
     platform.machine() == "aarch64" or "arm" in platform.machine(),
@@ -177,6 +181,7 @@ has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_pyarrow, requires_pyarrow = _importorskip("pyarrow")
+has_polars, requires_polars = _importorskip("polars")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -193,7 +198,7 @@ has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_netcdf, requires_netcdf = _importorskip("netcdf")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0")
-
+has_pandas_3_1, requires_pandas_3_1 = _importorskip("pandas", "3.1.0.dev0")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
