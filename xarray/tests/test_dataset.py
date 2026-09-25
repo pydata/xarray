@@ -639,7 +639,11 @@ class TestDataset:
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("level_1", "level_2")
         )
-        for coords in [{"x": mindex, "y": mindex}, {"x": mindex, "level_1": range(4)}]:
+        conflicting_coords: list[dict[str, Any]] = [
+            {"x": mindex, "y": mindex},
+            {"x": mindex, "level_1": range(4)},
+        ]
+        for coords in conflicting_coords:
             with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
                 with pytest.warns(
                     FutureWarning,
