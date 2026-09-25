@@ -53,6 +53,12 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`Dataset.reduce`, :py:meth:`Dataset.quantile` and
+  :py:meth:`Dataset.integrate` no longer keep an index spanning several
+  coordinates on the surviving coordinates when a reduced dimension removes one
+  of them; the index is dropped entirely, matching :py:class:`DataArray`
+  (:pull:`11616`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
