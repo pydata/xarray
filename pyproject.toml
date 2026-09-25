@@ -29,8 +29,8 @@ dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 accel = [
   "scipy>=1.15",
   "bottleneck",
-  "numbagg>=0.9",
-  "numba>=0.62",  # numba 0.62 added support for numpy 2.3
+  "numbagg>=0.9,!=0.9.5", # 0.9.5 breaks dask.array.nanmedian
+  "numba>=0.62",          # numba 0.62 added support for numpy 2.3
   "flox>=0.10",
   "opt_einsum",
 ]
@@ -171,6 +171,14 @@ module = [
   "numpy.exceptions.*", # remove once support for `numpy<2.0` has been dropped
   "array_api_strict.*",
 ]
+
+# pint>=0.26's annotations send mypy into infinite recursion (segfault / RecursionError)
+# when optype is installed, so don't analyse pint at all.
+# Fixed upstream in https://github.com/python/mypy/pull/22036; remove this override
+# once we require mypy > 2.3.1.
+[[tool.mypy.overrides]]
+follow_imports = "skip"
+module = ["pint.*"]
 
 # Gradually we want to add more modules to this list, ratcheting up our total
 # coverage. Once a module is here, functions are checked by mypy regardless of
