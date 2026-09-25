@@ -59,7 +59,7 @@ def module_available(module: str, minversion: str | None = None) -> bool:
 
     if minversion is not None:
         version = importlib.metadata.version(module)
-        
+
         if version is None:
             return False
 

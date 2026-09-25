@@ -400,8 +400,10 @@ def test_attempt_import() -> None:
         attempt_import(module="foo")
     with pytest.raises(ImportError, match="The foo package is required"):
         attempt_import(module="foo.bar")
+
+
 def test_module_available_handles_none_version(monkeypatch):
     from xarray.namedarray.utils import module_available
-    
+
     monkeypatch.setattr("importlib.metadata.version", lambda name: None)
     assert module_available("somepkg", minversion="1.0") is False
