@@ -405,7 +405,9 @@ _EQ_TESTS_B = [
 ]
 
 
-@pytest.mark.parametrize(("a", "b"), product(_EQ_TESTS_A, _EQ_TESTS_B), ids=_id_func)
+@pytest.mark.parametrize(
+    ("a", "b"), list(product(_EQ_TESTS_A, _EQ_TESTS_B)), ids=_id_func
+)
 def test_neq(a, b):
     assert a != b
 
@@ -432,7 +434,7 @@ _EQ_TESTS_B_COPY = [
 
 
 @pytest.mark.parametrize(
-    ("a", "b"), zip(_EQ_TESTS_B, _EQ_TESTS_B_COPY, strict=True), ids=_id_func
+    ("a", "b"), list(zip(_EQ_TESTS_B, _EQ_TESTS_B_COPY, strict=True)), ids=_id_func
 )
 def test_eq(a, b):
     assert a == b
@@ -602,7 +604,7 @@ def test_sub_error(offset, calendar):
 
 
 @pytest.mark.parametrize(
-    ("a", "b"), zip(_EQ_TESTS_A, _EQ_TESTS_B, strict=True), ids=_id_func
+    ("a", "b"), list(zip(_EQ_TESTS_A, _EQ_TESTS_B, strict=True)), ids=_id_func
 )
 def test_minus_offset(a, b):
     result = b - a

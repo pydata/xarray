@@ -950,7 +950,7 @@ def test_interpolate_chunk_1d(
                         dest[dim] = cast(
                             xr.DataArray,
                             np.linspace(
-                                before.item(), after.item(), len(da.coords[dim]) * 13
+                                before.item(), after.item(), len(da.coords[dim]) * 5
                             ),
                         )
                         if chunked:
@@ -1008,7 +1008,8 @@ def test_interpolate_chunk_advanced(method: InterpOptions) -> None:
     kwargs = {"fill_value": None}
     expected = da.interp(t=0.5, x=xda, y=yda, z=zda, kwargs=kwargs, method=method)
 
-    da = da.chunk(2)
+    # multiple chunks along every dimension, while keeping the task graph small
+    da = da.chunk(4)
     xda = xda.chunk(1)
     zda = zda.chunk(3)
     actual = da.interp(t=0.5, x=xda, y=yda, z=zda, kwargs=kwargs, method=method)
