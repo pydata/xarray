@@ -132,14 +132,12 @@ exclude = ['build', 'xarray/util/generate_.*\.py']
 files = "xarray"
 show_error_context = true
 warn_redundant_casts = true
-warn_unused_configs = true
 warn_unused_ignores = true
 
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-  "affine.*",
   "bottleneck.*",
   "cartopy.*",
   "cf_units.*",
@@ -155,7 +153,6 @@ module = [
   "mpl_toolkits.*",
   "nc_time_axis.*",
   "netCDF4.*",
-  "netcdftime.*",
   "numcodecs.*",
   "opt_einsum.*",
   "pint.*",
