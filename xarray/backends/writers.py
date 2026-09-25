@@ -429,7 +429,11 @@ def to_netcdf(
         auto_complex=auto_complex,
     )
     if group is not None:
-        store = store.get_child_store(group)
+        try:
+            store = store.get_child_store(group)
+        except Exception:
+            store.close()
+            raise
 
     writer = ArrayWriter()
 

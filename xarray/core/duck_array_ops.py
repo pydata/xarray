@@ -773,8 +773,11 @@ def mean(array, axis=None, skipna=None, **kwargs):
     if dtypes.is_datetime_like(array.dtype):
         dmin = _datetime_nanreduce(array, min).astype("datetime64[Y]").astype(int)
         dmax = _datetime_nanreduce(array, max).astype("datetime64[Y]").astype(int)
+        # midpoint computed without overflowing if both are NaT (i.e. int64 min)
         offset = (
-            np.array((dmin + dmax) // 2).astype("datetime64[Y]").astype(array.dtype)
+            np.array(dmin + (dmax - dmin) // 2)
+            .astype("datetime64[Y]")
+            .astype(array.dtype)
         )
         # From version 2025.01.2 xarray uses np.datetime64[unit], where unit
         # is one of "s", "ms", "us", "ns".

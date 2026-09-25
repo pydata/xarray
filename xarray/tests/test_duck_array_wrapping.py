@@ -455,6 +455,8 @@ class TestDataArrayMethods(_BaseTest):
         result = self.x.argsort()
         assert isinstance(result.data, self.Array)
 
+    # only checks the array type, the data contains NaN
+    @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
     def test_astype(self):
         result = self.x.astype(int)
         assert isinstance(result.data, self.Array)

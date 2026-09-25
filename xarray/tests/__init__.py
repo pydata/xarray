@@ -198,7 +198,7 @@ has_numexpr, requires_numexpr = _importorskip("numexpr")
 has_flox, requires_flox = _importorskip("flox")
 has_netcdf, requires_netcdf = _importorskip("netcdf")
 has_pandas_3, requires_pandas_3 = _importorskip("pandas", "3.0.0")
-
+has_pandas_3_1, requires_pandas_3_1 = _importorskip("pandas", "3.1.0.dev0")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
