@@ -1431,6 +1431,66 @@ def test_date_range(
     assert isinstance(dr, expected_type)
 
 
+@pytest.mark.parametrize(
+    "start,end,periods,expected",
+    [
+        (
+            cftime.DatetimeGregorian(2020, 1, 1),
+            cftime.DatetimeGregorian(2020, 1, 3),
+            None,
+            [
+                cftime.DatetimeGregorian(2020, 1, 1),
+                cftime.DatetimeGregorian(2020, 1, 2),
+                cftime.DatetimeGregorian(2020, 1, 3),
+            ],
+        ),
+        (
+            cftime.DatetimeGregorian(2020, 1, 1),
+            None,
+            3,
+            [
+                cftime.DatetimeGregorian(2020, 1, 1),
+                cftime.DatetimeGregorian(2020, 1, 2),
+                cftime.DatetimeGregorian(2020, 1, 3),
+            ],
+        ),
+        (
+            None,
+            cftime.DatetimeGregorian(2020, 1, 3),
+            3,
+            [
+                cftime.DatetimeGregorian(2020, 1, 1),
+                cftime.DatetimeGregorian(2020, 1, 2),
+                cftime.DatetimeGregorian(2020, 1, 3),
+            ],
+        ),
+    ],
+)
+def test_date_range_cftime_inputs(start, end, periods, expected) -> None:
+    result = date_range(
+        start=start,
+        end=end,
+        periods=periods,
+        freq="D",
+        calendar="standard",
+        use_cftime=None,
+    )
+
+    assert isinstance(result, CFTimeIndex)
+    np.testing.assert_equal(result.values, expected)
+
+
+@pytest.mark.parametrize("kwargs", [{"use_cftime": False}, {"tz": "UTC"}])
+def test_date_range_cftime_inputs_use_pandas(kwargs) -> None:
+    with pytest.raises(TypeError, match="Cannot convert input"):
+        date_range(
+            start=cftime.DatetimeGregorian(2020, 1, 1),
+            periods=2,
+            freq="D",
+            **kwargs,
+        )
+
+
 def test_date_range_errors() -> None:
     with pytest.raises(ValueError, match="Date range is invalid"):
         date_range(
