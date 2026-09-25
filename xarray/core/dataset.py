@@ -65,6 +65,7 @@ from xarray.core.indexes import (
     PandasMultiIndex,
     assert_no_index_corrupted,
     create_default_index_implicit,
+    drop_scalar_index_coords,
     filter_indexes_from_coords,
     isel_indexes,
     remove_unused_levels_categories,
@@ -2931,6 +2932,10 @@ class Dataset(
         coord_names = self._coord_names.copy()
 
         indexes, index_variables = isel_indexes(self.xindexes, indexers)
+        if drop:
+            drop_scalar_index_coords(
+                indexes, index_variables, self._variables, indexers
+            )
 
         for name, var in self._variables.items():
             # preserve variable order
@@ -2967,6 +2972,10 @@ class Dataset(
 
         variables: dict[Hashable, Variable] = {}
         indexes, index_variables = isel_indexes(self.xindexes, valid_indexers)
+        if drop:
+            drop_scalar_index_coords(
+                indexes, index_variables, self._variables, valid_indexers
+            )
 
         for name, var in self.variables.items():
             if name in index_variables:

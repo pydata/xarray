@@ -53,6 +53,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`Dataset.isel` and :py:meth:`Dataset.sel` now honor ``drop=True``
+  when a custom index preserves selected coordinates as scalars. They now raise
+  when only some of an index's coordinates would be dropped, instead of
+  silently keeping them (:pull:`11617`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).

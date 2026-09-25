@@ -36,6 +36,7 @@ from xarray.core.indexes import (
     Index,
     Indexes,
     PandasMultiIndex,
+    drop_scalar_index_coords,
     filter_indexes_from_coords,
     isel_indexes,
 )
@@ -1698,6 +1699,8 @@ class DataArray(
 
         variable = self._variable.isel(indexers, missing_dims=missing_dims)
         indexes, index_variables = isel_indexes(self.xindexes, indexers)
+        if drop:
+            drop_scalar_index_coords(indexes, index_variables, self._coords, indexers)
 
         coords = {}
         for coord_name, coord_value in self._coords.items():
