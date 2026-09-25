@@ -1603,6 +1603,74 @@ def test_map_blocks_hlg_layers():
     xr.testing.assert_equal(mapped, ds)
 
 
+def test_map_blocks_coords_shared_across_calls():
+    # regression test: repeated map_blocks calls over the same object must
+    # share their coordinate tasks. The key for a coordinate slice used to
+    # include ``gname``, which varies with func/args/kwargs, so every call
+    # shipped its own copy of the coordinates - making the graph grow linearly
+    # in the number of calls even though the coordinate data never changes.
+    da = xr.DataArray(
+        dask.array.zeros((20, 20), chunks=(5, 5)),
+        coords={"x": np.arange(20) * 1.0, "y": np.arange(20) * 1.0},
+        dims=["x", "y"],
+        name="a",
+    )
+
+    def coord_keys(graph):
+        return {k[0] for k in graph if str(k[0]).startswith(("x-", "y-"))}
+
+    # Same object and function, but different (non-dask) arguments, which is
+    # what makes gname differ between the two calls.
+    first = da.map_blocks(lambda obj, arg: obj, args=["one"], template=da)
+    second = da.map_blocks(lambda obj, arg: obj, args=["two"], template=da)
+
+    shared = coord_keys(dict(first.data.dask)) & coord_keys(dict(second.data.dask))
+    assert shared, "coordinate tasks should be reused across map_blocks calls"
+
+    merged = {**dict(first.data.dask), **dict(second.data.dask)}
+    # 4 chunks per dimension, one task per distinct slice, for x and y.
+    assert len(coord_keys(merged)) == 8
+
+    xr.testing.assert_equal(first.compute(), da.compute())
+    xr.testing.assert_equal(second.compute(), da.compute())
+
+
+def test_map_blocks_coords_distinct_when_variables_differ():
+    # Coordinate tasks are keyed on the variable's own token, so two objects
+    # with a same-named coordinate must never share a key when the coordinate
+    # differs in length, values or dtype - otherwise one would silently serve
+    # the other's data.
+    def make(values):
+        return xr.DataArray(
+            dask.array.zeros(len(values), chunks=5),
+            coords={"x": values},
+            dims=["x"],
+            name="a",
+        )
+
+    def coord_keys(obj):
+        graph = dict(obj.map_blocks(lambda o: o, template=obj).data.dask)
+        return {k[0] for k in graph if str(k[0]).startswith("x-")}
+
+    different_length = make(np.arange(20) * 1.0), make(np.arange(40) * 1.0)
+    different_values = make(np.arange(20) * 1.0), make(np.arange(20) * 7.0)
+    different_dtype = (
+        make(np.arange(20, dtype="float64")),
+        make(np.arange(20, dtype="int64")),
+    )
+    for first, second in (different_length, different_values, different_dtype):
+        assert not (coord_keys(first) & coord_keys(second))
+
+    # ... and computing both in one dask call gives each its own coordinates.
+    small, large = different_length
+    got_small, got_large = dask.compute(
+        small.map_blocks(lambda o: o + o.x, template=small),
+        large.map_blocks(lambda o: o + o.x, template=large),
+    )
+    np.testing.assert_array_equal(got_small.values, np.arange(20) * 1.0)
+    np.testing.assert_array_equal(got_large.values, np.arange(40) * 1.0)
+
+
 def test_make_meta(map_ds):
     from xarray.core.parallel import make_meta
 
