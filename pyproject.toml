@@ -298,6 +298,13 @@ ignore = [
   "RUF003",  # comment contains ambiguous no-break space unicode character
   "RUF005",  # consider unpacking operator instead of concatenation
   "RUF012",  # mutable class attributes
+  # rules added to the default set in ruff 0.16
+  "BLE001", # blind `except Exception`: used on purpose, e.g. in print_versions
+  "DTZ001", # `datetime()` without `tzinfo`: xarray works with naive datetimes
+  "N999",   # invalid module name: `netCDF4_`
+  "S110",   # `try`-`except`-`pass`
+  "TRY002", # raising vanilla `Exception`
+  "TRY004", # prefer `TypeError`: switching would change the raised exceptions
 ]
 
 [tool.ruff.lint.per-file-ignores]

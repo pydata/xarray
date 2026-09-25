@@ -1491,7 +1491,7 @@ class Dataset(
                             f" been successfully updated:\n{processed}"
                         ) from e
                     else:
-                        raise e
+                        raise
 
         elif utils.hashable(key):
             if isinstance(value, Dataset):
