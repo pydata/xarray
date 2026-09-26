@@ -53,6 +53,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
+  empty results when rolling an empty dimension, including with
+  ``roll_coords=True``, instead of raising ``ZeroDivisionError`` (:pull:`11613`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
