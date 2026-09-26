@@ -2685,6 +2685,12 @@ class ZarrBase(CFEncodedBase):
     def test_encoding_unlimited_dims(self) -> None:
         super().test_encoding_unlimited_dims()
 
+    @skip_if_zarr_format_3(
+        "endian support requires zarr-python>=3.1", condition=not has_zarr_v3_dtypes
+    )
+    def test_roundtrip_endian(self) -> None:
+        super().test_roundtrip_endian()
+
     def create_zarr_target(self):
         raise NotImplementedError
 
