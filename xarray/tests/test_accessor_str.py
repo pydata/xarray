@@ -381,6 +381,28 @@ def test_replace(dtype) -> None:
     assert_equal(result, expected)
 
 
+def test_replace_n_zero(dtype) -> None:
+    # ``n=0`` means "make no replacements", for regex and literal patterns alike
+    values = xr.DataArray(["fooBAD__barBAD"], dims=["x"]).astype(dtype)
+
+    result = values.str.replace("BAD[_]*", "", n=0)
+    assert result.dtype == values.dtype
+    assert_equal(result, values)
+
+    result = values.str.replace("BAD", "", n=0, regex=False)
+    assert result.dtype == values.dtype
+    assert_equal(result, values)
+
+    # ``n`` is broadcast, so a single zero must not spill over to its neighbours
+    n = xr.DataArray([0, 1, -1], dims=["y"])
+    result = values.str.replace("BAD[_]*", "", n=n)
+    expected = xr.DataArray(
+        [["fooBAD__barBAD", "foobarBAD", "foobar"]], dims=["x", "y"]
+    ).astype(dtype)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+
 def test_replace_callable() -> None:
     values = xr.DataArray(["fooBAD__barBAD"])
 
