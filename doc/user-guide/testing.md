@@ -73,17 +73,18 @@ To see an example of what each of these strategies might produce, you can call o
 which is a general hypothesis method valid for all strategies.
 
 ```{code-cell}
+import hypothesis.strategies as st
 import xarray.testing.strategies as xrst
 
-xrst.variables().example()
+xrst.variables(attrs=st.just({})).example()
 ```
 
 ```{code-cell}
-xrst.variables().example()
+xrst.variables(attrs=st.just({})).example()
 ```
 
 ```{code-cell}
-xrst.variables().example()
+xrst.variables(attrs=st.just({})).example()
 ```
 
 You can see that calling `.example()` multiple times will generate different examples, giving you an idea of the wide
@@ -121,8 +122,6 @@ If you want to fix one aspect of the data structure, whilst allowing variation i
 over all other aspects, then use {py:func}`hypothesis.strategies.just()`.
 
 ```{code-cell}
-import hypothesis.strategies as st
-
 # Generates only variable objects with dimensions ["x", "y"]
 xrst.variables(dims=st.just(["x", "y"])).example()
 ```
