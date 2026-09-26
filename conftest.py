@@ -69,13 +69,8 @@ def pytest_configure(config: pytest.Config):
 def pytest_runtest_setup(item):
     if _use_dask_array(item.config):
         _register_dask_array()
-    # based on https://stackoverflow.com/questions/47559524
-    if "flaky" in item.keywords and not item.config.getoption("--run-flaky"):
-        pytest.skip("set --run-flaky option to run flaky tests")
-    if "network" in item.keywords and not item.config.getoption("--run-network-tests"):
-        pytest.skip(
-            "set --run-network-tests to run test requiring an internet connection"
-        )
+    # The mypy yaml test items have no line number, which pytest requires to
+    # report a skip coming from a mark, so these have to be skipped at runtime.
     if any("mypy" in m.name for m in item.own_markers) and not item.config.getoption(
         "--run-mypy"
     ):
@@ -83,7 +78,9 @@ def pytest_runtest_setup(item):
 
 
 # See https://docs.pytest.org/en/stable/example/markers.html#automatically-adding-markers-based-on-test-names
-def pytest_collection_modifyitems(items):
+def pytest_collection_modifyitems(config: pytest.Config, items):
+    run_flaky = config.getoption("--run-flaky")
+    run_network = config.getoption("--run-network-tests")
     for item in items:
         _apply_skip_if_param(item)
         if "mypy" in item.nodeid:
@@ -94,6 +91,17 @@ def pytest_collection_modifyitems(items):
             # marking approach, meaning that each test case must contain "mypy" in the
             # name.
             item.add_marker(pytest.mark.mypy)
+        # based on https://stackoverflow.com/questions/47559524
+        if "flaky" in item.keywords and not run_flaky:
+            item.add_marker(
+                pytest.mark.skip(reason="set --run-flaky option to run flaky tests")
+            )
+        if "network" in item.keywords and not run_network:
+            item.add_marker(
+                pytest.mark.skip(
+                    reason="set --run-network-tests to run test requiring an internet connection"
+                )
+            )
         if _use_dask_array(item.config) and "skip_with_dask_array" in item.keywords:
             item.add_marker(
                 pytest.mark.skip(reason="skipped with dask-array chunk manager")
