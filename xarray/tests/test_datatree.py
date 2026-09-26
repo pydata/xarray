@@ -69,6 +69,11 @@ class TestTreeCreation:
         with pytest.raises(TypeError):
             DataTree(dataset=xr.DataArray(42, name="foo"))  # type: ignore[arg-type]
 
+        # A dict is not an accepted data object; the error message must not
+        # advertise ``dict`` as a valid type (regression test for #11514).
+        with pytest.raises(TypeError, match=r"xarray\.Coordinates"):
+            DataTree(dataset=dict())  # type: ignore[arg-type]
+
     def test_child_data_not_copied(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/9683
         class NoDeepCopy:
