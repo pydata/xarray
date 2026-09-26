@@ -4337,7 +4337,7 @@ class TestDataArray:
 
     @pytest.mark.parametrize("shift", [-1, 0, 1])
     @pytest.mark.parametrize("roll_coords", [False, True])
-    def test_roll_empty(self, shift, roll_coords) -> None:
+    def test_roll_empty(self, shift: int, roll_coords: bool) -> None:
         arr = DataArray([], coords={"x": range(0)}, dims="x")
         actual = arr.roll(x=shift, roll_coords=roll_coords)
         assert_identical(arr, actual)
