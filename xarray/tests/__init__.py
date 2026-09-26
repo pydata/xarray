@@ -107,7 +107,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
         message="'cgi' is deprecated and slated for removal in Python 3.13",
-        category=FutureWarning,
+        category=DeprecationWarning,
     )
     has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
@@ -152,7 +152,12 @@ else:
 
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
-has_zarr, requires_zarr = _importorskip("zarr")
+with warnings.catch_warnings():
+    # raised when importing numcodecs with crc32c installed
+    warnings.filterwarnings(
+        "ignore", message="crc32c usage is deprecated", category=DeprecationWarning
+    )
+    has_zarr, requires_zarr = _importorskip("zarr")
 # Since min zarr is now >=3.0, these are aliases for has_zarr/requires_zarr.
 # Kept to avoid a large diff across test files.
 has_zarr_v3 = has_zarr

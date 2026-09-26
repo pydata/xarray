@@ -49,15 +49,14 @@ def test_CFScaleOffset_coder_roundtrip(original) -> None:
     xr.testing.assert_identical(original, roundtripped)
 
 
-@given(
-    real=st.floats(allow_nan=True, allow_infinity=True),
-    imag=st.floats(allow_nan=True, allow_infinity=True),
-    dtype=st.sampled_from([np.complex64, np.complex128]),
-)
-def test_FillValueCoder_complex_roundtrip(real, imag, dtype) -> None:
+@given(data=st.data(), dtype=st.sampled_from([np.complex64, np.complex128]))
+def test_FillValueCoder_complex_roundtrip(data, dtype) -> None:
     from xarray.backends.zarr import FillValueCoder
 
-    value = dtype(complex(real, imag))
+    # draw values representable in `dtype` to avoid overflow when casting
+    value = dtype(
+        data.draw(npst.from_dtype(np.dtype(dtype), allow_nan=True, allow_infinity=True))
+    )
     encoded = FillValueCoder.encode(value, np.dtype(dtype))
     decoded = FillValueCoder.decode(encoded, np.dtype(dtype))
     np.testing.assert_equal(

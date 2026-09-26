@@ -2,7 +2,9 @@
 
 import os
 
+import numpy as np
 import pytest
+from packaging.version import Version
 
 
 def _use_dask_array(config: pytest.Config) -> bool:
@@ -47,6 +49,13 @@ def pytest_addoption(parser: pytest.Parser):
 
 
 def pytest_configure(config: pytest.Config):
+    if Version(np.__version__) < Version("2"):
+        # raised by `numpy` < 2 for code in `h5netcdf` reading fill values. Not scoped
+        # to a module because warnings re-emitted by `pytest.warns` lose their module.
+        config.addinivalue_line(
+            "filterwarnings",
+            "ignore:Conversion of an array with ndim > 0 to a scalar:DeprecationWarning",
+        )
     config.addinivalue_line(
         "markers",
         "skip_with_dask_array: skip when dask-array is registered as xarray's dask chunk manager",

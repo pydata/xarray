@@ -864,8 +864,14 @@ def test_combine_nested(variant, unit, error, dtype):
     )
     ds3 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.full_like(array1, fill_value=np.nan) * data_unit2),
-            "b": (("y", "x"), np.full_like(array2, fill_value=np.nan) * data_unit2),
+            "a": (
+                ("y", "x"),
+                np.full_like(array1, fill_value=np.nan, dtype=np.float64) * data_unit2,
+            ),
+            "b": (
+                ("y", "x"),
+                np.full_like(array2, fill_value=np.nan, dtype=np.float64) * data_unit2,
+            ),
         },
         coords={
             "x": np.arange(3, 6) * dim_unit2,
@@ -1209,8 +1215,14 @@ def test_merge_dataset(variant, unit, error, dtype):
     )
     ds3 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.full_like(array1, np.nan) * data_unit2),
-            "b": (("y", "x"), np.full_like(array2, np.nan) * data_unit2),
+            "a": (
+                ("y", "x"),
+                np.full_like(array1, np.nan, dtype=np.float64) * data_unit2,
+            ),
+            "b": (
+                ("y", "x"),
+                np.full_like(array2, np.nan, dtype=np.float64) * data_unit2,
+            ),
         },
         coords={
             "x": np.arange(3, 6) * dim_unit2,

@@ -356,8 +356,8 @@ filterwarnings = [
   "error:::xarray.*",
   # Zarr 2 V3 implementation
   "default:Zarr-Python is not in alignment with the final V3 specification",
-  # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
-  "default:is currently not part .* the Zarr version 3 specification.",
+  # raised by zarr < 3.1 for vlen-utf8, consolidated metadata, U1 dtype
+  "ignore:.* is currently not part .* the Zarr (version|format) 3 specification.:UserWarning",
   # Zarr V3 data type specifications warnings - very repetitive
   "ignore:The data type .* does not have a Zarr V3 specification",
   "ignore:Consolidated metadata is currently not part",
@@ -368,6 +368,8 @@ filterwarnings = [
   "ignore:Specifying null_placement in RankOptions is deprecated:FutureWarning:pyarrow",
   # raised by `numpy` for `np.datetime64("NaT")` in `flox`
   "ignore:The 'generic' unit for NumPy timedelta is deprecated:DeprecationWarning:flox",
+  # raised by `numpy` for code in `netcdf4-python` < 1.7 when indexing with empty arrays
+  "ignore:The truth value of an empty array is ambiguous:DeprecationWarning:netCDF4",
   # TODO: remove once we know how to deal with a changed signature in protocols
   "default:::xarray.tests.test_strategies",
 ]
