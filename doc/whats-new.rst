@@ -133,7 +133,7 @@ Documentation
 
 - Fixed the ``kwargs`` entry in the :py:meth:`Dataset.curvefit` and
   :py:meth:`DataArray.curvefit` docstrings: both take a ``kwargs`` dict, not
-  ``**kwargs`` (:issue:`6891`).
+  ``**kwargs`` (:issue:`6891`, :pull:`11536`).
   By `Advit Arora <https://github.com/advitrocks9>`_.
 
 
