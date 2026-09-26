@@ -347,6 +347,8 @@ intersphinx_mapping = {
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
     "zarr": ("https://zarr.readthedocs.io/en/stable/", None),
     "xarray-lmfit": ("https://xarray-lmfit.readthedocs.io/stable", None),
+    "pyarrow": ("https://arrow.apache.org/docs/", None),
+    'polars': ('https://docs.pola.rs/api/python/stable', None)
 }
 
 # Resolve the git ref once at import time, not per-object.

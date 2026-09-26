@@ -7925,10 +7925,20 @@ class TestArrowPyCapsule:
         assert schema.metadata[b"xarray:arrow_schema_version"] == b"v1"
 
         xarray_meta = json.loads(schema.metadata[b"xarray"])
-        assert xarray_meta["name"] == "temperature"
-        assert xarray_meta["dims"] == ["x"]
-        assert xarray_meta["attrs"] == {"units": "K", "long_name": "temperature"}
-        assert "x" in xarray_meta["coords"]
+        assert xarray_meta == {
+            "name": "temperature",
+            "dims": ["x"],
+            "shape": [3],
+            "attrs": {"units": "K", "long_name": "temperature"},
+            "coords": {
+                "x": {
+                    "dims": ["x"],
+                    "attrs": {},
+                    "dtype": "int64",
+                    "shape": [3],
+                }
+            },
+        }
 
     @requires_pyarrow
     def test_pyarrow_table_curvilinear_coords(self):

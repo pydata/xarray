@@ -6,6 +6,7 @@ import builtins
 import copy
 import datetime
 import io
+import json
 import math
 import sys
 import warnings
@@ -136,6 +137,7 @@ from xarray.util.deprecation_helpers import (
 )
 
 if TYPE_CHECKING:
+    import pyarrow as pa
     from dask.dataframe import DataFrame as DaskDataFrame
     from dask.delayed import Delayed
     from numpy.typing import ArrayLike
@@ -7470,6 +7472,103 @@ class Dataset(
             return flat
         full_index = self.coords.to_index(list(ordered_dims))
         return pd.Series(flat, index=full_index).reindex(index)
+
+    def __arrow_c_schema__(self):
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        from xarray.core.dataarray import _NumpyEncoder
+
+        fields = [
+            pa.field(str(name), pa.from_numpy_dtype(variable.dtype))
+            for name, variable in self.variables.items()
+        ]
+
+        xarray_metadata = {
+            "dims": list(self.dims),
+            "shape": [self.sizes[dim] for dim in self.dims],
+            "attrs": self.attrs,
+            "coords": {
+                str(name): coord.to_dict(data=False)
+                for name, coord in self.coords.variables.items()
+            },
+        }
+        schema_metadata = {
+            b"xarray:arrow_schema_version": b"v1",
+            b"xarray": json.dumps(xarray_metadata, cls=_NumpyEncoder).encode(),
+        }
+
+        schema = pa.schema(fields, metadata=schema_metadata)
+        return schema.__arrow_c_schema__()
+
+    def __arrow_c_stream__(self, requested_schema: Any = None) -> Any:
+        """Export the Dataset through the Arrow PyCapsule Interface.
+
+        https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
+        """
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        from xarray.core.dataarray import _broadcast_to_dims
+
+        dims = tuple(self.dims)
+        sizes = self.sizes
+        shape = tuple(sizes[dim] for dim in dims)
+
+        columns: dict[Hashable, pa.Array] = {
+            name: pa.array(_broadcast_to_dims(variable, dims, shape))
+            for name, variable in self.variables.items()
+        }
+
+        table = pa.table(columns, schema=pa.schema(self))
+        return table.__arrow_c_stream__(requested_schema)
+
+    def to_arrow(self) -> pa.Table:
+        """Convert this dataset into pyarrow.Table.
+
+        .. warning::
+            This functionality is considered **experimental**. It may be removed or
+            changed at any point without it being considered a breaking change.
+
+        Returns
+        -------
+        pyarrow.Table
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("x", [1.0, 2.0, 3.0])},
+        ...     coords={"x": [10, 20, 30]},
+        ... )
+        >>> ds.to_arrow()
+        pyarrow.Table
+        temperature: double
+        x: int64
+        ----
+        temperature: [[1,2,3]]
+        x: [[10,20,30]]
+
+        See Also
+        --------
+        xarray.DataArray.to_arrow
+        pandas.DataFrame.from_arrow
+        """
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        return pa.table(self)
 
     def _set_sparse_data_from_dataframe(
         self, idx: pd.Index, arrays: list[tuple[Hashable, np.ndarray]], dims: tuple
