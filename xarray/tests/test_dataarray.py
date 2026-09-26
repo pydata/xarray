@@ -4335,6 +4335,13 @@ class TestDataArray:
         expected = DataArray([3, 1, 2], coords=[("x", [0, 1, 2])])
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("shift", [-1, 0, 1])
+    @pytest.mark.parametrize("roll_coords", [False, True])
+    def test_roll_empty(self, shift, roll_coords) -> None:
+        arr = DataArray([], coords={"x": range(0)}, dims="x")
+        actual = arr.roll(x=shift, roll_coords=roll_coords)
+        assert_identical(arr, actual)
+
     def test_copy_with_data(self) -> None:
         orig = DataArray(
             np.random.random(size=(2, 2)),

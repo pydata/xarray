@@ -934,7 +934,7 @@ class PandasIndex(Index):
         return {self.dim: get_indexer_nd(self.index, other.index, method, tolerance)}
 
     def roll(self, shifts: Mapping[Any, int]) -> PandasIndex:
-        shift = shifts[self.dim] % self.index.shape[0]
+        shift = shifts[self.dim] % (self.index.shape[0] or 1)
 
         if shift != 0:
             new_pd_idx = self.index[-shift:].append(self.index[:-shift])
