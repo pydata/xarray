@@ -78,6 +78,7 @@ extlinks = {
 copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: "
 copybutton_prompt_is_regexp = True
 
+# myst-nb
 nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
 # RTD does not publish the .err.log report, so print tracebacks in the build log
 nb_execution_show_tb = True
@@ -175,6 +176,18 @@ jupyterlite_content_dir = "_build/contents"
 
 # mermaid config
 mermaid_version = "11.6.0"
+
+# sphinx-llm config
+# the markdown builder used for llms.txt can't render these nodes; they are omitted
+# from the generated markdown, so don't turn the warnings into build errors
+llms_txt_suppress_unknown_node_warnings = [
+    "abbreviation",
+    "classifier",
+    "desc_optional",
+    "label",
+    "mermaid",
+    "PassthroughTextElement",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]

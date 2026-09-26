@@ -117,6 +117,9 @@ Bug Fixes
   type error when applying reduction methods, due to the reduction methods being
   dynamically generated (:issue:`8136`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fixed a bug that caused rechunking a multi-dimensional cftime array along a
+  subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 

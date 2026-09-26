@@ -1696,7 +1696,7 @@ class Common2dMixin:
     def test_facetgrid_col_wrap_auto(
         self,
         n: int,
-        figsize: None | tuple[int, int],
+        figsize: tuple[int, int] | None,
         aspect: int,
         expected_shape: tuple[int, int],
     ) -> None:
@@ -3496,16 +3496,16 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 
 @requires_matplotlib
 def test_facetgrid_axes_raises_deprecation_warning() -> None:
-    with pytest.warns(
-        FutureWarning,
-        match=(
-            "self.axes is deprecated since 2022.11 in order to align with "
-            "matplotlibs plt.subplots, use self.axs instead."
-        ),
-    ):
-        with figure_context():
-            ds = xr.tutorial.scatter_example_dataset()
-            g = ds.plot.scatter(x="A", y="B", col="x")
+    with figure_context():
+        ds = xr.tutorial.scatter_example_dataset()
+        g = ds.plot.scatter(x="A", y="B", col="x")
+        with pytest.warns(
+            FutureWarning,
+            match=(
+                "self.axes is deprecated since 2022.11 in order to align with "
+                "matplotlibs plt.subplots, use self.axs instead."
+            ),
+        ):
             _ = g.axes
 
 
