@@ -53,6 +53,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix :py:func:`broadcast` failing on objects with an index spanning several
+  dimensions, such as a custom index set on both ``x`` and ``y`` (:pull:`11615`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
