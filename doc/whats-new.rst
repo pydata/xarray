@@ -120,6 +120,12 @@ Bug Fixes
 - Fixed a bug that caused rechunking a multi-dimensional cftime array along a
   subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:func:`concat` no longer raises ``TypeError: Cannot interpret
+  '<StringDtype(...)>' as a data type`` when the objects being joined carry
+  index coordinates with a mix of numpy and pandas extension dtypes, which
+  happens routinely under pandas 3 when one dimension coordinate came from a
+  :py:class:`pandas.Index` and another from a plain list (:issue:`11317`).
+  By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 

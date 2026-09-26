@@ -789,6 +789,16 @@ class PandasIndex(Index):
             indexes_coord_dtypes = {idx.coord_dtype for idx in indexes}
             if len(indexes_coord_dtypes) == 1:
                 coord_dtype = next(iter(indexes_coord_dtypes))
+            elif any(
+                isinstance(dtype, pd.api.extensions.ExtensionDtype)
+                for dtype in indexes_coord_dtypes
+            ):
+                # np.result_type cannot interpret a pandas extension dtype, and
+                # mixing one with a numpy dtype is ordinary now that pandas
+                # gives string indexes a StringDtype. _concat_indexes above has
+                # already had pandas promote these, so use the dtype it settled
+                # on rather than reimplementing pandas' rules here.
+                coord_dtype = new_pd_index.dtype
             else:
                 coord_dtype = np.result_type(*indexes_coord_dtypes)
 
