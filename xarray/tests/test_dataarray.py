@@ -3345,6 +3345,81 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"broadcast"):
             a.fillna(np.array([1, 2]))
 
+    @pytest.mark.parametrize("indexer_kind", ["pandas", "dataarray", "variable"])
+    @pytest.mark.parametrize("positions", [[0, 1, 2, 3], [3, 0], [], [0, 3]])
+    @pytest.mark.parametrize("fill_value", [np.nan, -1.0])
+    @pytest.mark.parametrize("names", [["city", "kind"], [None, None]])
+    def test_reindex_multiindex(
+        self, indexer_kind, positions, fill_value, names
+    ) -> None:
+        # GH11368: register both the dimension index and its level coordinates.
+        full = pd.MultiIndex.from_product([[1, 2], ["a", "b"]], names=names)
+        original = DataArray(
+            [10.0, 20.0],
+            dims="station",
+            coords=Coordinates.from_pandas_multiindex(full[[0, 3]], "station"),
+            name="measurement",
+            attrs={"units": "m"},
+        )
+        target = full[positions]
+        expected = DataArray(
+            np.array([10.0, fill_value, fill_value, 20.0])[positions],
+            dims="station",
+            coords=Coordinates.from_pandas_multiindex(target, "station"),
+            name="measurement",
+            attrs={"units": "m"},
+        )
+        indexer = {
+            "pandas": target,
+            "dataarray": expected.station,
+            "variable": expected.station.variable,
+        }[indexer_kind]
+
+        actual = original.reindex(station=indexer, fill_value=fill_value)
+
+        assert_identical(actual, expected)
+        assert_identical(
+            original.reindex_like(expected, fill_value=fill_value), expected
+        )
+
+    @pytest.mark.parametrize("reverse", [False, True])
+    @pytest.mark.parametrize("other_multiindex", [False, True])
+    def test_align_multiindex_conflicting_names(
+        self, reverse, other_multiindex
+    ) -> None:
+        original = DataArray(np.arange(4).reshape(2, 2), dims=["x", "y"])
+        shared_name = "shared" if other_multiindex else "y"
+        indexes = {
+            "x": pd.MultiIndex.from_tuples(
+                [(1, "a"), (2, "b")], names=[shared_name, "kind"]
+            ),
+            "y": (
+                pd.MultiIndex.from_tuples(
+                    [(9, "c"), (10, "d")], names=[shared_name, "other"]
+                )
+                if other_multiindex
+                else [9, 10]
+            ),
+        }
+        if reverse:
+            indexes = dict(reversed(indexes.items()))
+
+        with pytest.raises(ValueError, match="conflicting coordinate names"):
+            align(original, indexes=indexes)
+
+    def test_align_multiindex_indexer(self) -> None:
+        index = pd.MultiIndex.from_product([[1, 2], ["a", "b"]], names=["city", "kind"])
+        expected = DataArray(
+            [10, 0, 0, 20],
+            dims="station",
+            coords=Coordinates.from_pandas_multiindex(index, "station"),
+        )
+        original = expected.isel(station=[0, 3])
+
+        (actual,) = align(original, indexes={"station": index}, fill_value=0)
+
+        assert_identical(actual, expected)
+
     def test_align(self) -> None:
         array = DataArray(
             np.random.random((6, 8)), coords={"x": list("abcdef")}, dims=["x", "y"]
