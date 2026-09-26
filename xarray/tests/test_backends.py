@@ -7013,11 +7013,11 @@ def test_use_cftime_standard_calendar_default_out_of_range(calendar) -> None:
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
+        # load eagerly: the warning is raised again when lazy data is decoded
         with pytest.warns(SerializationWarning):
-            ds = open_dataset(tmp_file)
-        with ds:
-            assert_identical(expected_x, ds.x)
-            assert_identical(expected_time, ds.time)
+            ds = load_dataset(tmp_file)
+        assert_identical(expected_x, ds.x)
+        assert_identical(expected_time, ds.time)
 
 
 @requires_cftime

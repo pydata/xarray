@@ -279,7 +279,10 @@ class TestReduction:
 
             # create expected result (using nanmean because arrays with Nans will be generated)
             reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
-            expected = np.nanmean(var.data, axis=reduction_axes)
+            with warnings.catch_warnings():
+                # all-NaN slices are expected to reduce to NaN
+                warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
+                expected = np.nanmean(var.data, axis=reduction_axes)
 
             # assert property is always satisfied
             result = var.mean(dim=reduction_dims).data

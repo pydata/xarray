@@ -361,10 +361,13 @@ filterwarnings = [
   # Zarr V3 data type specifications warnings - very repetitive
   "ignore:The data type .* does not have a Zarr V3 specification",
   "ignore:Consolidated metadata is currently not part",
-  # raised by `numpy` for code in `netcdf4-python`
-  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.backends.netCDF4_",
-  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.tests.test_backends",
-  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.tests.test_backends_datatree",
+  # raised by `numpy` for code in `netcdf4-python`. Not scoped to a module
+  # because warnings re-emitted by `pytest.warns` lose their module.
+  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.:DeprecationWarning",
+  # raised by `pyarrow` for `pandas` ranking arrow-backed strings
+  "ignore:Specifying null_placement in RankOptions is deprecated:FutureWarning:pyarrow",
+  # raised by `numpy` for `np.datetime64("NaT")` in `flox`
+  "ignore:The 'generic' unit for NumPy timedelta is deprecated:DeprecationWarning:flox",
   # TODO: remove once we know how to deal with a changed signature in protocols
   "default:::xarray.tests.test_strategies",
 ]
