@@ -57,6 +57,9 @@ Bug Fixes
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
+  round trips (:issue:`11466`, :pull:`11474`).
+  By `stanbot8 <https://github.com/stanbot8>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs.
