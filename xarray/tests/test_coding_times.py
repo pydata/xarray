@@ -1717,47 +1717,57 @@ def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype) -> None:
 
 
 @parametrize_cftime
-@parametrize_dask
-def test_encode_cf_datetime_units_change(use_cftime, use_dask) -> None:
+def test_encode_cf_datetime_units_change(use_cftime) -> None:
     times = date_range(start="2000", freq="12h", periods=3, use_cftime=use_cftime)
     encoding = dict(units="days since 2000-01-01", dtype=np.dtype("int64"))
     variable = Variable(["time"], times, encoding=encoding)
 
-    if use_dask:
-        variable = variable.chunk({"time": 1})
-        with pytest.raises(ValueError, match="Times can't be serialized"):
-            conventions.encode_cf_variable(variable).compute()
+    with pytest.warns(UserWarning, match="Times can't be serialized"):
+        encoded = conventions.encode_cf_variable(variable)
+    if use_cftime:
+        expected_units = "hours since 2000-01-01 00:00:00.000000"
     else:
-        with pytest.warns(UserWarning, match="Times can't be serialized"):
-            encoded = conventions.encode_cf_variable(variable)
-        if use_cftime:
-            expected_units = "hours since 2000-01-01 00:00:00.000000"
-        else:
-            expected_units = "hours since 2000-01-01"
-        assert encoded.attrs["units"] == expected_units
-        decoded = conventions.decode_cf_variable(
-            "name", encoded, decode_times=CFDatetimeCoder(use_cftime=use_cftime)
-        )
-        assert_equal(variable, decoded)
+        expected_units = "hours since 2000-01-01"
+    assert encoded.attrs["units"] == expected_units
+    decoded = conventions.decode_cf_variable(
+        "name", encoded, decode_times=CFDatetimeCoder(use_cftime=use_cftime)
+    )
+    assert_equal(variable, decoded)
 
 
-@parametrize_dask
-def test_encode_cf_datetime_precision_loss_regression_test(use_dask) -> None:
+@requires_dask
+@parametrize_cftime
+def test_encode_cf_datetime_units_change_dask(use_cftime) -> None:
+    # With dask the units cannot be changed on the fly, so encoding raises
+    times = date_range(start="2000", freq="12h", periods=3, use_cftime=use_cftime)
+    encoding = dict(units="days since 2000-01-01", dtype=np.dtype("int64"))
+    variable = Variable(["time"], times, encoding=encoding).chunk({"time": 1})
+
+    with pytest.raises(ValueError, match="Times can't be serialized"):
+        conventions.encode_cf_variable(variable).compute()
+
+
+def test_encode_cf_datetime_precision_loss_regression_test() -> None:
     # Regression test for
     # https://github.com/pydata/xarray/issues/9134#issuecomment-2191446463
     times = date_range("2000", periods=5, freq="ns")
     encoding = dict(units="seconds since 1970-01-01", dtype=np.dtype("int64"))
     variable = Variable(["time"], times, encoding=encoding)
 
-    if use_dask:
-        variable = variable.chunk({"time": 1})
-        with pytest.raises(ValueError, match="Times can't be serialized"):
-            conventions.encode_cf_variable(variable).compute()
-    else:
-        with pytest.warns(UserWarning, match="Times can't be serialized"):
-            encoded = conventions.encode_cf_variable(variable)
-        decoded = conventions.decode_cf_variable("name", encoded)
-        assert_equal(variable, decoded)
+    with pytest.warns(UserWarning, match="Times can't be serialized"):
+        encoded = conventions.encode_cf_variable(variable)
+    decoded = conventions.decode_cf_variable("name", encoded)
+    assert_equal(variable, decoded)
+
+
+@requires_dask
+def test_encode_cf_datetime_precision_loss_regression_test_dask() -> None:
+    times = date_range("2000", periods=5, freq="ns")
+    encoding = dict(units="seconds since 1970-01-01", dtype=np.dtype("int64"))
+    variable = Variable(["time"], times, encoding=encoding).chunk({"time": 1})
+
+    with pytest.raises(ValueError, match="Times can't be serialized"):
+        conventions.encode_cf_variable(variable).compute()
 
 
 @requires_dask
@@ -1789,26 +1799,31 @@ def test_encode_cf_timedelta_via_dask(
     assert decoded_times.dtype == times.dtype
 
 
-@parametrize_dask
-def test_encode_cf_timedelta_units_change(use_dask) -> None:
+def test_encode_cf_timedelta_units_change() -> None:
     timedeltas = pd.timedelta_range(start="0h", freq="12h", periods=3)
     encoding = dict(units="days", dtype=np.dtype("int64"))
     variable = Variable(["time"], timedeltas, encoding=encoding)
 
-    if use_dask:
-        variable = variable.chunk({"time": 1})
-        with pytest.raises(ValueError, match="Timedeltas can't be serialized"):
-            conventions.encode_cf_variable(variable).compute()
-    else:
-        # In this case we automatically modify the encoding units to continue
-        # encoding with integer values.
-        with pytest.warns(UserWarning, match="Timedeltas can't be serialized"):
-            encoded = conventions.encode_cf_variable(variable)
-        assert encoded.attrs["units"] == "hours"
-        decoded = conventions.decode_cf_variable(
-            "name", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="ns")
-        )
-        assert_equal(variable, decoded)
+    # In this case we automatically modify the encoding units to continue
+    # encoding with integer values.
+    with pytest.warns(UserWarning, match="Timedeltas can't be serialized"):
+        encoded = conventions.encode_cf_variable(variable)
+    assert encoded.attrs["units"] == "hours"
+    decoded = conventions.decode_cf_variable(
+        "name", encoded, decode_timedelta=CFTimedeltaCoder(time_unit="ns")
+    )
+    assert_equal(variable, decoded)
+
+
+@requires_dask
+def test_encode_cf_timedelta_units_change_dask() -> None:
+    # With dask the units cannot be changed on the fly, so encoding raises
+    timedeltas = pd.timedelta_range(start="0h", freq="12h", periods=3)
+    encoding = dict(units="days", dtype=np.dtype("int64"))
+    variable = Variable(["time"], timedeltas, encoding=encoding).chunk({"time": 1})
+
+    with pytest.raises(ValueError, match="Timedeltas can't be serialized"):
+        conventions.encode_cf_variable(variable).compute()
 
 
 @parametrize_dask
