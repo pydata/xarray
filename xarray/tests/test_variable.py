@@ -48,6 +48,7 @@ from xarray.tests import (
     has_dask_array_expr,
     has_dask_ge_2024_11_0,
     has_pandas_3,
+    parametrize_dask,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -1949,9 +1950,7 @@ class TestVariable(VariableSubclassobjects):
         np.testing.assert_allclose(actual.values, expected)
 
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(True, marks=requires_dask), False]
-    )
+    @parametrize_dask
     def test_quantile_method(self, method, use_dask) -> None:
         v = Variable(["x", "y"], self.d)
         if use_dask:
@@ -2510,10 +2509,11 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
+    @pytest.mark.skipif(
+        not has_dask_array_expr,
+        reason="only meaningful with an alternate dask chunk manager",
+    )
     def test_legacy_dask_array_rejected_by_dask_array_manager(self):
-        if not has_dask_array_expr:
-            pytest.skip("only meaningful with an alternate dask chunk manager")
-
         import dask.array as da
 
         x = Variable("x", da.arange(6, chunks=3))
@@ -3127,33 +3127,6 @@ class TestNumpyCoercion:
         assert_identical(v.as_numpy(), Var("x", arr))
         np.testing.assert_equal(v.to_numpy(), arr)
 
-    @requires_sparse
-    def test_from_sparse(self, Var):
-        if Var is IndexVariable:
-            pytest.skip("Can't have 2D IndexVariables")
-
-        import sparse
-
-        arr = np.diagflat([1, 2, 3])
-        coords = np.array([[0, 1, 2], [0, 1, 2]])
-        sparr = sparse.COO(coords=coords, data=[1, 2, 3], shape=(3, 3))
-        v = Variable(["x", "y"], sparr)
-
-        assert_identical(v.as_numpy(), Variable(["x", "y"], arr))
-        np.testing.assert_equal(v.to_numpy(), arr)
-
-    @requires_cupy
-    def test_from_cupy(self, Var):
-        if Var is IndexVariable:
-            pytest.skip("cupy in default indexes is not supported at the moment")
-        import cupy as cp
-
-        arr = np.array([1, 2, 3])
-        v = Var("x", cp.array(arr))
-
-        assert_identical(v.as_numpy(), Var("x", arr))
-        np.testing.assert_equal(v.to_numpy(), arr)
-
     @requires_dask
     @requires_pint
     @pytest.mark.skip_with_dask_array
@@ -3172,6 +3145,33 @@ class TestNumpyCoercion:
         result = v.as_numpy()
         assert_identical(result, Var("x", arr))
         np.testing.assert_equal(v.to_numpy(), arr)
+
+
+# Not part of TestNumpyCoercion, as these only apply to Variable, not IndexVariable
+@requires_sparse
+def test_numpy_coercion_from_sparse() -> None:
+    # Can't have 2D IndexVariables
+    import sparse
+
+    arr = np.diagflat([1, 2, 3])
+    coords = np.array([[0, 1, 2], [0, 1, 2]])
+    sparr = sparse.COO(coords=coords, data=[1, 2, 3], shape=(3, 3))
+    v = Variable(["x", "y"], sparr)
+
+    assert_identical(v.as_numpy(), Variable(["x", "y"], arr))
+    np.testing.assert_equal(v.to_numpy(), arr)
+
+
+@requires_cupy
+def test_numpy_coercion_from_cupy() -> None:
+    # cupy in default indexes is not supported at the moment
+    import cupy as cp
+
+    arr = np.array([1, 2, 3])
+    v = Variable("x", cp.array(arr))
+
+    assert_identical(v.as_numpy(), Variable("x", arr))
+    np.testing.assert_equal(v.to_numpy(), arr)
 
 
 @pytest.mark.parametrize(

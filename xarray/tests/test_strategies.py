@@ -273,13 +273,20 @@ class TestReduction:
         Test that given a Variable of at least one dimension,
         the mean of the Variable is always equal to the mean of the underlying array.
         """
-        with set_options(use_numbagg=False):
+        # arbitrary floats can overflow to inf, and inf - inf gives nan
+        with (
+            set_options(use_numbagg=False),
+            np.errstate(over="ignore", invalid="ignore"),
+        ):
             # specify arbitrary reduction along at least one dimension
             reduction_dims = data.draw(unique_subset_of(var.dims, min_size=1))
 
             # create expected result (using nanmean because arrays with Nans will be generated)
             reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
-            expected = np.nanmean(var.data, axis=reduction_axes)
+            with warnings.catch_warnings():
+                # all-NaN slices are expected to reduce to NaN
+                warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
+                expected = np.nanmean(var.data, axis=reduction_axes)
 
             # assert property is always satisfied
             result = var.mean(dim=reduction_dims).data

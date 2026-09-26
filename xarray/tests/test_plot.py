@@ -1345,8 +1345,6 @@ class Common2dMixin:
 
     def test_3d_raises_valueerror(self) -> None:
         a = DataArray(easy_array((2, 3, 4)))
-        if self.plotfunc.__name__ == "imshow":
-            pytest.skip()
         with pytest.raises(ValueError, match=r"DataArray must be 2d"):
             self.plotfunc(a)
 
@@ -2006,6 +2004,10 @@ class TestPcolormeshLogscale(PlotTestCase):
 class TestImshow(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.imshow)
 
+    @pytest.mark.skip(reason="imshow accepts 3d arrays as RGB(A) images")
+    def test_3d_raises_valueerror(self) -> None:
+        pass
+
     @pytest.mark.xfail(
         reason=(
             "Failing inside matplotlib. Should probably be fixed upstream because "
@@ -2204,32 +2206,32 @@ class TestSurface(Common2dMixin, PlotTestCase):
         assert "y2d" == ax.get_ylabel()
         assert f"{self.darray.long_name} [{self.darray.units}]" == ax.get_zlabel()
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_xyincrease_false_changes_axes(self) -> None:
-        # Does not make sense for surface plots
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_xyincrease_true_changes_axes(self) -> None:
-        # Does not make sense for surface plots
-        pytest.skip("does not make sense for surface plots")
+        pass
 
     def test_can_pass_in_axis(self) -> None:
         self.pass_in_axis(self.plotmethod, subplot_kw={"projection": "3d"})
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_default_cmap(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_diverging_color_limits(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_colorbar_kwargs(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_cmap_and_color_both(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
     def test_seaborn_palette_as_cmap(self) -> None:
         # seaborn does not work with mpl_toolkits.mplot3d

@@ -21,13 +21,12 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     dask_array_api,
-    has_dask,
-    has_scipy,
-    has_scipy_ge_1_13,
+    parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
     requires_scipy,
+    requires_scipy_ge_1_13,
 )
 from xarray.tests.test_dataset import create_test_data
 
@@ -108,26 +107,23 @@ def nd_interp_coords():
     return coords
 
 
+@requires_scipy
 def test_keywargs():
-    if not has_scipy:
-        pytest.skip("scipy is not installed.")
-
     da = get_example_data(0)
     assert_equal(da.interp(x=[0.5, 0.8]), da.interp({"x": [0.5, 0.8]}))
 
 
+@requires_scipy
 @pytest.mark.parametrize("method", ["linear", "cubic"])
 @pytest.mark.parametrize("dim", ["x", "y"])
 @pytest.mark.parametrize(
-    "case", [pytest.param(0, id="no_chunk"), pytest.param(1, id="chunk_y")]
+    "case",
+    [
+        pytest.param(0, id="no_chunk"),
+        pytest.param(1, id="chunk_y", marks=requires_dask),
+    ],
 )
 def test_interpolate_1d(method: InterpOptions, dim: str, case: int) -> None:
-    if not has_scipy:
-        pytest.skip("scipy is not installed.")
-
-    if not has_dask and case == 1:
-        pytest.skip("dask is not installed in the environment.")
-
     da = get_example_data(case)
     xdest = np.linspace(0.0, 0.9, 80)
     actual = da.interp(method=method, coords={dim: xdest})
@@ -152,11 +148,9 @@ def test_interpolate_1d(method: InterpOptions, dim: str, case: int) -> None:
     assert_allclose(actual, expected)
 
 
+@requires_scipy
 @pytest.mark.parametrize("method", ["cubic", "zero"])
 def test_interpolate_1d_methods(method: InterpOptions) -> None:
-    if not has_scipy:
-        pytest.skip("scipy is not installed.")
-
     da = get_example_data(0)
     dim = "x"
     xdest = np.linspace(0.0, 0.9, 80)
@@ -188,17 +182,17 @@ def test_interpolate_1d_methods(method: InterpOptions) -> None:
         pytest.param(
             False,
             "makima",
-            marks=pytest.mark.skipif(not has_scipy_ge_1_13, reason="scipy too old"),
+            marks=requires_scipy_ge_1_13,
         ),
         pytest.param(
             True,
             "linear",
-            marks=pytest.mark.skipif(not has_dask, reason="dask not available"),
+            marks=requires_dask,
         ),
         pytest.param(
             True,
             "akima",
-            marks=pytest.mark.skipif(not has_dask, reason="dask not available"),
+            marks=requires_dask,
         ),
     ),
 )
@@ -297,9 +291,7 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
     "case",
     [
         pytest.param(3, id="no_chunk"),
-        pytest.param(
-            4, id="chunked", marks=pytest.mark.skipif(not has_dask, reason="no dask")
-        ),
+        pytest.param(4, id="chunked", marks=requires_dask),
     ],
 )
 def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> None:
@@ -431,12 +423,13 @@ def test_interpolate_nd_with_nan() -> None:
 @requires_scipy
 @pytest.mark.parametrize("method", ("linear",))
 @pytest.mark.parametrize(
-    "case", [pytest.param(0, id="no_chunk"), pytest.param(1, id="chunk_y")]
+    "case",
+    [
+        pytest.param(0, id="no_chunk"),
+        pytest.param(1, id="chunk_y", marks=requires_dask),
+    ],
 )
 def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
-    if not has_dask and case == 1:
-        pytest.skip("dask is not installed in the environment.")
-
     da = get_example_data(case)
     xdest = 0.4
 
@@ -461,12 +454,13 @@ def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
 @requires_scipy
 @pytest.mark.parametrize("method", ("linear",))
 @pytest.mark.parametrize(
-    "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
+    "case",
+    [
+        pytest.param(3, id="no_chunk"),
+        pytest.param(4, id="chunked", marks=requires_dask),
+    ],
 )
 def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
-    if not has_dask and case == 4:
-        pytest.skip("dask is not installed in the environment.")
-
     da = get_example_data(case)
     xdest = 0.4
     ydest = 0.05
@@ -492,15 +486,12 @@ def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
     assert_allclose(actual, expected)
 
 
-@pytest.mark.parametrize("use_dask", [True, False])
+@requires_scipy
+@parametrize_dask
 def test_nans(use_dask: bool) -> None:
-    if not has_scipy:
-        pytest.skip("scipy is not installed.")
-
     da = xr.DataArray([0, 1, np.nan, 2], dims="x", coords={"x": range(4)})
 
-    if not has_dask and use_dask:
-        pytest.skip("dask is not installed in the environment.")
+    if use_dask:
         da = da.chunk()
 
     actual = da.interp(x=[0.5, 1.5])
@@ -509,12 +500,11 @@ def test_nans(use_dask: bool) -> None:
 
 
 @requires_scipy
-@pytest.mark.parametrize("use_dask", [True, False])
+@parametrize_dask
 def test_errors(use_dask: bool) -> None:
     # spline is unavailable
     da = xr.DataArray([0, 1, np.nan, 2], dims="x", coords={"x": range(4)})
-    if not has_dask and use_dask:
-        pytest.skip("dask is not installed in the environment.")
+    if use_dask:
         da = da.chunk()
 
     for method in ["spline"]:
@@ -627,11 +617,10 @@ def test_dataset() -> None:
     assert interpolated["var1"].attrs["buz"] == "var2"
 
 
+@requires_scipy
 @pytest.mark.parametrize("case", [pytest.param(0, id="2D"), pytest.param(3, id="3D")])
 def test_interpolate_dimorder(case: int) -> None:
     """Make sure the resultant dimension order is consistent with .sel()"""
-    if not has_scipy:
-        pytest.skip("scipy is not installed.")
 
     da = get_example_data(case)
 
@@ -889,15 +878,17 @@ def test_decompose(method: InterpOptions) -> None:
 
 @requires_scipy
 @requires_dask
-@pytest.mark.parametrize("method", ("linear", "nearest", "cubic", "pchip", "quintic"))
 @pytest.mark.parametrize("chunked", [True, False])
 @pytest.mark.parametrize(
-    "data_ndim,interp_ndim,nscalar",
+    "method,data_ndim,interp_ndim,nscalar",
     [
-        (data_ndim, interp_ndim, nscalar)
+        (method, data_ndim, interp_ndim, nscalar)
+        for method in ("linear", "nearest", "cubic", "pchip", "quintic")
         for data_ndim in range(1, 4)
         for interp_ndim in range(1, data_ndim + 1)
         for nscalar in range(interp_ndim + 1)
+        # 3d interpolation with the higher order methods is too slow
+        if not (method in ("cubic", "pchip", "quintic") and interp_ndim == 3)
     ],
 )
 @pytest.mark.filterwarnings("ignore:Increasing number of chunks")
@@ -908,9 +899,6 @@ def test_interpolate_chunk_1d(
 
     It should do a series of 1d interpolation
     """
-
-    if method in ["cubic", "pchip", "quintic"] and interp_ndim == 3:
-        pytest.skip("Too slow.")
 
     # 3d non chunked data
     x = np.linspace(0, 1, 6)
@@ -1161,16 +1149,8 @@ def test_interp_vectorized_dask() -> None:
 
 
 @requires_scipy
-@pytest.mark.parametrize(
-    "chunk",
-    [
-        pytest.param(
-            True, marks=pytest.mark.skipif(not has_dask, reason="requires_dask")
-        ),
-        False,
-    ],
-)
-def test_interp_vectorized_shared_dims(chunk: bool) -> None:
+@parametrize_dask
+def test_interp_vectorized_shared_dims(use_dask: bool) -> None:
     # GH4463
     da = xr.DataArray(
         [[[1, 2, 3], [2, 3, 4]], [[1, 2, 3], [2, 3, 4]]],
@@ -1181,7 +1161,7 @@ def test_interp_vectorized_shared_dims(chunk: bool) -> None:
     dx = xr.DataArray(
         [[1.5, 1.5], [1.5, 1.5]], dims=("t", "u"), coords={"u": [45, 55], "t": [10, 12]}
     )
-    if chunk:
+    if use_dask:
         da = da.chunk(t=1)
     with raise_if_dask_computes():
         actual = da.interp(y=dy, x=dx, method="linear")

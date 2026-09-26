@@ -26,7 +26,7 @@ from xarray.structure.alignment import broadcast
 from xarray.tests import (
     dask_array_api,
     dask_array_type,
-    has_dask,
+    parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -2109,11 +2109,8 @@ def test_output_wrong_dim_size() -> None:
     )
 
 
-@pytest.mark.parametrize("use_dask", [True, False])
+@parametrize_dask
 def test_dot(use_dask: bool) -> None:
-    if use_dask and not has_dask:
-        pytest.skip("test for dask.")
-
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
     c = np.arange(5 * 60).reshape(5, 60)
@@ -2238,12 +2235,9 @@ def test_dot(use_dask: bool) -> None:
     pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
-@pytest.mark.parametrize("use_dask", [True, False])
+@parametrize_dask
 def test_dot_align_coords(use_dask: bool) -> None:
     # GH 3694
-
-    if use_dask and not has_dask:
-        pytest.skip("test for dask.")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -2385,9 +2379,7 @@ def test_where_attrs() -> None:
     assert_identical(ds_expected, ds_actual)
 
 
-@pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
-)
+@parametrize_dask
 @pytest.mark.parametrize(
     ["x", "coeffs", "expected"],
     [
@@ -2522,8 +2514,6 @@ def test_polyval(
     expected: xr.DataArray | xr.Dataset,
 ) -> None:
     if use_dask:
-        if not has_dask:
-            pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
 
@@ -2534,9 +2524,7 @@ def test_polyval(
 
 
 @requires_cftime
-@pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
-)
+@parametrize_dask
 @pytest.mark.parametrize("date", ["1970-01-01", "0753-04-21"])
 def test_polyval_cftime(use_dask: bool, date: str) -> None:
     import cftime
@@ -2548,8 +2536,6 @@ def test_polyval_cftime(use_dask: bool, date: str) -> None:
     coeffs = xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]})
 
     if use_dask:
-        if not has_dask:
-            pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
 
@@ -2587,9 +2573,7 @@ def test_polyval_timedelta_nat() -> None:
     assert not np.isnan(actual.values[[0, 2]]).any()
 
 
-@pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
-)
+@parametrize_dask
 @pytest.mark.parametrize(
     "x",
     [
@@ -2626,8 +2610,6 @@ def test_polyfit_polyval_integration(
 ) -> None:
     y.coords["x"] = x
     if use_dask:
-        if not has_dask:
-            pytest.skip("requires dask")
         y = y.chunk({"x": 2})
 
     fit = y.polyfit(dim="x", deg=2)
@@ -2636,7 +2618,7 @@ def test_polyfit_polyval_integration(
     xr.testing.assert_allclose(evaluated.variable, expected.variable)
 
 
-@pytest.mark.parametrize("use_dask", [False, True])
+@parametrize_dask
 @pytest.mark.parametrize(
     "a, b, ae, be, dim, axis",
     [
@@ -2738,8 +2720,6 @@ def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
     expected = np.cross(ae, be, axis=axis)
 
     if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
         a = a.chunk()
         b = b.chunk()
 

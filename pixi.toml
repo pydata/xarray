@@ -142,6 +142,8 @@ sparse = "0.15.*"
 toolz = "1.0.*"
 zarr = "3.0.*"
 pyarrow = "*"        # required by dask.dataframe
+# numcodecs warns on import when crc32c is used instead of google-crc32c
+google-crc32c = "*"
 
 
 [feature.test.dependencies]

@@ -107,7 +107,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
         message="'cgi' is deprecated and slated for removal in Python 3.13",
-        category=FutureWarning,
+        category=DeprecationWarning,
     )
     has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
@@ -152,7 +152,12 @@ else:
 
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
-has_zarr, requires_zarr = _importorskip("zarr")
+with warnings.catch_warnings():
+    # raised when importing numcodecs with crc32c installed
+    warnings.filterwarnings(
+        "ignore", message="crc32c usage is deprecated", category=DeprecationWarning
+    )
+    has_zarr, requires_zarr = _importorskip("zarr")
 # Since min zarr is now >=3.0, these are aliases for has_zarr/requires_zarr.
 # Kept to avoid a large diff across test files.
 has_zarr_v3 = has_zarr
@@ -217,12 +222,35 @@ has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
+has_jax, requires_jax = _importorskip("jax")
+has_aiobotocore, requires_aiobotocore = _importorskip("aiobotocore")
 
 parametrize_zarr_format = pytest.mark.parametrize(
     "zarr_format",
     [
         pytest.param(2, id="zarr_format=2"),
         pytest.param(3, id="zarr_format=3"),
+    ],
+)
+
+
+# Parametrize a test over in-memory (False) and dask-backed (True) data.
+# The dask case is skipped at collection time if dask is not installed.
+parametrize_dask = pytest.mark.parametrize(
+    "use_dask",
+    [
+        pytest.param(False, id="numpy"),
+        pytest.param(True, id="dask", marks=requires_dask),
+    ],
+)
+
+# Parametrize a test over numpy datetime64 (False) and cftime (True) dates.
+# The cftime case is skipped at collection time if cftime is not installed.
+parametrize_cftime = pytest.mark.parametrize(
+    "use_cftime",
+    [
+        pytest.param(False, id="datetime64"),
+        pytest.param(True, id="cftime", marks=requires_cftime),
     ],
 )
 

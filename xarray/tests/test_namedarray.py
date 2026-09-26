@@ -19,7 +19,7 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray.utils import fake_target_chunksize
-from xarray.tests import requires_cftime
+from xarray.tests import requires_array_api_strict, requires_cftime
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -383,13 +383,16 @@ class TestNamedArray(NamedArraySubclassobjects):
         custom_a = CustomArrayIndexable(numpy_a)
         check_duck_array_typevar(custom_a)
 
+    @requires_array_api_strict
     def test_duck_array_class_array_api(self) -> None:
         # Test numpy's array api:
-        nxp = pytest.importorskip("array_api_strict", minversion="1.0")
+        import array_api_strict as nxp
 
         # TODO: nxp doesn't use dtype typevars, so can only use Any for the moment:
-        arrayapi_a: duckarray[Any, Any]  #  duckarray[Any, np.dtype[np.int64]]
-        arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
+        arrayapi_a = cast(
+            "duckarray[Any, Any]",  #  duckarray[Any, np.dtype[np.int64]]
+            nxp.asarray([2.1, 4], dtype=nxp.int64),
+        )
         check_duck_array_typevar(arrayapi_a)
 
     def test_new_namedarray(self) -> None:

@@ -23,6 +23,7 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     dask_array_type,
+    parametrize_cftime,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -678,10 +679,7 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 
 @requires_bottleneck
-@pytest.mark.parametrize(
-    "use_cftime",
-    [False, pytest.param(True, marks=requires_cftime)],
-)
+@parametrize_cftime
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3h", np.timedelta64(3, "h"), pd.to_timedelta("3h")]
