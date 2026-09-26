@@ -20,6 +20,7 @@ from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
+    dask_array_api,
     has_dask,
     has_scipy,
     has_scipy_ge_1_13,
@@ -949,7 +950,7 @@ def test_interpolate_chunk_1d(
                         dest[dim] = cast(
                             xr.DataArray,
                             np.linspace(
-                                before.item(), after.item(), len(da.coords[dim]) * 13
+                                before.item(), after.item(), len(da.coords[dim]) * 5
                             ),
                         )
                         if chunked:
@@ -1007,7 +1008,8 @@ def test_interpolate_chunk_advanced(method: InterpOptions) -> None:
     kwargs = {"fill_value": None}
     expected = da.interp(t=0.5, x=xda, y=yda, z=zda, kwargs=kwargs, method=method)
 
-    da = da.chunk(2)
+    # multiple chunks along every dimension, while keeping the task graph small
+    da = da.chunk(4)
     xda = xda.chunk(1)
     zda = zda.chunk(3)
     actual = da.interp(t=0.5, x=xda, y=yda, z=zda, kwargs=kwargs, method=method)
@@ -1129,7 +1131,7 @@ def test_interp_non_numeric_nd() -> None:
 @requires_scipy
 def test_interp_vectorized_dask() -> None:
     # Synthetic dataset chunked in the two interpolation dimensions
-    import dask.array as da
+    da = dask_array_api
 
     nt = 10
     nlat = 20

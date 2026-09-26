@@ -48,6 +48,8 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_api,
+    dask_array_type,
     has_dask,
     has_dask_ge_2025_1_0,
     has_pyarrow,
@@ -59,6 +61,7 @@ from xarray.tests import (
     requires_iris,
     requires_numexpr,
     requires_pint,
+    requires_polars,
     requires_pyarrow,
     requires_scipy,
     requires_sparse,
@@ -501,10 +504,13 @@ class TestDataArray:
     @requires_dask
     def test_constructor_dask_coords(self) -> None:
         # regression test for GH1684
-        import dask.array as da
-
-        coord = da.arange(8, chunks=(4,))
-        data = da.random.random((8, 8), chunks=(4, 4)) + 1
+        coord = DataArray(np.arange(8), dims="x").chunk({"x": 4}).data
+        data = (
+            DataArray(np.random.random((8, 8)), dims=["x", "y"])
+            .chunk({"x": 4, "y": 4})
+            .data
+            + 1
+        )
         actual = DataArray(data, coords={"x": coord, "y": coord}, dims=["x", "y"])
 
         ecoord = np.arange(8)
@@ -961,15 +967,16 @@ class TestDataArray:
 
         with pytest.warns(FutureWarning):
             blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore[arg-type]
-            assert blocked.chunks == ((2, 1), (2, 2))
-            assert blocked.data.name != first_dask_name
+        assert blocked.chunks == ((2, 1), (2, 2))
+        assert blocked.data.name != first_dask_name
 
+        with pytest.warns(FutureWarning):
             blocked = unblocked.chunk(chunks=(3, 3))
-            assert blocked.chunks == ((3,), (3, 1))
-            assert blocked.data.name != first_dask_name
+        assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
 
-            with pytest.raises(ValueError):
-                blocked.chunk(chunks=(3, 3, 3))
+        with pytest.raises(ValueError), pytest.warns(FutureWarning):
+            blocked.chunk(chunks=(3, 3, 3))
 
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined
@@ -978,10 +985,8 @@ class TestDataArray:
         assert blocked.load().chunks is None
 
         # Check that kwargs are passed
-        import dask.array as da
-
         blocked = unblocked.chunk(name_prefix="testname_")
-        assert isinstance(blocked.data, da.Array)
+        assert isinstance(blocked.data, dask_array_type)
         assert "testname_" in blocked.data.name
 
         # test kwargs form of chunks
@@ -1323,8 +1328,7 @@ class TestDataArray:
     def test_loc(self) -> None:
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
-        # typing issue: see https://github.com/python/mypy/issues/2410
-        assert_identical(da[:3], da.loc[:"c"])  # type: ignore[misc]
+        assert_identical(da[:3], da.loc[:"c"])
         assert_identical(da[1], da.loc["b"])
         assert_identical(da[1], da.loc[{"x": "b"}])
         assert_identical(da[1], da.loc["b", ...])
@@ -1342,8 +1346,7 @@ class TestDataArray:
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
         # assignment
-        # typing issue: see https://github.com/python/mypy/issues/2410
-        da.loc["a":"j"] = 0  # type: ignore[misc]
+        da.loc["a":"j"] = 0
         assert np.all(da.values == 0)
         da.loc[{"x": slice("a", "j")}] = 2
         assert np.all(da.values == 2)
@@ -1463,6 +1466,20 @@ class TestDataArray:
 
         assert_identical(mdata.sel(x={"one": "a", "two": 1}), mdata.sel(one="a", two=1))
 
+    def test_selection_multiindex_nested_tuple_level_value(self) -> None:
+        level_0 = pd.Index(
+            [(1, 1), (1, 1), (2, 2), (3, 3)], name="a", tupleize_cols=False
+        )
+        level_1 = pd.Index([1, 2, 10, 20], name="b")
+        midx = pd.MultiIndex.from_arrays([level_0, level_1])
+        coords = Coordinates.from_pandas_multiindex(midx, "index")
+        data = DataArray(np.arange(4), dims=("index",), coords=coords)
+
+        actual = data.sel(index=((1, 1), 2))
+        expected = data.isel(index=1)
+
+        assert_identical(actual, expected)
+
     def test_selection_multiindex_remove_unused(self) -> None:
         # GH2619. For MultiIndex, we need to call remove_unused.
         ds = xr.DataArray(
@@ -1498,7 +1515,7 @@ class TestDataArray:
 
         with pytest.warns(FutureWarning):
             original = xr.concat([da, db], dim="x")
-            assert original.y.size == 4
+        assert original.y.size == 4
         with set_options(use_new_combine_kwarg_defaults=True):
             # default compat="override" will pick the first one
             new = xr.concat([da, db], dim="x")
@@ -1514,8 +1531,8 @@ class TestDataArray:
         dates = pd.date_range("2000-01-01", periods=10)
         da = DataArray(np.arange(1, 11), [("time", dates)])
 
-        assert_array_equal(da["time.dayofyear"], da.values)
-        assert_array_equal(da.coords["time.dayofyear"], da.values)
+        assert_array_equal(da["time.day_of_year"], da.values)
+        assert_array_equal(da.coords["time.day_of_year"], da.values)
 
     def test_coords(self) -> None:
         # use int64 to ensure repr() consistency on windows
@@ -2902,6 +2919,11 @@ class TestDataArray:
     def test_squeeze(self) -> None:
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
 
+    def test_squeeze_non_str_dim_name(self) -> None:
+        array = DataArray(np.zeros((1, 3)), dims=[0, "y"])
+        expected = DataArray(np.zeros(3), dims=["y"])
+        assert_identical(array.squeeze(), expected)
+
     def test_squeeze_drop(self) -> None:
         array = DataArray([1], [("x", [0])])
         expected = DataArray(1)
@@ -3194,7 +3216,12 @@ class TestDataArray:
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim",
-        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
+        [
+            pytest.param(None, None, id="none"),
+            pytest.param(0, "x", id="x"),
+            pytest.param([0], ["x"], id="list-x"),
+            pytest.param([0, 1], ["x", "y"], id="list-x-y"),
+        ],
     )
     def test_quantile(self, q, axis, dim, skipna, compute_backend) -> None:
         va = self.va.copy(deep=True)
@@ -3867,6 +3894,66 @@ class TestDataArray:
         actual_coords = actual_sparse.data.coords
 
         np.testing.assert_equal(actual_coords, expected_coords)
+
+    @requires_sparse
+    def test_to_series_sparse(self) -> None:
+        import sparse
+
+        # A sparsity pattern where no dimension has every one of its labels
+        # represented in the stored entries, and the missing labels aren't
+        # all at the same (e.g. trailing) position - this is the case a
+        # naive positional mapping from `sparse.COO.coords` to per-dimension
+        # coordinate labels gets wrong.
+        dense = np.array(
+            [
+                [0, 0, 3, 0],
+                [0, 0, 0, 9],
+                [7, 0, 0, 0],
+            ]
+        )
+        da = DataArray(
+            sparse.COO.from_numpy(dense),
+            dims=["x", "y"],
+            coords={"x": list("abc"), "y": list("wxyz")},
+            name="foo",
+        )
+        actual = da.to_series()
+
+        dense_da = DataArray(
+            dense,
+            dims=["x", "y"],
+            coords={"x": list("abc"), "y": list("wxyz")},
+            name="foo",
+        )
+        expected = dense_da.to_series()
+        expected = expected[expected != 0]
+
+        assert_array_equal(actual.sort_index().index, expected.sort_index().index)
+        assert_array_equal(actual.sort_index().values, expected.sort_index().values)
+        assert actual.name == "foo"
+        # only the stored entries are present - the full Cartesian product
+        # (which to_series() never materializes for sparse data) is not
+        assert len(actual) == dense[dense != 0].size
+
+    @requires_sparse
+    def test_to_series_sparse_1d(self) -> None:
+        import sparse
+
+        dense = np.array([0, 0, 5, 0, 7])
+        da = DataArray(
+            sparse.COO.from_numpy(dense),
+            dims=["x"],
+            coords={"x": list("pqrst")},
+            name="foo",
+        )
+        actual = da.to_series()
+
+        # a single dim should give a plain Index, matching the dense/non
+        # -sparse behavior of to_series(), not a length-1-level MultiIndex
+        assert isinstance(actual.index, pd.Index)
+        assert not isinstance(actual.index, pd.MultiIndex)
+        assert_array_equal(actual.sort_index().index, ["r", "t"])
+        assert_array_equal(actual.sort_index().values, [5, 7])
 
     def test_nbytes_does_not_load_data(self) -> None:
         array = InaccessibleArray(np.zeros((3, 3), dtype="uint8"))
@@ -4823,8 +4910,7 @@ class TestDataArray:
         dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
         if backend == "dask":
-            import dask.array as da
-
+            da = dask_array_api
             aa = aa.copy(data=da.from_array(a, chunks=3))
             bb = bb.copy(data=da.from_array(b, chunks=3))
             cc = cc.copy(data=da.from_array(c, chunks=7))
@@ -6614,7 +6700,7 @@ class TestReduce3D(TestReduce):
 
         minindices_x = {
             key: xr.where(
-                nanindices_x[key] == None,  # noqa: E711
+                nanindices_x[key] == None,
                 minindices_x[key],
                 nanindices_x[key],
             )
@@ -6632,7 +6718,7 @@ class TestReduce3D(TestReduce):
 
         minindices_y = {
             key: xr.where(
-                nanindices_y[key] == None,  # noqa: E711
+                nanindices_y[key] == None,
                 minindices_y[key],
                 nanindices_y[key],
             )
@@ -6650,7 +6736,7 @@ class TestReduce3D(TestReduce):
 
         minindices_z = {
             key: xr.where(
-                nanindices_z[key] == None,  # noqa: E711
+                nanindices_z[key] == None,
                 minindices_z[key],
                 nanindices_z[key],
             )
@@ -6668,7 +6754,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None,  # noqa: E711
+                nanindices_xy[key] == None,
                 minindices_xy[key],
                 nanindices_xy[key],
             )
@@ -6686,7 +6772,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None,  # noqa: E711
+                nanindices_xz[key] == None,
                 minindices_xz[key],
                 nanindices_xz[key],
             )
@@ -6704,7 +6790,7 @@ class TestReduce3D(TestReduce):
 
         minindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None,  # noqa: E711
+                nanindices_yz[key] == None,
                 minindices_yz[key],
                 nanindices_yz[key],
             )
@@ -6722,7 +6808,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None,  # noqa: E711
+                nanindices_xyz[key] == None,
                 minindices_xyz[key],
                 nanindices_xyz[key],
             )
@@ -6853,7 +6939,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_x = {
             key: xr.where(
-                nanindices_x[key] == None,  # noqa: E711
+                nanindices_x[key] == None,
                 maxindices_x[key],
                 nanindices_x[key],
             )
@@ -6871,7 +6957,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_y = {
             key: xr.where(
-                nanindices_y[key] == None,  # noqa: E711
+                nanindices_y[key] == None,
                 maxindices_y[key],
                 nanindices_y[key],
             )
@@ -6889,7 +6975,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_z = {
             key: xr.where(
-                nanindices_z[key] == None,  # noqa: E711
+                nanindices_z[key] == None,
                 maxindices_z[key],
                 nanindices_z[key],
             )
@@ -6907,7 +6993,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None,  # noqa: E711
+                nanindices_xy[key] == None,
                 maxindices_xy[key],
                 nanindices_xy[key],
             )
@@ -6925,7 +7011,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None,  # noqa: E711
+                nanindices_xz[key] == None,
                 maxindices_xz[key],
                 nanindices_xz[key],
             )
@@ -6943,7 +7029,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None,  # noqa: E711
+                nanindices_yz[key] == None,
                 maxindices_yz[key],
                 nanindices_yz[key],
             )
@@ -6961,7 +7047,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None,  # noqa: E711
+                nanindices_xyz[key] == None,
                 maxindices_xyz[key],
                 nanindices_xyz[key],
             )
@@ -7673,3 +7759,225 @@ def test_unstack_index_var() -> None:
         name="x",
     )
     assert_identical(actual, expected)
+
+
+class TestArrowPyCapsule:
+    @requires_pyarrow
+    def test_pyarrow_table_1d(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords={"x": [10, 20, 30]},
+            name="temperature",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"x", "temperature"}
+        assert table.num_rows == 3
+        assert table.schema.field("x").type == pa.int64()
+        assert table.schema.field("temperature").type == pa.float64()
+        np.testing.assert_array_equal(table["x"].to_pylist(), [10, 20, 30])
+        np.testing.assert_array_equal(table["temperature"].to_pylist(), [1.0, 2.0, 3.0])
+
+    @requires_pyarrow
+    def test_pyarrow_table_2d(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"x", "y", "data"}
+        assert table.num_rows == 6
+        assert table.schema.field("x").type == pa.int64()
+        assert table.schema.field("y").type == pa.int64()
+        assert table.schema.field("data").type == pa.float64()
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), list(np.arange(6, dtype=float))
+        )
+
+    @requires_pyarrow
+    def test_data_array_unnamed_variable(self):
+        import pyarrow as pa
+
+        da = xr.DataArray([1, 2, 3], dims=["x"], coords={"x": [0, 1, 2]})
+        table = pa.table(da)
+
+        assert "values" in table.column_names
+
+    @requires_polars
+    def test_polars_dataframe_1d(self):
+        import polars as pl
+
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords={"x": [10, 20, 30]},
+            name="temperature",
+        )
+        df = pl.from_arrow(da)
+
+        assert isinstance(df, pl.DataFrame)
+        assert set(df.columns) == {"x", "temperature"}
+        assert len(df) == 3
+        np.testing.assert_array_equal(df["x"].to_list(), [10, 20, 30])
+        np.testing.assert_array_equal(df["temperature"].to_list(), [1.0, 2.0, 3.0])
+
+    @requires_polars
+    def test_polars_dataframe_2d(self):
+        import polars as pl
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        df = pl.from_arrow(da)
+
+        assert isinstance(df, pl.DataFrame)
+        assert set(df.columns) == {"x", "y", "data"}
+        assert len(df) == 6
+        np.testing.assert_array_equal(
+            df["data"].to_list(), list(np.arange(6, dtype=float))
+        )
+        # x repeats for each y: [0,0,0,1,1,1]
+        np.testing.assert_array_equal(df["x"].to_list(), [0, 0, 0, 1, 1, 1])
+        # y cycles for each x: [10,20,30,10,20,30]
+        np.testing.assert_array_equal(df["y"].to_list(), [10, 20, 30, 10, 20, 30])
+
+    @requires_dask
+    @requires_pyarrow
+    def test_dask_dataarray(self):
+        import dask.array as da
+        import pyarrow as pa
+
+        dask_da = xr.DataArray(
+            da.from_array(np.arange(6, dtype=float).reshape(2, 3)),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        with pytest.raises(ValueError):
+            pa.table(dask_da)
+
+    @requires_polars
+    @requires_pyarrow
+    def test_polars_pyarrow_consistent(self):
+        import polars as pl
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        pa_table = pa.table(da)
+        pl_df = pl.from_arrow(da)
+
+        for col in pa_table.column_names:
+            np.testing.assert_array_equal(
+                pa_table[col].to_pylist(), pl_df[col].to_list()
+            )
+
+    @requires_pyarrow
+    def test_arrow_schema_fields(self):
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30]},
+            name="data",
+        )
+        schema = pa.schema(da)
+
+        assert isinstance(schema, pa.Schema)
+        assert schema.names == ["x", "y", "data"]
+        assert schema.field("x").type == pa.int64()
+        assert schema.field("y").type == pa.int64()
+        assert schema.field("data").type == pa.float64()
+
+    @requires_pyarrow
+    def test_arrow_schema_metadata(self):
+        import json
+
+        import pyarrow as pa
+
+        da = xr.DataArray(
+            [1.0, 2.0, 3.0],
+            dims=["x"],
+            coords={"x": [10, 20, 30]},
+            name="temperature",
+            attrs={"units": "K", "long_name": "temperature"},
+        )
+        schema = pa.schema(da)
+
+        assert schema.metadata[b"xarray:arrow_schema_version"] == b"v1"
+
+        xarray_meta = json.loads(schema.metadata[b"xarray"])
+        assert xarray_meta["name"] == "temperature"
+        assert xarray_meta["dims"] == ["x"]
+        assert xarray_meta["attrs"] == {"units": "K", "long_name": "temperature"}
+        assert "x" in xarray_meta["coords"]
+
+    @requires_pyarrow
+    def test_pyarrow_table_curvilinear_coords(self):
+        import pyarrow as pa
+
+        # non-dimension coordinates spanning multiple dims (e.g. a curvilinear
+        # grid with 2D lat/lon) should be supported
+        lat = np.array([[10.0, 11.0, 12.0], [13.0, 14.0, 15.0]])
+        lon = np.array([[20.0, 21.0, 22.0], [23.0, 24.0, 25.0]])
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"lat": (["x", "y"], lat), "lon": (["x", "y"], lon)},
+            name="data",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"lat", "lon", "data"}
+        assert table.num_rows == 6
+        assert table.schema.field("lat").type == pa.float64()
+        assert table.schema.field("lon").type == pa.float64()
+        assert table.schema.field("data").type == pa.float64()
+        np.testing.assert_array_equal(table["lat"].to_pylist(), lat.ravel())
+        np.testing.assert_array_equal(table["lon"].to_pylist(), lon.ravel())
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), np.arange(6, dtype=float)
+        )
+
+    @requires_pyarrow
+    def test_pyarrow_table_transposed_coords(self):
+        import pyarrow as pa
+
+        lat = np.array([[10.0, 11.0], [12.0, 13.0], [14.0, 15.0]])
+
+        # Array with swapped dims order
+        da = xr.DataArray(
+            np.arange(6, dtype=float).reshape(2, 3),
+            dims=["x", "y"],
+            coords={"lat": (["y", "x"], lat)},
+            name="data",
+        )
+        table = pa.table(da)
+
+        assert isinstance(table, pa.Table)
+        assert set(table.column_names) == {"lat", "data"}
+        assert table.num_rows == 6
+        assert table.schema.field("lat").type == pa.float64()
+        np.testing.assert_array_equal(table["lat"].to_pylist(), lat.T.ravel())
+        np.testing.assert_array_equal(
+            table["data"].to_pylist(), np.arange(6, dtype=float)
+        )

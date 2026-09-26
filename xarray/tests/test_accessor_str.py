@@ -57,10 +57,7 @@ def dtype(request):
 
 @requires_dask
 def test_dask() -> None:
-    import dask.array as da
-
-    arr = da.from_array(["a", "b", "c"], chunks=-1)
-    xarr = xr.DataArray(arr)
+    xarr = xr.DataArray(["a", "b", "c"]).chunk()
 
     result = xarr.str.len().compute()
     expected = xr.DataArray([1, 1, 1])

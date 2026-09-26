@@ -32,6 +32,7 @@ class RangeCoordinateTransform(CoordinateTransform):
         coord_name: Hashable,
         dim: str,
         dtype: Any = None,
+        step: float | None = None,
     ):
         if dtype is None:
             dtype = np.dtype(np.float64)
@@ -40,7 +41,7 @@ class RangeCoordinateTransform(CoordinateTransform):
 
         self.start = start
         self.stop = stop
-        self._step = None  # Will be calculated by property
+        self._step = step
 
     @property
     def coord_name(self) -> Hashable:
@@ -121,21 +122,23 @@ class RangeCoordinateTransform(CoordinateTransform):
         new_range = range(self.size)[sl]
         new_size = len(new_range)
 
+        # A slice scales the spacing by its own step, e.g. ``[::2]`` doubles it.
+        # Preserve the exact resulting step instead of letting it be re-derived
+        # from ``(stop - start) / size``, which would be wrong whenever the
+        # spacing does not evenly divide the interval. See GH11325.
+        new_step = self.step * new_range.step
         new_start = self.start + new_range.start * self.step
-        new_stop = self.start + new_range.stop * self.step
+        new_stop = new_start + new_size * new_step
 
-        result = type(self)(
+        return type(self)(
             new_start,
             new_stop,
             new_size,
             self.coord_name,
             self.dim,
             dtype=self.dtype,
+            step=new_step,
         )
-        if new_size == 0:
-            # For empty slices, preserve step from parent
-            result._step = self.step
-        return result
 
 
 class RangeIndex(CoordinateTransformIndex):
@@ -278,8 +281,13 @@ class RangeIndex(CoordinateTransformIndex):
 
         size = math.ceil((stop - start) / step)
 
+        # Snap ``stop`` to ``start + size * step`` and keep the exact ``step`` so
+        # that the materialized values match ``numpy.arange`` even when ``step``
+        # does not evenly divide ``stop - start``. See GH11325.
+        stop = start + size * step
+        # Snap `stop` to `start + size * step`
         transform = RangeCoordinateTransform(
-            start, stop, size, coord_name, dim, dtype=dtype
+            start, stop, size, coord_name, dim, dtype=dtype, step=step
         )
 
         return cls(transform)
@@ -339,7 +347,7 @@ class RangeIndex(CoordinateTransformIndex):
         if coord_name is None:
             coord_name = dim
 
-        if endpoint:
+        if endpoint and num > 1:
             stop += (stop - start) / (num - 1)
 
         transform = RangeCoordinateTransform(

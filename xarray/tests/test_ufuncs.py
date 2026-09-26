@@ -235,6 +235,24 @@ class TestXarrayUfuncs:
         cos_pickled = pickle.loads(pickle.dumps(xu.cos))
         assert_identical(cos_pickled(a), xu.cos(a))
 
+    def test_ufunc_datatree(self):
+        tree = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset({"x": ("n", [0.0, np.pi])}),
+                "/child": xr.Dataset({"x": ("n", [2 * np.pi, 3 * np.pi])}),
+            }
+        )
+        expected = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset({"x": ("n", np.cos([0.0, np.pi]))}),
+                "/child": xr.Dataset({"x": ("n", np.cos([2 * np.pi, 3 * np.pi]))}),
+            }
+        )
+
+        actual = xu.cos(tree)
+
+        assert expected.identical(actual)
+
     def test_ufunc_scalar(self):
         actual = xu.sin(1)
         assert isinstance(actual, float)

@@ -76,7 +76,7 @@ _NormalizedChunks = tuple[tuple[int, ...], ...]
 # # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
 T_ChunkDim: TypeAlias = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
+T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim] | tuple[T_ChunkDim, ...]
 
 _Dim = Hashable
 _Dims = tuple[_Dim, ...]

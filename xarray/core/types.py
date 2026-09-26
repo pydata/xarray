@@ -367,7 +367,9 @@ Bins = Union[
     int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
 ]
 
-ResampleCompatible: TypeAlias = str | datetime.timedelta | pd.Timedelta | pd.DateOffset
+ResampleCompatible: TypeAlias = (
+    str | datetime.timedelta | pd.Timedelta | pd.offsets.BaseOffset
+)
 
 
 class Closable(Protocol):

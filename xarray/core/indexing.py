@@ -35,7 +35,12 @@ from xarray.core.utils import (
     to_0d_array,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
-from xarray.namedarray.pycompat import array_type, integer_types, is_chunked_array
+from xarray.namedarray.pycompat import (
+    array_type,
+    integer_types,
+    is_chunked_array,
+    to_numpy,
+)
 
 if TYPE_CHECKING:
     from xarray.core.extension_array import PandasExtensionArray
@@ -683,9 +688,10 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
+            return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype, copy=copy)
+
         else:
-            return np.asarray(self.get_duck_array(), dtype=dtype)
+            return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype)
 
     def get_duck_array(self):
         return self.array.get_duck_array()
@@ -1726,7 +1732,7 @@ class NumpyIndexingAdapter(IndexingAdapter):
                     "Do you want to .copy() array first?"
                 ) from exc
             else:
-                raise exc
+                raise
 
     def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
         key = _outer_to_numpy_indexer(indexer, self.array.shape)
@@ -1844,7 +1850,7 @@ class DaskIndexingAdapter(IndexingAdapter):
     def _vindex_get(self, indexer: VectorizedIndexer):
         try:
             return self.array.vindex[indexer.tuple]
-        except IndexError as e:
+        except IndexError:
             # TODO: upstream to dask
             has_dask = any(is_duck_dask_array(i) for i in indexer.tuple)
             # this only works for "small" 1d coordinate arrays with one chunk
@@ -1856,7 +1862,7 @@ class DaskIndexingAdapter(IndexingAdapter):
                 or math.prod(self.array.numblocks) > 1
                 or self.array.ndim > 1
             ):
-                raise e
+                raise
             (idxr,) = indexer.tuple
             if idxr.ndim == 0:
                 return self.array[idxr.data]
@@ -2181,7 +2187,7 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
 
     @property
     def shape(self) -> tuple[int, ...]:
-        return tuple(self._transform.dim_size.values())
+        return tuple(self._transform.dim_size[dim] for dim in self._dims)
 
     @property
     def _in_memory(self) -> bool:

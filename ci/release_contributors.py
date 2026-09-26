@@ -18,6 +18,7 @@ ignored = [
             "no-reply@anthropic.com",
         ],
     },
+    {"name": "OpenAI"},
 ]
 
 
