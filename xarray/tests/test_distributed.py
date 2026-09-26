@@ -235,7 +235,8 @@ def test_dask_distributed_read_netcdf_integration_test(
 # https://github.com/dask/dask/blob/e04734b4d8959ba259801f2e2a490cb4ee8d891f/dask/tests/test_distributed.py#L338-L358
 @pytest.fixture
 def zarr(client):  # noqa: F811
-    zarr_lib = pytest.importorskip("zarr")
+    import zarr as zarr_lib
+
     # Zarr-Python 3 lazily allocates a dedicated thread/IO loop
     # for to execute async tasks. To avoid having this thread
     # be picked up as a "leaked thread", we manually trigger it's

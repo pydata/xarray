@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from xarray.core import dtypes
-from xarray.tests import requires_array_api_strict
+from xarray.tests import requires_array_api_strict, requires_dask
 
 try:
     import array_api_strict
@@ -58,10 +58,11 @@ def test_result_type_scalars(values, expected) -> None:
     assert np.issubdtype(actual, expected)
 
 
+@requires_dask
 def test_result_type_dask_array() -> None:
     # verify it works without evaluating dask arrays
-    da = pytest.importorskip("dask.array")
-    dask = pytest.importorskip("dask")
+    import dask
+    import dask.array as da
 
     def error():
         raise RuntimeError

@@ -10,6 +10,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting_html as fh
 from xarray.core.coordinates import Coordinates
+from xarray.tests import requires_dask
 
 
 def drop_fallback_text_repr(html: str) -> str:
@@ -79,7 +80,6 @@ def dataarray() -> xr.DataArray:
 
 @pytest.fixture
 def dask_dataarray(dataarray: xr.DataArray) -> xr.DataArray:
-    pytest.importorskip("dask")
     return dataarray.chunk()
 
 
@@ -121,6 +121,7 @@ def test_short_data_repr_html_non_str_keys(dataset: xr.Dataset) -> None:
     fh.dataset_repr(ds)
 
 
+@requires_dask
 def test_short_data_repr_html_dask(dask_dataarray: xr.DataArray) -> None:
     assert hasattr(dask_dataarray.data, "_repr_html_")
     data_repr = fh.short_data_repr_html(dask_dataarray)

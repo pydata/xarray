@@ -217,6 +217,8 @@ has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
 has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
+has_jax, requires_jax = _importorskip("jax")
+has_aiobotocore, requires_aiobotocore = _importorskip("aiobotocore")
 
 parametrize_zarr_format = pytest.mark.parametrize(
     "zarr_format",

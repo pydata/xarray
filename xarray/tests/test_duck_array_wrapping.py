@@ -1,9 +1,19 @@
+import importlib
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.tests import get_dask_chunkmanager, has_dask_array_expr
+from xarray.tests import (
+    get_dask_chunkmanager,
+    has_dask_array_expr,
+    requires_cupy,
+    requires_dask,
+    requires_jax,
+    requires_pint,
+    requires_sparse,
+)
 
 # Don't run cupy in CI because it requires a GPU
 NAMESPACE_ARRAYS = {
@@ -102,6 +112,18 @@ NAMESPACE_ARRAYS = {
     },
 }
 
+NAMESPACE_REQUIREMENTS = {
+    "cupy": requires_cupy,
+    "dask.array": requires_dask,
+    "jax.numpy": requires_jax,
+    "pint": requires_pint,
+    "sparse": requires_sparse,
+}
+NAMESPACES = [
+    pytest.param(namespace, marks=NAMESPACE_REQUIREMENTS[namespace])
+    for namespace in NAMESPACE_ARRAYS
+]
+
 try:
     import jax  # type: ignore[import-not-found,unused-ignore]
 
@@ -127,7 +149,7 @@ class _BaseTest:
 
             self.constructor = constructor
         else:
-            self.xp = pytest.importorskip(namespace)
+            self.xp = importlib.import_module(namespace)
             self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["array"])
             self.constructor = getattr(
                 self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["constructor"]
@@ -148,7 +170,7 @@ class _BaseTest:
         )
 
 
-@pytest.mark.parametrize("namespace", NAMESPACE_ARRAYS)
+@pytest.mark.parametrize("namespace", NAMESPACES)
 class TestTopLevelMethods(_BaseTest):
     @pytest.fixture(autouse=True)
     def setUp(self, request, namespace):
@@ -210,7 +232,7 @@ class TestTopLevelMethods(_BaseTest):
         assert isinstance(result.data, self.Array)
 
 
-@pytest.mark.parametrize("namespace", NAMESPACE_ARRAYS)
+@pytest.mark.parametrize("namespace", NAMESPACES)
 class TestDataArrayMethods(_BaseTest):
     @pytest.fixture(autouse=True)
     def setUp(self, request, namespace):

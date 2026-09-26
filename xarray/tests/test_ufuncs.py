@@ -137,8 +137,10 @@ def test_xarray_defers_to_unrecognized_type():
     assert np.sin(xarray_obj, out=other) == "other"  # type: ignore[call-overload]
 
 
+@requires_dask
 def test_xarray_handles_dask():
-    da = pytest.importorskip("dask.array")
+    import dask.array as da
+
     x = xr.DataArray(np.ones((2, 2)), dims=["x", "y"])
     y = da.ones((2, 2), chunks=(2, 2))
     result = np.add(x, y)
@@ -146,8 +148,10 @@ def test_xarray_handles_dask():
     assert isinstance(result, xr.DataArray)
 
 
+@requires_dask
 def test_dask_defers_to_xarray():
-    da = pytest.importorskip("dask.array")
+    import dask.array as da
+
     x = xr.DataArray(np.ones((2, 2)), dims=["x", "y"])
     y = da.ones((2, 2), chunks=(2, 2))
     result = np.add(y, x)

@@ -112,6 +112,7 @@ class TestDataArrayRolling:
             da.rolling(foo=2)
 
     @requires_dask
+    @requires_bottleneck
     @pytest.mark.parametrize(
         "name", ("sum", "mean", "std", "min", "max", "median", "argmin", "argmax")
     )
@@ -121,7 +122,8 @@ class TestDataArrayRolling:
     def test_rolling_wrapped_bottleneck(
         self, da, name, center, min_periods, compute_backend
     ) -> None:
-        bn = pytest.importorskip("bottleneck", minversion="1.1")
+        import bottleneck as bn
+
         # Test all bottleneck functions
         rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
@@ -179,11 +181,10 @@ class TestDataArrayRolling:
         actual = getattr(rolling_obj, name)().load()
         assert_allclose(actual, expected)
 
+    @requires_dask
     @pytest.mark.parametrize("center", (True, None))
     def test_rolling_wrapped_dask_nochunk(self, center) -> None:
         # GH:2113
-        pytest.importorskip("dask.array")
-
         da_day_clim = xr.DataArray(
             np.arange(1, 367), coords=[np.arange(1, 367)], dims="dayofyear"
         )
@@ -718,6 +719,7 @@ class TestDatasetRolling:
             )
             assert_identical(one, two)
 
+    @requires_bottleneck
     @pytest.mark.parametrize(
         "name", ("sum", "mean", "std", "var", "min", "max", "median")
     )
@@ -728,7 +730,7 @@ class TestDatasetRolling:
     def test_rolling_wrapped_bottleneck(
         self, ds, name, center, min_periods, key, compute_backend
     ) -> None:
-        bn = pytest.importorskip("bottleneck", minversion="1.1")
+        import bottleneck as bn
 
         # Test all bottleneck functions
         rolling_obj = ds.rolling(time=7, min_periods=min_periods)

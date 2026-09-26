@@ -87,6 +87,7 @@ from xarray.tests import (
     parametrize_dask,
     parametrize_zarr_format,
     raise_if_dask_computes,
+    requires_aiobotocore,
     requires_cftime,
     requires_dask,
     requires_fsspec,
@@ -5364,7 +5365,14 @@ class TestH5NetCDFDataRos3Driver(TestCommon):
             assert "mydataset" in list(actual)
 
 
-@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "zarr"])
+@pytest.fixture(
+    params=[
+        pytest.param("scipy", marks=requires_scipy),
+        pytest.param("netcdf4", marks=requires_netCDF4),
+        pytest.param("h5netcdf", marks=requires_h5netcdf),
+        pytest.param("zarr", marks=requires_zarr),
+    ]
+)
 def readengine(request):
     return request.param
 
@@ -5409,14 +5417,6 @@ def tmp_store(request, tmp_path):
         raise ValueError("not supported")
 
 
-# using pytest.mark.skipif does not work so this a work around
-def skip_if_not_engine(engine):
-    if engine == "netcdf4":
-        pytest.importorskip("netCDF4")
-    else:
-        pytest.importorskip(engine)
-
-
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
 @pytest.mark.skip(
@@ -5425,9 +5425,6 @@ def skip_if_not_engine(engine):
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
-    # skip certain combinations
-    skip_if_not_engine(readengine)
-
     randdata = np.random.randn(nfiles)
     original = Dataset({"foo": ("x", randdata)})
     # test standard open_mfdataset approach with too many files
@@ -5894,9 +5891,8 @@ class TestDask(DatasetIOBase):
             open_mfdataset("http://some/remote/uri")
 
     @requires_fsspec
+    @requires_aiobotocore
     def test_open_mfdataset_no_files(self) -> None:
-        pytest.importorskip("aiobotocore")
-
         # glob is attempted as of #4823, but finds no files
         with pytest.raises(OSError, match=r"no files"):
             open_mfdataset("http://some/remote/uri", engine="zarr")
