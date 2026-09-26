@@ -296,10 +296,7 @@ def _cov_corr(
         # Adjust covariance for degrees of freedom
         valid_count = valid_values.sum(dim)
         adjust = valid_count / (valid_count - ddof)
-        # I think the cast is required because of `T_DataArray` + `T_Xarray` (would be
-        # the same with `T_DatasetOrArray`)
-        # https://github.com/pydata/xarray/pull/8384#issuecomment-1784228026
-        return cast(T_DataArray, cov * adjust)
+        return cov * adjust
 
     else:
         # Compute std and corr

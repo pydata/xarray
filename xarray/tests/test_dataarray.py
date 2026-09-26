@@ -1328,8 +1328,7 @@ class TestDataArray:
     def test_loc(self) -> None:
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
-        # typing issue: see https://github.com/python/mypy/issues/2410
-        assert_identical(da[:3], da.loc[:"c"])  # type: ignore[misc]
+        assert_identical(da[:3], da.loc[:"c"])
         assert_identical(da[1], da.loc["b"])
         assert_identical(da[1], da.loc[{"x": "b"}])
         assert_identical(da[1], da.loc["b", ...])
@@ -1347,8 +1346,7 @@ class TestDataArray:
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
         # assignment
-        # typing issue: see https://github.com/python/mypy/issues/2410
-        da.loc["a":"j"] = 0  # type: ignore[misc]
+        da.loc["a":"j"] = 0
         assert np.all(da.values == 0)
         da.loc[{"x": slice("a", "j")}] = 2
         assert np.all(da.values == 2)
@@ -2920,6 +2918,11 @@ class TestDataArray:
 
     def test_squeeze(self) -> None:
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
+
+    def test_squeeze_non_str_dim_name(self) -> None:
+        array = DataArray(np.zeros((1, 3)), dims=[0, "y"])
+        expected = DataArray(np.zeros(3), dims=["y"])
+        assert_identical(array.squeeze(), expected)
 
     def test_squeeze_drop(self) -> None:
         array = DataArray([1], [("x", [0])])
