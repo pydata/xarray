@@ -14,6 +14,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     dask_array_type,
+    parametrize_cftime,
     parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
@@ -673,11 +674,7 @@ def test_cftime_round_accessor(
     assert_identical(result, expected)
 
 
-@pytest.mark.parametrize(
-    "use_cftime",
-    [False, pytest.param(True, marks=requires_cftime)],
-    ids=lambda x: f"use_cftime={x}",
-)
+@parametrize_cftime
 @parametrize_dask
 def test_decimal_year(use_cftime, use_dask) -> None:
     year = 2000

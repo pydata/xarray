@@ -54,6 +54,7 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_type,
     has_cftime,
+    parametrize_cftime,
     parametrize_dask,
     requires_cftime,
     requires_dask,
@@ -1281,9 +1282,7 @@ def test_decode_cf_datetime_uint64_with_cftime_overflow_error():
         decode_cf_datetime(num_dates, units, calendar)
 
 
-@pytest.mark.parametrize(
-    "use_cftime", [pytest.param(True, marks=requires_cftime), False]
-)
+@parametrize_cftime
 def test_decode_0size_datetime(use_cftime):
     # GH1329
     dtype = object if use_cftime else "=M8[ns]"
@@ -1724,9 +1723,7 @@ def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype) -> None:
     np.testing.assert_equal(decoded_times, times)
 
 
-@pytest.mark.parametrize(
-    "use_cftime", [False, pytest.param(True, marks=requires_cftime)]
-)
+@parametrize_cftime
 @parametrize_dask
 def test_encode_cf_datetime_units_change(use_cftime, use_dask) -> None:
     times = date_range(start="2000", freq="12h", periods=3, use_cftime=use_cftime)

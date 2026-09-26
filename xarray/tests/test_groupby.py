@@ -43,6 +43,7 @@ from xarray.tests import (
     has_cftime,
     has_dask_array_expr,
     has_flox,
+    parametrize_cftime,
     parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
@@ -3721,9 +3722,7 @@ class TestSeasonGrouperAndResampler:
         with pytest.raises(ValueError, match="sort"):
             da.resample(time=SeasonResampler(seasons))
 
-    @pytest.mark.parametrize(
-        "use_cftime", [pytest.param(True, marks=requires_cftime), False]
-    )
+    @parametrize_cftime
     @pytest.mark.parametrize("drop_incomplete", [True, False])
     @pytest.mark.parametrize(
         "seasons",

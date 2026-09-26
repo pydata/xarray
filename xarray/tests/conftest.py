@@ -122,8 +122,8 @@ def da(request, backend):
 
 @pytest.fixture(
     params=[
-        False,
-        pytest.param(True, marks=requires_cftime),
+        pytest.param(False, id="datetime64"),
+        pytest.param(True, id="cftime", marks=requires_cftime),
     ]
 )
 def use_cftime(request):

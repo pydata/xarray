@@ -37,6 +37,7 @@ from xarray.core.dataarray import DataArray
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_no_warnings,
+    parametrize_cftime,
     requires_cftime,
     requires_pandas_3,
 )
@@ -1491,7 +1492,7 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
 @pytest.mark.parametrize(
     "freq", ("YE", "YS", "YE-MAY", "MS", "ME", "QS", "h", "min", "s")
 )
-@pytest.mark.parametrize("use_cftime", (True, False))
+@parametrize_cftime
 def test_date_range_like_no_deprecation(freq, use_cftime):
     # ensure no internal warnings
     # TODO: remove once freq string deprecation is finished
@@ -1546,17 +1547,13 @@ def as_timedelta_not_implemented_error():
         tick.as_timedelta()
 
 
-@pytest.mark.parametrize(
-    "use_cftime", [pytest.param(True, marks=requires_cftime), False]
-)
+@parametrize_cftime
 def test_cftime_or_date_range_invalid_inclusive_value(use_cftime: bool) -> None:
     with pytest.raises(ValueError, match="nclusive"):
         date_range("2000", periods=3, inclusive="foo", use_cftime=use_cftime)  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize(
-    "use_cftime", [pytest.param(True, marks=requires_cftime), False]
-)
+@parametrize_cftime
 def test_cftime_or_date_range_inclusive_None(use_cftime: bool) -> None:
     result_None = date_range("2000-01-01", "2000-01-04", use_cftime=use_cftime)
     result_both = date_range(
