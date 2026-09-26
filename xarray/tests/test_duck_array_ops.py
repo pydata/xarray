@@ -590,8 +590,6 @@ def _reduce_params():
         [False, True],
     ):
         marks = [requires_dask] if use_dask else []
-        if dtype == np.bool_ and func == "mean":
-            marks.append(pytest.mark.skip(reason="numpy does not support this"))
         if use_dask and skipna is False and dtype == np.bool_:
             marks.append(
                 pytest.mark.skip(reason="dask does not compute object-typed array")

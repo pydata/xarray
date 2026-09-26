@@ -50,7 +50,6 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_api,
     dask_array_type,
-    has_dask,
     has_dask_ge_2025_1_0,
     has_pyarrow,
     parametrize_dask,
@@ -4014,10 +4013,7 @@ class TestDataArray:
         if encoding:
             expected["encoding"] = encoding_data
 
-        if has_dask:
-            da = array.chunk()
-        else:
-            da = array
+        da = array.chunk() if use_dask else array
 
         if data == "array" or data is False:
             with raise_if_dask_computes():

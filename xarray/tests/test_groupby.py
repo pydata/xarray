@@ -41,7 +41,6 @@ from xarray.tests import (
     create_test_data,
     dask_array_api,
     has_cftime,
-    has_dask,
     has_dask_array_expr,
     has_flox,
     parametrize_dask,
@@ -3139,28 +3138,6 @@ def test_multiple_groupers(use_flox: bool, shuffle: bool) -> None:
     # TODO: is order of dims correct?
     assert_identical(actual, expected.transpose("z", "x", "xy"))
 
-    if has_dask:
-        b["xy"] = b["xy"].chunk()
-        expected = xr.DataArray(
-            [[[1, 1, 1], [np.nan, 1, 2]]] * 4,
-            dims=("z", "x", "xy"),
-            coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
-        )
-        with raise_if_dask_computes(max_computes=0):
-            gb = b.groupby(x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"]))
-        assert is_chunked_array(gb.encoded.codes.data)
-        assert not gb.encoded.group_indices
-        if has_flox:
-            if has_dask_array_expr:
-                pytest.xfail(
-                    "flox lazy multiple-groupers currently mix legacy dask arrays"
-                )
-            with raise_if_dask_computes(max_computes=1):
-                assert_identical(gb.count(), expected)
-        else:
-            with pytest.raises(ValueError, match="when lazily grouping"):
-                gb.count()
-
 
 @pytest.mark.parametrize("use_flox", [True, False])
 @pytest.mark.parametrize("shuffle", [True, False])
@@ -3206,6 +3183,48 @@ def test_multiple_groupers_mixed(use_flox: bool, shuffle: bool) -> None:
     # gb - gb.mean()
 
     # ------
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "use_flox",
+    [
+        pytest.param(
+            True,
+            marks=[
+                requires_flox,
+                pytest.mark.xfail(
+                    has_dask_array_expr,
+                    reason="flox lazy multiple-groupers currently mix legacy dask arrays",
+                ),
+            ],
+        ),
+        False,
+    ],
+)
+def test_multiple_groupers_lazy(use_flox: bool) -> None:
+    b = xr.DataArray(
+        np.random.default_rng(0).random((2, 3, 4)),
+        coords={"xy": (("x", "y"), [["a", "b", "c"], ["b", "c", "c"]], {"foo": "bar"})},
+        dims=["x", "y", "z"],
+    )
+    b["xy"] = b["xy"].chunk()
+    expected = xr.DataArray(
+        [[[1, 1, 1], [np.nan, 1, 2]]] * 4,
+        dims=("z", "x", "xy"),
+        coords={"xy": ("xy", ["a", "b", "c"], {"foo": "bar"})},
+    )
+    with raise_if_dask_computes(max_computes=0):
+        gb = b.groupby(x=UniqueGrouper(), xy=UniqueGrouper(labels=["a", "b", "c"]))
+    assert is_chunked_array(gb.encoded.codes.data)
+    assert not gb.encoded.group_indices
+    with xr.set_options(use_flox=use_flox):
+        if use_flox:
+            with raise_if_dask_computes(max_computes=1):
+                assert_identical(gb.count(), expected)
+        else:
+            with pytest.raises(ValueError, match="when lazily grouping"):
+                gb.count()
 
 
 @requires_flox_0_9_12

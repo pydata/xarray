@@ -969,13 +969,9 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers5)
 
-    def test_vectorized_indexing_negative_step(self) -> None:
-        # use dask explicitly when present
-        open_kwargs: dict[str, Any] | None
-        if has_dask:
-            open_kwargs = {"chunks": {}}
-        else:
-            open_kwargs = None
+    @parametrize_dask
+    def test_vectorized_indexing_negative_step(self, use_dask: bool) -> None:
+        open_kwargs: dict[str, Any] | None = {"chunks": {}} if use_dask else None
         in_memory = create_test_data()
 
         def multiple_indexing(indexers):
@@ -4446,12 +4442,14 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 )  # use default
                 assert_identical(expected, on_disk)
 
+    @parametrize_dask
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
     def test_write_empty(
         self,
         consolidated: bool | None,
         write_empty: bool | None,
+        use_dask: bool,
     ) -> None:
         def assert_expected_files(expected: list[str], store: str) -> None:
             """Convenience for comparing with actual files written"""
@@ -4494,7 +4492,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
 
         ds = xr.Dataset(data_vars={"test": (("Z", "Y", "X"), data)})
 
-        if has_dask:
+        if use_dask:
             ds["test"] = ds["test"].chunk(1)
             encoding = None
         else:
@@ -7204,10 +7202,9 @@ def test_extract_zarr_variable_encoding() -> None:
         )
 
 
-@requires_zarr
-@requires_fsspec
-@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
-def test_open_fsspec() -> None:
+@pytest.fixture
+def fsspec_memory_zarr_stores():
+    """Write two zarr stores to fsspec's global in-memory filesystem."""
     import fsspec
 
     ds = open_dataset(os.path.join(os.path.dirname(__file__), "data", "example_1.nc"))
@@ -7222,6 +7219,18 @@ def test_open_fsspec() -> None:
     mm = m.get_mapper("out2.zarr")
     ds0.to_zarr(mm)  # old interface
 
+    yield ds, ds0
+
+    for path in ("out1.zarr", "out2.zarr"):
+        m.rm(path, recursive=True)
+
+
+@requires_zarr
+@requires_fsspec
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
+def test_open_fsspec(fsspec_memory_zarr_stores) -> None:
+    _, ds0 = fsspec_memory_zarr_stores
+
     # single dataset
     url = "memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
@@ -7232,17 +7241,23 @@ def test_open_fsspec() -> None:
     ds2 = open_dataset(url, engine="zarr")
     xr.testing.assert_equal(ds0, ds2)
 
-    # open_mfdataset requires dask
-    if has_dask:
-        # multi dataset
-        url = "memory://out*.zarr"
-        ds2 = open_mfdataset(url, engine="zarr")
-        xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
-        # multi dataset with caching
-        url = "simplecache::memory://out*.zarr"
-        ds2 = open_mfdataset(url, engine="zarr")
-        xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
+@requires_zarr
+@requires_fsspec
+@requires_dask
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
+def test_open_mfdataset_fsspec(fsspec_memory_zarr_stores) -> None:
+    ds, ds0 = fsspec_memory_zarr_stores
+
+    # multi dataset
+    url = "memory://out*.zarr"
+    ds2 = open_mfdataset(url, engine="zarr")
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
+
+    # multi dataset with caching
+    url = "simplecache::memory://out*.zarr"
+    ds2 = open_mfdataset(url, engine="zarr")
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
 
 @requires_h5netcdf
