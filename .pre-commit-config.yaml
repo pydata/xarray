@@ -24,7 +24,7 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.16.6
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
@@ -37,12 +37,12 @@ repos:
         # make sure this is the most recent version of black
         additional_dependencies: ["black==25.11.0"]
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.9.4
+    rev: v3.9.6
     hooks:
       - id: prettier
         args: ["--cache-location=.prettier_cache/cache"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.1.0
+    rev: v2.3.1
     hooks:
       - id: mypy
         # Copied from setup.cfg
@@ -59,6 +59,21 @@ repos:
             typing-extensions>=4.1.0,
             numpy,
           ]
+  # keep the mypy version used in CI (pixi.toml) in sync with the hook above, so that the
+  # pre-commit.ci autoupdate also updates mypy in CI
+  - repo: local
+    hooks:
+      - id: sync-mypy-version
+        name: sync the mypy version in pixi.toml
+        language: python
+        files: ^\.pre-commit-config\.yaml$
+        pass_filenames: false
+        entry: >-
+          python -c "import pathlib, re;
+          config = pathlib.Path('.pre-commit-config.yaml').read_text();
+          version = re.search(r'mirrors-mypy\s+rev: v?([0-9.]+)', config).group(1);
+          pixi = pathlib.Path('pixi.toml');
+          pixi.write_text(re.sub(r'(?m)^mypy = \"==[0-9.]+\"', f'mypy = \"=={version}\"', pixi.read_text()))"
   - repo: https://github.com/citation-file-format/cff-converter-python
     rev: 5295f87c0e261da61a7b919fc754e3a77edd98a7
     hooks:
@@ -71,16 +86,16 @@ repos:
       - id: taplo-lint
         args: ["--no-schema"]
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.25
+    rev: "0.26"
     hooks:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.48.0
+    rev: v1.50.1
     hooks:
       - id: typos
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.26.1
+    rev: v1.30.0
     hooks:
       - id: zizmor
         args: ["--offline"]

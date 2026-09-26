@@ -1732,7 +1732,7 @@ class NumpyIndexingAdapter(IndexingAdapter):
                     "Do you want to .copy() array first?"
                 ) from exc
             else:
-                raise exc
+                raise
 
     def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
         key = _outer_to_numpy_indexer(indexer, self.array.shape)
@@ -1850,7 +1850,7 @@ class DaskIndexingAdapter(IndexingAdapter):
     def _vindex_get(self, indexer: VectorizedIndexer):
         try:
             return self.array.vindex[indexer.tuple]
-        except IndexError as e:
+        except IndexError:
             # TODO: upstream to dask
             has_dask = any(is_duck_dask_array(i) for i in indexer.tuple)
             # this only works for "small" 1d coordinate arrays with one chunk
@@ -1862,7 +1862,7 @@ class DaskIndexingAdapter(IndexingAdapter):
                 or math.prod(self.array.numblocks) > 1
                 or self.array.ndim > 1
             ):
-                raise e
+                raise
             (idxr,) = indexer.tuple
             if idxr.ndim == 0:
                 return self.array[idxr.data]

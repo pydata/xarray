@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 import numpy as np
 
@@ -268,7 +268,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
 
         tree_adapter_cls: type[T_TreeAdapter] = opts.pop("tree_adapter_cls", None)
         if tree_adapter_cls is None:
-            tree_adapter_cls = ScipyKDTreeAdapter
+            tree_adapter_cls = cast(type[T_TreeAdapter], ScipyKDTreeAdapter)
 
         points = get_points(variables.values())
 

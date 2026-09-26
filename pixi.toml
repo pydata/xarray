@@ -58,7 +58,7 @@ aiobotocore = "*"
 
 [feature.numba.dependencies]
 numba = "*"
-numbagg = "*"
+numbagg = "!=0.9.5" # 0.9.5 rejects list axes passed by dask.array.nanmedian
 
 [feature.dask.dependencies]
 dask = "*"
@@ -181,11 +181,11 @@ python = "3.12.*"
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
-iris = "!=3.16.0"                  # avoid ncdata failing. See https://github.com/SciTools/ncdata/issues/255
+iris = "*"
 ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
-ncdata = "*"
+ncdata = ">=0.4"                   # support for iris>=3.16. See https://github.com/SciTools/ncdata/issues/255
 pydata-sphinx-theme = "*"
 pyproj = "*"
 rich = "*"                         # for Zarr tree()
@@ -194,7 +194,7 @@ sphinx-autosummary-accessors = "*"
 sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-inline-tabs = "*"
-sphinx-llm = ">=0.2.1"
+sphinx-llm = ">=1.1"               # for llms_txt_suppress_unknown_node_warnings
 sphinx = ">=8,<9"
 sphinxcontrib-mermaid = "*"
 sphinxcontrib-srclinks = "*"
@@ -221,7 +221,7 @@ linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in 
 
 
 [feature.typing.dependencies]
-mypy = "==1.19.1"
+mypy = "==2.3.1"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"
