@@ -53,6 +53,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Allow :py:class:`Dataset` variable selection with one-shot iterators, consuming
+  the iterator once instead of treating the iterator object as a variable name
+  (:pull:`11586`).
+  By `Ahmet Kamer <https://github.com/lowgame>`_.
+
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
