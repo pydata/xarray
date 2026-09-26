@@ -156,38 +156,43 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
         if is_chunked_array(a) and type(a) not in ALLOWED_NON_CHUNKED_TYPES
     ]
 
-    # Asserts all arrays are the same type (or numpy etc.)
-    chunked_array_types = {type(a) for a in chunked_arrays}
-    if len(chunked_array_types) > 1:
-        raise TypeError(
-            f"Mixing chunked array types is not supported, but received multiple types: {chunked_array_types}"
-        )
-    elif len(chunked_array_types) == 0:
+    if not chunked_arrays:
         raise TypeError("Expected a chunked array but none were found")
 
-    # iterate over defined chunk managers, seeing if each recognises this array type
-    chunked_arr = chunked_arrays[0]
+    # iterate over defined chunk managers, checking that every chunked array
+    # is recognised by the same manager (i.e. not a mix of cubed and dask).
+    # A manager may recognise more than one array class (e.g. dask and a
+    # subclass of dask.Array), so compare the selected managers rather than
+    # the exact array types (#11539).
     chunkmanagers = list_chunkmanagers()
-    selected = [
-        chunkmanager
-        for chunkmanager in chunkmanagers.values()
-        if chunkmanager.is_chunked_array(chunked_arr)
-    ]
-    if not selected:
-        if (
-            maybe_lib := type(chunked_arr).__module__.split(".")[0]
-        ) in KNOWN_CHUNKMANAGERS:
-            suggestion = f"Please try installing {KNOWN_CHUNKMANAGERS[maybe_lib]!r}."
-        else:
-            suggestion = "This is usually the result of a missing dependency."
-        raise TypeError(
-            f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
-            f" {suggestion}"
-        )
-    elif len(selected) >= 2:
-        raise TypeError(f"Multiple ChunkManagers recognise type {type(chunked_arr)}")
-    else:
-        return selected[0]
+    selected: list[ChunkManagerEntrypoint[Any]] | None = None
+    for a in chunked_arrays:
+        recognising = [
+            chunkmanager
+            for chunkmanager in chunkmanagers.values()
+            if chunkmanager.is_chunked_array(a)
+        ]
+        if not recognising:
+            if (maybe_lib := type(a).__module__.split(".")[0]) in KNOWN_CHUNKMANAGERS:
+                suggestion = (
+                    f"Please try installing {KNOWN_CHUNKMANAGERS[maybe_lib]!r}."
+                )
+            else:
+                suggestion = "This is usually the result of a missing dependency."
+            raise TypeError(
+                f"Could not find a Chunk Manager which recognises type {type(a)}"
+                f" {suggestion}"
+            )
+        elif len(recognising) >= 2:
+            raise TypeError(f"Multiple ChunkManagers recognise type {type(a)}")
+        if selected is None:
+            selected = recognising
+        elif recognising[0] is not selected[0]:
+            raise TypeError(
+                "Mixing chunked array types is not supported, but received"
+                f" multiple types: {{ {', '.join(str(type(x)) for x in chunked_arrays)} }}"
+            )
+    return selected[0]
 
 
 class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
