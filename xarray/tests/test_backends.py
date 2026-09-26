@@ -146,20 +146,34 @@ if TYPE_CHECKING:
     from xarray.backends.api import T_NetcdfEngine, T_NetcdfTypes
 
 
-@pytest.fixture(scope="module", params=ZARR_FORMATS)
+@pytest.fixture(params=ZARR_FORMATS)
 def default_zarr_format(request) -> Generator[None, None]:
     with zarr.config.set(default_zarr_format=request.param):
         yield
 
 
-def skip_if_zarr_format_3(reason: str):
-    if has_zarr and zarr.config["default_zarr_format"] == 3:
-        pytest.skip(reason=f"Unsupported with zarr_format=3: {reason}")
+# These marks require the test to use the ``default_zarr_format`` fixture.
+def skip_if_zarr_format_3(reason: str, condition: bool = True) -> pytest.MarkDecorator:
+    return pytest.mark.skip_if_param(
+        default_zarr_format=3,
+        reason=f"Unsupported with zarr_format=3: {reason}",
+        condition=condition,
+    )
 
 
-def skip_if_zarr_format_2(reason: str):
-    if has_zarr and zarr.config["default_zarr_format"] == 2:
-        pytest.skip(reason=f"Unsupported with zarr_format=2: {reason}")
+def skip_if_zarr_format_2(reason: str, condition: bool = True) -> pytest.MarkDecorator:
+    return pytest.mark.skip_if_param(
+        default_zarr_format=2,
+        reason=f"Unsupported with zarr_format=2: {reason}",
+        condition=condition,
+    )
+
+
+# Requires the test to use the ``tmp_store`` fixture.
+skip_if_zip_store = pytest.mark.skip_if_param(
+    tmp_store="ZipStore",
+    reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode.",
+)
 
 
 ON_WINDOWS = sys.platform == "win32"
@@ -1396,7 +1410,6 @@ class CFEncodedBase(DatasetIOBase):
             assert "coordinates" not in ds["lon"].encoding
 
     def test_roundtrip_endian(self) -> None:
-        skip_if_zarr_format_3("zarr v3 has not implemented endian support yet")
         ds = Dataset(
             {
                 "x": np.arange(3, 10, dtype=">i2"),
@@ -2963,11 +2976,10 @@ class ZarrBase(CFEncodedBase):
                     pass
 
     @requires_dask
+    @skip_if_zarr_format_2("sharding requires zarr v3 format")
     def test_shard_encoding_with_dask(self) -> None:
         # Test that dask chunks must align with shard boundaries.
         # See https://github.com/pydata/xarray/issues/10831
-        if zarr.config.config["default_zarr_format"] != 3:
-            pytest.skip("sharding requires zarr v3 format")
 
         ds = xr.DataArray(np.arange(12), dims="x", name="var1").to_dataset()
 
@@ -3089,9 +3101,8 @@ class ZarrBase(CFEncodedBase):
             with self.create_zarr_target() as store:
                 ds.to_zarr(store, encoding=encodings)
 
+    @skip_if_zarr_format_3("This test is unnecessary; no hidden Zarr keys")
     def test_hidden_zarr_keys(self) -> None:
-        skip_if_zarr_format_3("This test is unnecessary; no hidden Zarr keys")
-
         expected = create_test_data()
         with self.create_store() as store:
             expected.dump_to_store(store)
@@ -3118,9 +3129,8 @@ class ZarrBase(CFEncodedBase):
                 with xr.decode_cf(store):
                     pass
 
+    @skip_if_zarr_format_2("No dimension names in V2")
     def test_dimension_names(self) -> None:
-        skip_if_zarr_format_2("No dimension names in V2")
-
         expected = create_test_data()
         with self.create_store() as store:
             expected.dump_to_store(store)
@@ -3315,11 +3325,11 @@ class ZarrBase(CFEncodedBase):
                     **self.version_kwargs,
                 )
 
+    @skip_if_zarr_format_3(
+        "This actually works fine with Zarr format 3", condition=not has_zarr_v3_dtypes
+    )
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
-        if not has_zarr_v3_dtypes:
-            skip_if_zarr_format_3("This actually works fine with Zarr format 3")
-
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w", **self.version_kwargs)
@@ -3332,10 +3342,10 @@ class ZarrBase(CFEncodedBase):
         has_zarr_v3_dtypes,
         reason="This works on pre ZDtype Zarr-Python, but fails after.",
     )
+    # ...but it probably would work with Zarr format 2 if we used object dtype
+    @skip_if_zarr_format_2("This doesn't work with Zarr format 2")
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_works(self, dtype) -> None:
-        skip_if_zarr_format_2("This doesn't work with Zarr format 2")
-        # ...but it probably would if we used object dtype
 
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         expected = xr.concat([ds, ds_to_append], dim="time")
@@ -3917,13 +3927,12 @@ class ZarrBase(CFEncodedBase):
             # ``raise_on_invalid=vn in check_encoding_set`` line in zarr.py
             # ds.foo.encoding["fill_value"] = fv
 
+    @skip_if_zarr_format_2("fill_value is only an encoding key for zarr_format 3")
     def test_zarr_fill_value_in_encoding_on_read(self) -> None:
         # GH #10269: the Zarr array fill_value should be preserved in the
         # variable encoding on read, so that it is not lost on round-trip.
         # `fill_value` is an independent encoding key only for zarr_format 3;
         # for zarr_format 2 the fill_value is set via `_FillValue`.
-        if zarr.config.get("default_zarr_format") != 3:
-            pytest.skip("fill_value is only an encoding key for zarr_format 3")
 
         ds = xr.Dataset({"foo": ("x", [1, 2, 3])})
         ds.foo.encoding = {"fill_value": -99}
@@ -4182,6 +4191,9 @@ class TestZarrDictStore(ZarrBase):
 
     @pytest.mark.asyncio
     @requires_zarr_v3
+    @pytest.mark.skip_if_param(
+        cls_name="Variable", method="sel", reason="Variable doesn't have a .sel method"
+    )
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     @pytest.mark.parametrize(
         "indexer, method, target_zarr_class",
@@ -4242,9 +4254,6 @@ class TestZarrDictStore(ZarrBase):
         indexer,
         target_zarr_class,
     ) -> None:
-        if cls_name == "Variable" and method == "sel":
-            pytest.skip("Variable doesn't have a .sel method")
-
         # Each type of indexing ends up calling a different zarr indexing method
         # They all use a method named .getitem, but on a different internal zarr class
         def _resolve_class_from_string(class_path: str) -> type[Any]:
@@ -6817,14 +6826,8 @@ class TestDataArrayToNetCDF:
 
 @requires_zarr
 class TestDataArrayToZarr:
-    def skip_if_zarr_python_3_and_zip_store(self, store) -> None:
-        if isinstance(store, zarr.storage.ZipStore):
-            pytest.skip(
-                reason="zarr-python 3.x doesn't support reopening ZipStore with a new mode."
-            )
-
+    @skip_if_zip_store
     def test_dataarray_to_zarr_no_name(self, tmp_store) -> None:
-        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(np.arange(12).reshape((3, 4)))
 
         original_da.to_zarr(tmp_store)
@@ -6832,8 +6835,8 @@ class TestDataArrayToZarr:
         with open_dataarray(tmp_store, engine="zarr") as loaded_da:
             assert_identical(original_da, loaded_da)
 
+    @skip_if_zip_store
     def test_dataarray_to_zarr_with_name(self, tmp_store) -> None:
-        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(np.arange(12).reshape((3, 4)), name="test")
 
         original_da.to_zarr(tmp_store)
@@ -6841,8 +6844,8 @@ class TestDataArrayToZarr:
         with open_dataarray(tmp_store, engine="zarr") as loaded_da:
             assert_identical(original_da, loaded_da)
 
+    @skip_if_zip_store
     def test_dataarray_to_zarr_coord_name_clash(self, tmp_store) -> None:
-        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         original_da = DataArray(
             np.arange(12).reshape((3, 4)), dims=["x", "y"], name="x"
         )
@@ -6852,8 +6855,8 @@ class TestDataArrayToZarr:
         with open_dataarray(tmp_store, engine="zarr") as loaded_da:
             assert_identical(original_da, loaded_da)
 
+    @skip_if_zip_store
     def test_open_dataarray_options(self, tmp_store) -> None:
-        self.skip_if_zarr_python_3_and_zip_store(tmp_store)
         data = DataArray(np.arange(5), coords={"y": ("x", range(1, 6))}, dims=["x"])
 
         data.to_zarr(tmp_store)
@@ -6863,10 +6866,10 @@ class TestDataArrayToZarr:
             assert_identical(expected, loaded)
 
     @requires_dask
+    @skip_if_zip_store
     def test_dataarray_to_zarr_compute_false(self, tmp_store) -> None:
         from dask.delayed import Delayed
 
-        skip_if_zarr_format_3(tmp_store)
         original_da = DataArray(np.arange(12).reshape((3, 4)))
 
         output = original_da.to_zarr(tmp_store, compute=False)
@@ -6876,6 +6879,7 @@ class TestDataArrayToZarr:
             assert_identical(original_da, loaded_da)
 
     @requires_dask
+    @skip_if_zip_store
     def test_dataarray_to_zarr_align_chunks_true(self, tmp_store) -> None:
         # TODO: Improve data integrity checks when using Dask.
         #   Detecting automatic alignment issues in Dask can be tricky,
@@ -6883,7 +6887,6 @@ class TestDataArrayToZarr:
         #   For now, ensure that the parameter is present, but explore
         #   more robust verification methods to confirm data consistency.
 
-        skip_if_zarr_format_3(tmp_store)
         arr = DataArray(
             np.arange(4), dims=["a"], coords={"a": np.arange(4)}, name="foo"
         ).chunk(a=(2, 1, 1))

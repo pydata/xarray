@@ -55,6 +55,11 @@ def pytest_configure(config: pytest.Config):
         "markers",
         "xfail_with_dask_array: xfail when dask-array is registered as xarray's dask chunk manager",
     )
+    config.addinivalue_line(
+        "markers",
+        "skip_if_param(*, reason, condition=True, **params): skip the test cases whose "
+        "parametrized arguments or fixtures equal all of the given params",
+    )
     if not _use_dask_array(config):
         return
 
@@ -80,6 +85,7 @@ def pytest_runtest_setup(item):
 # See https://docs.pytest.org/en/stable/example/markers.html#automatically-adding-markers-based-on-test-names
 def pytest_collection_modifyitems(items):
     for item in items:
+        _apply_skip_if_param(item)
         if "mypy" in item.nodeid:
             # IMPORTANT: mypy type annotation tests leverage the pytest-mypy-plugins
             # plugin, and are thus written in test_*.yml files.  As such, there are
@@ -100,6 +106,25 @@ def pytest_collection_modifyitems(items):
             )
             kwargs.setdefault("strict", True)
             item.add_marker(pytest.mark.xfail(**kwargs))
+
+
+def _apply_skip_if_param(item: pytest.Item) -> None:
+    markers = list(item.iter_markers("skip_if_param"))
+    if not markers:
+        return
+    callspec = getattr(item, "callspec", None)
+    params = callspec.params if callspec is not None else {}
+    for marker in markers:
+        kwargs = dict(marker.kwargs)
+        reason = kwargs.pop("reason")
+        condition = kwargs.pop("condition", True)
+        if missing := set(kwargs) - set(params):
+            raise pytest.UsageError(
+                f"{item.nodeid}: skip_if_param requires the test to be "
+                f"parametrized over {sorted(missing)}"
+            )
+        if condition and all(params[name] == value for name, value in kwargs.items()):
+            item.add_marker(pytest.mark.skip(reason=reason))
 
 
 @pytest.fixture(autouse=True)
