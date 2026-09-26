@@ -227,6 +227,17 @@ parametrize_zarr_format = pytest.mark.parametrize(
 )
 
 
+# Parametrize a test over in-memory (False) and dask-backed (True) data.
+# The dask case is skipped at collection time if dask is not installed.
+parametrize_dask = pytest.mark.parametrize(
+    "use_dask",
+    [
+        pytest.param(False, id="numpy"),
+        pytest.param(True, id="dask", marks=requires_dask),
+    ],
+)
+
+
 def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
     if not has_h5netcdf:
         return has_h5netcdf, pytest.mark.skipif(

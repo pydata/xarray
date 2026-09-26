@@ -15,6 +15,7 @@ from xarray.tests import (
     assert_duckarray_allclose,
     assert_equal,
     assert_identical,
+    parametrize_dask,
     requires_dask,
     requires_matplotlib,
     requires_numbagg,
@@ -1856,7 +1857,7 @@ class TestVariable:
 
         assert expected == actual
 
-    @pytest.mark.parametrize("dask", [False, pytest.param(True, marks=[requires_dask])])
+    @parametrize_dask
     @pytest.mark.parametrize(
         ["variable", "indexers"],
         (
@@ -1882,8 +1883,8 @@ class TestVariable:
             ),
         ),
     )
-    def test_isel(self, variable, indexers, dask, dtype):
-        if dask:
+    def test_isel(self, variable, indexers, use_dask, dtype):
+        if use_dask:
             variable = variable.chunk(dict.fromkeys(variable.dims, 2))
         quantified = xr.Variable(
             variable.dims, variable.data.astype(dtype) * unit_registry.s

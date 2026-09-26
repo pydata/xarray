@@ -53,6 +53,7 @@ from xarray.tests import (
     has_dask,
     has_dask_ge_2025_1_0,
     has_pyarrow,
+    parametrize_dask,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -3981,21 +3982,16 @@ class TestDataArray:
 
     def test_series_categorical_index(self) -> None:
         # regression test for GH700
-        if not hasattr(pd, "CategoricalIndex"):
-            pytest.skip("requires pandas with CategoricalIndex")
-
         s = pd.Series(np.arange(5), index=pd.CategoricalIndex(list("aabbc")))
         arr = DataArray(s)
         assert "a a b b" in repr(arr)  # should not error
 
-    @pytest.mark.parametrize("use_dask", [True, False])
+    @parametrize_dask
     @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
     def test_to_and_from_dict(
         self, encoding: bool, data: bool | Literal["list", "array"], use_dask: bool
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         encoding_data = {"bar": "spam"}
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
@@ -4664,12 +4660,10 @@ class TestDataArray:
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
 
-    @pytest.mark.parametrize("use_dask", [True, False])
+    @parametrize_dask
     @pytest.mark.parametrize("use_datetime", [True, False])
     @pytest.mark.filterwarnings("ignore:overflow encountered in multiply")
     def test_polyfit(self, use_dask, use_datetime) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         xcoord = xr.DataArray(
             pd.date_range("1970-01-01", freq="D", periods=10), dims=("x",), name="x"
         )
@@ -4958,11 +4952,8 @@ class TestDataArray:
             aa.query(x="spam > 50")  # name not present
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
+    @parametrize_dask
     def test_curvefit(self, use_dask) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         def exp_decay(t, n0, tau=1):
             return n0 * np.exp(-t / tau)
 
@@ -5029,11 +5020,8 @@ class TestDataArray:
         assert params == param_names
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
+    @parametrize_dask
     def test_curvefit_multidimensional_guess(self, use_dask: bool) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         def sine(t, a, f, p):
             return a * np.sin(2 * np.pi * (f * t + p))
 
@@ -5079,11 +5067,8 @@ class TestDataArray:
             )
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
+    @parametrize_dask
     def test_curvefit_multidimensional_bounds(self, use_dask: bool) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         def sine(t, a, f, p):
             return a * np.sin(2 * np.pi * (f * t + p))
 
@@ -5141,11 +5126,8 @@ class TestDataArray:
             )
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
+    @parametrize_dask
     def test_curvefit_ignore_errors(self, use_dask: bool) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         # nonsense function to make the optimization fail
         def line(x, a, b):
             if a > 10:
@@ -5375,15 +5357,7 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
-    @pytest.mark.parametrize(
-        "use_dask",
-        [
-            pytest.param(
-                True, marks=pytest.mark.skipif(not has_dask, reason="no dask")
-            ),
-            False,
-        ],
-    )
+    @parametrize_dask
     def test_idxmin(
         self,
         x: np.ndarray,
@@ -5497,7 +5471,7 @@ class TestReduce1D(TestReduce):
         result7 = ar0.idxmin(fill_value=-1j)
         assert_identical(result7, expected7)
 
-    @pytest.mark.parametrize("use_dask", [True, False])
+    @parametrize_dask
     def test_idxmax(
         self,
         x: np.ndarray,
@@ -5506,8 +5480,6 @@ class TestReduce1D(TestReduce):
         nanindex: int | None,
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
@@ -5979,9 +5951,7 @@ class TestReduce2D(TestReduce):
 
         assert_identical(result3, expected2)
 
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(True, id="dask"), pytest.param(False, id="nodask")]
-    )
+    @parametrize_dask
     def test_idxmin(
         self,
         x: np.ndarray,
@@ -5990,8 +5960,6 @@ class TestReduce2D(TestReduce):
         nanindex: list[int | None],
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
 
@@ -6124,9 +6092,7 @@ class TestReduce2D(TestReduce):
             result7 = ar0.idxmin(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
 
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(True, id="dask"), pytest.param(False, id="nodask")]
-    )
+    @parametrize_dask
     def test_idxmax(
         self,
         x: np.ndarray,
@@ -6135,8 +6101,6 @@ class TestReduce2D(TestReduce):
         nanindex: list[int | None],
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
 
@@ -7067,10 +7031,8 @@ class TestReduce3D(TestReduce):
 class TestReduceND(TestReduce):
     @pytest.mark.parametrize("op", ["idxmin", "idxmax"])
     @pytest.mark.parametrize("ndim", [3, 5])
+    @requires_dask
     def test_idxminmax_dask(self, op: str, ndim: int) -> None:
-        if not has_dask:
-            pytest.skip("requires dask")
-
         ar0_raw = xr.DataArray(
             np.random.random_sample(size=[10] * ndim),
             dims=list("abcdefghij"[: ndim - 1]) + ["x"],

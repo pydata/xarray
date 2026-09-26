@@ -14,6 +14,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     dask_array_type,
+    parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -581,7 +582,7 @@ def cftime_rounding_dataarray(cftime_date_type):
 
 @requires_cftime
 @requires_dask
-@pytest.mark.parametrize("use_dask", [False, True])
+@parametrize_dask
 def test_cftime_floor_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
@@ -612,7 +613,7 @@ def test_cftime_floor_accessor(
 
 @requires_cftime
 @requires_dask
-@pytest.mark.parametrize("use_dask", [False, True])
+@parametrize_dask
 def test_cftime_ceil_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
@@ -643,7 +644,7 @@ def test_cftime_ceil_accessor(
 
 @requires_cftime
 @requires_dask
-@pytest.mark.parametrize("use_dask", [False, True])
+@parametrize_dask
 def test_cftime_round_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
@@ -677,11 +678,7 @@ def test_cftime_round_accessor(
     [False, pytest.param(True, marks=requires_cftime)],
     ids=lambda x: f"use_cftime={x}",
 )
-@pytest.mark.parametrize(
-    "use_dask",
-    [False, pytest.param(True, marks=requires_dask)],
-    ids=lambda x: f"use_dask={x}",
-)
+@parametrize_dask
 def test_decimal_year(use_cftime, use_dask) -> None:
     year = 2000
     periods = 10

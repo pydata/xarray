@@ -36,11 +36,10 @@ from xarray.tests import (
     assert_identical,
     dask_array_api,
     dask_array_type,
-    has_h5netcdf,
-    has_netCDF4,
-    has_scipy,
     requires_cftime,
+    requires_h5netcdf,
     requires_netCDF4,
+    requires_scipy,
     requires_zarr,
 )
 from xarray.tests.test_backends import (
@@ -55,13 +54,11 @@ def tmp_netcdf_filename(tmpdir):
     return str(tmpdir.join("testfile.nc"))
 
 
-ENGINES = []
-if has_scipy:
-    ENGINES.append("scipy")
-if has_netCDF4:
-    ENGINES.append("netcdf4")
-if has_h5netcdf:
-    ENGINES.append("h5netcdf")
+ENGINE_MARKS = {
+    "scipy": requires_scipy,
+    "netcdf4": requires_netCDF4,
+    "h5netcdf": requires_h5netcdf,
+}
 
 NC_FORMATS = {
     "netcdf4": [
@@ -76,11 +73,14 @@ NC_FORMATS = {
 }
 
 ENGINES_AND_FORMATS = [
-    ("netcdf4", "NETCDF3_CLASSIC"),
-    ("netcdf4", "NETCDF4_CLASSIC"),
-    ("netcdf4", "NETCDF4"),
-    ("h5netcdf", "NETCDF4"),
-    ("scipy", "NETCDF3_64BIT"),
+    pytest.param(engine, nc_format, marks=ENGINE_MARKS[engine])
+    for engine, nc_format in [
+        ("netcdf4", "NETCDF3_CLASSIC"),
+        ("netcdf4", "NETCDF4_CLASSIC"),
+        ("netcdf4", "NETCDF4"),
+        ("h5netcdf", "NETCDF4"),
+        ("scipy", "NETCDF3_64BIT"),
+    ]
 ]
 
 
@@ -93,9 +93,6 @@ def test_dask_distributed_netcdf_roundtrip(
     nc_format,
     compute,
 ):
-    if engine not in ENGINES:
-        pytest.skip("engine not available")
-
     chunks = {"dim1": 4, "dim2": 3, "dim3": 6}
 
     with cluster() as (s, [_a, _b]):
@@ -179,12 +176,19 @@ def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
 # TODO: move this to test_backends.py
 @requires_cftime
 @requires_netCDF4
-@pytest.mark.parametrize("parallel", (True, False))
+@pytest.mark.parametrize(
+    "parallel",
+    (
+        pytest.param(
+            True,
+            marks=pytest.mark.skip(
+                reason="Flaky in CI. Would be a welcome contribution to make a similar test reliable."
+            ),
+        ),
+        False,
+    ),
+)
 def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
-    if parallel:
-        pytest.skip(
-            "Flaky in CI. Would be a welcome contribution to make a similar test reliable."
-        )
     lon = np.arange(100)
     time = xr.date_range("20010101", periods=100, calendar="360_day", use_cftime=True)
     data = np.random.random((time.size, lon.size))
@@ -211,9 +215,6 @@ def test_dask_distributed_read_netcdf_integration_test(
     engine,
     nc_format,
 ):
-    if engine not in ENGINES:
-        pytest.skip("engine not available")
-
     chunks = {"dim1": 4, "dim2": 3, "dim3": 6}
 
     with cluster() as (s, [_a, _b]):

@@ -14,6 +14,7 @@ from xarray.tests import (
     assert_identical,
     dask_array_api,
     has_dask,
+    parametrize_dask,
     requires_bottleneck,
     requires_dask,
     requires_dask_ge_2024_11_0,
@@ -438,17 +439,36 @@ class TestDataArrayRolling:
     @requires_bottleneck
     @requires_dask_ge_2024_11_0
     @pytest.mark.parametrize(
-        "name",
-        ("sum", "mean", "std", "var", "min", "max", "median", "argmin", "argmax"),
+        "name, center, dtype",
+        [
+            pytest.param(
+                name,
+                center,
+                dtype,
+                marks=pytest.mark.skip(
+                    reason="centered bool bottleneck path fails for numpy-backed arrays"
+                )
+                if center and dtype is bool and name in ("std", "median")
+                else (),
+            )
+            for name in (
+                "sum",
+                "mean",
+                "std",
+                "var",
+                "min",
+                "max",
+                "median",
+                "argmin",
+                "argmax",
+            )
+            for center in (False, True)
+            for dtype in (bool, np.int8, np.int64)
+        ],
     )
-    @pytest.mark.parametrize("center", [False, True])
-    @pytest.mark.parametrize("dtype", [bool, np.int8, np.int64])
     def test_rolling_bottleneck_dask_dtype_matches_numpy(
         self, name, center, dtype
     ) -> None:
-        if center and dtype is bool and name in ("std", "median"):
-            pytest.skip("centered bool bottleneck path fails for numpy-backed arrays")
-
         raw = np.arange(100 * 4).reshape(100, 4)
         data = raw % 3 == 0 if dtype is bool else raw.astype(dtype)
         unchunked = DataArray(data, dims=("t", "a")).rolling(
@@ -833,16 +853,25 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("ds", (1, 2), indirect=True)
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
-    @pytest.mark.parametrize("window", (1, 2, 3, 4))
     @pytest.mark.parametrize(
-        "name", ("sum", "mean", "std", "var", "min", "max", "median")
+        "name, window",
+        [
+            pytest.param(
+                name,
+                window,
+                marks=pytest.mark.skip(
+                    reason="std with window == 1 is unstable in bottleneck"
+                )
+                if name == "std" and window == 1
+                else (),
+            )
+            for name in ("sum", "mean", "std", "var", "min", "max", "median")
+            for window in (1, 2, 3, 4)
+        ],
     )
     def test_rolling_reduce(self, ds, center, min_periods, window, name) -> None:
         if min_periods is not None and window < min_periods:
             min_periods = window
-
-        if name == "std" and window == 1:
-            pytest.skip("std with window == 1 is unstable in bottleneck")
 
         rolling_obj = ds.rolling(time=window, center=center, min_periods=min_periods)
 
@@ -862,9 +891,9 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1))
     @pytest.mark.parametrize("name", ("sum", "max"))
-    @pytest.mark.parametrize("dask", (True, False))
-    def test_ndrolling_reduce(self, ds, center, min_periods, name, dask) -> None:
-        if dask and has_dask:
+    @parametrize_dask
+    def test_ndrolling_reduce(self, ds, center, min_periods, name, use_dask) -> None:
+        if use_dask and has_dask:
             ds = ds.chunk({"x": 4})
 
         rolling_obj = ds.rolling(time=4, x=3, center=center, min_periods=min_periods)
@@ -892,15 +921,15 @@ class TestDatasetRolling:
 
     @pytest.mark.parametrize("center", (True, False, (True, False)))
     @pytest.mark.parametrize("fill_value", (np.nan, 0.0))
-    @pytest.mark.parametrize("dask", (True, False))
-    def test_ndrolling_construct(self, center, fill_value, dask) -> None:
+    @parametrize_dask
+    def test_ndrolling_construct(self, center, fill_value, use_dask) -> None:
         da = DataArray(
             np.arange(5 * 6 * 7).reshape(5, 6, 7).astype(float),
             dims=["x", "y", "z"],
             coords={"x": ["a", "b", "c", "d", "e"], "y": np.arange(6)},
         )
         ds = xr.Dataset({"da": da})
-        if dask and has_dask:
+        if use_dask and has_dask:
             ds = ds.chunk({"x": 4})
 
         actual = ds.rolling(x=3, z=2, center=center).construct(

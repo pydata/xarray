@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from itertools import product, starmap
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -37,7 +37,6 @@ from xarray.core.dataarray import DataArray
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_no_warnings,
-    has_cftime,
     requires_cftime,
     requires_pandas_3,
 )
@@ -1547,23 +1546,18 @@ def as_timedelta_not_implemented_error():
         tick.as_timedelta()
 
 
-@pytest.mark.parametrize("use_cftime", [True, False])
+@pytest.mark.parametrize(
+    "use_cftime", [pytest.param(True, marks=requires_cftime), False]
+)
 def test_cftime_or_date_range_invalid_inclusive_value(use_cftime: bool) -> None:
-    if use_cftime and not has_cftime:
-        pytest.skip("requires cftime")
-
-    if TYPE_CHECKING:
-        pytest.skip("inclusive type checked internally")
-
     with pytest.raises(ValueError, match="nclusive"):
-        date_range("2000", periods=3, inclusive="foo", use_cftime=use_cftime)
+        date_range("2000", periods=3, inclusive="foo", use_cftime=use_cftime)  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("use_cftime", [True, False])
+@pytest.mark.parametrize(
+    "use_cftime", [pytest.param(True, marks=requires_cftime), False]
+)
 def test_cftime_or_date_range_inclusive_None(use_cftime: bool) -> None:
-    if use_cftime and not has_cftime:
-        pytest.skip("requires cftime")
-
     result_None = date_range("2000-01-01", "2000-01-04", use_cftime=use_cftime)
     result_both = date_range(
         "2000-01-01", "2000-01-04", inclusive="both", use_cftime=use_cftime

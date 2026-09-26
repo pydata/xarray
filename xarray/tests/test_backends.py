@@ -84,6 +84,7 @@ from xarray.tests import (
     has_zarr_v3_dtypes,
     mock,
     network,
+    parametrize_dask,
     parametrize_zarr_format,
     raise_if_dask_computes,
     requires_cftime,
@@ -102,6 +103,7 @@ from xarray.tests import (
     requires_scipy_or_netCDF4,
     requires_zarr,
     requires_zarr_v3,
+    requires_zarr_v3_async_oindex,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
@@ -160,6 +162,13 @@ def skip_if_zarr_format_2(reason: str):
 
 
 ON_WINDOWS = sys.platform == "win32"
+
+if has_netCDF4:
+    NETCDFC_VERSION: Version | None = Version(
+        nc4.getlibversion().split()[0].split("-development")[0]
+    )
+else:
+    NETCDFC_VERSION = None
 default_value = object()
 
 
@@ -375,6 +384,28 @@ def create_boolean_data() -> Dataset:
             )
         }
     )
+
+
+MASK_AND_SCALE_DATA = [
+    (
+        create_unsigned_masked_scaled_data,
+        create_encoded_unsigned_masked_scaled_data,
+    ),
+    pytest.param(
+        create_bad_unsigned_masked_scaled_data,
+        create_bad_encoded_unsigned_masked_scaled_data,
+        marks=pytest.mark.xfail(reason="Bad _Unsigned attribute."),
+    ),
+    (
+        create_signed_masked_scaled_data,
+        create_encoded_signed_masked_scaled_data,
+    ),
+    (
+        create_unsigned_false_masked_scaled_data,
+        create_encoded_unsigned_false_masked_scaled_data,
+    ),
+    (create_masked_and_scaled_data, create_encoded_masked_and_scaled_data),
+]
 
 
 class TestCommon:
@@ -1105,33 +1136,9 @@ class CFEncodedBase(DatasetIOBase):
             else:
                 assert np.issubdtype(actual["a"].dtype, np.dtype("=U1"))
 
-    @pytest.mark.parametrize(
-        "decoded_fn, encoded_fn",
-        [
-            (
-                create_unsigned_masked_scaled_data,
-                create_encoded_unsigned_masked_scaled_data,
-            ),
-            pytest.param(
-                create_bad_unsigned_masked_scaled_data,
-                create_bad_encoded_unsigned_masked_scaled_data,
-                marks=pytest.mark.xfail(reason="Bad _Unsigned attribute."),
-            ),
-            (
-                create_signed_masked_scaled_data,
-                create_encoded_signed_masked_scaled_data,
-            ),
-            (
-                create_unsigned_false_masked_scaled_data,
-                create_encoded_unsigned_false_masked_scaled_data,
-            ),
-            (create_masked_and_scaled_data, create_encoded_masked_and_scaled_data),
-        ],
-    )
+    @pytest.mark.parametrize("decoded_fn, encoded_fn", MASK_AND_SCALE_DATA)
     @pytest.mark.parametrize("dtype", [np.dtype("float64"), np.dtype("float32")])
     def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn, dtype) -> None:
-        if hasattr(self, "DIMENSION_KEY") and dtype == np.float32:
-            pytest.skip("float32 will be treated as float64 in zarr")
         decoded = decoded_fn(dtype)
         encoded = encoded_fn(dtype)
         if decoded["x"].encoding["dtype"] == "u1" and not (
@@ -1456,8 +1463,6 @@ class CFEncodedBase(DatasetIOBase):
                 pass
 
     def test_encoding_unlimited_dims(self) -> None:
-        if isinstance(self, ZarrBase):
-            pytest.skip("No unlimited_dims handled in zarr.")
         ds = Dataset({"x": ("y", np.arange(10.0))})
         with self.roundtrip(ds, save_kwargs=dict(unlimited_dims=["y"])) as actual:
             assert actual.encoding["unlimited_dims"] == set("y")
@@ -2650,6 +2655,26 @@ class ZarrBase(CFEncodedBase):
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
     version_kwargs: dict[str, Any] = {}
 
+    @pytest.mark.parametrize("decoded_fn, encoded_fn", MASK_AND_SCALE_DATA)
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            np.dtype("float64"),
+            pytest.param(
+                np.dtype("float32"),
+                marks=pytest.mark.skip(
+                    reason="float32 will be treated as float64 in zarr"
+                ),
+            ),
+        ],
+    )
+    def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn, dtype) -> None:
+        super().test_roundtrip_mask_and_scale(decoded_fn, encoded_fn, dtype)
+
+    @pytest.mark.skip(reason="No unlimited_dims handled in zarr.")
+    def test_encoding_unlimited_dims(self) -> None:
+        super().test_encoding_unlimited_dims()
+
     def create_zarr_target(self):
         raise NotImplementedError
 
@@ -3306,12 +3331,14 @@ class ZarrBase(CFEncodedBase):
                     store_target, append_dim="time", **self.version_kwargs
                 )
 
+    @pytest.mark.skipif(
+        has_zarr_v3_dtypes,
+        reason="This works on pre ZDtype Zarr-Python, but fails after.",
+    )
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_works(self, dtype) -> None:
         skip_if_zarr_format_2("This doesn't work with Zarr format 2")
         # ...but it probably would if we used object dtype
-        if has_zarr_v3_dtypes:
-            pytest.skip("This works on pre ZDtype Zarr-Python, but fails after.")
 
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         expected = xr.concat([ds, ds_to_append], dim="time")
@@ -3462,12 +3489,10 @@ class ZarrBase(CFEncodedBase):
             with self.open(store) as actual:
                 assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
 
-    @pytest.mark.parametrize("chunk", [False, True])
-    def test_save_emptydim(self, chunk) -> None:
-        if chunk and not has_dask:
-            pytest.skip("requires dask")
+    @parametrize_dask
+    def test_save_emptydim(self, use_dask) -> None:
         ds = Dataset({"x": (("a", "b"), np.empty((5, 0))), "y": ("a", [1, 2, 5, 8, 9])})
-        if chunk:
+        if use_dask:
             ds = ds.chunk({})  # chunk dataset to save dask array
         with self.roundtrip(ds) as ds_reload:
             assert_identical(ds, ds_reload)
@@ -3486,12 +3511,12 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(ds, ds_reload)
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
-    @pytest.mark.parametrize("compute", [False, True])
-    @pytest.mark.parametrize("use_dask", [False, True])
+    @pytest.mark.parametrize(
+        "compute", [pytest.param(False, marks=requires_dask), True]
+    )
+    @parametrize_dask
     @pytest.mark.parametrize("write_empty", [False, True, None])
     def test_write_region(self, consolidated, compute, use_dask, write_empty) -> None:
-        if (use_dask or not compute) and not has_dask:
-            pytest.skip("requires dask")
 
         zeros = Dataset({"u": (("x",), np.zeros(10))})
         nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
@@ -4181,12 +4206,14 @@ class TestZarrDictStore(ZarrBase):
                 {"dim2": [1.0, 3.0]},
                 "sel",
                 "zarr.core.indexing.AsyncOIndex",
+                marks=requires_zarr_v3_async_oindex,
                 id="outer-sel",
             ),
             pytest.param(
                 {"dim2": [1, 3]},
                 "isel",
                 "zarr.core.indexing.AsyncOIndex",
+                marks=requires_zarr_v3_async_oindex,
                 id="outer-isel",
             ),
             pytest.param(
@@ -4196,6 +4223,7 @@ class TestZarrDictStore(ZarrBase):
                 },
                 "sel",
                 "zarr.core.indexing.AsyncVIndex",
+                marks=requires_zarr_v3_async_oindex,
                 id="vectorized-sel",
             ),
             pytest.param(
@@ -4205,6 +4233,7 @@ class TestZarrDictStore(ZarrBase):
                 },
                 "isel",
                 "zarr.core.indexing.AsyncVIndex",
+                marks=requires_zarr_v3_async_oindex,
                 id="vectorized-isel",
             ),
         ],
@@ -4216,14 +4245,6 @@ class TestZarrDictStore(ZarrBase):
         indexer,
         target_zarr_class,
     ) -> None:
-        if not has_zarr_v3_async_oindex and target_zarr_class in (
-            "zarr.core.indexing.AsyncOIndex",
-            "zarr.core.indexing.AsyncVIndex",
-        ):
-            pytest.skip(
-                "current version of zarr does not support orthogonal or vectorized async indexing"
-            )
-
         if cls_name == "Variable" and method == "sel":
             pytest.skip("Variable doesn't have a .sel method")
 
@@ -7193,15 +7214,6 @@ def test_extract_zarr_variable_encoding() -> None:
 def test_open_fsspec() -> None:
     import fsspec
 
-    if not (
-        (
-            hasattr(zarr.storage, "FSStore")
-            and hasattr(zarr.storage.FSStore, "getitems")
-        )  # zarr v2
-        or hasattr(zarr.storage, "FsspecStore")  # zarr v3
-    ):
-        pytest.skip("zarr too old")
-
     ds = open_dataset(os.path.join(os.path.dirname(__file__), "data", "example_1.nc"))
 
     m = fsspec.filesystem("memory")
@@ -7548,19 +7560,18 @@ def test_write_file_from_np_str(str_type: type[str | np.str_], tmpdir: str) -> N
 
 @requires_zarr
 @requires_netCDF4
+@pytest.mark.skipif(
+    NETCDFC_VERSION is not None and NETCDFC_VERSION < Version("4.8.1"),
+    reason="requires netcdf-c>=4.8.1",
+)
+# Bug in netcdf-c==4.8.1 (typo: Nan instead of NaN)
+# https://github.com/Unidata/netcdf-c/issues/2265
+@pytest.mark.skipif(
+    platform.system() == "Windows" and NETCDFC_VERSION == Version("4.8.1"),
+    reason="netcdf-c==4.8.1 has issues on Windows",
+)
 class TestNCZarr:
-    @property
-    def netcdfc_version(self):
-        return Version(nc4.getlibversion().split()[0].split("-development")[0])
-
     def _create_nczarr(self, filename):
-        if self.netcdfc_version < Version("4.8.1"):
-            pytest.skip("requires netcdf-c>=4.8.1")
-        if platform.system() == "Windows" and self.netcdfc_version == Version("4.8.1"):
-            # Bug in netcdf-c==4.8.1 (typo: Nan instead of NaN)
-            # https://github.com/Unidata/netcdf-c/issues/2265
-            pytest.skip("netcdf-c==4.8.1 has issues on Windows")
-
         ds = create_test_data()
         # Drop dim3: netcdf-c does not support dtype='<U1'
         # https://github.com/Unidata/netcdf-c/issues/2259
@@ -7584,12 +7595,13 @@ class TestNCZarr:
             actual = xr.open_zarr(tmp, consolidated=False)
             assert_identical(expected, actual)
 
+    @pytest.mark.skipif(
+        NETCDFC_VERSION is not None and NETCDFC_VERSION > Version("4.8.1"),
+        reason="netcdf-c>4.8.1 adds the _ARRAY_DIMENSIONS attribute",
+    )
     @pytest.mark.parametrize("mode", ["a", "r+"])
     @pytest.mark.filterwarnings("ignore:.*non-consolidated metadata.*")
     def test_raise_writing_to_nczarr(self, mode) -> None:
-        if self.netcdfc_version > Version("4.8.1"):
-            pytest.skip("netcdf-c>4.8.1 adds the _ARRAY_DIMENSIONS attribute")
-
         with create_tmp_file(suffix=".zarr") as tmp:
             ds = self._create_nczarr(tmp)
             with pytest.raises(

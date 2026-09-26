@@ -43,8 +43,8 @@ from xarray.tests import (
     has_cftime,
     has_dask,
     has_dask_array_expr,
-    has_dask_ge_2024_08_1,
     has_flox,
+    parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -683,20 +683,14 @@ def test_groupby_repr_datetime(obj) -> None:
 @pytest.mark.parametrize(
     "chunk",
     [
-        pytest.param(
-            dict(lat=1), marks=pytest.mark.skipif(not has_dask, reason="no dask")
-        ),
-        pytest.param(
-            dict(lat=2, lon=2), marks=pytest.mark.skipif(not has_dask, reason="no dask")
-        ),
+        pytest.param(dict(lat=1), marks=requires_dask),
+        pytest.param(dict(lat=2, lon=2), marks=requires_dask),
         False,
     ],
 )
 def test_groupby_drops_nans(shuffle: bool, chunk: Literal[False] | dict) -> None:
     if chunk and has_dask_array_expr:
         pytest.xfail("flox groupby currently builds legacy dask arrays")
-    if shuffle and chunk and not has_dask_ge_2024_08_1:
-        pytest.skip()
     # GH2383
     # nan in 2D data variable (requires stacking)
     ds = xr.Dataset(
@@ -1445,24 +1439,13 @@ class TestDataArrayGroupBy:
 
     @pytest.mark.parametrize("use_flox", [True, False])
     @pytest.mark.parametrize("shuffle", [True, False])
-    @pytest.mark.parametrize(
-        "chunk",
-        [
-            pytest.param(
-                True, marks=pytest.mark.skipif(not has_dask, reason="no dask")
-            ),
-            False,
-        ],
-    )
+    @parametrize_dask
     @pytest.mark.parametrize("method", ["sum", "mean", "median"])
     def test_groupby_reductions(
-        self, use_flox: bool, method: str, shuffle: bool, chunk: bool
+        self, use_flox: bool, method: str, shuffle: bool, use_dask: bool
     ) -> None:
-        if shuffle and chunk and not has_dask_ge_2024_08_1:
-            pytest.skip()
-
         array = self.da
-        if chunk:
+        if use_dask:
             array.data = array.chunk({"y": 5}).data
         reduction = getattr(np, method)
         expected = Dataset(
@@ -1944,8 +1927,6 @@ class TestDataArrayResample:
     def test_resample(
         self, use_cftime: bool, shuffle: bool, resample_freq: ResampleCompatible
     ) -> None:
-        if use_cftime and not has_cftime:
-            pytest.skip()
         times = xr.date_range(
             "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
         )
@@ -2417,8 +2398,6 @@ class TestDatasetResample:
     def test_resample(
         self, use_cftime: bool, resample_freq: ResampleCompatible
     ) -> None:
-        if use_cftime and not has_cftime:
-            pytest.skip()
         times = xr.date_range(
             "2000-01-01", freq="6h", periods=10, use_cftime=use_cftime
         )
@@ -2630,85 +2609,114 @@ class TestDatasetResample:
             getattr(ds.resample(time="MS"), func)(keepdims=True)
 
 
-@pytest.mark.parametrize("use_lazy_group_idx", [True, False])
-@pytest.mark.parametrize("use_dask", [True, False])
-@pytest.mark.parametrize("use_flox", [True, False])
+_SCAN_CASES = [
+    (
+        "cumsum",
+        ["group_idx"],
+        "time",
+        [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
+    ),
+    (
+        "cumsum",
+        ["group_idx"],
+        "test",
+        [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+    ),
+    (
+        "cumsum",
+        ["group_idx"],
+        ...,
+        [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
+    ),
+    (
+        "cumsum",
+        ["group_idx", "group_idx2"],
+        "time",
+        [[7, 2, 0, 1, 2, 2], [1, 1, 1, 2, 1, 2], [2, 2, 2, 4, 2, 4]],
+    ),
+    (
+        "cumsum",
+        ["group_idx", "group_idx2"],
+        "test",
+        [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
+    ),
+    (
+        "cumsum",
+        ["group_idx", "group_idx2"],
+        ...,
+        [[7, 2, 0, 1, 2, 2], [8, 3, 1, 3, 3, 4], [10, 5, 3, 7, 5, 8]],
+    ),
+    (
+        "cumprod",
+        ["group_idx"],
+        "time",
+        [[7, 14, 0, 0, 2, 2], [1, 1, 1, 1, 1, 1], [2, 4, 2, 4, 2, 4]],
+    ),
+    (
+        "cumprod",
+        ["group_idx"],
+        "test",
+        [[7, 2, 0, 1, 2, 1], [7, 2, 0, 1, 2, 1], [14, 4, 0, 2, 4, 2]],
+    ),
+    (
+        "cumprod",
+        ["group_idx"],
+        ...,
+        [[7, 14, 0, 0, 2, 2], [7, 14, 0, 0, 2, 2], [14, 56, 0, 0, 4, 8]],
+    ),
+    (
+        "cumprod",
+        ["group_idx", "group_idx2"],
+        "time",
+        [[7, 2, 0, 0, 2, 2], [1, 1, 1, 1, 1, 1], [2, 2, 2, 4, 2, 4]],
+    ),
+    (
+        "cumprod",
+        ["group_idx", "group_idx2"],
+        "test",
+        [[7, 2, 0, 1, 2, 1], [7, 2, 0, 1, 2, 1], [14, 4, 0, 2, 4, 2]],
+    ),
+    (
+        "cumprod",
+        ["group_idx", "group_idx2"],
+        ...,
+        [[7, 2, 0, 0, 2, 2], [7, 2, 0, 0, 2, 2], [14, 4, 0, 0, 4, 8]],
+    ),
+]
+
+
+def _groupby_scans_params():
+    for method, grp_idx, dim, expected_array in _SCAN_CASES:
+        for use_flox in (True, False):
+            for use_lazy_group_idx in (True, False):
+                if use_lazy_group_idx and not use_flox:
+                    # Lazy group_idx is not supported without flox.
+                    continue
+                marks = [requires_flox] if use_flox else []
+                if use_flox and method == "cumprod":
+                    reason = "TODO: Groupby with cumprod is currently not supported with flox"
+                    marks.append(pytest.mark.skip(reason=reason))
+                elif use_flox and dim == ...:
+                    reason = "TODO: Scans are only supported along a single dimension in flox."
+                    marks.append(pytest.mark.skip(reason=reason))
+                elif use_flox and dim == "test":
+                    reason = "TODO: group_idx along time dim and axis along test dim not currently supported with flox."
+                    marks.append(pytest.mark.skip(reason=reason))
+                yield pytest.param(
+                    method,
+                    grp_idx,
+                    dim,
+                    expected_array,
+                    use_flox,
+                    use_lazy_group_idx,
+                    marks=marks,
+                )
+
+
+@parametrize_dask
 @pytest.mark.parametrize(
-    "method, grp_idx, dim, expected_array",
-    [
-        (
-            "cumsum",
-            ["group_idx"],
-            "time",
-            [[7, 9, 0, 1, 2, 2], [1, 2, 1, 2, 1, 2], [2, 4, 2, 4, 2, 4]],
-        ),
-        (
-            "cumsum",
-            ["group_idx"],
-            "test",
-            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
-        ),
-        (
-            "cumsum",
-            ["group_idx"],
-            ...,
-            [[7, 9, 0, 1, 2, 2], [8, 11, 1, 3, 3, 4], [10, 15, 3, 7, 5, 8]],
-        ),
-        (
-            "cumsum",
-            ["group_idx", "group_idx2"],
-            "time",
-            [[7, 2, 0, 1, 2, 2], [1, 1, 1, 2, 1, 2], [2, 2, 2, 4, 2, 4]],
-        ),
-        (
-            "cumsum",
-            ["group_idx", "group_idx2"],
-            "test",
-            [[7, 2, 0, 1, 2, 0], [8, 3, 1, 2, 3, 1], [10, 5, 3, 4, 5, 3]],
-        ),
-        (
-            "cumsum",
-            ["group_idx", "group_idx2"],
-            ...,
-            [[7, 2, 0, 1, 2, 2], [8, 3, 1, 3, 3, 4], [10, 5, 3, 7, 5, 8]],
-        ),
-        (
-            "cumprod",
-            ["group_idx"],
-            "time",
-            [[7, 14, 0, 0, 2, 2], [1, 1, 1, 1, 1, 1], [2, 4, 2, 4, 2, 4]],
-        ),
-        (
-            "cumprod",
-            ["group_idx"],
-            "test",
-            [[7, 2, 0, 1, 2, 1], [7, 2, 0, 1, 2, 1], [14, 4, 0, 2, 4, 2]],
-        ),
-        (
-            "cumprod",
-            ["group_idx"],
-            ...,
-            [[7, 14, 0, 0, 2, 2], [7, 14, 0, 0, 2, 2], [14, 56, 0, 0, 4, 8]],
-        ),
-        (
-            "cumprod",
-            ["group_idx", "group_idx2"],
-            "time",
-            [[7, 2, 0, 0, 2, 2], [1, 1, 1, 1, 1, 1], [2, 2, 2, 4, 2, 4]],
-        ),
-        (
-            "cumprod",
-            ["group_idx", "group_idx2"],
-            "test",
-            [[7, 2, 0, 1, 2, 1], [7, 2, 0, 1, 2, 1], [14, 4, 0, 2, 4, 2]],
-        ),
-        (
-            "cumprod",
-            ["group_idx", "group_idx2"],
-            ...,
-            [[7, 2, 0, 0, 2, 2], [7, 2, 0, 0, 2, 2], [14, 4, 0, 0, 4, 8]],
-        ),
-    ],
+    "method, grp_idx, dim, expected_array, use_flox, use_lazy_group_idx",
+    list(_groupby_scans_params()),
 )
 def test_groupby_scans(
     method: Literal["cumsum", "cumprod"],
@@ -2719,30 +2727,8 @@ def test_groupby_scans(
     use_dask: bool,
     use_lazy_group_idx: bool,
 ) -> None:
-    if use_dask and not has_dask:
-        pytest.skip("requires dask")
-
     if use_dask and use_flox and has_dask_array_expr:
         pytest.xfail("flox groupby scans currently mix legacy dask arrays")
-
-    if use_flox:
-        if not has_flox:
-            pytest.skip("requires flox")
-
-        if method == "cumprod":
-            pytest.skip(
-                "TODO: Groupby with cumprod is currently not supported with flox"
-            )
-        if dim == ...:
-            pytest.skip(
-                "TODO: Scans are only supported along a single dimension in flox."
-            )
-        elif dim == "test":
-            pytest.skip(
-                "TODO: group_idx along time dim and axis along test dim not currently supported with flox."
-            )
-    elif use_lazy_group_idx:
-        pytest.skip("Lazy group_idx is not supported without flox.")
 
     # Test Dataset groupby:
     ds = xr.Dataset(
@@ -2878,10 +2864,8 @@ def test_min_count_vs_flox(func: str, min_count: int | None, skipna: bool) -> No
     assert_identical(actual, expected)
 
 
-@pytest.mark.parametrize("use_flox", [True, False])
+@pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
 def test_min_count_error(use_flox: bool) -> None:
-    if use_flox and not has_flox:
-        pytest.skip()
     da = DataArray(
         data=np.array([np.nan, 1, 1, np.nan, 1, 1]),
         dims="x",
@@ -3841,16 +3825,8 @@ class TestSeasonGrouperAndResampler:
         assert result_unit == time_unit
 
 
-@pytest.mark.parametrize(
-    "chunk",
-    [
-        pytest.param(
-            True, marks=pytest.mark.skipif(not has_dask, reason="requires dask")
-        ),
-        False,
-    ],
-)
-def test_datetime_mean(chunk, use_cftime):
+@parametrize_dask
+def test_datetime_mean(use_dask, use_cftime):
     ds = xr.Dataset(
         {
             "var1": (
@@ -3862,7 +3838,7 @@ def test_datetime_mean(chunk, use_cftime):
             "var2": (("x",), list(range(10))),
         }
     )
-    if chunk:
+    if use_dask:
         ds = ds.chunk()
     assert "var1" in ds.groupby("x").mean("time")
     assert "var1" in ds.mean("x")

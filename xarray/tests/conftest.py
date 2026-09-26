@@ -8,7 +8,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset, DataTree
-from xarray.tests import create_test_data, has_cftime, requires_dask
+from xarray.tests import create_test_data, requires_cftime, requires_dask
 
 
 @pytest.fixture(autouse=True)
@@ -123,9 +123,7 @@ def da(request, backend):
 @pytest.fixture(
     params=[
         False,
-        pytest.param(
-            True, marks=pytest.mark.skipif(not has_cftime, reason="no cftime")
-        ),
+        pytest.param(True, marks=requires_cftime),
     ]
 )
 def use_cftime(request):
