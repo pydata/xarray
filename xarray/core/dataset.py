@@ -1428,25 +1428,29 @@ class Dataset(
         """
         from xarray.core.formatting import shorten_list_repr
 
+        key_is_iterator = isinstance(cast(Any, key), Iterator)
         if utils.is_dict_like(key):
             return self.isel(**key)
         if utils.hashable(key):
             try:
                 return self._construct_dataarray(key)
             except KeyError as e:
-                message = f"No variable named {key!r}."
+                if not key_is_iterator:
+                    message = f"No variable named {key!r}."
 
-                best_guess = utils.did_you_mean(key, self.variables.keys())
-                if best_guess:
-                    message += f" {best_guess}"
-                else:
-                    message += f" Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
+                    best_guess = utils.did_you_mean(key, self.variables.keys())
+                    if best_guess:
+                        message += f" {best_guess}"
+                    else:
+                        message += f" Variables on the dataset include {shorten_list_repr(list(self.variables.keys()), max_items=10)}"
 
-                # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
-                if isinstance(key, tuple):
-                    message += f"\nHint: use a list to select multiple variables, for example `ds[{list(key)}]`"
-                raise KeyError(message) from e
+                    # If someone attempts `ds['foo' , 'bar']` instead of `ds[['foo', 'bar']]`
+                    if isinstance(key, tuple):
+                        message += f"\nHint: use a list to select multiple variables, for example `ds[{list(key)}]`"
+                    raise KeyError(message) from e
 
+        if key_is_iterator:
+            key = list(cast(Iterator[Hashable], key))
         if utils.iterable_of_hashable(key):
             return self._copy_listed(key)
         raise ValueError(f"Unsupported key-type {type(key)}")
