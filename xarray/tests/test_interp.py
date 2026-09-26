@@ -878,7 +878,7 @@ def test_decompose(method: InterpOptions) -> None:
 
 @requires_scipy
 @requires_dask
-@parametrize_dask
+@pytest.mark.parametrize("chunked", [True, False])
 @pytest.mark.parametrize(
     "method,data_ndim,interp_ndim,nscalar",
     [
@@ -893,7 +893,7 @@ def test_decompose(method: InterpOptions) -> None:
 )
 @pytest.mark.filterwarnings("ignore:Increasing number of chunks")
 def test_interpolate_chunk_1d(
-    method: InterpOptions, data_ndim, interp_ndim, nscalar, use_dask: bool
+    method: InterpOptions, data_ndim, interp_ndim, nscalar, chunked: bool
 ) -> None:
     """Interpolate nd array with multiple independent indexers
 
@@ -941,7 +941,7 @@ def test_interpolate_chunk_1d(
                                 before.item(), after.item(), len(da.coords[dim]) * 5
                             ),
                         )
-                        if use_dask:
+                        if chunked:
                             dest[dim] = xr.DataArray(data=dest[dim], dims=[dim])
                             dest[dim] = dest[dim].chunk(2)
                 actual = da.interp(method=method, **dest)

@@ -11,7 +11,6 @@ from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
-    has_dask,
     parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
@@ -29,7 +28,7 @@ def test_coarsen_absent_dims_error(ds: Dataset) -> None:
 @parametrize_dask
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
 def test_coarsen_dataset(ds, use_dask, boundary, side):
-    if use_dask and has_dask:
+    if use_dask:
         ds = ds.chunk({"x": 4})
 
     actual = ds.coarsen(time=2, x=3, boundary=boundary, side=side).max()
@@ -44,7 +43,7 @@ def test_coarsen_dataset(ds, use_dask, boundary, side):
 
 @parametrize_dask
 def test_coarsen_coords(ds, use_dask):
-    if use_dask and has_dask:
+    if use_dask:
         ds = ds.chunk({"x": 4})
 
     # check if coord_func works
@@ -278,7 +277,7 @@ class TestCoarsenConstruct:
             attrs={"foo": "bar"},
         )
 
-        if use_dask and has_dask:
+        if use_dask:
             ds = ds.chunk({"x": 4, "time": 10})
 
         expected = xr.Dataset(attrs={"foo": "bar"})

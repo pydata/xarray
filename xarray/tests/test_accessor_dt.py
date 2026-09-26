@@ -582,7 +582,6 @@ def cftime_rounding_dataarray(cftime_date_type):
 
 
 @requires_cftime
-@requires_dask
 @parametrize_dask
 def test_cftime_floor_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
@@ -613,7 +612,6 @@ def test_cftime_floor_accessor(
 
 
 @requires_cftime
-@requires_dask
 @parametrize_dask
 def test_cftime_ceil_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
@@ -644,7 +642,6 @@ def test_cftime_ceil_accessor(
 
 
 @requires_cftime
-@requires_dask
 @parametrize_dask
 def test_cftime_round_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask

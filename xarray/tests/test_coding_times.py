@@ -1086,23 +1086,16 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:Times can't be serialized faithfully")
-@pytest.mark.parametrize(
-    ("encoding_units", "freq", "use_cftime"),
-    [
-        pytest.param(
-            encoding_units,
-            freq,
-            use_cftime,
-            marks=requires_cftime if use_cftime else (),
-        )
-        for use_cftime, freq, encoding_units in product(
-            [True, False],
-            FREQUENCIES_TO_ENCODING_UNITS.keys(),
-            FREQUENCIES_TO_ENCODING_UNITS.values(),
-        )
-        # Nanosecond frequency is not valid for cftime dates.
-        if not (use_cftime and (freq == "ns" or encoding_units == "nanoseconds"))
-    ],
+@parametrize_cftime
+@pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
+@pytest.mark.parametrize("encoding_units", FREQUENCIES_TO_ENCODING_UNITS.values())
+@pytest.mark.skip_if_param(
+    use_cftime=True, freq="ns", reason="Nanosecond frequency is not valid for cftime"
+)
+@pytest.mark.skip_if_param(
+    use_cftime=True,
+    encoding_units="nanoseconds",
+    reason="Nanosecond frequency is not valid for cftime",
 )
 def test_encode_cf_datetime_defaults_to_correct_dtype(
     encoding_units, freq, use_cftime

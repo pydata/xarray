@@ -62,8 +62,8 @@ from xarray.tests import (
     create_test_data,
     dask_array_api,
     dask_array_type,
-    has_dask,
     has_pyarrow,
+    parametrize_cftime,
     parametrize_dask,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -8035,7 +8035,7 @@ def test_differentiate(use_dask, edge_order) -> None:
         dims=["x", "y"],
         coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
-    if use_dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8095,7 +8095,7 @@ def test_differentiate_datetime(use_dask) -> None:
         dims=["x", "y"],
         coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
-    if use_dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     # along x
@@ -8134,7 +8134,7 @@ def test_differentiate_cftime(use_dask) -> None:
         dims=["time", "y"],
     )
 
-    if use_dask and has_dask:
+    if use_dask:
         da = da.chunk({"time": 4})
 
     actual = da.differentiate("time", edge_order=1, datetime_unit="D")
@@ -8167,7 +8167,7 @@ def test_integrate(use_dask) -> None:
             "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
-    if use_dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8221,7 +8221,7 @@ def test_cumulative_integrate(use_dask) -> None:
             "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
-    if use_dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8268,13 +8268,11 @@ def test_cumulative_integrate(use_dask) -> None:
 
 
 @parametrize_dask
-@pytest.mark.parametrize(
-    "which_datetime", ["np", pytest.param("cftime", marks=requires_cftime)]
-)
-def test_trapezoid_datetime(use_dask, which_datetime) -> None:
+@parametrize_cftime
+def test_trapezoid_datetime(use_dask, use_cftime) -> None:
     rs = np.random.default_rng(42)
     coord: ArrayLike
-    if which_datetime == "np":
+    if not use_cftime:
         coord = np.array(
             [
                 "2004-07-13",
@@ -8297,7 +8295,7 @@ def test_trapezoid_datetime(use_dask, which_datetime) -> None:
         dims=["time", "y"],
     )
 
-    if use_dask and has_dask:
+    if use_dask:
         da = da.chunk({"time": 4})
 
     actual = da.integrate("time", datetime_unit="D")
