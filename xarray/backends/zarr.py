@@ -1406,7 +1406,7 @@ class ZarrStore(AbstractWritableDataStore):
 def open_zarr(
     store,
     group=None,
-    chunks: int | dict | None | Literal["auto"] | Default = _default,
+    chunks: int | dict | Literal["auto"] | Default | None = _default,
     decode_cf=True,
     mask_and_scale=True,
     decode_times=True,
