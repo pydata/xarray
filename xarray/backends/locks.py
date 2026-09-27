@@ -207,6 +207,16 @@ def acquire(lock, blocking=True):
         return lock.acquire(blocking)
 
 
+def _lock_identity(lock: Lock) -> int:
+    """Identity of the lock that is actually acquired.
+
+    Unpickled SerializableLocks are new objects wrapping the same threading.Lock.
+    """
+    if isinstance(lock, SerializableLock):
+        return id(lock.lock)
+    return id(lock)
+
+
 class CombinedLock(Lock):
     """A combination of multiple locks.
 
@@ -215,7 +225,12 @@ class CombinedLock(Lock):
     """
 
     def __init__(self, locks: Sequence[Lock]):
-        self.locks = tuple(set(locks))  # remove duplicates
+        # Remove duplicates and always acquire in one global order. Ordering by
+        # set iteration depends on memory addresses and insertion order, so two
+        # CombinedLocks sharing locks could acquire them in opposite orders and
+        # deadlock each other.
+        unique = {_lock_identity(lock): lock for lock in locks}
+        self.locks = tuple(lock for _, lock in sorted(unique.items()))
 
     def acquire(self, blocking=True):
         acquired = []
@@ -230,16 +245,14 @@ class CombinedLock(Lock):
         return True
 
     def release(self):
-        for lock in self.locks:
+        for lock in reversed(self.locks):
             lock.release()
 
     def __enter__(self):
-        for lock in self.locks:
-            lock.__enter__()
+        self.acquire()
 
     def __exit__(self, *args):
-        for lock in self.locks:
-            lock.__exit__(*args)
+        self.release()
 
     def locked(self):
         return any(lock.locked() for lock in self.locks)
