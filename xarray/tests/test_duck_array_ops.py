@@ -585,11 +585,11 @@ def _reduce_params():
         ["sum", "min", "max", "mean", "var"],  # TODO test cumsum, cumprod
         [False, True],
     ):
+        if use_dask and not skipna and dtype == np.bool_ and func in ("min", "max"):
+            # bool with NaN is object-typed, where min/max without skipna depends
+            # on the comparison order, which differs between dask and numpy.
+            continue
         marks = [requires_dask] if use_dask else []
-        if use_dask and skipna is False and dtype == np.bool_:
-            marks.append(
-                pytest.mark.skip(reason="dask does not compute object-typed array")
-            )
         yield pytest.param(dtype, use_dask, func, skipna, marks=marks)
 
 
@@ -669,20 +669,11 @@ def _argmin_max_params():
     for dtype, contains_nan, skipna in itertools.product(
         [float, int, np.float32, np.bool_, str], [True, False], [False, True]
     ):
-        marks = []
-        if contains_nan and not skipna:
-            marks.append(
-                pytest.mark.skip(
-                    reason="numpy's argmin (not nanargmin) does not handle object-dtype"
-                )
-            )
-        if contains_nan and skipna and np.dtype(dtype).kind in "iufc":
-            marks.append(
-                pytest.mark.skip(
-                    reason="numpy's nanargmin raises ValueError for all nan axis"
-                )
-            )
-        yield pytest.param(dtype, contains_nan, skipna, marks=marks)
+        if contains_nan and not skipna and dtype in (np.bool_, str):
+            # bool and str with NaN are object-typed, where argmin/argmax without
+            # skipna either fails to compare NaN with str or depends on the order.
+            continue
+        yield (dtype, contains_nan, skipna)
 
 
 @pytest.mark.parametrize("dim_num, aggdim", [(1, "x"), (2, "x"), (2, "y")])
