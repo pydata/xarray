@@ -155,21 +155,35 @@ jobs:
         run: |
           pixi run -e ${{ matrix.pixi-env }} -- python -c "import xarray"
 
+      # caches are immutable, so use a unique key per job and restore the latest cache
+      # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
       - name: Restore cached hypothesis directory
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .hypothesis/
-          key: cache-hypothesis
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ strategy.job-index }}
+          restore-keys: |
+            cache-hypothesis-${{ runner.os }}-
+            cache-hypothesis-
           enableCrossOsArchive: true
-          save-always: true
 
       - name: Run tests
+        id: tests
         run: |
           pixi run -e ${{ matrix.pixi-env }} -- python -m pytest -n ${{ matrix.numprocesses || 4 }} \
             --timeout 180 \
             --cov=xarray \
             --cov-report=xml \
             --junitxml=pytest.xml
+
+      # explicitly save the cache so it gets updated, also do this even if the tests fail
+      - name: Save cached hypothesis directory
+        if: always() && steps.tests.outcome != 'skipped'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .hypothesis/
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ strategy.job-index }}
+          enableCrossOsArchive: true
 
       - name: Upload test results
         if: always()
@@ -179,7 +193,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:

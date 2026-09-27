@@ -1599,8 +1599,8 @@ class TestVariable(VariableSubclassobjects):
 
         # test missing dimension, raise warning
         with pytest.warns(UserWarning):
-            v.transpose(..., "not_a_dim", missing_dims="warn")
-            assert_identical(expected_ell, actual)
+            actual = v.transpose(..., "not_a_dim", missing_dims="warn")
+        assert_identical(expected_ell, actual)
 
     def test_transpose_0d(self):
         for value in [
@@ -1921,7 +1921,12 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim",
-        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
+        [
+            pytest.param(None, None, id="none"),
+            pytest.param(0, "x", id="x"),
+            pytest.param([0], ["x"], id="list-x"),
+            pytest.param([0, 1], ["x", "y"], id="list-x-y"),
+        ],
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()
