@@ -53,6 +53,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fixed read-only data variables from :py:meth:`Dataset.from_dataframe`
+  with pandas 3, allowing indexed assignment to converted numeric columns
+  (:issue:`11527`).
+
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
