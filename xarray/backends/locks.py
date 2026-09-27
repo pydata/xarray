@@ -218,7 +218,16 @@ class CombinedLock(Lock):
         self.locks = tuple(set(locks))  # remove duplicates
 
     def acquire(self, blocking=True):
-        return all(acquire(lock, blocking=blocking) for lock in self.locks)
+        acquired = []
+        for lock in self.locks:
+            if not acquire(lock, blocking=blocking):
+                # Release the locks we already hold, otherwise a failed
+                # non-blocking acquire leaves them locked forever.
+                for held in reversed(acquired):
+                    held.release()
+                return False
+            acquired.append(lock)
+        return True
 
     def release(self):
         for lock in self.locks:

@@ -76,6 +76,25 @@ def test_combined_lock_locked_with_serializable_locks() -> None:
     assert combined.locked() is False
 
 
+def test_combined_lock_failed_nonblocking_acquire_releases_held_locks() -> None:
+    """A failed non-blocking acquire must not leave any constituent lock held."""
+    lock1 = SerializableLock()
+    lock2 = SerializableLock()
+    combined = CombinedLock([lock1, lock2])
+    first, last = combined.locks
+
+    last.acquire()
+    try:
+        assert combined.acquire(blocking=False) is False
+        assert first.locked() is False
+    finally:
+        last.release()
+
+    assert combined.acquire(blocking=False) is True
+    combined.release()
+    assert combined.locked() is False
+
+
 def test_combined_lock_locked_with_context_manager() -> None:
     """CombinedLock.locked() should reflect state when using context manager."""
     lock1 = threading.Lock()
