@@ -122,6 +122,15 @@ class TestNames:
         mary = DataTree(children={"Sue": sue})
         assert mary.children["Sue"].name == "Sue"
 
+    def test_child_names_cannot_contain_slashes(self) -> None:
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            DataTree(children={"folder/data": DataTree()})
+
+        tree = DataTree(children={"a": DataTree()})
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            tree.children = {"folder/data": DataTree()}
+        assert list(tree.children) == ["a"]
+
     def test_dataset_containing_slashes(self) -> None:
         xda: xr.DataArray = xr.DataArray(
             [[1, 2]],

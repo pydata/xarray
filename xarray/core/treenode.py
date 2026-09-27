@@ -170,7 +170,8 @@ class TreeNode:
         self._check_children(children)
         children = {**children}
 
-        old_children = self.children
+        # snapshot, since self.children is a live view that attaching mutates
+        old_children = dict(self.children)
         del self.children
         try:
             self._pre_attach_children(children)
@@ -195,7 +196,7 @@ class TreeNode:
 
     @staticmethod
     def _check_children(children: Mapping[str, TreeNode]) -> None:
-        """Check children for correct types and for any duplicates."""
+        """Check children for correct types, valid names and for any duplicates."""
         if not is_dict_like(children):
             raise TypeError(
                 "children must be a dict-like mapping from names to node objects"
@@ -203,6 +204,7 @@ class TreeNode:
 
         seen = set()
         for name, child in children.items():
+            _validate_name(name)
             if not isinstance(child, TreeNode):
                 raise TypeError(
                     f"Cannot add object {name}. It is of type {type(child)}, "
