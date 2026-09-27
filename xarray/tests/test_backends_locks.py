@@ -81,14 +81,15 @@ def test_combined_lock_failed_nonblocking_acquire_releases_held_locks() -> None:
     lock1 = SerializableLock()
     lock2 = SerializableLock()
     combined = CombinedLock([lock1, lock2])
-    first, last = combined.locks
 
-    last.acquire()
-    try:
-        assert combined.acquire(blocking=False) is False
-        assert first.locked() is False
-    finally:
-        last.release()
+    # The acquisition order is an implementation detail, so try both.
+    for busy, other in [(lock1, lock2), (lock2, lock1)]:
+        busy.acquire()
+        try:
+            assert combined.acquire(blocking=False) is False
+            assert other.locked() is False
+        finally:
+            busy.release()
 
     assert combined.acquire(blocking=False) is True
     combined.release()
