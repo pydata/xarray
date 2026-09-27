@@ -55,7 +55,7 @@ Bug Fixes
 
 - Fix a deadlock when reading or writing netCDF files with dask: a failed
   non-blocking acquire of a combined lock, e.g. while garbage collecting an
-  unclosed file, left some of its locks held forever.
+  unclosed file, left some of its locks held forever (:pull:`11622`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
