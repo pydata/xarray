@@ -976,7 +976,7 @@ def test_use_cftime_default_standard_calendar_out_of_range(
 
     with pytest.warns(SerializationWarning):
         result = decode_cf_datetime(numerical_dates, units, calendar)
-        np.testing.assert_array_equal(result, expected)
+    np.testing.assert_array_equal(result, expected)
 
 
 @requires_cftime
