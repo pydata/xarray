@@ -2045,6 +2045,52 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         xp = duck_array_ops.get_array_namespace(self.data)
 
         def _wrapper(npa, **kwargs):
+            if npa.size == 0:
+                # Every quantile here is undefined, which is the nan that
+                # mean, median and pandas already return. Neither backing
+                # function can supply it in the expected shape: nanquantile
+                # drops the leading q axis whenever the result is empty, and
+                # quantile raises outright. The empty axis need not be one of
+                # the reduced ones for that to happen.
+                #
+                # Run the same call over one element first, purely so that a
+                # bad q, method or dtype is rejected with numpy's own message.
+                # Whether an argument is valid must not depend on how much
+                # data it was handed.
+                try:
+                    probe = np.zeros((1,) * npa.ndim, dtype=npa.dtype)
+                except TypeError:
+                    # A pandas extension dtype, which numpy cannot build an
+                    # array from. q and method do not depend on the dtype, so
+                    # check those here and leave the dtype to the non-empty
+                    # path. An extension dtype that path rejects is therefore
+                    # still accepted when empty, as it already is for object
+                    # arrays.
+                    probe = np.zeros((1,) * npa.ndim)
+                _quantile_func(probe, **kwargs)
+                reduced_axes = {axis % npa.ndim for axis in kwargs["axis"]}
+                kept_shape = tuple(
+                    size
+                    for axis, size in enumerate(npa.shape)
+                    if axis not in reduced_axes
+                )
+                # Datetimes and timedeltas keep their own dtype and their
+                # own NA, which is what the non-empty path, median and
+                # groupby over an empty bin all return. Handing back float64
+                # nan there would make concat of an empty and a non-empty
+                # result fail to promote.
+                if npa.dtype.kind in "mM":
+                    # Indexed to a scalar, but built through an array so that
+                    # it keeps the unit. dtype.type("NaT") drops it, and a
+                    # unitless datetime64 is deprecated in numpy.
+                    fill_value = np.array("NaT", dtype=npa.dtype)[()]
+                    result_dtype = npa.dtype
+                else:
+                    fill_value = np.nan
+                    result_dtype = np.float64
+                return xp.full(
+                    kept_shape + (len(kwargs["q"]),), fill_value, dtype=result_dtype
+                )
             # move quantile axis to end. required for apply_ufunc
             return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
