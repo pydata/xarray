@@ -7746,10 +7746,7 @@ class TestDataset:
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
     )
-    @pytest.mark.parametrize(
-        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
-    )
-    def test_query(self, backend, engine, parser) -> None:
+    def test_query(self, use_dask: bool, engine, parser) -> None:
         """Test querying a dataset."""
 
         # setup test data
@@ -7762,7 +7759,7 @@ class TestDataset:
         )
         e = np.arange(0, 10 * 20).reshape(10, 20)
         f = np.random.normal(0, 1, size=(10, 20, 30))
-        if backend == "numpy":
+        if not use_dask:
             ds = Dataset(
                 {
                     "a": ("x", a),
@@ -7781,7 +7778,7 @@ class TestDataset:
                     "f2": (("x", "y", "z"), f),
                 },
             )
-        elif backend == "dask":
+        else:
             da = dask_array_api
             ds = Dataset(
                 {
@@ -7916,7 +7913,7 @@ class TestDataset:
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin(test_elements, backend) -> None:
+def test_isin(test_elements, use_dask: bool) -> None:
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),
@@ -7925,7 +7922,7 @@ def test_isin(test_elements, backend) -> None:
         }
     ).astype("bool")
 
-    if backend == "dask":
+    if use_dask:
         expected = expected.chunk()
 
     result = Dataset(

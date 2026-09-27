@@ -4875,11 +4875,8 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
     )
-    @pytest.mark.parametrize(
-        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
-    )
     def test_query(
-        self, backend, engine: QueryEngineOptions, parser: QueryParserOptions
+        self, use_dask: bool, engine: QueryEngineOptions, parser: QueryParserOptions
     ) -> None:
         """Test querying a dataset."""
 
@@ -4896,7 +4893,7 @@ class TestDataArray:
         cc = DataArray(data=c, dims=["y"], name="c", coords={"c2": ("y", c)})
         dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
-        if backend == "dask":
+        if use_dask:
             da = dask_array_api
             aa = aa.copy(data=da.from_array(a, chunks=3))
             bb = bb.copy(data=da.from_array(b, chunks=3))

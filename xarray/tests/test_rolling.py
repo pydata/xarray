@@ -109,14 +109,12 @@ class TestDataArrayRolling:
         ):
             da.rolling(foo=2)
 
-    @requires_dask
     @requires_bottleneck
     @pytest.mark.parametrize(
         "name", ("sum", "mean", "std", "min", "max", "median", "argmin", "argmax")
     )
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
-    @pytest.mark.parametrize("backend", ["numpy", "dask"], indirect=True)
     def test_rolling_wrapped_bottleneck(
         self, da, name, center, min_periods, compute_backend
     ) -> None:
@@ -154,7 +152,7 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
     @pytest.mark.parametrize("window", (7, 8))
-    @pytest.mark.parametrize("backend", ["dask"], indirect=True)
+    @pytest.mark.parametrize("use_dask", [pytest.param(True, id="dask")], indirect=True)
     def test_rolling_wrapped_dask(self, da, name, center, min_periods, window) -> None:
         # dask version
         rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
@@ -522,7 +520,9 @@ class TestDataArrayRollingExp:
         "window_type, window",
         [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]],
     )
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    @pytest.mark.parametrize(
+        "use_dask", [pytest.param(False, id="numpy")], indirect=True
+    )
     @pytest.mark.parametrize("func", ["mean", "sum", "var", "std"])
     def test_rolling_exp_runs(self, da, dim, window_type, window, func) -> None:
         da = da.where(da > 0.2)
@@ -536,7 +536,9 @@ class TestDataArrayRollingExp:
         "window_type, window",
         [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]],
     )
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    @pytest.mark.parametrize(
+        "use_dask", [pytest.param(False, id="numpy")], indirect=True
+    )
     def test_rolling_exp_mean_pandas(self, da, dim, window_type, window) -> None:
         da = da.isel(a=0).where(lambda x: x > 0.2)
 
@@ -553,7 +555,9 @@ class TestDataArrayRollingExp:
 
         assert_allclose(expected.variable, result.variable)
 
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    @pytest.mark.parametrize(
+        "use_dask", [pytest.param(False, id="numpy")], indirect=True
+    )
     @pytest.mark.parametrize("func", ["mean", "sum"])
     def test_rolling_exp_keep_attrs(self, da, func) -> None:
         attrs = {"attrs": "da"}
@@ -724,7 +728,9 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
     @pytest.mark.parametrize("key", ("z1", "z2"))
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    @pytest.mark.parametrize(
+        "use_dask", [pytest.param(False, id="numpy")], indirect=True
+    )
     def test_rolling_wrapped_bottleneck(
         self, ds, name, center, min_periods, key, compute_backend
     ) -> None:
@@ -974,14 +980,13 @@ class TestDatasetRolling:
 
 @requires_numbagg
 class TestDatasetRollingExp:
-    @pytest.mark.parametrize(
-        "backend", ["numpy", pytest.param("dask", marks=requires_dask)], indirect=True
-    )
     def test_rolling_exp(self, ds) -> None:
         result = ds.rolling_exp(time=10, window_type="span").mean()
         assert isinstance(result, Dataset)
 
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    @pytest.mark.parametrize(
+        "use_dask", [pytest.param(False, id="numpy")], indirect=True
+    )
     def test_rolling_exp_keep_attrs(self, ds) -> None:
         attrs_global = {"attrs": "global"}
         attrs_z1 = {"attr": "z1"}

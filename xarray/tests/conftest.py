@@ -32,8 +32,13 @@ def handle_numpy_1_warnings():
         yield
 
 
-@pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
-def backend(request):
+@pytest.fixture(
+    params=[
+        pytest.param(False, id="numpy"),
+        pytest.param(True, id="dask", marks=requires_dask),
+    ]
+)
+def use_dask(request):
     return request.param
 
 
@@ -53,7 +58,7 @@ def compute_backend(request):
 
 
 @pytest.fixture(params=[1])
-def ds(request, backend):
+def ds(request, use_dask):
     if request.param == 1:
         ds = Dataset(
             dict(
@@ -86,14 +91,14 @@ def ds(request, backend):
     else:
         raise ValueError
 
-    if backend == "dask":
+    if use_dask:
         return ds.chunk()
 
     return ds
 
 
 @pytest.fixture(params=[1])
-def da(request, backend):
+def da(request, use_dask):
     if request.param == 1:
         times = pd.date_range("2000-01-01", freq="1D", periods=21)
         da = DataArray(
@@ -112,12 +117,9 @@ def da(request, backend):
             dims=list("zyx"),
         )
 
-    if backend == "dask":
+    if use_dask:
         return da.chunk()
-    elif backend == "numpy":
-        return da
-    else:
-        raise ValueError
+    return da
 
 
 @pytest.fixture(
@@ -130,23 +132,13 @@ def use_cftime(request):
     return request.param
 
 
-@pytest.fixture(
-    params=[
-        pytest.param(False, id="numpy"),
-        pytest.param(True, id="dask", marks=requires_dask),
-    ]
-)
-def use_dask(request):
-    return request.param
-
-
 @pytest.fixture(params=[Dataset, DataArray])
 def type(request):
     return request.param
 
 
 @pytest.fixture(params=[1])
-def d(request, backend, type) -> DataArray | Dataset:
+def d(request, use_dask, type) -> DataArray | Dataset:
     """
     For tests which can test either a DataArray or a Dataset.
     """
@@ -173,12 +165,9 @@ def d(request, backend, type) -> DataArray | Dataset:
     else:
         raise ValueError
 
-    if backend == "dask":
+    if use_dask:
         return result.chunk()
-    elif backend == "numpy":
-        return result
-    else:
-        raise ValueError
+    return result
 
 
 @pytest.fixture
