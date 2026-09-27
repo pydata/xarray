@@ -512,15 +512,15 @@ ds_disk.encoding
 
 One key piece of information you can find in the encoding is whether a
 dimension is unlimited. Unlimited dimensions can grow in size, and are
-commonly used for a dimension like ``time`` that is appended to over
+commonly used for a dimension like `time` that is appended to over
 time:
 
-​```{code-cell}
+​`{code-cell}
 ds_disk.encoding["unlimited_dims"]
-​```
+​`
 
 This information can also be set explicitly when writing a file with
-:py:meth:`Dataset.to_netcdf` using the ``unlimited_dims`` keyword
+:py:meth:`Dataset.to_netcdf` using the `unlimited_dims` keyword
 argument.
 
 Note that all operations that manipulate variables other than indexing
