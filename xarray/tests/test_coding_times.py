@@ -54,8 +54,6 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_type,
     has_cftime,
-    parametrize_cftime,
-    parametrize_dask,
     requires_cftime,
     requires_dask,
 )
@@ -1086,7 +1084,6 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
 
 
 @pytest.mark.filterwarnings("ignore:Times can't be serialized faithfully")
-@parametrize_cftime
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
 @pytest.mark.parametrize("encoding_units", FREQUENCIES_TO_ENCODING_UNITS.values())
 @pytest.mark.skip_if_param(
@@ -1275,7 +1272,6 @@ def test_decode_cf_datetime_uint64_with_cftime_overflow_error():
         decode_cf_datetime(num_dates, units, calendar)
 
 
-@parametrize_cftime
 def test_decode_0size_datetime(use_cftime):
     # GH1329
     dtype = object if use_cftime else "=M8[ns]"
@@ -1716,7 +1712,6 @@ def test_encode_cf_datetime_cftime_datetime_via_dask(units, dtype) -> None:
     np.testing.assert_equal(decoded_times, times)
 
 
-@parametrize_cftime
 def test_encode_cf_datetime_units_change(use_cftime) -> None:
     times = date_range(start="2000", freq="12h", periods=3, use_cftime=use_cftime)
     encoding = dict(units="days since 2000-01-01", dtype=np.dtype("int64"))
@@ -1736,7 +1731,6 @@ def test_encode_cf_datetime_units_change(use_cftime) -> None:
 
 
 @requires_dask
-@parametrize_cftime
 def test_encode_cf_datetime_units_change_dask(use_cftime) -> None:
     # With dask the units cannot be changed on the fly, so encoding raises
     times = date_range(start="2000", freq="12h", periods=3, use_cftime=use_cftime)
@@ -1826,7 +1820,6 @@ def test_encode_cf_timedelta_units_change_dask() -> None:
         conventions.encode_cf_variable(variable).compute()
 
 
-@parametrize_dask
 def test_encode_cf_timedelta_small_dtype_missing_value(use_dask) -> None:
     # Regression test for GitHub issue #9134
     timedeltas = np.array([1, 2, "NaT", 4], dtype="timedelta64[D]").astype(

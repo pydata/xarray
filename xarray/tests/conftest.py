@@ -130,6 +130,16 @@ def use_cftime(request):
     return request.param
 
 
+@pytest.fixture(
+    params=[
+        pytest.param(False, id="numpy"),
+        pytest.param(True, id="dask", marks=requires_dask),
+    ]
+)
+def use_dask(request):
+    return request.param
+
+
 @pytest.fixture(params=[Dataset, DataArray])
 def type(request):
     return request.param

@@ -26,7 +26,6 @@ from xarray.structure.alignment import broadcast
 from xarray.tests import (
     dask_array_api,
     dask_array_type,
-    parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -2109,7 +2108,6 @@ def test_output_wrong_dim_size() -> None:
     )
 
 
-@parametrize_dask
 def test_dot(use_dask: bool) -> None:
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -2235,7 +2233,6 @@ def test_dot(use_dask: bool) -> None:
     pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
-@parametrize_dask
 def test_dot_align_coords(use_dask: bool) -> None:
     # GH 3694
 
@@ -2379,7 +2376,6 @@ def test_where_attrs() -> None:
     assert_identical(ds_expected, ds_actual)
 
 
-@parametrize_dask
 @pytest.mark.parametrize(
     ["x", "coeffs", "expected"],
     [
@@ -2524,7 +2520,6 @@ def test_polyval(
 
 
 @requires_cftime
-@parametrize_dask
 @pytest.mark.parametrize("date", ["1970-01-01", "0753-04-21"])
 def test_polyval_cftime(use_dask: bool, date: str) -> None:
     import cftime
@@ -2573,7 +2568,6 @@ def test_polyval_timedelta_nat() -> None:
     assert not np.isnan(actual.values[[0, 2]]).any()
 
 
-@parametrize_dask
 @pytest.mark.parametrize(
     "x",
     [
@@ -2618,7 +2612,6 @@ def test_polyfit_polyval_integration(
     xr.testing.assert_allclose(evaluated.variable, expected.variable)
 
 
-@parametrize_dask
 @pytest.mark.parametrize(
     "a, b, ae, be, dim, axis",
     [

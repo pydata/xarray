@@ -21,7 +21,6 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     dask_array_api,
-    parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -487,7 +486,6 @@ def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
 
 
 @requires_scipy
-@parametrize_dask
 def test_nans(use_dask: bool) -> None:
     da = xr.DataArray([0, 1, np.nan, 2], dims="x", coords={"x": range(4)})
 
@@ -500,7 +498,6 @@ def test_nans(use_dask: bool) -> None:
 
 
 @requires_scipy
-@parametrize_dask
 def test_errors(use_dask: bool) -> None:
     # spline is unavailable
     da = xr.DataArray([0, 1, np.nan, 2], dims="x", coords={"x": range(4)})
@@ -1149,7 +1146,6 @@ def test_interp_vectorized_dask() -> None:
 
 
 @requires_scipy
-@parametrize_dask
 def test_interp_vectorized_shared_dims(use_dask: bool) -> None:
     # GH4463
     da = xr.DataArray(

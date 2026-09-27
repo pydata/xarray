@@ -52,7 +52,6 @@ from xarray.tests import (
     dask_array_type,
     has_dask_ge_2025_1_0,
     has_pyarrow,
-    parametrize_dask,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -3985,7 +3984,6 @@ class TestDataArray:
         arr = DataArray(s)
         assert "a a b b" in repr(arr)  # should not error
 
-    @parametrize_dask
     @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
     def test_to_and_from_dict(
@@ -4656,7 +4654,6 @@ class TestDataArray:
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
 
-    @parametrize_dask
     @pytest.mark.parametrize("use_datetime", [True, False])
     @pytest.mark.filterwarnings("ignore:overflow encountered in multiply")
     def test_polyfit(self, use_dask, use_datetime) -> None:
@@ -4948,7 +4945,6 @@ class TestDataArray:
             aa.query(x="spam > 50")  # name not present
 
     @requires_scipy
-    @parametrize_dask
     def test_curvefit(self, use_dask) -> None:
         def exp_decay(t, n0, tau=1):
             return n0 * np.exp(-t / tau)
@@ -5016,7 +5012,6 @@ class TestDataArray:
         assert params == param_names
 
     @requires_scipy
-    @parametrize_dask
     def test_curvefit_multidimensional_guess(self, use_dask: bool) -> None:
         def sine(t, a, f, p):
             return a * np.sin(2 * np.pi * (f * t + p))
@@ -5063,7 +5058,6 @@ class TestDataArray:
             )
 
     @requires_scipy
-    @parametrize_dask
     def test_curvefit_multidimensional_bounds(self, use_dask: bool) -> None:
         def sine(t, a, f, p):
             return a * np.sin(2 * np.pi * (f * t + p))
@@ -5122,7 +5116,6 @@ class TestDataArray:
             )
 
     @requires_scipy
-    @parametrize_dask
     def test_curvefit_ignore_errors(self, use_dask: bool) -> None:
         # nonsense function to make the optimization fail
         def line(x, a, b):
@@ -5353,7 +5346,6 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
-    @parametrize_dask
     def test_idxmin(
         self,
         x: np.ndarray,
@@ -5467,7 +5459,6 @@ class TestReduce1D(TestReduce):
         result7 = ar0.idxmin(fill_value=-1j)
         assert_identical(result7, expected7)
 
-    @parametrize_dask
     def test_idxmax(
         self,
         x: np.ndarray,
@@ -5947,7 +5938,6 @@ class TestReduce2D(TestReduce):
 
         assert_identical(result3, expected2)
 
-    @parametrize_dask
     def test_idxmin(
         self,
         x: np.ndarray,
@@ -6088,7 +6078,6 @@ class TestReduce2D(TestReduce):
             result7 = ar0.idxmin(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
 
-    @parametrize_dask
     def test_idxmax(
         self,
         x: np.ndarray,

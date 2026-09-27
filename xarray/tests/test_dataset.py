@@ -63,8 +63,6 @@ from xarray.tests import (
     dask_array_api,
     dask_array_type,
     has_pyarrow,
-    parametrize_cftime,
-    parametrize_dask,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -8024,7 +8022,6 @@ def test_raise_no_warning_assert_close(ds) -> None:
     assert_allclose(ds, ds)
 
 
-@parametrize_dask
 @pytest.mark.parametrize("edge_order", [1, 2])
 def test_differentiate(use_dask, edge_order) -> None:
     rs = np.random.default_rng(42)
@@ -8073,7 +8070,6 @@ def test_differentiate(use_dask, edge_order) -> None:
         da.differentiate("x2d")
 
 
-@parametrize_dask
 def test_differentiate_datetime(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = np.array(
@@ -8123,7 +8119,6 @@ def test_differentiate_datetime(use_dask) -> None:
 
 
 @requires_cftime
-@parametrize_dask
 def test_differentiate_cftime(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = xr.date_range("2000", periods=8, freq="2ME", use_cftime=True)
@@ -8152,7 +8147,6 @@ def test_differentiate_cftime(use_dask) -> None:
     assert_allclose(actual, xr.ones_like(da["time"]).astype(float))
 
 
-@parametrize_dask
 def test_integrate(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
@@ -8206,7 +8200,6 @@ def test_integrate(use_dask) -> None:
 
 
 @requires_scipy
-@parametrize_dask
 def test_cumulative_integrate(use_dask) -> None:
     rs = np.random.default_rng(43)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
@@ -8267,8 +8260,6 @@ def test_cumulative_integrate(use_dask) -> None:
         da.cumulative_integrate("x2d")
 
 
-@parametrize_dask
-@parametrize_cftime
 def test_trapezoid_datetime(use_dask, use_cftime) -> None:
     rs = np.random.default_rng(42)
     coord: ArrayLike

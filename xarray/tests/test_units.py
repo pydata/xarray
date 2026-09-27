@@ -15,7 +15,6 @@ from xarray.tests import (
     assert_duckarray_allclose,
     assert_equal,
     assert_identical,
-    parametrize_dask,
     requires_dask,
     requires_matplotlib,
     requires_numbagg,
@@ -1869,7 +1868,6 @@ class TestVariable:
 
         assert expected == actual
 
-    @parametrize_dask
     @pytest.mark.parametrize(
         ["variable", "indexers"],
         (

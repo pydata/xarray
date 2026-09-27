@@ -48,7 +48,6 @@ from xarray.tests import (
     has_dask_array_expr,
     has_dask_ge_2024_11_0,
     has_pandas_3,
-    parametrize_dask,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
@@ -1950,7 +1949,6 @@ class TestVariable(VariableSubclassobjects):
         np.testing.assert_allclose(actual.values, expected)
 
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    @parametrize_dask
     def test_quantile_method(self, method, use_dask) -> None:
         v = Variable(["x", "y"], self.d)
         if use_dask:

@@ -43,8 +43,6 @@ from xarray.tests import (
     has_cftime,
     has_dask_array_expr,
     has_flox,
-    parametrize_cftime,
-    parametrize_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -1439,7 +1437,6 @@ class TestDataArrayGroupBy:
 
     @pytest.mark.parametrize("use_flox", [True, False])
     @pytest.mark.parametrize("shuffle", [True, False])
-    @parametrize_dask
     @pytest.mark.parametrize("method", ["sum", "mean", "median"])
     def test_groupby_reductions(
         self, use_flox: bool, method: str, shuffle: bool, use_dask: bool
@@ -2713,7 +2710,6 @@ def _groupby_scans_params():
                 )
 
 
-@parametrize_dask
 @pytest.mark.parametrize(
     "method, grp_idx, dim, expected_array, use_flox, use_lazy_group_idx",
     list(_groupby_scans_params()),
@@ -3722,7 +3718,6 @@ class TestSeasonGrouperAndResampler:
         with pytest.raises(ValueError, match="sort"):
             da.resample(time=SeasonResampler(seasons))
 
-    @parametrize_cftime
     @pytest.mark.parametrize("drop_incomplete", [True, False])
     @pytest.mark.parametrize(
         "seasons",
@@ -3843,7 +3838,6 @@ class TestSeasonGrouperAndResampler:
         assert result_unit == time_unit
 
 
-@parametrize_dask
 def test_datetime_mean(use_dask, use_cftime):
     ds = xr.Dataset(
         {

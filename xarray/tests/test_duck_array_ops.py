@@ -43,7 +43,6 @@ from xarray.tests import (
     dask_array_type,
     has_dask,
     has_dask_array_expr,
-    parametrize_dask,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -441,7 +440,6 @@ def assert_dask_array(da, dask):
 
 @arm_xfail
 @pytest.mark.filterwarnings("ignore:All-NaN .* encountered:RuntimeWarning")
-@parametrize_dask
 def test_datetime_mean(use_dask: bool, time_unit: PDDatetimeUnitOptions) -> None:
     # Note: only testing numpy, as dask is broken upstream
     dtype = f"M8[{time_unit}]"
@@ -478,7 +476,6 @@ def test_datetime_mean(use_dask: bool, time_unit: PDDatetimeUnitOptions) -> None
 
 
 @requires_cftime
-@parametrize_dask
 def test_cftime_datetime_mean(use_dask):
     times = date_range("2000", periods=4, use_cftime=True)
     da = DataArray(times, dims=["time"])
@@ -507,7 +504,6 @@ def test_cftime_datetime_mean(use_dask):
     assert_equal(result, expected)
 
 
-@parametrize_dask
 def test_mean_over_long_spanning_datetime64(use_dask) -> None:
     array = np.array(["1678-01-01", "NaT", "2260-01-01"], dtype="datetime64[ns]")
     da = DataArray(array, dims=["time"])
@@ -691,7 +687,6 @@ def _argmin_max_params():
 
 @pytest.mark.parametrize("dim_num, aggdim", [(1, "x"), (2, "x"), (2, "y")])
 @pytest.mark.parametrize("dtype, contains_nan, skipna", list(_argmin_max_params()))
-@parametrize_dask
 @pytest.mark.parametrize("func", ["min", "max"])
 def test_argmin_max(dim_num, dtype, contains_nan, use_dask, func, skipna, aggdim):
     # pandas-dev/pandas#16830, we do not check consistency with pandas but
@@ -836,7 +831,6 @@ def test_dask_gradient(axis, edge_order):
 
 @pytest.mark.parametrize("dim_num", [1, 2])
 @pytest.mark.parametrize("dtype", [float, int, np.float32, np.bool_])
-@parametrize_dask
 @pytest.mark.parametrize("func", ["sum", "prod"])
 @pytest.mark.parametrize("aggdim", [None, "x"])
 @pytest.mark.parametrize("contains_nan", [True, False])
@@ -855,7 +849,6 @@ def test_min_count(dim_num, dtype, use_dask, func, aggdim, contains_nan, skipna)
 
 
 @pytest.mark.parametrize("dtype", [float, int, np.float32, np.bool_])
-@parametrize_dask
 @pytest.mark.parametrize("func", ["sum", "prod"])
 def test_min_count_nd(dtype, use_dask, func):
     min_count = 3
@@ -875,7 +868,6 @@ def test_min_count_nd(dtype, use_dask, func):
     assert_dask_array(actual, use_dask)
 
 
-@parametrize_dask
 @pytest.mark.parametrize("func", ["sum", "prod"])
 @pytest.mark.parametrize("dim", [None, "a", "b"])
 def test_min_count_specific(use_dask, func, dim):
@@ -924,7 +916,6 @@ def test_min_count_dataset(func):
 
 
 @pytest.mark.parametrize("dtype", [float, int, np.float32, np.bool_])
-@parametrize_dask
 @pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("func", ["sum", "prod"])
 def test_multiple_dims(dtype, use_dask, skipna, func):
@@ -935,7 +926,6 @@ def test_multiple_dims(dtype, use_dask, skipna, func):
     assert_allclose(actual, expected)
 
 
-@parametrize_dask
 def test_datetime_to_numeric_datetime64(use_dask, time_unit: PDDatetimeUnitOptions):
     times = pd.date_range("2000", periods=5, freq="7D").as_unit(time_unit).values
     if use_dask:
@@ -964,7 +954,6 @@ def test_datetime_to_numeric_datetime64(use_dask, time_unit: PDDatetimeUnitOptio
 
 
 @requires_cftime
-@parametrize_dask
 def test_datetime_to_numeric_cftime(use_dask):
     times = date_range(
         "2000", periods=5, freq="7D", calendar="standard", use_cftime=True

@@ -13,7 +13,6 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     dask_array_api,
-    parametrize_dask,
     requires_bottleneck,
     requires_dask,
     requires_dask_ge_2024_11_0,
@@ -892,7 +891,6 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1))
     @pytest.mark.parametrize("name", ("sum", "max"))
-    @parametrize_dask
     def test_ndrolling_reduce(self, ds, center, min_periods, name, use_dask) -> None:
         if use_dask:
             ds = ds.chunk({"x": 4})
@@ -922,7 +920,6 @@ class TestDatasetRolling:
 
     @pytest.mark.parametrize("center", (True, False, (True, False)))
     @pytest.mark.parametrize("fill_value", (np.nan, 0.0))
-    @parametrize_dask
     def test_ndrolling_construct(self, center, fill_value, use_dask) -> None:
         da = DataArray(
             np.arange(5 * 6 * 7).reshape(5, 6, 7).astype(float),

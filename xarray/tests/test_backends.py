@@ -84,7 +84,6 @@ from xarray.tests import (
     has_zarr_v3_dtypes,
     mock,
     network,
-    parametrize_dask,
     parametrize_zarr_format,
     raise_if_dask_computes,
     requires_aiobotocore,
@@ -983,7 +982,6 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers5)
 
-    @parametrize_dask
     def test_vectorized_indexing_negative_step(self, use_dask: bool) -> None:
         open_kwargs: dict[str, Any] | None = {"chunks": {}} if use_dask else None
         in_memory = create_test_data()
@@ -3502,7 +3500,6 @@ class ZarrBase(CFEncodedBase):
             with self.open(store) as actual:
                 assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
 
-    @parametrize_dask
     def test_save_emptydim(self, use_dask) -> None:
         ds = Dataset({"x": (("a", "b"), np.empty((5, 0))), "y": ("a", [1, 2, 5, 8, 9])})
         if use_dask:
@@ -3527,7 +3524,6 @@ class ZarrBase(CFEncodedBase):
     @pytest.mark.parametrize(
         "compute", [pytest.param(False, marks=requires_dask), True]
     )
-    @parametrize_dask
     @pytest.mark.parametrize("write_empty", [False, True, None])
     def test_write_region(self, consolidated, compute, use_dask, write_empty) -> None:
 
@@ -4457,7 +4453,6 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
                 )  # use default
                 assert_identical(expected, on_disk)
 
-    @parametrize_dask
     @pytest.mark.parametrize("consolidated", [True, False, None])
     @pytest.mark.parametrize("write_empty", [True, False, None])
     def test_write_empty(
