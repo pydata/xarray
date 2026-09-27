@@ -1418,6 +1418,8 @@ def test_map_blocks_change_name(map_da):
     assert_identical(actual, expected)
 
 
+# filling integer variables with NaN is intentional
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_kwargs(obj):
     expected = xr.full_like(obj, fill_value=np.nan)
