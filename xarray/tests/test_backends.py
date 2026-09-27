@@ -1698,6 +1698,25 @@ class NetCDFBase(CFEncodedBase):
                     a.close()
                     b.close()
 
+    @pytest.fixture
+    def byte_attrs_dataset(self) -> dict[str, Any]:
+        """For testing issue #9407"""
+        null_byte = b"\x00"
+        other_bytes = bytes(range(1, 256))
+        ds = Dataset({"x": 1}, coords={"x_coord": [1]})
+        ds["x"].attrs["null_byte"] = null_byte
+        ds["x"].attrs["other_bytes"] = other_bytes
+
+        expected = ds.copy()
+        expected["x"].attrs["null_byte"] = ""
+        expected["x"].attrs["other_bytes"] = other_bytes.decode(errors="replace")
+
+        return {
+            "input": ds,
+            "expected": expected,
+            "h5netcdf_error": r"Invalid value provided for attribute .*: .*\. Null characters .*",
+        }
+
     def test_byte_attrs(self, byte_attrs_dataset: dict[str, Any]) -> None:
         # test for issue #9407
         input = byte_attrs_dataset["input"]
