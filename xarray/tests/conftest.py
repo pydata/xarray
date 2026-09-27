@@ -57,10 +57,9 @@ def compute_backend(request):
         yield request.param
 
 
-@pytest.fixture(params=[1])
-def ds(request, use_dask):
-    if request.param == 1:
-        ds = Dataset(
+def _create_test_ds(variant) -> Dataset:
+    if variant == 1:
+        return Dataset(
             dict(
                 z1=(["y", "x"], np.random.randn(2, 8)),
                 z2=(["time", "y"], np.random.randn(10, 2)),
@@ -72,8 +71,8 @@ def ds(request, use_dask):
                 y=range(2),
             ),
         )
-    elif request.param == 2:
-        ds = Dataset(
+    elif variant == 2:
+        return Dataset(
             dict(
                 z1=(["time", "y"], np.random.randn(10, 2)),
                 z2=(["time"], np.random.randn(10)),
@@ -86,40 +85,54 @@ def ds(request, use_dask):
                 y=range(2),
             ),
         )
-    elif request.param == 3:
-        ds = create_test_data()
-    else:
-        raise ValueError
-
-    if use_dask:
-        return ds.chunk()
-
-    return ds
+    elif variant == 3:
+        return create_test_data()
+    raise ValueError(f"unknown ds variant {variant!r}")
 
 
-@pytest.fixture(params=[1])
-def da(request, use_dask):
-    if request.param == 1:
+def _create_test_da(variant) -> DataArray:
+    if variant == 1:
         times = pd.date_range("2000-01-01", freq="1D", periods=21)
-        da = DataArray(
+        return DataArray(
             np.random.random((3, 21, 4)),
             dims=("a", "time", "x"),
             coords=dict(time=times),
         )
-
-    if request.param == 2:
-        da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
-
-    if request.param == "repeating_ints":
-        da = DataArray(
+    elif variant == 2:
+        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
+    elif variant == "repeating_ints":
+        return DataArray(
             np.tile(np.arange(12), 5).reshape(5, 4, 3),
             coords={"x": list("abc"), "y": list("defg")},
             dims=list("zyx"),
         )
+    raise ValueError(f"unknown da variant {variant!r}")
 
-    if use_dask:
-        return da.chunk()
-    return da
+
+@pytest.fixture(params=[1])
+def ds(request, use_dask) -> Dataset:
+    """Test Dataset, run once with numpy and once with dask."""
+    ds = _create_test_ds(request.param)
+    return ds.chunk() if use_dask else ds
+
+
+@pytest.fixture(params=[1])
+def ds_numpy(request) -> Dataset:
+    """Test Dataset backed by numpy only."""
+    return _create_test_ds(request.param)
+
+
+@pytest.fixture(params=[1])
+def da(request, use_dask) -> DataArray:
+    """Test DataArray, run once with numpy and once with dask."""
+    da = _create_test_da(request.param)
+    return da.chunk() if use_dask else da
+
+
+@pytest.fixture(params=[1])
+def da_numpy(request) -> DataArray:
+    """Test DataArray backed by numpy only."""
+    return _create_test_da(request.param)
 
 
 @pytest.fixture(

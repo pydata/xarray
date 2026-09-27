@@ -152,8 +152,10 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
     @pytest.mark.parametrize("window", (7, 8))
-    @pytest.mark.parametrize("use_dask", [pytest.param(True, id="dask")], indirect=True)
-    def test_rolling_wrapped_dask(self, da, name, center, min_periods, window) -> None:
+    def test_rolling_wrapped_dask(
+        self, da_numpy, name, center, min_periods, window
+    ) -> None:
+        da = da_numpy.chunk()
         # dask version
         rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
         actual = getattr(rolling_obj, name)().load()
@@ -520,12 +522,9 @@ class TestDataArrayRollingExp:
         "window_type, window",
         [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]],
     )
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(False, id="numpy")], indirect=True
-    )
     @pytest.mark.parametrize("func", ["mean", "sum", "var", "std"])
-    def test_rolling_exp_runs(self, da, dim, window_type, window, func) -> None:
-        da = da.where(da > 0.2)
+    def test_rolling_exp_runs(self, da_numpy, dim, window_type, window, func) -> None:
+        da = da_numpy.where(da_numpy > 0.2)
 
         rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
         result = getattr(rolling_exp, func)()
@@ -536,11 +535,8 @@ class TestDataArrayRollingExp:
         "window_type, window",
         [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]],
     )
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(False, id="numpy")], indirect=True
-    )
-    def test_rolling_exp_mean_pandas(self, da, dim, window_type, window) -> None:
-        da = da.isel(a=0).where(lambda x: x > 0.2)
+    def test_rolling_exp_mean_pandas(self, da_numpy, dim, window_type, window) -> None:
+        da = da_numpy.isel(a=0).where(lambda x: x > 0.2)
 
         result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
         assert isinstance(result, DataArray)
@@ -555,16 +551,13 @@ class TestDataArrayRollingExp:
 
         assert_allclose(expected.variable, result.variable)
 
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(False, id="numpy")], indirect=True
-    )
     @pytest.mark.parametrize("func", ["mean", "sum"])
-    def test_rolling_exp_keep_attrs(self, da, func) -> None:
+    def test_rolling_exp_keep_attrs(self, da_numpy, func) -> None:
         attrs = {"attrs": "da"}
-        da.attrs = attrs
+        da_numpy.attrs = attrs
 
-        # Equivalent of `da.rolling_exp(time=10).mean`
-        rolling_exp_func = getattr(da.rolling_exp(time=10), func)
+        # Equivalent of `da_numpy.rolling_exp(time=10).mean`
+        rolling_exp_func = getattr(da_numpy.rolling_exp(time=10), func)
 
         # attrs are kept per default
         result = rolling_exp_func()
@@ -592,7 +585,7 @@ class TestDataArrayRollingExp:
             UserWarning,
             match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect.",
         ):
-            da.rolling_exp(time=10, keep_attrs=True)
+            da_numpy.rolling_exp(time=10, keep_attrs=True)
 
 
 class TestDatasetRolling:
@@ -728,33 +721,30 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
     @pytest.mark.parametrize("key", ("z1", "z2"))
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(False, id="numpy")], indirect=True
-    )
     def test_rolling_wrapped_bottleneck(
-        self, ds, name, center, min_periods, key, compute_backend
+        self, ds_numpy, name, center, min_periods, key, compute_backend
     ) -> None:
         import bottleneck as bn
 
         # Test all bottleneck functions
-        rolling_obj = ds.rolling(time=7, min_periods=min_periods)
+        rolling_obj = ds_numpy.rolling(time=7, min_periods=min_periods)
 
         func_name = f"move_{name}"
         actual = getattr(rolling_obj, name)()
         if key == "z1":  # z1 does not depend on 'Time' axis. Stored as it is.
-            expected = ds[key]
+            expected = ds_numpy[key]
         elif key == "z2":
             expected = getattr(bn, func_name)(
-                ds[key].values, window=7, axis=0, min_count=min_periods
+                ds_numpy[key].values, window=7, axis=0, min_count=min_periods
             )
         else:
             raise ValueError
         np.testing.assert_allclose(actual[key].values, expected)
 
         # Test center
-        rolling_obj = ds.rolling(time=7, center=center)
+        rolling_obj = ds_numpy.rolling(time=7, center=center)
         actual = getattr(rolling_obj, name)()["time"]
-        assert_allclose(actual, ds["time"])
+        assert_allclose(actual, ds_numpy["time"])
 
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
@@ -984,23 +974,20 @@ class TestDatasetRollingExp:
         result = ds.rolling_exp(time=10, window_type="span").mean()
         assert isinstance(result, Dataset)
 
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(False, id="numpy")], indirect=True
-    )
-    def test_rolling_exp_keep_attrs(self, ds) -> None:
+    def test_rolling_exp_keep_attrs(self, ds_numpy) -> None:
         attrs_global = {"attrs": "global"}
         attrs_z1 = {"attr": "z1"}
 
-        ds.attrs = attrs_global
-        ds.z1.attrs = attrs_z1
+        ds_numpy.attrs = attrs_global
+        ds_numpy.z1.attrs = attrs_z1
 
         # attrs are kept per default
-        result = ds.rolling_exp(time=10).mean()
+        result = ds_numpy.rolling_exp(time=10).mean()
         assert result.attrs == attrs_global
         assert result.z1.attrs == attrs_z1
 
         # discard attrs
-        result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+        result = ds_numpy.rolling_exp(time=10).mean(keep_attrs=False)
         assert result.attrs == {}
         # TODO: from #8114 — this arguably should be empty, but `apply_ufunc` doesn't do
         # that at the moment. We should change in `apply_func` rather than
@@ -1010,19 +997,19 @@ class TestDatasetRollingExp:
 
         # test discard attrs using global option
         with set_options(keep_attrs=False):
-            result = ds.rolling_exp(time=10).mean()
+            result = ds_numpy.rolling_exp(time=10).mean()
         assert result.attrs == {}
         # See above
         # assert result.z1.attrs == {}
 
         # keyword takes precedence over global option
         with set_options(keep_attrs=False):
-            result = ds.rolling_exp(time=10).mean(keep_attrs=True)
+            result = ds_numpy.rolling_exp(time=10).mean(keep_attrs=True)
         assert result.attrs == attrs_global
         assert result.z1.attrs == attrs_z1
 
         with set_options(keep_attrs=True):
-            result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+            result = ds_numpy.rolling_exp(time=10).mean(keep_attrs=False)
         assert result.attrs == {}
         # See above
         # assert result.z1.attrs == {}
@@ -1031,4 +1018,4 @@ class TestDatasetRollingExp:
             UserWarning,
             match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect.",
         ):
-            ds.rolling_exp(time=10, keep_attrs=True)
+            ds_numpy.rolling_exp(time=10, keep_attrs=True)
