@@ -163,3 +163,14 @@ def test_combined_lock_deduplicates_unpickled_serializable_lock() -> None:
     with combined:
         assert lock.locked()
     assert not lock.locked()
+
+
+def test_combined_lock_is_sorted_again_when_unpickled() -> None:
+    # The lock order depends on ids, which differ between processes, so a
+    # CombinedLock pickled in another process must be sorted again.
+    combined = CombinedLock([SerializableLock(), SerializableLock()])
+    local_order = [lock.lock for lock in combined.locks]
+    combined.locks = combined.locks[::-1]  # as if sorted in another process
+
+    unpickled = pickle.loads(pickle.dumps(combined))
+    assert [lock.lock for lock in unpickled.locks] == local_order
