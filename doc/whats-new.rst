@@ -55,11 +55,11 @@ Bug Fixes
 
 - ``min`` and ``max`` of object arrays with ``skipna=False`` now return ``NaN``
   for slices containing missing values, instead of a result that depended on
-  the position of the missing value (:issue:`11501`).
+  the position of the missing value (:issue:`11501`, :pull:`#11627`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Avoid pandas' deprecated ``Series.values`` when creating a
   :py:class:`~xarray.Variable` from a timezone-aware :py:class:`pandas.Series`
-  (:issue:`11501`).
+  (:issue:`11501`, :pull:`#11627`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
