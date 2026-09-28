@@ -1423,6 +1423,17 @@ def date_range(
     if tz is not None:
         use_cftime = False
 
+    if use_cftime is None and any(
+        date is not None and not isinstance(date, str) for date in (start, end)
+    ):
+        try:
+            cftime = attempt_import("cftime")
+        except ImportError:
+            pass
+        else:
+            if any(isinstance(date, cftime.datetime) for date in (start, end)):
+                use_cftime = True
+
     if _is_standard_calendar(calendar) and use_cftime is not True:
         try:
             return pd.date_range(  # type: ignore[call-overload,unused-ignore]

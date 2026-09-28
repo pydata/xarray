@@ -53,6 +53,8 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fixed ``xr.date_range`` failing when ``cftime.datetime`` objects were passed as
+  ``start`` or ``end`` with ``use_cftime=None`` (:issue:`10065`).
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
