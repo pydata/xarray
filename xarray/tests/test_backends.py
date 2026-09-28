@@ -5815,6 +5815,10 @@ class TestDask(DatasetIOBase):
     def test_roundtrip_coordinates_with_space(self) -> None:
         pass
 
+    def test_roundtrip_stringdtype_nulls(self) -> None:
+        # nulls are only replaced when encoding, which does not happen here
+        pass
+
     def test_roundtrip_numpy_datetime_data(self) -> None:
         # Override method in DatasetIOBase - remove not applicable
         # save_kwargs

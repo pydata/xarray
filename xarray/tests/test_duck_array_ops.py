@@ -585,6 +585,23 @@ def test_empty_axis_dtype():
     assert_identical(ds.sum(dim="time")["var"], ds["var"])
 
 
+@pytest.mark.parametrize("func", ["min", "max"])
+@pytest.mark.parametrize(
+    "values", [[1.0, np.nan, 2.0], [np.nan, 1.0, 2.0], [True, np.nan, False]]
+)
+def test_min_max_object_propagates_nan(func, values) -> None:
+    da = DataArray(np.array(values, dtype=object))
+    actual = getattr(da, func)(skipna=False)
+    assert np.isnan(actual.item())
+
+    da2d = DataArray(np.array([[3, np.nan], [2, 1]], dtype=object), dims=("x", "y"))
+    actual = getattr(da2d, func)("y", skipna=False)
+    expected = DataArray(
+        np.array([np.nan, 2 if func == "max" else 1], dtype=object), dims="x"
+    )
+    assert_identical(actual, expected)
+
+
 @pytest.mark.parametrize("dim_num", [1, 2])
 @pytest.mark.parametrize("dtype", [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize("dask", [False, True])
@@ -651,7 +668,9 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
                 assert isinstance(da.data, dask_array_type)
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=5)
             assert_allclose(actual, expected, rtol=rtol)
-        else:
+        elif not (da.dtype.kind == "O" and not skipna and func in ["min", "max"]):
+            # pandas < 3.1 does not propagate NaN for object arrays here,
+            # see test_min_max_object_propagates_nan instead
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim)
             assert_allclose(actual, expected, rtol=rtol)
 
