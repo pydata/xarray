@@ -5271,7 +5271,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result1, expected1)
 
         result2 = ar.min(skipna=False)
-        if nanindex is not None and ar.dtype.kind != "O":
+        if nanindex is not None:
             expected2 = ar.isel(x=nanindex, drop=True)
         else:
             expected2 = expected1
@@ -5308,7 +5308,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result1, expected1)
 
         result2 = ar.max(skipna=False)
-        if nanindex is not None and ar.dtype.kind != "O":
+        if nanindex is not None:
             expected2 = ar.isel(x=nanindex, drop=True)
         else:
             expected2 = expected1
@@ -5820,8 +5820,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result2, expected0)  # Default keeps attrs
 
         minindex = [
-            x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(minindex, nanindex, strict=True)
+            x if y is None else y for x, y in zip(minindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(minindex)
@@ -5870,8 +5869,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result2, expected0)  # Default keeps attrs
 
         maxindex = [
-            x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(maxindex, nanindex, strict=True)
+            x if y is None else y for x, y in zip(maxindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(maxindex)

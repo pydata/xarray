@@ -53,6 +53,13 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- ``min`` and ``max`` of object arrays with ``skipna=False`` now return ``NaN``
+  for slices containing missing values, instead of a result that depended on
+  the position of the missing value (:issue:`11501`, :pull:`#11627`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Avoid pandas' deprecated ``Series.values`` when creating a
+  :py:class:`~xarray.Variable` from a timezone-aware :py:class:`pandas.Series`
+  (:issue:`11501`, :pull:`#11627`).
 - Fix deadlocks when reading and writing netCDF files with dask at the same
   time. Combined locks now always acquire their locks in the same order, which
   previously depended on memory addresses, and a failed non-blocking acquire,
