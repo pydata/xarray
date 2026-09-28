@@ -135,6 +135,12 @@ Bug Fixes
   :py:class:`~xarray.Variable` from a timezone-aware :py:class:`pandas.Series`
   (:issue:`11501`, :pull:`11627`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix ``OverflowError`` when displaying a ``timedelta64`` array whose values are
+  outside the range of ``timedelta64[ns]``, e.g. a ``timedelta64[s]``
+  coordinate spanning more than ~292 years. The repr used to cast to
+  ``timedelta64[ns]`` to split values into a day and a time part, which overflowed
+  for values that are valid in a coarser unit (:issue:`11630`).
+  By `ANIRUDDHA ADAK <https://github.com/aniruddhaadak80>`_.
 - Fix deadlocks when reading and writing netCDF files with dask at the same
   time. Combined locks now always acquire their locks in the same order, which
   previously depended on memory addresses, and a failed non-blocking acquire,
