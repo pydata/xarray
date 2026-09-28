@@ -1043,6 +1043,21 @@ class DatasetIOBase:
             actual = on_disk.isel(x=[])
             assert_identical(expected, actual)
 
+    def test_empty_isel_multidim(self) -> None:
+        # Empty indexers must also work for multi-dimensional variables, where
+        # the in-memory part of the decomposed indexer still has to line up with
+        # the axes of the loaded array.
+        # GH:issue:11625, GH:issue:9075
+        in_memory = xr.Dataset(
+            {"a": (("x", "y"), np.arange(12.0).reshape(4, 3))},
+            coords={"x": np.arange(4), "y": np.arange(3)},
+        )
+        with self.roundtrip(in_memory) as on_disk:
+            for x_indexer, y_indexer in (([], [0, 2]), ([1, 3], []), ([], [])):
+                expected = in_memory.isel(x=x_indexer, y=y_indexer)
+                actual = on_disk.isel(x=x_indexer, y=y_indexer)
+                assert_identical(expected, actual)
+
     def validate_array_type(self, ds):
 
         # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
