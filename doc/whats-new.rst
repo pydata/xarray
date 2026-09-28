@@ -53,6 +53,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fixed :py:meth:`~xarray.indexes.RangeIndex.arange` producing a negative-sized
+  index instead of an empty index when the interval direction conflicts with
+  the sign of ``step`` (:pull:`11623`).
+  By `Ahmet Kamer Çivi <https://github.com/lowgame>`_.
+
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).

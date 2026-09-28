@@ -279,7 +279,7 @@ class RangeIndex(CoordinateTransformIndex):
         if coord_name is None:
             coord_name = dim
 
-        size = math.ceil((stop - start) / step)
+        size = max(0, math.ceil((stop - start) / step))
 
         # Snap ``stop`` to ``start + size * step`` and keep the exact ``step`` so
         # that the materialized values match ``numpy.arange`` even when ``step``
