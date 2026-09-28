@@ -53,6 +53,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix the ``netcdf4`` engine silently writing byte-swapped values for
+  non-native-endian numeric attribute arrays, such as attributes of netCDF-3
+  files read with the ``scipy`` engine (:pull:`11543`).
 - :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
   empty results when rolling an empty dimension, including with
   ``roll_coords=True``, instead of raising ``ZeroDivisionError`` (:pull:`11613`).
