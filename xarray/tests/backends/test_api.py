@@ -538,11 +538,6 @@ def chunks(request):
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
-    if readengine == "netcdf4" and parallel:
-        pytest.skip(
-            "netCDF4 reads metadata without holding the netCDF-C lock and can "
-            "crash the worker, see GH9779"
-        )
     randdata = np.random.randn(nfiles)
     original = Dataset({"foo": ("x", randdata)})
     # test standard open_mfdataset approach with too many files

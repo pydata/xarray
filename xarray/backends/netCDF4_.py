@@ -4,7 +4,7 @@ import functools
 import operator
 import os
 from collections.abc import Iterable
-from contextlib import suppress
+from contextlib import AbstractContextManager, nullcontext, suppress
 from dataclasses import dataclass
 from io import IOBase
 from typing import TYPE_CHECKING, Any, Self
@@ -35,6 +35,7 @@ from xarray.backends.locks import (
     combine_locks,
     ensure_lock,
     get_write_lock,
+    is_reentrant_lock,
 )
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
@@ -451,11 +452,11 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager = manager
         self._group = group
         self._mode = mode
-        with manager.acquire_context():
+        self.lock = ensure_lock(lock)
+        with self._metadata_lock(), manager.acquire_context():
             self.format = self.ds.data_model
             self._filename = self.ds.filepath()
         self.is_remote = is_remote_uri(self._filename)
-        self.lock = ensure_lock(lock)
         self.autoclose = autoclose
 
     def get_child_store(self, group: str) -> Self:
@@ -553,6 +554,16 @@ class NetCDF4DataStore(WritableCFDataStore):
                 netCDF4.Dataset, filename, mode=mode, kwargs=kwargs, lock=lock
             )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+
+    def _metadata_lock(self) -> AbstractContextManager[Any]:
+        """Lock to hold while reading or writing metadata of the file.
+
+        netCDF-C is not thread-safe, so metadata must not be accessed
+        concurrently with other netCDF-C calls (GH9779). Accessing metadata
+        acquires the lock again, so it can only be held for reentrant locks,
+        like the default ones.
+        """
+        return self.lock if is_reentrant_lock(self.lock) else nullcontext()
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
@@ -696,8 +707,25 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         return target, variable.data
 
+    # Encoding happens before these without holding the lock, as it may compute
+    # dask arrays whose tasks need the same lock.
+    def set_attributes(self, attributes):
+        with self._metadata_lock():
+            super().set_attributes(attributes)
+
+    def set_dimensions(self, variables, unlimited_dims=None):
+        with self._metadata_lock():
+            super().set_dimensions(variables, unlimited_dims=unlimited_dims)
+
+    def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
+        with self._metadata_lock():
+            super().set_variables(
+                variables, check_encoding_set, writer, unlimited_dims=unlimited_dims
+            )
+
     def sync(self):
-        self.ds.sync()
+        with self._metadata_lock():
+            self.ds.sync()
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)
@@ -808,7 +836,11 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         )
 
         store_entrypoint = StoreBackendEntrypoint()
-        with close_on_error(store), store._manager.acquire_context():
+        with (
+            close_on_error(store),
+            store._metadata_lock(),
+            store._manager.acquire_context(),
+        ):
             ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
@@ -909,7 +941,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
         groups_dict = {}
-        with manager.acquire_context():
+        with store._metadata_lock(), manager.acquire_context():
             for path_group in _iter_nc_groups(store.ds, parent=parent):
                 group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
                 store_entrypoint = StoreBackendEntrypoint()

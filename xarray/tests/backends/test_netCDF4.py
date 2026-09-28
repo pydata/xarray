@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -541,3 +542,44 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     with open(path, "wb") as f:
         f.write(b"not-a-netcdf-file")
     assert not entrypoint.guess_can_open(path)
+
+
+def _dataset_with_metadata() -> Dataset:
+    return Dataset(
+        {
+            f"v{i}": (("x", "y"), np.full((4, 3), float(i)), {"units": "m"})
+            for i in range(10)
+        },
+        coords={"x": np.arange(4), "y": np.arange(3)},
+        attrs={f"attr{i}": i for i in range(5)},
+    )
+
+
+@requires_netCDF4
+def test_netcdf4_concurrent_writes(tmp_path: Path) -> None:
+    # GH9779: netCDF-C is not thread-safe, so writing metadata must hold its lock
+    original = _dataset_with_metadata()
+    paths = [tmp_path / f"{i}.nc" for i in range(16)]
+    with ThreadPoolExecutor(8) as executor:
+        list(executor.map(lambda p: original.to_netcdf(p, engine="netcdf4"), paths))
+
+    for path in paths:
+        with open_dataset(path, engine="netcdf4") as actual:
+            assert_identical(actual, original)
+
+
+@requires_netCDF4
+def test_netcdf4_concurrent_opens(tmp_path: Path) -> None:
+    # GH9779: netCDF-C is not thread-safe, so reading metadata must hold its lock
+    original = _dataset_with_metadata()
+    paths = [tmp_path / f"{i}.nc" for i in range(16)]
+    for path in paths:
+        original.to_netcdf(path, engine="netcdf4")
+
+    def load(path):
+        with open_dataset(path, engine="netcdf4") as ds:
+            return ds.load()
+
+    with ThreadPoolExecutor(8) as executor:
+        for actual in executor.map(load, paths * 4):
+            assert_identical(actual, original)
