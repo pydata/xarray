@@ -120,6 +120,13 @@ Bug Fixes
 - Fixed a bug that caused rechunking a multi-dimensional cftime array along a
   subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fixed indexing with an empty indexer array for backends that do not support full
+  vectorized indexing. The empty array is turned into an empty slice, which keeps
+  the dimension, so the in-memory part of the decomposed indexer now keeps a matching
+  entry; previously it was misaligned with the axes of the loaded array, which raised
+  ``IndexError`` for the ``h5netcdf`` and ``scipy`` engines and ``ValueError`` for
+  ``pydap`` (:issue:`9075`, :issue:`11625`, :pull:`11626`).
+  By `Aniruddha Adak <https://github.com/aniruddhaadak80>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
