@@ -50,7 +50,6 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_api,
     dask_array_type,
-    has_dask,
     has_dask_ge_2025_1_0,
     has_pyarrow,
     raise_if_dask_computes,
@@ -561,6 +560,18 @@ class TestDataArray:
         assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
 
+    def test_replace_maybe_drop_dims_keeps_reordered_coords(self) -> None:
+        array = DataArray(
+            np.empty((0, 2)),
+            dims=("x", "y"),
+            coords={"x": [], "y": [1, 1]},
+        )
+
+        actual = array._replace_maybe_drop_dims(Variable(("y", "x"), np.empty((1, 0))))
+
+        assert "x" in actual.coords
+        assert actual.sizes == {"y": 1, "x": 0}
+
     def test_replace_maybe_drop_dims_preserves_multi_coord_index(self) -> None:
         # Regression test for https://github.com/pydata/xarray/issues/11215
         # Multi-coordinate indexes spanning multiple dims should be preserved
@@ -967,15 +978,16 @@ class TestDataArray:
 
         with pytest.warns(FutureWarning):
             blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore[arg-type]
-            assert blocked.chunks == ((2, 1), (2, 2))
-            assert blocked.data.name != first_dask_name
+        assert blocked.chunks == ((2, 1), (2, 2))
+        assert blocked.data.name != first_dask_name
 
+        with pytest.warns(FutureWarning):
             blocked = unblocked.chunk(chunks=(3, 3))
-            assert blocked.chunks == ((3,), (3, 1))
-            assert blocked.data.name != first_dask_name
+        assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
 
-            with pytest.raises(ValueError):
-                blocked.chunk(chunks=(3, 3, 3))
+        with pytest.raises(ValueError), pytest.warns(FutureWarning):
+            blocked.chunk(chunks=(3, 3, 3))
 
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined
@@ -1327,8 +1339,7 @@ class TestDataArray:
     def test_loc(self) -> None:
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
-        # typing issue: see https://github.com/python/mypy/issues/2410
-        assert_identical(da[:3], da.loc[:"c"])  # type: ignore[misc]
+        assert_identical(da[:3], da.loc[:"c"])
         assert_identical(da[1], da.loc["b"])
         assert_identical(da[1], da.loc[{"x": "b"}])
         assert_identical(da[1], da.loc["b", ...])
@@ -1346,8 +1357,7 @@ class TestDataArray:
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
         # assignment
-        # typing issue: see https://github.com/python/mypy/issues/2410
-        da.loc["a":"j"] = 0  # type: ignore[misc]
+        da.loc["a":"j"] = 0
         assert np.all(da.values == 0)
         da.loc[{"x": slice("a", "j")}] = 2
         assert np.all(da.values == 2)
@@ -1516,7 +1526,7 @@ class TestDataArray:
 
         with pytest.warns(FutureWarning):
             original = xr.concat([da, db], dim="x")
-            assert original.y.size == 4
+        assert original.y.size == 4
         with set_options(use_new_combine_kwarg_defaults=True):
             # default compat="override" will pick the first one
             new = xr.concat([da, db], dim="x")
@@ -2920,6 +2930,11 @@ class TestDataArray:
     def test_squeeze(self) -> None:
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
 
+    def test_squeeze_non_str_dim_name(self) -> None:
+        array = DataArray(np.zeros((1, 3)), dims=[0, "y"])
+        expected = DataArray(np.zeros(3), dims=["y"])
+        assert_identical(array.squeeze(), expected)
+
     def test_squeeze_drop(self) -> None:
         array = DataArray([1], [("x", [0])])
         expected = DataArray(1)
@@ -3212,7 +3227,12 @@ class TestDataArray:
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim",
-        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
+        [
+            pytest.param(None, None, id="none"),
+            pytest.param(0, "x", id="x"),
+            pytest.param([0], ["x"], id="list-x"),
+            pytest.param([0, 1], ["x", "y"], id="list-x-y"),
+        ],
     )
     def test_quantile(self, q, axis, dim, skipna, compute_backend) -> None:
         va = self.va.copy(deep=True)
@@ -3972,21 +3992,15 @@ class TestDataArray:
 
     def test_series_categorical_index(self) -> None:
         # regression test for GH700
-        if not hasattr(pd, "CategoricalIndex"):
-            pytest.skip("requires pandas with CategoricalIndex")
-
         s = pd.Series(np.arange(5), index=pd.CategoricalIndex(list("aabbc")))
         arr = DataArray(s)
         assert "a a b b" in repr(arr)  # should not error
 
-    @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
     def test_to_and_from_dict(
         self, encoding: bool, data: bool | Literal["list", "array"], use_dask: bool
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         encoding_data = {"bar": "spam"}
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
@@ -4009,10 +4023,7 @@ class TestDataArray:
         if encoding:
             expected["encoding"] = encoding_data
 
-        if has_dask:
-            da = array.chunk()
-        else:
-            da = array
+        da = array.chunk() if use_dask else array
 
         if data == "array" or data is False:
             with raise_if_dask_computes():
@@ -4325,6 +4336,13 @@ class TestDataArray:
         actual = arr.roll(x=1)
         expected = DataArray([3, 1, 2], coords=[("x", [0, 1, 2])])
         assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("shift", [-1, 0, 1])
+    @pytest.mark.parametrize("roll_coords", [False, True])
+    def test_roll_empty(self, shift: int, roll_coords: bool) -> None:
+        arr = DataArray([], coords={"x": range(0)}, dims="x")
+        actual = arr.roll(x=shift, roll_coords=roll_coords)
+        assert_identical(arr, actual)
 
     def test_copy_with_data(self) -> None:
         orig = DataArray(
@@ -4655,12 +4673,9 @@ class TestDataArray:
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
 
-    @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("use_datetime", [True, False])
     @pytest.mark.filterwarnings("ignore:overflow encountered in multiply")
     def test_polyfit(self, use_dask, use_datetime) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         xcoord = xr.DataArray(
             pd.date_range("1970-01-01", freq="D", periods=10), dims=("x",), name="x"
         )
@@ -4879,11 +4894,8 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
     )
-    @pytest.mark.parametrize(
-        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
-    )
     def test_query(
-        self, backend, engine: QueryEngineOptions, parser: QueryParserOptions
+        self, use_dask: bool, engine: QueryEngineOptions, parser: QueryParserOptions
     ) -> None:
         """Test querying a dataset."""
 
@@ -4900,7 +4912,7 @@ class TestDataArray:
         cc = DataArray(data=c, dims=["y"], name="c", coords={"c2": ("y", c)})
         dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
-        if backend == "dask":
+        if use_dask:
             da = dask_array_api
             aa = aa.copy(data=da.from_array(a, chunks=3))
             bb = bb.copy(data=da.from_array(b, chunks=3))
@@ -4949,11 +4961,7 @@ class TestDataArray:
             aa.query(x="spam > 50")  # name not present
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_curvefit(self, use_dask) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         def exp_decay(t, n0, tau=1):
             return n0 * np.exp(-t / tau)
 
@@ -5020,11 +5028,7 @@ class TestDataArray:
         assert params == param_names
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_curvefit_multidimensional_guess(self, use_dask: bool) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         def sine(t, a, f, p):
             return a * np.sin(2 * np.pi * (f * t + p))
 
@@ -5070,11 +5074,7 @@ class TestDataArray:
             )
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_curvefit_multidimensional_bounds(self, use_dask: bool) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         def sine(t, a, f, p):
             return a * np.sin(2 * np.pi * (f * t + p))
 
@@ -5132,11 +5132,7 @@ class TestDataArray:
             )
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_curvefit_ignore_errors(self, use_dask: bool) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         # nonsense function to make the optimization fail
         def line(x, a, b):
             if a > 10:
@@ -5366,15 +5362,6 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
-    @pytest.mark.parametrize(
-        "use_dask",
-        [
-            pytest.param(
-                True, marks=pytest.mark.skipif(not has_dask, reason="no dask")
-            ),
-            False,
-        ],
-    )
     def test_idxmin(
         self,
         x: np.ndarray,
@@ -5488,7 +5475,6 @@ class TestReduce1D(TestReduce):
         result7 = ar0.idxmin(fill_value=-1j)
         assert_identical(result7, expected7)
 
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_idxmax(
         self,
         x: np.ndarray,
@@ -5497,8 +5483,6 @@ class TestReduce1D(TestReduce):
         nanindex: int | None,
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
@@ -5970,9 +5954,6 @@ class TestReduce2D(TestReduce):
 
         assert_identical(result3, expected2)
 
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(True, id="dask"), pytest.param(False, id="nodask")]
-    )
     def test_idxmin(
         self,
         x: np.ndarray,
@@ -5981,8 +5962,6 @@ class TestReduce2D(TestReduce):
         nanindex: list[int | None],
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
 
@@ -6115,9 +6094,6 @@ class TestReduce2D(TestReduce):
             result7 = ar0.idxmin(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
 
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(True, id="dask"), pytest.param(False, id="nodask")]
-    )
     def test_idxmax(
         self,
         x: np.ndarray,
@@ -6126,8 +6102,6 @@ class TestReduce2D(TestReduce):
         nanindex: list[int | None],
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
 
@@ -6691,7 +6665,7 @@ class TestReduce3D(TestReduce):
 
         minindices_x = {
             key: xr.where(
-                nanindices_x[key] == None,  # noqa: E711
+                nanindices_x[key] == None,
                 minindices_x[key],
                 nanindices_x[key],
             )
@@ -6709,7 +6683,7 @@ class TestReduce3D(TestReduce):
 
         minindices_y = {
             key: xr.where(
-                nanindices_y[key] == None,  # noqa: E711
+                nanindices_y[key] == None,
                 minindices_y[key],
                 nanindices_y[key],
             )
@@ -6727,7 +6701,7 @@ class TestReduce3D(TestReduce):
 
         minindices_z = {
             key: xr.where(
-                nanindices_z[key] == None,  # noqa: E711
+                nanindices_z[key] == None,
                 minindices_z[key],
                 nanindices_z[key],
             )
@@ -6745,7 +6719,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None,  # noqa: E711
+                nanindices_xy[key] == None,
                 minindices_xy[key],
                 nanindices_xy[key],
             )
@@ -6763,7 +6737,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None,  # noqa: E711
+                nanindices_xz[key] == None,
                 minindices_xz[key],
                 nanindices_xz[key],
             )
@@ -6781,7 +6755,7 @@ class TestReduce3D(TestReduce):
 
         minindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None,  # noqa: E711
+                nanindices_yz[key] == None,
                 minindices_yz[key],
                 nanindices_yz[key],
             )
@@ -6799,7 +6773,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None,  # noqa: E711
+                nanindices_xyz[key] == None,
                 minindices_xyz[key],
                 nanindices_xyz[key],
             )
@@ -6930,7 +6904,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_x = {
             key: xr.where(
-                nanindices_x[key] == None,  # noqa: E711
+                nanindices_x[key] == None,
                 maxindices_x[key],
                 nanindices_x[key],
             )
@@ -6948,7 +6922,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_y = {
             key: xr.where(
-                nanindices_y[key] == None,  # noqa: E711
+                nanindices_y[key] == None,
                 maxindices_y[key],
                 nanindices_y[key],
             )
@@ -6966,7 +6940,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_z = {
             key: xr.where(
-                nanindices_z[key] == None,  # noqa: E711
+                nanindices_z[key] == None,
                 maxindices_z[key],
                 nanindices_z[key],
             )
@@ -6984,7 +6958,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None,  # noqa: E711
+                nanindices_xy[key] == None,
                 maxindices_xy[key],
                 nanindices_xy[key],
             )
@@ -7002,7 +6976,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None,  # noqa: E711
+                nanindices_xz[key] == None,
                 maxindices_xz[key],
                 nanindices_xz[key],
             )
@@ -7020,7 +6994,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None,  # noqa: E711
+                nanindices_yz[key] == None,
                 maxindices_yz[key],
                 nanindices_yz[key],
             )
@@ -7038,7 +7012,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None,  # noqa: E711
+                nanindices_xyz[key] == None,
                 maxindices_xyz[key],
                 nanindices_xyz[key],
             )
@@ -7058,10 +7032,8 @@ class TestReduce3D(TestReduce):
 class TestReduceND(TestReduce):
     @pytest.mark.parametrize("op", ["idxmin", "idxmax"])
     @pytest.mark.parametrize("ndim", [3, 5])
+    @requires_dask
     def test_idxminmax_dask(self, op: str, ndim: int) -> None:
-        if not has_dask:
-            pytest.skip("requires dask")
-
         ar0_raw = xr.DataArray(
             np.random.random_sample(size=[10] * ndim),
             dims=list("abcdefghij"[: ndim - 1]) + ["x"],

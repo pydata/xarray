@@ -56,6 +56,15 @@ Bug Fixes
 - Fix the ``netcdf4`` engine silently writing byte-swapped values for
   non-native-endian numeric attribute arrays, such as attributes of netCDF-3
   files read with the ``scipy`` engine (:pull:`11543`).
+- :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
+  empty results when rolling an empty dimension, including with
+  ``roll_coords=True``, instead of raising ``ZeroDivisionError`` (:pull:`11613`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
+- Fixed :py:meth:`~xarray.indexes.RangeIndex.arange` producing a negative-sized
+  index instead of an empty index when the interval direction conflicts with
+  the sign of ``step`` (:pull:`11623`).
+  By `Ahmet Kamer Çivi <https://github.com/lowgame>`_.
+
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
@@ -107,7 +116,24 @@ Bug Fixes
   entries; ``to_dataframe`` indexes by the union of stored entries across all
   sparse variables sharing the same dims (:issue:`4007`).
   By `patnr <https://github.com/patnr>`_.
+- Following `pandas-dev/pandas#64793`_, ensure that resampling an array to a
+  ``Day`` frequency along a :py:class:`xarray.CFTimeIndex` produces the same
+  results as resampling to an equivalent ``Hour`` frequency, including with the
+  use of ``origin`` and ``offset`` options (:pull:`11546`). This effectively
+  rolls back the resample-related changes introduced in :pull:`10650`. By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix regression where accessing an object-dtype index eagerly attempts to
+  import cftime, slowing down operations.
+  By `Peter Hron <https://github.com/peterhron>`_.
+- Fixed :py:meth:`DataArray.coarsen()` and :py:meth:`Dataset.coarsen()` raising a
+  type error when applying reduction methods, due to the reduction methods being
+  dynamically generated (:issue:`8136`).
+  By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fixed a bug that caused rechunking a multi-dimensional cftime array along a
+  subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
+.. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
 Documentation
 ~~~~~~~~~~~~~
@@ -373,6 +399,10 @@ Bug Fixes
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 - :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
   By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+- Preserve non-grouped coordinates in fallback ``groupby`` reductions when grouping
+  by a non-leading dimension reorders the underlying variable dimensions
+  (:issue:`11188`, :pull:`11290`).
+  By `Sarthak <https://github.com/Sarthak160>`_.
 - Fix h5netcdf backend module detection and ros3 tests (:issue:`11243`, :pull:`11274`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 

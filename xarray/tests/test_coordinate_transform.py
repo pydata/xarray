@@ -212,8 +212,8 @@ def test_coordinate_transform_align_transposed() -> None:
 
     for join in ("exact", "outer", "inner"):
         actual1, actual2 = xr.align(ds1, ds2, join=join)
-        assert actual1.dims == ds1.dims
-        assert actual2.dims == ds2.dims
+        assert actual1.sizes == ds1.sizes
+        assert actual2.sizes == ds2.sizes
         assert_identical(actual1, ds1, check_default_indexes=False)
         assert_identical(actual2, ds2, check_default_indexes=False)
 

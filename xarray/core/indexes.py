@@ -491,7 +491,12 @@ class Index:
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    if len(index) > 0 and index.dtype == "O" and not isinstance(index, CFTimeIndex):
+    if (
+        len(index) > 0
+        and index.dtype == "O"
+        and utils.module_available("cftime")
+        and not isinstance(index, CFTimeIndex)
+    ):
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
@@ -929,7 +934,7 @@ class PandasIndex(Index):
         return {self.dim: get_indexer_nd(self.index, other.index, method, tolerance)}
 
     def roll(self, shifts: Mapping[Any, int]) -> PandasIndex:
-        shift = shifts[self.dim] % self.index.shape[0]
+        shift = shifts[self.dim] % (self.index.shape[0] or 1)
 
         if shift != 0:
             new_pd_idx = self.index[-shift:].append(self.index[:-shift])

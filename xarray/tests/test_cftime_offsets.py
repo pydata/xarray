@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from itertools import product, starmap
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -37,7 +37,6 @@ from xarray.core.dataarray import DataArray
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_no_warnings,
-    has_cftime,
     requires_cftime,
     requires_pandas_3,
 )
@@ -199,6 +198,18 @@ def test_str_and_repr(offset, expected):
 )
 def test_to_offset_offset_input(offset):
     assert to_offset(offset) == offset
+
+
+@pytest.mark.parametrize(
+    ("pandas_offset", "expected"),
+    [
+        (pd.offsets.Second(n=3), Second(n=3)),
+        (pd.offsets.MonthBegin(n=3), MonthBegin(n=3)),
+    ],
+    ids=_id_func,
+)
+def test_to_offset_pandas_offset_input(pandas_offset, expected):
+    assert to_offset(pandas_offset) == expected
 
 
 @pytest.mark.parametrize(
@@ -393,7 +404,9 @@ _EQ_TESTS_B = [
 ]
 
 
-@pytest.mark.parametrize(("a", "b"), product(_EQ_TESTS_A, _EQ_TESTS_B), ids=_id_func)
+@pytest.mark.parametrize(
+    ("a", "b"), list(product(_EQ_TESTS_A, _EQ_TESTS_B)), ids=_id_func
+)
 def test_neq(a, b):
     assert a != b
 
@@ -420,7 +433,7 @@ _EQ_TESTS_B_COPY = [
 
 
 @pytest.mark.parametrize(
-    ("a", "b"), zip(_EQ_TESTS_B, _EQ_TESTS_B_COPY, strict=True), ids=_id_func
+    ("a", "b"), list(zip(_EQ_TESTS_B, _EQ_TESTS_B_COPY, strict=True)), ids=_id_func
 )
 def test_eq(a, b):
     assert a == b
@@ -590,7 +603,7 @@ def test_sub_error(offset, calendar):
 
 
 @pytest.mark.parametrize(
-    ("a", "b"), zip(_EQ_TESTS_A, _EQ_TESTS_B, strict=True), ids=_id_func
+    ("a", "b"), list(zip(_EQ_TESTS_A, _EQ_TESTS_B, strict=True)), ids=_id_func
 )
 def test_minus_offset(a, b):
     result = b - a
@@ -1478,7 +1491,6 @@ def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd
 @pytest.mark.parametrize(
     "freq", ("YE", "YS", "YE-MAY", "MS", "ME", "QS", "h", "min", "s")
 )
-@pytest.mark.parametrize("use_cftime", (True, False))
 def test_date_range_like_no_deprecation(freq, use_cftime):
     # ensure no internal warnings
     # TODO: remove once freq string deprecation is finished
@@ -1533,23 +1545,12 @@ def as_timedelta_not_implemented_error():
         tick.as_timedelta()
 
 
-@pytest.mark.parametrize("use_cftime", [True, False])
 def test_cftime_or_date_range_invalid_inclusive_value(use_cftime: bool) -> None:
-    if use_cftime and not has_cftime:
-        pytest.skip("requires cftime")
-
-    if TYPE_CHECKING:
-        pytest.skip("inclusive type checked internally")
-
     with pytest.raises(ValueError, match="nclusive"):
-        date_range("2000", periods=3, inclusive="foo", use_cftime=use_cftime)
+        date_range("2000", periods=3, inclusive="foo", use_cftime=use_cftime)  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("use_cftime", [True, False])
 def test_cftime_or_date_range_inclusive_None(use_cftime: bool) -> None:
-    if use_cftime and not has_cftime:
-        pytest.skip("requires cftime")
-
     result_None = date_range("2000-01-01", "2000-01-04", use_cftime=use_cftime)
     result_both = date_range(
         "2000-01-01", "2000-01-04", inclusive="both", use_cftime=use_cftime
