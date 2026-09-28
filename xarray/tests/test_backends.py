@@ -1013,13 +1013,9 @@ class DatasetIOBase:
             coords={"x": np.arange(4), "y": np.arange(3)},
         )
         with self.roundtrip(in_memory) as on_disk:
-            for indexers in (
-                {"x": [], "y": [0, 2]},
-                {"x": [1, 3], "y": []},
-                {"x": [], "y": []},
-            ):
-                expected = in_memory.isel(**indexers)
-                actual = on_disk.isel(**indexers)
+            for x_indexer, y_indexer in (([], [0, 2]), ([1, 3], []), ([], [])):
+                expected = in_memory.isel(x=x_indexer, y=y_indexer)
+                actual = on_disk.isel(x=x_indexer, y=y_indexer)
                 assert_identical(expected, actual)
 
     def validate_array_type(self, ds):
