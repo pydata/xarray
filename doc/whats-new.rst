@@ -154,7 +154,7 @@ Bug Fixes
   :py:func:`open_mfdataset` and ``parallel=True``. The netCDF4 backend now
   holds the netCDF-C lock while reading or writing metadata, which is possible
   because xarray's global HDF5 and netCDF-C locks and its per-file write locks
-  for the threaded scheduler are now reentrant (:issue:`9779`).
+  for the threaded scheduler are now reentrant (:issue:`9779`, :pull:`11629`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
   empty results when rolling an empty dimension, including with
