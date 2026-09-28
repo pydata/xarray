@@ -18,7 +18,6 @@ from xarray.core.types import Closable, Lock
 # A pinned file evicted from FILE_CACHE by another thread is not closed right
 # away, as that thread may still be reading from it. Instead it is parked in
 # _EVICTED_PINNED until it is acquired again or the last user unpins it.
-_PIN_LOCK = threading.Lock()
 _PIN_COUNTS: dict[Any, int] = {}
 _EVICTED_PINNED: dict[Any, Closable] = {}
 
@@ -36,6 +35,13 @@ FILE_CACHE: LRUCache[Any, Closable] = LRUCache(
     maxsize=OPTIONS["file_cache_maxsize"], on_evict=_close_unless_pinned
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
+
+# Guards the pin state. It is the reentrant lock of FILE_CACHE, as evicting a
+# file from the cache updates the pin state while holding the cache's lock, and
+# garbage collection can run a manager's __del__, which closes its file and
+# removes it from the cache, while a thread holds either. Separate locks could
+# deadlock there.
+_PIN_LOCK = FILE_CACHE._lock
 
 T_File = TypeVar("T_File", bound=Closable)
 

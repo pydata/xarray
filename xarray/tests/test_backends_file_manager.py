@@ -7,6 +7,7 @@ from unittest import mock
 
 import pytest
 
+from xarray.backends import file_manager
 from xarray.backends.file_manager import (
     CachingFileManager,
     PickleableFileManager,
@@ -330,3 +331,27 @@ def test_pickleable_file_manager_preserves_closed(tmpdir) -> None:
     manager2 = pickle.loads(pickle.dumps(manager))
     assert manager2._closed
     assert repr(manager2) == "<closed PickleableFileManager>"
+
+
+def test_file_manager_del_while_pin_lock_held() -> None:
+    # Garbage collection can run a manager's __del__ while the same thread is
+    # updating the pin state, so closing from __del__ must not deadlock.
+    manager = CachingFileManager(mock.Mock(return_value=mock.Mock()), cache={})
+    manager.acquire()
+    done = threading.Event()
+
+    def delete_while_locked():
+        nonlocal manager
+        with file_manager._PIN_LOCK:
+            del manager  # runs __del__, which closes the file
+        done.set()
+
+    thread = threading.Thread(target=delete_while_locked, daemon=True)
+    thread.start()
+    assert done.wait(timeout=5)
+
+
+def test_file_manager_pin_lock_is_file_cache_lock() -> None:
+    # evictions update the pin state while holding the cache's lock, and
+    # __del__ can close files while either is held; one lock avoids deadlocks
+    assert file_manager._PIN_LOCK is file_manager.FILE_CACHE._lock
