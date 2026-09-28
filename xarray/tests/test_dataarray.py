@@ -4,7 +4,7 @@ import pickle
 import re
 import sys
 import warnings
-from collections.abc import Hashable, Mapping
+from collections.abc import Hashable
 from copy import deepcopy
 from textwrap import dedent
 from typing import Any, Final, Literal, cast
@@ -67,6 +67,7 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+from xarray.tests.indexes import XYIndex
 
 try:
     from pandas.errors import UndefinedVariableError
@@ -3588,31 +3589,14 @@ class TestDataArray:
         assert_identical(expected_y2, y2)
 
     def test_broadcast_arrays_multi_coordinate_index(self) -> None:
-        class TwoCoordinateIndex(Index):
-            @classmethod
-            def from_variables(
-                cls,
-                variables: Mapping[Hashable, Variable],
-                *,
-                options: Mapping[str, Any],
-            ) -> TwoCoordinateIndex:
-                return cls()
-
-            def create_variables(
-                self, variables: Mapping[Hashable, Variable] | None = None
-            ) -> dict[Hashable, Variable]:
-                return dict(variables or {})
-
         array = DataArray(
             np.arange(6).reshape(2, 3),
             dims=("y", "x"),
             coords={"y": [0, 1], "x": [10, 20, 30]},
         )
-        array = array.drop_indexes(["y", "x"]).set_xindex(
-            ["y", "x"], TwoCoordinateIndex
-        )
+        array = array.drop_indexes(["y", "x"]).set_xindex(["y", "x"], XYIndex)
         other = DataArray([1, 2], dims="channel")
-        assert isinstance(array.xindexes["x"], TwoCoordinateIndex)
+        assert isinstance(array.xindexes["x"], XYIndex)
         assert array.xindexes["x"] is array.xindexes["y"]
 
         result, other_result = broadcast(array, other)
