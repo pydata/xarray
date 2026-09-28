@@ -580,8 +580,6 @@ def cftime_rounding_dataarray(cftime_date_type):
 
 
 @requires_cftime
-@requires_dask
-@pytest.mark.parametrize("use_dask", [False, True])
 def test_cftime_floor_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
@@ -611,8 +609,6 @@ def test_cftime_floor_accessor(
 
 
 @requires_cftime
-@requires_dask
-@pytest.mark.parametrize("use_dask", [False, True])
 def test_cftime_ceil_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
@@ -642,8 +638,6 @@ def test_cftime_ceil_accessor(
 
 
 @requires_cftime
-@requires_dask
-@pytest.mark.parametrize("use_dask", [False, True])
 def test_cftime_round_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
@@ -672,16 +666,6 @@ def test_cftime_round_accessor(
     assert_identical(result, expected)
 
 
-@pytest.mark.parametrize(
-    "use_cftime",
-    [False, pytest.param(True, marks=requires_cftime)],
-    ids=lambda x: f"use_cftime={x}",
-)
-@pytest.mark.parametrize(
-    "use_dask",
-    [False, pytest.param(True, marks=requires_dask)],
-    ids=lambda x: f"use_dask={x}",
-)
 def test_decimal_year(use_cftime, use_dask) -> None:
     year = 2000
     periods = 10
