@@ -122,7 +122,7 @@ Bug Fixes
   By `Amartya Anand <https://github.com/SurfyPenguin>`_.
 - Preserve non-grouped coordinates in fallback ``groupby`` reductions when grouping
   by a non-leading dimension reorders the underlying variable dimensions
-  (:issue:`11188`).
+  (:issue:`11188`, :pull:`11290`).
   By `Sarthak <https://github.com/Sarthak160>`_.
 - Fix h5netcdf backend module detection and ros3 tests (:issue:`11243`, :pull:`11274`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
