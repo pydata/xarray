@@ -1411,6 +1411,10 @@ def _decompose_outer_indexer(
                 # empty np.ndarray key is converted to empty slice
                 # see https://github.com/pydata/xarray/issues/10867
                 backend_indexer.append(slice(0, 0))
+                # an empty slice does not drop the dimension (unlike an integer
+                # key), so np_indexer needs a matching entry to stay aligned
+                # with the axes of the loaded array
+                np_indexer.append(slice(None))
             elif isinstance(k, np.ndarray) and i != array_index:
                 # np.ndarray key is converted to slice that covers the entire
                 # entries of this key.
@@ -1437,6 +1441,10 @@ def _decompose_outer_indexer(
                 bk_slice, np_slice = _decompose_slice(k, s)
                 backend_indexer.append(bk_slice)
                 np_indexer.append(np_slice)
+            elif isinstance(k, np.ndarray) and k.size == 0:
+                # empty np.ndarray key is converted to empty slice
+                backend_indexer.append(slice(0, 0))
+                np_indexer.append(slice(None))
             elif isinstance(k, integer_types):
                 backend_indexer.append(k)
             elif isinstance(k, np.ndarray) and (np.diff(k) >= 0).all():
@@ -1454,7 +1462,11 @@ def _decompose_outer_indexer(
     assert indexing_support == IndexingSupport.BASIC
 
     for k, s in zip(indexer_elems, shape, strict=False):
-        if isinstance(k, np.ndarray):
+        if isinstance(k, np.ndarray) and k.size == 0:
+            # empty np.ndarray key is converted to empty slice
+            backend_indexer.append(slice(0, 0))
+            np_indexer.append(slice(None))
+        elif isinstance(k, np.ndarray):
             # np.ndarray key is converted to slice that covers the entire
             # entries of this key.
             backend_indexer.append(slice(np.min(k), np.max(k) + 1))
