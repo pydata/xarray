@@ -1872,10 +1872,12 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+        cmap = artist.cmap
+        assert isinstance(cmap, mpl.colors.ListedColormap)
+        assert cast(list[str], cmap.colors)[:5] == ["k", "r", "w", "b"]
 
         # the last color is now under "over"
-        assert self._color_as_tuple(artist.cmap.get_over()) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
 
     def test_colors_np_levels(self) -> None:
         # https://github.com/pydata/xarray/issues/3284
@@ -1884,7 +1886,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
 
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+        assert cast(list[str], cmap.colors)[:5] == ["k", "r", "w", "b"]
 
         # the last color is now under "over"
         assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)

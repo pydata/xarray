@@ -64,16 +64,16 @@ repos:
   - repo: local
     hooks:
       - id: sync-mypy-version
-        name: sync the mypy version in pixi.toml
+        name: sync the mypy version in the pixi manifests
         language: python
-        files: ^\.pre-commit-config\.yaml$
+        files: ^(\.pre-commit-config\.yaml|pixi\.toml|ci/nightly/pixi\.toml)$
         pass_filenames: false
         entry: >-
           python -c "import pathlib, re;
           config = pathlib.Path('.pre-commit-config.yaml').read_text();
           version = re.search(r'mirrors-mypy\s+rev: v?([0-9.]+)', config).group(1);
-          pixi = pathlib.Path('pixi.toml');
-          pixi.write_text(re.sub(r'(?m)^mypy = \"==[0-9.]+\"', f'mypy = \"=={version}\"', pixi.read_text()))"
+          [pixi.write_text(re.sub(r'(?m)^mypy = \"==[0-9.]+\"', f'mypy = \"=={version}\"', pixi.read_text()))
+          for pixi in map(pathlib.Path, ['pixi.toml', 'ci/nightly/pixi.toml'])]"
   - repo: https://github.com/citation-file-format/cff-converter-python
     rev: 5295f87c0e261da61a7b919fc754e3a77edd98a7
     hooks:
