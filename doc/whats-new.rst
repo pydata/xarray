@@ -53,6 +53,20 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix deadlocks when reading and writing netCDF files with dask at the same
+  time. Combined locks now always acquire their locks in the same order, which
+  previously depended on memory addresses, and a failed non-blocking acquire,
+  e.g. while garbage collecting an unclosed file, no longer leaves some of its
+  locks held forever (:pull:`11622`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix :py:func:`broadcast` failing on objects with an index spanning several
+  dimensions, such as a custom index set on both ``x`` and ``y`` (:pull:`11615`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
+- Fix errors and crashes in :py:func:`open_mfdataset` with ``parallel=True``
+  when opening more files than ``file_cache_maxsize``. Files evicted from the
+  file cache by another thread are no longer closed while they are still being
+  read (:pull:`11622`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
   empty results when rolling an empty dimension, including with
   ``roll_coords=True``, instead of raising ``ZeroDivisionError`` (:pull:`11613`).
@@ -61,7 +75,6 @@ Bug Fixes
   index instead of an empty index when the interval direction conflicts with
   the sign of ``step`` (:pull:`11623`).
   By `Ahmet Kamer Çivi <https://github.com/lowgame>`_.
-
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
@@ -134,6 +147,13 @@ Bug Fixes
   object unchanged. This matches the behavior of other methods such as
   :py:meth:`Dataset.differentiate` and reductions like ``mean`` (:issue:`7748`).
   By `imam2004i <https://github.com/imam2004i>`_.
+- Fixed indexing with an empty indexer array. An empty indexer array is now always
+  turned into an empty slice for the backend, so that the in-memory part of the
+  decomposed indexer stays aligned with the axes of the loaded array. Previously the
+  ``h5netcdf`` and ``scipy`` engines raised ``IndexError`` for multi-dimensional
+  variables, the ``netCDF4`` engine silently returned a wrongly-sized array, and
+  ``pydap`` raised ``ValueError`` (:issue:`9075`, :issue:`11625`, :pull:`11626`).
+  By `Aniruddha Adak <https://github.com/aniruddhaadak80>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 

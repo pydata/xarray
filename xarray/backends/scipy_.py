@@ -446,7 +446,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         )
 
         store_entrypoint = StoreBackendEntrypoint()
-        with close_on_error(store):
+        with close_on_error(store), store._manager.acquire_context():
             ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
