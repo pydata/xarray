@@ -28,6 +28,11 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- :py:meth:`Dataset.update`, and so ``ds[name] = ...`` and ``assign``, now raises
+  instead of silently replacing a Dataset's index with an incoming index of a
+  different type (e.g. a custom index by a default ``PandasIndex``). Drop the
+  incoming index with ``drop_indexes`` first (:pull:`11621`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Disable using bottleneck by default, as certain operations are less numerically
   stable than the equivalent numpy functions.
   By `Thomas Kluyver <https://github.com/takluyver>`_.
@@ -53,12 +58,6 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
-- :py:meth:`Dataset.update` (also used by ``__setitem__`` and ``assign``) now keeps
-  the Dataset's own index and coordinate variable, including attributes and dtype,
-  when an incoming object supplies an equal indexed coordinate. Previously, an
-  incoming default index could silently replace a custom index. Explicit keys
-  in an update mapping still replace the coordinate (:pull:`11621`).
-  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
