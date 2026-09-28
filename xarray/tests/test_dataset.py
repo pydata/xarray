@@ -4553,6 +4553,55 @@ class TestDataset:
         with pytest.raises(AlignmentError, match="indexed by PandasIndex"):
             ds["v"] = incoming
 
+    def test_update_series_index_type_mismatch_raises(self) -> None:
+        class CustomIndex(PandasIndex):
+            pass
+
+        ds = Dataset(coords={"x": [0, 1]})
+        ds = ds.drop_indexes("x").set_xindex("x", CustomIndex)
+        incoming = pd.Series([3, 4], index=pd.Index([0, 1], name="x"))
+
+        with pytest.raises(AlignmentError, match="indexed by CustomIndex"):
+            ds.update({"v": incoming})
+
+        ds.update({"v": DataArray(incoming).drop_indexes("x")})
+        assert isinstance(ds.xindexes["x"], CustomIndex)
+        np.testing.assert_array_equal(ds["v"], incoming)
+
+    def test_update_index_mismatch_hint_drops_complete_indexes(self) -> None:
+        coords = {"x": [0], "y": [0], "z": [0]}
+        ds = Dataset(coords=coords).drop_indexes(["x", "y", "z"])
+        ds = ds.set_xindex(["x", "y"], XYIndex)
+        index = Index()
+        incoming = Dataset(
+            coords=Coordinates(
+                coords, indexes={"x": PandasIndex([0], "x"), "y": index, "z": index}
+            )
+        )
+        to_drop = ["x", "y", "z"]
+
+        with pytest.raises(
+            AlignmentError, match=re.escape(f".drop_indexes({to_drop!r})")
+        ):
+            ds.update(incoming)
+
+        ds.update(incoming.drop_indexes(to_drop))
+        assert isinstance(ds.xindexes["x"], XYIndex)
+        assert ds.xindexes["x"] is ds.xindexes["y"]
+
+    def test_update_index_coordinate_mismatch_raises(self) -> None:
+        index = Index()
+        ds = Dataset(
+            coords=Coordinates({"x": [0], "y": [0]}, indexes={"x": index, "y": index})
+        )
+        incoming = Dataset(coords=Coordinates({"x": [0]}, indexes={"x": Index()}))
+
+        with pytest.raises(
+            AlignmentError,
+            match=r"Index.*coordinates \['x', 'y'\].*Index.*coordinates \['x'\]",
+        ):
+            ds.update(incoming)
+
     def test_update_explicitly_replaces_custom_index(self) -> None:
         class CustomIndex(PandasIndex):
             pass
@@ -4560,7 +4609,7 @@ class TestDataset:
         ds = Dataset({"a": ("x", [1, 2, 3])}, coords={"x": [0, 1, 2]})
         ds = ds.drop_indexes("x").set_xindex("x", CustomIndex)
 
-        ds.update({"x": ("x", [5, 6, 7])})
+        ds.update({"x": DataArray([5, 6, 7], dims="x", coords={"x": [0, 1, 2]})})
 
         np.testing.assert_array_equal(ds["x"], [5, 6, 7])
         assert type(ds.xindexes["x"]) is PandasIndex

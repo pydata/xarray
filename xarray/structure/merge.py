@@ -1197,26 +1197,37 @@ def _check_update_index_types(
     replaced: AbstractSet[Hashable],
 ) -> None:
     """Raise if an index in ``objects`` would replace one of ``dataset``'s
-    indexes with an index of another type. Coordinates in ``replaced`` are skipped.
+    indexes with an index of another type or coordinate set.
+    Coordinates in ``replaced`` are skipped.
     """
+    dataset_indexes = dataset.xindexes
     for key, obj in objects.items():
-        for name, index in obj.xindexes.items():
-            if name not in dataset.xindexes:
+        object_indexes = obj.xindexes
+        for name, index in object_indexes.items():
+            if name not in dataset_indexes:
                 continue
-            own_coords = set(dataset.xindexes.get_all_coords(name))
+            own_coords = set(dataset_indexes.get_all_coords(name))
             if own_coords & replaced:
                 continue
-            own = dataset.xindexes[name]
-            coords = set(obj.xindexes.get_all_coords(name))
+            own = dataset_indexes[name]
+            coords = set(object_indexes.get_all_coords(name))
             if type(index) is type(own) and coords == own_coords:
                 continue
             source = "the other Dataset" if key is None else f"the value for {key!r}"
-            to_drop = sorted((own_coords | coords) & set(obj.xindexes), key=str)
+            to_drop = sorted(
+                {
+                    coord
+                    for c in own_coords | coords
+                    for coord in object_indexes.get_all_coords(c, errors="ignore")
+                },
+                key=str,
+            )
             raise AlignmentError(
                 f"cannot update Dataset: coordinate {name!r} is indexed by "
-                f"{type(own).__name__} on the Dataset but by {type(index).__name__} "
-                f"in {source}. Drop the incoming index first, e.g. with "
-                f".drop_indexes({to_drop!r})."
+                f"{type(own).__name__} over coordinates {sorted(own_coords, key=str)!r} "
+                f"on the Dataset but by {type(index).__name__} over coordinates "
+                f"{sorted(coords, key=str)!r} in {source}. "
+                f"Drop the incoming index first, e.g. with .drop_indexes({to_drop!r})."
             )
 
 
@@ -1246,6 +1257,7 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
                     variable = value.variable.to_base_variable()
                     value = value._replace(variable=variable)
                 other[key] = value
+        (other,) = coerce_pandas_values([other])
         _check_update_index_types(
             dataset,
             {k: v for k, v in other.items() if isinstance(v, DataArray)},
