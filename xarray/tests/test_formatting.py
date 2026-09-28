@@ -131,6 +131,43 @@ class TestFormatting:
             actual = " ".join(formatting.format_items(item))
             assert expected == actual
 
+    @pytest.mark.parametrize(
+        "unit,values,expected",
+        [
+            # 10**10 seconds is ~317 years: valid as timedelta64[s], but it
+            # cannot be represented as timedelta64[ns].
+            ("s", [0, 10**10], "0 days 00:00:00 115740 days 17:46:40"),
+            ("m", [0, 10**11], "0 days 00:00:00 69444444 days 10:40:00"),
+            ("h", [0, 10**10], "0 days 00:00:00 416666666 days 16:00:00"),
+            ("D", [0, 10**6], "0 days 1000000 days"),
+        ],
+    )
+    def test_format_items_beyond_nanosecond_range(
+        self, unit: str, values: list[int], expected: str
+    ) -> None:
+        # values outside the range of timedelta64[ns] used to raise
+        # OverflowError instead of being formatted. See GH11676.
+        array = np.array(values, dtype=f"timedelta64[{unit}]")
+        actual = " ".join(formatting.format_items(array))
+        assert expected == actual
+
+    def test_format_items_nanosecond_range_negative(self) -> None:
+        # the whole range of timedelta64[ns], including the large negative
+        # values, used to raise OverflowError. See GH11676.
+        array = np.array([-(2**63 - 1), 0, 2**63 - 1], dtype="timedelta64[ns]")
+        actual = " ".join(formatting.format_items(array))
+        assert (
+            "-106752 days +00:12:43.145224193 0 days 00:00:00 106751 days 23:47:16.854775807"
+            == actual
+        )
+
+    def test_repr_timedelta_coarse_unit(self) -> None:
+        # GH11676: a timedelta64[s] coordinate spanning more than ~292 years
+        # could not be displayed at all.
+        array = np.array([0, 10**10], dtype="timedelta64[s]")
+        ds = xr.Dataset(coords={"t": ("t", array)})
+        assert "115740 days 17:46:40" in repr(ds)
+
     def test_format_array_flat(self) -> None:
         actual = formatting.format_array_flat(np.arange(100), 2)
         expected = "..."
