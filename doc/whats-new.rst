@@ -60,10 +60,20 @@ Bug Fixes
 - Avoid pandas' deprecated ``Series.values`` when creating a
   :py:class:`~xarray.Variable` from a timezone-aware :py:class:`pandas.Series`
   (:issue:`11501`, :pull:`#11627`).
+- Fix deadlocks when reading and writing netCDF files with dask at the same
+  time. Combined locks now always acquire their locks in the same order, which
+  previously depended on memory addresses, and a failed non-blocking acquire,
+  e.g. while garbage collecting an unclosed file, no longer leaves some of its
+  locks held forever (:pull:`11622`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix :py:func:`broadcast` failing on objects with an index spanning several
   dimensions, such as a custom index set on both ``x`` and ``y`` (:pull:`11615`).
   By `Matthias Schabel <https://github.com/matthiasschabel>`_.
+- Fix errors and crashes in :py:func:`open_mfdataset` with ``parallel=True``
+  when opening more files than ``file_cache_maxsize``. Files evicted from the
+  file cache by another thread are no longer closed while they are still being
+  read (:pull:`11622`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
   empty results when rolling an empty dimension, including with
   ``roll_coords=True``, instead of raising ``ZeroDivisionError`` (:pull:`11613`).
@@ -72,7 +82,6 @@ Bug Fixes
   index instead of an empty index when the interval direction conflicts with
   the sign of ``step`` (:pull:`11623`).
   By `Ahmet Kamer Çivi <https://github.com/lowgame>`_.
-
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
