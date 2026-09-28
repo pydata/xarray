@@ -1441,6 +1441,10 @@ def _decompose_outer_indexer(
                 bk_slice, np_slice = _decompose_slice(k, s)
                 backend_indexer.append(bk_slice)
                 np_indexer.append(np_slice)
+            elif isinstance(k, np.ndarray) and k.size == 0:
+                # empty np.ndarray key is converted to empty slice
+                backend_indexer.append(slice(0, 0))
+                np_indexer.append(slice(None))
             elif isinstance(k, integer_types):
                 backend_indexer.append(k)
             elif isinstance(k, np.ndarray) and (np.diff(k) >= 0).all():
