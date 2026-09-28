@@ -3209,8 +3209,7 @@ def test_groupby_non_leading_dim_preserves_coords() -> None:
         coords={"x": [], "y": [1, 1]},
     )
 
-    with xr.set_options(use_flox=False):
-        actual = data.groupby("y").sum()
+    actual = data.groupby("y").sum()
 
     assert "x" in actual.coords
     assert actual.sizes == {"x": 0, "y": 1}
