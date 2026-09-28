@@ -415,11 +415,22 @@ class Aligner(Generic[T_Alignable]):
                 if name in new_indexes:
                     other_idx = new_indexes[name]
                     other_var = new_index_vars[name]
-                    raise AlignmentError(
-                        f"cannot align objects on coordinate {name!r} because of conflicting indexes\n"
-                        f"first index: {idx!r}\nsecond index: {other_idx!r}\n"
-                        f"first variable: {var!r}\nsecond variable: {other_var!r}\n"
-                    )
+                    # `idx` and `other_idx` may be genuinely equal (e.g., a
+                    # multi-dimensional CoordinateTransformIndex covering the same
+                    # grid) yet fall into different `MatchingIndexKey` groups because
+                    # their associated coordinate variables have a different `dims`
+                    # order (e.g. one object was transposed). Only raise once we know
+                    # they are not actually equal.
+                    if not indexes_all_equal(
+                        [(idx, {name: var}), (other_idx, {name: other_var})],
+                        self.exclude_dims,
+                    ):
+                        raise AlignmentError(
+                            f"cannot align objects on coordinate {name!r} because of conflicting indexes\n"
+                            f"first index: {idx!r}\nsecond index: {other_idx!r}\n"
+                            f"first variable: {var!r}\nsecond variable: {other_var!r}\n"
+                        )
+                    continue
                 new_indexes[name] = idx
                 new_index_vars[name] = var
 

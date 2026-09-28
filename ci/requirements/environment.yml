@@ -24,7 +24,7 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
-  - numbagg
+  - numbagg!=0.9.5
   - numexpr
   - numpy>=2.2
   - opt_einsum

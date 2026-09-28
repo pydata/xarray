@@ -12,7 +12,14 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import DataArray, Dataset, IndexVariable, Variable, set_options
+from xarray import (
+    Coordinates,
+    DataArray,
+    Dataset,
+    IndexVariable,
+    Variable,
+    set_options,
+)
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.extension_array import PandasExtensionArray
@@ -30,7 +37,6 @@ from xarray.core.indexing import (
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
-from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     IndexableArray,
     assert_allclose,
@@ -38,6 +44,8 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     assert_no_warnings,
+    dask_array_type,
+    has_dask_array_expr,
     has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
@@ -49,8 +57,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.test_namedarray import NamedArraySubclassobjects
-
-dask_array_type = array_type("dask")
 
 _PAD_XR_NP_ARGS = [
     [{"x": (2, 1)}, ((2, 1), (0, 0), (0, 0))],
@@ -490,6 +496,11 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert v3.encoding == encoding3
         assert v4.encoding == {}
 
+        # drop_encoding should not copy data — fix for GH#11390
+        v = self.cls(["x"], np.arange(1000000))
+        v_dropped = v.drop_encoding()
+        assert v_dropped._data is v._data
+
     def test_concat(self):
         x = np.arange(5)
         y = np.arange(5, 10)
@@ -678,9 +689,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         v = self.cls("x", data)
         print(v)  # should not error
         if v.dtype == np.dtype("O"):
-            import dask.array as da
-
-            assert isinstance(v.data, da.Array)
+            assert isinstance(v.data, dask_array_type)
         else:
             assert v.dtype == data.dtype
 
@@ -1271,6 +1280,10 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(TypeError):
             as_variable(("x", DataArray([])))
 
+        # GH10194
+        with pytest.raises(TypeError, match=r"Using a Coordinates object"):
+            as_variable(Coordinates({"x": [1, 2, 3]}), name="x")
+
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
         v = v.astype(np.uint64)
@@ -1586,8 +1599,8 @@ class TestVariable(VariableSubclassobjects):
 
         # test missing dimension, raise warning
         with pytest.warns(UserWarning):
-            v.transpose(..., "not_a_dim", missing_dims="warn")
-            assert_identical(expected_ell, actual)
+            actual = v.transpose(..., "not_a_dim", missing_dims="warn")
+        assert_identical(expected_ell, actual)
 
     def test_transpose_0d(self):
         for value in [
@@ -1908,7 +1921,12 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim",
-        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
+        [
+            pytest.param(None, None, id="none"),
+            pytest.param(0, "x", id="x"),
+            pytest.param([0], ["x"], id="list-x"),
+            pytest.param([0, 1], ["x", "y"], id="list-x-y"),
+        ],
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()
@@ -2016,12 +2034,6 @@ class TestVariable(VariableSubclassobjects):
         ):
             v.rank("x")
 
-    def test_rank_use_bottleneck(self):
-        v = Variable(["x"], [3.0, 1.0, np.nan, 2.0, 4.0])
-        with set_options(use_bottleneck=False):
-            with pytest.raises(RuntimeError):
-                v.rank("x")
-
     @requires_bottleneck
     def test_rank(self):
         import bottleneck as bn
@@ -2105,18 +2117,16 @@ class TestVariable(VariableSubclassobjects):
 
     @requires_dask
     def test_reduce_keepdims_dask(self):
-        import dask.array
-
         v = Variable(["x", "y"], self.d).chunk()
 
         actual = v.mean(keepdims=True)
-        assert isinstance(actual.data, dask.array.Array)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, keepdims=True))
         assert_identical(actual, expected)
 
         actual = v.mean(dim="y", keepdims=True)
-        assert isinstance(actual.data, dask.array.Array)
+        assert isinstance(actual.data, dask_array_type)
 
         expected = Variable(v.dims, np.mean(self.d, axis=1, keepdims=True))
         assert_identical(actual, expected)
@@ -2437,10 +2447,8 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert blocked.load().chunks is None
 
         # Check that kwargs are passed
-        import dask.array as da
-
         blocked = unblocked.chunk(name="testname_")
-        assert isinstance(blocked.data, da.Array)
+        assert isinstance(blocked.data, dask_array_type)
         assert "testname_" in blocked.data.name
 
         # test kwargs form of chunks
@@ -2473,9 +2481,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         super().test_getitem_1d_fancy()
 
     def test_getitem_with_mask_nd_indexer(self):
-        import dask.array as da
-
-        v = Variable(["x"], da.arange(3, chunks=3))
+        v = Variable(["x"], np.arange(3)).chunk({"x": 3})
         indexer = Variable(("x", "y"), [[0, -1], [-1, 2]])
         assert_identical(
             v._getitem_with_mask(indexer, fill_value=-1),
@@ -2487,12 +2493,11 @@ class TestVariableWithDask(VariableSubclassobjects):
     @pytest.mark.parametrize("center", [True, False])
     def test_dask_rolling(self, dim, window, center):
         import dask
-        import dask.array as da
 
         dask.config.set(scheduler="single-threaded")
 
         x = Variable(("x", "y"), np.array(np.random.randn(100, 40), dtype=float))
-        dx = Variable(("x", "y"), da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8]))
+        dx = x.chunk({"x": (6, 30, 30, 20, 14), "y": 8})
 
         expected = x.rolling_window(
             dim, window, "window", center=center, fill_value=np.nan
@@ -2501,9 +2506,19 @@ class TestVariableWithDask(VariableSubclassobjects):
             actual = dx.rolling_window(
                 dim, window, "window", center=center, fill_value=np.nan
             )
-        assert isinstance(actual.data, da.Array)
+        assert isinstance(actual.data, dask_array_type)
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
+
+    def test_legacy_dask_array_rejected_by_dask_array_manager(self):
+        if not has_dask_array_expr:
+            pytest.skip("only meaningful with an alternate dask chunk manager")
+
+        import dask.array as da
+
+        x = Variable("x", da.arange(6, chunks=3))
+        with pytest.raises(TypeError, match="Could not find a Chunk Manager"):
+            x.rolling_window("x", 3, "window")
 
     @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11585")
     def test_multiindex(self):
@@ -3041,6 +3056,7 @@ class TestBackendIndexing:
     @requires_dask
     @pytest.mark.asyncio
     @pytest.mark.parametrize("load_async", [True, False])
+    @pytest.mark.skip_with_dask_array
     async def test_DaskIndexingAdapter(self, load_async):
         import dask.array as da
 
@@ -3140,6 +3156,7 @@ class TestNumpyCoercion:
 
     @requires_dask
     @requires_pint
+    @pytest.mark.skip_with_dask_array
     def test_from_pint_wrapping_dask(self, Var):
         import dask
         import pint

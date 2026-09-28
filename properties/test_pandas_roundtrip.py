@@ -125,6 +125,7 @@ def test_roundtrip_pandas_dataframe(df) -> None:
     xr.testing.assert_identical(arr, roundtripped.to_xarray())
 
 
+@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/65712")
 @given(df=dataframe_strategy())
 def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.

@@ -31,6 +31,7 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     assert_no_warnings,
+    dask_array_type,
     requires_cartopy,
     requires_cftime,
     requires_dask,
@@ -218,6 +219,17 @@ class TestPlot(PlotTestCase):
         long_latex_name = r"$Ra_s = \mathrm{mean}(\epsilon_k) / \mu M^2_\infty$"
         da.attrs = dict(long_name=long_latex_name)
         assert label_from_attrs(da) == long_latex_name
+
+        # Regression test for GH#11452: LaTeX labels with units should not be
+        # broken by textwrap, which can produce invalid "$$" sequences when
+        # the wrap point falls between two adjacent $...$ blocks.
+        da.attrs = dict(
+            long_name=r"$\frac{\mathrm{x}}{\mathrm{A}}$",
+            units=r"$\mathrm{m~hello~very~long}$",
+        )
+        result = label_from_attrs(da)
+        assert "\n" not in result
+        assert "$$" not in result
 
     def test1d(self) -> None:
         self.darray[:, 0, 0].plot()  # type: ignore[call-arg]
@@ -561,11 +573,11 @@ class TestPlot(PlotTestCase):
         # Check for 2d arrays
         x = np.logspace(-4, 3, 8)
         y = np.linspace(-5, 5, 11)
-        x, y = np.meshgrid(x, y)
+        x2d, _ = np.meshgrid(x, y)
         expected_interval_breaks = np.vstack([10 ** np.linspace(-4.5, 3.5, 9)] * 12)
-        x = _infer_interval_breaks(x, axis=1, scale="log")
-        x = _infer_interval_breaks(x, axis=0, scale="log")
-        np.testing.assert_allclose(x, expected_interval_breaks)
+        x2d = _infer_interval_breaks(x2d, axis=1, scale="log")
+        x2d = _infer_interval_breaks(x2d, axis=0, scale="log")
+        np.testing.assert_allclose(x2d, expected_interval_breaks)
 
     def test__infer_interval_breaks_logscale_invalid_coords(self) -> None:
         """
@@ -1667,6 +1679,34 @@ class Common2dMixin:
         assert_array_equal(g.axs.shape, [3, 2])
         for ax in g.axs.flat:
             assert ax.has_data()
+
+    @pytest.mark.parametrize(
+        ["n", "figsize", "aspect", "expected_shape"],
+        [
+            pytest.param(1, None, 1, [1, 1], id="1"),
+            pytest.param(3, None, 1, [1, 3], id="3"),  # <4 should not be wrapped
+            pytest.param(6, None, 1, [2, 3], id="6"),
+            pytest.param(8, None, 1, [3, 3], id="8"),
+            pytest.param(8, [10, 5], 1, [2, 4], id="8-figaspect=2"),
+            pytest.param(8, [5, 10], 1, [4, 2], id="8-figaspect=0.5"),
+            pytest.param(8, None, 4, [4, 2], id="8-aspect=4"),
+            pytest.param(8, None, 0.25, [2, 4], id="8-aspect=0.25"),
+        ],
+    )
+    def test_facetgrid_col_wrap_auto(
+        self,
+        n: int,
+        figsize: tuple[int, int] | None,
+        aspect: int,
+        expected_shape: tuple[int, int],
+    ) -> None:
+        a = easy_array((10, 15, n))
+        d = DataArray(a, dims=["y", "x", "z"])
+        g = self.plotfunc(
+            d, x="x", y="y", col="z", col_wrap="auto", figsize=figsize, aspect=aspect
+        )
+
+        assert_array_equal(g.axs.shape, expected_shape)
 
     @pytest.mark.filterwarnings("ignore:This figure includes")
     def test_facetgrid_map_only_appends_mappables(self) -> None:
@@ -3410,9 +3450,7 @@ def test_dataarray_not_loading_inplace(plotfunc: str) -> None:
     with figure_context():
         getattr(ds.A.plot, plotfunc)(x="x")
 
-    from dask.array import Array
-
-    assert isinstance(ds.A.data, Array)
+    assert isinstance(ds.A.data, dask_array_type)
 
 
 @requires_matplotlib
@@ -3458,16 +3496,16 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 
 @requires_matplotlib
 def test_facetgrid_axes_raises_deprecation_warning() -> None:
-    with pytest.warns(
-        FutureWarning,
-        match=(
-            "self.axes is deprecated since 2022.11 in order to align with "
-            "matplotlibs plt.subplots, use self.axs instead."
-        ),
-    ):
-        with figure_context():
-            ds = xr.tutorial.scatter_example_dataset()
-            g = ds.plot.scatter(x="A", y="B", col="x")
+    with figure_context():
+        ds = xr.tutorial.scatter_example_dataset()
+        g = ds.plot.scatter(x="A", y="B", col="x")
+        with pytest.warns(
+            FutureWarning,
+            match=(
+                "self.axes is deprecated since 2022.11 in order to align with "
+                "matplotlibs plt.subplots, use self.axs instead."
+            ),
+        ):
             _ = g.axes
 
 
@@ -3567,3 +3605,47 @@ def test_temp_dataarray() -> None:
     locals_ = dict(x="x", extend="var2")
     da = _temp_dataarray(ds, y_, locals_)
     assert da.shape == (3,)
+
+
+@requires_matplotlib
+def test_facetgrid_figsize_rcparams() -> None:
+    """Test that facetgrid_figsize='rcparams' uses matplotlib rcParams."""
+    import matplotlib as mpl
+
+    da = DataArray(
+        np.random.randn(10, 15, 3),
+        dims=["y", "x", "z"],
+        coords={"z": ["a", "b", "c"]},
+    )
+    custom_figsize = (12.0, 8.0)
+
+    with figure_context():
+        # Default behavior: computed from size and aspect
+        g = xplt.FacetGrid(da, col="z")
+        default_figsize = g.fig.get_size_inches()
+        # Default should be (ncol * size * aspect + cbar_space, nrow * size)
+        # = (3 * 3 * 1 + 1, 1 * 3) = (10, 3)
+        np.testing.assert_allclose(default_figsize, (10.0, 3.0))
+
+    with figure_context():
+        # rcparams mode: should use mpl.rcParams['figure.figsize']
+        with mpl.rc_context({"figure.figsize": custom_figsize}):
+            with xr.set_options(facetgrid_figsize="rcparams"):
+                g = xplt.FacetGrid(da, col="z")
+                actual_figsize = g.fig.get_size_inches()
+                np.testing.assert_allclose(actual_figsize, custom_figsize)
+
+    with figure_context():
+        # Tuple mode: fixed figsize via set_options
+        with xr.set_options(facetgrid_figsize=(14.0, 5.0)):
+            g = xplt.FacetGrid(da, col="z")
+            actual_figsize = g.fig.get_size_inches()
+            np.testing.assert_allclose(actual_figsize, (14.0, 5.0))
+
+    with figure_context():
+        # Explicit figsize should override the option
+        with xr.set_options(facetgrid_figsize="rcparams"):
+            explicit_size = (6.0, 4.0)
+            g = xplt.FacetGrid(da, col="z", figsize=explicit_size)
+            actual_figsize = g.fig.get_size_inches()
+            np.testing.assert_allclose(actual_figsize, explicit_size)

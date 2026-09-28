@@ -1,0 +1,176 @@
+---
+file_format: mystnb
+kernelspec:
+  name: python3
+---
+
+```{eval-rst}
+.. currentmodule:: xarray
+```
+
+(complex)=
+
+# Complex Numbers
+
+```{code-cell}
+:tags: [remove-input]
+
+import numpy as np
+import xarray as xr
+```
+
+```{code-cell}
+:tags: [remove-input]
+
+# Ensure the file is located in a unique temporary directory
+# so that it doesn't conflict with parallel builds of the
+# documentation.
+
+import tempfile
+import os.path
+
+tempdir = tempfile.TemporaryDirectory()
+```
+
+Xarray leverages NumPy to seamlessly handle complex numbers in {py:class}`~xarray.DataArray` and {py:class}`~xarray.Dataset` objects.
+
+In the examples below, we are using a DataArray named `da` with complex elements (of {math}`\mathbb{C}` ):
+
+```{code-cell}
+data = np.array([[1 + 2j, 3 + 4j], [5 + 6j, 7 + 8j]])
+da = xr.DataArray(
+    data,
+    dims=["x", "y"],
+    coords={"x": ["a", "b"], "y": [1, 2]},
+    name="complex_nums",
+)
+```
+
+## Operations on Complex Data
+
+You can access real and imaginary components using the `.real` and `.imag` attributes. Most NumPy universal functions (ufuncs) like {py:doc}`numpy.abs <numpy:reference/generated/numpy.absolute>` or {py:doc}`numpy.angle <numpy:reference/generated/numpy.angle>` work directly.
+
+```{code-cell}
+da.real
+```
+
+```{code-cell}
+np.abs(da)
+```
+
+```{note}
+Like NumPy, `.real` and `.imag` typically return _views_, not copies, of the original data.
+```
+
+## Reading and Writing Complex Data
+
+Writing complex data to NetCDF files (see {ref}`io.netcdf`) is supported via {py:meth}`~xarray.DataArray.to_netcdf` using specific backend engines that handle complex types:
+
+### h5netcdf
+
+This requires the [h5netcdf](https://h5netcdf.org) library to be installed.
+
+```{code-cell}
+complex_nums_h5_filename = "complex_nums_h5.nc"
+```
+
+```{code-cell}
+:tags: [remove-input]
+
+complex_nums_h5_filename = os.path.join(tempdir.name, complex_nums_h5_filename)
+
+```
+
+```{code-cell}
+
+# write the data to disk
+da.to_netcdf(complex_nums_h5_filename, engine="h5netcdf")
+# read the file back into memory
+ds_h5 = xr.open_dataset(complex_nums_h5_filename, engine="h5netcdf")
+# check the dtype
+ds_h5[da.name].dtype
+
+```
+
+### netcdf4
+
+Requires the [netcdf4-python (>= 1.7.1)](https://github.com/Unidata/netcdf4-python) library and you have to enable `auto_complex=True`.
+
+```{code-cell}
+
+complex_nums_nc4_filename = "complex_nums_nc4.nc"
+
+```
+
+```{code-cell}
+:tags: [remove-input]
+
+complex_nums_nc4_filename = os.path.join(tempdir.name, complex_nums_nc4_filename)
+
+```
+
+```{code-cell}
+
+# write the data to disk
+da.to_netcdf(complex_nums_nc4_filename, engine="netcdf4", auto_complex=True)
+# read the file back into memory
+ds_nc4 = xr.open_dataset(
+    complex_nums_nc4_filename, engine="netcdf4", auto_complex=True
+)
+# check the dtype
+ds_nc4[da.name].dtype
+
+```
+
+```{warning}
+The `scipy` engine only supports NetCDF V3 and does _not_ support complex arrays; writing with `engine="scipy"` raises a `TypeError`.
+```
+
+### Alternative: Manual Handling
+
+If direct writing is not supported (e.g., targeting NetCDF3), you can manually
+split the complex array into separate real and imaginary variables before saving:
+
+```{code-cell}
+complex_manual_filename = "complex_manual.nc"
+```
+
+```{code-cell}
+:tags: [remove-input]
+
+complex_manual_filename = os.path.join(tempdir.name, complex_manual_filename)
+```
+
+```{code-cell}
+# Write data to file
+ds_manual = xr.Dataset(
+    {
+        f"{da.name}_real": da.real,
+        f"{da.name}_imag": da.imag,
+    }
+)
+ds_manual.to_netcdf(complex_manual_filename, engine="scipy")  # Example
+
+# Read data from file
+ds = xr.open_dataset(complex_manual_filename, engine="scipy")
+reconstructed = ds[f"{da.name}_real"] + 1j * ds[f"{da.name}_imag"]
+```
+
+### Recommendations
+
+- Use `engine="netcdf4"` with `auto_complex=True` for full compliance and ease.
+- Use `h5netcdf` for HDF5-based storage when interoperability with HDF5 is desired.
+- For maximum legacy support (NetCDF3), manually handle real/imaginary components.
+
+```{code-cell}
+:tags: [remove-input]
+
+# Cleanup
+tempdir.cleanup()
+
+```
+
+## See also
+
+- {ref}`io.netcdf` — full NetCDF I/O guide
+- [NumPy complex numbers](https://numpy.org/doc/stable/user/basics.types.html#complex)
