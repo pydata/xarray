@@ -147,49 +147,49 @@ class StringAccessor(Generic[T_DataArray]):
     Similar to pandas, fields can be accessed through the `.str` attribute
     for applicable DataArrays.
 
-        >>> da = xr.DataArray(["some", "text", "in", "an", "array"])
-        >>> da.str.len()
-        <xarray.DataArray (dim_0: 5)> Size: 40B
-        array([4, 4, 2, 2, 5])
-        Dimensions without coordinates: dim_0
+    >>> da = xr.DataArray(["some", "text", "in", "an", "array"])
+    >>> da.str.len()
+    <xarray.DataArray (dim_0: 5)> Size: 40B
+    array([4, 4, 2, 2, 5])
+    Dimensions without coordinates: dim_0
 
     It also implements ``+``, ``*``, and ``%``, which operate as elementwise
     versions of the corresponding ``str`` methods. These will automatically
     broadcast for array-like inputs.
 
-        >>> da1 = xr.DataArray(["first", "second", "third"], dims=["X"])
-        >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
-        >>> da1.str + da2
-        <xarray.DataArray (X: 3, Y: 3)> Size: 252B
-        array([['first1', 'first2', 'first3'],
-               ['second1', 'second2', 'second3'],
-               ['third1', 'third2', 'third3']], dtype='<U7')
-        Dimensions without coordinates: X, Y
+    >>> da1 = xr.DataArray(["first", "second", "third"], dims=["X"])
+    >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
+    >>> da1.str + da2
+    <xarray.DataArray (X: 3, Y: 3)> Size: 252B
+    array([['first1', 'first2', 'first3'],
+           ['second1', 'second2', 'second3'],
+           ['third1', 'third2', 'third3']], dtype='<U7')
+    Dimensions without coordinates: X, Y
 
-        >>> da1 = xr.DataArray(["a", "b", "c", "d"], dims=["X"])
-        >>> reps = xr.DataArray([3, 4], dims=["Y"])
-        >>> da1.str * reps
-        <xarray.DataArray (X: 4, Y: 2)> Size: 128B
-        array([['aaa', 'aaaa'],
-               ['bbb', 'bbbb'],
-               ['ccc', 'cccc'],
-               ['ddd', 'dddd']], dtype='<U4')
-        Dimensions without coordinates: X, Y
+    >>> da1 = xr.DataArray(["a", "b", "c", "d"], dims=["X"])
+    >>> reps = xr.DataArray([3, 4], dims=["Y"])
+    >>> da1.str * reps
+    <xarray.DataArray (X: 4, Y: 2)> Size: 128B
+    array([['aaa', 'aaaa'],
+           ['bbb', 'bbbb'],
+           ['ccc', 'cccc'],
+           ['ddd', 'dddd']], dtype='<U4')
+    Dimensions without coordinates: X, Y
 
-        >>> da1 = xr.DataArray(["%s_%s", "%s-%s", "%s|%s"], dims=["X"])
-        >>> da2 = xr.DataArray([1, 2], dims=["Y"])
-        >>> da3 = xr.DataArray([0.1, 0.2], dims=["Z"])
-        >>> da1.str % (da2, da3)
-        <xarray.DataArray (X: 3, Y: 2, Z: 2)> Size: 240B
-        array([[['1_0.1', '1_0.2'],
-                ['2_0.1', '2_0.2']],
-        <BLANKLINE>
-               [['1-0.1', '1-0.2'],
-                ['2-0.1', '2-0.2']],
-        <BLANKLINE>
-               [['1|0.1', '1|0.2'],
-                ['2|0.1', '2|0.2']]], dtype='<U5')
-        Dimensions without coordinates: X, Y, Z
+    >>> da1 = xr.DataArray(["%s_%s", "%s-%s", "%s|%s"], dims=["X"])
+    >>> da2 = xr.DataArray([1, 2], dims=["Y"])
+    >>> da3 = xr.DataArray([0.1, 0.2], dims=["Z"])
+    >>> da1.str % (da2, da3)
+    <xarray.DataArray (X: 3, Y: 2, Z: 2)> Size: 240B
+    array([[['1_0.1', '1_0.2'],
+            ['2_0.1', '2_0.2']],
+    <BLANKLINE>
+           [['1-0.1', '1-0.2'],
+            ['2-0.1', '2-0.2']],
+    <BLANKLINE>
+           [['1|0.1', '1|0.2'],
+            ['2|0.1', '2|0.2']]], dtype='<U5')
+    Dimensions without coordinates: X, Y, Z
 
     .. note::
         When using ``%`` formatting with a dict, the values are always used as a

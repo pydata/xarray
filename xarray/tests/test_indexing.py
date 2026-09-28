@@ -537,6 +537,7 @@ class TestLazyArray:
         x = indexing.NumpyIndexingAdapter(original)
         lazy = indexing.LazilyIndexedArray(x)
 
+        indexer: indexing.ExplicitIndexer
         if indexer_class is indexing.BasicIndexer:
             indexer = indexer_class(key)
             lazy[indexer] = value

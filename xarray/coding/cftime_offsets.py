@@ -771,7 +771,7 @@ def _emit_freq_deprecation_warning(deprecated_freq):
 
 
 def to_offset(
-    freq: BaseCFTimeOffset | str | timedelta | pd.Timedelta | pd.DateOffset,
+    freq: BaseCFTimeOffset | str | timedelta | pd.Timedelta | pd.offsets.BaseOffset,
     warn: bool = True,
 ) -> BaseCFTimeOffset:
     """Convert a frequency string to the appropriate subclass of
@@ -780,7 +780,7 @@ def to_offset(
         return freq
     if isinstance(freq, timedelta | pd.Timedelta):
         return delta_to_tick(freq)
-    if isinstance(freq, pd.DateOffset):
+    if isinstance(freq, pd.offsets.BaseOffset):
         freq = freq.freqstr
 
     match = re.match(_PATTERN, freq)

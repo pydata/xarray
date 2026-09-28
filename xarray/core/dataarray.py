@@ -4,14 +4,7 @@ import copy
 import datetime
 import json
 import warnings
-from collections.abc import (
-    Callable,
-    Collection,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-)
+from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
 from functools import partial
 from os import PathLike
 from types import EllipsisType
@@ -3684,13 +3677,13 @@ class DataArray(
         limit: int | None = None,
         use_coordinate: bool | str = True,
         max_gap: (
-            None
-            | int
+            int
             | float
             | str
             | pd.Timedelta
             | np.timedelta64
             | datetime.timedelta
+            | None
         ) = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -4778,6 +4771,10 @@ class DataArray(
         Dataset.from_dataframe
         """
         temp_name = "__temporary_name"
+        if temp_name == series.index.name:
+            # See properties/test_pandas_roundtrip.py:
+            # @reproduce_failure('6.155.2', b'AEEAQQBBAQFBAEEBAJBfX3RlbXBvcmFyeV9uYW1l')
+            temp_name = "__temporary_name_fallback"
         df = pd.DataFrame({temp_name: series})
         ds = Dataset.from_dataframe(df, sparse=sparse)
         result = ds[temp_name]
@@ -6017,7 +6014,7 @@ class DataArray(
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple or mapping of Hashable to tuple, default: 0
+        constant_values : scalar, tuple or mapping of Hashable to tuple, default: None
             Used in 'constant'.  The values to set the padded values for each
             axis.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -6026,7 +6023,7 @@ class DataArray(
             dimension.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
-            Default is 0.
+            Default is ``None``, pads with ``np.nan``.
         end_values : scalar, tuple or mapping of Hashable to tuple, default: 0
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.

@@ -967,15 +967,16 @@ class TestDataArray:
 
         with pytest.warns(FutureWarning):
             blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))  # type: ignore[arg-type]
-            assert blocked.chunks == ((2, 1), (2, 2))
-            assert blocked.data.name != first_dask_name
+        assert blocked.chunks == ((2, 1), (2, 2))
+        assert blocked.data.name != first_dask_name
 
+        with pytest.warns(FutureWarning):
             blocked = unblocked.chunk(chunks=(3, 3))
-            assert blocked.chunks == ((3,), (3, 1))
-            assert blocked.data.name != first_dask_name
+        assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
 
-            with pytest.raises(ValueError):
-                blocked.chunk(chunks=(3, 3, 3))
+        with pytest.raises(ValueError), pytest.warns(FutureWarning):
+            blocked.chunk(chunks=(3, 3, 3))
 
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined
@@ -1327,8 +1328,7 @@ class TestDataArray:
     def test_loc(self) -> None:
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
-        # typing issue: see https://github.com/python/mypy/issues/2410
-        assert_identical(da[:3], da.loc[:"c"])  # type: ignore[misc]
+        assert_identical(da[:3], da.loc[:"c"])
         assert_identical(da[1], da.loc["b"])
         assert_identical(da[1], da.loc[{"x": "b"}])
         assert_identical(da[1], da.loc["b", ...])
@@ -1346,8 +1346,7 @@ class TestDataArray:
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
         da = self.ds["foo"]
         # assignment
-        # typing issue: see https://github.com/python/mypy/issues/2410
-        da.loc["a":"j"] = 0  # type: ignore[misc]
+        da.loc["a":"j"] = 0
         assert np.all(da.values == 0)
         da.loc[{"x": slice("a", "j")}] = 2
         assert np.all(da.values == 2)
@@ -1516,7 +1515,7 @@ class TestDataArray:
 
         with pytest.warns(FutureWarning):
             original = xr.concat([da, db], dim="x")
-            assert original.y.size == 4
+        assert original.y.size == 4
         with set_options(use_new_combine_kwarg_defaults=True):
             # default compat="override" will pick the first one
             new = xr.concat([da, db], dim="x")
@@ -2920,6 +2919,11 @@ class TestDataArray:
     def test_squeeze(self) -> None:
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
 
+    def test_squeeze_non_str_dim_name(self) -> None:
+        array = DataArray(np.zeros((1, 3)), dims=[0, "y"])
+        expected = DataArray(np.zeros(3), dims=["y"])
+        assert_identical(array.squeeze(), expected)
+
     def test_squeeze_drop(self) -> None:
         array = DataArray([1], [("x", [0])])
         expected = DataArray(1)
@@ -3212,7 +3216,12 @@ class TestDataArray:
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim",
-        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
+        [
+            pytest.param(None, None, id="none"),
+            pytest.param(0, "x", id="x"),
+            pytest.param([0], ["x"], id="list-x"),
+            pytest.param([0, 1], ["x", "y"], id="list-x-y"),
+        ],
     )
     def test_quantile(self, q, axis, dim, skipna, compute_backend) -> None:
         va = self.va.copy(deep=True)
@@ -6691,7 +6700,7 @@ class TestReduce3D(TestReduce):
 
         minindices_x = {
             key: xr.where(
-                nanindices_x[key] == None,  # noqa: E711
+                nanindices_x[key] == None,
                 minindices_x[key],
                 nanindices_x[key],
             )
@@ -6709,7 +6718,7 @@ class TestReduce3D(TestReduce):
 
         minindices_y = {
             key: xr.where(
-                nanindices_y[key] == None,  # noqa: E711
+                nanindices_y[key] == None,
                 minindices_y[key],
                 nanindices_y[key],
             )
@@ -6727,7 +6736,7 @@ class TestReduce3D(TestReduce):
 
         minindices_z = {
             key: xr.where(
-                nanindices_z[key] == None,  # noqa: E711
+                nanindices_z[key] == None,
                 minindices_z[key],
                 nanindices_z[key],
             )
@@ -6745,7 +6754,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None,  # noqa: E711
+                nanindices_xy[key] == None,
                 minindices_xy[key],
                 nanindices_xy[key],
             )
@@ -6763,7 +6772,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None,  # noqa: E711
+                nanindices_xz[key] == None,
                 minindices_xz[key],
                 nanindices_xz[key],
             )
@@ -6781,7 +6790,7 @@ class TestReduce3D(TestReduce):
 
         minindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None,  # noqa: E711
+                nanindices_yz[key] == None,
                 minindices_yz[key],
                 nanindices_yz[key],
             )
@@ -6799,7 +6808,7 @@ class TestReduce3D(TestReduce):
 
         minindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None,  # noqa: E711
+                nanindices_xyz[key] == None,
                 minindices_xyz[key],
                 nanindices_xyz[key],
             )
@@ -6930,7 +6939,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_x = {
             key: xr.where(
-                nanindices_x[key] == None,  # noqa: E711
+                nanindices_x[key] == None,
                 maxindices_x[key],
                 nanindices_x[key],
             )
@@ -6948,7 +6957,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_y = {
             key: xr.where(
-                nanindices_y[key] == None,  # noqa: E711
+                nanindices_y[key] == None,
                 maxindices_y[key],
                 nanindices_y[key],
             )
@@ -6966,7 +6975,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_z = {
             key: xr.where(
-                nanindices_z[key] == None,  # noqa: E711
+                nanindices_z[key] == None,
                 maxindices_z[key],
                 nanindices_z[key],
             )
@@ -6984,7 +6993,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None,  # noqa: E711
+                nanindices_xy[key] == None,
                 maxindices_xy[key],
                 nanindices_xy[key],
             )
@@ -7002,7 +7011,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None,  # noqa: E711
+                nanindices_xz[key] == None,
                 maxindices_xz[key],
                 nanindices_xz[key],
             )
@@ -7020,7 +7029,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None,  # noqa: E711
+                nanindices_yz[key] == None,
                 maxindices_yz[key],
                 nanindices_yz[key],
             )
@@ -7038,7 +7047,7 @@ class TestReduce3D(TestReduce):
 
         maxindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None,  # noqa: E711
+                nanindices_xyz[key] == None,
                 maxindices_xyz[key],
                 nanindices_xyz[key],
             )

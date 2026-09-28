@@ -966,7 +966,7 @@ class Dataset(
     ) -> Self:
         """Fastpath constructor for internal use.
 
-        Returns an object with optionally with replaced attributes.
+        Returns an object with optionally replaced attributes.
 
         Explicitly passed arguments are *not* copied when placed on the new
         dataset. It is up to the caller to ensure that they have the right type
@@ -1491,7 +1491,7 @@ class Dataset(
                             f" been successfully updated:\n{processed}"
                         ) from e
                     else:
-                        raise e
+                        raise
 
         elif utils.hashable(key):
             if isinstance(value, Dataset):
@@ -9268,6 +9268,7 @@ class Dataset(
         """
         pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
 
+        coord_pad_mode: PadModeOptions
         if mode in ("edge", "reflect", "symmetric", "wrap"):
             coord_pad_mode = mode
             coord_pad_options = {
