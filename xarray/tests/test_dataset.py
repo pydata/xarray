@@ -6293,8 +6293,16 @@ class TestDataset:
         actual = data["a"].mean("x").to_dataset()
         assert_identical(actual, expected)
 
-    @pytest.mark.parametrize("method", ["mean", "quantile", "integrate"])
-    def test_reduce_drops_spanning_index(self, method) -> None:
+    @pytest.mark.parametrize(
+        "reduce",
+        [
+            lambda ds: ds.mean("x"),
+            lambda ds: ds.quantile(0.5, dim="x"),
+            lambda ds: ds.integrate("x"),
+        ],
+        ids=["mean", "quantile", "integrate"],
+    )
+    def test_reduce_drops_spanning_index(self, reduce) -> None:
         class CustomIndex(Index): ...
 
         spanning_index = CustomIndex()
@@ -6306,12 +6314,7 @@ class TestDataset:
             ),
         ).assign_coords(z=("z", [5.0, 6.0]))
 
-        if method == "mean":
-            result = ds.mean("x")
-        elif method == "quantile":
-            result = ds.quantile(0.5, dim="x")
-        else:
-            result = ds.integrate("x")
+        result = reduce(ds)
 
         assert "y" in result.coords
         assert "x" not in result.xindexes
