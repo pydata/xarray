@@ -1136,10 +1136,12 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
     dims_map = {}
     for arg in args:
         for dim in arg.dims:
-            if dim not in common_coords and dim not in exclude:
+            if dim in exclude:
+                continue
+            if dim not in dims_map:
                 dims_map[dim] = arg.sizes[dim]
-                if dim in arg._indexes:
-                    common_coords.update(arg.xindexes.get_all_coords(dim))
+            if dim in arg._indexes and dim not in common_coords:
+                common_coords.update(arg.xindexes.get_all_coords(dim))
 
     return dims_map, common_coords
 
