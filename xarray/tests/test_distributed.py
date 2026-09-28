@@ -166,12 +166,15 @@ def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
         da.isel(time=slice(i, i + 10)).to_netcdf(fname)
         fnames.append(fname)
 
-    with cluster() as (s, [_a, _b]):
+    # GH7079: only multi-threaded workers open files concurrently within a
+    # process, and the race does not show up on every open
+    with cluster(worker_kwargs={"nthreads": 4}) as (s, [_a, _b]):
         with Client(s["address"]):
-            with xr.open_mfdataset(
-                fnames, parallel=parallel, concat_dim="time", combine="nested"
-            ) as tf:
-                assert_identical(tf["test"], da)
+            for _ in range(5):
+                with xr.open_mfdataset(
+                    fnames, parallel=parallel, concat_dim="time", combine="nested"
+                ) as tf:
+                    assert_identical(tf["test"], da)
 
 
 @requires_netCDF4
