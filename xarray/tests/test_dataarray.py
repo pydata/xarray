@@ -4299,6 +4299,13 @@ class TestDataArray:
         expected = DataArray(np.diff(da.values, axis=1), dims=["x", "y"])
         assert_equal(expected, actual)
 
+    def test_dataarray_diff_exception_invalid_dim(self) -> None:
+        # GH7748: diff along a non-existent dimension should raise instead of
+        # silently returning the array unchanged.
+        da = DataArray(np.arange(10), dims=["a"])
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            da.diff("b")
+
     def test_coordinate_diff(self) -> None:
         # regression test for GH634
         arr = DataArray(range(0, 20, 2), dims=["lon"], coords=[range(10)])
