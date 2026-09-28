@@ -231,6 +231,7 @@ types-decorator = "*"
 types-networkx = "*"
 types-openpyxl = "*"
 types-psutil = "*"
+types-pycurl = "*"
 types-Pygments = "*"
 types-python-dateutil = "*"
 types-pytz = "*"
@@ -242,7 +243,10 @@ pip = "*"
 
 [feature.typing.pypi-dependencies]
 types-defusedxml = "*"
+types-gevent = "*"
 types-pexpect = "*"
+types-pysocks = "*"
+types-xlrd = "*"
 
 # pandas-stubs / scipy-stubs live in their own feature, rather than in `typing`,
 # so that `test-nightly` can source them from PyPI (see the `nightly` feature)
@@ -255,7 +259,7 @@ pandas-stubs = "<=2.3.3.251219"
 scipy-stubs = ">=1.17.1.2"
 
 [feature.typing.tasks]
-mypy = { cmd = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report", description = "Run mypy type checking and generate a Cobertura XML report." }
+mypy = { cmd = "mypy --cobertura-xml-report mypy_report", description = "Run mypy type checking and generate a Cobertura XML report." }
 
 [feature.pre-commit.dependencies]
 pre-commit = "*"
