@@ -18,7 +18,7 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from xarray.core.datatree_render import RenderDataTree
-from xarray.core.duck_array_ops import array_all, array_any, array_equiv, astype, ravel
+from xarray.core.duck_array_ops import array_all, array_any, array_equiv, ravel
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.indexing import (
     BasicIndexer,
@@ -211,10 +211,18 @@ def format_items(x):
     if not isinstance(x, PandasExtensionArray) and np.issubdtype(
         x.dtype, np.timedelta64
     ):
-        x = astype(x, dtype="timedelta64[ns]")
-        day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
-        time_needed = x[~pd.isnull(x)] != day_part
-        day_needed = day_part != np.timedelta64(0, "ns")
+        # Split every value into a whole-day part and a remaining time part, to
+        # find out whether the day and/or the time component has to be shown.
+        # This is done in the array's own unit: casting to timedelta64[ns]
+        # overflows for values that are valid in a coarser unit, so a
+        # timedelta64[s] array holding e.g. 10**10 seconds could not be
+        # formatted at all.
+        unit, _ = np.datetime_data(x.dtype)
+        one_day = np.timedelta64(1, "D").astype(f"timedelta64[{unit}]")
+        zero = np.timedelta64(0, unit)
+        nonnull = x[~pd.isnull(x)]
+        day_needed = (nonnull // one_day) != zero
+        time_needed = np.mod(nonnull, one_day) != zero
         if array_all(np.logical_not(day_needed)):
             timedelta_format = "time"
         elif array_all(np.logical_not(time_needed)):
