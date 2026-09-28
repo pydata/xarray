@@ -228,6 +228,8 @@ class CombinedLock(Lock):
         # Remove duplicates and always acquire in one global order. Ordering by
         # set iteration depends on memory addresses and insertion order, so two
         # CombinedLocks sharing locks could acquire them in opposite orders and
+        # Remove duplicates and always acquire in one global order. If not careful,
+        # CombinedLocks sharing locks could acquire them in opposite orders and
         # deadlock each other.
         unique = {_lock_identity(lock): lock for lock in locks}
         self.locks = tuple(lock for _, lock in sorted(unique.items()))
