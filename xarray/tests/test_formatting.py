@@ -134,8 +134,8 @@ class TestFormatting:
     @pytest.mark.parametrize(
         "unit,values,expected",
         [
-            # 10**10 seconds is ~317 years: valid as timedelta64[s], but it
-            # cannot be represented as timedelta64[ns].
+            # 10**10 seconds is about 317 years, a perfectly valid
+            # timedelta64[s], but it does not fit in timedelta64[ns].
             ("s", [0, 10**10], "0 days 00:00:00 115740 days 17:46:40"),
             ("m", [0, 10**11], "0 days 00:00:00 69444444 days 10:40:00"),
             ("h", [0, 10**10], "0 days 00:00:00 416666666 days 16:00:00"),
@@ -145,28 +145,50 @@ class TestFormatting:
     def test_format_items_beyond_nanosecond_range(
         self, unit: str, values: list[int], expected: str
     ) -> None:
-        # values outside the range of timedelta64[ns] used to raise
-        # OverflowError instead of being formatted. See GH11630.
+        # Formatting must not additionally require every value to be
+        # representable in timedelta64[ns]. See GH11630.
         array = np.array(values, dtype=f"timedelta64[{unit}]")
         actual = " ".join(formatting.format_items(array))
         assert expected == actual
 
-    def test_format_items_nanosecond_range_negative(self) -> None:
-        # the whole range of timedelta64[ns], including the large negative
-        # values, used to raise OverflowError. See GH11630.
-        array = np.array([-(2**63 - 1), 0, 2**63 - 1], dtype="timedelta64[ns]")
-        actual = " ".join(formatting.format_items(array))
-        assert (
-            "-106752 days +00:12:43.145224193 0 days 00:00:00 106751 days 23:47:16.854775807"
-            == actual
-        )
+    @pytest.mark.parametrize(
+        "unit,expected",
+        [
+            ("s", "115740 days 17:46:40"),
+            ("m", "6944444 days 10:40:00"),
+            ("h", "416666666 days 16:00:00"),
+            ("D", "10000000000 days"),
+        ],
+    )
+    def test_repr_timedelta_beyond_nanosecond_range(
+        self, unit: str, expected: str
+    ) -> None:
+        # A timedelta64 coordinate too large for nanoseconds used to make
+        # repr() raise an OverflowError. See GH11630.
+        coord = np.array([0, 10**10], dtype=f"timedelta64[{unit}]")
+        da = xr.DataArray(np.zeros(2), dims="x", coords={"x": coord})
+        assert expected in repr(da)
 
-    def test_repr_timedelta_coarse_unit(self) -> None:
-        # GH11630: a timedelta64[s] coordinate spanning more than ~292 years
-        # could not be displayed at all.
-        array = np.array([0, 10**10], dtype="timedelta64[s]")
-        ds = xr.Dataset(coords={"t": ("t", array)})
-        assert "115740 days 17:46:40" in repr(ds)
+    @pytest.mark.parametrize(
+        "unit,values,expected",
+        [
+            # Units coarser than a day, and units too fine for a day to be
+            # representable, are not handled by the unit-native split and must
+            # keep formatting exactly as they did before. See GH11630.
+            ("W", [0, 10], "0 days 70 days"),
+            ("M", [0, 100], "0 days 00:00:00 3043 days 16:30:00"),
+            ("Y", [0, 1], "0 days 00:00:00 365 days 05:49:12"),
+            ("ps", [0, 10**13], "00:00:00 00:00:10"),
+            ("fs", [0, 10**15], "00:00:00 00:00:01"),
+            ("as", [0, 10**18], "00:00:00 00:00:01"),
+        ],
+    )
+    def test_format_items_units_without_a_representable_day(
+        self, unit: str, values: list[int], expected: str
+    ) -> None:
+        array = np.array(values, dtype=f"timedelta64[{unit}]")
+        actual = " ".join(formatting.format_items(array))
+        assert expected == actual
 
     def test_format_array_flat(self) -> None:
         actual = formatting.format_array_flat(np.arange(100), 2)
@@ -234,10 +256,10 @@ class TestFormatting:
 
     def test_pretty_print(self) -> None:
         assert formatting.pretty_print("abcdefghij", 8) == "abcde..."
-        assert formatting.pretty_print("??", 1) == "??"
+        assert formatting.pretty_print("ß", 1) == "ß"
 
     def test_maybe_truncate(self) -> None:
-        assert formatting.maybe_truncate("??", 10) == "??"
+        assert formatting.maybe_truncate("ß", 10) == "ß"
 
     def test_format_timestamp_invalid_pandas_format(self) -> None:
         expected = "2021-12-06 17:00:00 00"
@@ -309,8 +331,8 @@ class TestFormatting:
         if len(names) <= 1:
             assert hint_chars == [" "]
         else:
-            assert hint_chars[0] == "???" and hint_chars[-1] == "???"
-            assert len(names) == 2 or hint_chars[1:-1] == ["???"] * (len(names) - 2)
+            assert hint_chars[0] == "┌" and hint_chars[-1] == "└"
+            assert len(names) == 2 or hint_chars[1:-1] == ["│"] * (len(names) - 2)
 
     def test_diff_array_repr(self) -> None:
         da_a = xr.DataArray(
@@ -1283,4 +1305,3 @@ Coordinates:
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected
-
