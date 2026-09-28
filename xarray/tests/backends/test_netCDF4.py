@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset, backends, open_dataset
+from xarray import DataArray, Dataset, backends, open_dataset, open_mfdataset
 from xarray.backends.netCDF4_ import (
     NetCDF4BackendEntrypoint,
     _extract_nc4_variable_encoding,
@@ -36,6 +36,7 @@ from xarray.tests.backends.base import (
     NetCDF3Only,
     NetCDF4Base,
     _check_guess_can_open_and_open,
+    _write_mfdataset_files,
     create_tmp_file,
 )
 from xarray.tests.test_dataset import create_test_data
@@ -583,3 +584,13 @@ def test_netcdf4_concurrent_opens(tmp_path: Path) -> None:
     with ThreadPoolExecutor(8) as executor:
         for actual in executor.map(load, paths * 4):
             assert_identical(actual, original)
+
+
+@requires_netCDF4
+@requires_dask
+def test_open_mfdataset_netcdf4_parallel(tmp_path: Path) -> None:
+    # GH11088: opening netCDF4 files in parallel threads crashed with segfaults
+    paths, expected = _write_mfdataset_files(tmp_path, nfiles=8)
+    for _ in range(10):
+        with open_mfdataset(paths, engine="netcdf4", parallel=True) as actual:
+            assert_identical(actual.load(), expected)

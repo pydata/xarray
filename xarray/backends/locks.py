@@ -129,9 +129,11 @@ class SerializableLock(Lock):
 
 # Locks used by multiple backends.
 # Neither HDF5 nor the netCDF-C library are thread-safe. The locks are reentrant
-# so that backends can hold them across calls that acquire them again.
-HDF5_LOCK = SerializableLock(reentrant=True)
-NETCDFC_LOCK = SerializableLock(reentrant=True)
+# so that backends can hold them across calls that acquire them again. They
+# have fixed tokens, so that an unpickled lock, e.g. in a dask worker, is the
+# global lock of that process and not a separate lock.
+HDF5_LOCK = SerializableLock("xarray-hdf5-lock", reentrant=True)
+NETCDFC_LOCK = SerializableLock("xarray-netcdfc-lock", reentrant=True)
 
 
 _FILE_LOCKS: MutableMapping[Any, _ReentrantLock] = weakref.WeakValueDictionary()

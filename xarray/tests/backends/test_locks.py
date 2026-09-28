@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import multiprocessing
 import pickle
 import threading
 
@@ -235,3 +236,16 @@ def test_is_reentrant_lock() -> None:
     assert not locks.is_reentrant_lock(SerializableLock())
     assert not locks.is_reentrant_lock(threading.Lock())
     assert not locks.is_reentrant_lock(combine_locks([reentrant, threading.Lock()]))
+
+
+def _unpickles_to_global_locks(payload: bytes) -> bool:
+    hdf5, netcdfc = pickle.loads(payload)
+    return hdf5.lock is locks.HDF5_LOCK.lock and netcdfc.lock is locks.NETCDFC_LOCK.lock
+
+
+def test_global_locks_unpickle_to_global_locks_of_other_process() -> None:
+    # e.g. a dask worker reading a dataset that was opened in another process
+    # must use its own global locks, not separate ones
+    payload = pickle.dumps((locks.HDF5_LOCK, locks.NETCDFC_LOCK))
+    with multiprocessing.get_context("spawn").Pool(1) as pool:
+        assert pool.apply(_unpickles_to_global_locks, (payload,))
