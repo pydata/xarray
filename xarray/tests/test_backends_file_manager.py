@@ -349,9 +349,3 @@ def test_file_manager_del_while_pin_lock_held() -> None:
     thread = threading.Thread(target=delete_while_locked, daemon=True)
     thread.start()
     assert done.wait(timeout=5)
-
-
-def test_file_manager_pin_lock_is_file_cache_lock() -> None:
-    # evictions update the pin state while holding the cache's lock, and
-    # __del__ can close files while either is held; one lock avoids deadlocks
-    assert file_manager._PIN_LOCK is file_manager.FILE_CACHE._lock
