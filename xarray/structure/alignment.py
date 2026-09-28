@@ -101,7 +101,7 @@ def _normalize_indexes(
     """Normalize the indexes/indexers given for re-indexing or alignment.
 
     Wrap any arbitrary array or `pandas.Index` as an Xarray `PandasIndex`
-    associated with its corresponding dimension coordinate variable.
+    associated with its dimension coordinate and any MultiIndex level coordinates.
 
     """
     xr_indexes: dict[Hashable, Index] = {}
@@ -128,8 +128,20 @@ def _normalize_indexes(
                 idx = PandasMultiIndex(pd_idx, k)
             else:
                 idx = PandasIndex(pd_idx, k, coord_dtype=data.dtype)
-            xr_variables.update(idx.create_variables())
-        xr_indexes[k] = idx
+            variables = idx.create_variables()
+            if conflicting_names := variables.keys() & xr_indexes.keys():
+                raise AlignmentError(
+                    "cannot align on indexes with conflicting coordinate names: "
+                    f"{conflicting_names!r}"
+                )
+            xr_variables.update(variables)
+            xr_indexes.update(dict.fromkeys(variables, idx))
+        else:
+            if k in xr_indexes and xr_indexes[k] is not idx:
+                raise AlignmentError(
+                    f"cannot align on indexes with conflicting coordinate names: {k!r}"
+                )
+            xr_indexes[k] = idx
 
     return Indexes(xr_indexes, xr_variables)
 

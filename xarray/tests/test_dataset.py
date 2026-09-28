@@ -2530,6 +2530,26 @@ class TestDataset:
         assert_identical(expected, actual)
         assert actual.x.dtype == expected.x.dtype
 
+    @pytest.mark.parametrize("indexer_kind", ["pandas", "dataarray", "variable"])
+    def test_reindex_multiindex(self, indexer_kind) -> None:
+        index = pd.MultiIndex.from_product([[1, 2], ["a", "b"]], names=["city", "kind"])
+        expected = Dataset(
+            {"measurement": (("station", "z"), [[1, 2], [0, 0], [0, 0], [3, 4]])},
+            coords=xr.Coordinates.from_pandas_multiindex(index, "station"),
+            attrs={"description": "stations"},
+        ).assign_coords(z=["u", "v"], calibration=7)
+        original = expected.isel(station=[0, 3])
+        indexer = {
+            "pandas": index,
+            "dataarray": expected.station,
+            "variable": expected.station.variable,
+        }[indexer_kind]
+
+        actual = original.reindex(station=indexer, fill_value=0)
+
+        assert_identical(actual, expected)
+        assert_identical(original.reindex_like(expected, fill_value=0), expected)
+
     def test_reindex_with_multiindex_level(self) -> None:
         # test for https://github.com/pydata/xarray/issues/10347
         mindex = pd.MultiIndex.from_product(
