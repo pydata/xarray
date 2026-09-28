@@ -32,6 +32,7 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
+
       - uses: xarray-contrib/ci-trigger@10cd2bfec3484946a4058a421ddf9cfad101e715 # v1.2.1
         id: detect-trigger
         with:
@@ -50,8 +51,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
       - uses: xarray-contrib/pixi-lock/create-and-cache@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         id: pixi-lock
+
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pixi-lock
@@ -81,6 +84,7 @@ jobs:
         uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
@@ -91,6 +95,7 @@ jobs:
       - name: Version info
         run: |
           pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
+
       - name: Run doctests
         run: |
           # Raise an error if there are warnings in the doctests, with `-Werror`.
@@ -116,30 +121,34 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
           persist-credentials: false
+
       - name: Restore cached pixi lockfile
         uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ env.PIXI_ENV }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
           echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+
       - name: Version info
         run: |
           pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
 
       - name: Run mypy
         run: |
-          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: mypy_report/cobertura.xml
           flags: mypy
@@ -162,30 +171,34 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
           persist-credentials: false
+
       - name: Restore cached pixi lockfile
         uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ env.PIXI_ENV }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
           echo "PYTHON_VERSION=$(pixi run -e ${{env.PIXI_ENV}} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+
       - name: Version info
         run: |
           pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
 
       - name: Run mypy
         run: |
-          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --cobertura-xml-report mypy_report
 
       - name: Upload mypy coverage to Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: mypy_report/cobertura.xml
           flags: mypy-min
@@ -216,6 +229,7 @@ jobs:
         uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
@@ -226,10 +240,6 @@ jobs:
       - name: Version info
         run: |
           pixi run -e ${{env.PIXI_ENV}} -- python xarray/util/print_versions.py
-
-      - name: Install type stubs
-        run: |
-          pixi run -e ${{env.PIXI_ENV}} -- python -m mypy --install-types --non-interactive xarray/ || true
 
       - name: Run stubtest (core modules)
         run: |
@@ -267,16 +277,19 @@ jobs:
         uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
           cache: true
           environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+
       - name: set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
           echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
+
       - name: Version info
         run: |
           pixi run -e ${{ matrix.pixi-env }} -- python xarray/util/print_versions.py
@@ -286,7 +299,7 @@ jobs:
           pixi run -e ${{ matrix.pixi-env }} -- python -m pyright xarray/
 
       - name: Upload pyright coverage to Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: pyright_report/cobertura.xml
           flags: pyright
@@ -348,4 +361,4 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@70fb788f84895a7701f5643d103d587e460b5c99 # v0.6.3
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4

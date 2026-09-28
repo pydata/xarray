@@ -3059,7 +3059,7 @@ def test_multiple_groupers_string(as_dataset) -> None:
     # warning & type error in the future
     with pytest.warns(FutureWarning):
         with pytest.raises(TypeError):
-            obj.groupby("labels1", "labels2")  # type: ignore[arg-type, misc]
+            obj.groupby("labels1", "labels2")  # type: ignore[arg-type, call-arg]
     with pytest.raises(ValueError):
         obj.groupby("labels1", foo="bar")  # type: ignore[arg-type]
     with pytest.raises(ValueError):
