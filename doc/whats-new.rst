@@ -62,6 +62,11 @@ Bug Fixes
 - Fix :py:func:`broadcast` failing on objects with an index spanning several
   dimensions, such as a custom index set on both ``x`` and ``y`` (:pull:`11615`).
   By `Matthias Schabel <https://github.com/matthiasschabel>`_.
+- Fix errors and crashes in :py:func:`open_mfdataset` with ``parallel=True``
+  when opening more files than ``file_cache_maxsize``. Files evicted from the
+  file cache by another thread are no longer closed while they are still being
+  read (:pull:`11622`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
   empty results when rolling an empty dimension, including with
   ``roll_coords=True``, instead of raising ``ZeroDivisionError`` (:pull:`11613`).

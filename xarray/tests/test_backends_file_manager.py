@@ -7,7 +7,11 @@ from unittest import mock
 
 import pytest
 
-from xarray.backends.file_manager import CachingFileManager, PickleableFileManager
+from xarray.backends.file_manager import (
+    CachingFileManager,
+    PickleableFileManager,
+    _close_unless_pinned,
+)
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options
 from xarray.tests import assert_no_warnings
@@ -262,6 +266,43 @@ def test_file_manager_acquire_context(tmpdir, file_cache) -> None:
     assert file_cache  # file *was* already open
 
     manager.close()
+
+
+def test_file_manager_acquire_context_survives_eviction() -> None:
+    # A file evicted by another manager while in use must stay open until the
+    # context exits, and be reused rather than opened a second time.
+    cache: LRUCache = LRUCache(maxsize=1, on_evict=_close_unless_pinned)
+    file1, file2 = mock.Mock(), mock.Mock()
+    opener1 = mock.Mock(return_value=file1)
+    manager1 = CachingFileManager(opener1, "file1", cache=cache)
+    manager2 = CachingFileManager(mock.Mock(return_value=file2), "file2", cache=cache)
+
+    with manager1.acquire_context() as f:
+        assert f is file1
+        manager2.acquire()  # evicts file1
+        file1.close.assert_not_called()
+        assert manager1.acquire() is file1  # evicts file2
+        file2.close.assert_called_once_with()
+        manager2.acquire()  # evicts file1 again
+    file1.close.assert_called_once_with()
+    opener1.assert_called_once()
+
+    manager1.close()
+    manager2.close()
+
+
+def test_file_manager_close_while_pinned_and_evicted() -> None:
+    cache: LRUCache = LRUCache(maxsize=1, on_evict=_close_unless_pinned)
+    file1 = mock.Mock()
+    manager1 = CachingFileManager(mock.Mock(return_value=file1), "file1", cache=cache)
+    manager2 = CachingFileManager(mock.Mock(), "file2", cache=cache)
+
+    with manager1.acquire_context():
+        manager2.acquire()  # evicts file1
+        manager1.close()
+        file1.close.assert_called_once_with()
+    file1.close.assert_called_once_with()
+    manager2.close()
 
 
 def test_pickleable_file_manager_write_pickle(tmpdir) -> None:
