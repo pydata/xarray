@@ -146,14 +146,14 @@ class TestFormatting:
         self, unit: str, values: list[int], expected: str
     ) -> None:
         # values outside the range of timedelta64[ns] used to raise
-        # OverflowError instead of being formatted. See GH11676.
+        # OverflowError instead of being formatted. See GH11630.
         array = np.array(values, dtype=f"timedelta64[{unit}]")
         actual = " ".join(formatting.format_items(array))
         assert expected == actual
 
     def test_format_items_nanosecond_range_negative(self) -> None:
         # the whole range of timedelta64[ns], including the large negative
-        # values, used to raise OverflowError. See GH11676.
+        # values, used to raise OverflowError. See GH11630.
         array = np.array([-(2**63 - 1), 0, 2**63 - 1], dtype="timedelta64[ns]")
         actual = " ".join(formatting.format_items(array))
         assert (
@@ -162,7 +162,7 @@ class TestFormatting:
         )
 
     def test_repr_timedelta_coarse_unit(self) -> None:
-        # GH11676: a timedelta64[s] coordinate spanning more than ~292 years
+        # GH11630: a timedelta64[s] coordinate spanning more than ~292 years
         # could not be displayed at all.
         array = np.array([0, 10**10], dtype="timedelta64[s]")
         ds = xr.Dataset(coords={"t": ("t", array)})
@@ -234,10 +234,10 @@ class TestFormatting:
 
     def test_pretty_print(self) -> None:
         assert formatting.pretty_print("abcdefghij", 8) == "abcde..."
-        assert formatting.pretty_print("ß", 1) == "ß"
+        assert formatting.pretty_print("??", 1) == "??"
 
     def test_maybe_truncate(self) -> None:
-        assert formatting.maybe_truncate("ß", 10) == "ß"
+        assert formatting.maybe_truncate("??", 10) == "??"
 
     def test_format_timestamp_invalid_pandas_format(self) -> None:
         expected = "2021-12-06 17:00:00 00"
@@ -309,8 +309,8 @@ class TestFormatting:
         if len(names) <= 1:
             assert hint_chars == [" "]
         else:
-            assert hint_chars[0] == "┌" and hint_chars[-1] == "└"
-            assert len(names) == 2 or hint_chars[1:-1] == ["│"] * (len(names) - 2)
+            assert hint_chars[0] == "???" and hint_chars[-1] == "???"
+            assert len(names) == 2 or hint_chars[1:-1] == ["???"] * (len(names) - 2)
 
     def test_diff_array_repr(self) -> None:
         da_a = xr.DataArray(
@@ -1283,3 +1283,4 @@ Coordinates:
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected
+
