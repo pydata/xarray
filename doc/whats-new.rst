@@ -59,6 +59,9 @@ Bug Fixes
   e.g. while garbage collecting an unclosed file, no longer leaves some of its
   locks held forever (:pull:`11622`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix :py:func:`broadcast` failing on objects with an index spanning several
+  dimensions, such as a custom index set on both ``x`` and ``y`` (:pull:`11615`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
   empty results when rolling an empty dimension, including with
   ``roll_coords=True``, instead of raising ``ZeroDivisionError`` (:pull:`11613`).

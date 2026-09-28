@@ -66,6 +66,7 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+from xarray.tests.indexes import XYIndex
 
 try:
     from pandas.errors import UndefinedVariableError
@@ -3597,6 +3598,35 @@ class TestDataArray:
         expected_y2 = y.T
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
+
+    def test_broadcast_arrays_multi_coordinate_index(self) -> None:
+        array = DataArray(
+            np.arange(6).reshape(2, 3),
+            dims=("y", "x"),
+            coords={"y": [0, 1], "x": [10, 20, 30]},
+        )
+        array = array.drop_indexes(["y", "x"]).set_xindex(["y", "x"], XYIndex)
+        other = DataArray([1, 2], dims="channel")
+        assert isinstance(array.xindexes["x"], XYIndex)
+        assert array.xindexes["x"] is array.xindexes["y"]
+
+        result, other_result = broadcast(array, other)
+
+        assert result.dims == ("y", "x", "channel")
+        assert_array_equal(
+            result.values, np.broadcast_to(array.values[..., None], result.shape)
+        )
+
+        other_x = DataArray([1, 2, 3], dims="x")
+        other_y = DataArray([1, 2], dims="y")
+        for broadcast_result in (
+            result,
+            other_result,
+            *broadcast(other_x, other_y, array),
+        ):
+            assert set(broadcast_result.coords) == {"x", "y"}
+            assert_array_equal(broadcast_result.x, [10, 20, 30])
+            assert_array_equal(broadcast_result.y, [0, 1])
 
     def test_broadcast_arrays_misaligned(self) -> None:
         # broadcast on misaligned coords must auto-align
