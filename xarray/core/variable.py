@@ -1356,7 +1356,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _roll_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
 
-        count %= self.shape[axis]
+        count %= self.shape[axis] or 1
         if count != 0:
             indices = [slice(-count, None), slice(None, -count)]
         else:
