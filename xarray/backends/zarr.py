@@ -410,8 +410,9 @@ def _compact_chunk_sizes(
     compacted: list[int | tuple[int, ...]] = []
     for sizes in chunk_sizes:
         sizes = tuple(sizes)
-        if not sizes:  # zero-length dimension
-            compacted.append(sizes)
+        if not sizes:
+            # zero-length dimension: dask rejects an empty tuple here
+            compacted.append((0,))
         elif len(set(sizes[:-1])) <= 1 and sizes[-1] <= sizes[0]:
             compacted.append(sizes[0])
         else:

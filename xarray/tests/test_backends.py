@@ -7361,6 +7361,25 @@ class TestZarrRectilinearChunksRead:
             assert roundtrip["var"].data.chunks == expected_dask_chunks
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
+    def test_read_zero_length_dim(self, tmp_path) -> None:
+        """zarr reports no chunk sizes at all along a zero-length dimension,
+        which must not be passed to dask as an empty tuple."""
+        import zarr
+
+        store_path = tmp_path / "source.zarr"
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            self.create_zarr_array(
+                store_path,
+                shape=(0, 20),
+                chunks=(2, (5, 10, 5)),
+                dimension_names=("x", "y"),
+                dtype="float32",
+            )
+            roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+            assert roundtrip["var"].shape == (0, 20)
+            assert roundtrip["var"].encoding["chunks"][1] == (5, 10, 5)
+            assert roundtrip["var"].data.chunks == ((0,), (5, 10, 5))
+
     def test_read_rectilinear_shards(self, tmp_path) -> None:
         """Regular inner chunks with rectilinear shards. The regular chunks
         must be reported as an int regardless of zarr-python version."""
