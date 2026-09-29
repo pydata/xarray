@@ -26,7 +26,7 @@ from xarray.tests import (
     requires_pydap,
     requires_zarr,
 )
-from xarray.tests.test_backends import TestNetCDF4Data as _TestNetCDF4Data
+from xarray.tests.backends.test_backends import TestNetCDF4Data as _TestNetCDF4Data
 
 if TYPE_CHECKING:
     from xarray.backends.writers import T_DataTreeNetcdfEngine

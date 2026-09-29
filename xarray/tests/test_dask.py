@@ -32,7 +32,7 @@ from xarray.tests import (
     requires_pint,
     requires_scipy_or_netCDF4,
 )
-from xarray.tests.test_backends import create_tmp_file
+from xarray.tests.backends.test_backends import create_tmp_file
 
 dask = pytest.importorskip("dask")
 pytest.importorskip("dask.array")

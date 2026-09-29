@@ -247,15 +247,16 @@ def _check_compression_codec_available(codec: str | None) -> bool:
         return False
 
 
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+
+
 def open_example_dataset(name, *args, **kwargs) -> Dataset:
-    return open_dataset(
-        os.path.join(os.path.dirname(__file__), "data", name), *args, **kwargs
-    )
+    return open_dataset(os.path.join(DATA_DIR, name), *args, **kwargs)
 
 
 def open_example_mfdataset(names, *args, **kwargs) -> Dataset:
     return open_mfdataset(
-        [os.path.join(os.path.dirname(__file__), "data", name) for name in names],
+        [os.path.join(DATA_DIR, name) for name in names],
         *args,
         **kwargs,
     )
@@ -5499,7 +5500,7 @@ def test_open_mfdataset_manyfiles(
 @requires_netCDF4
 @requires_dask
 def test_open_mfdataset_can_open_path_objects() -> None:
-    dataset = os.path.join(os.path.dirname(__file__), "data", "example_1.nc")
+    dataset = os.path.join(DATA_DIR, "example_1.nc")
     with open_mfdataset(Path(dataset)) as actual:
         assert isinstance(actual, Dataset)
 
@@ -7253,7 +7254,7 @@ def fsspec_memory_zarr_stores():
     """Write two zarr stores to fsspec's global in-memory filesystem."""
     import fsspec
 
-    ds = open_dataset(os.path.join(os.path.dirname(__file__), "data", "example_1.nc"))
+    ds = open_dataset(os.path.join(DATA_DIR, "example_1.nc"))
 
     m = fsspec.filesystem("memory")
     mm = m.get_mapper("out1.zarr")

@@ -28,7 +28,7 @@ from xarray.tests import (
     requires_dask,
     requires_netCDF4,
 )
-from xarray.tests.test_backends import CFEncodedBase
+from xarray.tests.backends.test_backends import CFEncodedBase
 
 
 class TestBoolTypeArray:

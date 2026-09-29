@@ -42,7 +42,7 @@ from xarray.tests import (
     requires_scipy,
     requires_zarr,
 )
-from xarray.tests.test_backends import (
+from xarray.tests.backends.test_backends import (
     ON_WINDOWS,
     create_tmp_file,
 )
@@ -173,7 +173,7 @@ def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
                 assert_identical(tf["test"], da)
 
 
-# TODO: move this to test_backends.py
+# TODO: move this to backends/test_backends.py
 @requires_cftime
 @requires_netCDF4
 @pytest.mark.parametrize(
