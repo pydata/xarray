@@ -53,6 +53,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fixed ``DataArray.str.replace`` replacing every occurrence instead of none when
+  ``n=0``. ``re.sub`` treats ``count=0`` as "replace all", so the regex code path
+  collapsed ``n=0`` onto ``n=-1``, while the ``regex=False`` path already handled
+  ``n=0`` correctly (:pull:`11545`).
+  By `Alexander Kropiunig <https://github.com/Kropiunig>`_.
 - ``min`` and ``max`` of object arrays with ``skipna=False`` now return ``NaN``
   for slices containing missing values, instead of a result that depended on
   the position of the missing value (:issue:`11501`, :pull:`#11627`).
@@ -433,6 +438,9 @@ Bug Fixes
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 - :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
   By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+- Warn when tuple-style ``DataArray`` coordinates are renamed by explicitly
+  provided dimension names (:issue:`11234`, :pull:`11292`).
+  By `Asish Kumar <https://github.com/officialasishkumar>`_.
 - Preserve non-grouped coordinates in fallback ``groupby`` reductions when grouping
   by a non-leading dimension reorders the underlying variable dimensions
   (:issue:`11188`, :pull:`11290`).
