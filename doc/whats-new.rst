@@ -438,6 +438,9 @@ Bug Fixes
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 - :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
   By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+- Warn when tuple-style ``DataArray`` coordinates are renamed by explicitly
+  provided dimension names (:issue:`11234`, :pull:`11292`).
+  By `Asish Kumar <https://github.com/officialasishkumar>`_.
 - Preserve non-grouped coordinates in fallback ``groupby`` reductions when grouping
   by a non-leading dimension reorders the underlying variable dimensions
   (:issue:`11188`, :pull:`11290`).
