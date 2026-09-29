@@ -358,7 +358,7 @@ ds = xr.Dataset(
     },
 )
 
-ds.to_netcdf(nc_filename)
+ds.to_netcdf(nc_filename, unlimited_dims=["y"])
 ```
 
 By default, the file is saved as netCDF4 (assuming netCDF4-Python is
@@ -509,6 +509,19 @@ ds_disk["y"].encoding
 ```{code-cell}
 ds_disk.encoding
 ```
+
+One key piece of information you can find in the encoding is whether a
+dimension is unlimited. Unlimited dimensions can grow in size, and are
+commonly used for a dimension like `time` that is appended to over
+time:
+
+```{code-cell}
+ds_disk.encoding["unlimited_dims"]
+```
+
+This information can also be set explicitly when writing a file with
+{py:meth}`Dataset.to_netcdf` using the `unlimited_dims` keyword
+argument.
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.
