@@ -13,6 +13,14 @@ v2026.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Support reading Zarr V3 arrays with rectilinear (variable-sized) chunk
+  grids. Using this feature needs ``zarr-python >= 3.2`` with
+  ``zarr.config.set({"array.rectilinear_chunks": True})``; xarray's minimum
+  supported zarr version is unchanged. Writing rectilinear chunks from
+  xarray is not yet supported (:pull:`11592`, extracted from :pull:`11279`).
+  By `Max Jones <https://github.com/maxrjones>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 - Added `PyArrowCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
   to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
   export to pyarrow, polars or duckdb.
@@ -56,6 +64,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix a bug in the ``scipy`` backend where mixing non-adjacent scalar and
+  array indexers in :py:meth:`Dataset.sel` could silently transpose
+  dimension sizes when reading from a closed file object
+  (:issue:`10338`, :pull:`11638`).
+  By `Anirban Mandal <https://github.com/CoderAnirban71>`_.
 - Fixed ``DataArray.str.replace`` replacing every occurrence instead of none when
   ``n=0``. ``re.sub`` treats ``count=0`` as "replace all", so the regex code path
   collapsed ``n=0`` onto ``n=-1``, while the ``regex=False`` path already handled
@@ -94,6 +107,9 @@ Bug Fixes
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
+  round trips (:issue:`11466`, :pull:`11474`).
+  By `stanbot8 <https://github.com/stanbot8>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs.
