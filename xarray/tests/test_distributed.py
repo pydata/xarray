@@ -42,7 +42,7 @@ from xarray.tests import (
     requires_scipy,
     requires_zarr,
 )
-from xarray.tests.backends.test_backends import (
+from xarray.tests.backends.base import (
     ON_WINDOWS,
     create_tmp_file,
 )
