@@ -1032,6 +1032,16 @@ class ZarrStore(AbstractWritableDataStore):
                 )
                 vars_with_encoding[vn] = variables[vn].copy(deep=False)
                 vars_with_encoding[vn].encoding = existing_vars[vn].encoding
+                if existing_vars[vn].dtype.kind == "M" and (
+                    "units" in existing_vars[vn].attrs
+                ):
+                    # Datetimes stored with a native datetime64 dtype are not
+                    # decoded, so recover their encoding from the stored attrs.
+                    encoding = vars_with_encoding[vn].encoding
+                    for key in ("units", "calendar"):
+                        if key in existing_vars[vn].attrs:
+                            encoding[key] = existing_vars[vn].attrs[key]
+                    encoding["dtype"] = existing_vars[vn].dtype
             vars_with_encoding, _ = self.encode(vars_with_encoding, {})
             variables_encoded.update(vars_with_encoding)
 

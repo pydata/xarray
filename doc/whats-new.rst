@@ -53,6 +53,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Appending to a Zarr store whose datetime variable is stored with a native
+  ``datetime64`` dtype now reuses the stored ``units`` and ``calendar``, instead
+  of writing the appended times with default units (:issue:`10639`).
 - ``min`` and ``max`` of object arrays with ``skipna=False`` now return ``NaN``
   for slices containing missing values, instead of a result that depended on
   the position of the missing value (:issue:`11501`, :pull:`#11627`).

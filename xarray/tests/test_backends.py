@@ -3448,6 +3448,28 @@ class ZarrBase(CFEncodedBase):
                 xr.open_dataset(store_target, engine="zarr", **self.version_kwargs),
             )
 
+    def test_append_native_datetime64_encoding(self) -> None:
+        # https://github.com/pydata/xarray/issues/10639
+        encoding = {
+            "units": "milliseconds since 1970-01-01T00:00:00",
+            "dtype": "datetime64[ms]",
+        }
+        times = np.array(["0001-01-01T00:01", "0001-01-01T00:02"], dtype="M8[ms]")
+        ds1 = xr.Dataset({"v": ("time", [1.0])}, coords={"time": times[:1]})
+        ds2 = xr.Dataset({"v": ("time", [2.0])}, coords={"time": times[1:]})
+        with self.create_zarr_target() as store_target:
+            ds1.to_zarr(
+                store_target,
+                mode="w",
+                encoding={"time": encoding},
+                **self.version_kwargs,
+            )
+            ds2.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+            with xr.open_dataset(
+                store_target, engine="zarr", **self.version_kwargs
+            ) as actual:
+                np.testing.assert_array_equal(actual["time"].values, times)
+
     def test_append_with_append_dim_no_overwrite(self) -> None:
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
