@@ -12,11 +12,17 @@ v2026.09.0 (Sep 29, 2026)
 -------------------------
 
 This release adds read support for Zarr V3 rectilinear (variable-sized) chunks,
-Arrow PyCapsule export for :py:class:`DataArray`, :py:class:`DataTree` support
+Arrow PyCapsule export for :py:class:`DataArray`, a new
+:py:meth:`DataArray.plot.lines` plotting method, :py:class:`DataTree` support
 in :py:func:`apply_ufunc`, and flox-accelerated groupby medians. Bottleneck is
 now disabled by default, the remaining zarr-python 2 compatibility code has been
 removed, and the minimum ``h5netcdf`` version is now 1.8. It also includes many
 bug fixes.
+
+.. warning::
+
+  This is the last xarray release that will support Python 3.11. Future
+  releases will require Python 3.12 or later.
 
 Thanks to the 45 contributors to this release:
 ANIRUDDHA ADAK, Ahmet Kamer Çivi, Albert Yau, Andrew Scherer, Anirban Mandal,
@@ -43,6 +49,7 @@ New Features
   to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
   export to pyarrow, polars or duckdb (:pull:`11338`).
   By `Jules Chéron <https://github.com/jules-ch>`_.
+
 - Added new plot method :py:meth:`DataArray.plot.lines` which allows creating line plots efficiently in
   a similar manner to :py:meth:`DataArray.plot.scatter`, also available for datasets. (:pull:`7173`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
