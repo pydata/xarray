@@ -680,10 +680,12 @@ class Numpy2StringDTypeCoder(VariableCoder):
         raise NotImplementedError
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if variable.dtype.kind == "T":
+        if (
+            variable.dtype.kind == "T"
+            and variable.encoding.get("dtype") != variable.dtype
+        ):
             return variable.astype(object)
-        else:
-            return variable
+        return variable
 
 
 class NativeEnumCoder(VariableCoder):
