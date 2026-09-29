@@ -149,7 +149,8 @@ class H5NetCDFStore(WritableCFDataStore):
         self.format = format or "NETCDF4"
         # todo: utilizing find_root_and_group seems a bit clunky
         #  making filename available on h5netcdf.Group seems better
-        self._filename = find_root_and_group(self.ds)[0].filename
+        with manager.acquire_context():
+            self._filename = find_root_and_group(self.ds)[0].filename
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
@@ -570,16 +571,17 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         store_entrypoint = StoreBackendEntrypoint()
 
-        ds = store_entrypoint.open_dataset(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
+        with store._manager.acquire_context():
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
 
         # only warn if phony_dims exist in file
         # remove together with the above check
@@ -686,26 +688,27 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
         groups_dict = {}
-        for path_group in _iter_nc_groups(store.ds, parent=parent):
-            group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
-            store_entrypoint = StoreBackendEntrypoint()
-            with close_on_error(group_store):
-                group_ds = store_entrypoint.open_dataset(
-                    group_store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
-                )
+        with manager.acquire_context():
+            for path_group in _iter_nc_groups(store.ds, parent=parent):
+                group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
+                store_entrypoint = StoreBackendEntrypoint()
+                with close_on_error(group_store):
+                    group_ds = store_entrypoint.open_dataset(
+                        group_store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
 
-            if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
-            else:
-                group_name = str(NodePath(path_group))
-            groups_dict[group_name] = group_ds
+                if group:
+                    group_name = str(NodePath(path_group).relative_to(parent))
+                else:
+                    group_name = str(NodePath(path_group))
+                groups_dict[group_name] = group_ds
 
         # only warn if phony_dims exist in file
         # remove together with the above check

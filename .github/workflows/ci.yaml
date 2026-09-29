@@ -64,6 +64,8 @@ jobs:
     name: "${{ matrix.os }} | ${{ matrix.pixi-env }}${{ matrix.pytest-addopts && format(' ({0})', matrix.pytest-addopts) || '' }}"
     runs-on: ${{ matrix.os }}
     needs: cache-pixi-lock
+    # The slowest jobs take ~20 minutes; a hung test should not burn the 6h default.
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash -l {0}
@@ -131,7 +133,9 @@ jobs:
           then
             if [[ "${{ matrix.pytest-addopts }}" == "flaky" ]] ;
             then
-              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
+              # The thread timeout method also kills tests stuck in C code or deadlocked
+              # threads, which the default signal method cannot interrupt.
+              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests --timeout-method=thread -W default" >> $GITHUB_ENV
             elif [[ "${{ matrix.pytest-addopts }}" == "mypy" ]] ;
             then
               echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV

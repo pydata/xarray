@@ -7106,6 +7106,16 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"'label' argument has to"):
             ds.diff("dim2", label="raise_me")  # type: ignore[arg-type]
 
+    def test_dataset_diff_exception_invalid_dim(self) -> None:
+        # GH7748: diff along a non-existent dimension should raise instead of
+        # silently returning the object unchanged.
+        ds = create_test_data(seed=1)
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim")
+        # the check runs before the ``n == 0`` short-circuit
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim", n=0)
+
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": -10}])
     def test_shift(self, fill_value) -> None:
         coords = {"bar": ("x", list("abc")), "x": [-4, 3, 2]}

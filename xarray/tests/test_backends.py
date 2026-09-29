@@ -104,6 +104,7 @@ from xarray.tests import (
     requires_zarr,
     requires_zarr_v3,
     requires_zarr_v3_async_oindex,
+    requires_zarr_v3_dtypes,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
@@ -4127,6 +4128,48 @@ class TestInstrumentedZarrStore:
             self.check_requests(expected, patches)
 
 
+@requires_zarr_v3_dtypes
+@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+def test_roundtrip_stringdtype_zarr_v3() -> None:
+    dtype = np.dtypes.StringDType()
+    data = np.array(["a", "bb", "ccc"], dtype=dtype)
+    expected = Dataset(
+        {
+            "data": ("dim", data.copy()),
+            "scalar": np.array("a", dtype=dtype),
+        },
+        coords={
+            "dim": ("dim", data.copy()),
+            "nondim": ("dim", data.copy()),
+        },
+    )
+    store = zarr.storage.MemoryStore({}, read_only=False)
+
+    with assert_no_warnings():
+        expected.to_zarr(store, zarr_format=3, consolidated=False)
+    actual = xr.open_zarr(store, consolidated=False).load()
+
+    for name in expected.variables:
+        assert zarr.open_array(store=store, path=str(name), mode="r").dtype == dtype
+        assert actual[name].dtype == dtype
+    assert_identical(expected, actual)
+
+
+@requires_zarr_v3_dtypes
+@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+def test_stringdtype_with_na_object_uses_the_compatibility_path() -> None:
+    dtype = np.dtypes.StringDType(na_object=np.nan)
+    data = np.array(["a", "bb", "ccc"], dtype=dtype)
+    expected = Dataset({"data": ("dim", data.copy())})
+    store = zarr.storage.MemoryStore({}, read_only=False)
+
+    expected.to_zarr(store, zarr_format=3, consolidated=False)
+    actual = xr.open_zarr(store, consolidated=False).load()
+
+    assert zarr.open_array(store=store, path="data", mode="r").dtype.kind != "T"
+    assert (actual["data"].values == data.astype(object)).all()
+
+
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
@@ -4707,6 +4750,37 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
                 )
             else:
                 assert len(loaded_ds.xindexes) == 0
+
+    def test_indexing_multiple_non_adjacent_indexers(self) -> None:
+        # GH10338: mixing slices, scalars, and a non-adjacent array indexer
+        # in .sel() should not shuffle dimension sizes when reading through
+        # the scipy backend from a closed file object.
+        data = xr.Dataset(
+            {
+                "x": (
+                    ("a", "b", "c", "d"),
+                    np.random.rand(3, 6, 5, 25),
+                )
+            },
+            coords={
+                "a": np.arange(3),
+                "b": ["u", "v", "w", "x", "y", "z"],
+                "c": np.arange(5),
+                "d": np.arange(0, 250, 10),
+            },
+        )
+        with self.roundtrip(data) as on_disk:
+            actual = on_disk["x"].sel(
+                b="w",
+                d=np.arange(0, 250, 20),
+            )
+            expected = data["x"].sel(
+                b="w",
+                d=np.arange(0, 250, 20),
+            )
+            assert actual.dims == expected.dims
+            assert actual.shape == expected.shape
+            assert_allclose(actual, expected)
 
 
 @requires_scipy
@@ -5461,12 +5535,14 @@ def tmp_store(request, tmp_path):
 
 @requires_dask
 @pytest.mark.filterwarnings("ignore:use make_scale(name) instead")
-@pytest.mark.skip(
-    reason="Flaky test which can cause the worker to crash (so don't xfail). Very open to contributions fixing this"
-)
 def test_open_mfdataset_manyfiles(
     readengine, nfiles, parallel, chunks, file_cache_maxsize
 ):
+    if readengine == "netcdf4" and parallel:
+        pytest.skip(
+            "netCDF4 reads metadata without holding the netCDF-C lock and can "
+            "crash the worker, see GH9779"
+        )
     randdata = np.random.randn(nfiles)
     original = Dataset({"foo": ("x", randdata)})
     # test standard open_mfdataset approach with too many files
@@ -5873,6 +5949,12 @@ class TestDask(DatasetIOBase):
         pass
 
     def test_roundtrip_coordinates_with_space(self) -> None:
+        pass
+
+    @pytest.mark.skip(
+        reason="nulls are only replaced when encoding, which does not happen here"
+    )
+    def test_roundtrip_stringdtype_nulls(self) -> None:
         pass
 
     def test_roundtrip_numpy_datetime_data(self) -> None:

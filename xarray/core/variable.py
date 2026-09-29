@@ -292,6 +292,10 @@ def as_compatible_data(
             and not isinstance(data.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES)
         ):
             pandas_data = data.array
+        elif isinstance(data, pd.Series) and isinstance(data.dtype, pd.DatetimeTZDtype):
+            # Series.values is deprecated for timezone-aware data; convert
+            # to UTC datetime64 explicitly instead
+            pandas_data = data.to_numpy(dtype=f"datetime64[{data.dtype.unit}]")  # type: ignore[assignment]
         else:
             pandas_data = data.values  # type: ignore[assignment]
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
