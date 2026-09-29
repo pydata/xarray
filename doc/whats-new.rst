@@ -53,6 +53,40 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fixed ``DataArray.str.replace`` replacing every occurrence instead of none when
+  ``n=0``. ``re.sub`` treats ``count=0`` as "replace all", so the regex code path
+  collapsed ``n=0`` onto ``n=-1``, while the ``regex=False`` path already handled
+  ``n=0`` correctly (:pull:`11545`).
+  By `Alexander Kropiunig <https://github.com/Kropiunig>`_.
+- ``min`` and ``max`` of object arrays with ``skipna=False`` now return ``NaN``
+  for slices containing missing values, instead of a result that depended on
+  the position of the missing value (:issue:`11501`, :pull:`#11627`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Avoid pandas' deprecated ``Series.values`` when creating a
+  :py:class:`~xarray.Variable` from a timezone-aware :py:class:`pandas.Series`
+  (:issue:`11501`, :pull:`#11627`).
+- Fix deadlocks when reading and writing netCDF files with dask at the same
+  time. Combined locks now always acquire their locks in the same order, which
+  previously depended on memory addresses, and a failed non-blocking acquire,
+  e.g. while garbage collecting an unclosed file, no longer leaves some of its
+  locks held forever (:pull:`11622`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix :py:func:`broadcast` failing on objects with an index spanning several
+  dimensions, such as a custom index set on both ``x`` and ``y`` (:pull:`11615`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
+- Fix errors and crashes in :py:func:`open_mfdataset` with ``parallel=True``
+  when opening more files than ``file_cache_maxsize``. Files evicted from the
+  file cache by another thread are no longer closed while they are still being
+  read (:pull:`11622`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
+  empty results when rolling an empty dimension, including with
+  ``roll_coords=True``, instead of raising ``ZeroDivisionError`` (:pull:`11613`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
+- Fixed :py:meth:`~xarray.indexes.RangeIndex.arange` producing a negative-sized
+  index instead of an empty index when the interval direction conflicts with
+  the sign of ``step`` (:pull:`11623`).
+  By `Ahmet Kamer Çivi <https://github.com/lowgame>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
@@ -126,6 +160,18 @@ Bug Fixes
   indexes aligned silently and the mismatched index was used to combine the data
   (:issue:`10714`).
   By `Kayvan Zahiri <https://github.com/Kayvan-Zahiri>`_.
+- :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` now raise a ``ValueError``
+  when ``dim`` is not an existing dimension, instead of silently returning the
+  object unchanged. This matches the behavior of other methods such as
+  :py:meth:`Dataset.differentiate` and reductions like ``mean`` (:issue:`7748`).
+  By `imam2004i <https://github.com/imam2004i>`_.
+- Fixed indexing with an empty indexer array. An empty indexer array is now always
+  turned into an empty slice for the backend, so that the in-memory part of the
+  decomposed indexer stays aligned with the axes of the loaded array. Previously the
+  ``h5netcdf`` and ``scipy`` engines raised ``IndexError`` for multi-dimensional
+  variables, the ``netCDF4`` engine silently returned a wrongly-sized array, and
+  ``pydap`` raised ``ValueError`` (:issue:`9075`, :issue:`11625`, :pull:`11626`).
+  By `Aniruddha Adak <https://github.com/aniruddhaadak80>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
@@ -136,6 +182,11 @@ Documentation
 
 - Migrated from nbsphinx/jupyter-execute to myst-nb (:issue:`7924`, :pull:`11456`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+
+- Added an example to the netCDF section of the IO user guide showing how to
+  check which dimensions are unlimited via ``Dataset.encoding``
+  (:issue:`7517`, :pull:`11618`).
+  By `Anirban Mandal <https://github.com/CoderAnirban71>`_.
 
 
 Internal Changes
@@ -393,6 +444,13 @@ Bug Fixes
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 - :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
   By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+- Warn when tuple-style ``DataArray`` coordinates are renamed by explicitly
+  provided dimension names (:issue:`11234`, :pull:`11292`).
+  By `Asish Kumar <https://github.com/officialasishkumar>`_.
+- Preserve non-grouped coordinates in fallback ``groupby`` reductions when grouping
+  by a non-leading dimension reorders the underlying variable dimensions
+  (:issue:`11188`, :pull:`11290`).
+  By `Sarthak <https://github.com/Sarthak160>`_.
 - Fix h5netcdf backend module detection and ros3 tests (:issue:`11243`, :pull:`11274`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
