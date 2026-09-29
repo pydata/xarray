@@ -43,6 +43,9 @@ New Features
   to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
   export to pyarrow, polars or duckdb (:pull:`11338`).
   By `Jules Chéron <https://github.com/jules-ch>`_.
+- Added new plot method :py:meth:`DataArray.plot.lines` which allows creating line plots efficiently in
+  a similar manner to :py:meth:`DataArray.plot.scatter`, also available for datasets. (:pull:`7173`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 - :py:func:`apply_ufunc` now accepts :py:class:`DataTree` inputs, applying
   ``func`` to the datasets at each node and returning trees with the same
