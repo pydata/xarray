@@ -1122,11 +1122,15 @@ class ZarrStore(AbstractWritableDataStore):
                 )
                 vars_with_encoding[vn] = variables[vn].copy(deep=False)
                 vars_with_encoding[vn].encoding = existing_vars[vn].encoding
-                if existing_vars[vn].dtype.kind == "M" and (
+                if existing_vars[vn].dtype.kind in "Mm" and (
                     "units" in existing_vars[vn].attrs
                 ):
-                    # Datetimes stored with a native datetime64 dtype are not
-                    # decoded, so recover their encoding from the stored attrs.
+                    # A variable stored with a native datetime64 or timedelta64
+                    # dtype is opened without any time encoding, so the branch
+                    # above copies nothing useful. Without the stored units the
+                    # appended values would be re-encoded with default units and
+                    # then read back as different times. Take the units,
+                    # calendar and dtype from the stored attrs instead.
                     encoding = vars_with_encoding[vn].encoding
                     for key in ("units", "calendar"):
                         if key in existing_vars[vn].attrs:

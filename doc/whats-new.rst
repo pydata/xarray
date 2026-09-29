@@ -61,9 +61,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
-- Appending to a Zarr store whose datetime variable is stored with a native
-  ``datetime64`` dtype now reuses the stored ``units`` and ``calendar``, instead
-  of writing the appended times with default units (:issue:`10639`).
+- Appending to a Zarr store whose time variable is stored with a native
+  ``datetime64`` or ``timedelta64`` dtype now reuses the stored ``units`` and
+  ``calendar``, instead of writing the appended values with default units
+  (:issue:`10639`).
 - Fix a bug in the ``scipy`` backend where mixing non-adjacent scalar and
   array indexers in :py:meth:`Dataset.sel` could silently transpose
   dimension sizes when reading from a closed file object
