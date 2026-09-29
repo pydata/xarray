@@ -8016,6 +8016,10 @@ class Dataset(
         --------
         Dataset.differentiate
         """
+        if dim not in self.dims:
+            raise ValueError(
+                f"Dimension {dim!r} not found in data dimensions {tuple(self.dims)}"
+            )
         if n == 0:
             return self
         if n < 0:

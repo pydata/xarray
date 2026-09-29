@@ -410,6 +410,38 @@ class TestDataArray:
         expected = DataArray([1, 2, 3], coords=[("x", [0, 1, 2])])
         assert_identical(expected, actual)
 
+    def test_constructor_tuple_coords_warn_when_dims_override_names(self) -> None:
+        data = np.random.random((2, 3))
+        coords = [("a", [0, 1]), ("b", [-1, -2, -3])]
+
+        with pytest.warns(
+            UserWarning,
+            match="Coordinate names in tuple-style coords are ignored",
+        ):
+            actual = DataArray(data, coords=coords, dims=["x", "y"])
+
+        expected = Dataset(
+            {None: (["x", "y"], data)},
+            coords={"x": [0, 1], "y": [-1, -2, -3]},
+        )[None]
+        assert_identical(expected, actual)
+
+    def test_constructor_tuple_coords_no_warning_when_names_match_dims(self) -> None:
+        data = np.random.random((2, 3))
+
+        with assert_no_warnings():
+            actual = DataArray(
+                data,
+                coords=[("x", [0, 1]), ("y", [-1, -2, -3])],
+                dims=["x", "y"],
+            )
+
+        expected = Dataset(
+            {None: (["x", "y"], data)},
+            coords={"x": [0, 1], "y": [-1, -2, -3]},
+        )[None]
+        assert_identical(expected, actual)
+
     def test_constructor_invalid(self) -> None:
         data = np.random.randn(3, 2)
 
@@ -4329,6 +4361,13 @@ class TestDataArray:
         expected = DataArray(np.diff(da.values, axis=1), dims=["x", "y"])
         assert_equal(expected, actual)
 
+    def test_dataarray_diff_exception_invalid_dim(self) -> None:
+        # GH7748: diff along a non-existent dimension should raise instead of
+        # silently returning the array unchanged.
+        da = DataArray(np.arange(10), dims=["a"])
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            da.diff("b")
+
     def test_coordinate_diff(self) -> None:
         # regression test for GH634
         arr = DataArray(range(0, 20, 2), dims=["lon"], coords=[range(10)])
@@ -5264,7 +5303,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result1, expected1)
 
         result2 = ar.min(skipna=False)
-        if nanindex is not None and ar.dtype.kind != "O":
+        if nanindex is not None:
             expected2 = ar.isel(x=nanindex, drop=True)
         else:
             expected2 = expected1
@@ -5301,7 +5340,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result1, expected1)
 
         result2 = ar.max(skipna=False)
-        if nanindex is not None and ar.dtype.kind != "O":
+        if nanindex is not None:
             expected2 = ar.isel(x=nanindex, drop=True)
         else:
             expected2 = expected1
@@ -5813,8 +5852,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result2, expected0)  # Default keeps attrs
 
         minindex = [
-            x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(minindex, nanindex, strict=True)
+            x if y is None else y for x, y in zip(minindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(minindex)
@@ -5863,8 +5901,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result2, expected0)  # Default keeps attrs
 
         maxindex = [
-            x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(maxindex, nanindex, strict=True)
+            x if y is None else y for x, y in zip(maxindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(maxindex)

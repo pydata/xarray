@@ -2837,7 +2837,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
             warnings.simplefilter("ignore")
             actual2: T_DuckArray = as_compatible_data(series)
 
-        np.testing.assert_array_equal(actual2, np.asarray(series.values))
+        np.testing.assert_array_equal(actual2, series.to_numpy(dtype="datetime64[s]"))
         assert actual2.dtype == np.dtype("datetime64[s]")
 
     def test_full_like(self) -> None:
