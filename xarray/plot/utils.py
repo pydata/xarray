@@ -2042,7 +2042,7 @@ def _line(
         and isinstance(edgecolors, np.ma.MaskedArray)
         and not np.ma.is_masked(orig_edgecolor)
     ):
-        edgecolors = edgecolors.data
+        edgecolors = edgecolors.data  # type: ignore[assignment,unused-ignore]
 
     # load default linestyle from rcParams
     if linestyle is None:
