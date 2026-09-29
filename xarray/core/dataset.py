@@ -1491,7 +1491,7 @@ class Dataset(
                             f" been successfully updated:\n{processed}"
                         ) from e
                     else:
-                        raise e
+                        raise
 
         elif utils.hashable(key):
             if isinstance(value, Dataset):
@@ -8016,6 +8016,10 @@ class Dataset(
         --------
         Dataset.differentiate
         """
+        if dim not in self.dims:
+            raise ValueError(
+                f"Dimension {dim!r} not found in data dimensions {tuple(self.dims)}"
+            )
         if n == 0:
             return self
         if n < 0:
@@ -9268,6 +9272,7 @@ class Dataset(
         """
         pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
 
+        coord_pad_mode: PadModeOptions
         if mode in ("edge", "reflect", "symmetric", "wrap"):
             coord_pad_mode = mode
             coord_pad_options = {

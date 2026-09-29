@@ -207,6 +207,16 @@ def acquire(lock, blocking=True):
         return lock.acquire(blocking)
 
 
+def _lock_identity(lock: Lock) -> int:
+    """Identity of the lock that is actually acquired.
+
+    Unpickled SerializableLocks are new objects wrapping the same threading.Lock.
+    """
+    if isinstance(lock, SerializableLock):
+        return id(lock.lock)
+    return id(lock)
+
+
 class CombinedLock(Lock):
     """A combination of multiple locks.
 
@@ -215,22 +225,38 @@ class CombinedLock(Lock):
     """
 
     def __init__(self, locks: Sequence[Lock]):
-        self.locks = tuple(set(locks))  # remove duplicates
+        # Remove duplicates and always acquire in one global order. If not careful,
+        # CombinedLocks sharing locks could acquire them in opposite orders and
+        # deadlock each other.
+        unique = {_lock_identity(lock): lock for lock in locks}
+        self.locks = tuple(lock for _, lock in sorted(unique.items()))
+
+    def __reduce__(self):
+        # The order depends on the ids of the locks, which differ between
+        # processes, so sort again when unpickling.
+        return (type(self), (list(self.locks),))
 
     def acquire(self, blocking=True):
-        return all(acquire(lock, blocking=blocking) for lock in self.locks)
+        acquired = []
+        for lock in self.locks:
+            if not acquire(lock, blocking=blocking):
+                # Release the locks we already hold, otherwise a failed
+                # non-blocking acquire leaves them locked forever.
+                for held in reversed(acquired):
+                    held.release()
+                return False
+            acquired.append(lock)
+        return True
 
     def release(self):
-        for lock in self.locks:
+        for lock in reversed(self.locks):
             lock.release()
 
     def __enter__(self):
-        for lock in self.locks:
-            lock.__enter__()
+        self.acquire()
 
     def __exit__(self, *args):
-        for lock in self.locks:
-            lock.__exit__(*args)
+        self.release()
 
     def locked(self):
         return any(lock.locked() for lock in self.locks)
@@ -276,7 +302,7 @@ def combine_locks(locks: Sequence[Lock]) -> Lock:
         return DummyLock()
 
 
-def ensure_lock(lock: Lock | None | Literal[False]) -> Lock:
+def ensure_lock(lock: Lock | Literal[False] | None) -> Lock:
     """Ensure that the given object is a lock."""
     if lock is None or lock is False:
         return DummyLock()

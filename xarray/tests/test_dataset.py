@@ -62,8 +62,6 @@ from xarray.tests import (
     create_test_data,
     dask_array_api,
     dask_array_type,
-    has_cftime,
-    has_dask,
     has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -639,13 +637,17 @@ class TestDataset:
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("level_1", "level_2")
         )
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            with pytest.warns(
-                FutureWarning,
-                match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
-            ):
-                Dataset({}, {"x": mindex, "y": mindex})
-                Dataset({}, {"x": mindex, "level_1": range(4)})
+        conflicting_coords: list[dict[str, Any]] = [
+            {"x": mindex, "y": mindex},
+            {"x": mindex, "level_1": range(4)},
+        ]
+        for coords in conflicting_coords:
+            with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+                with pytest.warns(
+                    FutureWarning,
+                    match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+                ):
+                    Dataset({}, coords)
 
     def test_constructor_no_default_index(self) -> None:
         # explicitly passing a Coordinates object skips the creation of default index
@@ -1148,9 +1150,9 @@ class TestDataset:
         "use_cftime,calendar",
         [
             (False, "standard"),
-            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "standard"),
-            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "noleap"),
-            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "360_day"),
+            pytest.param(True, "standard", marks=requires_cftime),
+            pytest.param(True, "noleap", marks=requires_cftime),
+            pytest.param(True, "360_day", marks=requires_cftime),
         ],
     )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
@@ -1325,7 +1327,7 @@ class TestDataset:
             "standard",
             pytest.param(
                 "gregorian",
-                marks=pytest.mark.skipif(not has_cftime, reason="needs cftime"),
+                marks=requires_cftime,
             ),
         ),
     )
@@ -6916,7 +6918,7 @@ class TestDataset:
         # test missing dimension, raise warning
         with pytest.warns(UserWarning):
             actual = ds.transpose(..., "not_a_dim", missing_dims="warn")
-            assert_identical(expected_ell, actual)
+        assert_identical(expected_ell, actual)
 
         assert "T" not in dir(ds)
 
@@ -7003,6 +7005,16 @@ class TestDataset:
         ds = create_test_data(seed=1)
         with pytest.raises(ValueError, match=r"'label' argument has to"):
             ds.diff("dim2", label="raise_me")  # type: ignore[arg-type]
+
+    def test_dataset_diff_exception_invalid_dim(self) -> None:
+        # GH7748: diff along a non-existent dimension should raise instead of
+        # silently returning the object unchanged.
+        ds = create_test_data(seed=1)
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim")
+        # the check runs before the ``n == 0`` short-circuit
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim", n=0)
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": -10}])
     def test_shift(self, fill_value) -> None:
@@ -7744,10 +7756,7 @@ class TestDataset:
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
     )
-    @pytest.mark.parametrize(
-        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
-    )
-    def test_query(self, backend, engine, parser) -> None:
+    def test_query(self, use_dask: bool, engine, parser) -> None:
         """Test querying a dataset."""
 
         # setup test data
@@ -7760,7 +7769,7 @@ class TestDataset:
         )
         e = np.arange(0, 10 * 20).reshape(10, 20)
         f = np.random.normal(0, 1, size=(10, 20, 30))
-        if backend == "numpy":
+        if not use_dask:
             ds = Dataset(
                 {
                     "a": ("x", a),
@@ -7779,7 +7788,7 @@ class TestDataset:
                     "f2": (("x", "y", "z"), f),
                 },
             )
-        elif backend == "dask":
+        else:
             da = dask_array_api
             ds = Dataset(
                 {
@@ -7914,7 +7923,7 @@ class TestDataset:
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin(test_elements, backend) -> None:
+def test_isin(test_elements, use_dask: bool) -> None:
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),
@@ -7923,7 +7932,7 @@ def test_isin(test_elements, backend) -> None:
         }
     ).astype("bool")
 
-    if backend == "dask":
+    if use_dask:
         expected = expected.chunk()
 
     result = Dataset(
@@ -8020,9 +8029,8 @@ def test_raise_no_warning_assert_close(ds) -> None:
     assert_allclose(ds, ds)
 
 
-@pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("edge_order", [1, 2])
-def test_differentiate(dask, edge_order) -> None:
+def test_differentiate(use_dask, edge_order) -> None:
     rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -8031,7 +8039,7 @@ def test_differentiate(dask, edge_order) -> None:
         dims=["x", "y"],
         coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8069,8 +8077,7 @@ def test_differentiate(dask, edge_order) -> None:
         da.differentiate("x2d")
 
 
-@pytest.mark.parametrize("dask", [True, False])
-def test_differentiate_datetime(dask) -> None:
+def test_differentiate_datetime(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = np.array(
         [
@@ -8091,7 +8098,7 @@ def test_differentiate_datetime(dask) -> None:
         dims=["x", "y"],
         coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     # along x
@@ -8119,8 +8126,7 @@ def test_differentiate_datetime(dask) -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("dask", [True, False])
-def test_differentiate_cftime(dask) -> None:
+def test_differentiate_cftime(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = xr.date_range("2000", periods=8, freq="2ME", use_cftime=True)
 
@@ -8130,7 +8136,7 @@ def test_differentiate_cftime(dask) -> None:
         dims=["time", "y"],
     )
 
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"time": 4})
 
     actual = da.differentiate("time", edge_order=1, datetime_unit="D")
@@ -8148,8 +8154,7 @@ def test_differentiate_cftime(dask) -> None:
     assert_allclose(actual, xr.ones_like(da["time"]).astype(float))
 
 
-@pytest.mark.parametrize("dask", [True, False])
-def test_integrate(dask) -> None:
+def test_integrate(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -8163,7 +8168,7 @@ def test_integrate(dask) -> None:
             "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8202,8 +8207,7 @@ def test_integrate(dask) -> None:
 
 
 @requires_scipy
-@pytest.mark.parametrize("dask", [True, False])
-def test_cumulative_integrate(dask) -> None:
+def test_cumulative_integrate(use_dask) -> None:
     rs = np.random.default_rng(43)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -8217,7 +8221,7 @@ def test_cumulative_integrate(dask) -> None:
             "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8263,12 +8267,10 @@ def test_cumulative_integrate(dask) -> None:
         da.cumulative_integrate("x2d")
 
 
-@pytest.mark.parametrize("dask", [True, False])
-@pytest.mark.parametrize("which_datetime", ["np", "cftime"])
-def test_trapezoid_datetime(dask, which_datetime) -> None:
+def test_trapezoid_datetime(use_dask, use_cftime) -> None:
     rs = np.random.default_rng(42)
     coord: ArrayLike
-    if which_datetime == "np":
+    if not use_cftime:
         coord = np.array(
             [
                 "2004-07-13",
@@ -8283,8 +8285,6 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
             dtype="datetime64",
         )
     else:
-        if not has_cftime:
-            pytest.skip("Test requires cftime.")
         coord = xr.date_range("2000", periods=8, freq="2D", use_cftime=True)
 
     da = xr.DataArray(
@@ -8293,7 +8293,7 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
         dims=["time", "y"],
     )
 
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"time": 4})
 
     actual = da.integrate("time", datetime_unit="D")

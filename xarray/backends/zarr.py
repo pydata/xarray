@@ -29,6 +29,7 @@ from xarray.core import indexing
 from xarray.core.treenode import NodePath
 from xarray.core.types import ZarrWriteModes
 from xarray.core.utils import (
+    Default,
     FrozenDict,
     HiddenKeyDict,
     _default,
@@ -1487,7 +1488,7 @@ class ZarrStore(AbstractWritableDataStore):
 def open_zarr(
     store,
     group=None,
-    chunks=_default,
+    chunks: int | dict | Literal["auto"] | Default | None = _default,
     decode_cf=True,
     mask_and_scale=True,
     decode_times=True,
