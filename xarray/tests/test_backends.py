@@ -7392,6 +7392,7 @@ class TestZarrRectilinearChunksRead:
             assert roundtrip["var"].data.chunks == expected_dask_chunks
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
+    @requires_dask
     def test_read_zero_length_dim(self, tmp_path) -> None:
         """zarr reports no chunk sizes at all along a zero-length dimension,
         which must not be passed to dask as an empty tuple."""
