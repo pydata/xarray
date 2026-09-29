@@ -103,8 +103,8 @@ from xarray.tests import (
     requires_scipy_or_netCDF4,
     requires_zarr,
     requires_zarr_v3,
-    requires_zarr_v3_dtypes,
     requires_zarr_v3_async_oindex,
+    requires_zarr_v3_dtypes,
 )
 from xarray.tests.test_coding_times import (
     _ALL_CALENDARS,
