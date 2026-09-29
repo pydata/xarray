@@ -25,6 +25,9 @@ New Features
   to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
   export to pyarrow, polars or duckdb.
   By `Jules Chéron <https://github.com/jules-ch>`_.
+- Added new plot method :py:meth:`DataArray.plot.lines` which allows creating line plots efficiently in
+  a similar manner to :py:meth:`DataArray.plot.scatter`, also available for datasets. (:pull:`7173`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 - The ``h5netcdf`` backend now reports compression and filter settings in the
   variable ``encoding`` consistently with the ``netCDF4`` backend (using
