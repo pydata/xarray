@@ -53,6 +53,11 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Fix a bug in the ``scipy`` backend where mixing non-adjacent scalar and
+  array indexers in :py:meth:`Dataset.sel` could silently transpose
+  dimension sizes when reading from a closed file object
+  (:issue:`10338`, :pull:`11638`).
+  By `Anirban Mandal <https://github.com/CoderAnirban71>`_.
 - Fixed ``DataArray.str.replace`` replacing every occurrence instead of none when
   ``n=0``. ``re.sub`` treats ``count=0`` as "replace all", so the regex code path
   collapsed ``n=0`` onto ``n=-1``, while the ``regex=False`` path already handled
