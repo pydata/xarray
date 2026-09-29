@@ -149,6 +149,11 @@ Bug Fixes
   file cache by another thread are no longer closed while they are still being
   read (:pull:`11622`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
+  memory maps being left open when reading with ``engine="scipy"`` and dask
+  while files get evicted from the file cache. Data read from memory mapped
+  files is now copied before the file can be closed by another thread.
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
   empty results when rolling an empty dimension, including with
   ``roll_coords=True``, instead of raising ``ZeroDivisionError`` (:pull:`11613`).
