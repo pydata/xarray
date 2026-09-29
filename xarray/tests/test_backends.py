@@ -4737,7 +4737,7 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
             )
             assert actual.dims == expected.dims
             assert actual.shape == expected.shape
-            assert_allclose(actual, expected)         
+            assert_allclose(actual, expected)
 
 
 @requires_scipy
