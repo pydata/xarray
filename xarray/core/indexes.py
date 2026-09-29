@@ -491,7 +491,12 @@ class Index:
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    if len(index) > 0 and index.dtype == "O" and not isinstance(index, CFTimeIndex):
+    if (
+        len(index) > 0
+        and index.dtype == "O"
+        and utils.module_available("cftime")
+        and not isinstance(index, CFTimeIndex)
+    ):
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
@@ -929,7 +934,7 @@ class PandasIndex(Index):
         return {self.dim: get_indexer_nd(self.index, other.index, method, tolerance)}
 
     def roll(self, shifts: Mapping[Any, int]) -> PandasIndex:
-        shift = shifts[self.dim] % self.index.shape[0]
+        shift = shifts[self.dim] % (self.index.shape[0] or 1)
 
         if shift != 0:
             new_pd_idx = self.index[-shift:].append(self.index[:-shift])
@@ -1038,7 +1043,9 @@ class PandasMultiIndex(PandasIndex):
         # default index level names
         names = []
         for i, idx in enumerate(self.index.levels):
-            name = idx.name or f"{dim}_level_{i}"
+            # only unnamed levels get a synthetic name: ``""``, ``False`` and
+            # ``0`` are all valid (if unusual) level names
+            name = idx.name if idx.name is not None else f"{dim}_level_{i}"
             if name == dim:
                 raise ValueError(
                     f"conflicting multi-index level name {name!r} with dimension {dim!r}"
@@ -1366,10 +1373,15 @@ class PandasMultiIndex(PandasIndex):
                 indexer = _query_slice(self.index, label, coord_name)
 
             elif isinstance(label, tuple):
-                if _is_nested_tuple(label):
+                if len(label) == self.index.nlevels:
+                    try:
+                        indexer = self.index.get_loc(label)
+                    except (KeyError, TypeError, pd.errors.InvalidIndexError):
+                        if not _is_nested_tuple(label):
+                            raise
+                        indexer = self.index.get_locs(label)
+                elif _is_nested_tuple(label):
                     indexer = self.index.get_locs(label)
-                elif len(label) == self.index.nlevels:
-                    indexer = self.index.get_loc(label)
                 else:
                     levels = [self.index.names[i] for i in range(len(label))]
                     indexer, new_index = self.index.get_loc_level(label, level=levels)
@@ -1515,15 +1527,23 @@ class CoordinateTransformIndex(Index):
         for name in self.transform.coord_names:
             # copy attributes, if any
             attrs: Mapping[Hashable, Any] | None
+            dims = self.transform.dims
 
             if variables is not None and name in variables:
                 var = variables[name]
                 attrs = var.attrs
+                # preserve a dims order that only differs from the transform's own
+                # by a transpose (e.g. set by a prior `Variable.transpose()` call),
+                # instead of silently reverting to the transform's original order.
+                # `CoordinateTransform.dims` is always `tuple[str, ...]`, so a
+                # `var.dims` matching it as a set is too.
+                if set(var.dims) == set(dims):
+                    dims = cast(tuple[str, ...], var.dims)
             else:
                 attrs = None
 
-            data = CoordinateTransformIndexingAdapter(self.transform, name)
-            new_variables[name] = Variable(self.transform.dims, data, attrs=attrs)
+            data = CoordinateTransformIndexingAdapter(self.transform, name, dims)
+            new_variables[name] = Variable(dims, data, attrs=attrs)
 
         return new_variables
 

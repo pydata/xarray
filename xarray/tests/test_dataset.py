@@ -22,7 +22,6 @@ try:
 except ImportError:
     from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
 
-import contextlib
 
 from pandas.errors import UndefinedVariableError
 
@@ -61,8 +60,8 @@ from xarray.tests import (
     assert_no_warnings,
     assert_writeable,
     create_test_data,
-    has_cftime,
-    has_dask,
+    dask_array_api,
+    dask_array_type,
     has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -77,9 +76,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import ScalarIndex, XYIndex
-
-with contextlib.suppress(ImportError):
-    import dask.array as da
 
 # from numpy version 2.0 trapz is deprecated and renamed to trapezoid
 # remove once numpy 2.0 is the oldest supported version
@@ -641,13 +637,17 @@ class TestDataset:
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("level_1", "level_2")
         )
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            with pytest.warns(
-                FutureWarning,
-                match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
-            ):
-                Dataset({}, {"x": mindex, "y": mindex})
-                Dataset({}, {"x": mindex, "level_1": range(4)})
+        conflicting_coords: list[dict[str, Any]] = [
+            {"x": mindex, "y": mindex},
+            {"x": mindex, "level_1": range(4)},
+        ]
+        for coords in conflicting_coords:
+            with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+                with pytest.warns(
+                    FutureWarning,
+                    match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+                ):
+                    Dataset({}, coords)
 
     def test_constructor_no_default_index(self) -> None:
         # explicitly passing a Coordinates object skips the creation of default index
@@ -1150,14 +1150,12 @@ class TestDataset:
         "use_cftime,calendar",
         [
             (False, "standard"),
-            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "standard"),
-            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "noleap"),
-            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "360_day"),
+            pytest.param(True, "standard", marks=requires_cftime),
+            pytest.param(True, "noleap", marks=requires_cftime),
+            pytest.param(True, "360_day", marks=requires_cftime),
         ],
     )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
-        import dask.array
-
         N = 365 + 365  # 2 years - 1 day
         time = xr.date_range(
             "2000-01-01", periods=N, freq="D", use_cftime=use_cftime, calendar=calendar
@@ -1165,8 +1163,18 @@ class TestDataset:
 
         ds = Dataset(
             {
-                "pr": ("time", dask.array.random.random((N), chunks=(20))),
-                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "pr": (
+                    "time",
+                    DataArray(np.random.random(N), dims="time")
+                    .chunk({"time": 20})
+                    .data,
+                ),
+                "pr2d": (
+                    ("x", "time"),
+                    DataArray(np.random.random((10, N)), dims=("x", "time"))
+                    .chunk({"time": 20})
+                    .data,
+                ),
                 "ones": ("time", np.ones((N,))),
             },
             coords={"time": time},
@@ -1262,7 +1270,7 @@ class TestDataset:
             if k in reblocked.dims:
                 assert isinstance(v.data, np.ndarray)
             else:
-                assert isinstance(v.data, da.Array)
+                assert isinstance(v.data, dask_array_type)
 
         expected_chunks: dict[Hashable, tuple[int, ...]] = {
             "dim1": (8,),
@@ -1319,15 +1327,13 @@ class TestDataset:
             "standard",
             pytest.param(
                 "gregorian",
-                marks=pytest.mark.skipif(not has_cftime, reason="needs cftime"),
+                marks=requires_cftime,
             ),
         ),
     )
     @pytest.mark.parametrize("freq", ["D", "W", "5ME", "YE"])
     @pytest.mark.parametrize("add_gap", [True, False])
     def test_chunk_by_frequency(self, freq: str, calendar: str, add_gap: bool) -> None:
-        import dask.array
-
         N = 365 * 2
         ΔN = 28  # noqa: PLC2401
         time = xr.date_range(
@@ -1342,8 +1348,18 @@ class TestDataset:
 
         ds = Dataset(
             {
-                "pr": ("time", dask.array.random.random((N), chunks=(20))),
-                "pr2d": (("x", "time"), dask.array.random.random((10, N), chunks=(20))),
+                "pr": (
+                    "time",
+                    DataArray(np.random.random(N), dims="time")
+                    .chunk({"time": 20})
+                    .data,
+                ),
+                "pr2d": (
+                    ("x", "time"),
+                    DataArray(np.random.random((10, N)), dims=("x", "time"))
+                    .chunk({"time": 20})
+                    .data,
+                ),
                 "ones": ("time", np.ones((N,))),
             },
             coords={"time": time},
@@ -1737,7 +1753,7 @@ class TestDataset:
         times = pd.date_range("2000-01-01", periods=3)
         assert_equal(data.isel(time=slice(3)), data.sel(time=times))
         assert_equal(
-            data.isel(time=slice(3)), data.sel(time=(data["time.dayofyear"] <= 3))
+            data.isel(time=slice(3)), data.sel(time=(data["time.day_of_year"] <= 3))
         )
 
         td = pd.to_timedelta(np.arange(3), unit="days")
@@ -4645,11 +4661,11 @@ class TestDataset:
         assert_array_equal(data["time.month"].values, index.month)
         assert_array_equal(data["time.season"].values, "DJF")
         # test virtual variable math
-        assert_array_equal(data["time.dayofyear"] + 1, 2 + np.arange(20))
-        assert_array_equal(np.sin(data["time.dayofyear"]), np.sin(1 + np.arange(20)))
+        assert_array_equal(data["time.day_of_year"] + 1, 2 + np.arange(20))
+        assert_array_equal(np.sin(data["time.day_of_year"]), np.sin(1 + np.arange(20)))
         # ensure they become coordinates
-        expected = Dataset({}, {"dayofyear": data["time.dayofyear"]})
-        actual = data[["time.dayofyear"]]
+        expected = Dataset({}, {"day_of_year": data["time.day_of_year"]})
+        actual = data[["time.day_of_year"]]
         assert_equal(expected, actual)
         # non-coordinate variables
         ds = Dataset({"t": ("x", pd.date_range("2000-01-01", periods=3))})
@@ -4672,9 +4688,10 @@ class TestDataset:
     def test_slice_virtual_variable(self) -> None:
         data = create_test_data()
         assert_equal(
-            data["time.dayofyear"][:10].variable, Variable(["time"], 1 + np.arange(10))
+            data["time.day_of_year"][:10].variable,
+            Variable(["time"], 1 + np.arange(10)),
         )
-        assert_equal(data["time.dayofyear"][0].variable, Variable([], 1))
+        assert_equal(data["time.day_of_year"][0].variable, Variable([], 1))
 
     def test_setitem(self) -> None:
         # assign a variable
@@ -5006,7 +5023,11 @@ class TestDataset:
         mx = xr.Coordinates.from_pandas_multiindex(
             pd.MultiIndex.from_tuples([(1, 2), (3, 4)], names=["d", "e"]), "z"
         )
-        ds = Dataset(dict(var1=var), coords=dict(y=idx, z=mx)).assign_attrs(a=1, b=2)
+        ds = (
+            Dataset(dict(var1=var), coords=dict(y=idx))
+            .assign_coords(mx)
+            .assign_attrs(a=1, b=2)
+        )
         assert ds.attrs != {}
         assert ds["var1"].attrs != {}
         assert ds["y"].attrs != {}
@@ -5422,6 +5443,100 @@ class TestDataset:
         idx = pd.MultiIndex.from_arrays([[0], [1]], names=["x", "y"])
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
+
+    @requires_sparse
+    def test_to_dataframe_sparse_crash_regression(self) -> None:
+        # `Dataset.to_dataframe()` used to unconditionally call `.values` on
+        # every variable, which crashes for a sparse.COO-backed variable
+        # (sparse arrays refuse to densify implicitly) instead of raising a
+        # clear error or, preferably, working.
+        import sparse
+
+        ds = Dataset(
+            {"u": (("x", "y"), sparse.COO.from_numpy(np.array([[0, 1], [0, 0]])))},
+            coords={"x": ["a", "b"], "y": ["c", "d"]},
+        )
+        ds.to_dataframe()  # should not raise
+
+    @requires_sparse
+    def test_to_dataframe_sparse(self) -> None:
+        import sparse
+
+        x = ["a", "b", "c"]
+        y = ["w", "x", "y", "z"]
+
+        # Two sparse variables with different, non-overlapping-except-once
+        # sparsity patterns, plus one fully dense variable, so the test
+        # covers: per-column fill values, union-of-coordinates alignment,
+        # and mixing sparse with dense columns in one DataFrame.
+        dense_u = np.array([[0, 0, 3, 0], [0, 0, 0, 9], [7, 0, 0, 0]])
+        dense_v = np.array([[0, 11, 0, 0], [0, 0, 0, 0], [0, 0, 0, 22]])
+        dense_w = np.arange(12).reshape(3, 4)
+
+        ds = Dataset(
+            {
+                "u": (("x", "y"), sparse.COO.from_numpy(dense_u)),
+                "v": (("x", "y"), sparse.COO.from_numpy(dense_v)),
+                "w": (("x", "y"), dense_w),
+            },
+            coords={"x": x, "y": y},
+        )
+        ds_dense = Dataset(
+            {
+                "u": (("x", "y"), dense_u),
+                "v": (("x", "y"), dense_v),
+                "w": (("x", "y"), dense_w),
+            },
+            coords={"x": x, "y": y},
+        )
+
+        actual = ds.to_dataframe()
+        expected_full = ds_dense.to_dataframe()
+
+        # Rows where every sparse column is at its fill value are dropped
+        # rather than materialized - the whole point of not densifying.
+        stored = (dense_u.reshape(-1) != 0) | (dense_v.reshape(-1) != 0)
+        assert len(actual) == stored.sum()
+        assert expected_full.loc[actual.index].equals(actual)
+
+        # dim_order permutation: sparse columns must line up on the same
+        # (relabeled) index as everything else, not just their native order.
+        actual_t = ds.to_dataframe(dim_order=["y", "x"])
+        expected_t = ds_dense.to_dataframe(dim_order=["y", "x"])
+        assert expected_t.loc[actual_t.index].equals(actual_t)
+        assert len(actual_t) == stored.sum()
+
+    @requires_sparse
+    def test_to_dataframe_sparse_disjoint_union(self) -> None:
+        # Regression test for a question raised in review of gh-11528: two
+        # sparse columns with zero overlapping stored positions, together
+        # covering every cell - the union of their stored coordinates is the
+        # full Cartesian product, so this exercises the case where indexing
+        # by that union saves no memory over just densifying, while still
+        # having to remain correct (not raise, not drop or misplace rows).
+        import sparse
+
+        dense_u = np.array([[1, 0, 2], [0, 3, 0]])
+        dense_v = np.array([[0, 4, 0], [5, 0, 6]])
+        assert not np.any((dense_u != 0) & (dense_v != 0))  # disjoint
+        assert np.all((dense_u != 0) | (dense_v != 0))  # covers every cell
+
+        ds = Dataset(
+            {
+                "u": (("x", "y"), sparse.COO.from_numpy(dense_u)),
+                "v": (("x", "y"), sparse.COO.from_numpy(dense_v)),
+            },
+            coords={"x": ["a", "b"], "y": ["p", "q", "r"]},
+        )
+        ds_dense = Dataset(
+            {"u": (("x", "y"), dense_u), "v": (("x", "y"), dense_v)},
+            coords={"x": ["a", "b"], "y": ["p", "q", "r"]},
+        )
+
+        actual = ds.to_dataframe()
+        expected = ds_dense.to_dataframe()
+        assert len(actual) == dense_u.size
+        assert expected.loc[actual.index].equals(actual)
 
     def test_from_dataframe_categorical_dtype_index(self) -> None:
         cat = pd.CategoricalIndex(list("abcd"))
@@ -6503,12 +6618,6 @@ class TestDataset:
         ):
             x.rank("invalid_dim")
 
-    def test_rank_use_bottleneck(self) -> None:
-        ds = Dataset({"a": ("x", [0, np.nan, 2]), "b": ("y", [4, 6, 3, 4])})
-        with xr.set_options(use_bottleneck=False):
-            with pytest.raises(RuntimeError):
-                ds.rank("x")
-
     def test_count(self) -> None:
         ds = Dataset({"x": ("a", [np.nan, 1]), "y": 0, "z": np.nan})
         expected = Dataset({"x": 1, "y": 1, "z": 0})
@@ -6738,10 +6847,11 @@ class TestDataset:
             ds += ds[["bar"]]
 
         # verify we can rollback in-place operations if something goes wrong
-        # nb. inplace datetime64 math actually will work with an integer array
-        # but not floats thanks to numpy's inconsistent handling
-        other = DataArray(np.datetime64("2000-01-01"), coords={"c": 2})
+        # (datetime64 math works with timedelta64 values stored in "bar", but
+        # not floats stored in "foo").
+        other = DataArray(np.datetime64("2000-01-01", "ns"), coords={"c": 2})
         actual = ds.copy(deep=True)
+        actual["bar"] = actual.bar.astype("timedelta64[ns]")
         with pytest.raises(TypeError):
             actual += other
         assert_identical(actual, ds)
@@ -6808,7 +6918,7 @@ class TestDataset:
         # test missing dimension, raise warning
         with pytest.warns(UserWarning):
             actual = ds.transpose(..., "not_a_dim", missing_dims="warn")
-            assert_identical(expected_ell, actual)
+        assert_identical(expected_ell, actual)
 
         assert "T" not in dir(ds)
 
@@ -6895,6 +7005,16 @@ class TestDataset:
         ds = create_test_data(seed=1)
         with pytest.raises(ValueError, match=r"'label' argument has to"):
             ds.diff("dim2", label="raise_me")  # type: ignore[arg-type]
+
+    def test_dataset_diff_exception_invalid_dim(self) -> None:
+        # GH7748: diff along a non-existent dimension should raise instead of
+        # silently returning the object unchanged.
+        ds = create_test_data(seed=1)
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim")
+        # the check runs before the ``n == 0`` short-circuit
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim", n=0)
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": -10}])
     def test_shift(self, fill_value) -> None:
@@ -7636,10 +7756,7 @@ class TestDataset:
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
     )
-    @pytest.mark.parametrize(
-        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
-    )
-    def test_query(self, backend, engine, parser) -> None:
+    def test_query(self, use_dask: bool, engine, parser) -> None:
         """Test querying a dataset."""
 
         # setup test data
@@ -7652,7 +7769,7 @@ class TestDataset:
         )
         e = np.arange(0, 10 * 20).reshape(10, 20)
         f = np.random.normal(0, 1, size=(10, 20, 30))
-        if backend == "numpy":
+        if not use_dask:
             ds = Dataset(
                 {
                     "a": ("x", a),
@@ -7671,7 +7788,8 @@ class TestDataset:
                     "f2": (("x", "y", "z"), f),
                 },
             )
-        elif backend == "dask":
+        else:
+            da = dask_array_api
             ds = Dataset(
                 {
                     "a": ("x", da.from_array(a, chunks=3)),
@@ -7679,7 +7797,10 @@ class TestDataset:
                     "c": ("y", da.from_array(c, chunks=7)),
                     "d": ("z", da.from_array(d, chunks=12)),
                     "e": (("x", "y"), da.from_array(e, chunks=(3, 7))),
-                    "f": (("x", "y", "z"), da.from_array(f, chunks=(3, 7, 12))),
+                    "f": (
+                        ("x", "y", "z"),
+                        da.from_array(f, chunks=(3, 7, 12)),
+                    ),
                 },
                 coords={
                     "a2": ("x", a),
@@ -7802,7 +7923,7 @@ class TestDataset:
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin(test_elements, backend) -> None:
+def test_isin(test_elements, use_dask: bool) -> None:
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),
@@ -7811,7 +7932,7 @@ def test_isin(test_elements, backend) -> None:
         }
     ).astype("bool")
 
-    if backend == "dask":
+    if use_dask:
         expected = expected.chunk()
 
     result = Dataset(
@@ -7908,9 +8029,8 @@ def test_raise_no_warning_assert_close(ds) -> None:
     assert_allclose(ds, ds)
 
 
-@pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("edge_order", [1, 2])
-def test_differentiate(dask, edge_order) -> None:
+def test_differentiate(use_dask, edge_order) -> None:
     rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -7919,7 +8039,7 @@ def test_differentiate(dask, edge_order) -> None:
         dims=["x", "y"],
         coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -7957,8 +8077,7 @@ def test_differentiate(dask, edge_order) -> None:
         da.differentiate("x2d")
 
 
-@pytest.mark.parametrize("dask", [True, False])
-def test_differentiate_datetime(dask) -> None:
+def test_differentiate_datetime(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = np.array(
         [
@@ -7979,7 +8098,7 @@ def test_differentiate_datetime(dask) -> None:
         dims=["x", "y"],
         coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     # along x
@@ -8007,8 +8126,7 @@ def test_differentiate_datetime(dask) -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("dask", [True, False])
-def test_differentiate_cftime(dask) -> None:
+def test_differentiate_cftime(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = xr.date_range("2000", periods=8, freq="2ME", use_cftime=True)
 
@@ -8018,7 +8136,7 @@ def test_differentiate_cftime(dask) -> None:
         dims=["time", "y"],
     )
 
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"time": 4})
 
     actual = da.differentiate("time", edge_order=1, datetime_unit="D")
@@ -8036,8 +8154,7 @@ def test_differentiate_cftime(dask) -> None:
     assert_allclose(actual, xr.ones_like(da["time"]).astype(float))
 
 
-@pytest.mark.parametrize("dask", [True, False])
-def test_integrate(dask) -> None:
+def test_integrate(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -8051,7 +8168,7 @@ def test_integrate(dask) -> None:
             "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8090,8 +8207,7 @@ def test_integrate(dask) -> None:
 
 
 @requires_scipy
-@pytest.mark.parametrize("dask", [True, False])
-def test_cumulative_integrate(dask) -> None:
+def test_cumulative_integrate(use_dask) -> None:
     rs = np.random.default_rng(43)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -8105,7 +8221,7 @@ def test_cumulative_integrate(dask) -> None:
             "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8151,12 +8267,10 @@ def test_cumulative_integrate(dask) -> None:
         da.cumulative_integrate("x2d")
 
 
-@pytest.mark.parametrize("dask", [True, False])
-@pytest.mark.parametrize("which_datetime", ["np", "cftime"])
-def test_trapezoid_datetime(dask, which_datetime) -> None:
+def test_trapezoid_datetime(use_dask, use_cftime) -> None:
     rs = np.random.default_rng(42)
     coord: ArrayLike
-    if which_datetime == "np":
+    if not use_cftime:
         coord = np.array(
             [
                 "2004-07-13",
@@ -8171,8 +8285,6 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
             dtype="datetime64",
         )
     else:
-        if not has_cftime:
-            pytest.skip("Test requires cftime.")
         coord = xr.date_range("2000", periods=8, freq="2D", use_cftime=True)
 
     da = xr.DataArray(
@@ -8181,7 +8293,7 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
         dims=["time", "y"],
     )
 
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"time": 4})
 
     actual = da.integrate("time", datetime_unit="D")

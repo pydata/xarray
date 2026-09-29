@@ -457,7 +457,7 @@ class DataWithCoords(AttrAccessMixin):
         numpy.squeeze
         """
         dims = get_squeeze_dims(self, dim, axis)
-        return self.isel(drop=drop, **dict.fromkeys(dims, 0))
+        return self.isel(dict.fromkeys(dims, 0), drop=drop)
 
     def clip(
         self,

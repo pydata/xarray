@@ -127,6 +127,7 @@ def as_variable(
         The newly created variable.
 
     """
+    from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
 
     # TODO: consider extending this method to automatically handle Iris and
@@ -160,6 +161,12 @@ def as_variable(
         obj = Variable([], obj)
     elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
         obj = Variable(obj.name, obj)
+    elif isinstance(obj, Coordinates):
+        raise TypeError(
+            f"Variable {name!r}: Using a Coordinates object to construct a variable is "
+            "ambiguous, please pass the Coordinates object directly instead, e.g., "
+            "`obj.assign_coords(coords)` instead of `obj.assign_coords({name: coords})`."
+        )
     elif isinstance(obj, set | dict):
         raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
     elif name is not None:
@@ -285,6 +292,10 @@ def as_compatible_data(
             and not isinstance(data.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES)
         ):
             pandas_data = data.array
+        elif isinstance(data, pd.Series) and isinstance(data.dtype, pd.DatetimeTZDtype):
+            # Series.values is deprecated for timezone-aware data; convert
+            # to UTC datetime64 explicitly instead
+            pandas_data = data.to_numpy(dtype=f"datetime64[{data.dtype.unit}]")  # type: ignore[assignment]
         else:
             pandas_data = data.values  # type: ignore[assignment]
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
@@ -387,7 +398,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         attrs : dict_like or None, optional
             Attributes to assign to the new variable. If None (default), an
             empty attribute dictionary is initialized.
-            (see FAQ, :ref:`approach to metadata`)
+            (see FAQ, :ref:`approach-to-metadata`)
         encoding : dict_like or None, optional
             Dictionary specifying how to encode this array's data into a
             serialized format like netCDF4. Currently used keys (for netCDF)
@@ -983,7 +994,10 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
-            data = copy.copy(self._data)
+            # Only copy data when it is actually being changed.
+            # Many callers (e.g. drop_encoding) only change encoding/attrs,
+            # and a full data copy is expensive for large arrays.
+            data = self._data
         if attrs is _default:
             attrs = copy.copy(self._attrs)
         if encoding is _default:
@@ -1346,7 +1360,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _roll_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
 
-        count %= self.shape[axis]
+        count %= self.shape[axis] or 1
         if count != 0:
             indices = [slice(-count, None), slice(None, -count)]
         else:
@@ -2090,11 +2104,8 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         Dataset.rank, DataArray.rank
         """
         # This could / should arguably be implemented at the DataArray & Dataset level
-        if not OPTIONS["use_bottleneck"]:
-            raise RuntimeError(
-                "rank requires bottleneck to be enabled."
-                " Call `xr.set_options(use_bottleneck=True)` to enable it."
-            )
+        if not module_available("bottleneck"):
+            raise ImportError("rank requires bottleneck to be installed.")
 
         import bottleneck as bn
 

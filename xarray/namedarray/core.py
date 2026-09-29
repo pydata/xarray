@@ -601,6 +601,17 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
             # raise NotImplementedError("Method requires self.data to be a dask array")
             return None
 
+    def __dask_exprs__(self) -> Sequence[Any] | None:
+        try:
+            from dask._expr import Expr
+        except ImportError:
+            return None
+
+        expr = getattr(self._data, "expr", None)
+        if isinstance(expr, Expr):
+            return [expr]
+        return None
+
     def __dask_keys__(self) -> NestedKeys:
         if is_duck_dask_array(self._data):
             return self._data.__dask_keys__()
