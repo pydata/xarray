@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 from collections.abc import (
     Callable,
@@ -34,7 +35,7 @@ from xarray.core.treenode import group_subtrees
 from xarray.core.types import ReadBuffer
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
-from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.parallelcompat import guess_chunkmanager, list_chunkmanagers
 from xarray.namedarray.utils import _get_chunk
 from xarray.structure.chunks import _maybe_chunk
 from xarray.structure.combine import (
@@ -102,7 +103,8 @@ def _get_mtime(filename_or_obj):
         path = None
 
     if path and not is_remote_uri(path):
-        mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
+        with contextlib.suppress(OSError):
+            mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
 
     return mtime
 
@@ -232,7 +234,11 @@ def _chunk_ds(
     chunkmanager = guess_chunkmanager(chunked_array_type)
 
     # TODO refactor to move this dask-specific logic inside the DaskManager class
-    if isinstance(chunkmanager, DaskManager):
+    is_dask_chunkmanager = isinstance(chunkmanager, DaskManager) or any(
+        name == "dask" and manager is chunkmanager
+        for name, manager in list_chunkmanagers().items()
+    )
+    if is_dask_chunkmanager:
         from dask.base import tokenize
 
         mtime = _get_mtime(filename_or_obj)
@@ -265,6 +271,7 @@ def _chunk_ds(
             inline_array=inline_array,
             chunked_array_type=chunkmanager,
             from_array_kwargs=from_array_kwargs.copy(),
+            just_use_token=True,
         )
     return backend_ds._replace(variables)
 
@@ -435,7 +442,7 @@ def open_dataset(
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays or when large arrays are sliced before computation.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -536,7 +543,7 @@ def open_dataset(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -567,6 +574,12 @@ def open_dataset(
 
     Notes
     -----
+    For files with multiple groups, ``open_dataset`` reads only the selected
+    group (the root group by default). Use ``open_datatree`` to load the groups
+    into a tree, or ``open_groups`` to load each group into a dictionary. To
+    open one non-root group with ``open_dataset``, pass its path with the
+    ``group`` keyword argument.
+
     ``open_dataset`` opens the file with read-only access. When you modify
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
@@ -679,7 +692,7 @@ def open_dataarray(
         - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -772,7 +785,7 @@ def open_dataarray(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce the underlying data array to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -805,7 +818,7 @@ def open_dataarray(
     All parameters are passed directly to `xarray.open_dataset`. See that
     documentation for further details.
 
-    See also
+    See Also
     --------
     open_dataset
     """
@@ -905,7 +918,7 @@ def open_datatree(
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -1006,7 +1019,7 @@ def open_datatree(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -1151,7 +1164,7 @@ def open_groups(
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -1250,7 +1263,7 @@ def open_groups(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -1387,7 +1400,7 @@ def open_mfdataset(
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine = None,
     data_vars: (
-        Literal["all", "minimal", "different"] | None | list[str] | CombineKwargDefault
+        Literal["all", "minimal", "different"] | list[str] | CombineKwargDefault | None
     ) = _DATA_VARS_DEFAULT,
     coords=_COORDS_DEFAULT,
     combine: Literal["by_coords", "nested"] = "by_coords",
@@ -1463,7 +1476,7 @@ def open_mfdataset(
         "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
-    data_vars : {"minimal", "different", "all"} or list of str, default: "all"
+    data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
             appears are included.
@@ -1473,9 +1486,12 @@ def open_mfdataset(
             load the data payload of data variables into memory if they are not
             already loaded.
           * "all": All data variables will be concatenated.
+          * None: Means ``"all"`` if ``concat_dim`` is not present in any of
+            the ``objs``, and ``"minimal"`` if ``concat_dim`` is present
+            in any of ``objs``.
           * list of str: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
-    coords : {"minimal", "different", "all"} or list of str, optional
+    coords : {"minimal", "different", "all"} or list of str, default: "different"
         These coordinate variables will be concatenated together:
          * "minimal": Only coordinates in which the dimension already appears
            are included.

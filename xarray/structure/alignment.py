@@ -415,11 +415,22 @@ class Aligner(Generic[T_Alignable]):
                 if name in new_indexes:
                     other_idx = new_indexes[name]
                     other_var = new_index_vars[name]
-                    raise AlignmentError(
-                        f"cannot align objects on coordinate {name!r} because of conflicting indexes\n"
-                        f"first index: {idx!r}\nsecond index: {other_idx!r}\n"
-                        f"first variable: {var!r}\nsecond variable: {other_var!r}\n"
-                    )
+                    # `idx` and `other_idx` may be genuinely equal (e.g., a
+                    # multi-dimensional CoordinateTransformIndex covering the same
+                    # grid) yet fall into different `MatchingIndexKey` groups because
+                    # their associated coordinate variables have a different `dims`
+                    # order (e.g. one object was transposed). Only raise once we know
+                    # they are not actually equal.
+                    if not indexes_all_equal(
+                        [(idx, {name: var}), (other_idx, {name: other_var})],
+                        self.exclude_dims,
+                    ):
+                        raise AlignmentError(
+                            f"cannot align objects on coordinate {name!r} because of conflicting indexes\n"
+                            f"first index: {idx!r}\nsecond index: {other_idx!r}\n"
+                            f"first variable: {var!r}\nsecond variable: {other_var!r}\n"
+                        )
+                    continue
                 new_indexes[name] = idx
                 new_index_vars[name] = var
 
@@ -1125,10 +1136,12 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
     dims_map = {}
     for arg in args:
         for dim in arg.dims:
-            if dim not in common_coords and dim not in exclude:
+            if dim in exclude:
+                continue
+            if dim not in dims_map:
                 dims_map[dim] = arg.sizes[dim]
-                if dim in arg._indexes:
-                    common_coords.update(arg.xindexes.get_all_coords(dim))
+            if dim in arg._indexes and dim not in common_coords:
+                common_coords.update(arg.xindexes.get_all_coords(dim))
 
     return dims_map, common_coords
 

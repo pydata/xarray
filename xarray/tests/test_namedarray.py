@@ -19,7 +19,7 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray.utils import fake_target_chunksize
-from xarray.tests import requires_cftime
+from xarray.tests import requires_array_api_strict, requires_cftime
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -239,14 +239,14 @@ class TestNamedArray(NamedArraySubclassobjects):
 
     def test_from_array_with_masked_array(self) -> None:
         masked_array: np.ndarray[Any, np.dtype[np.generic]]
-        masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])  # type: ignore[no-untyped-call]
+        masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])
         with pytest.raises(NotImplementedError):
             from_array(("x",), masked_array)
 
     def test_from_array_with_0d_object(self) -> None:
         data = np.empty((), dtype=object)
         data[()] = (10, 12, 12)
-        narr = from_array((), data)
+        narr: NamedArray[Any, Any] = from_array((), data)
         np.array_equal(np.asarray(narr.data), data)
 
     # TODO: Make xr.core.indexing.ExplicitlyIndexed pass as a subclass of_arrayfunction_or_api
@@ -376,20 +376,23 @@ class TestNamedArray(NamedArraySubclassobjects):
         check_duck_array_typevar(numpy_a)
 
         masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
-        masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))  # type: ignore[no-untyped-call]
-        check_duck_array_typevar(masked_a)  # type: ignore[arg-type]  # MaskedArray not in duckarray union
+        masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))
+        check_duck_array_typevar(masked_a)
 
         custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]]
         custom_a = CustomArrayIndexable(numpy_a)
         check_duck_array_typevar(custom_a)
 
+    @requires_array_api_strict
     def test_duck_array_class_array_api(self) -> None:
         # Test numpy's array api:
-        nxp = pytest.importorskip("array_api_strict", minversion="1.0")
+        import array_api_strict as nxp
 
         # TODO: nxp doesn't use dtype typevars, so can only use Any for the moment:
-        arrayapi_a: duckarray[Any, Any]  #  duckarray[Any, np.dtype[np.int64]]
-        arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
+        arrayapi_a = cast(
+            "duckarray[Any, Any]",  #  duckarray[Any, np.dtype[np.int64]]
+            nxp.asarray([2.1, 4], dtype=nxp.int64),
+        )
         check_duck_array_typevar(arrayapi_a)
 
     def test_new_namedarray(self) -> None:

@@ -97,7 +97,7 @@ def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
 
 
 def to_numpy(
-    data: duckarray[Any, Any], **kwargs: dict[str, Any]
+    data: duckarray[Any, Any], **kwargs: Any
 ) -> np.ndarray[Any, np.dtype[Any]]:
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -144,7 +144,7 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
     elif is_duck_array(data):
         return data
     else:
-        return np.asarray(data)  # type: ignore[return-value]
+        return np.asarray(data)  # type: ignore[return-value, unused-ignore]
 
 
 async def async_to_duck_array(

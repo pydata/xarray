@@ -67,8 +67,8 @@ def _get_virtual_variable(
         dim_sizes = {}
 
     if key in dim_sizes:
-        data = pd.Index(range(dim_sizes[key]), name=key)
-        variable = IndexVariable((key,), data)
+        data = pd.RangeIndex(dim_sizes[key], name=key)
+        variable = IndexVariable((key,), data, fastpath=True)
         return key, key, variable
 
     if not isinstance(key, str):

@@ -125,11 +125,13 @@ def _apply_mask(
     dtype: np.typing.DTypeLike | None,
 ) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
-    data = np.asarray(data, dtype=dtype)
-    condition = False
-    for fv in encoded_fill_values:
-        condition |= data == fv
-    return np.where(condition, decoded_fill_value, data)
+    data = np.array(data, dtype=dtype, copy=True)
+    if encoded_fill_values:
+        condition = False
+        for fv in encoded_fill_values:
+            condition |= data == fv
+        data[condition] = decoded_fill_value
+    return data
 
 
 def _is_time_like(units):
@@ -633,10 +635,14 @@ class NonStringCoder(VariableCoder):
             dtype = np.dtype(encoding.pop("dtype"))
             if dtype != variable.dtype:
                 if np.issubdtype(dtype, np.integer):
+                    # CF coordinate variables are not allowed to have missing values, so
+                    # they do not need a _FillValue. For simplicity we don't warn with 1D dimension coordinates.
+                    # http://cfconventions.org/cf-conventions/cf-conventions.html#missing-data
                     if (
                         np.issubdtype(variable.dtype, np.floating)
                         and "_FillValue" not in variable.attrs
                         and "missing_value" not in variable.attrs
+                        and dims != (name,)
                     ):
                         warnings.warn(
                             f"saving variable {name} with floating "

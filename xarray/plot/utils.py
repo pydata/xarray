@@ -194,6 +194,15 @@ def _determine_cmap_params(
     else:
         mpl = attempt_import("matplotlib")
 
+    if plot_data.dtype.kind == "m":
+        unit, _ = np.datetime_data(plot_data.dtype)
+        zero = np.timedelta64(0, unit)
+    elif plot_data.dtype.kind == "M":
+        unit, _ = np.datetime_data(plot_data.dtype)
+        zero = np.datetime64(0, unit)
+    else:
+        zero = 0.0
+
     if isinstance(levels, Iterable):
         levels = sorted(levels)
 
@@ -202,7 +211,7 @@ def _determine_cmap_params(
     # Handle all-NaN input data gracefully
     if calc_data.size == 0:
         # Arbitrary default for when all values are NaN
-        calc_data = np.array(0.0)
+        calc_data = np.array(zero)
 
     # Setting center=False prevents a divergent cmap
     possibly_divergent = center is not False
@@ -210,7 +219,7 @@ def _determine_cmap_params(
     # Set center to 0 so math below makes sense but remember its state
     center_is_none = False
     if center is None:
-        center = 0
+        center = zero
         center_is_none = True
 
     # Setting both vmin and vmax prevents a divergent cmap
@@ -245,10 +254,10 @@ def _determine_cmap_params(
 
     if possibly_divergent:
         levels_are_divergent = (
-            isinstance(levels, Iterable) and levels[0] * levels[-1] < 0
+            isinstance(levels, Iterable) and levels[0] * levels[-1] < zero
         )
         # kwargs not specific about divergent or not: infer defaults from data
-        divergent = (vmin < 0 < vmax) or not center_is_none or levels_are_divergent
+        divergent = (vmin < zero < vmax) or not center_is_none or levels_are_divergent
     else:
         divergent = False
 
@@ -514,7 +523,7 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
 
 
 def _get_units_from_attrs(da: DataArray) -> str:
-    """Extracts and formats the unit/units from a attributes."""
+    """Extracts and formats the unit/units from their attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
     if isinstance(da.data, pint_array_type):
@@ -546,9 +555,12 @@ def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
 
     # Treat `name` differently if it's a latex sequence
     if name.startswith("$") and (name.count("$") % 2 == 0):
-        return "$\n$".join(
-            textwrap.wrap(name + extra + units, 60, break_long_words=False)
-        )
+        # Don't wrap LaTeX strings — textwrap can break them at positions
+        # that produce invalid LaTeX (e.g., splitting between adjacent
+        # $...$ blocks creates "$$" sequences). The rendered width of LaTeX
+        # is typically much shorter than the source string length, so
+        # wrapping based on character count is misleading anyway.
+        return name + extra + units
     else:
         return "\n".join(textwrap.wrap(name + extra + units, 30))
 
@@ -578,7 +590,7 @@ def _interval_to_double_bound_points(
     xarray: Iterable[pd.Interval], yarray: Iterable
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Helper function to deal with a xarray consisting of pd.Intervals. Each
+    Helper function to deal with an xarray consisting of pd.Intervals. Each
     interval is replaced with both boundaries. I.e. the length of xarray
     doubles. yarray is modified so it matches the new shape of xarray.
     """

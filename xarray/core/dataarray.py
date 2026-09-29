@@ -2,15 +2,9 @@ from __future__ import annotations
 
 import copy
 import datetime
+import json
 import warnings
-from collections.abc import (
-    Callable,
-    Hashable,
-    Iterable,
-    Mapping,
-    MutableMapping,
-    Sequence,
-)
+from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
 from functools import partial
 from os import PathLike
 from types import EllipsisType
@@ -35,7 +29,7 @@ from xarray.core.coordinates import (
     create_coords_with_default_indexes,
     validate_dataarray_coords,
 )
-from xarray.core.dataset import Dataset
+from xarray.core.dataset import Dataset, _sparse_coo_to_index
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
@@ -72,6 +66,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.structure import alignment
@@ -172,6 +167,21 @@ def _infer_coords_and_dims(
         if not hashable(d):
             raise TypeError(f"Dimension {d} is not hashable")
 
+    if coords is not None and not utils.is_dict_like(coords):
+        if any(
+            isinstance(coord, tuple)
+            and len(coord) >= 2
+            and hashable(coord[0])
+            and coord[0] != dim
+            for dim, coord in zip(dims_tuple, coords, strict=True)
+        ):
+            utils.emit_user_level_warning(
+                "Coordinate names in tuple-style coords are ignored when `dims` "
+                "are provided. Use a mapping for `coords` if you need named "
+                "coordinates.",
+                UserWarning,
+            )
+
     new_coords: Mapping[Hashable, Any]
 
     if isinstance(coords, Coordinates):
@@ -254,6 +264,21 @@ class _LocIndexer(Generic[T_DataArray]):
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
+class _NumpyEncoder(json.JSONEncoder):
+    """Encode numpy value in Arrow schema metadata"""
+
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
+
 class DataArray(
     AbstractArray,
     DataWithCoords,
@@ -327,7 +352,7 @@ class DataArray(
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
-        (see FAQ, :ref:`approach to metadata`)
+        (see FAQ, :ref:`approach-to-metadata`)
     indexes : :py:class:`~xarray.Indexes` or dict-like, optional
         For internal use only. For passing indexes objects to the
         new DataArray, use the ``coords`` argument instead with a
@@ -369,10 +394,10 @@ class DataArray(
            [[22.60070734, 13.78914233, 14.17424919],
             [18.28478802, 16.15234857, 26.63418806]]])
     Coordinates:
-      * time            (time) datetime64[ns] 24B 2014-09-06 2014-09-07 2014-09-08
         lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
         lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-        reference_time  datetime64[ns] 8B 2014-09-05
+      * time            (time) datetime64[us] 24B 2014-09-06 2014-09-07 2014-09-08
+        reference_time  datetime64[us] 8B 2014-09-05
     Dimensions without coordinates: x, y
     Attributes:
         description:  Ambient temperature.
@@ -386,8 +411,8 @@ class DataArray(
     Coordinates:
         lon             float64 8B -99.32
         lat             float64 8B 42.21
-        time            datetime64[ns] 8B 2014-09-08
-        reference_time  datetime64[ns] 8B 2014-09-05
+        time            datetime64[us] 8B 2014-09-08
+        reference_time  datetime64[us] 8B 2014-09-05
     Attributes:
         description:  Ambient temperature.
         units:        degC
@@ -476,6 +501,102 @@ class DataArray(
 
         self._close = None
 
+    def __arrow_c_schema__(self):
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        values_column = self.name or "values"
+
+        fields = []
+        for name, coord in self._coords.items():
+            arrow_dtype = pa.from_numpy_dtype(coord.dtype)
+            fields.append(pa.field(str(name), arrow_dtype))
+
+        fields.append(
+            pa.field(str(values_column), pa.from_numpy_dtype(self._variable.dtype))
+        )
+
+        xarray_metadata = {
+            "name": self.name,
+            "dims": list(self._variable.dims),
+            "shape": list(self._variable.shape),
+            "attrs": self.attrs,
+            "coords": {
+                str(name): variable.to_dict(data=False)
+                for name, variable in self._coords.items()
+            },
+        }
+        schema_metadata = {
+            b"xarray:arrow_schema_version": b"v1",
+            b"xarray": json.dumps(xarray_metadata, cls=_NumpyEncoder).encode(),
+        }
+
+        schema = pa.schema(fields, metadata=schema_metadata)
+        return schema.__arrow_c_schema__()
+
+    def __arrow_c_stream__(self, requested_schema: Any = None) -> Any:
+        """Export the DataArray through the Arrow PyCapsule Interface.
+
+        https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
+        """
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        if is_chunked_array(self._variable._data):
+            raise ValueError(
+                "Chunked DataArray must be computed first, use: DataArray.compute()"
+            )
+
+        values = self._variable.values
+        dims = self._variable.dims
+        shape = self._variable.shape
+
+        values_column = self.name or "values"
+
+        if not values.flags.c_contiguous:
+            values = np.ascontiguousarray(values)
+
+        columns: dict[Hashable, pa.Array] = {}
+        for name, coord in self._coords.items():
+            # Broadcast each coordinate up to the full data shape so that 1D
+            # dimension coordinates and N-D (e.g. curvilinear) coordinates
+            # flatten consistently with the data values.
+
+            # Order axes based on Variable dims
+            dim_order = tuple(
+                coord.dims.index(dim) for dim in dims if dim in coord.dims
+            )
+
+            # Reorder coords values to variable dim order
+            ordered_coords = coord.values.transpose(dim_order)
+
+            # Expand coord dims
+            # coord dims (x, y) variable dims (x,y,z) -> (x, y, 1)
+            # NOTE: Insert a length-1 axis for each data dim missing for coordinates
+            # (slice(None) keeps an existing axis, np.newaxis adds one)
+            indexer = tuple(
+                slice(None) if dim in coord.dims else np.newaxis for dim in dims
+            )
+            expanded_coords = ordered_coords[indexer]
+
+            # Broadcast to full flattened shape (x, y, 1) -> (x, y, z)
+            columns[name] = pa.array(np.broadcast_to(expanded_coords, shape).ravel())
+
+        columns[values_column] = pa.array(np.ravel(values))
+
+        schema = pa.schema(self)
+
+        table = pa.table(columns, schema=schema)
+        return table.__arrow_c_stream__(requested_schema)
+
     @classmethod
     def _construct_direct(
         cls,
@@ -528,7 +649,7 @@ class DataArray(
             indexes = self._indexes
         elif set(self.dims) == set(variable.dims):
             # Shape has changed (e.g. from reduce(..., keepdims=True)
-            new_sizes = dict(zip(self.dims, variable.shape, strict=True))
+            new_sizes = dict(variable.sizes)
             coords = {
                 k: v
                 for k, v in self._coords.items()
@@ -537,9 +658,13 @@ class DataArray(
             indexes = filter_indexes_from_coords(self._indexes, set(coords))
         else:
             allowed_dims = set(variable.dims)
-            coords = {
-                k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
-            }
+            coords = {}
+            for k, v in self._coords.items():
+                if k in self._indexes:
+                    if self._indexes[k].should_add_coord_to_array(k, v, allowed_dims):
+                        coords[k] = v
+                elif set(v.dims) <= allowed_dims:
+                    coords[k] = v
             indexes = filter_indexes_from_coords(self._indexes, set(coords))
         return self._replace(variable, coords, name, indexes=indexes)
 
@@ -1108,6 +1233,13 @@ class DataArray(
     def __dask_keys__(self):
         return self._to_temp_dataset().__dask_keys__()
 
+    def __dask_exprs__(self):
+        return self._to_temp_dataset().__dask_exprs__()
+
+    def __dask_rebuild_from_exprs__(self, exprs):
+        ds = self._to_temp_dataset().__dask_rebuild_from_exprs__(exprs)
+        return self._from_temp_dataset(ds)
+
     def __dask_layers__(self):
         return self._to_temp_dataset().__dask_layers__()
 
@@ -1479,7 +1611,7 @@ class DataArray(
             utils.emit_user_level_warning(
                 "Supplying chunks as dimension-order tuples is deprecated. "
                 "It will raise an error in the future. Instead use a dict with dimension names as keys.",
-                category=DeprecationWarning,
+                category=FutureWarning,
             )
             if len(chunks) != len(self.dims):
                 raise ValueError(
@@ -1516,7 +1648,7 @@ class DataArray(
         indexers : dict, optional
             A dict with keys matching dimensions and values given
             by integers, slice objects or arrays.
-            indexer can be a integer, slice, array-like or DataArray.
+            indexer can be an integer, slice, array-like or DataArray.
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
@@ -1734,7 +1866,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the first `n`
+        """Return a new DataArray whose data is given by the first `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also
@@ -1777,7 +1909,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the last `n`
+        """Return a new DataArray whose data is given by the last `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also
@@ -2407,7 +2539,7 @@ class DataArray(
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
           * y        (y) int64 24B 11 13 15
         """
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
@@ -2434,7 +2566,7 @@ class DataArray(
         ----------
         other : Dataset or DataArray
             Object with an 'indexes' attribute giving a mapping from dimension
-            names to an 1d array-like, which provides coordinates upon
+            names to a 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
         method : { "linear", "nearest", "zero", "slinear", "quadratic", "cubic", \
             "quintic", "polynomial", "pchip", "barycentric", "krogh", "akima", "makima" }
@@ -2548,7 +2680,7 @@ class DataArray(
           * y        (y) int64 24B 70 80 90
         """
 
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
@@ -2807,8 +2939,8 @@ class DataArray(
                [1., 1., 1.]])
         Coordinates:
           * x        (x) int64 16B 0 1
-          * y        (y) int64 24B 0 1 2
             a        (x) int64 16B 3 4
+          * y        (y) int64 24B 0 1 2
         >>> arr.set_index(x="a")
         <xarray.DataArray (x: 2, y: 3)> Size: 48B
         array([[1., 1., 1.],
@@ -2869,7 +3001,7 @@ class DataArray(
         **options,
     ) -> Self:
         """Set a new, Xarray-compatible index from one or more existing
-        coordinate(s).
+        coordinate(s). Existing index(es) on the coord(s) will be replaced.
 
         Parameters
         ----------
@@ -3091,9 +3223,9 @@ class DataArray(
             b        (x) int64 16B 0 3
         >>> stacked = data.to_stacked_array("z", ["x"])
         >>> stacked.indexes["z"]
-        MultiIndex([('a',   0),
-                    ('a',   1),
-                    ('a',   2),
+        MultiIndex([('a', 0.0),
+                    ('a', 1.0),
+                    ('a', 2.0),
                     ('b', nan)],
                    name='z')
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
@@ -3199,7 +3331,7 @@ class DataArray(
             New Dataset copied from `self` with variables removed.
 
         Examples
-        -------
+        --------
         >>> data = np.arange(12).reshape(4, 3)
         >>> da = xr.DataArray(
         ...     data=data,
@@ -3560,13 +3692,13 @@ class DataArray(
         limit: int | None = None,
         use_coordinate: bool | str = True,
         max_gap: (
-            None
-            | int
+            int
             | float
             | str
             | pd.Timedelta
             | np.timedelta64
             | datetime.timedelta
+            | None
         ) = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3985,7 +4117,7 @@ class DataArray(
         result: DataFrame
             DataArray as a pandas DataFrame.
 
-        See also
+        See Also
         --------
         DataArray.to_pandas
         DataArray.to_series
@@ -4023,16 +4155,31 @@ class DataArray(
         The Series is indexed by the Cartesian product of index coordinates
         (in the form of a :py:class:`pandas.MultiIndex`).
 
+        If the underlying data is a :py:class:`sparse.COO` array, the result
+        instead only contains that array's stored (non-fill-value) entries,
+        indexed by their coordinates - the full Cartesian product is never
+        materialized, which avoids a `.todense()` call that could raise
+        MemoryError for large, genuinely sparse data.
+
         Returns
         -------
         result : Series
             DataArray as a pandas Series.
 
-        See also
+        See Also
         --------
         DataArray.to_pandas
         DataArray.to_dataframe
         """
+        if isinstance(self.data, array_type("sparse")):
+            from sparse import COO
+
+            if isinstance(self.data, COO):
+                index = _sparse_coo_to_index(self.data, self.dims, self.get_index)
+                return pd.Series(self.data.data, index=index, name=self.name)
+            # TODO: other SparseArray subclasses, e.g. DOK, lack the
+            # .coords/.data attributes _sparse_coo_to_index relies on.
+
         index = self.coords.to_index()
         return pd.Series(self.values.reshape(-1), index=index, name=self.name)
 
@@ -4208,7 +4355,7 @@ class DataArray(
         Notes
         -----
         Only xarray.Dataset objects can be written to netCDF files, so
-        the xarray.DataArray is converted to a xarray.Dataset object
+        the xarray.DataArray is converted to an xarray.Dataset object
         containing a single variable. If the DataArray has no name, or if the
         name is the same as a coordinate name, then it is given the name
         ``"__xarray_dataarray_variable__"``.
@@ -4255,9 +4402,7 @@ class DataArray(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         *,
         encoding: Mapping | None = None,
@@ -4268,7 +4413,6 @@ class DataArray(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -4279,9 +4423,7 @@ class DataArray(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,
@@ -4292,7 +4434,6 @@ class DataArray(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -4301,9 +4442,7 @@ class DataArray(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,
@@ -4314,7 +4453,6 @@ class DataArray(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -4339,20 +4477,23 @@ class DataArray(
         ----------
         store : zarr.storage.StoreLike, optional
             Store or path to directory in local or remote file system.
-        chunk_store : MutableMapping, str or path-like, optional
-            Store or path to directory in local or remote file system only for Zarr
-            array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "a-", r+", None}, optional
-            Persistence mode: "w" means create (overwrite if exists);
-            "w-" means create (fail if exists);
-            "a" means override all existing variables including dimension coordinates (create if does not exist);
-            "a-" means only append those variables that have ``append_dim``.
-            "r+" means modify existing array *values* only (raise an error if
-            any metadata or shapes would change).
+            Persistence mode:
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "a-" means only append those variables that have ``append_dim``.
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
             "r+" if ``region`` is set and ``w-`` otherwise.
-        synchronizer : object, optional
-            Zarr array synchronizer.
+
+            .. note::
+                When modifying an existing Zarr array that is lazily opened, the "w"
+                behavior can be surprising since the underlying file that is being
+                lazily read from might get deleted before the data is computed.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
         encoding : dict, optional
@@ -4370,8 +4511,6 @@ class DataArray(
             write consolidated metadata and attempt to read consolidated
             metadata for existing stores (falling back to non-consolidated).
 
-            When the experimental ``zarr_version=3``, ``consolidated`` must be
-            either be ``None`` or ``False``.
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overridden variables must remain the same size.
@@ -4427,11 +4566,6 @@ class DataArray(
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
-        zarr_version : int or None, optional
-
-            .. deprecated:: 2024.9.1
-            Use ``zarr_format`` instead.
-
         zarr_format : int or None, optional
             The desired zarr format to target (currently 2 or 3). The default
             of None will attempt to determine the zarr version from ``store`` when
@@ -4506,9 +4640,7 @@ class DataArray(
         return to_zarr(  # type: ignore[call-overload,misc]
             dataset,
             store=store,
-            chunk_store=chunk_store,
             mode=mode,
-            synchronizer=synchronizer,
             group=group,
             encoding=encoding,
             compute=compute,
@@ -4518,7 +4650,6 @@ class DataArray(
             safe_chunks=safe_chunks,
             align_chunks=align_chunks,
             storage_options=storage_options,
-            zarr_version=zarr_version,
             zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
             chunkmanager_store_kwargs=chunkmanager_store_kwargs,
@@ -4655,6 +4786,10 @@ class DataArray(
         Dataset.from_dataframe
         """
         temp_name = "__temporary_name"
+        if temp_name == series.index.name:
+            # See properties/test_pandas_roundtrip.py:
+            # @reproduce_failure('6.155.2', b'AEEAQQBBAQFBAEEBAJBfX3RlbXBvcmFyeV9uYW1l')
+            temp_name = "__temporary_name_fallback"
         df = pd.DataFrame({temp_name: series})
         ds = Dataset.from_dataframe(df, sparse=sparse)
         result = ds[temp_name]
@@ -4662,20 +4797,27 @@ class DataArray(
         return result
 
     def to_iris(self) -> iris_Cube:
-        """Convert this array into a iris.cube.Cube"""
+        """Convert this array into an iris.cube.Cube"""
         from xarray.convert import to_iris
 
         return to_iris(self)
 
     @classmethod
     def from_iris(cls, cube: iris_Cube) -> Self:
-        """Convert a iris.cube.Cube into an xarray.DataArray"""
+        """Convert an iris.cube.Cube into an xarray.DataArray"""
         from xarray.convert import from_iris
 
         return from_iris(cube)
 
     def _all_compat(self, other: Self, compat_str: str) -> bool:
         """Helper function for equals, broadcast_equals, and identical"""
+
+        # For identical, also compare indexes
+        if compat_str == "identical":
+            from xarray.core.indexes import indexes_identical
+
+            if not indexes_identical(self.xindexes, other.xindexes):
+                return False
 
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
@@ -4695,7 +4837,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are broadcast equal.
 
@@ -4749,7 +4891,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are equal.
 
@@ -4796,8 +4938,8 @@ class DataArray(
             return False
 
     def identical(self, other: Self) -> bool:
-        """Like equals, but also checks the array name and attributes, and
-        attributes on all coordinates.
+        """Like equals, but also checks the array name, attributes,
+        attributes on all coordinates, and indexes.
 
         Parameters
         ----------
@@ -4805,7 +4947,7 @@ class DataArray(
             DataArray to compare to.
 
         Returns
-        ----------
+        -------
         equal : bool
             True if the two DataArrays are identical.
 
@@ -4899,7 +5041,9 @@ class DataArray(
             if not reflexive
             else f(other_variable_or_arraylike, self.variable)
         )
-        coords, indexes = self.coords._merge_raw(other_coords, reflexive)
+        coords, indexes = self.coords._merge_raw(
+            other_coords, reflexive, compat=OPTIONS["arithmetic_compat"]
+        )
         name = result_name([self, other])
 
         return self._replace(variable, coords, name, indexes=indexes)
@@ -4919,7 +5063,9 @@ class DataArray(
         other_coords = getattr(other, "coords", None)
         other_variable = getattr(other, "variable", other)
         try:
-            with self.coords._merge_inplace(other_coords):
+            with self.coords._merge_inplace(
+                other_coords, compat=OPTIONS["arithmetic_compat"]
+            ):
                 f(self.variable, other_variable)
         except MergeError as exc:
             raise MergeError(
@@ -5163,6 +5309,11 @@ class DataArray(
         dot
         numpy.tensordot
 
+        Notes
+        -----
+        This method automatically aligns coordinates by their values (not their order).
+        See :ref:`math-automatic-alignment` and :py:func:`xarray.dot` for more details.
+
         Examples
         --------
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
@@ -5179,6 +5330,14 @@ class DataArray(
         >>> dot_result = da.dot(dm)
         >>> dot_result.dims
         ('x', 'y')
+
+        Coordinates are aligned by their values:
+
+        >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+        >>> y = xr.DataArray([2, 20], coords=[("foo", ["b", "a"])])
+        >>> x.dot(y)
+        <xarray.DataArray ()> Size: 8B
+        array(40)
 
         """
         if isinstance(other, Dataset):
@@ -5215,6 +5374,8 @@ class DataArray(
         https://numpy.org/doc/stable/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
         followed by the 2nd key, etc.
+        Sorting is stable: when all sort keys compare equal, the original order is
+        preserved.
 
         Parameters
         ----------
@@ -5249,19 +5410,19 @@ class DataArray(
         <xarray.DataArray (time: 5)> Size: 40B
         array([5, 4, 3, 2, 1])
         Coordinates:
-          * time     (time) datetime64[ns] 40B 2000-01-01 2000-01-02 ... 2000-01-05
+          * time     (time) datetime64[us] 40B 2000-01-01 2000-01-02 ... 2000-01-05
 
         >>> da.sortby(da)
         <xarray.DataArray (time: 5)> Size: 40B
         array([1, 2, 3, 4, 5])
         Coordinates:
-          * time     (time) datetime64[ns] 40B 2000-01-05 2000-01-04 ... 2000-01-01
+          * time     (time) datetime64[us] 40B 2000-01-05 2000-01-04 ... 2000-01-01
 
         >>> da.sortby(lambda x: x)
         <xarray.DataArray (time: 5)> Size: 40B
         array([1, 2, 3, 4, 5])
         Coordinates:
-          * time     (time) datetime64[ns] 40B 2000-01-05 2000-01-04 ... 2000-01-01
+          * time     (time) datetime64[us] 40B 2000-01-05 2000-01-04 ... 2000-01-01
         """
         # We need to convert the callable here rather than pass it through to the
         # dataset method, since otherwise the dataset method would try to call the
@@ -5463,7 +5624,7 @@ class DataArray(
         -------
         differentiated: DataArray
 
-        See also
+        See Also
         --------
         numpy.gradient: corresponding numpy function
 
@@ -5521,7 +5682,7 @@ class DataArray(
         -------
         integrated : DataArray
 
-        See also
+        See Also
         --------
         Dataset.integrate
         numpy.trapz : corresponding numpy function
@@ -5578,7 +5739,7 @@ class DataArray(
         -------
         integrated : DataArray
 
-        See also
+        See Also
         --------
         Dataset.cumulative_integrate
         scipy.integrate.cumulative_trapezoid : corresponding scipy function
@@ -5868,7 +6029,7 @@ class DataArray(
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple or mapping of Hashable to tuple, default: 0
+        constant_values : scalar, tuple or mapping of Hashable to tuple, default: None
             Used in 'constant'.  The values to set the padded values for each
             axis.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -5877,7 +6038,7 @@ class DataArray(
             dimension.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
-            Default is 0.
+            Default is ``None``, pads with ``np.nan``.
         end_values : scalar, tuple or mapping of Hashable to tuple, default: 0
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
@@ -5940,8 +6101,8 @@ class DataArray(
                [nan, nan, nan, nan]])
         Coordinates:
           * x        (x) float64 32B nan 0.0 1.0 nan
-          * y        (y) int64 32B 10 20 30 40
             z        (x) float64 32B nan 100.0 200.0 nan
+          * y        (y) int64 32B 10 20 30 40
 
         Careful, ``constant_values`` are coerced to the data type of the array which may
         lead to a loss of precision:
@@ -5954,8 +6115,8 @@ class DataArray(
                [ 1,  1,  1,  1]])
         Coordinates:
           * x        (x) float64 32B nan 0.0 1.0 nan
-          * y        (y) int64 32B 10 20 30 40
             z        (x) float64 32B nan 100.0 200.0 nan
+          * y        (y) int64 32B 10 20 30 40
         """
         ds = self._to_temp_dataset().pad(
             pad_width=pad_width,
@@ -6163,6 +6324,26 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
+    @overload
+    def argmin(  # type: ignore[overload-overlap]
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmin(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
     def argmin(
         self,
         dim: Dims = None,
@@ -6263,6 +6444,26 @@ class DataArray(
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
             return self._replace_maybe_drop_dims(result)
+
+    @overload
+    def argmax(  # type: ignore[overload-overlap]
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmax(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
 
     def argmax(
         self,
@@ -6722,7 +6923,7 @@ class DataArray(
         time part of the timestamps.
 
         Parameters
-        ---------
+        ----------
         calendar : str
             The target calendar name.
         dim : str
@@ -6843,8 +7044,8 @@ class DataArray(
         dim : str
             The time coordinate name.
 
-        Return
-        ------
+        Returns
+        -------
         DataArray
             The source interpolated on the decimal years of target,
         """
@@ -6900,22 +7101,22 @@ class DataArray(
         array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
                1.826e+03], shape=(1827,))
         Coordinates:
-          * time     (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
-        >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
+          * time     (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
+        >>> da.groupby("time.day_of_year") - da.groupby("time.day_of_year").mean("time")
         <xarray.DataArray (time: 1827)> Size: 15kB
         array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5], shape=(1827,))
         Coordinates:
-          * time       (time) datetime64[ns] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
-            dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
+          * time         (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
+            day_of_year  (time) int64 15kB 1 2 3 4 5 6 7 ... 360 361 362 363 364 365 366
 
         Use a ``Grouper`` object to be more explicit
 
-        >>> da.coords["dayofyear"] = da.time.dt.dayofyear
-        >>> da.groupby(dayofyear=xr.groupers.UniqueGrouper()).mean()
-        <xarray.DataArray (dayofyear: 366)> Size: 3kB
+        >>> da.coords["day_of_year"] = da.time.dt.day_of_year
+        >>> da.groupby(day_of_year=xr.groupers.UniqueGrouper()).mean()
+        <xarray.DataArray (day_of_year: 366)> Size: 3kB
         array([ 730.8,  731.8,  732.8, ..., 1093.8, 1094.8, 1095.5])
         Coordinates:
-          * dayofyear  (dayofyear) int64 3kB 1 2 3 4 5 6 7 ... 361 362 363 364 365 366
+          * day_of_year  (day_of_year) int64 3kB 1 2 3 4 5 6 ... 361 362 363 364 365 366
 
         >>> da = xr.DataArray(
         ...     data=np.arange(12).reshape((4, 3)),
@@ -7176,12 +7377,12 @@ class DataArray(
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.rolling(time=3, center=True).mean()
         <xarray.DataArray (time: 12)> Size: 96B
         array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
 
         Remove the NaNs using ``dropna()``:
 
@@ -7189,7 +7390,7 @@ class DataArray(
         <xarray.DataArray (time: 10)> Size: 80B
         array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 80B 2000-01-15 2000-02-15 ... 2000-10-15
+          * time     (time) datetime64[us] 80B 2000-01-15 2000-02-15 ... 2000-10-15
 
         See Also
         --------
@@ -7212,7 +7413,7 @@ class DataArray(
 
         Parameters
         ----------
-        dims : iterable of hashable
+        dim : iterable of hashable
             The name(s) of the dimensions to create the cumulative window along
         min_periods : int, default: 1
             Minimum number of observations in window required to have a value
@@ -7243,13 +7444,13 @@ class DataArray(
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
 
         >>> da.cumulative("time").sum()
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  3.,  6., 10., 15., 21., 28., 36., 45., 55., 66.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
 
         See Also
         --------
@@ -7358,7 +7559,7 @@ class DataArray(
                356.98071625, 357.98347107, 358.9862259 , 359.98898072,
                360.99173554, 361.99449036, 362.99724518, 364.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-12-12
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-12-12
         >>> da.coarsen(time=3, boundary="trim").mean()  # +doctest: ELLIPSIS
         <xarray.DataArray (time: 121)> Size: 968B
         array([  1.00275482,   4.01101928,   7.01928375,  10.02754821,
@@ -7393,7 +7594,7 @@ class DataArray(
                349.96143251, 352.96969697, 355.97796143, 358.9862259 ,
                361.99449036])
         Coordinates:
-          * time     (time) datetime64[ns] 968B 1999-12-16 1999-12-19 ... 2000-12-10
+          * time     (time) datetime64[us] 968B 1999-12-16 1999-12-19 ... 2000-12-10
         >>>
 
         See Also
@@ -7496,12 +7697,12 @@ class DataArray(
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.resample(time="QS-DEC").mean()
         <xarray.DataArray (time: 4)> Size: 32B
         array([ 1.,  4.,  7., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 32B 1999-12-01 2000-03-01 ... 2000-09-01
+          * time     (time) datetime64[us] 32B 1999-12-01 2000-03-01 ... 2000-09-01
 
         Upsample monthly time-series data to daily data:
 
@@ -7528,7 +7729,7 @@ class DataArray(
                10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
                10.96774194, 11.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         Limit scope of upsampling method
 
@@ -7549,7 +7750,7 @@ class DataArray(
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         See Also
         --------

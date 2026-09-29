@@ -268,6 +268,10 @@ def _extract_nc4_variable_encoding(
     safe_to_drop = {"source", "original_shape"}
     valid_encodings = {
         "zlib",
+        "szip",
+        "bzip2",
+        "blosc",
+        "zstd",
         "complevel",
         "fletcher32",
         "contiguous",
@@ -313,6 +317,27 @@ def _extract_nc4_variable_encoding(
     for k in safe_to_drop:
         if k in encoding:
             del encoding[k]
+
+    # Translate the boolean netCDF4-Python style compression flags (as produced
+    # by h5netcdf's ``variable.filters()``) into a single h5py-style
+    # ``compression`` string. At most one of these is ever true for a given
+    # variable; if several were set we keep the last one.
+    compression = None
+    if encoding.pop("zlib", False):
+        compression = "zlib"
+    if encoding.pop("szip", False):
+        compression = "szip"
+    if encoding.pop("bzip2", False):
+        compression = "bzip2"
+    if encoding.pop("blosc", False):
+        compression = "blosc"
+    if encoding.pop("zstd", False):
+        compression = "zstd"
+
+    # If both styles are used together, the explicit h5py-style ``compression``
+    # takes precedence over the translated netCDF4-Python style flag.
+    if compression is not None and encoding.get("compression") is None:
+        encoding["compression"] = compression
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
@@ -421,13 +446,14 @@ class NetCDF4DataStore(WritableCFDataStore):
                         "argument is provided"
                     )
                 root = manager
-            manager = DummyFileManager(root)
+            manager = DummyFileManager(root, lock=NETCDF4_PYTHON_LOCK)
 
         self._manager = manager
         self._group = group
         self._mode = mode
-        self.format = self.ds.data_model
-        self._filename = self.ds.filepath()
+        with manager.acquire_context():
+            self.format = self.ds.data_model
+            self._filename = self.ds.filepath()
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
@@ -510,17 +536,21 @@ class NetCDF4DataStore(WritableCFDataStore):
                 "<xarray-in-memory-write>", mode=mode, memory=memory, **kwargs
             )
             close = _CloseWithCopy(filename, nc4_dataset)
-            manager = DummyFileManager(nc4_dataset, close=close)
+            manager = DummyFileManager(nc4_dataset, close=close, lock=lock)
 
         elif isinstance(filename, bytes | memoryview):
             assert mode == "r"
             kwargs["memory"] = filename
             manager = PickleableFileManager(
-                netCDF4.Dataset, "<xarray-in-memory-read>", mode=mode, kwargs=kwargs
+                netCDF4.Dataset,
+                "<xarray-in-memory-read>",
+                mode=mode,
+                kwargs=kwargs,
+                lock=lock,
             )
         else:
             manager = CachingFileManager(
-                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
+                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs, lock=lock
             )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
@@ -715,10 +745,19 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             _, ext = os.path.splitext(path)
             return ext in {".nc", ".nc4", ".cdf"}
 
-        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
-            # For remote URIs, check extension (accounting for query params/fragments)
-            # Remote netcdf-c can handle both regular URLs and DAP URLs
-            return _has_netcdf_ext(filename_or_obj, is_remote=True)
+        if isinstance(filename_or_obj, str):
+            if is_remote_uri(filename_or_obj):
+                # For remote URIs, check extension (accounting for query params/fragments)
+                # Remote netcdf-c can handle both regular URLs and DAP URLs
+                if _has_netcdf_ext(filename_or_obj, is_remote=True):
+                    return True
+                elif "zarr" in filename_or_obj.lower():
+                    return False
+                # return true for non-zarr URLs so we don't have a breaking change for people relying on this
+                # netcdf backend guessing true for all remote sources.
+                # TODO: emit a warning here about deprecation of this behavior
+                # https://github.com/pydata/xarray/pull/10931
+                return True
 
         if isinstance(filename_or_obj, str | os.PathLike):
             # For local paths, check magic number first, then extension
@@ -769,7 +808,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         )
 
         store_entrypoint = StoreBackendEntrypoint()
-        with close_on_error(store):
+        with close_on_error(store), store._manager.acquire_context():
             ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
@@ -870,25 +909,26 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
         groups_dict = {}
-        for path_group in _iter_nc_groups(store.ds, parent=parent):
-            group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
-            store_entrypoint = StoreBackendEntrypoint()
-            with close_on_error(group_store):
-                group_ds = store_entrypoint.open_dataset(
-                    group_store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
-                )
-            if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
-            else:
-                group_name = str(NodePath(path_group))
-            groups_dict[group_name] = group_ds
+        with manager.acquire_context():
+            for path_group in _iter_nc_groups(store.ds, parent=parent):
+                group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
+                store_entrypoint = StoreBackendEntrypoint()
+                with close_on_error(group_store):
+                    group_ds = store_entrypoint.open_dataset(
+                        group_store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
+                if group:
+                    group_name = str(NodePath(path_group).relative_to(parent))
+                else:
+                    group_name = str(NodePath(path_group))
+                groups_dict[group_name] = group_ds
 
         return groups_dict
 

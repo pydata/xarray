@@ -9,12 +9,14 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray import DataTree, load_datatree, open_datatree, open_groups
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
-    has_zarr_v3,
+    dask_array_type,
+    get_dask_chunkmanager,
     network,
     parametrize_zarr_format,
     requires_dask,
@@ -70,10 +72,6 @@ def assert_chunks_equal(
     actual: DataTree, expected: DataTree, enforce_dask: bool = False
 ) -> None:
     __tracebackhide__ = True
-
-    from xarray.namedarray.pycompat import array_type
-
-    dask_array_type = array_type("dask")
 
     comparison = {
         (path, name): (
@@ -569,8 +567,6 @@ class TestH5NetCDFDatatreeIO(NetCDFIOBase):
 class TestPyDAPDatatreeIO:
     """Test PyDAP backend for DataTree."""
 
-    pytestmark = pytest.mark.xfail(reason="test.opendap.org reports a 404 error")
-
     engine: T_DataTreeNetcdfEngine | None = "pydap"
     # you can check these by adding a .dmr to urls, and replacing dap4 with http
     unaligned_datatree_url = (
@@ -582,7 +578,8 @@ class TestPyDAPDatatreeIO:
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
 
     def test_open_datatree_unaligned_hierarchy(
-        self, url=unaligned_datatree_url
+        self,
+        url=unaligned_datatree_url,
     ) -> None:
         with pytest.raises(
             ValueError,
@@ -615,7 +612,7 @@ class TestPyDAPDatatreeIO:
         ) as expected:
             assert_identical(unaligned_dict_of_datasets["/Group1/subgroup1"], expected)
 
-    def test_inherited_coords(self, url=simplegroup_datatree_url) -> None:
+    def test_inherited_coords(self, tmpdir, url=simplegroup_datatree_url) -> None:
         """Test that `open_datatree` inherits coordinates from root tree.
 
         This particular h5 file is a test file that inherits the time coordinate from the root
@@ -641,7 +638,19 @@ class TestPyDAPDatatreeIO:
             │       Temperature  (time, Z, Y, X) float32 ...
             |       Salinity     (time, Z, Y, X) float32 ...
         """
-        tree = open_datatree(url, engine=self.engine)
+        import pydap
+        from pydap.net import create_session
+
+        # Create a session with pre-set retry params in pydap backend, to cache urls
+        cache_name = tmpdir / "debug"
+        session = create_session(
+            use_cache=True, cache_kwargs={"cache_name": cache_name}
+        )
+        session.cache.clear()
+
+        _version_ = Version(pydap.__version__)
+
+        tree = open_datatree(url, engine=self.engine, session=session)
         assert set(tree.dims) == {"time", "Z", "nv"}
         assert tree["/SimpleGroup"].coords["time"].dims == ("time",)
         assert tree["/SimpleGroup"].coords["Z"].dims == ("Z",)
@@ -651,6 +660,13 @@ class TestPyDAPDatatreeIO:
             assert set(tree["/SimpleGroup"].dims) == set(
                 list(expected.dims) + ["Z", "nv"]
             )
+
+        if _version_ > Version("3.5.5"):
+            # Total downloads are: 1 dmr, + 1 dap url for all dimensions for each group
+            assert len(session.cache.urls()) == 3
+        else:
+            # 1 dmr + 1 dap url per dimension (total there are 4 dimension arrays)
+            assert len(session.cache.urls()) == 5
 
     def test_open_groups_to_dict(self, url=all_aligned_child_nodes_url) -> None:
         aligned_dict_of_datasets = open_groups(url, engine=self.engine)
@@ -683,22 +699,33 @@ class TestZarrDatatreeIO:
             from numcodecs.blosc import Blosc
 
             codec = Blosc(cname="zstd", clevel=3, shuffle=2)
-            comp = {"compressors": (codec,)} if has_zarr_v3 else {"compressor": codec}
+            comp = {"compressors": (codec,)}
         elif zarr_format == 3:
-            # specifying codecs in zarr_format=3 requires importing from zarr 3 namespace
-            from zarr.registry import get_codec_class
+            import zarr
 
-            Blosc = get_codec_class("numcodecs.blosc")
-            comp = {"compressors": (Blosc(cname="zstd", clevel=3),)}  # type: ignore[call-arg]
+            comp = {
+                "compressors": (zarr.codecs.BloscCodec(cname="zstd", clevel=3),),
+            }
 
         enc = {"/set2": dict.fromkeys(original_dt["/set2"].dataset.data_vars, comp)}
         original_dt.to_zarr(filepath, encoding=enc, zarr_format=zarr_format)
 
         with open_datatree(filepath, engine="zarr") as roundtrip_dt:
-            compressor_key = "compressors" if has_zarr_v3 else "compressor"
-            assert (
-                roundtrip_dt["/set2/a"].encoding[compressor_key] == comp[compressor_key]
-            )
+            if zarr_format == 3:
+                # zarr v3 BloscCodec auto-tunes typesize and shuffle on write,
+                # so we only check the attributes we explicitly set
+                rt_codec = roundtrip_dt["/set2/a"].encoding["compressors"][0]
+                # DEPR: backwards compatibility with zarr <= 3.2.1
+                # This will become a string in the future.
+                # Once we can drop zarr <= 3.2.1, the assertion can become
+                #   assert rt_codec.cname == "zstd"
+                assert getattr(rt_codec.cname, "value", rt_codec.cname) == "zstd"
+                assert rt_codec.clevel == 3
+            else:
+                assert (
+                    roundtrip_dt["/set2/a"].encoding["compressors"]
+                    == comp["compressors"]
+                )
 
             enc["/not/a/group"] = {"foo": "bar"}  # type: ignore[dict-item]
             with pytest.raises(ValueError, match=r"unexpected encoding group.*"):
@@ -738,23 +765,14 @@ class TestZarrDatatreeIO:
     ) -> None:
         simple_datatree.to_zarr(str(tmpdir), zarr_format=zarr_format)
 
-        import zarr
-
-        # expected exception type changed in zarr-python v2->v3, see https://github.com/zarr-developers/zarr-python/issues/2821
-        expected_exception_type = (
-            FileExistsError if has_zarr_v3 else zarr.errors.ContainsGroupError
-        )
-
         # with default settings, to_zarr should not overwrite an existing dir
-        with pytest.raises(expected_exception_type):
+        with pytest.raises(FileExistsError):
             simple_datatree.to_zarr(str(tmpdir))
 
     @requires_dask
     def test_to_zarr_compute_false(
         self, tmp_path: Path, simple_datatree: DataTree, zarr_format: Literal[2, 3]
     ) -> None:
-        import dask.array as da
-
         storepath = tmp_path / "test.zarr"
         original_dt = simple_datatree.chunk()
         result = original_dt.to_zarr(
@@ -806,8 +824,7 @@ class TestZarrDatatreeIO:
                     assert not chunk_file.exists()
 
         DEFAULT_ZARR_FILL_VALUE = 0
-        # The default value of write_empty_chunks changed from True->False in zarr-python v2->v3
-        WRITE_EMPTY_CHUNKS_DEFAULT = not has_zarr_v3
+        WRITE_EMPTY_CHUNKS_DEFAULT = False
 
         for node in original_dt.subtree:
             # inherited variables aren't meant to be written to zarr
@@ -820,7 +837,7 @@ class TestZarrDatatreeIO:
                     # don't expect dask.Arrays to be written to disk, as compute=False
                     # also don't expect numpy arrays containing only zarr's fill_value to be written to disk
                     chunks_expected=(
-                        not isinstance(var.data, da.Array)
+                        not isinstance(var.data, dask_array_type)
                         and (
                             var.data != DEFAULT_ZARR_FILL_VALUE
                             or WRITE_EMPTY_CHUNKS_DEFAULT
@@ -850,8 +867,6 @@ class TestZarrDatatreeIO:
 
     @requires_dask
     def test_to_zarr_no_redundant_computation(self, tmpdir, zarr_format) -> None:
-        import dask.array as da
-
         eval_count = 0
 
         def expensive_func(x):
@@ -859,8 +874,11 @@ class TestZarrDatatreeIO:
             eval_count += 1
             return x + 1
 
-        base = da.random.random((), chunks=())
-        derived1 = da.map_blocks(expensive_func, base, meta=np.array((), np.float64))
+        chunkmanager = get_dask_chunkmanager()
+        base = chunkmanager.array_api.random.random((), chunks=())
+        derived1 = chunkmanager.map_blocks(
+            expensive_func, base, meta=np.array((), np.float64)
+        )
         derived2 = derived1 + 1  # depends on derived1
         tree = DataTree.from_dict(
             {

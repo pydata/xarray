@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 import numpy as np
 
@@ -75,7 +75,13 @@ class ScipyKDTreeAdapter(TreeAdapter):
     _kdtree: KDTree
 
     def __init__(self, points: np.ndarray, options: Mapping[str, Any]):
-        from scipy.spatial import KDTree
+        try:
+            from scipy.spatial import KDTree
+        except ImportError as err:
+            raise ImportError(
+                "`NDPointIndex` requires `scipy` when used with `ScipyKDTreeAdapter`. "
+                "Please ensure that `scipy` is installed and importable."
+            ) from err
 
         self._kdtree = KDTree(points, **options)
 
@@ -135,7 +141,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     Data variables:
         *empty*
 
-    Creation of a NDPointIndex from the "xx" and "yy" coordinate variables:
+    Creation of an NDPointIndex from the "xx" and "yy" coordinate variables:
 
     >>> ds = ds.set_xindex(("xx", "yy"), xr.indexes.NDPointIndex)
     >>> ds
@@ -238,7 +244,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
         assert isinstance(tree_obj, TreeAdapter)
         self._tree_obj = tree_obj
 
-        assert len(coord_names) == len(dims) == len(shape)
+        assert len(dims) == len(shape)
         self._coord_names = coord_names
         self._dims = dims
         self._shape = shape
@@ -258,17 +264,11 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
 
         var0 = next(iter(variables.values()))
 
-        if len(variables) != len(var0.dims):
-            raise ValueError(
-                f"the number of variables {len(variables)} doesn't match "
-                f"the number of dimensions {len(var0.dims)}"
-            )
-
         opts = dict(options)
 
         tree_adapter_cls: type[T_TreeAdapter] = opts.pop("tree_adapter_cls", None)
         if tree_adapter_cls is None:
-            tree_adapter_cls = ScipyKDTreeAdapter
+            tree_adapter_cls = cast(type[T_TreeAdapter], ScipyKDTreeAdapter)
 
         points = get_points(variables.values())
 

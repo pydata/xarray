@@ -443,12 +443,38 @@ attrs_repr = functools.partial(
 )
 
 
+def _coord_sort_key(coord, dims):
+    """Sort key for coordinate ordering.
+
+        Orders by:
+        1. Primary: index of the matching dimension in dataset dims.
+        2. Secondary: dimension coordinates (name == dim) come before non-dimension coordinates
+
+        This groups non-dimension coordinates right after their associated dimension
+    coordinate.
+    """
+    name, var = coord
+
+    # Dimension coordinates come first within their dim section
+    if name in dims:
+        return (dims.index(name), 0)
+
+    # Non-dimension coordinates come second within their dim section
+    # Check the var.dims list in backwards order to put (x, y) after (x) and (y)
+    for d in var.dims[::-1]:
+        if d in dims:
+            return (dims.index(d), 1)
+
+    # Scalar coords or coords with dims not in dataset dims go at the end
+    return (len(dims), 1)
+
+
 def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     dims = tuple(coords._data.dims)
     dim_ordered_coords = sorted(
-        coords.items(), key=lambda x: dims.index(x[0]) if x[0] in dims else len(dims)
+        coords.items(), key=functools.partial(_coord_sort_key, dims=dims)
     )
     return _mapping_repr(
         dict(dim_ordered_coords),
@@ -973,6 +999,60 @@ def _compat_to_str(compat):
         return compat
 
 
+def diff_indexes_repr(a_indexes, b_indexes, col_width: int = 20) -> str:
+    """Generate diff representation for indexes."""
+    a_keys = set(a_indexes.keys())
+    b_keys = set(b_indexes.keys())
+
+    summary = []
+
+    if only_a := a_keys - b_keys:
+        summary.append(f"Indexes only on the left object:  {sorted(only_a)}")
+
+    if only_b := b_keys - a_keys:
+        summary.append(f"Indexes only on the right object: {sorted(only_b)}")
+
+    # Check for indexes on the same coordinates but with different types or values
+    common_keys = a_keys & b_keys
+    diff_items = []
+
+    for key in sorted(common_keys):
+        a_idx = a_indexes[key]
+        b_idx = b_indexes[key]
+
+        # Check if indexes differ
+        indexes_equal = False
+        if type(a_idx) is type(b_idx):
+            try:
+                indexes_equal = a_idx.equals(b_idx)
+            except NotImplementedError:
+                # Fall back to variable comparison
+                a_var = a_indexes.variables[key]
+                b_var = b_indexes.variables[key]
+                indexes_equal = a_var.equals(b_var)
+
+        if not indexes_equal:
+            # Format the index values similar to variable diff
+            try:
+                a_repr = inline_index_repr(
+                    a_indexes.to_pandas_indexes()[key], max_width=70
+                )
+                b_repr = inline_index_repr(
+                    b_indexes.to_pandas_indexes()[key], max_width=70
+                )
+            except TypeError:
+                # Custom indexes may not support to_pandas_index()
+                a_repr = repr(a_idx)
+                b_repr = repr(b_idx)
+            diff_items.append(f"L   {key!s:<{col_width}} {a_repr}")
+            diff_items.append(f"R   {key!s:<{col_width}} {b_repr}")
+
+    if diff_items:
+        summary.append("Differing indexes:\n" + "\n".join(diff_items))
+
+    return "\n".join(summary)
+
+
 def diff_array_repr(a, b, compat):
     # used for DataArray, Variable and IndexVariable
     summary = [
@@ -1002,10 +1082,14 @@ def diff_array_repr(a, b, compat):
         ):
             summary.append(coords_diff)
 
-    if compat == "identical" and (
-        attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat)
-    ):
-        summary.append(attrs_diff)
+    if compat == "identical":
+        if hasattr(a, "xindexes") and (
+            indexes_diff := diff_indexes_repr(a.xindexes, b.xindexes)
+        ):
+            summary.append(indexes_diff)
+
+        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
+            summary.append(attrs_diff)
 
     return "\n".join(summary)
 
@@ -1043,10 +1127,12 @@ def diff_dataset_repr(a, b, compat):
     ):
         summary.append(data_diff)
 
-    if compat == "identical" and (
-        attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat)
-    ):
-        summary.append(attrs_diff)
+    if compat == "identical":
+        if indexes_diff := diff_indexes_repr(a.xindexes, b.xindexes):
+            summary.append(indexes_diff)
+
+        if attrs_diff := diff_attrs_repr(a.attrs, b.attrs, compat):
+            summary.append(attrs_diff)
 
     return "\n".join(summary)
 

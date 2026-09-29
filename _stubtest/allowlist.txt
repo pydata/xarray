@@ -1,0 +1,38 @@
+# Stubtest Allowlist for xarray
+# ================================
+# This file contains patterns for symbols that stubtest reports as errors
+# but are working correctly at runtime.
+#
+# Format: Each line is a regex pattern matching fully qualified names to ignore.
+# See: https://mypy.readthedocs.io/en/stable/stubtest.html#allowlist
+
+# =============================================================================
+# TYPE_CHECKING imports - not present at runtime
+# =============================================================================
+
+# TypeVars
+xarray\.core\.dataarray\.T_XarrayOther$
+
+# External library types (dask, delayed, etc.)
+xarray\.core\.dataarray\.iris_Cube$
+
+# =============================================================================
+# Plot accessors and methods
+# =============================================================================
+
+xarray\.core\.dataarray\.DataArray\.plot$
+xarray\.core\.(dataarray|dataset)\.Dataset\.plot$
+
+# =============================================================================
+# __array__ method - complex numpy protocol
+# =============================================================================
+
+xarray\.core\.(dataarray|dataset)\.Dataset\.__array__$
+
+# =============================================================================
+# Variable/IndexVariable methods inherited from numpy-like interface
+# =============================================================================
+
+xarray\.core\.(dataarray|dataset|variable)\.Variable\.(item|searchsorted)$
+xarray\.core\.(dataarray|dataset|variable)\.IndexVariable\.(item|searchsorted)$
+xarray\.core\.dataarray\.DataArray\.(item|searchsorted)$

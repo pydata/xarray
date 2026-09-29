@@ -283,4 +283,4 @@ complete examples, please consult the relevant documentation.*
         allows for grouping related data together.
         Analogous to a single
         `netCDF group <https://www.unidata.ucar.edu/software/netcdf/workshops/2011/groups-types/GroupsIntro.html>`_
-        or `Zarr group <https://zarr.readthedocs.io/en/stable/tutorial.html#groups>`_.
+        or `Zarr group <https://zarr.readthedocs.io/en/stable/user-guide/groups/#groups>`_.

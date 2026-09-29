@@ -3,11 +3,19 @@ import pytest
 
 import xarray as xr
 from xarray.indexes import NDPointIndex
-from xarray.tests import assert_identical
+from xarray.indexes.nd_point_index import ScipyKDTreeAdapter
+from xarray.tests import assert_identical, has_scipy, requires_scipy
 
-pytest.importorskip("scipy")
+
+@pytest.mark.skipif(has_scipy, reason="requires scipy to be missing")
+def test_scipy_kdtree_adapter_missing_scipy():
+    points = np.random.rand(4, 2)
+
+    with pytest.raises(ImportError, match=r"scipy"):
+        ScipyKDTreeAdapter(points, options={})
 
 
+@requires_scipy
 def test_tree_index_init() -> None:
     from xarray.indexes.nd_point_index import ScipyKDTreeAdapter
 
@@ -26,12 +34,10 @@ def test_tree_index_init() -> None:
     assert ds_indexed1.xindexes["xx"].equals(ds_indexed2.xindexes["yy"])
 
 
+@requires_scipy
 def test_tree_index_init_errors() -> None:
     xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)})
-
-    with pytest.raises(ValueError, match="number of variables"):
-        ds.set_xindex("xx", NDPointIndex)
 
     ds2 = ds.assign_coords(yy=(("u", "v"), [[3.0, 3.0], [4.0, 4.0]]))
 
@@ -39,6 +45,7 @@ def test_tree_index_init_errors() -> None:
         ds2.set_xindex(("xx", "yy"), NDPointIndex)
 
 
+@requires_scipy
 def test_tree_index_sel() -> None:
     xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)}).set_xindex(
@@ -112,6 +119,7 @@ def test_tree_index_sel() -> None:
     assert_identical(actual, expected)
 
 
+@requires_scipy
 def test_tree_index_sel_errors() -> None:
     xx, yy = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds = xr.Dataset(coords={"xx": (("y", "x"), xx), "yy": (("y", "x"), yy)}).set_xindex(
@@ -137,6 +145,7 @@ def test_tree_index_sel_errors() -> None:
         )
 
 
+@requires_scipy
 def test_tree_index_equals() -> None:
     xx1, yy1 = np.meshgrid([1.0, 2.0], [3.0, 4.0])
     ds1 = xr.Dataset(
@@ -179,5 +188,36 @@ def test_tree_index_rename() -> None:
         xx=xr.Variable(ds_renamed.xx.dims, [[1.1, 1.1, 1.1], [1.9, 1.9, 1.9]]),
         uu=xr.Variable(ds_renamed.uu.dims, [[3.1, 3.1, 3.1], [3.9, 3.9, 3.9]]),
         method="nearest",
+    )
+    assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_tree_index_1d_coords() -> None:
+    ds = xr.Dataset(
+        {"temp": ("points", np.arange(20, dtype=float))},
+        coords={
+            "x": ("points", np.linspace(0, 10, 20)),
+            "y": ("points", np.linspace(15, 8, 20)),
+        },
+    )
+    ds_indexed = ds.set_xindex(("x", "y"), NDPointIndex)
+
+    assert isinstance(ds_indexed.xindexes["x"], NDPointIndex)
+
+    actual = ds_indexed.sel(x=5.0, y=11.5, method="nearest")
+    assert actual.temp.values == 10.0
+
+    actual = ds_indexed.sel(
+        x=xr.Variable("query", [0.0, 5.0, 10.0]),
+        y=xr.Variable("query", [15.0, 11.5, 8.0]),
+        method="nearest",
+    )
+    expected = xr.Dataset(
+        {"temp": ("query", [0.0, 10.0, 19.0])},
+        coords={
+            "x": ("query", [0.0, ds.x.values[10], 10.0]),
+            "y": ("query", [15.0, ds.y.values[10], 8.0]),
+        },
     )
     assert_identical(actual, expected)

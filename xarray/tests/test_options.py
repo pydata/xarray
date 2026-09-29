@@ -84,6 +84,21 @@ def test_netcdf_engine_order() -> None:
     assert OPTIONS["netcdf_engine_order"] == original
 
 
+def test_facetgrid_figsize() -> None:
+    with pytest.raises(ValueError):
+        xarray.set_options(facetgrid_figsize="invalid")
+    with pytest.raises(ValueError):
+        xarray.set_options(facetgrid_figsize=(1.0,))
+    with pytest.raises(ValueError):
+        xarray.set_options(facetgrid_figsize=(1.0, 2.0, 3.0))
+    with xarray.set_options(facetgrid_figsize="rcparams"):
+        assert OPTIONS["facetgrid_figsize"] == "rcparams"
+    with xarray.set_options(facetgrid_figsize="computed"):
+        assert OPTIONS["facetgrid_figsize"] == "computed"
+    with xarray.set_options(facetgrid_figsize=(12.0, 8.0)):
+        assert OPTIONS["facetgrid_figsize"] == (12.0, 8.0)
+
+
 def test_display_style() -> None:
     original = "html"
     assert OPTIONS["display_style"] == original

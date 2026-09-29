@@ -13,15 +13,20 @@ import hypothesis.strategies as st
 from hypothesis import given
 from hypothesis.extra.array_api import make_strategies_namespace
 
+import xarray as xr
+from xarray import broadcast
 from xarray.core.options import set_options
 from xarray.core.variable import Variable
 from xarray.testing.strategies import (
     attrs,
+    basic_indexers,
     dimension_names,
     dimension_sizes,
+    outer_array_indexers,
     supported_dtypes,
     unique_subset_of,
     variables,
+    vectorized_indexers,
 )
 
 ALLOWED_ATTRS_VALUES_TYPES = (int, bool, str, np.ndarray)
@@ -268,14 +273,90 @@ class TestReduction:
         Test that given a Variable of at least one dimension,
         the mean of the Variable is always equal to the mean of the underlying array.
         """
-        with set_options(use_numbagg=False):
+        # arbitrary floats can overflow to inf, and inf - inf gives nan
+        with (
+            set_options(use_numbagg=False),
+            np.errstate(over="ignore", invalid="ignore"),
+        ):
             # specify arbitrary reduction along at least one dimension
             reduction_dims = data.draw(unique_subset_of(var.dims, min_size=1))
 
             # create expected result (using nanmean because arrays with Nans will be generated)
             reduction_axes = tuple(var.get_axis_num(dim) for dim in reduction_dims)
-            expected = np.nanmean(var.data, axis=reduction_axes)
+            with warnings.catch_warnings():
+                # all-NaN slices are expected to reduce to NaN
+                warnings.filterwarnings("ignore", "Mean of empty slice", RuntimeWarning)
+                expected = np.nanmean(var.data, axis=reduction_axes)
 
             # assert property is always satisfied
             result = var.mean(dim=reduction_dims).data
             npt.assert_equal(expected, result)
+
+
+class TestBasicIndexers:
+    @given(st.data(), dimension_sizes(min_dims=1))
+    def test_types(self, data, sizes):
+        idxr = data.draw(basic_indexers(sizes=sizes))
+        assert idxr
+        assert isinstance(idxr, dict)
+        for key, value in idxr.items():
+            assert key in sizes
+            assert isinstance(value, (int, slice))
+
+    @given(st.data(), dimension_sizes(min_dims=2))
+    def test_min_max_dims(self, data, sizes):
+        min_dims = data.draw(st.integers(min_value=1, max_value=len(sizes)))
+        max_dims = data.draw(st.integers(min_value=min_dims, max_value=len(sizes)))
+        idxr = data.draw(
+            basic_indexers(sizes=sizes, min_dims=min_dims, max_dims=max_dims)
+        )
+        assert min_dims <= len(idxr) <= max_dims
+
+
+class TestOuterArrayIndexers:
+    @given(st.data(), dimension_sizes(min_dims=1, min_side=1))
+    def test_types(self, data, sizes):
+        idxr = data.draw(outer_array_indexers(sizes=sizes, min_dims=1))
+        assert idxr
+        assert isinstance(idxr, dict)
+        for key, value in idxr.items():
+            assert key in sizes
+            assert isinstance(value, np.ndarray)
+            assert value.dtype == np.int64
+            assert value.ndim == 1
+            # Check indices in bounds (negative indices valid)
+            assert np.all((value >= -sizes[key]) & (value < sizes[key]))
+
+    @given(st.data(), dimension_sizes(min_dims=2, min_side=1))
+    def test_min_max_dims(self, data, sizes):
+        min_dims = data.draw(st.integers(min_value=1, max_value=len(sizes)))
+        max_dims = data.draw(st.integers(min_value=min_dims, max_value=len(sizes)))
+        idxr = data.draw(
+            outer_array_indexers(sizes=sizes, min_dims=min_dims, max_dims=max_dims)
+        )
+        assert min_dims <= len(idxr) <= max_dims
+
+
+class TestVectorizedIndexers:
+    @given(st.data(), dimension_sizes(min_dims=2, min_side=1))
+    def test_types(self, data, sizes):
+        idxr = data.draw(vectorized_indexers(sizes=sizes))
+        assert isinstance(idxr, dict)
+        assert idxr  # not empty
+        # All DataArrays should be broadcastable together
+        broadcast(*idxr.values())
+        for key, value in idxr.items():
+            assert key in sizes
+            assert isinstance(value, xr.DataArray)
+            assert value.dtype == np.int64
+            # Check indices in bounds (negative indices valid)
+            assert np.all((value.values >= -sizes[key]) & (value.values < sizes[key]))
+
+    @given(st.data(), dimension_sizes(min_dims=3, min_side=1))
+    def test_min_max_dims(self, data, sizes):
+        min_dims = data.draw(st.integers(min_value=2, max_value=len(sizes)))
+        max_dims = data.draw(st.integers(min_value=min_dims, max_value=len(sizes)))
+        idxr = data.draw(
+            vectorized_indexers(sizes=sizes, min_dims=min_dims, max_dims=max_dims)
+        )
+        assert min_dims <= len(idxr) <= max_dims

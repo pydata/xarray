@@ -174,8 +174,15 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
         if chunkmanager.is_chunked_array(chunked_arr)
     ]
     if not selected:
+        if (
+            maybe_lib := type(chunked_arr).__module__.split(".")[0]
+        ) in KNOWN_CHUNKMANAGERS:
+            suggestion = f"Please try installing {KNOWN_CHUNKMANAGERS[maybe_lib]!r}."
+        else:
+            suggestion = "This is usually the result of a missing dependency."
         raise TypeError(
             f"Could not find a Chunk Manager which recognises type {type(chunked_arr)}"
+            f" {suggestion}"
         )
     elif len(selected) >= 2:
         raise TypeError(f"Multiple ChunkManagers recognise type {type(chunked_arr)}")
@@ -350,7 +357,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         from xarray.namedarray.utils import _get_chunk
 
         if _contains_cftime_datetimes(data):
-            chunks2 = _get_chunk(data, chunks, self, preferred_chunks={})  # type: ignore[arg-type]
+            preferred_chunks = dict(enumerate(data.chunks))
+            chunks2 = _get_chunk(
+                data,  # type: ignore[arg-type]
+                chunks,
+                self,
+                preferred_chunks=preferred_chunks,
+                dims=preferred_chunks.keys(),
+            )
         else:
             chunks2 = chunks  # type: ignore[assignment]
         return data.rechunk(chunks2, **kwargs)
@@ -507,7 +521,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         -------
         Chunked array
 
-        See also
+        See Also
         --------
         dask.array.cumreduction
         """

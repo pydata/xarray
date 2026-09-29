@@ -316,7 +316,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: None = None,  # no wrap -> primitive
         col: None = None,  # no wrap -> primitive
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_legend: bool | None = None,
@@ -356,7 +356,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable,  # wrap -> FacetGrid
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_legend: bool | None = None,
@@ -396,7 +396,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable,  # wrap -> FacetGrid
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_legend: bool | None = None,
@@ -435,7 +435,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: None = None,  # no wrap -> primitive
         col: None = None,  # no wrap -> primitive
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -474,7 +474,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable,  # wrap -> FacetGrid
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -513,7 +513,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable,  # wrap -> FacetGrid
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -556,7 +556,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: None = None,  # no wrap -> primitive
         col: None = None,  # no wrap -> primitive
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -595,7 +595,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable,  # wrap -> FacetGrid
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -634,7 +634,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable,  # wrap -> FacetGrid
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -677,7 +677,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: None = None,  # no wrap -> primitive
         col: None = None,  # no wrap -> primitive
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -716,7 +716,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable,  # wrap -> FacetGrid
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -755,7 +755,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable,  # wrap -> FacetGrid
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -798,7 +798,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: None = None,  # no wrap -> primitive
         col: None = None,  # no wrap -> primitive
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -837,7 +837,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable,  # wrap -> FacetGrid
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -876,7 +876,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable,  # wrap -> FacetGrid
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -919,7 +919,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: None = None,  # no wrap -> primitive
         col: None = None,  # no wrap -> primitive
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -958,7 +958,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable,  # wrap -> FacetGrid
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -997,7 +997,7 @@ class DataArrayPlotAccessor:
         ax: Axes | None = None,
         row: Hashable,  # wrap -> FacetGrid
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -1188,7 +1188,7 @@ class DatasetPlotAccessor:
         ax: Axes | None = None,
         row: None = None,  # no wrap -> primitive
         col: None = None,  # no wrap -> primitive
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_legend: bool | None = None,
@@ -1228,7 +1228,7 @@ class DatasetPlotAccessor:
         ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable,  # wrap -> FacetGrid
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_legend: bool | None = None,
@@ -1268,7 +1268,7 @@ class DatasetPlotAccessor:
         ax: Axes | None = None,
         row: Hashable,  # wrap -> FacetGrid
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_legend: bool | None = None,
@@ -1310,7 +1310,7 @@ class DatasetPlotAccessor:
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         sharex: bool = True,
         sharey: bool = True,
         aspect: AspectOptions = None,
@@ -1346,7 +1346,7 @@ class DatasetPlotAccessor:
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         sharex: bool = True,
         sharey: bool = True,
         aspect: AspectOptions = None,
@@ -1382,7 +1382,7 @@ class DatasetPlotAccessor:
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         sharex: bool = True,
         sharey: bool = True,
         aspect: AspectOptions = None,
@@ -1422,7 +1422,7 @@ class DatasetPlotAccessor:
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         sharex: bool = True,
         sharey: bool = True,
         aspect: AspectOptions = None,
@@ -1458,7 +1458,7 @@ class DatasetPlotAccessor:
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         sharex: bool = True,
         sharey: bool = True,
         aspect: AspectOptions = None,
@@ -1494,7 +1494,7 @@ class DatasetPlotAccessor:
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         sharex: bool = True,
         sharey: bool = True,
         aspect: AspectOptions = None,

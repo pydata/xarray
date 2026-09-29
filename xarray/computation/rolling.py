@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 import numpy as np
 
 from xarray.compat import dask_array_ops
-from xarray.computation.arithmetic import CoarsenArithmetic
 from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
@@ -51,6 +50,43 @@ Returns
 reduced : same type as caller
     New object with `{name}` applied along its rolling dimension.
 """
+
+_COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
+Reduce this object's data by applying `{name}` along some dimension(s).
+
+Parameters
+----------
+{skip_na_docs}{min_count_docs}
+keep_attrs : bool, optional
+    If True, the attributes (`attrs`) will be copied from the original
+    object to the new one.  If False (default), the new object will be
+    returned without attributes.
+**kwargs : dict
+    Additional keyword arguments passed on to the appropriate array
+    function for calculating `{name}` on this object's data.
+
+Returns
+-------
+reduced : same type as caller
+    New object with `{name}` applied to its data and the
+    indicated dimension(s) removed.
+"""
+
+_SKIPNA_DOCSTRING = """
+skipna : bool, optional
+    If True, skip missing values (as marked by NaN). By default, only
+    skips missing values for float dtypes; other dtypes either do not
+    have a sentinel missing value (int) or skipna=True has not been
+    implemented (object, datetime64 or timedelta64)."""
+
+_MINCOUNT_DOCSTRING = """
+min_count : int, default: None
+    The required number of valid values to perform the operation. If
+    fewer than min_count non-NA values are present the result will be
+    NA. Only used if skipna is set to True or defaults to True for the
+    array's dtype. New in version 0.10.8: Added with the default being
+    None. Changed in version 0.17.0: if specified on an integer array
+    and skipna=True, the result will be a float array."""
 
 
 class Rolling(Generic[T_Xarray]):
@@ -168,7 +204,7 @@ class Rolling(Generic[T_Xarray]):
 
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
         if module_available("numbagg"):
-            import numbagg
+            import numbagg  # type: ignore[import-not-found, unused-ignore]
 
             numbagg_move_func = getattr(numbagg, "move_" + name, None)
         else:
@@ -176,6 +212,15 @@ class Rolling(Generic[T_Xarray]):
 
         def method(self, keep_attrs=None, **kwargs):
             keep_attrs = self._get_keep_attrs(keep_attrs)
+            if "keepdims" in kwargs:
+                warnings.warn(
+                    "Reductions are applied along the rolling dimension. "
+                    "Passing the 'keepdims' kwarg to reduction is not "
+                    "supported and will be ignored.",
+                    FutureWarning,
+                    stacklevel=3,
+                )
+                del kwargs["keepdims"]
 
             return self._array_reduce(
                 array_agg_func=array_agg_func,
@@ -279,7 +324,7 @@ class DataArrayRolling(Rolling["DataArray"]):
             Object to window.
         windows : mapping of hashable to int
             A mapping from the name of the dimension to create the rolling
-            exponential window along (e.g. `time`) to the size of the moving window.
+            window along (e.g. `time`) to the size of the moving window.
         min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
@@ -491,7 +536,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
-            np.ndarray over an the rolling dimension.
+            np.ndarray over the rolling dimension.
         keep_attrs : bool, default: None
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
@@ -670,8 +715,14 @@ class DataArrayRolling(Rolling["DataArray"]):
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
         if is_duck_dask_array(padded.data):
+            input_dtype = self.obj.dtype if self.obj.dtype.kind == "b" else padded.dtype
             values = dask_array_ops.dask_rolling_wrapper(
-                func, padded, axis=axis, window=self.window[0], min_count=min_count
+                func,
+                padded,
+                axis=axis,
+                window=self.window[0],
+                min_count=min_count,
+                input_dtype=input_dtype,
             )
         else:
             values = func(
@@ -707,7 +758,7 @@ class DataArrayRolling(Rolling["DataArray"]):
                 f"Reductions are applied along the rolling dimension(s) "
                 f"'{self.dim}'. Passing the 'dim' kwarg to reduction "
                 f"operations has no effect.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=3,
             )
             del kwargs["dim"]
@@ -791,7 +842,7 @@ class DatasetRolling(Rolling["Dataset"]):
             Object to window.
         windows : mapping of hashable to int
             A mapping from the name of the dimension to create the rolling
-            exponential window along (e.g. `time`) to the size of the moving window.
+            window along (e.g. `time`) to the size of the moving window.
         min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
@@ -860,7 +911,7 @@ class DatasetRolling(Rolling["Dataset"]):
         func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
-            np.ndarray over an the rolling dimension.
+            np.ndarray over the rolling dimension.
         keep_attrs : bool, default: None
             If True, the attributes (``attrs``) will be copied from the original
             object to the new one. If False, the new object will be returned
@@ -1020,7 +1071,7 @@ class DatasetRolling(Rolling["Dataset"]):
         return Dataset(dataset, coords=coords, attrs=attrs)
 
 
-class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
+class Coarsen(Generic[T_Xarray]):
     """A object that implements the coarsen.
 
     See Also
@@ -1061,7 +1112,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
             Object to window.
         windows : mapping of hashable to int
             A mapping from the name of the dimension to create the rolling
-            exponential window along (e.g. `time`) to the size of the moving window.
+            window along (e.g. `time`) to the size of the moving window.
         boundary : {"exact", "trim", "pad"}
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of window size. If 'trim', the excess indexes are trimmed.
@@ -1110,6 +1161,46 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
             if getattr(self, k, None) is not None
         )
         return f"{self.__class__.__name__} [{attrs}]"
+
+    @staticmethod
+    def _reduce_method_impl(name: str, include_skipna: bool) -> Callable[..., T_Xarray]:
+        """Creates methods that mirror the implementation in Rolling."""
+
+        kwargs: dict[str, Any] = {}
+        if include_skipna:
+            kwargs["skipna"] = None
+
+        func = getattr(duck_array_ops, name)
+
+        available_min_count = getattr(func, "available_min_count", False)
+        skip_na_docs = _SKIPNA_DOCSTRING if include_skipna else ""
+        min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ""
+
+        def method(self, keep_attrs: bool | None = None, **kwargs) -> T_Xarray:
+            return self._reduce_method(
+                func,
+                **kwargs,
+            )(self, keep_attrs=keep_attrs, **kwargs)
+
+        method.__name__ = name
+        method.__doc__ = _COARSEN_REDUCE_DOCSTRING_TEMPLATE.format(
+            name=name,
+            skip_na_docs=skip_na_docs,
+            min_count_docs=min_count_docs,
+        )
+        return method
+
+    any = _reduce_method_impl("array_any", include_skipna=False)
+    all = _reduce_method_impl("array_all", include_skipna=False)
+    max = _reduce_method_impl("max", include_skipna=True)
+    min = _reduce_method_impl("min", include_skipna=True)
+    mean = _reduce_method_impl("mean", include_skipna=True)
+    prod = _reduce_method_impl("prod", include_skipna=True)
+    sum = _reduce_method_impl("sum", include_skipna=True)
+    std = _reduce_method_impl("std", include_skipna=True)
+    var = _reduce_method_impl("var", include_skipna=True)
+    median = _reduce_method_impl("median", include_skipna=True)
+    count = _reduce_method_impl("count", include_skipna=False)
 
     def construct(
         self,

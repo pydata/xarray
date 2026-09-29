@@ -175,6 +175,7 @@ class TestGetChunkManager:
             guess_chunkmanager("foo")
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_get_dask_if_installed(self) -> None:
         chunkmanager = guess_chunkmanager(None)
         assert isinstance(chunkmanager, DaskManager)
@@ -192,6 +193,7 @@ class TestGetChunkManager:
             guess_chunkmanager("dask")
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_choose_dask_over_other_chunkmanagers(
         self, register_dummy_chunkmanager
     ) -> None:
@@ -223,11 +225,24 @@ class TestGetChunkedArrayType:
         dummy_arr = DummyChunkedArray([1, 2, 3])
 
         with pytest.raises(
-            TypeError, match="Could not find a Chunk Manager which recognises"
+            TypeError,
+            match=r"Could not find a Chunk Manager .* missing dependency.",
+        ):
+            get_chunked_array_type(dummy_arr)
+
+    def test_recommend_known_chunkmanager_if_unavailable(self, monkeypatch) -> None:
+        # For instance for a cubed array, this recommends installing cubed-xarray
+        monkeypatch.setitem(KNOWN_CHUNKMANAGERS, "xarray", "dummy")
+
+        dummy_arr = DummyChunkedArray([1, 2, 3])
+        with pytest.raises(
+            TypeError,
+            match=r"Could not find a Chunk Manager .* try installing 'dummy'.",
         ):
             get_chunked_array_type(dummy_arr)
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_detect_dask_if_installed(self) -> None:
         import dask.array as da
 
