@@ -41,10 +41,11 @@ NAMED_ARRAY_MODULE_PREAMBLE = '''\
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, Generic
 
 from xarray.core import duck_array_ops
-from xarray.core.types import Dims, Self
+from xarray.core.types import Self
+from xarray.namedarray._typing import DimsLike, DimType_co
 '''
 
 AGGREGATIONS_PREAMBLE = """
@@ -94,13 +95,13 @@ class {obj}{cls}Aggregations:
 
 NAMED_ARRAY_AGGREGATIONS_PREAMBLE = """
 
-class {obj}{cls}Aggregations:
+class {obj}{cls}Aggregations(Generic[DimType_co]):
     __slots__ = ()
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         axis: int | Sequence[int] | None = None,
         keepdims: bool = False,
@@ -182,7 +183,7 @@ class {obj}{cls}Aggregations:
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
-        dim: Dims = None,{kw_only}{extra_kwargs}{keep_attrs}
+        dim: {dim_type} = None,{kw_only}{extra_kwargs}{keep_attrs}
         **kwargs: Any,
     ) -> Self:
         """
@@ -194,7 +195,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
 TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
     def {method}(
         self,
-        dim: Dims = None,
+        dim: {dim_type} = None,
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -372,6 +373,7 @@ class AggregationGenerator:
     definition_preamble: str
     has_keep_attrs: bool = True
     notes: str = ""
+    dim_type: str = "Dims"
     preamble: str = field(init=False)
 
     def __post_init__(self):
@@ -397,6 +399,7 @@ class AggregationGenerator:
                 else ""
             ),
             kw_only="\n        *," if has_kw_only else "",
+            dim_type=self.dim_type,
         )
 
         if method.extra_kwargs:
@@ -776,6 +779,7 @@ NAMED_ARRAY_GENERATOR = GenericAggregationGenerator(
     example_call_preamble="",
     definition_preamble=NAMED_ARRAY_AGGREGATIONS_PREAMBLE,
     has_keep_attrs=False,
+    dim_type="DimsLike[DimType_co]",
 )
 
 
