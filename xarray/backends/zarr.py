@@ -235,19 +235,24 @@ class ZarrArrayWrapper(BackendArray):
         self._array = zarr_array
         self.shape = self._array.shape
 
-        # preserve vlen string object dtype (GH 7328)
+        # preserve vlen string object dtype (GH 7328), but keep a native StringDType
+        dtype = self._array.dtype
         if (
-            self._array.serializer
+            dtype.kind != "T"
+            and self._array.serializer
             and self._array.serializer.to_dict()["name"] == "vlen-utf8"
         ):
             dtype = coding.strings.create_vlen_dtype(str)
-        else:
-            dtype = self._array.dtype
 
         self.dtype = dtype
 
     def get_array(self):
         return self._array
+
+    def _preserve_string_dtype(self, value):
+        if self.dtype.kind == "T" and isinstance(value, str):
+            return np.asarray(value, dtype=self.dtype)
+        return value
 
     def _oindex(self, key):
         return self._array.oindex[key]
@@ -288,12 +293,14 @@ class ZarrArrayWrapper(BackendArray):
             method = self._vindex
         elif isinstance(key, indexing.OuterIndexer):
             method = self._oindex
-        return indexing.explicit_indexing_adapter(
+        value = indexing.explicit_indexing_adapter(
             key, array.shape, indexing.IndexingSupport.VECTORIZED, method
         )
 
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
+
+        return self._preserve_string_dtype(value)
 
     async def async_getitem(self, key):
         array = self._array
@@ -303,9 +310,24 @@ class ZarrArrayWrapper(BackendArray):
             method = self._async_vindex
         elif isinstance(key, indexing.OuterIndexer):
             method = self._async_oindex
-        return await indexing.async_explicit_indexing_adapter(
+        value = await indexing.async_explicit_indexing_adapter(
             key, array.shape, indexing.IndexingSupport.VECTORIZED, method
         )
+        return self._preserve_string_dtype(value)
+
+
+def _rectilinear_encoding_error(key: str, value, name) -> TypeError:
+    """Error for a rectilinear (variable-sized) chunk or shard spec, which xarray
+    can read but not yet write."""
+    return TypeError(
+        f"encoding[{key!r}]={value!r} for variable {name!r} is a rectilinear "
+        "(variable-sized) grid, e.g. read from a store opened with "
+        "zarr.config.set({'array.rectilinear_chunks': True}). xarray can read "
+        "rectilinear grids but not yet write them, including with `region` or "
+        "`append_dim`. To write a regular grid to a new array instead, clear "
+        f"the encoding (`del ds[{name!r}].encoding[{key!r}]`) and make sure the "
+        "variable's own chunks are uniform (e.g. `ds.chunk({dim: size})`)."
+    )
 
 
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
@@ -368,6 +390,8 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
+            if isinstance(x, list | tuple):
+                raise _rectilinear_encoding_error("chunks", enc_chunks_tuple, name)
             raise TypeError(
                 "zarr chunk sizes specified in `encoding['chunks']` "
                 "must be an int or a tuple of ints. "
@@ -381,6 +405,27 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
         return enc_chunks_tuple
 
     return enc_chunks_tuple
+
+
+def _compact_chunk_sizes(
+    chunk_sizes: tuple[tuple[int, ...], ...],
+) -> tuple[int | tuple[int, ...], ...]:
+    """Replace a dask-style listing of chunk sizes with a single int along any
+    dimension where it describes a regular grid, e.g. ((10, 10, 5),) -> (10,).
+
+    Gives a consistent representation across zarr-python versions.
+    """
+    compacted: list[int | tuple[int, ...]] = []
+    for sizes in chunk_sizes:
+        sizes = tuple(sizes)
+        if not sizes:
+            # zero-length dimension: dask rejects an empty tuple here
+            compacted.append((0,))
+        elif len(set(sizes[:-1])) <= 1 and sizes[-1] <= sizes[0]:
+            compacted.append(sizes[0])
+        else:
+            compacted.append(sizes)
+    return tuple(compacted)
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
@@ -507,12 +552,26 @@ def extract_zarr_variable_encoding(
     if chunks is None:
         chunks = "auto"
     encoding["chunks"] = chunks
+
+    # Reject rectilinear shards (a sequence of sequences) like we do for chunks.
+    # Zarr also accepts an int, tuple of ints, "auto" or a dict here.
+    shards = encoding.get("shards")
+    if isinstance(shards, list | tuple) and any(
+        isinstance(x, list | tuple) for x in shards
+    ):
+        raise _rectilinear_encoding_error("shards", shards, name)
+    if isinstance(shards, integer_types):
+        # Expand to a tuple: zarr-python 3.2.x crashes on an int shard spec.
+        encoding["shards"] = variable.ndim * (int(shards),)
+
     return encoding
 
 
 # Function below is copied from conventions.encode_cf_variable.
 # The only change is to raise an error for object dtypes.
-def encode_zarr_variable(var, needs_copy=True, name=None):
+def encode_zarr_variable(
+    var, needs_copy=True, name=None, *, zarr_format: ZarrFormat | None = None
+):
     """
     Converts a Variable into another Variable which follows some
     of the CF conventions:
@@ -534,6 +593,13 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     """
     var = conventions.encode_cf_variable(var, name=name, coders=ZARR_CODERS)
     var = ensure_dtype_not_object(var, name=name)
+
+    if (
+        zarr_format == 3
+        and var.dtype.kind == "T"
+        and var.dtype == np.dtypes.StringDType()
+    ):
+        return var
 
     # zarr allows unicode, but not variable-length strings, so it's both
     # simpler and more compact to always encode as UTF-8 explicitly.
@@ -854,23 +920,46 @@ class ZarrStore(AbstractWritableDataStore):
 
     def open_store_variable(self, name):
         zarr_array = self.members[name]
-        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(zarr_array))
         try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
             zarr_array, DIMENSION_KEY, try_nczarr
         )
         attributes = dict(attributes)
+        array_wrapper = ZarrArrayWrapper(zarr_array)
+        data = indexing.LazilyIndexedArray(array_wrapper)
+
+        try:
+            chunks = tuple(zarr_array.chunks)
+        except NotImplementedError:
+            # Rectilinear chunk grid (zarr-python >= 3.2): `.chunks` raises, so
+            # read the per-chunk sizes instead, e.g. ((10, 20, 30),).
+            chunks = zarr_array.read_chunk_sizes
+        # Normalise to an int per regular dim and a tuple per rectilinear dim,
+        # since what zarr-python returns above varies between versions.
+        chunks = _compact_chunk_sizes(
+            tuple(x if isinstance(x, tuple) else (x,) for x in chunks)
+        )
+        preferred_chunks = dict(zip(dimensions, chunks, strict=True))
 
         encoding = {
-            "chunks": zarr_array.chunks,
-            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks, strict=True)),
+            "chunks": chunks,
+            "preferred_chunks": preferred_chunks,
         }
+        if array_wrapper.dtype.kind == "T":
+            encoding["dtype"] = array_wrapper.dtype
+
+        try:
+            shards = zarr_array.shards
+        except NotImplementedError:
+            # Rectilinear shard grid: `.shards` raises, so read the per-shard
+            # (i.e. outer/storage chunk) sizes instead, e.g. ((1, 2),).
+            shards = _compact_chunk_sizes(zarr_array.write_chunk_sizes)
 
         encoding.update(
             {
                 "compressors": zarr_array.compressors,
                 "filters": zarr_array.filters,
-                "shards": zarr_array.shards,
+                "shards": shards,
             }
         )
         if self.zarr_group.metadata.zarr_format == 3:
@@ -930,7 +1019,8 @@ class ZarrStore(AbstractWritableDataStore):
         _put_attrs(self.zarr_group, attributes)
 
     def encode_variable(self, variable, name=None):
-        variable = encode_zarr_variable(variable, name=name)
+        zarr_format = self.zarr_group.metadata.zarr_format
+        variable = encode_zarr_variable(variable, name=name, zarr_format=zarr_format)
         return variable
 
     def encode_attribute(self, a):
@@ -1208,6 +1298,21 @@ class ZarrStore(AbstractWritableDataStore):
                 else:
                     del v.encoding["_FillValue"]
 
+            # We need to do this for both new and existing variables to ensure we're not
+            # writing to a partial chunk, even though we don't use the `encoding` value
+            # when writing to an existing variable. See
+            # https://github.com/pydata/xarray/issues/8371 for details.
+            # Note: Ideally there should be two functions, one for validating the chunks and
+            # another one for extracting the encoding.
+            # Must run before any resize below, so a rejected encoding can't
+            # leave behind a resized array that was never written to.
+            encoding = extract_zarr_variable_encoding(
+                v,
+                raise_on_invalid=vn in check_encoding_set,
+                name=vn,
+                zarr_format=3 if is_zarr_v3_format else 2,
+            )
+
             zarr_shape = None
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
@@ -1232,19 +1337,6 @@ class ZarrStore(AbstractWritableDataStore):
 
                 zarr_shape = zarr_array.shape
             region = tuple(write_region[dim] for dim in dims)
-
-            # We need to do this for both new and existing variables to ensure we're not
-            # writing to a partial chunk, even though we don't use the `encoding` value
-            # when writing to an existing variable. See
-            # https://github.com/pydata/xarray/issues/8371 for details.
-            # Note: Ideally there should be two functions, one for validating the chunks and
-            # another one for extracting the encoding.
-            encoding = extract_zarr_variable_encoding(
-                v,
-                raise_on_invalid=vn in check_encoding_set,
-                name=vn,
-                zarr_format=3 if is_zarr_v3_format else 2,
-            )
 
             # When shards are specified, dask chunks must align with shard boundaries
             # (not just zarr chunk boundaries) to avoid data corruption during

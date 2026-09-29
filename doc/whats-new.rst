@@ -13,6 +13,14 @@ v2026.07.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Support reading Zarr V3 arrays with rectilinear (variable-sized) chunk
+  grids. Using this feature needs ``zarr-python >= 3.2`` with
+  ``zarr.config.set({"array.rectilinear_chunks": True})``; xarray's minimum
+  supported zarr version is unchanged. Writing rectilinear chunks from
+  xarray is not yet supported (:pull:`11592`, extracted from :pull:`11279`).
+  By `Max Jones <https://github.com/maxrjones>`_ and
+  `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 - Added `PyArrowCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
   to :py:class:`DataArray` (``__arrow_c_schema__`` and ``__arrow_c_stream__``), enabling near zero-copy
   export to pyarrow, polars or duckdb.
@@ -56,6 +64,16 @@ Bug Fixes
 - Appending to a Zarr store whose datetime variable is stored with a native
   ``datetime64`` dtype now reuses the stored ``units`` and ``calendar``, instead
   of writing the appended times with default units (:issue:`10639`).
+- Fix a bug in the ``scipy`` backend where mixing non-adjacent scalar and
+  array indexers in :py:meth:`Dataset.sel` could silently transpose
+  dimension sizes when reading from a closed file object
+  (:issue:`10338`, :pull:`11638`).
+  By `Anirban Mandal <https://github.com/CoderAnirban71>`_.
+- Fixed ``DataArray.str.replace`` replacing every occurrence instead of none when
+  ``n=0``. ``re.sub`` treats ``count=0`` as "replace all", so the regex code path
+  collapsed ``n=0`` onto ``n=-1``, while the ``regex=False`` path already handled
+  ``n=0`` correctly (:pull:`11545`).
+  By `Alexander Kropiunig <https://github.com/Kropiunig>`_.
 - ``min`` and ``max`` of object arrays with ``skipna=False`` now return ``NaN``
   for slices containing missing values, instead of a result that depended on
   the position of the missing value (:issue:`11501`, :pull:`#11627`).
@@ -89,6 +107,9 @@ Bug Fixes
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
+  round trips (:issue:`11466`, :pull:`11474`).
+  By `stanbot8 <https://github.com/stanbot8>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs.
@@ -174,6 +195,11 @@ Documentation
 
 - Migrated from nbsphinx/jupyter-execute to myst-nb (:issue:`7924`, :pull:`11456`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_.
+
+- Added an example to the netCDF section of the IO user guide showing how to
+  check which dimensions are unlimited via ``Dataset.encoding``
+  (:issue:`7517`, :pull:`11618`).
+  By `Anirban Mandal <https://github.com/CoderAnirban71>`_.
 
 
 Internal Changes
@@ -431,6 +457,9 @@ Bug Fixes
   By `Emmanuel Ferdman <https://github.com/emmanuel-ferdman>`_.
 - :func:`combine_by_coords` no longer returns an empty dataset when a generator is passed as ``data_objects`` (:issue:`10114`, :pull:`11265`).
   By `Amartya Anand <https://github.com/SurfyPenguin>`_.
+- Warn when tuple-style ``DataArray`` coordinates are renamed by explicitly
+  provided dimension names (:issue:`11234`, :pull:`11292`).
+  By `Asish Kumar <https://github.com/officialasishkumar>`_.
 - Preserve non-grouped coordinates in fallback ``groupby`` reductions when grouping
   by a non-leading dimension reorders the underlying variable dimensions
   (:issue:`11188`, :pull:`11290`).
