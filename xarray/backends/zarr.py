@@ -308,6 +308,20 @@ class ZarrArrayWrapper(BackendArray):
         )
 
 
+def _rectilinear_encoding_error(key: str, value, name) -> TypeError:
+    """Error for a rectilinear (variable-sized) chunk or shard spec, which xarray
+    can read but not yet write."""
+    return TypeError(
+        f"encoding[{key!r}]={value!r} for variable {name!r} is a rectilinear "
+        "(variable-sized) grid, e.g. read from a store opened with "
+        "zarr.config.set({'array.rectilinear_chunks': True}). xarray can read "
+        "rectilinear grids but not yet write them, including with `region` or "
+        "`append_dim`. To write a regular grid to a new array instead, clear "
+        f"the encoding (`del ds[{name!r}].encoding[{key!r}]`) and make sure the "
+        "variable's own chunks are uniform (e.g. `ds.chunk({dim: size})`)."
+    )
+
+
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     """
     Given encoding chunks (possibly None or []) and variable chunks
@@ -369,21 +383,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
             if isinstance(x, list | tuple):
-                raise TypeError(
-                    f"encoding['chunks']={enc_chunks_tuple!r} for variable "
-                    f"named {name!r} looks like a rectilinear (variable-sized) "
-                    "chunk grid, e.g. from a store opened with "
-                    "zarr.config.set({'array.rectilinear_chunks': True}). "
-                    "Writing rectilinear chunks is not yet supported by xarray "
-                    "(only reading them is), so this variable cannot be written "
-                    "into an existing rectilinear-chunked array (with `region` "
-                    "or `append_dim`). To write it to a *new* array with a "
-                    "regular chunk grid instead, clear its chunk encoding "
-                    "(`ds.drop_encoding()`, or "
-                    f"`del ds[{name!r}].encoding['chunks']`) *and* make sure "
-                    "its own chunks are uniform too, e.g. with "
-                    "`ds.chunk({dim: size})`."
-                )
+                raise _rectilinear_encoding_error("chunks", enc_chunks_tuple, name)
             raise TypeError(
                 "zarr chunk sizes specified in `encoding['chunks']` "
                 "must be an int or a tuple of ints. "
@@ -550,19 +550,7 @@ def extract_zarr_variable_encoding(
     if isinstance(shards, list | tuple) and any(
         isinstance(x, list | tuple) for x in shards
     ):
-        raise TypeError(
-            f"encoding['shards']={shards!r} for variable named {name!r} "
-            "looks like a rectilinear (variable-sized) shard grid, e.g. "
-            "from a store opened with "
-            "zarr.config.set({'array.rectilinear_chunks': True}). Writing "
-            "rectilinear shards is not yet supported by xarray (only "
-            "reading them is), so this variable cannot be written into an "
-            "existing rectilinear-sharded array (with `region` or "
-            "`append_dim`). To write it to a *new* array with a regular "
-            "shard grid instead, clear its shard encoding (`ds.drop_encoding()`, "
-            f"or `del ds[{name!r}].encoding['shards']`) *and* make sure its "
-            "own chunks are uniform too, e.g. with `ds.chunk({dim: size})`."
-        )
+        raise _rectilinear_encoding_error("shards", shards, name)
     if isinstance(shards, integer_types):
         # Expand to a tuple: zarr-python 3.2.x crashes on an int shard spec.
         encoding["shards"] = variable.ndim * (int(shards),)
