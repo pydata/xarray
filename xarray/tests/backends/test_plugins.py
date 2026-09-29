@@ -45,10 +45,10 @@ class DummyBackendEntrypoint2(common.BackendEntrypoint):
 @pytest.fixture
 def dummy_duplicated_entrypoints():
     specs = [
-        ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
-        ["engine1", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
-        ["engine2", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
-        ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
+        ["engine1", "xarray.tests.backends.test_plugins:backend_1", "xarray.backends"],
+        ["engine1", "xarray.tests.backends.test_plugins:backend_2", "xarray.backends"],
+        ["engine2", "xarray.tests.backends.test_plugins:backend_1", "xarray.backends"],
+        ["engine2", "xarray.tests.backends.test_plugins:backend_2", "xarray.backends"],
     ]
     eps = list(starmap(EntryPoint, specs))
     return eps
@@ -64,7 +64,7 @@ def test_remove_duplicates(dummy_duplicated_entrypoints) -> None:
 def test_broken_plugin() -> None:
     broken_backend = EntryPoint(
         "broken_backend",
-        "xarray.tests.test_plugins:backend_1",
+        "xarray.tests.backends.test_plugins:backend_1",
         "xarray.backends",
     )
     with pytest.warns(RuntimeWarning) as record:
@@ -90,8 +90,8 @@ def test_remove_duplicates_warnings(dummy_duplicated_entrypoints) -> None:
 )
 def test_backends_dict_from_pkg() -> None:
     specs = [
-        ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
-        ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
+        ["engine1", "xarray.tests.backends.test_plugins:backend_1", "xarray.backends"],
+        ["engine2", "xarray.tests.backends.test_plugins:backend_2", "xarray.backends"],
     ]
     entrypoints = list(starmap(EntryPoint, specs))
     engines = plugins.backends_dict_from_pkg(entrypoints)
@@ -143,7 +143,7 @@ def test_set_missing_parameters_raise_error() -> None:
 )
 def test_build_engines() -> None:
     dummy_pkg_entrypoint = EntryPoint(
-        "dummy", "xarray.tests.test_plugins:backend_1", "xarray_backends"
+        "dummy", "xarray.tests.backends.test_plugins:backend_1", "xarray_backends"
     )
     backend_entrypoints = plugins.build_engines(EntryPoints([dummy_pkg_entrypoint]))
 
@@ -162,10 +162,14 @@ def test_build_engines_sorted() -> None:
     dummy_pkg_entrypoints = EntryPoints(
         [
             EntryPoint(
-                "dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"
+                "dummy2",
+                "xarray.tests.backends.test_plugins:backend_1",
+                "xarray.backends",
             ),
             EntryPoint(
-                "dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"
+                "dummy1",
+                "xarray.tests.backends.test_plugins:backend_1",
+                "xarray.backends",
             ),
         ]
     )
