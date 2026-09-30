@@ -4316,7 +4316,7 @@ class Dataset(
         name_dict: Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new object with renamed variables, coordinates and dimensions.
+        """Returns an object with renamed variables, coordinates and dimensions.
 
         Parameters
         ----------
@@ -4346,7 +4346,7 @@ class Dataset(
         dims_dict: Mapping[Any, Hashable] | None = None,
         **dims: Hashable,
     ) -> Self:
-        """Returns a new object with renamed dimensions only.
+        """Returns an object with renamed dimensions only.
 
         Parameters
         ----------
@@ -4393,7 +4393,7 @@ class Dataset(
         name_dict: Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new object with renamed variables including coordinates
+        """Returns an object with renamed variables including coordinates
 
         Parameters
         ----------
