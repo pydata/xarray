@@ -13,6 +13,7 @@ import warnings
 from collections.abc import Generator, Iterator
 from contextlib import ExitStack
 from io import BytesIO
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -2186,6 +2187,25 @@ class FileObjectNetCDF:
         assert_identical(restored, data)
         restored.close()
         assert not f.closed
+
+
+def _write_mfdataset_files(tmp_path: Path, nfiles: int) -> tuple[list[Path], Dataset]:
+    # files like in the MVCE of GH11088, concatenated along a time dimension
+    datasets = [
+        Dataset(
+            {"foo": (("x", "y"), np.random.rand(4, 5))},
+            coords={
+                "x": [10, 20, 30, 40],
+                "y": pd.date_range("2000-01-01", periods=5) + pd.Timedelta(days=5 * i),
+                "z": ("x", list("abcd")),
+            },
+        )
+        for i in range(nfiles)
+    ]
+    paths = [tmp_path / f"{i}.nc" for i in range(nfiles)]
+    for ds, path in zip(datasets, paths, strict=True):
+        ds.to_netcdf(path, engine="netcdf4")
+    return paths, xr.concat(datasets, dim="y")
 
 
 def _check_guess_can_open_and_open(entrypoint, obj, engine, expected):
