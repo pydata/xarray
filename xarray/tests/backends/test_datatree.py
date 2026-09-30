@@ -26,7 +26,7 @@ from xarray.tests import (
     requires_pydap,
     requires_zarr,
 )
-from xarray.tests.test_backends import TestNetCDF4Data as _TestNetCDF4Data
+from xarray.tests.backends.test_netCDF4 import TestNetCDF4Data as _TestNetCDF4Data
 
 if TYPE_CHECKING:
     from xarray.backends.writers import T_DataTreeNetcdfEngine
@@ -701,7 +701,7 @@ class TestZarrDatatreeIO:
             codec = Blosc(cname="zstd", clevel=3, shuffle=2)
             comp = {"compressors": (codec,)}
         elif zarr_format == 3:
-            import zarr
+            import zarr.codecs
 
             comp = {
                 "compressors": (zarr.codecs.BloscCodec(cname="zstd", clevel=3),),
