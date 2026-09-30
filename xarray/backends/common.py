@@ -14,6 +14,7 @@ from typing import (
     Self,
     Union,
     overload,
+    override,
 )
 
 import numpy as np
@@ -313,6 +314,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
         raise NotImplementedError("Backend does not support asynchronous loading")
 
+    @override
     def get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore[index]
@@ -711,6 +713,7 @@ def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
 class WritableCFDataStore(AbstractWritableDataStore):
     __slots__ = ()
 
+    @override
     def encode(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.

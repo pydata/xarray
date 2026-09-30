@@ -14,6 +14,7 @@ from typing import (
     TypeVar,
     cast,
     overload,
+    override,
 )
 
 import numpy as np
@@ -876,6 +877,7 @@ class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):  # 
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],

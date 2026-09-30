@@ -8,7 +8,7 @@ from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, S
 from functools import partial
 from os import PathLike
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, TypeVar, overload, override
 
 import numpy as np
 import pandas as pd
@@ -1005,6 +1005,7 @@ class DataArray(
 
         return self._replace_maybe_drop_dims(var, name=key)
 
+    @override
     def __getitem__(self, key: Any) -> Self:
         if isinstance(key, str):
             return self._getitem_coord(key)
@@ -1033,12 +1034,14 @@ class DataArray(
     def __delitem__(self, key: Any) -> None:
         del self.coords[key]
 
+    @override
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for attribute-style access"""
         yield from self._item_sources
         yield self.attrs
 
+    @override
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
@@ -3995,6 +3998,7 @@ class DataArray(
         """
         return ops.fillna(self, other, join="outer")
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -5007,6 +5011,7 @@ class DataArray(
         # compatible with matmul
         return computation.dot(other, self)
 
+    @override
     def _unary_op(self, f: Callable, *args, **kwargs) -> Self:
         keep_attrs = kwargs.pop("keep_attrs", None)
         if keep_attrs is None:
@@ -5022,6 +5027,7 @@ class DataArray(
                 da.attrs = self.attrs
             return da
 
+    @override
     def _binary_op(
         self, other: DaCompatible, f: Callable, reflexive: bool = False
     ) -> Self:
@@ -5048,6 +5054,7 @@ class DataArray(
 
         return self._replace(variable, coords, name, indexes=indexes)
 
+    @override
     def _inplace_binary_op(self, other: DaCompatible, f: Callable) -> Self:
         from xarray.core.groupby import GroupBy
 

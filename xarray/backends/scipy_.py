@@ -4,7 +4,7 @@ import gzip
 import io
 import os
 from collections.abc import Iterable, Mapping
-from typing import IO, TYPE_CHECKING, Any, Literal, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, overload, override
 
 import numpy as np
 
@@ -288,22 +288,27 @@ class ScipyDataStore(WritableCFDataStore):
             _decode_attrs(var._attributes),  # type: ignore[attr-defined]  # using private attribute
         )
 
+    @override
     def get_variables(self) -> Frozen[str, Variable]:
         return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 
+    @override
     def get_attrs(self) -> Frozen[str, Any]:
         return Frozen(_decode_attrs(self.ds._attributes))  # type: ignore[attr-defined]  # using private attribute
 
+    @override
     def get_dimensions(self) -> Frozen[str, int | None]:
         return Frozen(self.ds.dimensions)
 
+    @override
     def get_encoding(self) -> dict[Literal["unlimited_dims"], set[str]]:
         return {
             "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
         }
 
+    @override
     def set_dimension(self, name: str, length: int, is_unlimited: bool = False) -> None:
         if name in self.ds.dimensions:
             raise ValueError(
@@ -316,15 +321,18 @@ class ScipyDataStore(WritableCFDataStore):
         if not is_valid_nc3_name(key):
             raise ValueError("Not a valid attribute name")
 
+    @override
     def set_attribute(self, key: str, value: Any) -> None:
         self._validate_attr_key(key)
         value = encode_nc3_attr_value(value)
         setattr(self.ds, key, value)
 
+    @override
     def encode_variable(self, variable: Variable, name: str | None = None) -> Variable:
         variable = encode_nc3_variable(variable, name=name)
         return variable
 
+    @override
     def prepare_variable(
         self,
         name: str,
@@ -356,9 +364,11 @@ class ScipyDataStore(WritableCFDataStore):
 
         return target, data
 
+    @override
     def sync(self) -> None:
         self.ds.sync()
 
+    @override
     def close(self) -> None:
         self._manager.close()
 
@@ -396,6 +406,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     description = "Open netCDF files (.nc, .cdf and .nc.gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
+    @override
     def guess_can_open(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -423,6 +434,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
         return False
 
+    @override
     def open_dataset(
         self,
         filename_or_obj: T_PathFileOrDataStore,

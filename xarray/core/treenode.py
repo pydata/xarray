@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
@@ -698,6 +698,7 @@ class NamedNode(TreeNode):
         _validate_name(name)
         self._name = name
 
+    @override
     def __repr__(self, level=0):
         repr_value = "\t" * level + self.__str__() + "\n"
         for child in self.children:
@@ -708,11 +709,13 @@ class NamedNode(TreeNode):
         name_repr = repr(self.name) if self.name is not None else ""
         return f"NamedNode({name_repr})"
 
+    @override
     def _post_attach(self, parent: Self, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
         _validate_name(name)  # is this check redundant?
         self._name = name
 
+    @override
     def _copy_node(
         self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
     ) -> Self:

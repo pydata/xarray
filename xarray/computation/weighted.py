@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, cast, override
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -539,6 +539,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
 
 
 class DataArrayWeighted(Weighted["DataArray"]):
+    @override
     def _implementation(self, func, dim, **kwargs) -> DataArray:
         self._check_dim(dim)
 
@@ -548,6 +549,7 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 
 class DatasetWeighted(Weighted["Dataset"]):
+    @override
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
         return self.obj.map(func, dim=dim, **kwargs)

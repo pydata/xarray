@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, override
 
 import numpy as np
 import pandas as pd
@@ -276,6 +276,7 @@ class PandasExtensionArray[T_ExtensionArray: pd.api.extensions.ExtensionArray](
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
 
+    @override
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         if (
             isinstance(key, tuple) and len(key) == 1
@@ -291,6 +292,7 @@ class PandasExtensionArray[T_ExtensionArray: pd.api.extensions.ExtensionArray](
     def __setitem__(self, key, val):
         self.array[key] = val
 
+    @override
     def __len__(self):
         return len(self.array)
 
@@ -302,6 +304,7 @@ class PandasExtensionArray[T_ExtensionArray: pd.api.extensions.ExtensionArray](
     def __ne__(self, other):
         return ~(self == other)
 
+    @override
     @property
     def ndim(self) -> int:
         return 1

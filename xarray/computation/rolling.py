@@ -5,7 +5,7 @@ import itertools
 import math
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, override
 
 import numpy as np
 
@@ -625,6 +625,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         counts = self._counts(keep_attrs=False)
         return result.where(counts >= self.min_periods)
 
+    @override
     def _counts(self, keep_attrs: bool | None) -> DataArray:
         """Number of non-nan entries in each rolling window."""
 
@@ -948,6 +949,7 @@ class DatasetRolling(Rolling["Dataset"]):
             **kwargs,
         )
 
+    @override
     def _counts(self, keep_attrs: bool | None) -> Dataset:
         return self._dataset_implementation(
             DataArrayRolling._counts, keep_attrs=keep_attrs

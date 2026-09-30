@@ -6,7 +6,7 @@ import itertools
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Union, cast, override
 
 import numpy as np
 import pandas as pd
@@ -1605,6 +1605,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         reordered = _maybe_reorder(stacked, dim, positions, N=self.group1d.size)
         return self._obj._replace_maybe_drop_dims(reordered)
 
+    @override
     def _restore_dim_order(self, stacked: DataArray) -> DataArray:
         def lookup_order(dimension):
             for grouper in self.groupers:
@@ -1622,6 +1623,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         )
         return stacked
 
+    @override
     def map(
         self,
         func: Callable[..., DataArray],
@@ -1716,6 +1718,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         combined = self._maybe_reindex(combined)
         return combined
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -1813,6 +1816,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
         return FrozenMappingWarningOnValuesAccess(self._dims)
 
+    @override
     def map(
         self,
         func: Callable[..., Dataset],
@@ -1889,6 +1893,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         combined = self._maybe_reindex(combined)
         return combined
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],

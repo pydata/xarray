@@ -7,7 +7,7 @@ from collections import ChainMap
 from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, TypeVar, get_args
+from typing import TYPE_CHECKING, Any, TypeVar, get_args, override
 
 import numpy as np
 import pandas as pd
@@ -123,6 +123,7 @@ class NumpyInterpolator(BaseInterpolator):
         else:
             raise ValueError(f"{fill_value} is not a valid fill_value")
 
+    @override
     def __call__(self, x):
         return self.f(
             x,

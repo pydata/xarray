@@ -6,7 +6,7 @@ import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMapping
 from contextlib import AbstractContextManager, contextmanager
-from typing import Any, Literal, TypeVar, cast
+from typing import Any, Literal, TypeVar, cast, override
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
@@ -206,6 +206,7 @@ class CachingFileManager(FileManager[T_File]):
         else:
             yield
 
+    @override
     def acquire(self, needs_lock: bool = True) -> T_File:
         """Acquire a file object from the manager.
 
@@ -225,6 +226,7 @@ class CachingFileManager(FileManager[T_File]):
         return file
 
     @contextmanager
+    @override
     def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
         """Context manager for acquiring a file.
 
@@ -284,6 +286,7 @@ class CachingFileManager(FileManager[T_File]):
             else:
                 return file, True
 
+    @override
     def close(self, needs_lock: bool = True) -> None:
         """Explicitly close any associated file object (if necessary)."""
         # TODO: remove needs_lock if/when we have a reentrant lock in
@@ -439,15 +442,18 @@ class PickleableFileManager(FileManager[T_File]):
         assert file is not None
         return file
 
+    @override
     def acquire(self, needs_lock: bool = True) -> T_File:
         del needs_lock  # unused
         return self._get_unclosed_file()
 
     @contextmanager
+    @override
     def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
         del needs_lock  # unused
         yield self._get_unclosed_file()
 
+    @override
     def close(self, needs_lock: bool = True) -> None:
         if not self._closed:
             file = self._get_unclosed_file()
@@ -522,15 +528,18 @@ class DummyFileManager(FileManager[T_File]):
         self._value = value
         self._close = close
 
+    @override
     def acquire(self, needs_lock: bool = True) -> T_File:
         del needs_lock  # unused
         return self._value
 
     @contextmanager
+    @override
     def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
         del needs_lock  # unused
         yield self._value
 
+    @override
     def close(self, needs_lock: bool = True) -> None:
         if needs_lock and self._lock:
             with self._lock:

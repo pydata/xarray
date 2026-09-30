@@ -77,6 +77,7 @@ from typing import (
     TypeVar,
     cast,
     overload,
+    override,
 )
 
 import numpy as np
@@ -543,6 +544,7 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
             FutureWarning,
         )
 
+    @override
     def __getitem__(self, key: K) -> V:
         self._warn()
         return super().__getitem__(key)
