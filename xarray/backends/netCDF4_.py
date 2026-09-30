@@ -560,18 +560,36 @@ class NetCDF4DataStore(WritableCFDataStore):
         """Lock to hold while reading or writing metadata of the file.
 
         netCDF-C is not thread-safe, so metadata must not be accessed
-        concurrently with other netCDF-C calls (GH9779). This is ``self.lock``
-        itself, but accessing metadata acquires it again, e.g. through
-        ``self.ds`` and the array wrappers, as the file manager uses the same
-        lock. So it can only be held if it is reentrant, like the default locks.
+        concurrently with other netCDF-C calls (GH9779). This is not a separate
+        lock: it is ``self.lock`` itself. The only question is whether it can be
+        held around a whole block of metadata access, instead of only around
+        each individual netCDF-C call.
 
-        Other locks would deadlock, so they are not held here and only protect
-        the individual calls as before. These are custom locks passed by users
-        and the write locks of the distributed and multiprocessing schedulers,
-        which come from other libraries. ``lock=False`` gives a ``DummyLock``,
-        which does not lock anything either way.
+        While the lock is held, metadata access acquires it again, because the
+        file manager and the array wrappers (e.g. through ``self.ds``) use the
+        same lock. With a reentrant lock, like the default locks, that is fine.
+        With a lock that is not reentrant, the second acquire would deadlock.
+        So in that case the lock is not held around the block, and it only
+        protects the individual calls, as before GH9779 was fixed. That is what
+        the ``nullcontext()`` is for.
+
+        Locks that end up there:
+
+        - a custom lock passed by the user, e.g. a plain ``threading.Lock``
+        - ``to_netcdf`` with the distributed or multiprocessing scheduler: their
+          per-file write locks come from other libraries and are not reentrant,
+          so the ``CombinedLock`` of those and the global netCDF-C and HDF5 locks
+          is not reentrant as a whole either
+
+        These cases are not protected against GH9779, but behave as they did
+        before. Only the default locks, i.e. the case from GH9779, get the full
+        protection. ``lock=False`` gives a ``DummyLock``, which does not lock
+        anything either way.
         """
-        return self.lock if is_reentrant_lock(self.lock) else nullcontext()
+        if is_reentrant_lock(self.lock):
+            return self.lock
+        # not reentrant: holding it here would deadlock, see above
+        return nullcontext()
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
