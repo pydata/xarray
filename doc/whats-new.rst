@@ -6,6 +6,42 @@
 What's New
 ==========
 
+.. _whats-new.2026.09.1:
+
+v2026.09.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
+  together with a per-file write lock, are used from several threads of a dask
+  worker. The locks are now always acquired in the same order, also after
+  they were pickled, and copies of the same ``dask.distributed.Lock`` are no
+  longer acquired twice (:pull:`11645`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2026.09.0:
 
 v2026.09.0 (Sep 29, 2026)
