@@ -13,7 +13,6 @@ from typing import (
     TypeAlias,
     TypeVar,
     Union,
-    overload,
     runtime_checkable,
 )
 
@@ -289,21 +288,8 @@ AspectOptions = Union[Literal["auto", "equal"], float, None]
 ExtendOptions = Literal["neither", "both", "min", "max"] | None
 
 
-_T_co = TypeVar("_T_co", covariant=True)
-
-
-class NestedSequence(Protocol[_T_co]):
-    def __len__(self, /) -> int: ...
-    @overload
-    def __getitem__(self, index: int, /) -> _T_co | NestedSequence[_T_co]: ...
-    @overload
-    def __getitem__(self, index: slice, /) -> NestedSequence[_T_co]: ...
-    def __iter__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
-    def __reversed__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
-
-
-_T = TypeVar("_T")
-NestedDict = dict[str, "NestedDict[_T] | _T"]
+type NestedSequence[T] = Sequence[T | NestedSequence[T]]
+type NestedDict[T] = dict[str, NestedDict[T] | T]
 
 
 AnyStr_co = TypeVar("AnyStr_co", str, bytes, covariant=True)

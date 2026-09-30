@@ -61,11 +61,12 @@ def _infer_tile_ids_from_nested_list[T](
     combined_tile_ids : dict[tuple(int, ...), obj]
     """
 
-    if not isinstance(entry, str) and isinstance(entry, Sequence):
-        for i, item in enumerate(entry):
-            yield from _infer_tile_ids_from_nested_list(item, current_pos + (i,))
-    else:
-        yield current_pos, cast(T, entry)
+    for i, item in enumerate(entry):
+        position = current_pos + (i,)
+        if not isinstance(item, str) and isinstance(item, Sequence):
+            yield from _infer_tile_ids_from_nested_list(item, position)
+        else:
+            yield position, cast(T, item)
 
 
 def _ensure_same_types(series, dim):
