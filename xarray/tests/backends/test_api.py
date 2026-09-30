@@ -74,6 +74,9 @@ from xarray.tests.test_coding_times import (
 from xarray.tests.test_dataset import create_test_data
 
 with contextlib.suppress(ImportError):
+    import dask
+
+with contextlib.suppress(ImportError):
     import netCDF4 as nc4
 
 if TYPE_CHECKING:
@@ -597,6 +600,41 @@ def test_open_mfdataset_list_attr() -> None:
                     [nfiles[0], nfiles[1]], combine="nested", concat_dim="x"
                 ) as actual:
                     assert_identical(actual, original)
+
+
+@requires_cftime
+@requires_netCDF4
+@requires_dask
+@pytest.mark.parametrize(
+    "parallel",
+    (
+        pytest.param(
+            True,
+            marks=pytest.mark.skip(
+                reason="Flaky in CI. Would be a welcome contribution to make a similar test reliable."
+            ),
+        ),
+        False,
+    ),
+)
+def test_open_mfdataset_multiple_files_parallel(parallel, tmp_path):
+    lon = np.arange(100)
+    time = xr.date_range("20010101", periods=100, calendar="360_day", use_cftime=True)
+    data = np.random.random((time.size, lon.size))
+    da = xr.DataArray(data, coords={"time": time, "lon": lon}, name="test")
+
+    fnames = []
+    for i in range(0, 100, 10):
+        fname = tmp_path / f"test_{i}.nc"
+        da.isel(time=slice(i, i + 10)).to_netcdf(fname)
+        fnames.append(fname)
+
+    for get in [dask.threaded.get, dask.multiprocessing.get, dask.local.get_sync, None]:
+        with dask.config.set(scheduler=get):
+            with xr.open_mfdataset(
+                fnames, parallel=parallel, concat_dim="time", combine="nested"
+            ) as tf:
+                assert_identical(tf["test"], da)
 
 
 @requires_scipy_or_netCDF4
