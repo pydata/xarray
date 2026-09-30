@@ -6,6 +6,45 @@
 What's New
 ==========
 
+.. _whats-new.2026.09.1:
+
+v2026.09.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix errors and crashes (``NetCDF: HDF error``, segfaults, double frees) when
+  opening or writing netCDF4 files from multiple threads, e.g. with
+  :py:func:`open_mfdataset` and ``parallel=True``. The netCDF4 backend now
+  holds the netCDF-C lock while reading or writing metadata, which is possible
+  because xarray's global HDF5 and netCDF-C locks and its per-file write locks
+  for the threaded scheduler are now reentrant. The global locks also no longer
+  turn into separate locks when datasets are sent to another process, e.g. to a
+  dask distributed worker (:issue:`9779`, :issue:`11088`, :pull:`11629`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2026.09.0:
 
 v2026.09.0 (Sep 29, 2026)
@@ -148,15 +187,6 @@ Bug Fixes
   when opening more files than ``file_cache_maxsize``. Files evicted from the
   file cache by another thread are no longer closed while they are still being
   read (:pull:`11622`).
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
-- Fix errors and crashes (``NetCDF: HDF error``, segfaults, double frees) when
-  opening or writing netCDF4 files from multiple threads, e.g. with
-  :py:func:`open_mfdataset` and ``parallel=True``. The netCDF4 backend now
-  holds the netCDF-C lock while reading or writing metadata, which is possible
-  because xarray's global HDF5 and netCDF-C locks and its per-file write locks
-  for the threaded scheduler are now reentrant. The global locks also no longer
-  turn into separate locks when datasets are sent to another process, e.g. to a
-  dask distributed worker (:issue:`9779`, :issue:`11088`, :pull:`11629`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
   empty results when rolling an empty dimension, including with
