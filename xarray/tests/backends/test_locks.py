@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import multiprocessing
 import pickle
 import threading
 
@@ -9,7 +10,7 @@ from xarray.backends.locks import CombinedLock, SerializableLock, combine_locks
 
 def test_threaded_lock() -> None:
     lock1 = locks._get_threaded_lock("foo")
-    assert isinstance(lock1, type(threading.Lock()))
+    assert isinstance(lock1, locks._ReentrantLock)
     lock2 = locks._get_threaded_lock("foo")
     assert lock1 is lock2
 
@@ -174,3 +175,77 @@ def test_combined_lock_is_sorted_again_when_unpickled() -> None:
 
     unpickled = pickle.loads(pickle.dumps(combined))
     assert [locks._lock_identity(lock) for lock in unpickled.locks] == local_order
+
+
+def test_reentrant_serializable_lock() -> None:
+    lock = SerializableLock(reentrant=True)
+    with lock:
+        with lock:
+            assert lock.locked()
+        assert lock.locked()
+
+        # other threads still have to wait
+        result = []
+        thread = threading.Thread(target=lambda: result.append(lock.acquire(False)))
+        thread.start()
+        thread.join()
+        assert result == [False]
+    assert not lock.locked()
+
+
+def test_reentrant_serializable_lock_release_from_other_thread() -> None:
+    lock = SerializableLock(reentrant=True)
+    lock.acquire()
+    errors = []
+
+    def release():
+        try:
+            lock.release()
+        except RuntimeError as err:
+            errors.append(err)
+
+    thread = threading.Thread(target=release)
+    thread.start()
+    thread.join()
+    assert len(errors) == 1
+    assert lock.locked()
+    lock.release()
+
+
+def test_reentrant_serializable_lock_pickle() -> None:
+    lock = SerializableLock(reentrant=True)
+    unpickled = pickle.loads(pickle.dumps(lock))
+    assert unpickled.reentrant
+    assert unpickled.lock is lock.lock
+
+    # a fresh process only has the pickled state
+    del SerializableLock._locks[lock.token]
+    restored = SerializableLock.__new__(SerializableLock)
+    restored.__setstate__(lock.__getstate__())
+    assert restored.reentrant
+    with restored:
+        with restored:
+            pass
+
+
+def test_is_reentrant_lock() -> None:
+    reentrant = SerializableLock(reentrant=True)
+    assert locks.is_reentrant_lock(reentrant)
+    assert locks.is_reentrant_lock(locks.HDF5_LOCK)
+    assert locks.is_reentrant_lock(combine_locks([locks.NETCDFC_LOCK, reentrant]))
+    assert not locks.is_reentrant_lock(SerializableLock())
+    assert not locks.is_reentrant_lock(threading.Lock())
+    assert not locks.is_reentrant_lock(combine_locks([reentrant, threading.Lock()]))
+
+
+def _unpickles_to_global_locks(payload: bytes) -> bool:
+    hdf5, netcdfc = pickle.loads(payload)
+    return hdf5.lock is locks.HDF5_LOCK.lock and netcdfc.lock is locks.NETCDFC_LOCK.lock
+
+
+def test_global_locks_unpickle_to_global_locks_of_other_process() -> None:
+    # e.g. a dask worker reading a dataset that was opened in another process
+    # must use its own global locks, not separate ones
+    payload = pickle.dumps((locks.HDF5_LOCK, locks.NETCDFC_LOCK))
+    with multiprocessing.get_context("spawn").Pool(1) as pool:
+        assert pool.apply(_unpickles_to_global_locks, (payload,))

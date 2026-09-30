@@ -44,6 +44,7 @@ from xarray.tests import (
 )
 from xarray.tests.backends.base import (
     ON_WINDOWS,
+    _write_mfdataset_files,
     create_tmp_file,
 )
 from xarray.tests.test_dataset import create_test_data
@@ -165,12 +166,32 @@ def test_open_mfdataset_multiple_files_parallel_distributed(parallel, tmp_path):
         da.isel(time=slice(i, i + 10)).to_netcdf(fname)
         fnames.append(fname)
 
-    with cluster() as (s, [_a, _b]):
+    # GH7079: only multi-threaded workers open files concurrently within a
+    # process, and the race does not show up on every open
+    with cluster(worker_kwargs={"nthreads": 4}) as (s, [_a, _b]):
         with Client(s["address"]):
-            with xr.open_mfdataset(
-                fnames, parallel=parallel, concat_dim="time", combine="nested"
-            ) as tf:
-                assert_identical(tf["test"], da)
+            for _ in range(5):
+                with xr.open_mfdataset(
+                    fnames, parallel=parallel, concat_dim="time", combine="nested"
+                ) as tf:
+                    assert_identical(tf["test"], da)
+
+
+@requires_netCDF4
+def test_open_mfdataset_netcdf4_parallel_distributed(
+    loop,  # noqa: F811
+    tmp_path,
+) -> None:
+    # GH11088: datasets are opened on one worker and read on another, so the
+    # global netCDF-C and HDF5 locks must survive pickling as the same locks
+    paths, expected = _write_mfdataset_files(tmp_path, nfiles=8)
+    with cluster(worker_kwargs={"nthreads": 4}) as (s, [_a, _b]):
+        with Client(s["address"], loop=loop):
+            for _ in range(5):
+                with xr.open_mfdataset(
+                    paths, engine="netcdf4", parallel=True
+                ) as actual:
+                    assert_identical(actual.load(), expected)
 
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
