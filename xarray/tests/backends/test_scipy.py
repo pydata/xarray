@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import gzip
+import warnings
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -11,7 +12,9 @@ import pytest
 
 import xarray as xr
 from xarray import Dataset, backends, open_dataset
-from xarray.backends.scipy_ import ScipyBackendEntrypoint
+from xarray.backends.file_manager import _close_unless_pinned
+from xarray.backends.scipy_ import ScipyArrayWrapper, ScipyBackendEntrypoint
+from xarray.core import indexing
 from xarray.core.indexes import PandasIndex
 from xarray.tests import (
     assert_allclose,
@@ -190,6 +193,43 @@ class TestScipyFilePath(NetCDF3Only, CFEncodedBase):
 
             with pytest.raises(TypeError, match=r"pip install netcdf4"):
                 open_dataset(tmp_file, engine="scipy")
+
+    @pytest.mark.parametrize(
+        "key",
+        [
+            indexing.BasicIndexer((slice(1, 3),)),
+            indexing.OuterIndexer((np.array([0, 2]),)),
+        ],
+        ids=["view", "copy"],
+    )
+    def test_read_while_evicted_closes_mmap(self, key) -> None:
+        # A file evicted from the cache while being read is closed as soon as
+        # the read unpins it. No reference into its memory map may be alive by
+        # then, or scipy cannot close the mmap and warns.
+        original = Dataset({"x": ("t", np.arange(5.0))})
+        with create_tmp_file() as tmp_file:
+            original.to_netcdf(tmp_file, engine="scipy")
+            with backends.ScipyDataStore(tmp_file, mmap=True) as store:
+                array = ScipyArrayWrapper("x", store)
+                manager = store._manager
+                nc = manager.acquire()
+
+                class EvictOnAccess(dict):
+                    def __getitem__(self, name):
+                        # evict the file while the read has it pinned
+                        manager._cache.pop(manager._key)
+                        _close_unless_pinned(manager._key, nc)
+                        return super().__getitem__(name)
+
+                # bypass netcdf_file.__setattr__, which records global attributes
+                nc.__dict__["variables"] = EvictOnAccess(nc.variables)
+
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error", RuntimeWarning)
+                    actual = array[key]
+
+                assert nc.fp.closed
+                np.testing.assert_array_equal(actual, original["x"].values[key.tuple])
 
 
 @requires_scipy

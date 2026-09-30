@@ -25,6 +25,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
+  memory maps being left open when reading with ``engine="scipy"`` and dask
+  while files get evicted from the file cache. Data read from memory mapped
+  files is now copied before the file can be closed by another thread
+  (:pull:`11634`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix errors and crashes (``NetCDF: HDF error``, segfaults, double frees) when
   opening or writing netCDF4 files from multiple threads, e.g. with
   :py:func:`open_mfdataset` and ``parallel=True``. The netCDF4 backend now
