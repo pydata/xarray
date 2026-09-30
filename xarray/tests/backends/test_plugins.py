@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 from importlib.metadata import EntryPoint, EntryPoints
 from itertools import starmap
@@ -19,8 +20,6 @@ from xarray.tests import (
     requires_netCDF4,
     requires_zarr,
 )
-
-# Do not import list_engines here, this will break the lazy tests
 
 importlib_metadata_mock = "importlib.metadata"
 
@@ -290,36 +289,31 @@ def test_lazy_import() -> None:
         "sparse",
         "zarr",
     ]
-    # ensure that none of the above modules has been imported before
-    modules_backup = {}
-    for pkg in list(sys.modules.keys()):
-        for mod in deny_list + ["xarray"]:
-            if pkg.startswith(mod):
-                modules_backup[pkg] = sys.modules[pkg]
-                del sys.modules[pkg]
-                break
+    # Check in a fresh interpreter. In this process, the modules have already
+    # been imported by other tests and while collecting the tests (e.g. by the
+    # has_* checks), and removing them from sys.modules is not reliable: e.g.
+    # threads or modules left over from other tests can import them again.
+    code = f"""
+import sys
 
-    try:
-        import xarray  # noqa: F401
-        from xarray.backends import list_engines
+import xarray
+from xarray.backends import list_engines
 
-        list_engines()
+list_engines()
 
-        # ensure that none of the modules that are supposed to be
-        # lazy loaded are loaded when importing xarray
-        is_imported = set()
-        for pkg in sys.modules:
-            for mod in deny_list:
-                if pkg.startswith(mod):
-                    is_imported.add(mod)
-                    break
-        assert len(is_imported) == 0, (
-            f"{is_imported} have been imported but should be lazy"
-        )
-
-    finally:
-        # restore original
-        sys.modules.update(modules_backup)
+deny_list = {deny_list!r}
+imported = sorted(
+    mod
+    for mod in deny_list
+    if any(pkg == mod or pkg.startswith(mod + ".") for pkg in sys.modules)
+)
+print(",".join(imported))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    is_imported = result.stdout.strip()
+    assert not is_imported, f"{is_imported} have been imported but should be lazy"
 
 
 def test_list_engines() -> None:
