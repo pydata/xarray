@@ -13,7 +13,12 @@ import xarray as xr
 from xarray import Dataset, backends, open_dataset
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.core.indexes import PandasIndex
-from xarray.tests import assert_identical, requires_netCDF4, requires_scipy
+from xarray.tests import (
+    assert_allclose,
+    assert_identical,
+    requires_netCDF4,
+    requires_scipy,
+)
 from xarray.tests.backends.base import (
     CFEncodedBase,
     FileObjectNetCDF,
@@ -117,6 +122,37 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only, FileObjectNetCDF):
                 )
             else:
                 assert len(loaded_ds.xindexes) == 0
+
+    def test_indexing_multiple_non_adjacent_indexers(self) -> None:
+        # GH10338: mixing slices, scalars, and a non-adjacent array indexer
+        # in .sel() should not shuffle dimension sizes when reading through
+        # the scipy backend from a closed file object.
+        data = xr.Dataset(
+            {
+                "x": (
+                    ("a", "b", "c", "d"),
+                    np.random.rand(3, 6, 5, 25),
+                )
+            },
+            coords={
+                "a": np.arange(3),
+                "b": ["u", "v", "w", "x", "y", "z"],
+                "c": np.arange(5),
+                "d": np.arange(0, 250, 10),
+            },
+        )
+        with self.roundtrip(data) as on_disk:
+            actual = on_disk["x"].sel(
+                b="w",
+                d=np.arange(0, 250, 20),
+            )
+            expected = data["x"].sel(
+                b="w",
+                d=np.arange(0, 250, 20),
+            )
+            assert actual.dims == expected.dims
+            assert actual.shape == expected.shape
+            assert_allclose(actual, expected)
 
 
 @requires_scipy
