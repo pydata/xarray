@@ -156,7 +156,7 @@ decoding and it shall instantiate the output Xarray class {py:class}`~xarray.Dat
 If `MyBackendEntrypoint.open_dataarray` is not implemented and `xarray.open_dataarray(engine='my_engine')` is called then `MyBackendEntrypoint.open_dataset` is used instead.
 If `open_dataset` is used to open a `DataArray`, if the `Dataset` contains a single variable, that is returned. If the `Dataset` contains multiple variables then a `ValueError` is raised.
 
-All other processing and requirements are the same as for {ref}`rst-open_dataset`.
+All other processing and requirements are the same as for {ref}`rst-open-dataset`.
 
 (rst-open-datatree)=
 
@@ -167,7 +167,7 @@ decoding and it shall instantiate the output Xarray class {py:class}`~xarray.Dat
 
 If `MyBackendEntrypoint.open_datatree` is not implemented and `xarray.open_datatree(engine='my_engine')` is called a `NotImplementedError` is raised.
 
-All other processing and requirements are the same as for {ref}`rst-open_dataset`.
+All other processing and requirements are the same as for {ref}`rst-open-dataset`.
 
 (rst-open-dataset-parameters)=
 
