@@ -302,3 +302,29 @@ async def test_serializable_locks(c, s, a, b) -> None:
 
         lock2 = pickle.loads(pickle.dumps(lock))
         assert type(lock) is type(lock2)
+
+
+@gen_cluster(client=True)
+async def test_combined_lock_order_survives_pickling(c, s, a, b) -> None:
+    # Every task unpickles its own copy of a CombinedLock, so its locks are new
+    # objects with new ids. The acquisition order must not depend on them,
+    # otherwise two threads of a worker can take the locks in opposite orders
+    # and deadlock each other (test_serializable_locks hung this way).
+    def lock_types(x, combined):
+        return [type(lock).__name__ for lock in combined.locks]
+
+    for combined in [
+        CombinedLock([HDF5_LOCK, Lock("filename.nc")]),
+        CombinedLock([Lock("filename.nc"), HDF5_LOCK]),
+    ]:
+        futures = c.map(lock_types, range(100), combined=combined, pure=False)
+        # the per-file lock first, the library lock last, in every task
+        for types in await c.gather(futures):
+            assert types == ["Lock", "SerializableLock"]
+
+    # copies of the same distributed lock are the same lock, so acquiring both
+    # would deadlock, as distributed locks are not reentrant
+    lock = Lock("filename.nc")
+    copy = pickle.loads(pickle.dumps(lock))
+    assert copy is not lock
+    assert len(CombinedLock([lock, copy]).locks) == 1

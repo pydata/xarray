@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import multiprocessing
+import sys
 import threading
 import uuid
 import weakref
 from collections.abc import Callable, Hashable, MutableMapping, Sequence
-from typing import Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard
 from weakref import WeakValueDictionary
 
 from xarray.core.types import Lock
+
+if TYPE_CHECKING:
+    from distributed import Lock as DistributedLock
 
 
 # SerializableLock is adapted from Dask:
@@ -207,14 +211,64 @@ def acquire(lock, blocking=True):
         return lock.acquire(blocking)
 
 
-def _lock_identity(lock: Lock) -> int:
-    """Identity of the lock that is actually acquired.
+# Lock ordering
+# -------------
+# A thread holding lock A while waiting for lock B deadlocks with a thread
+# holding B while waiting for A. The standard way to rule this out is a lock
+# hierarchy: all locks are acquired in one global order, so nobody ever waits
+# for a lock that comes before one it already holds. CombinedLock enforces this
+# by sorting its locks with _lock_order_key.
+#
+# The key must identify the lock that is actually acquired, not the Python
+# object wrapping it. Locks are pickled all the time: every dask task gets its
+# own unpickled copy of the locks it uses, so two copies of the same lock are
+# different objects with different ids. Ordering by id() made the order differ
+# between tasks: two threads of a distributed worker could take HDF5_LOCK and
+# the per-file write lock in opposite orders and deadlock.
+#
+# So the key has two parts:
+#
+# 1. A level, depending on the kind of lock. xarray combines the process-wide
+#    library locks (HDF5_LOCK and NETCDFC_LOCK, both SerializableLocks) with a
+#    per-file write lock from get_write_lock. The write lock is acquired first:
+#    it may be a distributed or multiprocessing lock that is slow to acquire, and
+#    waiting for it while holding a library lock would block all HDF5 and
+#    netCDF-C calls of the process in the meantime. Deadlock freedom only needs
+#    the order to be the same everywhere, not this particular one.
+# 2. Within a level, a name that stays the same when the lock is pickled: the
+#    token of a SerializableLock and the name of a dask.distributed.Lock. Other
+#    locks, like threading and multiprocessing locks, have no such name, so they
+#    fall back to id(). That is fine as long as no two of them are combined,
+#    which xarray never does: there is at most one write lock per file.
+_RESOURCE_LOCK_LEVEL = 0  # per-file write locks and user supplied locks
+_LIBRARY_LOCK_LEVEL = 1  # SerializableLocks, like HDF5_LOCK and NETCDFC_LOCK
 
-    Unpickled SerializableLocks are new objects wrapping the same threading.Lock.
+
+def _is_distributed_lock(lock: Lock) -> TypeGuard[DistributedLock]:
+    # A dask.distributed.Lock can only exist if distributed was imported, so
+    # don't import it just to check.
+    distributed = sys.modules.get("distributed")
+    return distributed is not None and isinstance(lock, distributed.Lock)
+
+
+def _lock_order_key(lock: Lock) -> tuple[int, str, str | int]:
+    """Position of ``lock`` in the global lock order, see "Lock ordering" above.
+
+    Copies of the same lock get the same key, also across processes, so the key
+    is used to remove duplicates too.
+
+    The second element names the kind of the last one, so that only values of
+    the same type are ever compared and sorting never fails.
     """
     if isinstance(lock, SerializableLock):
-        return id(lock.lock)
-    return id(lock)
+        # All copies with the same token wrap the same threading.Lock. Tokens
+        # can be any hashable, so compare their reprs, which keeps 1 and "1"
+        # apart.
+        return (_LIBRARY_LOCK_LEVEL, "token", repr(lock.token))
+    if _is_distributed_lock(lock):
+        # all copies with the same name are the same lock on the scheduler
+        return (_RESOURCE_LOCK_LEVEL, "name", lock.name)
+    return (_RESOURCE_LOCK_LEVEL, "id", id(lock))
 
 
 class CombinedLock(Lock):
@@ -222,18 +276,24 @@ class CombinedLock(Lock):
 
     Like a locked door, a CombinedLock is locked if any of its constituent
     locks are locked.
+
+    The locks are always acquired in one global order, independent of the order
+    they are passed in, see "Lock ordering" above.
     """
 
     def __init__(self, locks: Sequence[Lock]):
-        # Remove duplicates and always acquire in one global order. If not careful,
+        # Remove duplicates, as acquiring a lock that is not reentrant twice
+        # deadlocks, and sort into the global lock order. If not careful,
         # CombinedLocks sharing locks could acquire them in opposite orders and
         # deadlock each other.
-        unique = {_lock_identity(lock): lock for lock in locks}
+        unique = {_lock_order_key(lock): lock for lock in locks}
         self.locks = tuple(lock for _, lock in sorted(unique.items()))
 
     def __reduce__(self):
-        # The order depends on the ids of the locks, which differ between
-        # processes, so sort again when unpickling.
+        # Sort again when unpickling. The keys of SerializableLocks and
+        # distributed locks are the same in every process, so their order does
+        # not change. But other locks are ordered by id(), which differs between
+        # processes.
         return (type(self), (list(self.locks),))
 
     def acquire(self, blocking=True):
