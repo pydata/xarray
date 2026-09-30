@@ -1,0 +1,54 @@
+/* Override some aspects of the pydata-sphinx-theme */
+
+/* Xarray Branding Guide:
+Primary Color palette (Hex): #17afb4 #e28126 #59c7d6 #0e4666 #4a4a4a
+Secondary Color Palette (Hex): #f58154 #e7b72d #b3dfe5 #8e8d99 #767985
+Primary Typeface: Acumin Variable Concept - Semicondensed Medium
+*/
+
+/* Increase Xarray logo size in upper left corner */
+.navbar-brand img {
+  height: 75px;
+}
+.navbar-brand {
+  height: 75px;
+}
+
+/* Adjust index page overview cards, borrowed from Pandas & Numpy */
+/* Override SVG icon color */
+html[data-theme="dark"] .sd-card img[src*=".svg"] {
+  filter: invert(0.82) brightness(0.8) contrast(1.2);
+}
+/* https://github.com/executablebooks/sphinx-design/blob/main/style/_cards.scss */
+/* More space around image */
+.intro-card {
+  padding: 30px 1px 1px 1px;
+}
+/* More prominent card borders */
+.intro-card .sd-card {
+  border: 2px solid var(--pst-color-border);
+  overflow: hidden;
+}
+/* Shrink SVG icons */
+.intro-card .sd-card-img-top {
+  margin: 1px;
+  height: 100px;
+  background-color: transparent !important;
+}
+/* Color titles like links */
+.intro-card .sd-card-title {
+  color: var(--pst-color-primary);
+  font-size: var(--pst-font-size-h5);
+}
+/* Don't have 'raised' color background for card interiors in dark mode */
+.bd-content .sd-card .sd-card-body {
+  background-color: unset !important;
+}
+
+/* workaround Pydata Sphinx theme using light colors for widget cell outputs in dark-mode */
+/* works for many widgets but not for Xarray html reprs */
+/* https://github.com/pydata/pydata-sphinx-theme/issues/2189 */
+html[data-theme="dark"] div.cell_output .text_html:has(div.xr-wrap) {
+  background-color: var(--pst-color-on-background) !important;
+  color: var(--pst-color-text-base) !important;
+}

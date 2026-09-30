@@ -1,0 +1,104 @@
+# https://pre-commit.com/
+ci:
+  autoupdate_schedule: monthly
+  autoupdate_commit_msg: "Update pre-commit hooks"
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: debug-statements
+      - id: mixed-line-ending
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      # - id: python-check-blanket-noqa  # checked by ruff
+      # - id: python-check-blanket-type-ignore  # checked by ruff
+      # - id: python-check-mock-methods  # checked by ruff
+      - id: python-no-log-warn
+      # - id: python-use-type-annotations  # too many false positives
+      - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
+      - id: text-unicode-replacement-char
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.6
+    hooks:
+      - id: ruff-check
+        args: ["--fix", "--show-fixes"]
+      - id: ruff-format
+  - repo: https://github.com/keewis/blackdoc
+    rev: v0.4.6
+    hooks:
+      - id: blackdoc
+        exclude: "generate_aggregations.py"
+        # make sure this is the most recent version of black
+        additional_dependencies: ["black==25.11.0"]
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.9.6
+    hooks:
+      - id: prettier
+        args: ["--cache-location=.prettier_cache/cache"]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.3.1
+    hooks:
+      - id: mypy
+        # Copied from setup.cfg
+        exclude: "properties|asv_bench"
+        # This is slow and so we take it out of the fast-path; requires passing
+        # `--hook-stage manual` to pre-commit
+        stages: [manual]
+        additional_dependencies: [
+            # Type stubs
+            types-python-dateutil,
+            types-setuptools,
+            types-PyYAML,
+            types-pytz,
+            typing-extensions>=4.1.0,
+            numpy,
+          ]
+  # keep the mypy version used in CI (pixi.toml) and the dev dependency group
+  # (pyproject.toml) in sync with the hook above, so that the pre-commit.ci autoupdate
+  # also updates mypy in CI and for uv users
+  - repo: local
+    hooks:
+      - id: sync-mypy-version
+        name: sync mypy version
+        language: python
+        files: ^(\.pre-commit-config\.yaml|pixi\.toml|ci/nightly/pixi\.toml)$
+        pass_filenames: false
+        entry: >-
+          python -c "import pathlib, re;
+          config = pathlib.Path('.pre-commit-config.yaml').read_text();
+          version = re.search(r'mirrors-mypy\s+rev: v?([0-9.]+)', config).group(1);
+          [pixi.write_text(re.sub(r'(?m)^mypy = \"==[0-9.]+\"', f'mypy = \"=={version}\"', pixi.read_text()))
+          for pixi in map(pathlib.Path, ['pixi.toml', 'ci/nightly/pixi.toml'])];
+          pyproject = pathlib.Path('pyproject.toml');
+          pyproject.write_text(re.sub(r'\"mypy==[0-9.]+\"', f'\"mypy=={version}\"', pyproject.read_text()))"
+  - repo: https://github.com/citation-file-format/cff-converter-python
+    rev: 5295f87c0e261da61a7b919fc754e3a77edd98a7
+    hooks:
+      - id: validate-cff
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
+        args: ["--option", "array_auto_collapse=false"]
+      - id: taplo-lint
+        args: ["--no-schema"]
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: "0.26"
+    hooks:
+      - id: validate-pyproject
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
+  - repo: https://github.com/adhtruong/mirrors-typos
+    rev: v1.50.1
+    hooks:
+      - id: typos
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.0
+    hooks:
+      - id: zizmor
+        args: ["--offline"]

@@ -1,0 +1,39 @@
+name: xarray-examples
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - boto3
+  - bottleneck
+  - cartopy
+  - cfgrib
+  - cftime
+  - coveralls
+  - dask
+  - distributed
+  - dask_labextension
+  - h5netcdf
+  - h5py
+  - hdf5
+  - iris
+  - lxml # Optional dep of pydap
+  - matplotlib
+  - nc-time-axis
+  - netcdf4
+  - numba
+  - numpy
+  - packaging
+  - pandas
+  - pint>=0.22
+  - pip
+  - pooch
+  - pydap
+  - rasterio
+  - scipy
+  - seaborn
+  - setuptools
+  - sparse
+  - toolz
+  - xarray
+  - zarr
+  - numbagg

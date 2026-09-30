@@ -1,0 +1,81 @@
+name: Benchmark
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+  workflow_dispatch:
+
+env:
+  PR_HEAD_LABEL: ${{ github.event.pull_request.head.label }}
+
+permissions: {}
+
+jobs:
+  benchmark:
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || contains( github.event.pull_request.labels.*.name, 'topic-performance') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    name: Linux
+    runs-on: ubuntu-latest
+    env:
+      ASV_DIR: "./asv_bench"
+      CONDA_ENV_FILE: ci/requirements/environment-benchmark.yml
+
+    steps:
+      # We need the full repo to avoid this issue
+      # https://github.com/actions/checkout/issues/23
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up conda environment
+        uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
+        with:
+          micromamba-version: "1.5.10-0"
+          environment-file: ${{env.CONDA_ENV_FILE}}
+          environment-name: xarray-benchmark
+          cache-environment: true
+          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
+          # add "build" because of https://github.com/airspeed-velocity/asv/issues/1385
+          create-args: >-
+            asv
+            python-build
+            mamba<=1.5.10
+
+      - name: Run benchmarks
+        shell: bash -l {0}
+        id: benchmark
+        env:
+          OPENBLAS_NUM_THREADS: 1
+          MKL_NUM_THREADS: 1
+          OMP_NUM_THREADS: 1
+          ASV_FACTOR: 1.5
+          ASV_SKIP_SLOW: 1
+          GITHUB_LABEL: ${{ github.event.pull_request.base.label }}
+        run: |
+          set -x
+          # ID this runner
+          asv machine --yes
+          echo "Baseline:  ${{ github.event.pull_request.base.sha }} ($GITHUB_LABEL)"
+          echo "Contender: ${GITHUB_SHA} ($PR_HEAD_LABEL)"
+          # Run benchmarks for current commit against base
+          ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
+          asv continuous $ASV_OPTIONS ${{ github.event.pull_request.base.sha }} ${GITHUB_SHA} \
+              | sed "/Traceback \|failed$\|PERFORMANCE DECREASED/ s/^/::error::/" \
+              | tee benchmarks.log
+          # Report and export results for subsequent steps
+          if grep "Traceback \|failed\|PERFORMANCE DECREASED" benchmarks.log > /dev/null ; then
+              exit 1
+          fi
+        working-directory: ${{ env.ASV_DIR }}
+
+      - name: Add instructions to artifact
+        if: always()
+        run: |
+          cp benchmarks/README_CI.md benchmarks.log .asv/results/
+        working-directory: ${{ env.ASV_DIR }}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: asv-benchmark-results-${{ runner.os }}
+          path: ${{ env.ASV_DIR }}/.asv/results

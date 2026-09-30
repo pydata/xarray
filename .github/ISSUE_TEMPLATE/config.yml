@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ❓ Usage question
+    url: https://github.com/pydata/xarray/discussions
+    about: |
+      Ask questions and discuss with other community members here.
+      If you have a question like "How do I concatenate a list of datasets?" then
+      please include a self-contained reproducible example if possible.
+  - name: 🗺️ Raster analysis usage question
+    url: https://github.com/corteva/rioxarray/discussions
+    about: |
+      If you are using the rioxarray extension (engine='rasterio'), or have questions about
+      raster analysis such as geospatial formats, coordinate reprojection, etc.,
+      please use the rioxarray discussion forum.

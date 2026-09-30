@@ -1,0 +1,23 @@
+# Comment to be posted to on first time issues
+newIssueWelcomeComment: >
+  Thanks for opening your first issue here at xarray! Be sure to follow the issue template!
+
+  If you have an idea for a solution, we would really welcome a Pull Request with proposed changes.
+
+  See the [Contributing Guide](https://docs.xarray.dev/en/latest/contributing.html) for more.
+
+  It may take us a while to respond here, but we really value your contribution. Contributors like you help make xarray better.
+
+  Thank you!
+
+# Comment to be posted to on PRs from first time contributors in your repository
+newPRWelcomeComment: >
+  Thank you for opening this pull request! It may take us a few days to respond here, so thank you for being patient.
+
+  If you have questions, some answers may be found in our [contributing guidelines](https://docs.xarray.dev/en/stable/contributing.html).
+
+# Comment to be posted to on pull requests merged by a first time user
+firstPRMergeComment: >
+  Congratulations on completing your first pull request! Welcome to Xarray!
+  We are proud of you, and hope to see you again!
+  ![celebration gif](https://media.giphy.com/media/umYMU8G2ixG5mJBDo5/giphy.gif)
