@@ -1251,7 +1251,11 @@ class Dataset(
             copy.deepcopy(self._encoding, memo) if deep else copy.copy(self._encoding)
         )
 
-        return self._replace(variables, indexes=indexes, attrs=attrs, encoding=encoding)
+        copied = self._replace(
+            variables, indexes=indexes, attrs=attrs, encoding=encoding
+        )
+        copied.set_close(self._close)
+        return copied
 
     def __copy__(self) -> Self:
         return self._copy(deep=False)
