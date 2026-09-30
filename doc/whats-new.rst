@@ -6,6 +6,42 @@
 What's New
 ==========
 
+.. _whats-new.2026.10.0:
+
+v2026.10.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+- :py:func:`concat` no longer raises ``TypeError: Cannot interpret
+  '<StringDtype(...)>' as a data type`` when the objects being joined carry
+  index coordinates with a mix of numpy and pandas extension dtypes, which
+  happens routinely under pandas 3 when one dimension coordinate came from a
+  :py:class:`pandas.Index` and another from a plain list (:issue:`11317`).
+  By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2026.09.0:
 
 v2026.09.0 (Sep 29, 2026)
@@ -223,12 +259,6 @@ Bug Fixes
 - Fixed a bug that caused rechunking a multi-dimensional cftime array along a
   subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
-- :py:func:`concat` no longer raises ``TypeError: Cannot interpret
-  '<StringDtype(...)>' as a data type`` when the objects being joined carry
-  index coordinates with a mix of numpy and pandas extension dtypes, which
-  happens routinely under pandas 3 when one dimension coordinate came from a
-  :py:class:`pandas.Index` and another from a plain list (:issue:`11317`).
-  By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
 - :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` now raise a ``ValueError``
   when ``dim`` is not an existing dimension, instead of silently returning the
   object unchanged. This matches the behavior of other methods such as
