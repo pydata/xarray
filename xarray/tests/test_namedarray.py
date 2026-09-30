@@ -104,12 +104,8 @@ def check_duck_array_typevar(a: duckarray[Any, _DType]) -> duckarray[Any, _DType
                 from typing import get_protocol_members
 
                 expected_attrs = get_protocol_members(t)
-            elif sys.version_info >= (3, 12):
-                expected_attrs = t.__protocol_attrs__
             else:
-                from typing import _get_protocol_attrs  # type: ignore[attr-defined]
-
-                expected_attrs = _get_protocol_attrs(t)
+                expected_attrs = t.__protocol_attrs__
 
             missing_attrs_ = expected_attrs - actual_attrs
             if missing_attrs_:
