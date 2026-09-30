@@ -3450,6 +3450,9 @@ class ZarrBase(CFEncodedBase):
                 xr.open_dataset(store_target, engine="zarr", **self.version_kwargs),
             )
 
+    @skip_if_zarr_format_3(
+        "native time dtypes need zarr-python>=3.1", condition=not has_zarr_v3_dtypes
+    )
     @pytest.mark.parametrize(
         "times, encoding",
         [
