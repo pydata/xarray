@@ -91,7 +91,9 @@ class ScipyArrayWrapper(BackendArray):
     def _getitem(self, key):
         with self.datastore.lock:
             data = self.get_variable(needs_lock=False).data
-            return data[key]
+            return indexing.NumpyIndexingAdapter(data).oindex[
+                indexing.OuterIndexer(key)
+            ]
 
     def __getitem__(self, key):
         data = indexing.explicit_indexing_adapter(
@@ -446,7 +448,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         )
 
         store_entrypoint = StoreBackendEntrypoint()
-        with close_on_error(store):
+        with close_on_error(store), store._manager.acquire_context():
             ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,

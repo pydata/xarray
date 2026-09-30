@@ -1530,7 +1530,7 @@ class TestNewDefaults:
                 actual = concat(
                     [ds1, ds2], dim="y", coords="different", data_vars="different"
                 )
-                assert_identical(actual, expected)
+            assert_identical(actual, expected)
         with set_options(use_new_combine_kwarg_defaults=True):
             with pytest.raises(ValueError, match="might be related to new default"):
                 concat([ds1, ds2], dim="y", coords="different", data_vars="different")
@@ -1600,7 +1600,7 @@ class TestNewDefaults:
                 match="will change from coords='different' to coords='minimal'",
             ):
                 old = concat(objs, "x")
-                assert_identical(old, expected)
+            assert_identical(old, expected)
         with set_options(use_new_combine_kwarg_defaults=True):
             new = concat(objs, "x")
             with pytest.raises(AssertionError):
