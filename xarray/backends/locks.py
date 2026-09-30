@@ -15,6 +15,54 @@ if TYPE_CHECKING:
     from distributed import Lock as DistributedLock
 
 
+class _ReentrantLock:
+    """Like ``threading.RLock``, but with ``locked()`` on all Python versions.
+
+    The netCDF4 backend holds its lock while reading and writing metadata, and
+    the calls it makes meanwhile acquire the same lock again, so the default
+    locks must be reentrant. ``threading.RLock`` only has ``locked()`` since
+    Python 3.14, but ``SerializableLock.locked()`` and ``CombinedLock.locked()``
+    rely on it.
+    """
+
+    # TODO: replace with threading.RLock once we require Python >= 3.14
+
+    __slots__ = ("__weakref__", "_count", "_lock", "_owner")
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._owner: int | None = None
+        self._count = 0
+
+    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+        me = threading.get_ident()
+        if self._owner == me:
+            self._count += 1
+            return True
+        if not self._lock.acquire(blocking, timeout):
+            return False
+        self._owner = me
+        self._count = 1
+        return True
+
+    def release(self) -> None:
+        if self._owner != threading.get_ident():
+            raise RuntimeError("cannot release un-acquired lock")
+        self._count -= 1
+        if not self._count:
+            self._owner = None
+            self._lock.release()
+
+    def __enter__(self) -> bool:
+        return self.acquire()
+
+    def __exit__(self, *args) -> None:
+        self.release()
+
+    def locked(self) -> bool:
+        return self._lock.locked()
+
+
 # SerializableLock is adapted from Dask:
 # https://github.com/dask/dask/blob/74e898f0ec712e8317ba86cc3b9d18b6b9922be0/dask/utils.py#L1160-L1224
 # Used under the terms of Dask's license, see licenses/DASK_LICENSE.
@@ -43,21 +91,26 @@ class SerializableLock(Lock):
     This is useful for consistently protecting resources on a per-process
     level.
 
+    With ``reentrant=True`` the lock can be acquired again by the thread that
+    already holds it, like ``threading.RLock``.
+
     The creation of locks is itself not threadsafe.
     """
 
-    _locks: ClassVar[WeakValueDictionary[Hashable, threading.Lock]] = (
+    _locks: ClassVar[WeakValueDictionary[Hashable, threading.Lock | _ReentrantLock]] = (
         WeakValueDictionary()
     )
     token: Hashable
-    lock: threading.Lock
+    reentrant: bool
+    lock: threading.Lock | _ReentrantLock
 
-    def __init__(self, token: Hashable | None = None):
+    def __init__(self, token: Hashable | None = None, reentrant: bool = False):
         self.token = token or str(uuid.uuid4())
+        self.reentrant = reentrant
         if self.token in SerializableLock._locks:
             self.lock = SerializableLock._locks[self.token]
         else:
-            self.lock = threading.Lock()
+            self.lock = _ReentrantLock() if reentrant else threading.Lock()
             SerializableLock._locks[self.token] = self.lock
 
     def acquire(self, *args, **kwargs):
@@ -76,10 +129,12 @@ class SerializableLock(Lock):
         return self.lock.locked()
 
     def __getstate__(self):
-        return self.token
+        # include reentrant, so that a process that does not know the token yet
+        # creates the right kind of lock
+        return (self.token, self.reentrant)
 
-    def __setstate__(self, token):
-        self.__init__(token)
+    def __setstate__(self, state):
+        self.__init__(*state)
 
     def __str__(self):
         return f"<{self.__class__.__name__}: {self.token}>"
@@ -88,19 +143,25 @@ class SerializableLock(Lock):
 
 
 # Locks used by multiple backends.
-# Neither HDF5 nor the netCDF-C library are thread-safe.
-HDF5_LOCK = SerializableLock()
-NETCDFC_LOCK = SerializableLock()
+# Neither HDF5 nor the netCDF-C library are thread-safe. The locks are reentrant
+# so that backends can hold them across calls that acquire them again. They
+# have fixed tokens, so that an unpickled lock, e.g. in a dask worker, is the
+# global lock of that process and not a separate lock. The tokens also give them
+# the same place in the lock order in every process (see "Lock ordering").
+HDF5_LOCK = SerializableLock("xarray-hdf5-lock", reentrant=True)
+NETCDFC_LOCK = SerializableLock("xarray-netcdfc-lock", reentrant=True)
 
 
-_FILE_LOCKS: MutableMapping[Any, threading.Lock] = weakref.WeakValueDictionary()
+_FILE_LOCKS: MutableMapping[Any, _ReentrantLock] = weakref.WeakValueDictionary()
 
 
-def _get_threaded_lock(key: str) -> threading.Lock:
+def _get_threaded_lock(key: str) -> _ReentrantLock:
+    # reentrant, as it is combined with the global locks into the lock that
+    # netCDF4 holds while writing metadata (see is_reentrant_lock)
     try:
         lock = _FILE_LOCKS[key]
     except KeyError:
-        lock = _FILE_LOCKS[key] = threading.Lock()
+        lock = _FILE_LOCKS[key] = _ReentrantLock()
     return lock
 
 
@@ -237,9 +298,10 @@ def acquire(lock, blocking=True):
 #    the order to be the same everywhere, not this particular one.
 # 2. Within a level, a name that stays the same when the lock is pickled: the
 #    token of a SerializableLock and the name of a dask.distributed.Lock. Other
-#    locks, like threading and multiprocessing locks, have no such name, so they
-#    fall back to id(). That is fine as long as no two of them are combined,
-#    which xarray never does: there is at most one write lock per file.
+#    locks, like threading and multiprocessing locks and the reentrant per-file
+#    locks of the threaded scheduler, have no such name, so they fall back to
+#    id(). That is fine as long as no two of them are combined, which xarray
+#    never does: there is at most one write lock per file.
 _RESOURCE_LOCK_LEVEL = 0  # per-file write locks and user supplied locks
 _LIBRARY_LOCK_LEVEL = 1  # SerializableLocks, like HDF5_LOCK and NETCDFC_LOCK
 
@@ -342,6 +404,15 @@ class DummyLock(Lock):
 
     def locked(self):
         return False
+
+
+def is_reentrant_lock(lock: Lock) -> bool:
+    """Whether the thread holding ``lock`` can safely acquire it again."""
+    if isinstance(lock, CombinedLock):
+        return all(is_reentrant_lock(lock) for lock in lock.locks)
+    if isinstance(lock, SerializableLock):
+        return lock.reentrant
+    return isinstance(lock, _ReentrantLock)
 
 
 def combine_locks(locks: Sequence[Lock]) -> Lock:
