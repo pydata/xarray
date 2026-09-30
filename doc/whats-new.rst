@@ -19,7 +19,7 @@ Breaking Changes
 ~~~~~~~~~~~~~~~~
 - Support for Python 3.11 has been dropped. The minimum required Python version
   is now 3.12, in line with xarray's
-  :ref:`minimum dependency policy <mindeps_policy>`.
+  :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
