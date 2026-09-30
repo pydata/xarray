@@ -6,6 +6,42 @@
 What's New
 ==========
 
+.. _whats-new.2026.09.1:
+
+v2026.09.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+
+- Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
+  memory maps being left open when reading with ``engine="scipy"`` and dask
+  while files get evicted from the file cache. Data read from memory mapped
+  files is now copied before the file can be closed by another thread
+  (:pull:`11634`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2026.09.0:
 
 v2026.09.0 (Sep 29, 2026)
@@ -148,12 +184,6 @@ Bug Fixes
   when opening more files than ``file_cache_maxsize``. Files evicted from the
   file cache by another thread are no longer closed while they are still being
   read (:pull:`11622`).
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
-- Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
-  memory maps being left open when reading with ``engine="scipy"`` and dask
-  while files get evicted from the file cache. Data read from memory mapped
-  files is now copied before the file can be closed by another thread
-  (:pull:`11634`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.roll` and :py:meth:`Dataset.roll` now return unchanged
   empty results when rolling an empty dimension, including with
