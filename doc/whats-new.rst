@@ -160,6 +160,10 @@ Bug Fixes
 - Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
   round trips (:issue:`11466`, :pull:`11474`).
   By `stanbot8 <https://github.com/stanbot8>`_.
+- :py:meth:`Dataset.copy` now preserves its resource-closing callback, so a
+  copied file-backed dataset can release a file reopened after the original
+  dataset is closed (:issue:`10106`). By `nightcityblade
+  <https://github.com/nightcityblade>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs (:pull:`11449`).
