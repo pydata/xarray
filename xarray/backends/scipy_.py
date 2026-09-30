@@ -4,7 +4,7 @@ import gzip
 import io
 import os
 from collections.abc import Iterable, Mapping
-from typing import IO, TYPE_CHECKING, Any, Literal, TypeVar, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 
@@ -43,26 +43,22 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.types import ReadBuffer
 
-T = TypeVar("T")
-K = TypeVar("K")
-V = TypeVar("V")
-
 
 @overload
 def _decode_string(s: bytes) -> str: ...
 
 
 @overload
-def _decode_string(s: T) -> T: ...
+def _decode_string[T](s: T) -> T: ...
 
 
-def _decode_string(s: bytes | T) -> str | T:
+def _decode_string[T](s: bytes | T) -> str | T:
     if isinstance(s, bytes):
         return s.decode("utf-8", "replace")
     return s
 
 
-def _decode_attrs(d: Mapping[K, V]) -> dict[K, V]:
+def _decode_attrs[K, V](d: Mapping[K, V]) -> dict[K, V]:
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
     return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}

@@ -576,7 +576,7 @@ def _get_valid_fill_mask(arr, dim, limit):
     ) <= limit
 
 
-def _localize(obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
+def _localize[T](obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
     """Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """

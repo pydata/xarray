@@ -6,7 +6,7 @@ import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMapping
 from contextlib import AbstractContextManager, contextmanager
-from typing import Any, Generic, Literal, TypeVar, cast
+from typing import Any, Literal, TypeVar, cast
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
@@ -50,7 +50,7 @@ REF_COUNTS: dict[Any, int] = {}
 _OMIT_MODE = utils.ReprObject("<omitted>")
 
 
-class FileManager(Generic[T_File]):
+class FileManager[T_File: Closable]:
     """Manager for acquiring and closing a file object.
 
     Use FileManager subclasses (CachingFileManager in particular) on backend

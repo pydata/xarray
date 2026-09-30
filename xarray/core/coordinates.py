@@ -5,7 +5,6 @@ from contextlib import contextmanager
 from typing import (
     TYPE_CHECKING,
     Any,
-    Generic,
     cast,
 )
 
@@ -1078,7 +1077,7 @@ class DataTreeCoordinates(Coordinates):
         ]
 
 
-class DataArrayCoordinates(Coordinates, Generic[T_DataArray]):
+class DataArrayCoordinates[T_DataArray: DataArray](Coordinates):
     """Dictionary like container for DataArray coordinates (variables + indexes).
 
     This collection can be passed directly to the :py:class:`~xarray.Dataset`

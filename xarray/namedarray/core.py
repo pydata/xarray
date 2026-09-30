@@ -212,7 +212,11 @@ def from_array(
     return NamedArray(dims, np.asarray(data), attrs)
 
 
-class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):
+# Not using PEP 695 type parameters: their variance is inferred, and the mutable
+# data (the `data` setter and `_data`) makes NamedArray invariant. It is meant to
+# be covariant though, e.g. NamedArray[Any, dtype[float64]] should be usable as
+# NamedArray[Any, dtype[Any]], even if assigning to `data` makes that unsound.
+class NamedArray(NamedArrayAggregations, Generic[_ShapeType_co, _DType_co]):  # noqa: UP046
     """
     A wrapper around duck arrays with named dimensions
     and attributes which describe a single Array.

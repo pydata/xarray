@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from xarray.groupers import Grouper, Resampler
     from xarray.structure.alignment import Aligner
 
-    GroupInput: TypeAlias = (
+    type GroupInput = (
         str
         | DataArray
         | IndexVariable
@@ -103,9 +103,7 @@ try:
 except ImportError:
     CFTimeDatetime = np.datetime64
 
-DatetimeLike: TypeAlias = (
-    pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
-)
+type DatetimeLike = pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
 
 
 class Alignable(Protocol):
@@ -200,11 +198,11 @@ Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
-T_ChunkDimFreq: TypeAlias = Union["Resampler", T_ChunkDim]
-T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
+type T_ChunkDim = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
+type T_ChunkDimFreq = Resampler | T_ChunkDim
+type T_ChunksFreq = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
+type T_Chunks = T_ChunkDim | Mapping[Any, T_ChunkDim]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
@@ -367,7 +365,8 @@ Bins = Union[
     int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
 ]
 
-ResampleCompatible: TypeAlias = (
+# not a `type` statement, as it is also used in isinstance checks
+ResampleCompatible: TypeAlias = (  # noqa: UP040
     str | datetime.timedelta | pd.Timedelta | pd.offsets.BaseOffset
 )
 

@@ -22,7 +22,6 @@ from typing import (
     Literal,
     NoReturn,
     ParamSpec,
-    TypeAlias,
     TypeVar,
     Union,
     overload,
@@ -445,7 +444,7 @@ class DatasetView(Dataset):
         return Dataset(variables, attrs=attrs)
 
 
-FromDictDataValue: TypeAlias = "CoercibleValue | Dataset | DataTree | None"
+type FromDictDataValue = CoercibleValue | Dataset | DataTree | None
 
 
 @dataclass

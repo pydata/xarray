@@ -5,7 +5,7 @@ import copy
 import inspect
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -993,10 +993,7 @@ def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"
         )
 
 
-T_PDIndex = TypeVar("T_PDIndex", bound=pd.Index)
-
-
-def remove_unused_levels_categories(index: T_PDIndex) -> T_PDIndex:
+def remove_unused_levels_categories[T_PDIndex: pd.Index](index: T_PDIndex) -> T_PDIndex:
     """
     Remove unused levels from MultiIndex and unused categories from CategoricalIndex
     """
@@ -1699,10 +1696,9 @@ def create_default_index_implicit(
 
 
 # generic type that represents either a pandas or an xarray index
-T_PandasOrXarrayIndex = TypeVar("T_PandasOrXarrayIndex", Index, pd.Index)
 
 
-class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
+class Indexes[T_PandasOrXarrayIndex: (Index, pd.Index)](collections.abc.Mapping):
     """Immutable proxy for Dataset or DataArray indexes.
 
     It is a mapping where keys are coordinate names and values are either pandas

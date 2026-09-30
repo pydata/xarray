@@ -5,7 +5,7 @@ import itertools
 import math
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import numpy as np
 
@@ -89,7 +89,7 @@ min_count : int, default: None
     and skipna=True, the result will be a float array."""
 
 
-class Rolling(Generic[T_Xarray]):
+class Rolling[T_Xarray: (DataArray, Dataset)]:
     """A object that implements the moving window pattern.
 
     See Also
@@ -1071,7 +1071,7 @@ class DatasetRolling(Rolling["Dataset"]):
         return Dataset(dataset, coords=coords, attrs=attrs)
 
 
-class Coarsen(Generic[T_Xarray]):
+class Coarsen[T_Xarray: (DataArray, Dataset)]:
     """A object that implements the coarsen.
 
     See Also

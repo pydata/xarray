@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -101,10 +101,7 @@ def get_points(coords: Iterable[Variable | Any]) -> np.ndarray:
     return np.stack([np.ravel(d) for d in data]).T
 
 
-T_TreeAdapter = TypeVar("T_TreeAdapter", bound=TreeAdapter)
-
-
-class NDPointIndex(Index, Generic[T_TreeAdapter]):
+class NDPointIndex[T_TreeAdapter: TreeAdapter](Index):
     """Xarray index for irregular, n-dimensional data.
 
     This index may be associated with a set of coordinate variables representing

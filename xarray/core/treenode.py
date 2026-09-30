@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
@@ -656,9 +656,6 @@ class TreeNode:
         return self.root is other.root
 
 
-AnyNamedNode = TypeVar("AnyNamedNode", bound="NamedNode")
-
-
 def _validate_name(name: str | None) -> None:
     if name is not None:
         if not isinstance(name, str):
@@ -796,7 +793,7 @@ class TreeIsomorphismError(ValueError):
     """Error raised if two tree objects do not share the same node structure."""
 
 
-def group_subtrees(
+def group_subtrees[AnyNamedNode: NamedNode](
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
     """Iterate over subtrees grouped by relative paths in breadth-first order.
@@ -862,7 +859,7 @@ def group_subtrees(
             queue.append((path / name, child_nodes))
 
 
-def zip_subtrees(
+def zip_subtrees[AnyNamedNode: NamedNode](
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[AnyNamedNode, ...]]:
     """Zip together subtrees aligned by relative path."""

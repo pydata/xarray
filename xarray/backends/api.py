@@ -13,7 +13,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
-    TypeVar,
     Union,
     cast,
 )
@@ -1392,14 +1391,11 @@ def open_groups(
     return groups
 
 
-_FLike = TypeVar("_FLike", bound=Union[str, ReadBuffer])
-
-
-def _remove_path(
-    paths: NestedSequence[_FLike], paths_to_remove: set[_FLike]
-) -> NestedSequence[_FLike]:
+def _remove_path[FLike: str | ReadBuffer](
+    paths: NestedSequence[FLike], paths_to_remove: set[FLike]
+) -> NestedSequence[FLike]:
     # Initialize an empty list to store the result
-    result: list[Union[_FLike, NestedSequence[_FLike]]] = []
+    result: list[Union[FLike, NestedSequence[FLike]]] = []
 
     for item in paths:
         if isinstance(item, list):

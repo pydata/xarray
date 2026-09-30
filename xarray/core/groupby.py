@@ -6,7 +6,7 @@ import itertools
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -24,6 +24,7 @@ from xarray.core._aggregations import (
     DatasetGroupByAggregations,
 )
 from xarray.core.common import (
+    DataWithCoords,
     ImplementsArrayReduce,
     ImplementsDatasetReduce,
     _is_numeric_aggregatable_dtype,
@@ -183,7 +184,7 @@ def _inverse_permutation_indices(positions, N: int | None = None) -> np.ndarray 
     return newpositions[newpositions != -1]
 
 
-class _DummyGroup(Generic[T_Xarray]):
+class _DummyGroup[T_Xarray: (DataArray, Dataset)]:
     """Class for keeping track of grouped dimensions without coordinates.
 
     Should not be user visible.
@@ -286,7 +287,7 @@ def _ensure_1d(
 
 
 @dataclass
-class ResolvedGrouper(Generic[T_DataWithCoords]):
+class ResolvedGrouper[T_DataWithCoords: DataWithCoords]:
     """
     Wrapper around a Grouper object.
 
@@ -577,7 +578,7 @@ class ComposedGrouper:
         )
 
 
-class GroupBy(Generic[T_Xarray]):
+class GroupBy[T_Xarray: (DataArray, Dataset)]:
     """A object that implements the split-apply-combine pattern.
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over

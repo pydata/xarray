@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Generic, Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -132,7 +132,7 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
 
 
-class Weighted(Generic[T_Xarray]):
+class Weighted[T_Xarray: (DataArray, Dataset)]:
     """An object that implements weighted operations.
 
     You should create a Weighted object by using the ``DataArray.weighted`` or

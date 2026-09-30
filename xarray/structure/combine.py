@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 import pandas as pd
 
@@ -31,16 +31,13 @@ if TYPE_CHECKING:
     )
 
 
-T = TypeVar("T")
-
-
-def _infer_concat_order_from_positions(
+def _infer_concat_order_from_positions[T](
     datasets: NestedSequence[T],
 ) -> dict[tuple[int, ...], T]:
     return dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
 
-def _infer_tile_ids_from_nested_list(
+def _infer_tile_ids_from_nested_list[T](
     entry: NestedSequence[T], current_pos: tuple[int, ...]
 ) -> Iterator[tuple[tuple[int, ...], T]]:
     """
@@ -410,15 +407,15 @@ def _nested_combine(
 # Define types for arbitrarily-nested list of lists.
 # Mypy doesn't seem to handle overloads properly with recursive types, so we
 # explicitly expand the first handful of levels of recursion.
-DatasetLike: TypeAlias = DataArray | Dataset
-DatasetHyperCube: TypeAlias = (
+type DatasetLike = DataArray | Dataset
+type DatasetHyperCube = (
     DatasetLike
     | Sequence[DatasetLike]
     | Sequence[Sequence[DatasetLike]]
     | Sequence[Sequence[Sequence[DatasetLike]]]
     | Sequence[Sequence[Sequence[Sequence[DatasetLike]]]]
 )
-DataTreeHyperCube: TypeAlias = (
+type DataTreeHyperCube = (
     DataTree
     | Sequence[DataTree]
     | Sequence[Sequence[DataTree]]
@@ -721,10 +718,7 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-K = TypeVar("K", bound=Hashable)
-
-
-def groupby_defaultdict(
+def groupby_defaultdict[T, K: Hashable](
     iter: list[T],
     key: Callable[[T], K],
 ) -> Iterator[tuple[K, Iterator[T]]]:

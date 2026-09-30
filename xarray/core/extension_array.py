@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -238,7 +238,9 @@ def __extension_duck_array__reshape(
 
 
 @dataclass(frozen=True)
-class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
+class PandasExtensionArray[T_ExtensionArray: pd.api.extensions.ExtensionArray](
+    NDArrayMixin
+):
     """NEP-18 compliant wrapper for pandas extension arrays.
 
     Parameters

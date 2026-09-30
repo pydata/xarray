@@ -12,8 +12,6 @@ from typing import (
     Any,
     ClassVar,
     Self,
-    TypeAlias,
-    TypeVar,
     Union,
     overload,
 )
@@ -50,8 +48,6 @@ logger = logging.getLogger(__name__)
 
 NONE_VAR_NAME = "__values__"
 
-T = TypeVar("T")
-
 
 @overload
 def _normalize_path(path: os.PathLike) -> str: ...
@@ -62,10 +58,10 @@ def _normalize_path(path: str) -> str: ...
 
 
 @overload
-def _normalize_path(path: T) -> T: ...
+def _normalize_path[T](path: T) -> T: ...
 
 
-def _normalize_path(path: os.PathLike | str | T) -> str | T:
+def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -382,7 +378,7 @@ class AbstractDataStore:
         self.close()
 
 
-T_PathFileOrDataStore: TypeAlias = (
+type T_PathFileOrDataStore = (
     str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
 )
 
