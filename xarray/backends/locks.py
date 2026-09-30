@@ -12,7 +12,16 @@ from xarray.core.types import Lock
 
 
 class _ReentrantLock:
-    """Like ``threading.RLock``, but with ``locked()`` on all Python versions."""
+    """Like ``threading.RLock``, but with ``locked()`` on all Python versions.
+
+    The netCDF4 backend holds its lock while reading and writing metadata, and
+    the calls it makes meanwhile acquire the same lock again, so the default
+    locks must be reentrant. ``threading.RLock`` only has ``locked()`` since
+    Python 3.14, but ``SerializableLock.locked()`` and ``CombinedLock.locked()``
+    rely on it.
+    """
+
+    # TODO: replace with threading.RLock once we require Python >= 3.14
 
     __slots__ = ("__weakref__", "_count", "_lock", "_owner")
 
@@ -116,6 +125,8 @@ class SerializableLock(Lock):
         return self.lock.locked()
 
     def __getstate__(self):
+        # include reentrant, so that a process that does not know the token yet
+        # creates the right kind of lock
         return (self.token, self.reentrant)
 
     def __setstate__(self, state):
@@ -131,7 +142,9 @@ class SerializableLock(Lock):
 # Neither HDF5 nor the netCDF-C library are thread-safe. The locks are reentrant
 # so that backends can hold them across calls that acquire them again. They
 # have fixed tokens, so that an unpickled lock, e.g. in a dask worker, is the
-# global lock of that process and not a separate lock.
+# global lock of that process and not a separate lock. This relies on
+# CombinedLock sorting its locks again when unpickled, otherwise processes could
+# acquire the same locks in a different order and deadlock.
 HDF5_LOCK = SerializableLock("xarray-hdf5-lock", reentrant=True)
 NETCDFC_LOCK = SerializableLock("xarray-netcdfc-lock", reentrant=True)
 
@@ -140,6 +153,8 @@ _FILE_LOCKS: MutableMapping[Any, _ReentrantLock] = weakref.WeakValueDictionary()
 
 
 def _get_threaded_lock(key: str) -> _ReentrantLock:
+    # reentrant, as it is combined with the global locks into the lock that
+    # netCDF4 holds while writing metadata (see is_reentrant_lock)
     try:
         lock = _FILE_LOCKS[key]
     except KeyError:

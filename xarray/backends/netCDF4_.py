@@ -453,6 +453,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._group = group
         self._mode = mode
         self.lock = ensure_lock(lock)
+        # data_model and filepath() are netCDF-C calls too
         with self._metadata_lock(), manager.acquire_context():
             self.format = self.ds.data_model
             self._filename = self.ds.filepath()
@@ -559,9 +560,16 @@ class NetCDF4DataStore(WritableCFDataStore):
         """Lock to hold while reading or writing metadata of the file.
 
         netCDF-C is not thread-safe, so metadata must not be accessed
-        concurrently with other netCDF-C calls (GH9779). Accessing metadata
-        acquires the lock again, so it can only be held for reentrant locks,
-        like the default ones.
+        concurrently with other netCDF-C calls (GH9779). This is ``self.lock``
+        itself, but accessing metadata acquires it again, e.g. through
+        ``self.ds`` and the array wrappers, as the file manager uses the same
+        lock. So it can only be held if it is reentrant, like the default locks.
+
+        Other locks would deadlock, so they are not held here and only protect
+        the individual calls as before. These are custom locks passed by users
+        and the write locks of the distributed and multiprocessing schedulers,
+        which come from other libraries. ``lock=False`` gives a ``DummyLock``,
+        which does not lock anything either way.
         """
         return self.lock if is_reentrant_lock(self.lock) else nullcontext()
 
@@ -836,6 +844,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         )
 
         store_entrypoint = StoreBackendEntrypoint()
+        # Hold the lock for the whole call, as reading variables and attributes
+        # while decoding goes through netCDF-C.
         with (
             close_on_error(store),
             store._metadata_lock(),
@@ -941,6 +951,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
         groups_dict = {}
+        # like in open_dataset, walking the groups and reading them goes
+        # through netCDF-C
         with store._metadata_lock(), manager.acquire_context():
             for path_group in _iter_nc_groups(store.ds, parent=parent):
                 group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
