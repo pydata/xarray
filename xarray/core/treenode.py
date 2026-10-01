@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -25,10 +24,7 @@ class NodePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
 
     def __init__(self, *pathsegments):
-        if sys.version_info >= (3, 12):
-            super().__init__(*pathsegments)
-        else:
-            super().__new__(PurePosixPath, *pathsegments)
+        super().__init__(*pathsegments)
         if self.drive:
             raise ValueError("NodePaths cannot have drives")
 
