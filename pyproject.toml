@@ -6,9 +6,9 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -16,7 +16,7 @@ dynamic = ["version"]
 license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 
@@ -291,6 +291,11 @@ ignore = [
   "PLW1641", # object does not implement `__hash__` method
   "PLW2901", # `for` loop variable overwritten by assignment target
   "UP007",   # use X | Y for type annotations
+  # PEP 695 type parameter syntax (Python >= 3.12): the migration from TypeVar
+  # and TypeAlias is left for a separate change
+  "UP040",   # `type` statement instead of TypeAlias
+  "UP046",   # type parameters instead of subclassing Generic
+  "UP047",   # type parameters instead of TypeVar in generic functions
   "FURB105", # unnecessary empty string passed to `print`
   "RUF001",  # string contains ambiguous unicode character
   "RUF002",  # docstring contains ambiguous acute accent unicode character
@@ -447,6 +452,8 @@ slowy = "slowy"
 Commun = "Commun"
 Noice = "Noice"
 Hax = "Hax"
+Yau = "Yau"
+whn = "whn"
 
 # Tests
 Ome = "Ome"
