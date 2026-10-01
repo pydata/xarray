@@ -471,7 +471,26 @@ def update_videos(app: Sphinx):
     LOGGER.info("Videos page updated.")
 
 
+def check_intersphinx_inventories(app: Sphinx) -> None:
+    """Abort the build early if an intersphinx inventory could not be loaded.
+
+    The missing references would otherwise only fail the build (warnings are
+    errors) after it ran completely, which takes a long time.
+    """
+    loaded = app.env.intersphinx_named_inventory  # type: ignore[attr-defined]
+    missing = sorted(set(app.config.intersphinx_mapping) - set(loaded))
+    if missing:
+        LOGGER.error(
+            "Could not load the intersphinx inventories of %s, see the warnings "
+            "above. Aborting the build, try again later if the server is unavailable.",
+            ", ".join(missing),
+        )
+        sys.exit(1)
+
+
 def setup(app: Sphinx):
     app.connect("html-page-context", html_page_context)
+    # run after sphinx.ext.intersphinx loaded the inventories (priority 500)
+    app.connect("builder-inited", check_intersphinx_inventories, priority=900)
     app.connect("builder-inited", update_gallery)
     app.connect("builder-inited", update_videos)
