@@ -782,6 +782,62 @@ class GroupBy(Generic[T_Xarray]):
         else:
             return unstacked  # type: ignore[return-value]
 
+    def _needs_shuffle_for_blockwise(self) -> bool:
+        """Whether flox's blockwise strategy needs us to shuffle first.
+
+        Flox can only rechunk so that chunk boundaries line up with group
+        boundaries, which requires the members of each group to be contiguous.
+        """
+        # Obsolete once xarray-contrib/flox#501 is fixed, see `_flox_reduce`.
+        if self._by_chunked or self._stacked_dim is not None:
+            return False
+
+        from xarray.core.dataarray import DataArray
+
+        was_array = isinstance(self._obj, DataArray)
+        as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
+        dim = self._group_dim
+        if not any(
+            var.chunks is not None and len(var.chunks[var.get_axis_num(dim)]) > 1
+            for var in as_dataset._variables.values()
+            if dim in var.dims
+        ):
+            return False
+
+        codes = self.encoded.codes.data
+        codes = codes[codes >= 0]
+        if codes.size == 0:
+            return False
+        n_runs = np.count_nonzero(np.diff(codes)) + 1
+        return n_runs != len(np.unique(codes))
+
+    def _shuffle_obj_and_codes(self) -> tuple[T_Xarray, tuple[DataArray, ...]]:
+        """Shuffle the original object together with the codes of each grouper,
+        so that all members of a group end up in a single chunk."""
+        from xarray.core.dataarray import DataArray
+
+        was_array = isinstance(self._obj, DataArray)
+        as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
+
+        codes_names = [f"__codes_{i}__" for i in range(len(self.groupers))]
+        as_dataset = as_dataset.assign_coords(
+            {
+                name: grouper.codes.variable
+                for name, grouper in zip(codes_names, self.groupers, strict=True)
+            }
+        )
+        shuffled = as_dataset._shuffle(
+            dim=self._group_dim, indices=self.encoded.group_indices, chunks=None
+        )
+        codes = tuple(
+            shuffled[name].rename(grouper.codes.name)
+            for name, grouper in zip(codes_names, self.groupers, strict=True)
+        )
+        shuffled_obj = cast("Dataset", shuffled.drop_vars(codes_names))
+        if was_array:
+            return self._obj._from_temp_dataset(shuffled_obj), codes
+        return shuffled_obj, codes  # type: ignore[return-value]
+
     def map(
         self,
         func: Callable,
@@ -1084,6 +1140,15 @@ class GroupBy(Generic[T_Xarray]):
         from xarray.core.dataset import Dataset
 
         obj = self._original_obj
+        codes = tuple(g.codes for g in self.groupers)
+        # flox can only rechunk contiguous groups for blockwise reductions,
+        # so shuffle every group into a single chunk ourselves (GH11651).
+        # TODO: Once flox shuffles automatically for blockwise-only reductions
+        # (https://github.com/xarray-contrib/flox/issues/501), restrict this to
+        # older flox versions and remove it when the minimum flox version allows.
+        if kwargs.get("method") == "blockwise" and self._needs_shuffle_for_blockwise():
+            obj, codes = self._shuffle_obj_and_codes()
+
         variables = (
             {k: v.variable for k, v in obj.data_vars.items()}
             if isinstance(obj, Dataset)  # type: ignore[redundant-expr]  # seems to be a mypy bug
@@ -1153,7 +1218,6 @@ class GroupBy(Generic[T_Xarray]):
             pd.RangeIndex(len(grouper)) for grouper in self.groupers
         )
 
-        codes = tuple(g.codes for g in self.groupers)
         result = xarray_reduce(
             obj.drop_vars(non_numeric.keys()),
             *codes,

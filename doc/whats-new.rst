@@ -25,6 +25,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
+  groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
+  members of a group are spread over multiple chunks and are not contiguous.
+  The object is now shuffled so that each group is in a single chunk first
+  (:issue:`11651`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
   memory maps being left open when reading with ``engine="scipy"`` and dask
   while files get evicted from the file cache. Data read from memory mapped
