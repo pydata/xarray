@@ -33,7 +33,7 @@ Bug Fixes
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.
   The object is now shuffled so that each group is in a single chunk first
-  (:issue:`11651`).
+  (:issue:`11651`, :pull:`11653`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
   memory maps being left open when reading with ``engine="scipy"`` and dask

@@ -807,11 +807,15 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         boundaries, which requires the members of each group to be contiguous.
         """
         # Obsolete once xarray-contrib/flox#501 is fixed, see `_flox_reduce`.
+        # _shuffle_obj can't shuffle by a chunked array, and the order would be
+        # lost again when unstacking a multi-dimensional group.
         if self._by_chunked or self._stacked_dim is not None:
             return False
 
         from xarray.core.dataarray import DataArray
 
+        # Without multiple chunks along the group dimension, e.g. for numpy
+        # arrays, blockwise always works. Shuffling would only copy the data.
         was_array = isinstance(self._obj, DataArray)
         as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
         dim = self._group_dim
@@ -822,10 +826,14 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         ):
             return False
 
+        # Flox can rechunk contiguous groups on its own, e.g. for resampling, so
+        # only shuffle if some group is interrupted by another one. Missing
+        # values (code -1) are dropped by the reduction and don't count.
         codes = self.encoded.codes.data
         codes = codes[codes >= 0]
         if codes.size == 0:
             return False
+        # every group is contiguous if it forms exactly one run of equal codes
         n_runs = np.count_nonzero(np.diff(codes)) + 1
         return n_runs != len(np.unique(codes))
 
