@@ -157,14 +157,14 @@ jobs:
           fail_ci_if_error: false
 
   mypy-min:
-    name: Mypy 3.11
+    name: Mypy 3.12
     runs-on: "ubuntu-latest"
     needs: cache-pixi-lock
     defaults:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test-py311-with-typing
+      PIXI_ENV: test-py312-with-typing
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -257,7 +257,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pixi-env: ["test-py314-with-typing", "test-py311-with-typing"]
+        pixi-env: ["test-py314-with-typing", "test-py312-with-typing"]
     if: |
       always()
       && (
