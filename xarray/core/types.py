@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
-from types import EllipsisType
+from types import EllipsisType, TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -362,9 +362,18 @@ class Closable(Protocol):
 
 
 class Lock(Protocol):
-    def acquire(self, *args, **kwargs) -> Any: ...
+    # The parameters are positional-only, as their names differ between lock
+    # types, e.g. multiprocessing.Lock.acquire(block, timeout).
+    def acquire(self, blocking: bool = ..., /) -> bool: ...
     def release(self) -> None: ...
-    def __enter__(self) -> Any: ...
-    def __exit__(self, *args, **kwargs) -> None: ...
+    # threading locks return the result of acquire(), dask.distributed.Lock self
+    def __enter__(self) -> object: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None: ...
     def __hash__(self) -> int:
         return super().__hash__()
