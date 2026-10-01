@@ -217,8 +217,9 @@ def _maybe_wrap_data(data):
 
 def _possibly_convert_objects(values):
     """Convert object arrays into datetime64 and timedelta64 according
-    to the pandas convention.  For backwards compat, as of 3.0.0 pandas,
-    object dtype inputs are cast to strings by `pandas.Series`
+    to the pandas convention. Object dtype inputs that are inferred to be
+    strings are returned unchanged. For backwards compat, as of 3.0.0 pandas,
+    the remaining object dtype inputs are cast to strings by `pandas.Series`
     but we output them as object dtype with the input metadata preserved as well.
 
 
@@ -227,8 +228,22 @@ def _possibly_convert_objects(values):
     * pd.Timestamp
     * pd.Timedelta
     """
-    as_series = pd.Series(values.ravel(), copy=False)
-    result = np.asarray(as_series).reshape(values.shape)
+    inferred = pd.api.types.infer_dtype(values.ravel(), skipna=True)
+
+    if inferred == "string":
+        return values
+    elif inferred == "datetime":
+        result = pd.to_datetime(values.ravel()).to_numpy().reshape(values.shape)
+    elif inferred == "timedelta":
+        result = pd.to_timedelta(values.ravel()).to_numpy().reshape(values.shape)
+    elif inferred in ["datetime64", "timedelta64"]:
+        # Casting drops unit info for these cases;
+        # fall back to pd.Series roundtrip, which preserves them.
+        as_series = pd.Series(values.ravel(), copy=False)
+        result = np.asarray(as_series).reshape(values.shape)
+    else:
+        return values
+
     if not result.flags.writeable:
         # GH8843, pandas copy-on-write mode creates read-only arrays by default
         try:
