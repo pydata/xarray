@@ -29,6 +29,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Arithmetic and comparison operators of :py:class:`Dataset` now accept a dict
+  of variable names to values for static type checkers, e.g. ``ds + {"a": 1}``,
+  as they already did at runtime (:pull:`XXXXX`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
   together with a per-file write lock, are used from several threads of a dask
   worker. The locks are now always acquired in the same order, also after
@@ -62,6 +66,11 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- The generated arithmetic operators in ``xarray/core/_typed_ops.py`` use PEP 695
+  type parameters, are tested with mypy, and CI now checks that they are up to
+  date with ``xarray/util/generate_ops.py``. The CI check of the generated
+  aggregations now fails if they are out of date (:pull:`XXXXX`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
