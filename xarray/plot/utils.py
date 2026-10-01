@@ -1080,7 +1080,8 @@ def legend_elements(
 
     elif prop == "sizes":
         if isinstance(self, mpl.collections.LineCollection):
-            arr = np.ma.asarray(self.get_linewidths())
+            # linewidths of missing values are nan, see _line
+            arr = np.ma.masked_invalid(self.get_linewidths())
         else:
             arr = np.ma.asarray(self.get_sizes())
         _color = kwargs.pop("color", "k")
@@ -2065,7 +2066,8 @@ def _line(
 
     collection = LineCollection_(
         segments,
-        linewidths=s_,
+        # matplotlib doesn't support masked linewidths, use nan explicitly instead
+        linewidths=np.ma.filled(s_, np.nan),
         linestyles=linestyle,
         facecolors=colors,
         edgecolors=edgecolors,
