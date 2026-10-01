@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Generator
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,14 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset, DataTree
-from xarray.tests import create_test_data, requires_cftime, requires_dask
+from xarray.tests import create_test_data, has_zarr, requires_cftime, requires_dask
+
+if has_zarr:
+    import zarr
+
+    ZARR_FORMATS = [2, 3]
+else:
+    ZARR_FORMATS = []
 
 
 @pytest.fixture(autouse=True)
@@ -250,3 +258,9 @@ def simple_datatree(create_test_datatree):
 @pytest.fixture(params=["s", "ms", "us", "ns"])
 def time_unit(request):
     return request.param
+
+
+@pytest.fixture(params=ZARR_FORMATS)
+def default_zarr_format(request) -> Generator[None, None]:
+    with zarr.config.set(default_zarr_format=request.param):
+        yield

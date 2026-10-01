@@ -5,7 +5,7 @@ import json
 import os
 import struct
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal, Self, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast, override
 
 import numpy as np
 import pandas as pd
@@ -302,6 +302,7 @@ class ZarrArrayWrapper(BackendArray):
 
         return self._preserve_string_dtype(value)
 
+    @override
     async def async_getitem(self, key):
         array = self._array
         if isinstance(key, indexing.BasicIndexer):
@@ -864,6 +865,7 @@ class ZarrStore(AbstractWritableDataStore):
             # on demand.
             self._members = self._fetch_members()
 
+    @override
     def get_child_store(self, group: str) -> Self:
         zarr_group = self.zarr_group.require_group(group)
         return type(self)(
@@ -985,9 +987,11 @@ class ZarrStore(AbstractWritableDataStore):
 
         return Variable(dimensions, data, attributes, encoding)
 
+    @override
     def get_variables(self):
         return FrozenDict((k, self.open_store_variable(k)) for k in self.array_keys())
 
+    @override
     def get_attrs(self):
         return {
             k: v
@@ -995,6 +999,7 @@ class ZarrStore(AbstractWritableDataStore):
             if not k.lower().startswith("_nc")
         }
 
+    @override
     def get_dimensions(self):
         try_nczarr = self._mode == "r"
         dimensions = {}
@@ -1009,23 +1014,28 @@ class ZarrStore(AbstractWritableDataStore):
                 dimensions[d] = s
         return dimensions
 
+    @override
     def set_dimensions(self, variables, unlimited_dims=None):
         if unlimited_dims is not None:
             raise NotImplementedError(
                 "Zarr backend doesn't know how to handle unlimited dimensions"
             )
 
+    @override
     def set_attributes(self, attributes):
         _put_attrs(self.zarr_group, attributes)
 
+    @override
     def encode_variable(self, variable, name=None):
         zarr_format = self.zarr_group.metadata.zarr_format
         variable = encode_zarr_variable(variable, name=name, zarr_format=zarr_format)
         return variable
 
+    @override
     def encode_attribute(self, a):
         return encode_zarr_attr_value(a)
 
+    @override
     def store(
         self,
         variables,
@@ -1207,7 +1217,7 @@ class ZarrStore(AbstractWritableDataStore):
             ):
                 raise ValueError(
                     'Differing "write_empty_chunks" values in encoding and parameters'
-                    f'Got {encoding["write_empty_chunks"] = } and {self._write_empty = }'
+                    f"Got {encoding["write_empty_chunks"] = } and {self._write_empty = }"
                 )
             else:
                 encoding["write_empty_chunks"] = self._write_empty
@@ -1231,6 +1241,7 @@ class ZarrStore(AbstractWritableDataStore):
         zarr_array = _put_attrs(zarr_array, attrs)
         return zarr_array
 
+    @override
     def set_variables(
         self,
         variables: dict[str, Variable],
@@ -1383,9 +1394,11 @@ class ZarrStore(AbstractWritableDataStore):
 
             writer.add(v.data, zarr_array, region)
 
+    @override
     def sync(self) -> None:
         pass
 
+    @override
     def close(self) -> None:
         if self._close_store_on_close:
             self.zarr_group.store.close()
@@ -1712,6 +1725,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ZarrBackendEntrypoint.html"
     supports_groups = True
 
+    @override
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if isinstance(filename_or_obj, str | os.PathLike):
             # allow a trailing slash to account for an autocomplete
@@ -1721,6 +1735,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         return False
 
+    @override
     def open_dataset(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -1770,6 +1785,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
+    @override
     def open_datatree(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -1806,6 +1822,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
+    @override
     def open_groups_as_dict(
         self,
         filename_or_obj: T_PathFileOrDataStore,

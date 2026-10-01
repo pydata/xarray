@@ -3305,6 +3305,17 @@ class TestDataset:
 
             assert data.attrs["Test"] is not copied.attrs["Test"]
 
+    def test_copy_preserves_close(self) -> None:
+        calls: list[None] = []
+        data = create_test_data()
+        data.set_close(lambda: calls.append(None))
+
+        copied = data.copy()
+        data.close()
+        copied.close()
+
+        assert calls == [None, None]
+
     def test_copy_with_data(self) -> None:
         orig = create_test_data()
         new_data = {k: np.random.randn(*v.shape) for k, v in orig.data_vars.items()}

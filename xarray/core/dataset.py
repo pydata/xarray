@@ -26,7 +26,7 @@ from numbers import Number
 from operator import methodcaller
 from os import PathLike
 from types import EllipsisType
-from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload, override
 
 import numpy as np
 import pandas as pd
@@ -443,6 +443,7 @@ class Dataset(
 
     # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
     # related to https://github.com/python/mypy/issues/9319?
+    @override
     def __eq__(self, other: DsCompatible) -> Self:  # type: ignore[override]
         return super().__eq__(other)
 
@@ -1251,7 +1252,11 @@ class Dataset(
             copy.deepcopy(self._encoding, memo) if deep else copy.copy(self._encoding)
         )
 
-        return self._replace(variables, indexes=indexes, attrs=attrs, encoding=encoding)
+        copied = self._replace(
+            variables, indexes=indexes, attrs=attrs, encoding=encoding
+        )
+        copied.set_close(self._close)
+        return copied
 
     def __copy__(self) -> Self:
         return self._copy(deep=False)
@@ -1349,12 +1354,14 @@ class Dataset(
 
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
+    @override
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for attribute-style access"""
         yield from self._item_sources
         yield self.attrs
 
+    @override
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
@@ -1418,6 +1425,7 @@ class Dataset(
     @overload
     def __getitem__(self, key: Iterable[Hashable]) -> Self: ...
 
+    @override
     def __getitem__(
         self, key: Mapping[Any, Any] | Hashable | Iterable[Hashable]
     ) -> Self | DataArray:
@@ -1872,6 +1880,7 @@ class Dataset(
         """
         return Indexes(self._indexes, {k: self._variables[k] for k in self._indexes})
 
+    @override
     @property
     def coords(self) -> DatasetCoordinates:
         """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
@@ -6864,6 +6873,7 @@ class Dataset(
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
+    @override
     def reduce(
         self,
         func: Callable,
@@ -7855,6 +7865,7 @@ class Dataset(
 
         return obj
 
+    @override
     def _unary_op(self, f, *args, **kwargs) -> Self:
         variables = {}
         keep_attrs = kwargs.pop("keep_attrs", None)
@@ -7870,6 +7881,7 @@ class Dataset(
         attrs = self._attrs if keep_attrs else None
         return self._replace_with_new_dims(variables, attrs=attrs)
 
+    @override
     def _binary_op(self, other, f, reflexive=False, join=None) -> Dataset:
         from xarray.core.dataarray import DataArray
         from xarray.core.datatree import DataTree
@@ -7892,6 +7904,7 @@ class Dataset(
             ds.attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
         return ds
 
+    @override
     def _inplace_binary_op(self, other, f) -> Self:
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import GroupBy

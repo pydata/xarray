@@ -123,7 +123,7 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
     return _decorator
 
 
-def deprecate_dims(func: T, old_name="dims") -> T:
+def deprecate_dims[T: Callable](func: T, old_name="dims") -> T:
     """
     For functions that previously took `dims` as a kwarg, and have now transitioned to
     `dim`. This decorator will issue a warning if `dims` is passed while forwarding it

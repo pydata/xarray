@@ -6,6 +6,64 @@
 What's New
 ==========
 
+.. _whats-new.2026.09.1:
+
+v2026.09.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Support for Python 3.11 has been dropped. The minimum required Python version
+  is now 3.12, in line with xarray's
+  :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug Fixes
+~~~~~~~~~
+- Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
+  together with a per-file write lock, are used from several threads of a dask
+  worker. The locks are now always acquired in the same order, also after
+  they were pickled, and copies of the same ``dask.distributed.Lock`` are no
+  longer acquired twice (:pull:`11645`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
+  memory maps being left open when reading with ``engine="scipy"`` and dask
+  while files get evicted from the file cache. Data read from memory mapped
+  files is now copied before the file can be closed by another thread
+  (:pull:`11634`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix errors and crashes (``NetCDF: HDF error``, segfaults, double frees) when
+  opening or writing netCDF4 files from multiple threads, e.g. with
+  :py:func:`open_mfdataset` and ``parallel=True``. The netCDF4 backend now
+  holds the netCDF-C lock while reading or writing metadata, which is possible
+  because xarray's global HDF5 and netCDF-C locks and its per-file write locks
+  for the threaded scheduler are now reentrant. The global locks also no longer
+  turn into separate locks when datasets are sent to another process, e.g. to a
+  dask distributed worker (:issue:`9779`, :issue:`11088`, :pull:`11629`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`Dataset.copy` now preserves its resource-closing callback, so a
+  copied file-backed dataset can release a file reopened after the original
+  dataset is closed (:issue:`10106`, :pull:`11643`).
+  By `nightcityblade <https://github.com/nightcityblade>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2026.09.0:
 
 v2026.09.0 (Sep 29, 2026)
