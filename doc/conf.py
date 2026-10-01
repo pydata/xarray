@@ -341,7 +341,14 @@ intersphinx_mapping = {
     "numba": ("https://numba.readthedocs.io/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
-    "python": ("https://docs.python.org/3/", None),
+    "python": (
+        "https://docs.python.org/3/",
+        (
+            None,
+            # fallback to the latest archived inventory if docs.python.org is down
+            "https://web.archive.org/web/https://docs.python.org/3/objects.inv",
+        ),
+    ),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
