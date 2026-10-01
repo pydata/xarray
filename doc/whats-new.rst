@@ -35,6 +35,12 @@ Bug Fixes
   The object is now shuffled so that each group is in a single chunk first
   (:issue:`11651`, :pull:`11653`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
+  together with a per-file write lock, are used from several threads of a dask
+  worker. The locks are now always acquired in the same order, also after
+  they were pickled, and copies of the same ``dask.distributed.Lock`` are no
+  longer acquired twice (:pull:`11645`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
   memory maps being left open when reading with ``engine="scipy"`` and dask
   while files get evicted from the file cache. Data read from memory mapped
