@@ -4,7 +4,7 @@ import itertools
 import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 import numpy as np
 
@@ -341,11 +341,9 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                 bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
-T = TypeVar("T")
-U = TypeVar("U")
-
-
-def _item_or_default(obj: Mapping[Any, T | U] | T, key: Hashable, default: T) -> T | U:
+def _item_or_default[T, U](
+    obj: Mapping[Any, T | U] | T, key: Hashable, default: T
+) -> T | U:
     """
     Return item by key if obj is mapping and key is present, else return default value.
     """

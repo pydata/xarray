@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from typing import override
 
 import numpy as np
 
@@ -21,9 +22,11 @@ class InMemoryDataStore(AbstractWritableDataStore):
         self._variables = {} if variables is None else variables
         self._attributes = {} if attributes is None else attributes
 
+    @override
     def get_attrs(self):
         return self._attributes
 
+    @override
     def get_variables(self):
         res = {}
         for k, v in self._variables.items():
@@ -32,18 +35,22 @@ class InMemoryDataStore(AbstractWritableDataStore):
             v._data = indexing.LazilyIndexedArray(v._data)
         return res
 
+    @override
     def get_dimensions(self):
         return {d: s for v in self._variables.values() for d, s in v.dims.items()}
 
+    @override
     def prepare_variable(self, k, v, *args, **kwargs):
         new_var = Variable(v.dims, np.empty_like(v), v.attrs)
         self._variables[k] = new_var
         return new_var, v.data
 
+    @override
     def set_attribute(self, k, v):
         # copy to imitate writing to disk.
         self._attributes[k] = copy.deepcopy(v)
 
+    @override
     def set_dimension(self, dim, length, unlimited_dims=None):
         # in this model, dimensions are accounted for in the variables
         pass

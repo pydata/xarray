@@ -6,7 +6,7 @@ import threading
 import uuid
 import weakref
 from collections.abc import Callable, Hashable, MutableMapping, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, override
 from weakref import WeakValueDictionary
 
 from xarray.core.types import Lock
@@ -113,15 +113,19 @@ class SerializableLock(Lock):
             self.lock = _ReentrantLock() if reentrant else threading.Lock()
             SerializableLock._locks[self.token] = self.lock
 
+    @override
     def acquire(self, *args, **kwargs):
         return self.lock.acquire(*args, **kwargs)
 
+    @override
     def release(self, *args, **kwargs):
         return self.lock.release(*args, **kwargs)
 
+    @override
     def __enter__(self):
         self.lock.__enter__()
 
+    @override
     def __exit__(self, *args):
         self.lock.__exit__(*args)
 
@@ -358,6 +362,7 @@ class CombinedLock(Lock):
         # processes.
         return (type(self), (list(self.locks),))
 
+    @override
     def acquire(self, blocking=True):
         acquired = []
         for lock in self.locks:
@@ -370,13 +375,16 @@ class CombinedLock(Lock):
             acquired.append(lock)
         return True
 
+    @override
     def release(self):
         for lock in reversed(self.locks):
             lock.release()
 
+    @override
     def __enter__(self):
         self.acquire()
 
+    @override
     def __exit__(self, *args):
         self.release()
 
@@ -390,15 +398,19 @@ class CombinedLock(Lock):
 class DummyLock(Lock):
     """DummyLock provides the lock API without any actual locking."""
 
+    @override
     def acquire(self, blocking=True):
         pass
 
+    @override
     def release(self):
         pass
 
+    @override
     def __enter__(self):
         pass
 
+    @override
     def __exit__(self, *args):
         pass
 

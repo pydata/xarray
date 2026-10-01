@@ -41,12 +41,12 @@ if TYPE_CHECKING:
     )
 
 
-class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
-    def __init__(self, array: duckarray[Any, _DType_co]) -> None:
-        self.array: duckarray[Any, _DType_co] = array
+class CustomArrayBase[ShapeType_co, DType_co: np.dtype[Any]]:
+    def __init__(self, array: duckarray[Any, DType_co]) -> None:
+        self.array: duckarray[Any, DType_co] = array
 
     @property
-    def dtype(self) -> _DType_co:
+    def dtype(self) -> DType_co:
         return self.array.dtype
 
     @property
@@ -54,8 +54,8 @@ class CustomArrayBase(Generic[_ShapeType_co, _DType_co]):
         return self.array.shape
 
 
-class CustomArray(
-    CustomArrayBase[_ShapeType_co, _DType_co], Generic[_ShapeType_co, _DType_co]
+class CustomArray[ShapeType_co, DType_co: np.dtype[Any]](
+    CustomArrayBase[ShapeType_co, DType_co]
 ):
     def __array__(
         self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
@@ -66,14 +66,12 @@ class CustomArray(
             return np.asarray(self.array, dtype=dtype)
 
 
-class CustomArrayIndexable(
-    CustomArrayBase[_ShapeType_co, _DType_co],
-    ExplicitlyIndexed,
-    Generic[_ShapeType_co, _DType_co],
+class CustomArrayIndexable[ShapeType_co, DType_co: np.dtype[Any]](
+    CustomArrayBase[ShapeType_co, DType_co], ExplicitlyIndexed
 ):
     def __getitem__(
         self, key: _IndexKeyLike | CustomArrayIndexable[Any, Any], /
-    ) -> CustomArrayIndexable[Any, _DType_co]:
+    ) -> CustomArrayIndexable[Any, DType_co]:
         if isinstance(key, CustomArrayIndexable):
             if isinstance(key.array, type(self.array)):
                 # TODO: key.array is duckarray here, can it be narrowed down further?
