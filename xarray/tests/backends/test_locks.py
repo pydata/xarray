@@ -168,7 +168,7 @@ def test_combined_lock_deduplicates_unpickled_serializable_lock() -> None:
 
 def test_combined_lock_order_survives_pickling() -> None:
     # Copies of a lock are new objects, e.g. in every dask task that uses it,
-    # so the order must not depend on their ids (see "Lock ordering" in locks.py).
+    # so the order must not depend on their ids (see CombinedLock._sort_locks).
     # str(SerializableLock) contains its token, which identifies the lock
     combined = CombinedLock([SerializableLock(), SerializableLock()])
     tokens = [str(lock) for lock in combined.locks]
