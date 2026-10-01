@@ -2510,7 +2510,20 @@ class TestZarrRectilinearChunksRead:
             with pytest.raises(TypeError, match=r"rectilinear"):
                 ds.to_zarr(tmp_path / "dest.zarr", zarr_format=3, mode="w")
 
-    @pytest.mark.parametrize("shards", [20, (20,), "auto"], ids=repr)
+    @pytest.mark.parametrize(
+        "shards",
+        [
+            20,
+            (20,),
+            pytest.param(
+                "auto",
+                marks=pytest.mark.filterwarnings(
+                    "ignore:Automatic shard shape inference is experimental"
+                ),
+            ),
+        ],
+        ids=repr,
+    )
     def test_write_regular_shards_still_works(self, tmp_path, shards) -> None:
         """Every non-rectilinear shard spec zarr accepts must still write."""
         data = np.arange(60, dtype="float32")

@@ -17,6 +17,10 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- Support for Python 3.11 has been dropped. The minimum required Python version
+  is now 3.12, in line with xarray's
+  :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Deprecations
@@ -29,6 +33,12 @@ Bug Fixes
   ``datetime64`` or ``timedelta64`` dtype now reuses the stored ``units`` and
   ``calendar``, instead of writing the appended values with default units
   (:issue:`10639`).
+- Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
+  together with a per-file write lock, are used from several threads of a dask
+  worker. The locks are now always acquired in the same order, also after
+  they were pickled, and copies of the same ``dask.distributed.Lock`` are no
+  longer acquired twice (:pull:`11645`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
   memory maps being left open when reading with ``engine="scipy"`` and dask
   while files get evicted from the file cache. Data read from memory mapped
