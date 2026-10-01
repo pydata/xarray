@@ -24,4 +24,4 @@ build:
     build:
       html:
         - pixi run --frozen build-package
-        - pixi run --frozen doc BUILDDIR=$READTHEDOCS_OUTPUT
+        - pixi run --frozen --verbose doc BUILDDIR=$READTHEDOCS_OUTPUT
