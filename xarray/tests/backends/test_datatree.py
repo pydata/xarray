@@ -316,10 +316,13 @@ class NetCDFIOBase:
             assert_identical(written_dt, original_dt)
 
     def test_default_write_engine(self, tmpdir, simple_datatree, monkeypatch):
-        # Ensure the other netCDF library are not installed
+        # Pretend the other netCDF library is not installed. A None entry in
+        # sys.modules makes importlib.util.find_spec return None and imports of
+        # that module fail, while all other imports keep working. Emptying
+        # sys.meta_path instead broke lazy imports of other modules, e.g. of
+        # h5netcdf.legacyapi, unless another test had imported them already.
         exclude = "netCDF4" if self.engine == "h5netcdf" else "h5netcdf"
-        monkeypatch.delitem(sys.modules, exclude, raising=False)
-        monkeypatch.setattr(sys, "meta_path", [])
+        monkeypatch.setitem(sys.modules, exclude, None)
 
         filepath = tmpdir + "/phony_dims.nc"
         original_dt = simple_datatree
