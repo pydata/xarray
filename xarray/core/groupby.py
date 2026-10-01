@@ -762,26 +762,43 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         dask.array.shuffle
         """
         self._raise_if_by_is_chunked()
-        return self._shuffle_obj(chunks)
+        obj, _ = self._shuffle_obj(chunks)
+        return obj
 
-    def _shuffle_obj(self, chunks: T_Chunks) -> T_Xarray:
+    def _shuffle_obj(self, chunks: T_Chunks) -> tuple[T_Xarray, tuple[DataArray, ...]]:
+        """Shuffle the object, so that all members of a group are in the same chunk.
+
+        The codes of each grouper are shuffled along with it, so that they match
+        the shuffled object.
+        """
         from xarray.core.dataarray import DataArray
 
         was_array = isinstance(self._obj, DataArray)
         as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
 
-        for grouper in self.groupers:
-            if grouper.name not in as_dataset._variables:
-                as_dataset.coords[grouper.name] = grouper.group
+        group_coords = {
+            grouper.name: grouper.group
+            for grouper in self.groupers
+            if grouper.name not in as_dataset._variables
+        }
+        codes_names = [f"__codes_{i}__" for i in range(len(self.groupers))]
+        codes_coords = {
+            name: grouper.codes.variable
+            for name, grouper in zip(codes_names, self.groupers, strict=True)
+        }
+        as_dataset = as_dataset.assign_coords(group_coords | codes_coords)
 
         shuffled = as_dataset._shuffle(
             dim=self._group_dim, indices=self.encoded.group_indices, chunks=chunks
         )
-        unstacked: Dataset = self._maybe_unstack(shuffled)
+        codes = tuple(
+            shuffled[name].rename(grouper.codes.name)
+            for name, grouper in zip(codes_names, self.groupers, strict=True)
+        )
+        unstacked: Dataset = self._maybe_unstack(shuffled.drop_vars(codes_names))
         if was_array:
-            return self._obj._from_temp_dataset(unstacked)
-        else:
-            return unstacked  # type: ignore[return-value]
+            return self._obj._from_temp_dataset(unstacked), codes
+        return unstacked, codes  # type: ignore[return-value]
 
     def _needs_shuffle_for_blockwise(self) -> bool:
         """Whether flox's blockwise strategy needs us to shuffle first.
@@ -811,33 +828,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
             return False
         n_runs = np.count_nonzero(np.diff(codes)) + 1
         return n_runs != len(np.unique(codes))
-
-    def _shuffle_obj_and_codes(self) -> tuple[T_Xarray, tuple[DataArray, ...]]:
-        """Shuffle the original object together with the codes of each grouper,
-        so that all members of a group end up in a single chunk."""
-        from xarray.core.dataarray import DataArray
-
-        was_array = isinstance(self._obj, DataArray)
-        as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
-
-        codes_names = [f"__codes_{i}__" for i in range(len(self.groupers))]
-        as_dataset = as_dataset.assign_coords(
-            {
-                name: grouper.codes.variable
-                for name, grouper in zip(codes_names, self.groupers, strict=True)
-            }
-        )
-        shuffled = as_dataset._shuffle(
-            dim=self._group_dim, indices=self.encoded.group_indices, chunks=None
-        )
-        codes = tuple(
-            shuffled[name].rename(grouper.codes.name)
-            for name, grouper in zip(codes_names, self.groupers, strict=True)
-        )
-        shuffled_obj = cast("Dataset", shuffled.drop_vars(codes_names))
-        if was_array:
-            return self._obj._from_temp_dataset(shuffled_obj), codes
-        return shuffled_obj, codes  # type: ignore[return-value]
 
     def map(
         self,
@@ -1148,7 +1138,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         # (https://github.com/xarray-contrib/flox/issues/501), restrict this to
         # older flox versions and remove it when the minimum flox version allows.
         if kwargs.get("method") == "blockwise" and self._needs_shuffle_for_blockwise():
-            obj, codes = self._shuffle_obj_and_codes()
+            obj, codes = self._shuffle_obj(chunks=None)
 
         variables = (
             {k: v.variable for k, v in obj.data_vars.items()}
