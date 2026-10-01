@@ -36,3 +36,11 @@ xarray\.core\.(dataarray|dataset)\.Dataset\.__array__$
 xarray\.core\.(dataarray|dataset|variable)\.Variable\.(item|searchsorted)$
 xarray\.core\.(dataarray|dataset|variable)\.IndexVariable\.(item|searchsorted)$
 xarray\.core\.dataarray\.DataArray\.(item|searchsorted)$
+
+# =============================================================================
+# PEP 695 type parameters
+# =============================================================================
+
+# Classes with type parameters have a __type_params__ attribute at runtime,
+# which stubtest does not expect in the stub (here: the source itself)
+xarray\..*\.__type_params__$

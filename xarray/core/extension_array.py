@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, cast
+from typing import TYPE_CHECKING, cast, override
 
 import numpy as np
 import pandas as pd
@@ -238,7 +238,9 @@ def __extension_duck_array__reshape(
 
 
 @dataclass(frozen=True)
-class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
+class PandasExtensionArray[T_ExtensionArray: pd.api.extensions.ExtensionArray](
+    NDArrayMixin
+):
     """NEP-18 compliant wrapper for pandas extension arrays.
 
     Parameters
@@ -274,6 +276,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
 
+    @override
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         if (
             isinstance(key, tuple) and len(key) == 1
@@ -289,6 +292,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __setitem__(self, key, val):
         self.array[key] = val
 
+    @override
     def __len__(self):
         return len(self.array)
 
@@ -300,6 +304,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __ne__(self, other):
         return ~(self == other)
 
+    @override
     @property
     def ndim(self) -> int:
         return 1
