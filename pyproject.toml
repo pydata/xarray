@@ -291,11 +291,6 @@ ignore = [
   "PLW1641", # object does not implement `__hash__` method
   "PLW2901", # `for` loop variable overwritten by assignment target
   "UP007",   # use X | Y for type annotations
-  # PEP 695 type parameter syntax (Python >= 3.12): the migration from TypeVar
-  # and TypeAlias is left for a separate change
-  "UP040",   # `type` statement instead of TypeAlias
-  "UP046",   # type parameters instead of subclassing Generic
-  "UP047",   # type parameters instead of TypeVar in generic functions
   "FURB105", # unnecessary empty string passed to `print`
   "RUF001",  # string contains ambiguous unicode character
   "RUF002",  # docstring contains ambiguous acute accent unicode character
