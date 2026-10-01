@@ -414,6 +414,8 @@ class CombinedLock(Lock):
 class DummyLock(Lock):
     """DummyLock provides the lock API without any actual locking."""
 
+    reentrant: ClassVar[Literal[True]] = True
+
     @override
     def acquire(self, blocking: bool = True) -> Literal[True]:
         return True
@@ -441,7 +443,8 @@ class DummyLock(Lock):
 
 def is_reentrant_lock(lock: Lock) -> bool:
     """Whether the thread holding ``lock`` can safely acquire it again."""
-    if isinstance(lock, (SerializableLock, CombinedLock)):
+    # TODO: check if we should add e.g. threading.RLock or multiprocessing.RLock
+    if isinstance(lock, (SerializableLock, CombinedLock, DummyLock)):
         return lock.reentrant
     return isinstance(lock, _ReentrantLock)
 
