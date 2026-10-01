@@ -31,7 +31,6 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
-    module_available,
     try_read_magic_number_from_file_or_path,
 )
 from xarray.core.variable import Variable
@@ -47,8 +46,6 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 K = TypeVar("K")
 V = TypeVar("V")
-
-HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
 
 
 @overload
@@ -89,27 +86,32 @@ class ScipyArrayWrapper(BackendArray):
         return ds.variables[self.variable_name]
 
     def _getitem(self, key):
-        with self.datastore.lock:
-            data = self.get_variable(needs_lock=False).data
-            return indexing.NumpyIndexingAdapter(data).oindex[
+        with (
+            self.datastore.lock,
+            self.datastore._manager.acquire_context(needs_lock=False) as ds,
+        ):
+            source = ds.variables[self.variable_name].data
+            data = indexing.NumpyIndexingAdapter(source).oindex[
                 indexing.OuterIndexer(key)
             ]
+            # Copy data if it is a view into a mmapped file. This makes things
+            # consistent with the netCDF4 library by ensuring we can safely read
+            # arrays even after closing associated files. Copy while the file is
+            # pinned, so that another thread evicting it from the file cache
+            # cannot close it while a view into its memory map is still alive.
+            # Advanced indexing already returns a copy, so skip copying twice.
+            if ds.use_mmap and np.may_share_memory(data, source):
+                data = np.array(data, copy=True)
+            # Unpinning may close the file, so drop our view into the memory
+            # map before leaving this block.
+            del source
+            return data
 
     def __getitem__(self, key):
         data = indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
         )
-        # Copy data if the source file is mmapped. This makes things consistent
-        # with the netCDF4 library by ensuring we can safely read arrays even
-        # after closing associated files.
-        copy: bool | None = self.datastore.ds.use_mmap
-
-        # adapt handling of copy-kwarg to numpy 2.0
-        # see https://github.com/numpy/numpy/issues/25916
-        # and https://github.com/numpy/numpy/pull/25922
-        copy = None if HAS_NUMPY_2_0 and copy is False else copy
-
-        return np.array(data, dtype=self.dtype, copy=copy)
+        return np.asarray(data, dtype=self.dtype)
 
     def __setitem__(self, key, value):
         with self.datastore.lock:
