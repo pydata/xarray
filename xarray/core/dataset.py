@@ -3795,6 +3795,33 @@ class Dataset(
             sparse=sparse,
         )
 
+    def _sort_for_interp(self, dims: list[Hashable]) -> Self:
+        """Sort along ``dims`` for interpolation, skipping sorts that are not needed.
+
+        ``sortby`` indexes with an integer array, which copies the data (and
+        adds a fancy-indexing layer to dask graphs) even if the coordinate is
+        already sorted. Increasing coordinates and dimensions without a
+        coordinate are left as they are, strictly decreasing coordinates are
+        reversed with a slice, and only the remaining dimensions are sorted.
+        """
+        reverse: dict[Hashable, slice] = {}
+        to_sort: list[Hashable] = []
+        for dim in dims:
+            if dim not in self._variables:
+                continue
+            index = self._indexes.get(dim)
+            if isinstance(index, PandasIndex) and not isinstance(
+                index, PandasMultiIndex
+            ):
+                if index.index.is_monotonic_increasing:
+                    continue
+                if index.index.is_monotonic_decreasing and index.index.is_unique:
+                    reverse[dim] = slice(None, None, -1)
+                    continue
+            to_sort.append(dim)
+        obj = self.isel(reverse) if reverse else self
+        return obj.sortby(to_sort) if to_sort else obj
+
     def interp(
         self,
         coords: Mapping[Any, Any] | None = None,
@@ -3961,7 +3988,7 @@ class Dataset(
 
         coords = either_dict_or_kwargs(coords, coords_kwargs, "interp")
         indexers = dict(self._validate_interp_indexers(coords))
-        obj = self if assume_sorted else self.sortby(list(coords))
+        obj = self if assume_sorted else self._sort_for_interp(list(coords))
 
         def maybe_variable(obj, k):
             # workaround to get variable for dimension without coordinate.

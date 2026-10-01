@@ -576,6 +576,38 @@ def test_sorted() -> None:
 
 
 @requires_scipy
+@pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
+@pytest.mark.parametrize("vectorized", [False, True])
+def test_interp_sorted_coords_skip_sortby(
+    method: InterpOptions, vectorized: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # GH9758: increasing and strictly decreasing coordinates are not sorted
+    # with sortby, the result is the same as interpolating the sorted data
+    x = np.linspace(0, 1, 10)
+    y = np.linspace(0, 2, 8)[::-1]
+    da = xr.DataArray(
+        np.sin(x[:, np.newaxis] * 3) * np.cos(y),
+        dims=["x", "y"],
+        coords={"x": x, "y": y, "x2": ("x", x**2)},
+    )
+    x_new: list[float] | xr.DataArray = [0.05, 0.5, 0.95]
+    y_new: list[float] | xr.DataArray = [0.1, 1.0, 1.9]
+    if vectorized:
+        x_new = xr.DataArray(x_new, dims="p")
+        y_new = xr.DataArray(y_new, dims="p")
+    expected = da.sortby(["x", "y"]).interp(
+        x=x_new, y=y_new, method=method, assume_sorted=True
+    )
+
+    def fail(*args, **kwargs):
+        raise AssertionError("sortby should not be called")
+
+    monkeypatch.setattr(xr.Dataset, "sortby", fail)
+    actual = da.interp(x=x_new, y=y_new, method=method)
+    assert_identical(actual, expected)
+
+
+@requires_scipy
 def test_dimension_wo_coords() -> None:
     da = xr.DataArray(
         np.arange(12).reshape(3, 4), dims=["x", "y"], coords={"y": [0, 1, 2, 3]}
