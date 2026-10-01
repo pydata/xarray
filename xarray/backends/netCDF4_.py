@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from contextlib import AbstractContextManager, nullcontext, suppress
 from dataclasses import dataclass
 from io import IOBase
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, override
 
 import numpy as np
 
@@ -105,6 +105,7 @@ class BaseNetCDF4Array(BackendArray):
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     __slots__ = ()
 
+    @override
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
         variable = ds.variables[self.variable_name]
@@ -460,6 +461,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.is_remote = is_remote_uri(self._filename)
         self.autoclose = autoclose
 
+    @override
     def get_child_store(self, group: str) -> Self:
         if self._group is not None:
             group = os.path.join(self._group, group)
@@ -643,20 +645,25 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         return Variable(dimensions, data, attributes, encoding)
 
+    @override
     def get_variables(self):
         return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 
+    @override
     def get_attrs(self):
         return FrozenDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
 
+    @override
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
+    @override
     def get_parent_dimensions(self):
         return FrozenDict(collect_ancestor_dimensions(self.ds))
 
+    @override
     def get_encoding(self):
         return {
             "unlimited_dims": {
@@ -664,11 +671,13 @@ class NetCDF4DataStore(WritableCFDataStore):
             }
         }
 
+    @override
     def set_dimension(self, name, length, is_unlimited=False):
         _ensure_no_forward_slash_in_name(name)
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, size=dim_length)
 
+    @override
     def set_attribute(self, key, value):
         if self.format != "NETCDF4":
             value = encode_nc3_attr_value(value)
@@ -678,6 +687,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         else:
             self.ds.setncattr(key, value)
 
+    @override
     def encode_variable(self, variable, name=None):
         variable = _force_native_endianness(variable)
         if self.format == "NETCDF4":
@@ -686,6 +696,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             variable = encode_nc3_variable(variable, name=name)
         return variable
 
+    @override
     def prepare_variable(
         self, name, variable: Variable, check_encoding=False, unlimited_dims=None
     ):
@@ -735,24 +746,29 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     # Encoding happens before these without holding the lock, as it may compute
     # dask arrays whose tasks need the same lock.
+    @override
     def set_attributes(self, attributes):
         with self._metadata_lock():
             super().set_attributes(attributes)
 
+    @override
     def set_dimensions(self, variables, unlimited_dims=None):
         with self._metadata_lock():
             super().set_dimensions(variables, unlimited_dims=unlimited_dims)
 
+    @override
     def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
         with self._metadata_lock():
             super().set_variables(
                 variables, check_encoding_set, writer, unlimited_dims=unlimited_dims
             )
 
+    @override
     def sync(self):
         with self._metadata_lock():
             self.ds.sync()
 
+    @override
     def close(self, **kwargs):
         self._manager.close(**kwargs)
 
@@ -785,6 +801,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
     supports_groups = True
 
+    @override
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         # Helper to check if magic number is netCDF or HDF5
         def _is_netcdf_magic(magic: bytes) -> bool:
@@ -826,6 +843,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         return False
 
+    @override
     def open_dataset(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -881,6 +899,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
+    @override
     def open_datatree(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -924,6 +943,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
+    @override
     def open_groups_as_dict(
         self,
         filename_or_obj: T_PathFileOrDataStore,

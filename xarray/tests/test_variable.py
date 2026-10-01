@@ -5,7 +5,7 @@ from abc import ABC
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
-from typing import Any, Generic
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -2741,7 +2741,7 @@ class TestIndexVariable(VariableSubclassobjects):
         assert a.dims == ("x",)
 
 
-class TestAsCompatibleData(Generic[T_DuckArray]):
+class TestAsCompatibleData[T_DuckArray: Any]:
     def test_unchanged_types(self):
         types = (np.asarray, PandasIndexingAdapter, LazilyIndexedArray)
         for t in types:
