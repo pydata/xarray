@@ -12,7 +12,7 @@
 
     da = DataArray().pipe(lambda data, arg: arg, "foo")
 
-    reveal_type(da)  # N: Revealed type is "builtins.str"
+    reveal_type(da)  # N: Revealed type is "str"
 
 - case: test_mypy_pipe_lambda_chaining_return_type
   main: |
@@ -20,7 +20,7 @@
 
     answer = DataArray().pipe(lambda data, arg: arg, "foo").count("o")
 
-    reveal_type(answer)  # N: Revealed type is "builtins.int"
+    reveal_type(answer)  # N: Revealed type is "int"
 
 - case: test_mypy_pipe_lambda_missing_arg
   main: |
@@ -31,7 +31,7 @@
   out: |
     main:4: error: No overload variant of "pipe" of "DataWithCoords" matches argument type "Callable[[Any, Any], Any]"  [call-overload]
     main:4: note: Possible overload variants:
-    main:4: note:     def [P`2, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:4: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:4: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_lambda_extra_arg
@@ -43,7 +43,7 @@
   out: |
     main:4: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[Any], Any]", "str"  [call-overload]
     main:4: note: Possible overload variants:
-    main:4: note:     def [P`2, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:4: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:4: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_missing_posarg
@@ -58,7 +58,7 @@
   out: |
     main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument type "Callable[[DataArray, int], DataArray]"  [call-overload]
     main:7: note: Possible overload variants:
-    main:7: note:     def [P`2, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_extra_posarg
@@ -73,7 +73,7 @@
   out: |
     main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[DataArray, int], DataArray]", "int", "str"  [call-overload]
     main:7: note: Possible overload variants:
-    main:7: note:     def [P`2, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_missing_kwarg
@@ -88,7 +88,7 @@
   out: |
     main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(da: DataArray, arg: int, *, kwonly: int) -> DataArray", "int"  [call-overload]
     main:7: note: Possible overload variants:
-    main:7: note:     def [P`2, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_missing_keyword
@@ -103,7 +103,7 @@
   out: |
     main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(da: DataArray, arg: int, *, kwonly: int) -> DataArray", "int", "int"  [call-overload]
     main:7: note: Possible overload variants:
-    main:7: note:     def [P`2, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_unexpected_keyword
@@ -141,7 +141,7 @@
 
     answer = DataArray().pipe((f, "da"), 42)
 
-    reveal_type(answer)  # N: Revealed type is "builtins.int"
+    reveal_type(answer)  # N: Revealed type is "int"
 
 - case: test_mypy_pipe_tuple_missing_arg
   main: |
@@ -165,7 +165,7 @@
   out: |
     main:17: error: No overload variant of "pipe" of "DataWithCoords" matches argument type "Callable[[Any, Any], DataArray]"  [call-overload]
     main:17: note: Possible overload variants:
-    main:17: note:     def [P`9, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:17: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:17: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_tuple_extra_arg
@@ -190,5 +190,5 @@
   out: |
     main:17: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[Any, Any], DataArray]", "int", "str"  [call-overload]
     main:17: note: Possible overload variants:
-    main:17: note:     def [P`9, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:17: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:17: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T

@@ -356,7 +356,7 @@ def _combine_1d(
                 "If you are intending to concatenate datasets, please specify the concatenation dimension explicitly. "
                 "Using merge to concatenate is quite inefficient."
             )
-            raise e
+            raise
 
     return combined
 
@@ -799,9 +799,9 @@ def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     data_vars: Literal["all", "minimal", "different"]
-    | None
     | list[str]
-    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    | CombineKwargDefault
+    | None = _DATA_VARS_DEFAULT,
     coords: str | CombineKwargDefault = _COORDS_DEFAULT,
     fill_value: object = dtypes.NA,
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
