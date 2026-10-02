@@ -164,6 +164,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Allow :py:class:`Dataset` variable selection with one-shot iterators, consuming
+  the iterator once instead of treating the iterator object as a variable name
+  (:pull:`11586`).
+  By `Ahmet Kamer <https://github.com/lowgame>`_.
 - Treat a full ``MultiIndex`` key with tuple-valued levels as scalar selection,
   so ``.sel`` no longer preserves a length-1 dimension for nested tuple keys
   that identify a single row (:issue:`11341`, :pull:`11348`).
