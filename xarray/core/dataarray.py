@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import datetime
 import json
-import math
 import warnings
 from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
 from functools import partial
@@ -318,17 +317,6 @@ def _broadcast_to_dims(
 
     if (variable.dims, variable.shape) == (dims, shape):
         return coord_values.ravel()
-
-    # PERF: Optimize 1D broadcasting reducing allocations
-    if variable.ndim == 1:
-        (dim,) = variable.dims
-        k = dims.index(dim)
-        inner = math.prod(shape[k + 1 :])
-        outer = math.prod(shape[:k])
-
-        if inner > 1 and outer > 1:
-            # Use tile + repeat on 1D coordinate
-            return np.tile(np.repeat(coord_values, inner), outer)
 
     # General N-D path (curvilinear coordinates, scalar coordinates, etc.):
     # broadcast the coordinate up to the full data shape so it flattens
@@ -657,6 +645,22 @@ class DataArray(
         -------
         pyarrow.Table
 
+        Notes
+        -----
+        A column is zero-copied when its variable has the same dims as the data, in
+        the same order. A copy is made when:
+
+        - the variable has fewer dims than the data (e.g. 1D or scalar
+          coordinates), or its dims are in a different order: it is broadcast
+          with NumPy
+        - the dtype is ``bool``, string or ``object``
+
+        See Also
+        --------
+        xarray.Dataset.to_arrow
+        pandas.DataFrame.from_arrow
+        polars.from_arrow
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -672,12 +676,6 @@ class DataArray(
         ----
         x: [[10,20,30]]
         temperature: [[1,2,3]]
-
-        See Also
-        --------
-        xarray.Dataset.to_arrow
-        pandas.DataFrame.from_arrow
-        polars.from_arrow
         """
         try:
             import pyarrow as pa
