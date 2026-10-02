@@ -58,6 +58,10 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Clarified the ``rename`` docstrings so they no longer describe the result as a
+  "new" object, which could be read as implying it no longer shares memory with
+  the original (:issue:`9432`, :pull:`11644`).
+  By `imam <https://github.com/imam2004i>`_.
 
 
 Internal Changes
