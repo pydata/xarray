@@ -779,7 +779,9 @@ class DataArrayRolling(Rolling["DataArray"]):
             # TODO: we could also allow this, probably as part of a refactoring of this
             # module, so we can use the machinery in `self.reduce`.
             and self.ndim == 1
-            and xp is np
+            # Only plain numpy arrays, numbagg doesn't support wrapped duck arrays
+            # like pint quantities (which also report numpy as their namespace).
+            and isinstance(self.obj.data, np.ndarray)
         ):
             import numbagg
 
@@ -798,8 +800,12 @@ class DataArrayRolling(Rolling["DataArray"]):
             OPTIONS["use_bottleneck"]
             and bottleneck_move_func is not None
             and (
-                not is_duck_dask_array(self.obj.data)
-                or module_available("dask", "2024.11.0")
+                # bottleneck strips the units of wrapped duck arrays like pint
+                isinstance(self.obj.data, np.ndarray)
+                or (
+                    is_duck_dask_array(self.obj.data)
+                    and module_available("dask", "2024.11.0")
+                )
             )
             and self.ndim == 1
             and xp is np

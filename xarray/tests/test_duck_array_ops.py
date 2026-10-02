@@ -37,7 +37,6 @@ from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.types import NPDatetimeUnitOptions, PDDatetimeUnitOptions
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 from xarray.tests import (
-    arm_xfail,
     assert_array_equal,
     dask_array_api,
     dask_array_type,
@@ -438,7 +437,6 @@ def assert_dask_array(da, dask):
         assert isinstance(da.data, dask_array_type)
 
 
-@arm_xfail
 @pytest.mark.filterwarnings("ignore:All-NaN .* encountered:RuntimeWarning")
 def test_datetime_mean(use_dask: bool, time_unit: PDDatetimeUnitOptions) -> None:
     # Note: only testing numpy, as dask is broken upstream

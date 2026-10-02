@@ -1288,7 +1288,9 @@ def test_to_datetimeindex_feb_29(calendar) -> None:
         index.to_datetimeindex(time_unit="ns")
 
 
-@pytest.mark.xfail(reason="fails on pandas main branch")
+@pytest.mark.xfail(
+    has_pandas_3, reason="partial string indexing of a MultiIndex fails on pandas 3"
+)
 @requires_cftime
 def test_multiindex():
     index = xr.date_range(

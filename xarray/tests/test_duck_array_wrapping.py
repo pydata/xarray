@@ -8,11 +8,24 @@ import xarray as xr
 from xarray.tests import (
     get_dask_chunkmanager,
     has_dask_array_expr,
+    has_sparse_0_19,
     requires_cupy,
     requires_dask,
     requires_jax,
+    requires_numbagg,
     requires_pint,
     requires_sparse,
+)
+
+# TODO: remove once sparse>=0.19 is the minimum version
+_SPARSE_SCALAR_XFAILS = (
+    {}
+    if has_sparse_0_19
+    else {
+        "count": "0-d output is dense before sparse 0.19",
+        "cov": "0-d output is dense before sparse 0.19",
+        "dot": "0-d output is dense before sparse 0.19",
+    }
 )
 
 # Don't run cupy in CI because it requires a GPU
@@ -22,7 +35,12 @@ NAMESPACE_ARRAYS = {
             "array": "ndarray",
             "constructor": "asarray",
         },
-        "xfails": {"quantile": "no nanquantile"},
+        "xfails": {
+            "quantile": "no nanquantile",
+            "interp": "interp uses numpy and scipy",
+            "polyfit": "polyfit uses numpy linalg",
+            "rolling_exp_reduce": "rolling_exp uses numbagg",
+        },
     },
     "dask.array": {
         "attrs": {
@@ -31,7 +49,6 @@ NAMESPACE_ARRAYS = {
         },
         "xfails": {
             "argsort": "no argsort",
-            "conjugate": "conj but no conjugate",
             "searchsorted": "dask.array.searchsorted but no Array.searchsorted",
         },
     },
@@ -45,6 +62,9 @@ NAMESPACE_ARRAYS = {
             "rolling_reduce": "no sliding_window_view",
             "cumulative_construct": "no sliding_window_view",
             "cumulative_reduce": "no sliding_window_view",
+            "interp": "interp uses numpy and scipy",
+            "polyfit": "polyfit uses numpy linalg",
+            "rolling_exp_reduce": "rolling_exp uses numbagg",
         },
     },
     "pint": {
@@ -59,17 +79,16 @@ NAMESPACE_ARRAYS = {
             "argmin": "returns an int",
             "argsort": "returns an int",
             "count": "returns an int",
-            "dot": "no tensordot",
             "full_like": "should work, see: https://github.com/hgrecco/pint/pull/1669",
             "idxmax": "returns the coordinate",
             "idxmin": "returns the coordinate",
             "isin": "returns a bool",
             "isnull": "returns a bool",
             "notnull": "returns a bool",
-            "rolling_reduce": "no dispatch for numbagg/bottleneck",
-            "cumulative_reduce": "no dispatch for numbagg/bottleneck",
             "searchsorted": "returns an int",
-            "weighted": "no tensordot",
+            "interp": "interp uses numpy and scipy",
+            "polyfit": "polyfit uses numpy linalg",
+            "rolling_exp_reduce": "rolling_exp uses numbagg",
         },
     },
     "sparse": {
@@ -78,11 +97,9 @@ NAMESPACE_ARRAYS = {
             "constructor": "COO",
         },
         "xfails": {
-            "cov": "dense output",
+            **_SPARSE_SCALAR_XFAILS,
             "corr": "no nanstd",
             "cross": "no cross",
-            "count": "dense output",
-            "dot": "fails on some platforms/versions",
             "isin": "no isin",
             "rolling_construct": "no sliding_window_view",
             "rolling_reduce": "no sliding_window_view",
@@ -104,10 +121,12 @@ NAMESPACE_ARRAYS = {
             "cumsum": "no cumsum",
             "cumprod": "no cumprod",
             "argsort": "no argsort",
-            "conjugate": "no conjugate",
             "searchsorted": "no searchsorted",
             "shift": "pad constant_values must be fill_value",
             "pad": "pad constant_values must be fill_value",
+            "interp": "interp uses numpy and scipy",
+            "polyfit": "polyfit uses numpy linalg",
+            "rolling_exp_reduce": "rolling_exp uses numbagg",
         },
     },
 }
@@ -139,7 +158,11 @@ class _BaseTest:
         xarray_method = request.node.name.split("test_")[1].split("[")[0]
         if namespace == "dask.array" and has_dask_array_expr:
             if xarray_method in {"groupby", "groupby_bins", "resample"}:
-                pytest.xfail("flox groupby currently builds legacy dask arrays")
+                request.applymarker(
+                    pytest.mark.xfail(
+                        reason="flox groupby currently builds legacy dask arrays"
+                    )
+                )
             chunkmanager = get_dask_chunkmanager()
             self.xp = chunkmanager.array_api
             self.Array = chunkmanager.array_cls
@@ -156,7 +179,9 @@ class _BaseTest:
             )
         if xarray_method in NAMESPACE_ARRAYS[namespace]["xfails"]:
             reason = NAMESPACE_ARRAYS[namespace]["xfails"][xarray_method]
-            pytest.xfail(f"xfail for {self.namespace}: {reason}")
+            request.applymarker(
+                pytest.mark.xfail(reason=f"xfail for {self.namespace}: {reason}")
+            )
 
     def get_test_dataarray(self):
         data = np.asarray([[1, 2, 3, np.nan, 5]])
@@ -255,7 +280,6 @@ class TestDataArrayMethods(_BaseTest):
         result = self.x.squeeze("y")
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="interp uses numpy and scipy")
     def test_interp(self):
         # TODO: some cases could be made to work
         result = self.x.interp(x=2.5)
@@ -327,7 +351,7 @@ class TestDataArrayMethods(_BaseTest):
         result = self.x.rolling(x=3).mean(skipna=skipna)
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="rolling_exp uses numbagg")
+    @requires_numbagg
     def test_rolling_exp_reduce(self):
         result = self.x.rolling_exp(x=3).mean()
         assert isinstance(result.data, self.Array)
@@ -385,7 +409,6 @@ class TestDataArrayMethods(_BaseTest):
         result = self.x.integrate("x")
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="polyfit uses numpy linalg")
     def test_polyfit(self):
         # TODO: this could work, there are just a lot of different linalg calls
         result = self.x.polyfit("x", 1)

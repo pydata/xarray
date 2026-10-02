@@ -2687,7 +2687,6 @@ def test_polyfit_polyval_integration(
             np.array([4, 5, 6]),
             "cartesian",
             -1,
-            marks=(pytest.mark.xfail(),),
         ),
         # Test filling in between with coords:
         pytest.param(
@@ -2705,7 +2704,6 @@ def test_polyfit_polyval_integration(
             np.array([4, 5, 6]),
             "cartesian",
             -1,
-            marks=(pytest.mark.xfail(),),
         ),
     ],
 )
