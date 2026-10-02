@@ -15,6 +15,7 @@ from xarray.tests import (
     requires_dask,
     requires_pydap,
     requires_scipy_or_netCDF4,
+    skip_if_server_unreachable,
 )
 from xarray.tests.backends.base import create_tmp_file, open_example_dataset
 
@@ -104,6 +105,7 @@ class TestPydapOnline(TestPydap):
     def create_dap2_datasets(self, **kwargs):
         # in pydap 3.5.0, urls defaults to dap2.
         url = "http://test.opendap.org/opendap/data/nc/bears.nc"
+        skip_if_server_unreachable(url)
         actual = open_dataset(url, engine="pydap", **kwargs)
         # pydap <3.5.6 converts to unicode dtype=|U. Not what
         # xarray expects. Thus force to bytes dtype. pydap >=3.5.6
@@ -119,6 +121,7 @@ class TestPydapOnline(TestPydap):
 
     def create_dap4_dataset(self, **kwargs):
         url = "dap4://test.opendap.org/opendap/data/nc/bears.nc"
+        skip_if_server_unreachable(url)
         actual = open_dataset(url, engine="pydap", **kwargs)
         with open_example_dataset("bears.nc") as expected:
             # workaround to restore string which is converted to byte
@@ -157,6 +160,7 @@ def test_batchdap4_downloads(tmpdir, protocol) -> None:
     session = create_session(use_cache=True, cache_kwargs={"cache_name": cache_name})
     session.cache.clear()
     url = "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc"
+    skip_if_server_unreachable(url)
 
     ds = open_dataset(
         url.replace("https", protocol),
