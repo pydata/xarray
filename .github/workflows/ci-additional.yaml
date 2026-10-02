@@ -349,6 +349,92 @@ jobs:
         run: |
           pixi run policy-min-versions
 
+  check-generate-aggregations:
+    name: "Check generate-aggregations is up-to-date"
+    runs-on: ubuntu-latest
+    needs: cache-pixi-lock
+    if: |
+      github.event_name == 'pull_request'
+      && needs.cache-pixi-lock.result == 'success'
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check if generate_aggregations.py changed
+        id: filter
+        run: |
+          if git diff --name-only origin/${GITHUB_BASE_REF}...HEAD | grep -q 'xarray/util/generate_aggregations.py'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore cached pixi lockfile
+        if: steps.filter.outputs.changed == 'true'
+        uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
+        with:
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        if: steps.filter.outputs.changed == 'true'
+        with:
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
+          cache: true
+          cache-write: false
+
+      - name: Run generate-aggregations-ci
+        if: steps.filter.outputs.changed == 'true'
+        run: |
+          pixi run generate-aggregations-ci
+
+  check-generate-ops:
+    name: "Check generate-ops is up-to-date"
+    runs-on: ubuntu-latest
+    needs: cache-pixi-lock
+    if: |
+      github.event_name == 'pull_request'
+      && needs.cache-pixi-lock.result == 'success'
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check if generate_ops.py or _typed_ops.py changed
+        id: filter
+        run: |
+          if git diff --name-only origin/${GITHUB_BASE_REF}...HEAD | grep -qE 'xarray/util/generate_ops.py|xarray/core/_typed_ops.py'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore cached pixi lockfile
+        if: steps.filter.outputs.changed == 'true'
+        uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
+        with:
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        if: steps.filter.outputs.changed == 'true'
+        with:
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
+          cache: true
+          cache-write: false
+
+      - name: Run generate-ops-ci
+        if: steps.filter.outputs.changed == 'true'
+        run: |
+          pixi run generate-ops-ci
+
   zizmor:
     name: GHA Security Analysis using Zizmor
     runs-on: ubuntu-latest
