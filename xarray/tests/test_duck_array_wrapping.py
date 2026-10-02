@@ -11,6 +11,7 @@ from xarray.tests import (
     requires_cupy,
     requires_dask,
     requires_jax,
+    requires_numbagg,
     requires_pint,
     requires_sparse,
 )
@@ -22,7 +23,12 @@ NAMESPACE_ARRAYS = {
             "array": "ndarray",
             "constructor": "asarray",
         },
-        "xfails": {"quantile": "no nanquantile"},
+        "xfails": {
+            "quantile": "no nanquantile",
+            "interp": "interp uses numpy and scipy",
+            "polyfit": "polyfit uses numpy linalg",
+            "rolling_exp_reduce": "rolling_exp uses numbagg",
+        },
     },
     "dask.array": {
         "attrs": {
@@ -45,6 +51,9 @@ NAMESPACE_ARRAYS = {
             "rolling_reduce": "no sliding_window_view",
             "cumulative_construct": "no sliding_window_view",
             "cumulative_reduce": "no sliding_window_view",
+            "interp": "interp uses numpy and scipy",
+            "polyfit": "polyfit uses numpy linalg",
+            "rolling_exp_reduce": "rolling_exp uses numbagg",
         },
     },
     "pint": {
@@ -70,6 +79,9 @@ NAMESPACE_ARRAYS = {
             "cumulative_reduce": "no dispatch for numbagg/bottleneck",
             "searchsorted": "returns an int",
             "weighted": "no tensordot",
+            "interp": "interp uses numpy and scipy",
+            "polyfit": "polyfit uses numpy linalg",
+            "rolling_exp_reduce": "rolling_exp uses numbagg",
         },
     },
     "sparse": {
@@ -108,6 +120,9 @@ NAMESPACE_ARRAYS = {
             "searchsorted": "no searchsorted",
             "shift": "pad constant_values must be fill_value",
             "pad": "pad constant_values must be fill_value",
+            "interp": "interp uses numpy and scipy",
+            "polyfit": "polyfit uses numpy linalg",
+            "rolling_exp_reduce": "rolling_exp uses numbagg",
         },
     },
 }
@@ -255,7 +270,6 @@ class TestDataArrayMethods(_BaseTest):
         result = self.x.squeeze("y")
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="interp uses numpy and scipy")
     def test_interp(self):
         # TODO: some cases could be made to work
         result = self.x.interp(x=2.5)
@@ -327,7 +341,7 @@ class TestDataArrayMethods(_BaseTest):
         result = self.x.rolling(x=3).mean(skipna=skipna)
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="rolling_exp uses numbagg")
+    @requires_numbagg
     def test_rolling_exp_reduce(self):
         result = self.x.rolling_exp(x=3).mean()
         assert isinstance(result.data, self.Array)
@@ -385,7 +399,6 @@ class TestDataArrayMethods(_BaseTest):
         result = self.x.integrate("x")
         assert isinstance(result.data, self.Array)
 
-    @pytest.mark.xfail(reason="polyfit uses numpy linalg")
     def test_polyfit(self):
         # TODO: this could work, there are just a lot of different linalg calls
         result = self.x.polyfit("x", 1)

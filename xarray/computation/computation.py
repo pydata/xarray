@@ -442,6 +442,10 @@ def cross(
                 join="outer",
                 exclude=set(all_dims) - {dim},
             )
+            # Rechunk the aligned arrays because apply_ufunc requires core
+            # dimensions not to be chunked:
+            a = a.chunk({dim: -1}) if is_chunked_array(a.data) else a
+            b = b.chunk({dim: -1}) if is_chunked_array(b.data) else b
         elif min(a.sizes[dim], b.sizes[dim]) == 2:
             # If the array doesn't have coords we can only infer
             # that it has composite values if the size is at least 2.

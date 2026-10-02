@@ -165,11 +165,7 @@ def test_variable_property(prop):
             ),
             True,
         ),
-        param(
-            do("conjugate"),
-            True,
-            marks=xfail(reason="'COO' object has no attribute 'conjugate'"),
-        ),
+        (do("conjugate"), True),
         param(
             do("cumprod"),
             True,
@@ -269,8 +265,8 @@ def test_variable_method(func, sparse_output):
     "func,sparse_output",
     [
         (do("squeeze"), True),
-        param(do("to_index"), False, marks=xfail(reason="Coercion to dense")),
-        param(do("to_index_variable"), False, marks=xfail(reason="Coercion to dense")),
+        (do("to_index"), False),
+        (do("to_index_variable"), False),
         param(
             do("searchsorted", 0.5),
             True,
@@ -445,11 +441,7 @@ def test_dataarray_property(prop):
             marks=xfail(reason="Missing implementation for np.flip"),
         ),
         (do("combine_first", make_xrarray({"x": 10, "y": 5})), True),
-        param(
-            do("conjugate"),
-            False,
-            marks=xfail(reason="'COO' object has no attribute 'conjugate'"),
-        ),
+        (do("conjugate"), True),
         param(
             do("cumprod"),
             True,
@@ -465,11 +457,7 @@ def test_dataarray_property(prop):
             False,
             marks=xfail(reason="Missing implementation for np.gradient"),
         ),
-        param(
-            do("dot", make_xrarray({"x": 10, "y": 5})),
-            True,
-            marks=xfail(reason="Missing implementation for np.einsum"),
-        ),
+        (do("dot", make_xrarray({"x": 10, "y": 5})), array_api_scalar()),
         param(do("dropna", "x"), False, marks=xfail(reason="Coercion to dense")),
         param(do("ffill", "x"), False, marks=xfail(reason="Coercion to dense")),
         (do("fillna", 0), True),
@@ -525,7 +513,7 @@ def test_dataarray_property(prop):
             False,
             marks=xfail(reason="Coercion to dense"),
         ),
-        param(
+        (
             do(
                 "reindex_like",
                 make_xrarray(
@@ -534,14 +522,9 @@ def test_dataarray_property(prop):
                 ),
             ),
             True,
-            marks=xfail(reason="Indexing COO with more than one iterable index"),
         ),
         (do("roll", x=2, roll_coords=True), True),
-        param(
-            do("sel", x=[0, 1, 2], y=[2, 3]),
-            True,
-            marks=xfail(reason="Indexing COO with more than one iterable index"),
-        ),
+        (do("sel", x=[0, 1, 2], y=[2, 3]), True),
         param(
             do("std"), False, marks=xfail(reason="Missing implementation for np.nanstd")
         ),
@@ -892,13 +875,18 @@ class TestSparseDataArrayAndDataset:
 
 
 class TestSparseCoords:
-    @pytest.mark.xfail(reason="Coercion of coords to dense")
     def test_sparse_coords(self):
-        xr.DataArray(
+        da = xr.DataArray(
             sparse.COO.from_numpy(np.arange(4)),
             dims=["x"],
-            coords={"x": sparse.COO.from_numpy([1, 2, 3, 4])},
+            coords={
+                "x": sparse.COO.from_numpy([1, 2, 3, 4]),
+                "c": ("x", sparse.COO.from_numpy([5, 6, 7, 8])),
+            },
         )
+        # index coordinates are backed by pandas and therefore dense
+        np.testing.assert_array_equal(da.x.values, [1, 2, 3, 4])
+        assert isinstance(da.c.data, sparse.COO)
 
 
 @requires_dask

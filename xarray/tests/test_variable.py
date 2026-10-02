@@ -2518,10 +2518,6 @@ class TestVariableWithDask(VariableSubclassobjects):
         with pytest.raises(TypeError, match="Could not find a Chunk Manager"):
             x.rolling_window("x", 3, "window")
 
-    @pytest.mark.xfail(reason="https://github.com/dask/dask/issues/11585")
-    def test_multiindex(self):
-        super().test_multiindex()
-
     @pytest.mark.parametrize(
         "mode",
         [
@@ -2530,9 +2526,7 @@ class TestVariableWithDask(VariableSubclassobjects):
                 "median",
                 marks=pytest.mark.xfail(reason="median is not implemented by Dask"),
             ),
-            pytest.param(
-                "reflect", marks=pytest.mark.xfail(reason="dask.array.pad bug")
-            ),
+            "reflect",
             "edge",
             "linear_ramp",
             "maximum",
@@ -2545,7 +2539,14 @@ class TestVariableWithDask(VariableSubclassobjects):
     @pytest.mark.filterwarnings(
         r"ignore:dask.array.pad.+? converts integers to floats."
     )
-    def test_pad(self, mode, xr_arg, np_arg):
+    def test_pad(self, mode, xr_arg, np_arg, request):
+        shape = (4, 3, 2)
+        if mode == "reflect" and any(
+            max(width) >= size for width, size in zip(np_arg, shape, strict=True)
+        ):
+            request.applymarker(
+                pytest.mark.xfail(reason="https://github.com/dask/dask/issues/6127")
+            )
         super().test_pad(mode, xr_arg, np_arg)
 
     @pytest.mark.skip(reason="dask doesn't support extension arrays")

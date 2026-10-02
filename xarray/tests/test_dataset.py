@@ -3326,50 +3326,27 @@ class TestDataset:
             expected[k].data = v
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(raises=AssertionError)
-    @pytest.mark.parametrize(
-        "deep, expected_orig",
-        [
-            [
-                True,
-                xr.DataArray(
-                    xr.IndexVariable("a", np.array([1, 2])),
-                    coords={"a": [1, 2]},
-                    dims=["a"],
-                ),
-            ],
-            [
-                False,
-                xr.DataArray(
-                    xr.IndexVariable("a", np.array([999, 2])),
-                    coords={"a": [999, 2]},
-                    dims=["a"],
-                ),
-            ],
-        ],
-    )
+    @pytest.mark.parametrize("deep, expected_orig", [[True, [1, 2]], [False, [999, 2]]])
     def test_copy_coords(self, deep, expected_orig) -> None:
-        """The test fails for the shallow copy, and apparently only on Windows
-        for some reason. In windows coords seem to be immutable unless it's one
-        dataset deep copied from another."""
+        """Shallow copies share the coordinate values with the original,
+        deep copies don't."""
         ds = xr.DataArray(
             np.ones([2, 2, 2]),
-            coords={"a": [1, 2], "b": ["x", "y"], "c": [0, 1]},
+            coords={"a": [1, 2], "b": ["x", "y"], "c": [0, 1], "d": ("a", [1, 2])},
             dims=["a", "b", "c"],
             name="value",
         ).to_dataset()
-        ds_cp = ds.copy(deep=deep)
-        new_a = np.array([999, 2])
-        ds_cp.coords["a"] = ds_cp.a.copy(data=new_a)
+        ds_cp = ds.copy(deep)
+        # index coordinates are immutable, so modify a non-index coordinate
+        ds_cp["d"].data[0] = 999
 
-        expected_cp = xr.DataArray(
-            xr.IndexVariable("a", new_a),
-            coords={"a": [999, 2]},
-            dims=["a"],
-        )
-        assert_identical(ds_cp.coords["a"], expected_cp)
+        assert_identical(ds_cp["d"].variable, xr.Variable("a", [999, 2]))
+        assert_identical(ds["d"].variable, xr.Variable("a", expected_orig))
+        assert type(ds["d"].variable) is xr.Variable
 
-        assert_identical(ds.coords["a"], expected_orig)
+        # the index is shared by shallow copies and copied by deep copies
+        assert (ds_cp.xindexes["a"].index is ds.xindexes["a"].index) is not deep
+        assert_identical(ds["a"].variable, xr.IndexVariable("a", [1, 2]))
 
     def test_copy_with_data_errors(self) -> None:
         orig = create_test_data()
