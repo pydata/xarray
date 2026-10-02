@@ -6,7 +6,16 @@ from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    ParamSpec,
+    TypeVar,
+    Union,
+    overload,
+    override,
+)
 
 import numpy as np
 import pandas as pd
@@ -376,6 +385,7 @@ class TreeAttrAccessMixin(AttrAccessMixin):
 
     __slots__ = ()
 
+    @override
     def __init_subclass__(cls, **kwargs):
         """This method overrides the check from ``AttrAccessMixin`` that ensures
         ``__dict__`` is absent in a class, with ``__slots__`` used instead.
@@ -457,7 +467,7 @@ class DataWithCoords(AttrAccessMixin):
         numpy.squeeze
         """
         dims = get_squeeze_dims(self, dim, axis)
-        return self.isel(drop=drop, **dict.fromkeys(dims, 0))
+        return self.isel(dict.fromkeys(dims, 0), drop=drop)
 
     def clip(
         self,

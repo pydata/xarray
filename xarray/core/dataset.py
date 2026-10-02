@@ -26,7 +26,7 @@ from numbers import Number
 from operator import methodcaller
 from os import PathLike
 from types import EllipsisType
-from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, cast, overload, override
 
 import numpy as np
 import pandas as pd
@@ -100,6 +100,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     is_scalar,
     maybe_wrap_array,
+    module_available,
     parse_dims_as_set,
 )
 from xarray.core.variable import (
@@ -199,6 +200,32 @@ _DATETIMEINDEX_COMPONENTS = [
 ]
 
 
+def _sparse_coo_to_index(
+    coo, dims: tuple[Hashable, ...], get_index: Callable[[Hashable], pd.Index]
+) -> pd.Index:
+    """Build a pandas Index (a MultiIndex if ``len(dims) > 1``) over exactly
+    the stored (non-fill-value) entries of a ``sparse.COO`` array.
+
+    ``coo.coords`` gives, per dimension, the integer position of each stored
+    entry — not the dimension's actual coordinate labels. Those integer
+    positions are also not guaranteed to be a 0..n-1 range: whichever unique
+    positions happen to occur become the codes/levels of an initial
+    `pandas.MultiIndex.from_arrays`, in the order `factorize` assigns them.
+    `set_levels` is then used to map each level's codes back to the real
+    coordinate values through `get_index`, rather than assuming (as one
+    could naively) that the codes already run in coordinate order. This is
+    the read-side inverse of `Dataset._set_sparse_data_from_dataframe`.
+    """
+    mindex = pd.MultiIndex.from_arrays(coo.coords, names=dims)
+    mindex = mindex.set_levels(
+        [
+            get_index(dim).values[np.asarray(level)]
+            for dim, level in zip(dims, mindex.levels, strict=True)
+        ]
+    )
+    return mindex.get_level_values(0) if len(dims) == 1 else mindex
+
+
 class Dataset(
     DataWithCoords,
     DatasetAggregations,
@@ -276,7 +303,7 @@ class Dataset(
 
     attrs : dict-like, optional
         Global attributes to save on this dataset.
-        (see FAQ, :ref:`approach to metadata`)
+        (see FAQ, :ref:`approach-to-metadata`)
 
     Examples
     --------
@@ -416,6 +443,7 @@ class Dataset(
 
     # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
     # related to https://github.com/python/mypy/issues/9319?
+    @override
     def __eq__(self, other: DsCompatible) -> Self:  # type: ignore[override]
         return super().__eq__(other)
 
@@ -533,7 +561,7 @@ class Dataset(
 
         Data will be computed and/or loaded from disk or a remote source.
 
-        Unlike ``.compute``, the original dataset is modified and returned.
+        Unlike ``.compute``, the original dataset is modified in-place and returned.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
@@ -648,14 +676,17 @@ class Dataset(
         if not graphs:
             return None
         else:
-            try:
-                from dask.highlevelgraph import HighLevelGraph
+            from dask.highlevelgraph import HighLevelGraph
 
+            if all(isinstance(graph, HighLevelGraph) for graph in graphs.values()):
                 return HighLevelGraph.merge(*graphs.values())
-            except ImportError:
-                from dask import sharedict
 
-                return sharedict.merge(*graphs.values())
+            from dask.utils import ensure_dict
+
+            merged = {}
+            for graph in graphs.values():
+                merged.update(ensure_dict(graph))
+            return merged
 
     def __dask_keys__(self):
         import dask
@@ -665,6 +696,56 @@ class Dataset(
             for v in self.variables.values()
             if dask.is_dask_collection(v)
         ]
+
+    def __dask_exprs__(self):
+        from importlib import import_module
+
+        import dask
+
+        try:
+            DaskArray = import_module("dask_array").Array
+        except ImportError:
+            return None
+
+        exprs = []
+        for v in self.variables.values():
+            if dask.is_dask_collection(v):
+                if not isinstance(v._data, DaskArray):
+                    # Composite expressions must account for every Dask-backed
+                    # variable.  Returning None keeps Dask's collection APIs on
+                    # the existing HighLevelGraph path for mixed
+                    # legacy/expression datasets.
+                    return None
+                exprs.append(v._data.expr)
+        return exprs or None
+
+    def __dask_rebuild_from_exprs__(self, exprs):
+        import dask
+        from dask._collections import new_collection
+
+        dask_variables = [
+            (k, v) for k, v in self._variables.items() if dask.is_dask_collection(v)
+        ]
+        exprs = list(exprs)
+        if len(exprs) != len(dask_variables):
+            raise ValueError(
+                f"Expected {len(dask_variables)} expressions to rebuild Dataset, "
+                f"got {len(exprs)}"
+            )
+
+        variables = dict(self._variables)
+        for (k, v), expr in zip(dask_variables, exprs, strict=True):
+            variables[k] = v._replace(data=new_collection(expr))
+
+        return type(self)._construct_direct(
+            variables,
+            self._coord_names,
+            self._dims,
+            self._attrs,
+            self._indexes,
+            self._encoding,
+            self._close,
+        )
 
     def __dask_layers__(self):
         import dask
@@ -886,7 +967,7 @@ class Dataset(
     ) -> Self:
         """Fastpath constructor for internal use.
 
-        Returns an object with optionally with replaced attributes.
+        Returns an object with optionally replaced attributes.
 
         Explicitly passed arguments are *not* copied when placed on the new
         dataset. It is up to the caller to ensure that they have the right type
@@ -1171,7 +1252,11 @@ class Dataset(
             copy.deepcopy(self._encoding, memo) if deep else copy.copy(self._encoding)
         )
 
-        return self._replace(variables, indexes=indexes, attrs=attrs, encoding=encoding)
+        copied = self._replace(
+            variables, indexes=indexes, attrs=attrs, encoding=encoding
+        )
+        copied.set_close(self._close)
+        return copied
 
     def __copy__(self) -> Self:
         return self._copy(deep=False)
@@ -1269,12 +1354,14 @@ class Dataset(
 
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
+    @override
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for attribute-style access"""
         yield from self._item_sources
         yield self.attrs
 
+    @override
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
@@ -1338,6 +1425,7 @@ class Dataset(
     @overload
     def __getitem__(self, key: Iterable[Hashable]) -> Self: ...
 
+    @override
     def __getitem__(
         self, key: Mapping[Any, Any] | Hashable | Iterable[Hashable]
     ) -> Self | DataArray:
@@ -1411,7 +1499,7 @@ class Dataset(
                             f" been successfully updated:\n{processed}"
                         ) from e
                     else:
-                        raise e
+                        raise
 
         elif utils.hashable(key):
             if isinstance(value, Dataset):
@@ -1792,6 +1880,7 @@ class Dataset(
         """
         return Indexes(self._indexes, {k: self._variables[k] for k in self._indexes})
 
+    @override
     @property
     def coords(self) -> DatasetCoordinates:
         """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
@@ -2151,9 +2240,7 @@ class Dataset(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,
@@ -2164,7 +2251,6 @@ class Dataset(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -2175,9 +2261,7 @@ class Dataset(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,
@@ -2188,7 +2272,6 @@ class Dataset(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -2197,9 +2280,7 @@ class Dataset(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,
@@ -2210,7 +2291,6 @@ class Dataset(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -2235,9 +2315,6 @@ class Dataset(
         ----------
         store : zarr.storage.StoreLike, optional
             Store or path to directory in local or remote file system.
-        chunk_store : MutableMapping, str or path-like, optional
-            Store or path to directory in local or remote file system only for Zarr
-            array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "a-", r+", None}, optional
             Persistence mode:
 
@@ -2255,8 +2332,6 @@ class Dataset(
                 When modifying an existing Zarr array that is lazily opened, the "w"
                 behavior can be surprising since the underlying file that is being
                 lazily read from might get deleted before the data is computed.
-        synchronizer : object, optional
-            Zarr array synchronizer.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
         encoding : dict, optional
@@ -2274,8 +2349,6 @@ class Dataset(
             write consolidated metadata and attempt to read consolidated
             metadata for existing stores (falling back to non-consolidated).
 
-            When the experimental ``zarr_version=3``, ``consolidated`` must be
-            either be ``None`` or ``False``.
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overridden variables must remain the same size.
@@ -2339,11 +2412,6 @@ class Dataset(
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
-        zarr_version : int or None, optional
-
-            .. deprecated:: 2024.9.1
-            Use ``zarr_format`` instead.
-
         zarr_format : int or None, optional
             The desired zarr format to target (currently 2 or 3). The default
             of None will attempt to determine the zarr version from ``store`` when
@@ -2409,10 +2477,8 @@ class Dataset(
         return to_zarr(  # type: ignore[call-overload,misc]
             self,
             store=store,
-            chunk_store=chunk_store,
             storage_options=storage_options,
             mode=mode,
-            synchronizer=synchronizer,
             group=group,
             encoding=encoding,
             compute=compute,
@@ -2421,7 +2487,6 @@ class Dataset(
             region=region,
             safe_chunks=safe_chunks,
             align_chunks=align_chunks,
-            zarr_version=zarr_version,
             zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
             chunkmanager_store_kwargs=chunkmanager_store_kwargs,
@@ -6808,6 +6873,7 @@ class Dataset(
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
+    @override
     def reduce(
         self,
         func: Callable,
@@ -6925,7 +6991,7 @@ class Dataset(
                 )
 
         coord_names = {k for k in self.coords if k in variables}
-        indexes = {k: v for k, v in self._indexes.items() if k in variables}
+        indexes = filter_indexes_from_coords(self._indexes, coord_names)
         attrs = self.attrs if keep_attrs else None
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes
@@ -7265,11 +7331,49 @@ class Dataset(
             for k in extension_array_columns
             if k not in extension_array_columns_different_index
         ]
-        data = [
-            self._variables[k].set_dims(ordered_dims).values.reshape(-1)
+        ordered_dim_names = tuple(ordered_dims)
+        sparse_columns = [
+            k
             for k in non_extension_array_columns
+            if isinstance(self._variables[k].data, array_type("sparse"))
         ]
-        index = self.coords.to_index([*ordered_dims])
+        if sparse_columns:
+            from sparse import COO
+
+            # Other SparseArray subclasses (e.g. DOK) lack the .coords/.data
+            # attributes _sparse_coo_to_index relies on, and a variable whose
+            # dims need broadcasting to reach ordered_dim_names would have
+            # to be densified to do that anyway - both fall back to the
+            # dense path below, same as before this feature existed.
+            sparse_columns = [
+                k
+                for k in sparse_columns
+                if isinstance(self._variables[k].data, COO)
+                and set(self._variables[k].dims) == set(ordered_dim_names)
+            ]
+
+        if sparse_columns:
+            # Avoid densifying sparse variables.
+            # Instead index the DataFrame by the stored coordinates.
+            sparse_indexes = [
+                self._sparse_column_index(self._variables[k], ordered_dim_names)
+                for k in sparse_columns
+            ]
+            index = sparse_indexes[0]
+            for other in sparse_indexes[1:]:
+                index = index.union(other)
+            data = [
+                self._to_dataframe_sparse_column(
+                    self._variables[k], ordered_dim_names, index
+                )
+                for k in non_extension_array_columns
+            ]
+        else:
+            data = [
+                self._variables[k].set_dims(ordered_dims).values.reshape(-1)
+                for k in non_extension_array_columns
+            ]
+            index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(
             {
                 **dict(zip(non_extension_array_columns, data, strict=True)),
@@ -7327,6 +7431,55 @@ class Dataset(
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         return self._to_dataframe(ordered_dims=ordered_dims)
+
+    def _sparse_column_index(
+        self, variable: Variable, ordered_dims: tuple[Hashable, ...]
+    ) -> pd.Index:
+        """`_sparse_coo_to_index` for `variable.data`, a `sparse.COO` array,
+        reordered (a metadata-only operation - no densifying) to match
+        ``ordered_dims`` when `variable.dims` uses some other order over the
+        same set of dims.
+        """
+        index = _sparse_coo_to_index(variable.data, variable.dims, self.get_index)
+        if (
+            len(ordered_dims) > 1
+            and variable.dims != ordered_dims
+            and isinstance(index, pd.MultiIndex)
+        ):
+            index = index.reorder_levels(ordered_dims)
+        return index
+
+    def _to_dataframe_sparse_column(
+        self,
+        variable: Variable,
+        ordered_dims: tuple[Hashable, ...],
+        index: pd.Index,
+    ) -> np.ndarray | pd.Series:
+        """Compute one `_to_dataframe` column, densifying only where
+        needed: a ``sparse.COO`` variable over the same set of dims as
+        ``ordered_dims`` (in any order) is turned into its own (partial)
+        index via `_sparse_column_index` and reindexed onto the combined
+        ``index`` using its own fill value; anything else still goes
+        through the original dense `.values.reshape(-1)` path (a no-op for
+        already-dense variables, and unchanged - already broken, see
+        `_to_dataframe` - behavior for sparse variables that need
+        broadcasting) and is aligned onto ``index`` positionally or via
+        reindexing.
+        """
+        from sparse import COO
+
+        data = variable.data
+        if isinstance(data, COO) and set(variable.dims) == set(ordered_dims):
+            sparse_index = self._sparse_column_index(variable, ordered_dims)
+            return pd.Series(data.data, index=sparse_index).reindex(
+                index, fill_value=data.fill_value
+            )
+
+        flat = variable.set_dims(ordered_dims).values.reshape(-1)
+        if len(flat) == len(index):
+            return flat
+        full_index = self.coords.to_index(list(ordered_dims))
+        return pd.Series(flat, index=full_index).reindex(index)
 
     def _set_sparse_data_from_dataframe(
         self, idx: pd.Index, arrays: list[tuple[Hashable, np.ndarray]], dims: tuple
@@ -7515,9 +7668,9 @@ class Dataset(
         dask.dataframe.DataFrame
         """
 
-        import dask.array as da
         import dask.dataframe as dd
 
+        chunkmanager = guess_chunkmanager("dask")
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         columns = list(ordered_dims)
@@ -7534,7 +7687,7 @@ class Dataset(
             except KeyError:
                 # dimension without a matching coordinate
                 size = self.sizes[name]
-                data = da.arange(size, chunks=size, dtype=np.int64)
+                data = chunkmanager.array_api.arange(size, chunks=size, dtype=np.int64)
                 var = Variable((name,), data)
 
             # IndexVariable objects have a dummy .chunk() method
@@ -7712,6 +7865,7 @@ class Dataset(
 
         return obj
 
+    @override
     def _unary_op(self, f, *args, **kwargs) -> Self:
         variables = {}
         keep_attrs = kwargs.pop("keep_attrs", None)
@@ -7727,6 +7881,7 @@ class Dataset(
         attrs = self._attrs if keep_attrs else None
         return self._replace_with_new_dims(variables, attrs=attrs)
 
+    @override
     def _binary_op(self, other, f, reflexive=False, join=None) -> Dataset:
         from xarray.core.dataarray import DataArray
         from xarray.core.datatree import DataTree
@@ -7749,6 +7904,7 @@ class Dataset(
             ds.attrs = merge_attrs([self_attrs, other_attrs], "drop_conflicts")
         return ds
 
+    @override
     def _inplace_binary_op(self, other, f) -> Self:
         from xarray.core.dataarray import DataArray
         from xarray.core.groupby import GroupBy
@@ -7873,6 +8029,10 @@ class Dataset(
         --------
         Dataset.differentiate
         """
+        if dim not in self.dims:
+            raise ValueError(
+                f"Dimension {dim!r} not found in data dimensions {tuple(self.dims)}"
+            )
         if n == 0:
             return self
         if n < 0:
@@ -8094,6 +8254,8 @@ class Dataset(
         https://numpy.org/doc/stable/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
         followed by the 2nd key, etc.
+        Sorting is stable: when all sort keys compare equal, the original order is
+        preserved.
 
         Parameters
         ----------
@@ -8351,7 +8513,7 @@ class Dataset(
 
         # construct the new dataset
         coord_names = {k for k in self.coords if k in variables}
-        indexes = {k: v for k, v in self._indexes.items() if k in variables}
+        indexes = filter_indexes_from_coords(self._indexes, coord_names)
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
         attrs = self.attrs if keep_attrs else None
@@ -8394,11 +8556,8 @@ class Dataset(
         ranked : Dataset
             Variables that do not depend on `dim` are dropped.
         """
-        if not OPTIONS["use_bottleneck"]:
-            raise RuntimeError(
-                "rank requires bottleneck to be enabled."
-                " Call `xr.set_options(use_bottleneck=True)` to enable it."
-            )
+        if not module_available("bottleneck"):
+            raise ImportError("rank requires bottleneck to be installed.")
 
         if dim not in self.dims:
             raise ValueError(
@@ -8601,7 +8760,7 @@ class Dataset(
                 variables[k] = Variable(v_dims, integ)
             else:
                 variables[k] = v
-        indexes = {k: v for k, v in self._indexes.items() if k in variables}
+        indexes = filter_indexes_from_coords(self._indexes, coord_names)
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
@@ -9126,6 +9285,7 @@ class Dataset(
         """
         pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
 
+        coord_pad_mode: PadModeOptions
         if mode in ("edge", "reflect", "symmetric", "wrap"):
             coord_pad_mode = mode
             coord_pad_options = {
@@ -10406,7 +10566,7 @@ class Dataset(
 
         Parameters
         ----------
-        dims : iterable of hashable
+        dim : iterable of hashable
             The name(s) of the dimensions to create the cumulative window along
         min_periods : int, default: 1
             Minimum number of observations in window required to have a value

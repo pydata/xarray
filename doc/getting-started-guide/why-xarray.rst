@@ -28,7 +28,7 @@ powerful and concise interface. For example:
    dimensions (array broadcasting) based on dimension names, not shape.
 -  Easily use the `split-apply-combine <https://vita.had.co.nz/papers/plyr.pdf>`_
    paradigm with ``groupby``:
-   ``x.groupby('time.dayofyear').mean()``.
+   ``x.groupby('time.day_of_year').mean()``.
 -  Database-like alignment based on coordinate labels that smoothly
    handles missing values: ``x, y = xr.align(x, y, join='outer')``.
 -  Keep track of arbitrary metadata in the form of a Python dictionary:

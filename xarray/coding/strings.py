@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from functools import partial
+from typing import override
 
 import numpy as np
 
@@ -53,6 +54,7 @@ class EncodedStringCoder(VariableCoder):
     def __init__(self, allows_unicode=True):
         self.allows_unicode = allows_unicode
 
+    @override
     def encode(self, variable: Variable, name=None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
@@ -60,7 +62,7 @@ class EncodedStringCoder(VariableCoder):
         # which all backends support natively (GH11199)
         if data.dtype.kind == "T":
             data = np.asarray(data, dtype=object)
-            data[data == None] = ""  # noqa: E711
+            data[data == None] = ""
             data = np.asarray(data, dtype="U")
             variable = Variable(dims, data, attrs, encoding)
 
@@ -87,6 +89,7 @@ class EncodedStringCoder(VariableCoder):
             variable.encoding = encoding
             return variable
 
+    @override
     def decode(self, variable: Variable, name=None) -> Variable:
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
@@ -154,6 +157,7 @@ def validate_char_dim_name(strlen, encoding, name) -> str:
 class CharacterArrayCoder(VariableCoder):
     """Transforms between arrays containing bytes and character arrays."""
 
+    @override
     def encode(self, variable, name=None):
         variable = ensure_fixed_length_bytes(variable)
 
@@ -164,6 +168,7 @@ class CharacterArrayCoder(VariableCoder):
             dims = dims + (char_dim_name,)
         return Variable(dims, data, attrs, encoding)
 
+    @override
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
@@ -273,23 +278,29 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
             )
         self.array = indexing.as_indexable(array)
 
+    @override
     @property
     def dtype(self):
         return np.dtype("S" + str(self.array.shape[-1]))
 
+    @override
     @property
     def shape(self) -> tuple[int, ...]:
         return self.array.shape[:-1]
 
+    @override
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
 
+    @override
     def _vindex_get(self, key):
         return type(self)(self.array.vindex[key])
 
+    @override
     def _oindex_get(self, key):
         return type(self)(self.array.oindex[key])
 
+    @override
     def __getitem__(self, key):
         # require slicing the last dimension completely
         key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
@@ -297,5 +308,6 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
             raise IndexError("too many indices")
         return type(self)(self.array[key])
 
+    @override
     def get_duck_array(self):
         return _numpy_char_to_bytes(self.array.get_duck_array())

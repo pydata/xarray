@@ -6,7 +6,7 @@ import itertools
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Union, cast, override
 
 import numpy as np
 import pandas as pd
@@ -24,6 +24,7 @@ from xarray.core._aggregations import (
     DatasetGroupByAggregations,
 )
 from xarray.core.common import (
+    DataWithCoords,
     ImplementsArrayReduce,
     ImplementsDatasetReduce,
     _is_numeric_aggregatable_dtype,
@@ -183,7 +184,7 @@ def _inverse_permutation_indices(positions, N: int | None = None) -> np.ndarray 
     return newpositions[newpositions != -1]
 
 
-class _DummyGroup(Generic[T_Xarray]):
+class _DummyGroup[T_Xarray: (DataArray, Dataset)]:
     """Class for keeping track of grouped dimensions without coordinates.
 
     Should not be user visible.
@@ -286,7 +287,7 @@ def _ensure_1d(
 
 
 @dataclass
-class ResolvedGrouper(Generic[T_DataWithCoords]):
+class ResolvedGrouper[T_DataWithCoords: DataWithCoords]:
     """
     Wrapper around a Grouper object.
 
@@ -577,7 +578,7 @@ class ComposedGrouper:
         )
 
 
-class GroupBy(Generic[T_Xarray]):
+class GroupBy[T_Xarray: (DataArray, Dataset)]:
     """A object that implements the split-apply-combine pattern.
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over
@@ -1070,6 +1071,16 @@ class GroupBy(Generic[T_Xarray]):
         """Adaptor function that translates our groupby API to that of flox."""
         import flox
         from flox.xarray import xarray_reduce
+
+        if "keepdims" in kwargs:
+            warnings.warn(
+                "Reductions are applied along the grouping or resampling dimension. "
+                "Passing the 'keepdims' kwarg to reduction is not "
+                "supported and will be ignored.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            del kwargs["keepdims"]
 
         from xarray.core.dataset import Dataset
 
@@ -1594,6 +1605,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         reordered = _maybe_reorder(stacked, dim, positions, N=self.group1d.size)
         return self._obj._replace_maybe_drop_dims(reordered)
 
+    @override
     def _restore_dim_order(self, stacked: DataArray) -> DataArray:
         def lookup_order(dimension):
             for grouper in self.groupers:
@@ -1611,6 +1623,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         )
         return stacked
 
+    @override
     def map(
         self,
         func: Callable[..., DataArray],
@@ -1705,6 +1718,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         combined = self._maybe_reindex(combined)
         return combined
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -1712,7 +1726,6 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
-        keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
     ) -> DataArray:
@@ -1757,13 +1770,23 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
+        if "keepdims" in kwargs:
+            warnings.warn(
+                "Reductions are applied along the grouping or resampling dimension. "
+                "Passing the 'keepdims' kwarg to reduction is not "
+                "supported and will be ignored.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            del kwargs["keepdims"]
+
         def reduce_array(ar: DataArray) -> DataArray:
             return ar.reduce(
                 func=func,
                 dim=dim,
                 axis=axis,
                 keep_attrs=keep_attrs,
-                keepdims=keepdims,
+                keepdims=False,
                 **kwargs,
             )
 
@@ -1793,6 +1816,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
         return FrozenMappingWarningOnValuesAccess(self._dims)
 
+    @override
     def map(
         self,
         func: Callable[..., Dataset],
@@ -1869,6 +1893,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         combined = self._maybe_reindex(combined)
         return combined
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -1876,7 +1901,6 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
-        keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
     ) -> Dataset:
@@ -1923,13 +1947,23 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
 
+        if "keepdims" in kwargs:
+            warnings.warn(
+                "Reductions are applied along the grouping or resampling dimension. "
+                "Passing the 'keepdims' kwarg to reduction is not "
+                "supported and will be ignored.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            del kwargs["keepdims"]
+
         def reduce_dataset(ds: Dataset) -> Dataset:
             return ds.reduce(
                 func=func,
                 dim=dim,
                 axis=axis,
                 keep_attrs=keep_attrs,
-                keepdims=keepdims,
+                keepdims=False,
                 **kwargs,
             )
 
