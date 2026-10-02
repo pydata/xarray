@@ -29,6 +29,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
+  groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
+  members of a group are spread over multiple chunks and are not contiguous.
+  The object is now shuffled so that each group is in a single chunk first
+  (:issue:`11651`, :pull:`11653`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
   together with a per-file write lock, are used from several threads of a dask
   worker. The locks are now always acquired in the same order, also after
