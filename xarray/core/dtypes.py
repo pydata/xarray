@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 from pandas.api.extensions import ExtensionDtype
@@ -53,10 +53,10 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
     (np.bytes_, np.str_),  # numpy promotes to unicode
 )
 
-T_dtype = TypeVar("T_dtype", np.dtype, ExtensionDtype)
 
-
-def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
+def maybe_promote[T_dtype: (np.dtype, ExtensionDtype)](
+    dtype: T_dtype,
+) -> tuple[T_dtype, Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters

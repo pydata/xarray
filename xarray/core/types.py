@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
-from types import EllipsisType
+from types import EllipsisType, TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -13,7 +13,6 @@ from typing import (
     TypeAlias,
     TypeVar,
     Union,
-    overload,
     runtime_checkable,
 )
 
@@ -35,7 +34,7 @@ if TYPE_CHECKING:
     from xarray.groupers import Grouper, Resampler
     from xarray.structure.alignment import Aligner
 
-    GroupInput: TypeAlias = (
+    type GroupInput = (
         str
         | DataArray
         | IndexVariable
@@ -103,9 +102,7 @@ try:
 except ImportError:
     CFTimeDatetime = np.datetime64
 
-DatetimeLike: TypeAlias = (
-    pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
-)
+type DatetimeLike = pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
 
 
 class Alignable(Protocol):
@@ -200,11 +197,11 @@ Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
-T_ChunkDimFreq: TypeAlias = Union["Resampler", T_ChunkDim]
-T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
+type T_ChunkDim = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
+type T_ChunkDimFreq = Resampler | T_ChunkDim
+type T_ChunksFreq = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
+type T_Chunks = T_ChunkDim | Mapping[Any, T_ChunkDim]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
@@ -291,21 +288,8 @@ AspectOptions = Union[Literal["auto", "equal"], float, None]
 ExtendOptions = Literal["neither", "both", "min", "max"] | None
 
 
-_T_co = TypeVar("_T_co", covariant=True)
-
-
-class NestedSequence(Protocol[_T_co]):
-    def __len__(self, /) -> int: ...
-    @overload
-    def __getitem__(self, index: int, /) -> _T_co | NestedSequence[_T_co]: ...
-    @overload
-    def __getitem__(self, index: slice, /) -> NestedSequence[_T_co]: ...
-    def __iter__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
-    def __reversed__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
-
-
-_T = TypeVar("_T")
-NestedDict = dict[str, "NestedDict[_T] | _T"]
+type NestedSequence[T] = Sequence[T | NestedSequence[T]]
+type NestedDict[T] = dict[str, NestedDict[T] | T]
 
 
 AnyStr_co = TypeVar("AnyStr_co", str, bytes, covariant=True)
@@ -367,7 +351,8 @@ Bins = Union[
     int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
 ]
 
-ResampleCompatible: TypeAlias = (
+# not a `type` statement, as it is also used in isinstance checks
+ResampleCompatible: TypeAlias = (  # noqa: UP040
     str | datetime.timedelta | pd.Timedelta | pd.offsets.BaseOffset
 )
 
@@ -377,9 +362,18 @@ class Closable(Protocol):
 
 
 class Lock(Protocol):
-    def acquire(self, *args, **kwargs) -> Any: ...
+    # The parameters are positional-only, as their names differ between lock
+    # types, e.g. multiprocessing.Lock.acquire(block, timeout).
+    def acquire(self, blocking: bool = ..., /) -> bool: ...
     def release(self) -> None: ...
-    def __enter__(self) -> Any: ...
-    def __exit__(self, *args, **kwargs) -> None: ...
+    # threading locks return the result of acquire(), dask.distributed.Lock self
+    def __enter__(self) -> object: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None: ...
     def __hash__(self) -> int:
         return super().__hash__()
