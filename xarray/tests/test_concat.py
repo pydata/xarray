@@ -31,6 +31,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     requires_dask,
+    requires_pandas_3,
     requires_pyarrow,
     requires_scipy_or_netCDF4,
 )
@@ -1489,6 +1490,16 @@ def test_concat_index_not_same_dim() -> None:
         match=r"Cannot concatenate along dimension 'x' indexes with dimensions.*",
     ):
         concat([ds1, ds2], dim="x")
+
+
+@requires_pandas_3
+def test_concat_pandas_index_string_dtype() -> None:
+    # GH11317
+    da = DataArray([0], dims=["dim_a"], coords={"dim_a": ["a"]})
+    db = DataArray([0], dims=["dim_b"], coords={"dim_b": ["b"]})
+    db2 = concat([db], pd.Index(["b"], name="dim_a", dtype=pd.StringDtype()))
+    result = concat([da, db2], dim="dim_a")
+    assert list(result["dim_a"].values) == ["a", "b"]
 
 
 class TestNewDefaults:
