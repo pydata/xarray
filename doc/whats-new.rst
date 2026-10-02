@@ -66,6 +66,15 @@ Documentation
 ~~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+- :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` no longer sort
+  coordinates that are already increasing, and reverse strictly decreasing
+  ones instead of sorting them. This avoids copying the data before
+  interpolating (:issue:`9758`, :pull:`11658`).
+  By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
