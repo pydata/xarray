@@ -232,8 +232,25 @@ class ZarrBase(CFEncodedBase):
                 assert actual["x"].dtype == "bool"
                 np.testing.assert_array_equal(actual["x"].values, original["x"].values)
 
-    def test_roundtrip_bytes_with_fill_value(self):
-        pytest.xfail("Broken by Zarr 3.0.7")
+    def test_roundtrip_bytes_with_fill_value(  # type: ignore[override]
+        self, request: pytest.FixtureRequest
+    ) -> None:
+        if zarr.config.config["default_zarr_format"] == 3:
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason="decoding bytes fill values is not supported for zarr format 3"
+                )
+            )
+        elif not has_zarr_v3_dtypes and not isinstance(
+            self, TestZarrNoConsolidatedMetadataSupport
+        ):
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason="zarr>=3.0.7,<3.1 wrongly encodes bytes fill values in consolidated "
+                    "metadata, see https://github.com/zarr-developers/zarr-python/issues/2979"
+                )
+            )
+        super().test_roundtrip_bytes_with_fill_value()
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
     def test_roundtrip_consolidated(self, consolidated) -> None:

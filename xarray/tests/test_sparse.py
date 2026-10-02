@@ -890,15 +890,17 @@ class TestSparseCoords:
 
 
 @requires_dask
-def test_chunk():
+def test_chunk(request):
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
     a = DataArray(s)
     ac = a.chunk(2)
     assert ac.chunks == ((2, 2),)
     assert isinstance(ac.data._meta, sparse.COO)
     if has_dask_array_expr:
-        pytest.xfail(
-            "dask-array sparse COO equality with eager sparse arrays is not implemented"
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="dask-array sparse COO equality with eager sparse arrays is not implemented"
+            )
         )
     assert_identical(ac, a)
 

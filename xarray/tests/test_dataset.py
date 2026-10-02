@@ -3345,7 +3345,9 @@ class TestDataset:
         assert type(ds["d"].variable) is xr.Variable
 
         # the index is shared by shallow copies and copied by deep copies
-        assert (ds_cp.xindexes["a"].index is ds.xindexes["a"].index) is not deep
+        assert (
+            ds_cp.xindexes["a"].to_pandas_index() is ds.xindexes["a"].to_pandas_index()
+        ) is not deep
         assert_identical(ds["a"].variable, xr.IndexVariable("a", [1, 2]))
 
     def test_copy_with_data_errors(self) -> None:

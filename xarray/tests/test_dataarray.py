@@ -2567,7 +2567,7 @@ class TestDataArray:
         assert original.values.flags["C_CONTIGUOUS"]
         assert converted.values.flags["F_CONTIGUOUS"]
 
-    def test_astype_subok(self) -> None:
+    def test_astype_subok(self, request: pytest.FixtureRequest) -> None:
         class NdArraySubclass(np.ndarray):
             pass
 
@@ -2575,7 +2575,11 @@ class TestDataArray:
         converted_not_subok = original.astype("d", subok=False)
         converted_subok = original.astype("d", subok=True)
         if not isinstance(original.data, NdArraySubclass):
-            pytest.xfail("DataArray cannot be backed yet by a subclasses of np.ndarray")
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason="DataArray cannot be backed yet by a subclasses of np.ndarray"
+                )
+            )
         assert isinstance(converted_not_subok.data, np.ndarray)
         assert not isinstance(converted_not_subok.data, NdArraySubclass)
         assert isinstance(converted_subok.data, NdArraySubclass)
@@ -4445,7 +4449,9 @@ class TestDataArray:
         assert type(da["d"].variable) is xr.Variable
 
         # the index is shared by shallow copies and copied by deep copies
-        assert (da_cp.xindexes["a"].index is da.xindexes["a"].index) is not deep
+        assert (
+            da_cp.xindexes["a"].to_pandas_index() is da.xindexes["a"].to_pandas_index()
+        ) is not deep
         assert_identical(da["a"].variable, xr.IndexVariable("a", [1, 2]))
 
     def test_real_and_imag(self) -> None:
@@ -5529,8 +5535,6 @@ class TestReduce1D(TestReduce):
         nanindex: int | None,
         use_dask: bool,
     ) -> None:
-        if use_dask and x.dtype.kind == "M":
-            pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
@@ -6006,9 +6010,6 @@ class TestReduce2D(TestReduce):
         nanindex: list[int | None],
         use_dask: bool,
     ) -> None:
-        if use_dask and x.dtype.kind == "M":
-            pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
-
         if x.dtype.kind == "O":
             # TODO: nanops._nan_argminmax_object computes once to check for all-NaN slices.
             max_computes = 1
@@ -6146,9 +6147,6 @@ class TestReduce2D(TestReduce):
         nanindex: list[int | None],
         use_dask: bool,
     ) -> None:
-        if use_dask and x.dtype.kind == "M":
-            pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
-
         if x.dtype.kind == "O":
             # TODO: nanops._nan_argminmax_object computes once to check for all-NaN slices.
             max_computes = 1

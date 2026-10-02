@@ -480,16 +480,27 @@ def test_apply_ufunc_dataset(variant, dtype):
     ),
 )
 @pytest.mark.parametrize("value", (10, dtypes.NA))
-def test_align_dataarray(value, variant, unit, error, dtype):
-    if variant == "coords" and (
-        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
-    ):
-        pytest.xfail(
-            reason=(
-                "fill_value is used for both data variables and coords. "
-                "See https://github.com/pydata/xarray/issues/4165"
+def test_align_dataarray(value, variant, unit, error, dtype, request):
+    if variant == "coords":
+        if value != dtypes.NA and error is None:
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason=(
+                        "a scalar fill_value is used for both data variables and "
+                        "coords. See https://github.com/pydata/xarray/issues/4165"
+                    )
+                )
             )
-        )
+        elif (
+            value == dtypes.NA
+            and isinstance(unit, unit_registry.Unit)
+            and unit != unit_registry.m
+        ):
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason="the expected values don't convert coords back to their units"
+                )
+            )
 
     fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
 
@@ -584,16 +595,27 @@ def test_align_dataarray(value, variant, unit, error, dtype):
     ),
 )
 @pytest.mark.parametrize("value", (10, dtypes.NA))
-def test_align_dataset(value, unit, variant, error, dtype):
-    if variant == "coords" and (
-        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
-    ):
-        pytest.xfail(
-            reason=(
-                "fill_value is used for both data variables and coords. "
-                "See https://github.com/pydata/xarray/issues/4165"
+def test_align_dataset(value, unit, variant, error, dtype, request):
+    if variant == "coords":
+        if value != dtypes.NA and error is None:
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason=(
+                        "a scalar fill_value is used for both data variables and "
+                        "coords. See https://github.com/pydata/xarray/issues/4165"
+                    )
+                )
             )
-        )
+        elif (
+            value == dtypes.NA
+            and isinstance(unit, unit_registry.Unit)
+            and unit != unit_registry.m
+        ):
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason="the expected values don't convert coords back to their units"
+                )
+            )
 
     fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
 

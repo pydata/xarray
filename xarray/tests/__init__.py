@@ -199,6 +199,7 @@ with warnings.catch_warnings():
     # seaborn uses the deprecated `pandas.is_categorical_dtype`
     has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
+has_sparse_0_19, requires_sparse_0_19 = _importorskip("sparse", "0.19.0")
 has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
