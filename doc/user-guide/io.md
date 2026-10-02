@@ -680,10 +680,12 @@ encodings as values. These encodings are saved as attributes on the netCDF
 variables on disk, which allows xarray to faithfully read encoded data back into
 memory.
 
+```caution
 Encoding options can also be provided as attributes on individual variables.
 This alternative path is generally not recommended because the options are
 passed to the backend as-is, without CF compliance checks and adjustments.
 But it can be useful in some cases when full control over the backend is needed.
+```
 
 It is important to note that using encodings is entirely optional: if you do not
 supply any of these encoding options, xarray will write data to disk using a
