@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-import platform
 import string
 import warnings
 from contextlib import contextmanager, nullcontext
@@ -53,11 +52,6 @@ warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
 # flox builds NaT dtypes at import time; numpy deprecated the generic timedelta unit
 warnings.filterwarnings(
     "ignore", "The 'generic' unit for NumPy timedelta is deprecated"
-)
-
-arm_xfail = pytest.mark.xfail(
-    platform.machine() == "aarch64" or "arm" in platform.machine(),
-    reason="expected failure on ARM",
 )
 
 
