@@ -75,8 +75,9 @@ doc/generated/
 doc/api/generated/
 xarray/tests/data/*.grib.*.idx
 
-# Claude Code
-.claude/
+# Claude Code (except shared project skills)
+.claude/*
+!.claude/skills/
 
 # Sync tools
 Icon*

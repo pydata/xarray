@@ -46,7 +46,7 @@ from collections.abc import Callable, Hashable, Mapping
 from functools import reduce
 from operator import or_ as set_union
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
 
 import numpy as np
@@ -141,7 +141,7 @@ def _apply_str_ufunc(
     )
 
 
-class StringAccessor(Generic[T_DataArray]):
+class StringAccessor[T_DataArray: DataArray]:
     r"""Vectorized string functions for string-like arrays.
 
     Similar to pandas, fields can be accessed through the `.str` attribute
@@ -1944,8 +1944,10 @@ class StringAccessor(Generic[T_DataArray]):
 
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
-            func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=max(i_n, 0)
+            # ``re.sub`` interprets ``count=0`` as "replace every occurrence",
+            # so ``n=0`` has to be special-cased to mean "replace nothing".
+            func = lambda x, ipat, irepl, i_n: (
+                x if i_n == 0 else ipat.sub(repl=irepl, string=x, count=max(i_n, 0))
             )
         else:
             pat = self._stringify(pat)

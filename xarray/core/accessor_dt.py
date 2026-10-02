@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Generic, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -240,7 +240,7 @@ def _index_or_data(obj):
         return obj.data
 
 
-class TimeAccessor(Generic[T_DataArray]):
+class TimeAccessor[T_DataArray: DataArray]:
     __slots__ = ("_obj",)
 
     def __init__(self, obj: T_DataArray) -> None:

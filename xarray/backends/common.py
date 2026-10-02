@@ -12,10 +12,9 @@ from typing import (
     Any,
     ClassVar,
     Self,
-    TypeAlias,
-    TypeVar,
     Union,
     overload,
+    override,
 )
 
 import numpy as np
@@ -50,8 +49,6 @@ logger = logging.getLogger(__name__)
 
 NONE_VAR_NAME = "__values__"
 
-T = TypeVar("T")
-
 
 @overload
 def _normalize_path(path: os.PathLike) -> str: ...
@@ -62,10 +59,10 @@ def _normalize_path(path: str) -> str: ...
 
 
 @overload
-def _normalize_path(path: T) -> T: ...
+def _normalize_path[T](path: T) -> T: ...
 
 
-def _normalize_path(path: os.PathLike | str | T) -> str | T:
+def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -317,6 +314,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
         raise NotImplementedError("Backend does not support asynchronous loading")
 
+    @override
     def get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore[index]
@@ -382,7 +380,7 @@ class AbstractDataStore:
         self.close()
 
 
-T_PathFileOrDataStore: TypeAlias = (
+type T_PathFileOrDataStore = (
     str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
 )
 
@@ -715,6 +713,7 @@ def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
 class WritableCFDataStore(AbstractWritableDataStore):
     __slots__ = ()
 
+    @override
     def encode(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.

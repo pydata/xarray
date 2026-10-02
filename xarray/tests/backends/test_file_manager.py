@@ -346,6 +346,8 @@ def test_file_manager_del_while_pin_lock_held() -> None:
             del manager  # runs __del__, which closes the file
         done.set()
 
-    thread = threading.Thread(target=delete_while_locked, daemon=True)
-    thread.start()
-    assert done.wait(timeout=5)
+    # the manager is deliberately deallocated without closing it first
+    with set_options(warn_for_unclosed_files=False):
+        thread = threading.Thread(target=delete_while_locked, daemon=True)
+        thread.start()
+        assert done.wait(timeout=5)
