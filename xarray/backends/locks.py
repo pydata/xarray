@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import multiprocessing
+import sys
 import threading
 import uuid
 import weakref
-from collections.abc import Callable, Hashable, MutableMapping, Sequence
-from typing import Any, ClassVar, Literal
+from collections.abc import Callable, Hashable, Iterable, MutableMapping, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, override
 from weakref import WeakValueDictionary
 
 from xarray.core.types import Lock
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    from distributed import Lock as DistributedLock
 
 
 class _ReentrantLock:
@@ -52,7 +58,12 @@ class _ReentrantLock:
     def __enter__(self) -> bool:
         return self.acquire()
 
-    def __exit__(self, *args) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.release()
 
     def locked(self) -> bool:
@@ -109,17 +120,26 @@ class SerializableLock(Lock):
             self.lock = _ReentrantLock() if reentrant else threading.Lock()
             SerializableLock._locks[self.token] = self.lock
 
-    def acquire(self, *args, **kwargs):
+    @override
+    def acquire(self, *args: Any, **kwargs: Any) -> bool:
         return self.lock.acquire(*args, **kwargs)
 
-    def release(self, *args, **kwargs):
-        return self.lock.release(*args, **kwargs)
+    @override
+    def release(self) -> None:
+        self.lock.release()
 
-    def __enter__(self):
-        self.lock.__enter__()
+    @override
+    def __enter__(self) -> bool:
+        return self.lock.__enter__()
 
-    def __exit__(self, *args):
-        self.lock.__exit__(*args)
+    @override
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.lock.__exit__(exc_type, exc_value, traceback)
 
     def locked(self):
         return self.lock.locked()
@@ -142,9 +162,8 @@ class SerializableLock(Lock):
 # Neither HDF5 nor the netCDF-C library are thread-safe. The locks are reentrant
 # so that backends can hold them across calls that acquire them again. They
 # have fixed tokens, so that an unpickled lock, e.g. in a dask worker, is the
-# global lock of that process and not a separate lock. This relies on
-# CombinedLock sorting its locks again when unpickled, otherwise processes could
-# acquire the same locks in a different order and deadlock.
+# global lock of that process and not a separate lock. The tokens also give them
+# the same place in the lock order in every process, see CombinedLock._sort_locks.
 HDF5_LOCK = SerializableLock("xarray-hdf5-lock", reentrant=True)
 NETCDFC_LOCK = SerializableLock("xarray-netcdfc-lock", reentrant=True)
 
@@ -251,7 +270,7 @@ def get_write_lock(key: str) -> Lock:
     return lock_maker(key)
 
 
-def acquire(lock, blocking=True):
+def acquire(lock: Lock, blocking: bool = True) -> object:
     """Acquire a lock, possibly in a non-blocking fashion.
 
     Includes backwards compatibility hacks for old versions of Python, dask
@@ -269,14 +288,23 @@ def acquire(lock, blocking=True):
         return lock.acquire(blocking)
 
 
-def _lock_identity(lock: Lock) -> int:
-    """Identity of the lock that is actually acquired.
+def _is_distributed_lock(lock: Lock) -> TypeGuard[DistributedLock]:
+    # A dask.distributed.Lock can only exist if distributed was imported, so
+    # don't import it just to check.
+    distributed = sys.modules.get("distributed")
+    return distributed is not None and isinstance(lock, distributed.Lock)
 
-    Unpickled SerializableLocks are new objects wrapping the same threading.Lock.
-    """
+
+def _lock_key(lock: Lock) -> tuple[str, str | int]:
+    """Key that is the same for all copies of a lock, e.g. after pickling."""
     if isinstance(lock, SerializableLock):
-        return id(lock.lock)
-    return id(lock)
+        # All copies with the same token wrap the same threading.Lock. Tokens
+        # can be any hashable, so use their reprs, which keeps 1 and "1" apart.
+        return ("token", repr(lock.token))
+    if _is_distributed_lock(lock):
+        # all copies with the same name are the same lock on the scheduler
+        return ("distributed", lock.name)
+    return ("object", id(lock))
 
 
 class CombinedLock(Lock):
@@ -284,22 +312,59 @@ class CombinedLock(Lock):
 
     Like a locked door, a CombinedLock is locked if any of its constituent
     locks are locked.
+
+    The locks are always acquired in the same order, independent of the order
+    they are passed in, see ``CombinedLock._sort_locks``.
     """
 
-    def __init__(self, locks: Sequence[Lock]):
-        # Remove duplicates and always acquire in one global order. If not careful,
-        # CombinedLocks sharing locks could acquire them in opposite orders and
-        # deadlock each other.
-        unique = {_lock_identity(lock): lock for lock in locks}
-        self.locks = tuple(lock for _, lock in sorted(unique.items()))
+    locks: tuple[Lock, ...]
 
-    def __reduce__(self):
-        # The order depends on the ids of the locks, which differ between
-        # processes, so sort again when unpickling.
-        return (type(self), (list(self.locks),))
+    def __init__(self, locks: Sequence[Lock]) -> None:
+        self.locks = self._sort_locks(locks)
 
-    def acquire(self, blocking=True):
-        acquired = []
+    @staticmethod
+    def _sort_locks(locks: Iterable[Lock]) -> tuple[Lock, ...]:
+        """Remove duplicate locks and sort them into the order they are acquired in.
+
+        A thread holding lock A while waiting for lock B deadlocks with a thread
+        holding B while waiting for A. The standard way to rule this out is to
+        acquire all locks in the same order everywhere, so nobody ever waits for
+        a lock that comes before one it already holds.
+
+        xarray combines the process-wide library locks (HDF5_LOCK and
+        NETCDFC_LOCK, both SerializableLocks) with at most one other lock,
+        usually the per-file write lock from get_write_lock. The order is:
+
+        1. All locks that are not SerializableLocks, in the order they are
+           passed in. This is the per-file lock: it may be a distributed or
+           multiprocessing lock that is slow to acquire, and waiting for it
+           while holding a library lock would block all HDF5 and netCDF-C calls
+           of the process in the meantime. Should two such locks ever be
+           combined, they must be passed in the same order everywhere.
+        2. The SerializableLocks, sorted by their token.
+
+        The order must not depend on the lock objects themselves, e.g. their
+        id(): locks are pickled all the time, every dask task gets its own copy
+        of the locks it uses, and these copies are new objects. When the order
+        depended on id(), two threads of a distributed worker could take
+        HDF5_LOCK and the per-file write lock in opposite orders and deadlock.
+        Tokens and the order of the arguments stay the same when pickled.
+
+        Copies of the same lock are removed, as acquiring a lock that is not
+        reentrant twice deadlocks.
+        """
+        # Use a dict to keep ordering
+        unique = list({_lock_key(lock): lock for lock in locks}.values())
+        file_locks = [lock for lock in unique if not isinstance(lock, SerializableLock)]
+        library_locks = sorted(
+            (lock for lock in unique if isinstance(lock, SerializableLock)),
+            key=lambda lock: repr(lock.token),
+        )
+        return (*file_locks, *library_locks)
+
+    @override
+    def acquire(self, blocking: bool = True) -> bool:
+        acquired: list[Lock] = []
         for lock in self.locks:
             if not acquire(lock, blocking=blocking):
                 # Release the locks we already hold, otherwise a failed
@@ -310,53 +375,82 @@ class CombinedLock(Lock):
             acquired.append(lock)
         return True
 
-    def release(self):
+    @override
+    def release(self) -> None:
         for lock in reversed(self.locks):
             lock.release()
 
-    def __enter__(self):
-        self.acquire()
+    @override
+    def __enter__(self) -> bool:
+        return self.acquire()
 
-    def __exit__(self, *args):
+    @override
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         self.release()
 
-    def locked(self):
-        return any(lock.locked() for lock in self.locks)
+    def locked(self) -> bool:
+        """Whether any of the locks is locked.
 
-    def __repr__(self):
+        ``locked()`` is not part of the Lock protocol, so this raises an
+        ``AttributeError`` if one of the locks doesn't support it, e.g.
+        ``multiprocessing.Lock`` before Python 3.14.
+        """
+        return any(lock.locked() for lock in self.locks)  # type: ignore[attr-defined]
+
+    @property
+    def reentrant(self) -> bool:
+        """True if all locks are reentrant, otherwise False."""
+        return all(is_reentrant_lock(lock) for lock in self.locks)
+
+    def __repr__(self) -> str:
         return f"CombinedLock({list(self.locks)!r})"
 
 
 class DummyLock(Lock):
     """DummyLock provides the lock API without any actual locking."""
 
-    def acquire(self, blocking=True):
+    reentrant: ClassVar[Literal[True]] = True
+
+    @override
+    def acquire(self, blocking: bool = True) -> Literal[True]:
+        return True
+
+    @override
+    def release(self) -> None:
         pass
 
-    def release(self):
+    @override
+    def __enter__(self) -> Literal[True]:
+        return True
+
+    @override
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         pass
 
-    def __enter__(self):
-        pass
-
-    def __exit__(self, *args):
-        pass
-
-    def locked(self):
+    def locked(self) -> Literal[False]:
         return False
 
 
 def is_reentrant_lock(lock: Lock) -> bool:
     """Whether the thread holding ``lock`` can safely acquire it again."""
-    if isinstance(lock, CombinedLock):
-        return all(is_reentrant_lock(lock) for lock in lock.locks)
-    if isinstance(lock, SerializableLock):
+    # TODO: check if we should add e.g. threading.RLock or multiprocessing.RLock
+    if isinstance(lock, (SerializableLock, CombinedLock, DummyLock)):
         return lock.reentrant
     return isinstance(lock, _ReentrantLock)
 
 
-def combine_locks(locks: Sequence[Lock]) -> Lock:
-    """Combine a sequence of locks into a single lock."""
+def combine_locks(locks: Iterable[Lock]) -> Lock:
+    """Combine multiple locks into a single lock."""
     all_locks: list[Lock] = []
     for lock in locks:
         if isinstance(lock, CombinedLock):
@@ -367,10 +461,9 @@ def combine_locks(locks: Sequence[Lock]) -> Lock:
     num_locks = len(all_locks)
     if num_locks > 1:
         return CombinedLock(all_locks)
-    elif num_locks == 1:
+    if num_locks == 1:
         return all_locks[0]
-    else:
-        return DummyLock()
+    return DummyLock()
 
 
 def ensure_lock(lock: Lock | Literal[False] | None) -> Lock:
