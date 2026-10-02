@@ -608,6 +608,22 @@ def test_interp_sorted_coords_skip_sortby(
 
 
 @requires_scipy
+def test_interp_decreasing_coord_with_ties_uses_sortby() -> None:
+    # GH9758: reversing a decreasing coordinate with ties would put the tied
+    # values in the opposite order to sortby's stable sort, which changes the
+    # result of methods that accept repeated points
+    da = xr.DataArray(
+        [30.0, 21.0, 22.0, 15.0, 10.0],
+        dims="x",
+        coords={"x": [4.0, 3.0, 3.0, 2.0, 1.0]},
+    )
+    x_new = [1.5, 3.0, 3.5]
+    expected = da.sortby("x").interp(x=x_new, method="krogh", assume_sorted=True)
+    actual = da.interp(x=x_new, method="krogh")
+    assert_identical(actual, expected)
+
+
+@requires_scipy
 def test_dimension_wo_coords() -> None:
     da = xr.DataArray(
         np.arange(12).reshape(3, 4), dims=["x", "y"], coords={"y": [0, 1, 2, 3]}

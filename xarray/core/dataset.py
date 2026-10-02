@@ -3815,6 +3815,9 @@ class Dataset(
             ):
                 if index.index.is_monotonic_increasing:
                     continue
+                # Decreasing coordinates still need flipping: _localize and the scipy
+                # interpolators assume increasing values. A reversed slice equals the
+                # stable sort that sortby does only when there are no ties.
                 if index.index.is_monotonic_decreasing and index.index.is_unique:
                     reverse[dim] = slice(None, None, -1)
                     continue
