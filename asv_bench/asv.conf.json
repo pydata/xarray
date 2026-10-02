@@ -66,6 +66,8 @@
     "scipy": [""],
     "bottleneck": [""],
     "dask": [""],
+    // without it, the solver picks an old dask that doesn't support numpy 2
+    "pyarrow": [""],
     "distributed": [""],
     "flox": [""],
     "numpy_groupies": [""],

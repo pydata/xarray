@@ -166,15 +166,42 @@ def test_combined_lock_deduplicates_unpickled_serializable_lock() -> None:
     assert not lock.locked()
 
 
-def test_combined_lock_is_sorted_again_when_unpickled() -> None:
-    # The lock order depends on ids, which differ between processes, so a
-    # CombinedLock pickled in another process must be sorted again.
+def test_combined_lock_order_survives_pickling() -> None:
+    # Copies of a lock are new objects, e.g. in every dask task that uses it,
+    # so the order must not depend on their ids (see CombinedLock._sort_locks).
+    # str(SerializableLock) contains its token, which identifies the lock
     combined = CombinedLock([SerializableLock(), SerializableLock()])
-    local_order = [locks._lock_identity(lock) for lock in combined.locks]
-    combined.locks = combined.locks[::-1]  # as if sorted in another process
+    tokens = [str(lock) for lock in combined.locks]
+
+    for _ in range(10):
+        copies = [pickle.loads(pickle.dumps(lock)) for lock in combined.locks]
+        rebuilt = CombinedLock(copies[::-1])
+        assert [str(lock) for lock in rebuilt.locks] == tokens
 
     unpickled = pickle.loads(pickle.dumps(combined))
-    assert [locks._lock_identity(lock) for lock in unpickled.locks] == local_order
+    assert [str(lock) for lock in unpickled.locks] == tokens
+
+
+def test_combined_lock_acquires_resource_locks_before_library_locks() -> None:
+    # A per-file write lock is acquired before the process-wide library locks,
+    # so that waiting for it never blocks all HDF5 and netCDF-C calls.
+    library_lock = SerializableLock()
+    resource_lock = threading.Lock()
+    expected = (resource_lock, library_lock)
+    assert CombinedLock([library_lock, resource_lock]).locks == expected
+    assert CombinedLock([resource_lock, library_lock]).locks == expected
+
+
+def test_combined_lock_sorts_serializable_locks_by_token() -> None:
+    # tokens of different types must not break sorting
+    lock_int, lock_str, lock_same_repr = (
+        SerializableLock(1),
+        SerializableLock("a"),
+        SerializableLock("1"),
+    )
+    combined = CombinedLock([lock_str, lock_same_repr, lock_int])
+    assert len(combined.locks) == 3
+    assert combined.locks == CombinedLock([lock_int, lock_same_repr, lock_str]).locks
 
 
 def test_reentrant_serializable_lock() -> None:

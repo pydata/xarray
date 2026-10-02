@@ -7021,7 +7021,7 @@ class Dataset(
                 )
 
         coord_names = {k for k in self.coords if k in variables}
-        indexes = {k: v for k, v in self._indexes.items() if k in variables}
+        indexes = filter_indexes_from_coords(self._indexes, coord_names)
         attrs = self.attrs if keep_attrs else None
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes
@@ -8543,7 +8543,7 @@ class Dataset(
 
         # construct the new dataset
         coord_names = {k for k in self.coords if k in variables}
-        indexes = {k: v for k, v in self._indexes.items() if k in variables}
+        indexes = filter_indexes_from_coords(self._indexes, coord_names)
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
         attrs = self.attrs if keep_attrs else None
@@ -8790,7 +8790,7 @@ class Dataset(
                 variables[k] = Variable(v_dims, integ)
             else:
                 variables[k] = v
-        indexes = {k: v for k, v in self._indexes.items() if k in variables}
+        indexes = filter_indexes_from_coords(self._indexes, coord_names)
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
