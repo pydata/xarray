@@ -287,6 +287,9 @@ Bug Fixes
 - Fixed a bug that caused rechunking a multi-dimensional cftime array along a
   subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Allow non-mapping arguments such as ``"auto"`` or an integer to
+  :py:meth:`DataTree.chunk`, matching :py:meth:`Dataset.chunk` (:issue:`11315`).
+  By `Sai Asish Y <https://github.com/SAY-5>`_.
 - :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` now raise a ``ValueError``
   when ``dim`` is not an existing dimension, instead of silently returning the
   object unchanged. This matches the behavior of other methods such as
