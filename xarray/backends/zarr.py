@@ -155,8 +155,11 @@ class FillValueCoder:
 
     @classmethod
     def decode(
-        cls, value: int | float | str | bytes | list, dtype: str | np.dtype[Any]
+        cls, value: int | float | str | bytes | list | None, dtype: str | np.dtype[Any]
     ):
+        if value is None:
+            return None
+
         if dtype == "string":
             # zarr V3 string type
             return str(value)
@@ -168,7 +171,17 @@ class FillValueCoder:
                 )
             return base64.standard_b64decode(value)
         np_dtype = np.dtype(dtype)
+
+        if (
+            np_dtype.kind == "S"
+            or coding.strings.is_unicode_dtype(np_dtype)
+        ) and isinstance(value, str):
+            return np.asarray(value, dtype=np_dtype)[()]
+
         if np_dtype.kind == "f":
+            if isinstance(value, int | float) and not isinstance(value, bool):
+                return np.asarray(value, dtype=np_dtype)[()]
+
             if not isinstance(value, str | bytes):
                 raise TypeError(
                     f"Failed to decode fill_value: expected str or bytes for dtype {np_dtype}, got {type(value).__name__}"
