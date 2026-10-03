@@ -173,8 +173,7 @@ class FillValueCoder:
         np_dtype = np.dtype(dtype)
 
         if (
-            np_dtype.kind == "S"
-            or coding.strings.is_unicode_dtype(np_dtype)
+            np_dtype.kind == "S" or coding.strings.is_unicode_dtype(np_dtype)
         ) and isinstance(value, str):
             return np.asarray(value, dtype=np_dtype)[()]
 
