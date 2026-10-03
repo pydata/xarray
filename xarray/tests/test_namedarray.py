@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import sys
 from abc import abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
@@ -233,9 +233,22 @@ class TestNamedArray(NamedArraySubclassobjects):
 
     def test_from_array_with_masked_array(self) -> None:
         masked_array: np.ndarray[Any, np.dtype[np.generic]]
-        masked_array = np.ma.array([1, 2, 3], mask=[False, True, False])
+        masked_array = cast("Callable[..., NDArray[np.generic]]", np.ma.array)(
+            [1, 2, 3], mask=[False, True, False]
+        )
         with pytest.raises(NotImplementedError):
             from_array(("x",), masked_array)
+
+    @pytest.mark.parametrize("mask", [np.ma.nomask, False, [False, False, False]])
+    def test_from_array_with_unmasked_array(
+        self, mask: bool | np.bool_ | list[bool]
+    ) -> None:
+        data = cast("Callable[..., NDArray[np.int64]]", np.ma.array)(
+            [1, 2, 3], mask=mask
+        )
+        actual: NamedArray[Any, Any] = from_array(("x",), data)
+        assert actual.data is data
+        np.testing.assert_equal(actual.data, [1, 2, 3])
 
     def test_from_array_with_0d_object(self) -> None:
         data = np.empty((), dtype=object)
@@ -369,8 +382,10 @@ class TestNamedArray(NamedArraySubclassobjects):
         numpy_a = np.array([2.1, 4], dtype=np.dtype(np.int64))
         check_duck_array_typevar(numpy_a)
 
-        masked_a: np.ma.MaskedArray[Any, np.dtype[np.int64]]
-        masked_a = np.ma.asarray([2.1, 4], dtype=np.dtype(np.int64))
+        masked_a: NDArray[np.int64]
+        masked_a = cast("Callable[..., NDArray[np.int64]]", np.ma.asarray)(
+            [2.1, 4], dtype=np.dtype(np.int64)
+        )
         check_duck_array_typevar(masked_a)
 
         custom_a: CustomArrayIndexable[Any, np.dtype[np.int64]]
