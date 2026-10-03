@@ -195,7 +195,7 @@ def from_array(
 
     # TODO: dask.array.ma.MaskedArray also exists, better way?
     if isinstance(data, np.ma.MaskedArray):
-        mask = np.ma.getmaskarray(data)
+        mask = np.asarray(data.mask)
         if mask.any():
             # TODO: requires refactoring/vendoring xarray.core.dtypes and
             # xarray.core.duck_array_ops

@@ -29,6 +29,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Allow :py:func:`open_datatree` and :py:func:`open_groups` to pass
+  ``use_zarr_fill_value_as_mask`` to the Zarr backend (:issue:`11361`).
+  By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.
