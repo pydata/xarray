@@ -2697,7 +2697,7 @@ class DataArray(
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new DataArray with renamed coordinates, dimensions or a new name.
+        """Returns a DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
         ----------
