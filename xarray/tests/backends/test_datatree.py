@@ -567,6 +567,7 @@ class TestH5NetCDFDatatreeIO(NetCDFIOBase):
 
 @network
 @requires_pydap
+@pytest.mark.skip(reason="test.opendap.org is currently returning 403 Forbidden")
 class TestPyDAPDatatreeIO:
     """Test PyDAP backend for DataTree."""
 
