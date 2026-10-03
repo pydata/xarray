@@ -683,6 +683,50 @@ class TestPyDAPDatatreeIO:
 class TestZarrDatatreeIO:
     engine = "zarr"
 
+    @pytest.mark.parametrize("opener", [open_datatree, open_groups])
+    @pytest.mark.parametrize("use_zarr_fill_value_as_mask", [True, False, None])
+    def test_use_zarr_fill_value_as_mask(
+        self, tmp_path, zarr_format, opener, use_zarr_fill_value_as_mask
+    ) -> None:
+        filepath = tmp_path / "fill_value.zarr"
+        dataset = xr.Dataset({"a": ("x", [0, 1])})
+        encoding = {
+            "a": (
+                {"_FillValue": 0}
+                if zarr_format == 2
+                else {"_FillValue": None, "fill_value": 0}
+            )
+        }
+        for group in ["/", "/child"]:
+            dataset.to_zarr(
+                filepath,
+                group=group,
+                mode="a",
+                encoding=encoding,
+                consolidated=False,
+                zarr_format=zarr_format,
+            )
+
+        masked = use_zarr_fill_value_as_mask
+        if masked is None:
+            masked = zarr_format == 2
+        expected = [np.nan, 1] if masked else [0, 1]
+        result = opener(
+            filepath,
+            engine="zarr",
+            consolidated=False,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+        )
+        try:
+            for group in ["/", "/child"]:
+                np.testing.assert_equal(result[group]["a"].values, expected)
+        finally:
+            if isinstance(result, DataTree):
+                result.close()
+            else:
+                for dataset in result.values():
+                    dataset.close()
+
     def test_to_zarr(self, tmpdir, simple_datatree, zarr_format) -> None:
         filepath = str(tmpdir / "test.zarr")
         original_dt = simple_datatree
