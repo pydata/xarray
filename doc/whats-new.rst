@@ -29,6 +29,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
+  groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
+  members of a group are spread over multiple chunks and are not contiguous.
+  The object is now shuffled so that each group is in a single chunk first
+  (:issue:`11651`, :pull:`11653`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
   together with a per-file write lock, are used from several threads of a dask
   worker. The locks are now always acquired in the same order, also after
@@ -65,8 +71,22 @@ Documentation
   By `imam <https://github.com/imam2004i>`_.
 
 
+Performance
+~~~~~~~~~~~
+- :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` no longer sort
+  coordinates that are already increasing, and reverse strictly decreasing
+  ones instead of sorting them. This avoids copying the data before
+  interpolating (:issue:`9758`, :pull:`11658`).
+  By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- The generated arithmetic operators in ``xarray/core/_typed_ops.py`` use PEP 695
+  type parameters, are tested with mypy, and CI now checks that they are up to
+  date with ``xarray/util/generate_ops.py``. The CI check of the generated
+  aggregations now fails if they are out of date (:pull:`11657`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
