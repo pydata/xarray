@@ -29,6 +29,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Appending to a Zarr store whose time variable is stored with a native
+  ``datetime64`` or ``timedelta64`` dtype now reuses the stored ``units`` and
+  ``calendar``, instead of writing the appended values with default units
+  (:issue:`10639`).
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.
