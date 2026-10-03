@@ -13,6 +13,10 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added `PyArrowCapsule interface <https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#arrow-pycapsule-interface>`_
+  to :py:class:`DataSet`.
+  Added :py:meth:`DataSet.to_arrow` & :py:meth:`DataArray.to_arrow` to export to flat :py:class:`pyarrow.Table`.
+  By `Jules Chéron <https://github.com/jules-ch>`_. (:pull:`11600`)
 
 
 Breaking Changes
