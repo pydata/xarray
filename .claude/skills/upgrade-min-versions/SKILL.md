@@ -1,3 +1,8 @@
+---
+name: upgrade-min-versions
+description: Upgrade the minimum versions of xarray's dependencies (numpy, pandas, dask, zarr, scipy, ...) to match ci/policy.yaml, including pixi.toml/pyproject.toml pins, test decorator cleanup and the whats-new table. Use when bumping dependency minimums or when `pixi run policy-min-versions` shows `<`. For dropping a Python version, use drop-python-version instead.
+---
+
 # Upgrade Minimum Dependency Versions
 
 This skill upgrades xarray's minimum dependency versions to match the policy defined in `ci/policy.yaml`.
@@ -5,6 +10,7 @@ This skill upgrades xarray's minimum dependency versions to match the policy def
 ## When to Use
 
 Run this skill when:
+
 - Preparing a new release that bumps minimum versions
 - The policy file has been updated and manifests need to catch up
 - `pixi run policy-min-versions` shows `<` for any packages
@@ -18,6 +24,7 @@ pixi run policy-min-versions
 ```
 
 This shows a table with:
+
 - `=` means the version matches policy
 - `<` means the version needs to be upgraded
 - `>` means the version exceeds policy (usually fine)
@@ -32,6 +39,7 @@ Update versions in these sections of `pixi.toml`:
 - `[package.run-dependencies]` - for packaging
 
 Example changes:
+
 ```toml
 # [feature.minimal.dependencies]
 numpy = "2.0.*"  # was "1.26.*"
@@ -47,6 +55,7 @@ dask-core = "2025.1.*"  # was "2024.6.*"
 ### 3. Update pyproject.toml
 
 Update the corresponding versions in `pyproject.toml` optional dependencies:
+
 - `dependencies` - numpy, packaging, pandas
 - `[project.optional-dependencies]` - accel, io, viz sections
 
@@ -69,6 +78,7 @@ All packages should now show `=`.
 ### 6. Clean Up Obsolete Test Decorators
 
 In `xarray/tests/__init__.py`, remove any `has_*` / `requires_*` decorators for versions that are now guaranteed by the new minimums. For example:
+
 - If numpy >= 2.0 is now required, remove `has_numpy_2` / `requires_numpy_2`
 - If dask >= 2025.1 is now required, remove `has_dask_ge_2024_*` / `has_dask_ge_2025_1_0` / `has_dask_expr` / `requires_dask_expr`
 - If zarr >= 3.0 is now required, remove `has_zarr_v3` / `requires_zarr_v3`
@@ -81,6 +91,7 @@ rg "has_scipy_ge_|has_dask_ge_|has_zarr_v3[^_]|has_pandas_ge_|has_numpy_2|has_da
 ```
 
 For each file found:
+
 - Remove imports of deleted decorators
 - Remove `@requires_*` decorators that are always true
 - Remove `if has_*:` conditionals (keep only the true branch)
@@ -120,7 +131,9 @@ Breaking Changes
 ## Common Issues
 
 ### Lock file conflicts
+
 If `pixi lock` fails, check for incompatible version combinations. Some packages (like h5py/hdf5) are noted in comments as prone to conflicts.
 
 ### Test failures after cleanup
+
 After removing version guards, some tests may fail if they relied on version-specific behavior. Update the test logic to use only the new minimum version's behavior.

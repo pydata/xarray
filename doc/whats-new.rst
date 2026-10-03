@@ -6,9 +6,9 @@
 What's New
 ==========
 
-.. _whats-new.2026.10.0:
+.. _whats-new.2026.09.1:
 
-v2026.10.0 (unreleased)
+v2026.09.1 (unreleased)
 -----------------------
 
 New Features
@@ -17,6 +17,10 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- Support for Python 3.11 has been dropped. The minimum required Python version
+  is now 3.12, in line with xarray's
+  :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Deprecations
@@ -25,21 +29,65 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-
 - :py:func:`concat` no longer raises ``TypeError: Cannot interpret
   '<StringDtype(...)>' as a data type`` when the objects being joined carry
   index coordinates with a mix of numpy and pandas extension dtypes, which
   happens routinely under pandas 3 when one dimension coordinate came from a
   :py:class:`pandas.Index` and another from a plain list (:issue:`11317`).
   By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
+- Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
+  groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
+  members of a group are spread over multiple chunks and are not contiguous.
+  The object is now shuffled so that each group is in a single chunk first
+  (:issue:`11651`, :pull:`11653`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
+  together with a per-file write lock, are used from several threads of a dask
+  worker. The locks are now always acquired in the same order, also after
+  they were pickled, and copies of the same ``dask.distributed.Lock`` are no
+  longer acquired twice (:pull:`11645`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix ``RuntimeWarning: Cannot close a netcdf_file opened with mmap=True`` and
+  memory maps being left open when reading with ``engine="scipy"`` and dask
+  while files get evicted from the file cache. Data read from memory mapped
+  files is now copied before the file can be closed by another thread
+  (:pull:`11634`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix errors and crashes (``NetCDF: HDF error``, segfaults, double frees) when
+  opening or writing netCDF4 files from multiple threads, e.g. with
+  :py:func:`open_mfdataset` and ``parallel=True``. The netCDF4 backend now
+  holds the netCDF-C lock while reading or writing metadata, which is possible
+  because xarray's global HDF5 and netCDF-C locks and its per-file write locks
+  for the threaded scheduler are now reentrant. The global locks also no longer
+  turn into separate locks when datasets are sent to another process, e.g. to a
+  dask distributed worker (:issue:`9779`, :issue:`11088`, :pull:`11629`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`Dataset.copy` now preserves its resource-closing callback, so a
+  copied file-backed dataset can release a file reopened after the original
+  dataset is closed (:issue:`10106`, :pull:`11643`).
+  By `nightcityblade <https://github.com/nightcityblade>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+- :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` no longer sort
+  coordinates that are already increasing, and reverse strictly decreasing
+  ones instead of sorting them. This avoids copying the data before
+  interpolating (:issue:`9758`, :pull:`11658`).
+  By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- The generated arithmetic operators in ``xarray/core/_typed_ops.py`` use PEP 695
+  type parameters, are tested with mypy, and CI now checks that they are up to
+  date with ``xarray/util/generate_ops.py``. The CI check of the generated
+  aggregations now fails if they are out of date (:pull:`11657`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:

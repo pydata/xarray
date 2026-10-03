@@ -29,8 +29,8 @@ xarray = { path = "." }
 [target.linux-64.dependencies]
 pydap-server = "*"
 
-[feature.py311.dependencies]
-python = "3.11.*"
+[feature.py312.dependencies]
+python = "3.12.*"
 
 [feature.py313.dependencies]
 python = "3.13.*"
@@ -100,7 +100,7 @@ jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
 
 [feature.minimal.dependencies]
 # minimal versions
-python = "3.11.*"
+python = "3.12.*"
 numpy = "1.26.*"
 pandas = "2.2.*"
 
@@ -172,14 +172,20 @@ pytest --doctest-modules xarray/core/_aggregations.py &&\
 ! pytest --doctest-modules xarray/namedarray/_aggregations.py --accept  &&\
 pytest --doctest-modules xarray/namedarray/_aggregations.py &&\
 echo 'Aggregations generated successfully!'
-""", description = "Generate module and stub file for arithmetic operators of various xarray classes." }
-generate-aggregations-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success! Generate-aggregations matches the committed tree" || echo "Failure :( . Generate-aggregations does not match the committed files"', depends-on = [
+""", description = "Generate the aggregation methods of the xarray classes, including the outputs of their doctests." }
+generate-aggregations-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success! Generate-aggregations matches the committed tree" || ( echo "Failure :( . Generate-aggregations does not match the committed files" && git diff && exit 1 )', depends-on = [
   'generate-aggregations',
+  'pre-commit',
+] }
+generate-ops = { cmd = "python xarray/util/generate_ops.py > xarray/core/_typed_ops.py", description = "Generate the mixin classes with the arithmetic operators of the xarray classes." }
+generate-ops-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success! Generate-ops matches the committed tree" || ( echo "Failure :( . Generate-ops does not match the committed files" && git diff && exit 1 )', depends-on = [
+  'generate-ops',
   'pre-commit',
 ] }
 
 [feature.doc.dependencies]
 python = "3.12.*"
+cartopy_offlinedata = "*"          # Natural Earth data, avoids downloads (and timeouts) while executing notebooks
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
@@ -279,6 +285,7 @@ release-contributors = { cmd = "python ci/release_contributors.py", description 
 [feature.dev.dependencies]
 ipython = ">=9.8.0,<10"
 black = ">=25.1.0,<26"
+jinja2 = "*"            # for xarray/util/generate_ops.py
 
 [feature.policy.pypi-dependencies]
 xarray-minimum-dependency-policy = "*"
@@ -293,17 +300,17 @@ args = ["env"]
 [feature.policy.tasks]
 policy-bare-minimum = [
   { task = "_check-policy", args = [
-    "pixi:test-py311-bare-minimum",
+    "pixi:test-py312-bare-minimum",
   ] },
 ]
 policy-bare-min-and-scipy = [
   { task = "_check-policy", args = [
-    "pixi:test-py311-bare-min-and-scipy",
+    "pixi:test-py312-bare-min-and-scipy",
   ] },
 ]
 policy-min-versions = [
   { task = "_check-policy", args = [
-    "pixi:test-py311-min-versions",
+    "pixi:test-py312-min-versions",
   ] },
 ]
 [feature.policy.tasks.policy]
@@ -311,9 +318,9 @@ policy-min-versions = [
 depends-on = [
   { task = "_check-policy", args = [
     """\
-    pixi:test-py311-bare-minimum \
-    pixi:test-py311-bare-min-and-scipy \
-    pixi:test-py311-min-versions \
+    pixi:test-py312-bare-minimum \
+    pixi:test-py312-bare-min-and-scipy \
+    pixi:test-py312-min-versions \
     """,
   ] },
 ]
@@ -400,8 +407,8 @@ test-py314 = { features = [
   "extras",
 ] }
 
-test-py311 = { features = [
-  "py311",
+test-py312 = { features = [
+  "py312",
   "test",
   "backends",
   "accel",
@@ -411,8 +418,8 @@ test-py311 = { features = [
   "extras",
 ] }
 
-test-py311-with-typing = { features = [
-  "py311",
+test-py312-with-typing = { features = [
+  "py312",
   "test",
   "backends",
   "accel",
@@ -437,13 +444,13 @@ test-py314-with-typing = { features = [
   "typing-stubs",
 ] }
 
-test-py311-bare-minimum = { features = ["test", "minimal"] }
-test-py311-bare-min-and-scipy = { features = [
+test-py312-bare-minimum = { features = ["test", "minimal"] }
+test-py312-bare-min-and-scipy = { features = [
   "test",
   "minimal",
   "minimum-scipy",
 ] }
-test-py311-min-versions = { features = [
+test-py312-min-versions = { features = [
   "test",
   "minimal",
   "minimum-scipy",

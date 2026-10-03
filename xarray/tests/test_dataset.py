@@ -3305,6 +3305,17 @@ class TestDataset:
 
             assert data.attrs["Test"] is not copied.attrs["Test"]
 
+    def test_copy_preserves_close(self) -> None:
+        calls: list[None] = []
+        data = create_test_data()
+        data.set_close(lambda: calls.append(None))
+
+        copied = data.copy()
+        data.close()
+        copied.close()
+
+        assert calls == [None, None]
+
     def test_copy_with_data(self) -> None:
         orig = create_test_data()
         new_data = {k: np.random.randn(*v.shape) for k, v in orig.data_vars.items()}
@@ -6290,6 +6301,34 @@ class TestDataset:
         # should be consistent
         actual = data["a"].mean("x").to_dataset()
         assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        "reduce",
+        [
+            lambda ds: ds.mean("x"),
+            lambda ds: ds.quantile(0.5, dim="x"),
+            lambda ds: ds.integrate("x"),
+        ],
+        ids=["mean", "quantile", "integrate"],
+    )
+    def test_reduce_drops_spanning_index(self, reduce) -> None:
+        class CustomIndex(Index): ...
+
+        spanning_index = CustomIndex()
+        coords = {"x": ("x", [0.0, 1.0, 2.0]), "y": ("y", [3.0, 4.0])}
+        ds = Dataset(
+            {"a": (("x", "y"), np.arange(6).reshape(3, 2))},
+            coords=Coordinates(
+                coords, indexes={"x": spanning_index, "y": spanning_index}
+            ),
+        ).assign_coords(z=("z", [5.0, 6.0]))
+
+        result = reduce(ds)
+
+        assert "y" in result.coords
+        assert "x" not in result.xindexes
+        assert "y" not in result.xindexes
+        assert result.xindexes["z"].equals(ds.xindexes["z"])
 
     def test_mean_uint_dtype(self) -> None:
         data = xr.Dataset(
