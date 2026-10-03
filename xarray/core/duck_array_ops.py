@@ -121,7 +121,10 @@ def _dask_or_eager_func(
 def fail_on_dask_array_input(values, msg=None, func_name=None):
     if is_duck_dask_array(values):
         if msg is None:
-            msg = "%r is not yet a valid method on dask arrays"
+            msg = (
+                "%r is not yet a valid method on dask arrays. Load the data into "
+                "memory first, e.g. with '.compute()' or '.load()'."
+            )
         if func_name is None:
             func_name = inspect.stack()[1][3]
         raise NotImplementedError(msg % func_name)

@@ -270,7 +270,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         with pytest.raises(NotImplementedError, match="dask"):
             v.argsort()
-        with pytest.raises(NotImplementedError, match="dask"):
+        with pytest.raises(NotImplementedError, match="Load the data into memory"):
             v[0].item()  # type: ignore[attr-defined]
 
     def test_univariate_ufunc(self):

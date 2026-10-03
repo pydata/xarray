@@ -125,12 +125,29 @@ def _call_possibly_missing_method(arg, name, args, kwargs):
         return method(*args, **kwargs)
 
 
+# Note appended to the inherited NumPy docstring of ``item``, which is not
+# implemented for lazy (e.g. dask) arrays, see
+# duck_array_ops.fail_on_dask_array_input. Inserted before the "Parameters"
+# section so it renders near the top of the method documentation.
+_ITEM_DASK_NOTE = (
+    "\n.. note::\n"
+    "    For xarray objects wrapping a lazy array such as a dask array,\n"
+    "    ``item`` is not implemented and raises ``NotImplementedError``.\n"
+    "    Load the data into memory first, for example with\n"
+    "    ``obj.compute().item()`` or ``obj.as_numpy().item()``.\n"
+)
+
+
 def _values_method_wrapper(name):
     def func(self, *args, **kwargs):
         return _call_possibly_missing_method(self.data, name, args, kwargs)
 
     func.__name__ = name
-    func.__doc__ = getattr(np.ndarray, name).__doc__
+    doc = getattr(np.ndarray, name).__doc__
+    if name == "item" and doc is not None:
+        anchor = "\nParameters\n"
+        doc = doc.replace(anchor, _ITEM_DASK_NOTE + anchor, 1)
+    func.__doc__ = doc
     return func
 
 

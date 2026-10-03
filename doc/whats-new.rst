@@ -64,6 +64,11 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Clarified that :py:meth:`DataArray.item` and :py:meth:`Variable.item` are not
+  implemented for lazy (e.g. dask) arrays, both in the method docstring and in the
+  raised error message, which now suggests loading the data into memory first
+  (:issue:`7916`).
+  By `imam <https://github.com/imam2004i>`_.
 
 
 Performance
