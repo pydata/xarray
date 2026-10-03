@@ -2229,6 +2229,38 @@ def test_fill_value_coder_inf_nan(value, dtype) -> None:
 
 
 @requires_zarr
+def test_fill_value_coder_json_bytes() -> None:
+    from xarray.backends.zarr import FillValueCoder
+
+    decoded = FillValueCoder.decode("hello", np.dtype("S5"))
+    assert decoded == b"hello"
+
+
+@requires_zarr
+def test_fill_value_coder_json_none() -> None:
+    from xarray.backends.zarr import FillValueCoder
+
+    decoded = FillValueCoder.decode(None, np.dtype("float32"))
+    assert decoded is None
+
+
+@requires_zarr
+def test_fill_value_coder_json_float() -> None:
+    from xarray.backends.zarr import FillValueCoder
+
+    decoded = FillValueCoder.decode(0.0, np.dtype("float32"))
+    assert decoded == np.float32(0.0)
+
+
+@requires_zarr
+def test_fill_value_coder_json_string() -> None:
+    from xarray.backends.zarr import FillValueCoder
+
+    decoded = FillValueCoder.decode("hello", np.dtype("U5"))
+    assert decoded == "hello"
+
+
+@requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
     var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
