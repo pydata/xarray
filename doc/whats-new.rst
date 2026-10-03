@@ -29,6 +29,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:func:`concat` no longer raises ``TypeError: Cannot interpret
+  '<StringDtype(...)>' as a data type`` when the objects being joined carry
+  index coordinates with a mix of numpy and pandas extension dtypes, which
+  happens routinely under pandas 3 when one dimension coordinate came from a
+  :py:class:`pandas.Index` and another from a plain list (:issue:`11317`).
+  By `Dipak Chaudhari <https://github.com/dchaudhari7177>`_.
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.
