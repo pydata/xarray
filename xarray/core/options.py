@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         "display_expand_data",
         "display_expand_groups",
         "display_expand_indexes",
+        "display_expand_accessors",
         "display_default_indexes",
         "enable_cftimeindex",
         "file_cache_maxsize",
@@ -63,6 +64,7 @@ if TYPE_CHECKING:
         display_expand_data: Literal["default"] | bool
         display_expand_groups: Literal["default"] | bool
         display_expand_indexes: Literal["default"] | bool
+        display_expand_accessors: Literal["default"] | bool
         display_default_indexes: Literal["default"] | bool
         enable_cftimeindex: bool
         file_cache_maxsize: int
@@ -97,6 +99,7 @@ OPTIONS: T_Options = {
     "display_expand_data": "default",
     "display_expand_groups": "default",
     "display_expand_indexes": "default",
+    "display_expand_accessors": "default",
     "display_default_indexes": False,
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
@@ -137,6 +140,7 @@ _VALIDATORS = {
     "display_expand_data_vars": lambda choice: choice in [True, False, "default"],
     "display_expand_data": lambda choice: choice in [True, False, "default"],
     "display_expand_indexes": lambda choice: choice in [True, False, "default"],
+    "display_expand_accessors": lambda choice: choice in [True, False, "default"],
     "display_default_indexes": lambda choice: choice in [True, False, "default"],
     "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
@@ -286,6 +290,13 @@ class set_options:
         * ``True`` : to always expand indexes
         * ``False`` : to always collapse indexes
         * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
+    display_expand_accessors : {"default", True, False}
+        Whether to expand the accessors section for display of
+        ``DataArray``, ``Dataset``, or ``DataTree`` objects. Can be
+
+        * ``True`` : to always expand accessors
+        * ``False`` : to always collapse accessors
+        * ``default`` : to expand unless over a pre-defined limit
     display_max_children : int, default: 12
         Maximum number of children to display for each node in a DataTree.
     display_max_html_elements : int, default: 300

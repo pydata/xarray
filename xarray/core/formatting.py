@@ -443,6 +443,31 @@ attrs_repr = functools.partial(
 )
 
 
+def summarize_accessor(key, value, col_width=None):
+    """Summary line for a registered accessor in ``__repr__``."""
+    k_str = f"    {key}:"
+    if col_width is not None:
+        k_str = pretty_print(k_str, col_width)
+    v_str = repr(value).replace("\t", "\\t").replace("\n", "\\n")
+    return maybe_truncate(f"{k_str} {v_str}", OPTIONS["display_width"])
+
+
+def accessors_repr(obj, max_rows=None):
+    """Return an Accessors section for ``obj``, or ``None`` if empty."""
+    from xarray.core.extensions import get_accessors_for_repr
+
+    accessors = get_accessors_for_repr(obj)
+    if not accessors:
+        return None
+    return _mapping_repr(
+        accessors,
+        title="Accessors",
+        summarizer=summarize_accessor,
+        expand_option_name="display_expand_accessors",
+        max_rows=max_rows,
+    )
+
+
 def _coord_sort_key(coord, dims):
     """Sort key for coordinate ordering.
 
@@ -767,6 +792,9 @@ def array_repr(arr):
         if xindexes:
             summary.append(indexes_repr(xindexes, max_rows=max_rows))
 
+    if accessors_section := accessors_repr(arr, max_rows=max_rows):
+        summary.append(accessors_section)
+
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs, max_rows=max_rows))
 
@@ -804,6 +832,9 @@ def dataset_repr(ds):
     )
     if xindexes:
         summary.append(indexes_repr(xindexes, max_rows=max_rows))
+
+    if accessors_section := accessors_repr(ds, max_rows=max_rows):
+        summary.append(accessors_section)
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
@@ -1238,6 +1269,9 @@ def _datatree_node_repr(node: DataTree, root: bool) -> str:
     )
     if xindexes:
         summary.append(indexes_repr(xindexes, max_rows=max_rows))
+
+    if accessors_section := accessors_repr(node, max_rows=max_rows):
+        summary.append(accessors_section)
 
     if node.attrs:
         summary.append(attrs_repr(node.attrs, max_rows=max_rows))

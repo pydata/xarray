@@ -1246,3 +1246,75 @@ Coordinates:
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected
+
+
+def test_dataset_repr_includes_custom_accessor() -> None:
+    @xr.register_dataset_accessor("repr_demo_fmt")
+    class ReprDemo:
+        def __init__(self, obj):
+            self._obj = obj
+
+        def __repr__(self) -> str:
+            return "ReprDemo(ok)"
+
+    try:
+        ds = xr.Dataset({"x": 1})
+        text = formatting.dataset_repr(ds)
+        assert "Accessors:" in text
+        assert "repr_demo_fmt:" in text
+        assert "ReprDemo(ok)" in text
+        # Accessors appear before Attributes when both present
+        ds.attrs["a"] = 1
+        text = formatting.dataset_repr(ds)
+        assert text.index("Accessors:") < text.index("Attributes:")
+    finally:
+        del xr.Dataset.repr_demo_fmt  # type: ignore[attr-defined]
+
+
+def test_dataset_repr_skips_accessor_without_custom_repr() -> None:
+    @xr.register_dataset_accessor("no_repr_demo_fmt")
+    class NoCustomRepr:
+        def __init__(self, obj):
+            self._obj = obj
+
+    try:
+        text = formatting.dataset_repr(xr.Dataset())
+        assert "Accessors:" not in text
+        assert "no_repr_demo_fmt" not in text
+    finally:
+        del xr.Dataset.no_repr_demo_fmt  # type: ignore[attr-defined]
+
+
+def test_dataset_repr_omits_broken_accessor() -> None:
+    @xr.register_dataset_accessor("broken_repr_demo_fmt")
+    class BrokenAccessor:
+        def __init__(self, obj):
+            raise AttributeError("broken")
+
+        def __repr__(self) -> str:
+            return "Broken()"
+
+    try:
+        text = formatting.dataset_repr(xr.Dataset())
+        assert "Accessors:" not in text
+        assert "broken_repr_demo_fmt" not in text
+    finally:
+        del xr.Dataset.broken_repr_demo_fmt  # type: ignore[attr-defined]
+
+
+def test_dataarray_repr_includes_custom_accessor() -> None:
+    @xr.register_dataarray_accessor("repr_demo_da")
+    class ReprDemoDA:
+        def __init__(self, obj):
+            self._obj = obj
+
+        def __repr__(self) -> str:
+            return "ReprDemoDA()"
+
+    try:
+        text = formatting.array_repr(xr.DataArray(0))
+        assert "Accessors:" in text
+        assert "repr_demo_da:" in text
+        assert "ReprDemoDA()" in text
+    finally:
+        del xr.DataArray.repr_demo_da  # type: ignore[attr-defined]
