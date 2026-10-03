@@ -77,6 +77,11 @@ Performance
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- The generated arithmetic operators in ``xarray/core/_typed_ops.py`` use PEP 695
+  type parameters, are tested with mypy, and CI now checks that they are up to
+  date with ``xarray/util/generate_ops.py``. The CI check of the generated
+  aggregations now fails if they are out of date (:pull:`11657`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
