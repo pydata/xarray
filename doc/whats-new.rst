@@ -84,6 +84,13 @@ Internal Changes
   date with ``xarray/util/generate_ops.py``. The CI check of the generated
   aggregations now fails if they are out of date (:pull:`11657`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add type hints to ``__array_ufunc__`` of :py:class:`Variable`,
+  :py:class:`DataArray` and :py:class:`Dataset`, matching the ``__array_ufunc__``
+  protocols of NumPy's ufunc stubs. Once NumPy prefers these protocols over its
+  ``ArrayLike`` overloads, static type checkers infer e.g. ``np.exp(da)`` as
+  :py:class:`DataArray` and ``np.add(da, ds)`` as :py:class:`Dataset`
+  instead of ``np.ndarray`` (:issue:`8388`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
