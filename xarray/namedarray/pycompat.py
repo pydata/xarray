@@ -15,7 +15,7 @@ integer_types = (int, np.integer)
 if TYPE_CHECKING:
     ModType = Literal["dask", "pint", "cupy", "sparse", "cubed", "numbagg"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
-    from xarray.namedarray._typing import DType, ShapeType, duckarray
+    from xarray.namedarray._typing import duckarray
 
 
 class DuckArrayModule:
@@ -127,7 +127,9 @@ def to_numpy(
     return data
 
 
-def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[ShapeType, DType]:
+def to_duck_array[ShapeType, DType: np.dtype[Any]](
+    data: Any, **kwargs: dict[str, Any]
+) -> duckarray[ShapeType, DType]:
     from xarray.core.indexing import (
         ExplicitlyIndexed,
         ImplicitToExplicitIndexingAdapter,
@@ -147,7 +149,7 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[ShapeType, D
         return np.asarray(data)  # type: ignore[return-value, unused-ignore]
 
 
-async def async_to_duck_array(
+async def async_to_duck_array[ShapeType, DType: np.dtype[Any]](
     data: Any, **kwargs: dict[str, Any]
 ) -> duckarray[ShapeType, DType]:
     from xarray.core.indexing import (

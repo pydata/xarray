@@ -21,10 +21,7 @@ from xarray.namedarray.pycompat import is_chunked_array
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         Chunks,
-        DType,
-        DType_co,
         NormalizedChunks,
-        ShapeType,
         T_Chunks,
         duckarray,
     )
@@ -39,9 +36,9 @@ class ChunkedArrayMixinProtocol(Protocol):
     @property
     def chunks(self) -> NormalizedChunks: ...
 
-    def compute(
+    def compute[DType: np.dtype[Any]](
         self, *data: Any, **kwargs: Any
-    ) -> tuple[np.ndarray[Any, DType_co], ...]: ...
+    ) -> tuple[np.ndarray[Any, DType], ...]: ...
 
 
 T_ChunkedArray = TypeVar("T_ChunkedArray", bound=ChunkedArrayMixinProtocol)
@@ -262,10 +259,10 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def normalize_chunks(
+    def normalize_chunks[DType: np.dtype[Any]](
         self,
         chunks: Chunks | NormalizedChunks,
-        shape: ShapeType | None = None,
+        shape: tuple[int, ...] | None = None,
         limit: int | None = None,
         dtype: DType | None = None,
         previous_chunks: NormalizedChunks | None = None,
@@ -370,9 +367,9 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         return data.rechunk(chunks2, **kwargs)
 
     @abstractmethod
-    def compute(
+    def compute[DType: np.dtype[Any]](
         self, *data: T_ChunkedArray | Any, **kwargs: Any
-    ) -> tuple[np.ndarray[Any, DType_co], ...]:
+    ) -> tuple[np.ndarray[Any, DType], ...]:
         """
         Computes one or more chunked arrays, returning them as eager numpy arrays.
 
@@ -441,14 +438,14 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         """
         raise NotImplementedError()
 
-    def reduction(
+    def reduction[DType: np.dtype[Any]](
         self,
         arr: T_ChunkedArray,
         func: Callable[..., Any],
         combine_func: Callable[..., Any] | None = None,
         aggregate_func: Callable[..., Any] | None = None,
         axis: int | Sequence[int] | None = None,
-        dtype: DType_co | None = None,
+        dtype: DType | None = None,
         keepdims: bool = False,
     ) -> T_ChunkedArray:
         """
@@ -490,14 +487,14 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         """
         raise NotImplementedError()
 
-    def scan(
+    def scan[DType: np.dtype[Any]](
         self,
         func: Callable[..., Any],
         binop: Callable[..., Any],
         ident: float,
         arr: T_ChunkedArray,
         axis: int | None = None,
-        dtype: DType_co | None = None,
+        dtype: DType | None = None,
         **kwargs: Any,
     ) -> T_ChunkedArray:
         """
@@ -528,14 +525,14 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def apply_gufunc(
+    def apply_gufunc[DType: np.dtype[Any]](
         self,
         func: Callable[..., Any],
         signature: str,
         *args: Any,
         axes: Sequence[tuple[int, ...]] | None = None,
         keepdims: bool = False,
-        output_dtypes: Sequence[DType_co] | None = None,
+        output_dtypes: Sequence[DType] | None = None,
         vectorize: bool | None = None,
         **kwargs: Any,
     ) -> Any:
@@ -614,11 +611,11 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         """
         raise NotImplementedError()
 
-    def map_blocks(
+    def map_blocks[DType: np.dtype[Any]](
         self,
         func: Callable[..., Any],
         *args: Any,
-        dtype: DType_co | None = None,
+        dtype: DType | None = None,
         chunks: tuple[int, ...] | None = None,
         drop_axis: int | Sequence[int] | None = None,
         new_axis: int | Sequence[int] | None = None,

@@ -11,7 +11,6 @@ from typing import (
     Any,
     Generic,
     Literal,
-    TypeVar,
     cast,
     overload,
     override,
@@ -28,11 +27,9 @@ from xarray.core.indexing import (
 )
 from xarray.namedarray._aggregations import NamedArrayAggregations
 from xarray.namedarray._typing import (
-    DimType,
     DimType_co,
     DType_co,
     ErrorHandlingWithWarn,
-    ScalarType_co,
     ShapeType_co,
     SupportsImag,
     SupportsReal,
@@ -61,11 +58,8 @@ if TYPE_CHECKING:
         Chunks,
         Default,
         DimsLike,
-        DType,
         IntOrUnknown,
-        ScalarType,
         Shape,
-        ShapeType,
         duckarray,
     )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
@@ -87,14 +81,9 @@ if TYPE_CHECKING:
 
     from typing import Self
 
-    T_NamedArray = TypeVar("T_NamedArray", bound="_NamedArray[Any, Any]")
-    T_NamedArrayInteger = TypeVar(
-        "T_NamedArrayInteger", bound="_NamedArray[np.integer[Any], Any]"
-    )
-
 
 @overload
-def _new(
+def _new[ShapeType_co, DType_co: np.dtype[Any], DimType_co: Hashable](
     x: NamedArray[ShapeType_co, DType_co, DimType_co],
     dims: Default = ...,
     data: Default = ...,
@@ -103,7 +92,12 @@ def _new(
 
 
 @overload
-def _new(
+def _new[
+    ShapeType_co,
+    DType_co: np.dtype[Any],
+    DimType_co: Hashable,
+    DimType: Hashable,
+](
     x: NamedArray[ShapeType_co, DType_co, DimType_co],
     dims: Iterable[DimType] = ...,
     data: Default = ...,
@@ -112,7 +106,12 @@ def _new(
 
 
 @overload
-def _new(
+def _new[
+    DType_co: np.dtype[Any],
+    DimType_co: Hashable,
+    ShapeType,
+    DType: np.dtype[Any],
+](
     x: NamedArray[Any, DType_co, DimType_co],
     dims: Default = ...,
     data: duckarray[ShapeType, DType] = ...,
@@ -121,7 +120,13 @@ def _new(
 
 
 @overload
-def _new(
+def _new[
+    DType_co: np.dtype[Any],
+    DimType_co: Hashable,
+    DimType: Hashable,
+    ShapeType,
+    DType: np.dtype[Any],
+](
     x: NamedArray[Any, DType_co, DimType_co],
     dims: Iterable[DimType] = ...,
     data: duckarray[ShapeType, DType] = ...,
@@ -129,7 +134,13 @@ def _new(
 ) -> NamedArray[ShapeType, DType, DimType]: ...
 
 
-def _new(
+def _new[
+    DType_co: np.dtype[Any],
+    DimType_co: Hashable,
+    DimType: Hashable,
+    ShapeType,
+    DType: np.dtype[Any],
+](
     x: NamedArray[Any, DType_co, DimType_co],
     dims: Iterable[DimType] | Default = _default,
     data: duckarray[ShapeType, DType] | Default = _default,
@@ -167,7 +178,7 @@ def _new(
 
 
 @overload
-def from_array(
+def from_array[DimType_co: Hashable, ShapeType, DType: np.dtype[Any]](
     dims: Iterable[DimType_co],
     data: duckarray[ShapeType, DType],
     attrs: AttrsLike = ...,
@@ -175,14 +186,14 @@ def from_array(
 
 
 @overload
-def from_array(
+def from_array[DimType_co: Hashable](
     dims: Iterable[DimType_co],
     data: ArrayLike,
     attrs: AttrsLike = ...,
 ) -> NamedArray[Any, Any, DimType_co]: ...
 
 
-def from_array(
+def from_array[DimType_co: Hashable, ShapeType, DType: np.dtype[Any]](
     dims: Iterable[DimType_co],
     data: duckarray[ShapeType, DType] | ArrayLike,
     attrs: AttrsLike = None,
@@ -301,7 +312,7 @@ class NamedArray(
     ) -> NamedArray[ShapeType_co, DType_co, DimType_co]: ...
 
     @overload
-    def _new(
+    def _new[DimType: Hashable](
         self,
         dims: Iterable[DimType] = ...,
         data: Default = ...,
@@ -309,7 +320,7 @@ class NamedArray(
     ) -> NamedArray[ShapeType_co, DType_co, DimType]: ...
 
     @overload
-    def _new(
+    def _new[ShapeType, DType: np.dtype[Any]](
         self,
         dims: Default = ...,
         data: duckarray[ShapeType, DType] = ...,
@@ -317,14 +328,14 @@ class NamedArray(
     ) -> NamedArray[ShapeType, DType, DimType_co]: ...
 
     @overload
-    def _new(
+    def _new[DimType: Hashable, ShapeType, DType: np.dtype[Any]](
         self,
         dims: Iterable[DimType] = ...,
         data: duckarray[ShapeType, DType] = ...,
         attrs: AttrsLike | Default = ...,
     ) -> NamedArray[ShapeType, DType, DimType]: ...
 
-    def _new(
+    def _new[DimType: Hashable, DType: np.dtype[Any], ShapeType](
         self,
         dims: Iterable[DimType] | Default = _default,
         data: duckarray[Any, DType] | Default = _default,
@@ -358,7 +369,7 @@ class NamedArray(
         """
         return _new(self, dims, data, attrs)
 
-    def _replace(
+    def _replace[DimType: Hashable](
         self,
         dims: Iterable[DimType] | Default = _default,
         data: duckarray[ShapeType_co, DType_co] | Default = _default,
@@ -597,7 +608,7 @@ class NamedArray(
         self._data = data
 
     @property
-    def imag(
+    def imag[ShapeType, ScalarType: np.generic](
         self: NamedArray[ShapeType, np.dtype[SupportsImag[ScalarType]], DimType_co],  # type: ignore[type-var]
     ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType_co]:
         """
@@ -615,7 +626,7 @@ class NamedArray(
         return self._new(data=self._data.imag)
 
     @property
-    def real(
+    def real[ShapeType, ScalarType: np.generic](
         self: NamedArray[ShapeType, np.dtype[SupportsReal[ScalarType]], DimType_co],  # type: ignore[type-var]
     ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType_co]:
         """
@@ -1005,7 +1016,9 @@ class NamedArray(
         # Return NamedArray to handle IndexVariable when data is nD
         return from_array(dims, data, attrs=self._attrs)
 
-    def _nonzero(self: T_NamedArrayInteger) -> tuple[T_NamedArrayInteger, ...]:
+    def _nonzero[T_NamedArrayInteger: _NamedArray[np.integer[Any], Any]](
+        self: T_NamedArrayInteger,
+    ) -> tuple[T_NamedArrayInteger, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
@@ -1233,10 +1246,12 @@ class NamedArray(
         return expand_dims(self, dim=dim)
 
 
-_NamedArray = NamedArray[Any, np.dtype[ScalarType_co], DimType_co]
+type _NamedArray[ScalarType: np.generic, DimType: Hashable] = NamedArray[
+    Any, np.dtype[ScalarType], DimType
+]
 
 
-def _raise_if_any_duplicate_dimensions(
+def _raise_if_any_duplicate_dimensions[DimType_co: Hashable](
     dims: tuple[DimType_co, ...], err_context: str = "This function"
 ) -> None:
     if len(set(dims)) < len(dims):

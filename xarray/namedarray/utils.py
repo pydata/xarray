@@ -4,7 +4,7 @@ import importlib
 import itertools
 import sys
 import warnings
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
 from numbers import Number
 from typing import TYPE_CHECKING, Any, cast
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
     from xarray.core.types import T_ChunkDim
-    from xarray.namedarray._typing import DimType, DuckArray, duckarray
+    from xarray.namedarray._typing import DuckArray, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -104,7 +104,7 @@ def is_dict_like(value: Any) -> TypeGuard[Mapping[Any, Any]]:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
-def drop_missing_dims(
+def drop_missing_dims[DimType: Hashable](
     supplied_dims: Iterable[DimType | EllipsisType],
     dims: Iterable[DimType],
     missing_dims: ErrorHandlingWithWarn,
@@ -140,7 +140,7 @@ def drop_missing_dims(
     return tuple(d for d in supplied_dims_tuple if d in dims_set or d is ...)
 
 
-def infix_dims(
+def infix_dims[DimType: Hashable](
     dims_supplied: Iterable[DimType | EllipsisType],
     dims_all: Iterable[DimType],
     missing_dims: ErrorHandlingWithWarn = "raise",

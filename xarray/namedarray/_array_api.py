@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Hashable
 from types import ModuleType
 from typing import Any, overload
 
@@ -9,10 +10,6 @@ from xarray.namedarray._typing import (
     Axes,
     Axis,
     Default,
-    DimType,
-    DType,
-    ScalarType,
-    ShapeType,
     SupportsImag,
     SupportsReal,
     _default,
@@ -31,7 +28,7 @@ def _get_data_namespace(x: NamedArray[Any, Any, Any]) -> ModuleType:
 # %% Creation Functions
 
 
-def astype(
+def astype[ShapeType, DimType: Hashable, DType: np.dtype[Any]](
     x: NamedArray[ShapeType, Any, DimType], dtype: DType, /, *, copy: bool = True
 ) -> NamedArray[ShapeType, DType, DimType]:
     """
@@ -78,7 +75,7 @@ def astype(
 # %% Elementwise Functions
 
 
-def imag(
+def imag[ShapeType, DimType: Hashable, ScalarType: np.generic](
     x: NamedArray[ShapeType, np.dtype[SupportsImag[ScalarType]], DimType],  # type: ignore[type-var]
     /,
 ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType]:
@@ -111,7 +108,7 @@ def imag(
     return out
 
 
-def real(
+def real[ShapeType, DimType: Hashable, ScalarType: np.generic](
     x: NamedArray[ShapeType, np.dtype[SupportsReal[ScalarType]], DimType],  # type: ignore[type-var]
     /,
 ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType]:
@@ -148,7 +145,7 @@ def real(
 
 
 @overload
-def expand_dims(
+def expand_dims[DType: np.dtype[Any], DimType: Hashable](
     x: NamedArray[Any, DType, DimType],
     /,
     *,
@@ -158,7 +155,7 @@ def expand_dims(
 
 
 @overload
-def expand_dims(
+def expand_dims[DType: np.dtype[Any], DimType: Hashable](
     x: NamedArray[Any, DType, DimType],
     /,
     *,
@@ -167,7 +164,7 @@ def expand_dims(
 ) -> NamedArray[Any, DType, DimType | str]: ...
 
 
-def expand_dims(
+def expand_dims[DType: np.dtype[Any], DimType: Hashable](
     x: NamedArray[Any, DType, DimType],
     /,
     *,
@@ -213,7 +210,7 @@ def expand_dims(
     return out
 
 
-def permute_dims(
+def permute_dims[DType: np.dtype[Any], DimType: Hashable](
     x: NamedArray[Any, DType, DimType], axes: Axes
 ) -> NamedArray[Any, DType, DimType]:
     """

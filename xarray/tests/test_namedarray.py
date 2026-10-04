@@ -30,8 +30,6 @@ if TYPE_CHECKING:
     from xarray.namedarray._typing import (
         AttrsLike,
         Default,
-        DimType,
-        DType,
         DuckArray,
         IndexKeyLike,
         IntOrUnknown,
@@ -86,7 +84,9 @@ class CustomArrayIndexable[ShapeType_co, DType_co: np.dtype[Any]](
         return np
 
 
-def check_duck_array_typevar(a: duckarray[Any, DType]) -> duckarray[Any, DType]:
+def check_duck_array_typevar[DType: np.dtype[Any]](
+    a: duckarray[Any, DType],
+) -> duckarray[Any, DType]:
     # Mypy checks a is valid:
     b: duckarray[Any, DType] = a
 
@@ -413,7 +413,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             ) -> Variable[ShapeType_co, DType_co, DimType_co]: ...
 
             @overload
-            def _new(
+            def _new[DimType: Hashable](
                 self,
                 dims: Iterable[DimType] = ...,
                 data: Default = ...,
@@ -421,7 +421,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             ) -> Variable[ShapeType_co, DType_co, DimType]: ...
 
             @overload
-            def _new(
+            def _new[DType: np.dtype[Any]](
                 self,
                 dims: Default = ...,
                 data: duckarray[Any, DType] = ...,
@@ -429,14 +429,14 @@ class TestNamedArray(NamedArraySubclassobjects):
             ) -> Variable[Any, DType, DimType_co]: ...
 
             @overload
-            def _new(
+            def _new[DimType: Hashable, DType: np.dtype[Any]](
                 self,
                 dims: Iterable[DimType] = ...,
                 data: duckarray[Any, DType] = ...,
                 attrs: AttrsLike | Default = ...,
             ) -> Variable[Any, DType, DimType]: ...
 
-            def _new(
+            def _new[DimType: Hashable, DType: np.dtype[Any]](
                 self,
                 dims: Iterable[DimType] | Default = _default,
                 data: duckarray[Any, DType] | Default = _default,
@@ -496,7 +496,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             ) -> Variable[ShapeType_co, DType_co, DimType_co]: ...
 
             @overload
-            def _new(
+            def _new[DimType: Hashable](
                 self,
                 dims: Iterable[DimType] = ...,
                 data: Default = ...,
@@ -504,7 +504,7 @@ class TestNamedArray(NamedArraySubclassobjects):
             ) -> Variable[ShapeType_co, DType_co, DimType]: ...
 
             @overload
-            def _new(
+            def _new[DType: np.dtype[Any]](
                 self,
                 dims: Default = ...,
                 data: duckarray[Any, DType] = ...,
@@ -512,14 +512,14 @@ class TestNamedArray(NamedArraySubclassobjects):
             ) -> Variable[Any, DType, DimType_co]: ...
 
             @overload
-            def _new(
+            def _new[DimType: Hashable, DType: np.dtype[Any]](
                 self,
                 dims: Iterable[DimType] = ...,
                 data: duckarray[Any, DType] = ...,
                 attrs: AttrsLike | Default = ...,
             ) -> Variable[Any, DType, DimType]: ...
 
-            def _new(
+            def _new[DimType: Hashable, DType: np.dtype[Any]](
                 self,
                 dims: Iterable[DimType] | Default = _default,
                 data: duckarray[Any, DType] | Default = _default,
