@@ -64,7 +64,9 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Fix the backend array indexing examples to pass indexers as a single tuple
+  to ``_raw_indexing_method`` (:issue:`7450`, :pull:`11583`).
+  By `Seahzee <https://github.com/Seahzee>`_.
 
 Performance
 ~~~~~~~~~~~
