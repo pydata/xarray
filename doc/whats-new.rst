@@ -89,7 +89,7 @@ Internal Changes
   protocols of NumPy's ufunc stubs. Once NumPy prefers these protocols over its
   ``ArrayLike`` overloads, static type checkers infer e.g. ``np.exp(da)`` as
   :py:class:`DataArray` and ``np.add(da, ds)`` as :py:class:`Dataset`
-  instead of ``np.ndarray`` (:issue:`8388`).
+  instead of ``np.ndarray`` (:issue:`8388`, :pull:`11667`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
