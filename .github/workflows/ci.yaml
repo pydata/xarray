@@ -92,6 +92,7 @@ jobs:
           - pixi-env: "test-py314"
             pytest-addopts: "flaky"
             os: ubuntu-latest
+            numprocesses: 1
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
           - pixi-env: "test-py312-with-typing"
