@@ -84,6 +84,10 @@ Internal Changes
   date with ``xarray/util/generate_ops.py``. The CI check of the generated
   aggregations now fails if they are out of date (:pull:`11657`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:class:`~xarray.NamedArray` is now generic in the type of its dimension
+  names, i.e. ``NamedArray[ShapeType, DType, DimType]``, so static type checkers
+  can infer and check the type of dimension names (:pull:`11223`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
@@ -350,10 +354,6 @@ Performance
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- :py:class:`~xarray.NamedArray` is now generic in its dimension type, i.e.
-  ``NamedArray[ShapeType, DType, DimType]``, so static type checkers can infer and
-  check the type of dimension names (:pull:`11223`).
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
   which caused ``AsyncMock`` objects to leak through instead of real array data
   (:pull:`11232`).
