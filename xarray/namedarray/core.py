@@ -238,10 +238,25 @@ def from_array[DimType_co: Hashable, ShapeType, DType: np.dtype[Any]](
     return NamedArray(dims, np.asarray(data), attrs)
 
 
-# Not using PEP 695 type parameters: their variance is inferred, and the mutable
-# data (the `data` setter and `_data`) makes NamedArray invariant. It is meant to
-# be covariant though, e.g. NamedArray[Any, dtype[float64]] should be usable as
-# NamedArray[Any, dtype[Any]], even if assigning to `data` makes that unsound.
+# Variance of the type parameters:
+# All three (shape, dtype, dims) are covariant, e.g. a
+# NamedArray[Any, dtype[float64], Literal["x"]] is usable as a
+# NamedArray[Any, dtype[Any], str]. This is the same as numpy's ndarray.
+#
+# This is not fully sound: the `data` and `dims` setters (and some methods, e.g.
+# `get_axis_num`) take the type variables as input. Assigning through an upcast
+# reference can therefore make the static type wrong. We accept this:
+# - The setters are typed with the class type variables on purpose, so that
+#   assigning e.g. int data to a NamedArray typed as float64 is still caught in
+#   the common (non-upcast) case. Typing them loosely, as numpy does, would hide
+#   these mistakes without making anything sound.
+# - The shape and number of dims are checked at runtime by the setters anyway.
+# - A fully sound alternative is an immutable NamedArray without setters, which
+#   would be a breaking API change.
+#
+# PEP 695 type parameters are not used here, because their variance is inferred
+# and the setters would make NamedArray invariant. Hence the explicitly covariant
+# TypeVars with `Generic`.
 class NamedArray(
     NamedArrayAggregations[DimType_co],
     Generic[ShapeType_co, DType_co, DimType_co],  # noqa: UP046
