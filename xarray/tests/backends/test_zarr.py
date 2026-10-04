@@ -2272,6 +2272,7 @@ def test_open_zarr_json_native_fill_value(tmp_path) -> None:
 
     np.testing.assert_array_equal(ds["data"], [1.0, 2.0, 3.0])
 
+
 @requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
     var = xr.Variable("x", [1, 2])
