@@ -122,3 +122,28 @@
     da = xr.DataArray([1.0], dims="x")
 
     reveal_type(reduce(da))  # N: Revealed type is "Never"
+
+# The ufunc stubs of NumPy >= 2.6 use the `__array_ufunc__` protocols. Not collected
+# for older versions.
+- case: test_mypy_array_ufunc_numpy_ufuncs
+  skip: __import__("numpy").lib.NumpyVersion(__import__("numpy").__version__) < "2.6.0.dev0"
+  main: |
+    import numpy as np
+    import xarray as xr
+
+    v = xr.Variable("x", [1.0])
+    da = xr.DataArray([1.0], dims="x")
+    ds = xr.Dataset({"a": da})
+
+    reveal_type(np.isnan(v))  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(np.isnan(da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(np.isnan(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.exp(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.sqrt(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.subtract(ds, 1))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.maximum(ds, 0))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.greater(ds, 0))  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+    # NumPy checks its `ArrayLike` overloads first, which match DataArray, as it
+    # implements `__array__` (numpy/numpy#25024). Update once this is fixed.
+    reveal_type(np.exp(da))  # N: Revealed type is "Any"
