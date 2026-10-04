@@ -180,7 +180,12 @@ jobs:
       - name: Run tests
         id: tests
         run: |
-          pixi run -e ${{ matrix.pixi-env }} -- python -m pytest -n ${{ matrix.numprocesses || 4 }} \
+          if [[ "${{ matrix.pytest-addopts }}" == "flaky" ]]; then
+            NPROCS=""
+          else
+            NPROCS="-n ${{ matrix.numprocesses || 4 }}"
+          fi
+          pixi run -e ${{ matrix.pixi-env }} -- python -m pytest $NPROCS \
             --timeout 180 \
             --cov=xarray \
             --cov-report=xml \
