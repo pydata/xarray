@@ -29,6 +29,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Raise an :py:class:`AlignmentError` when an indexed auxiliary coordinate and
+  a plain auxiliary coordinate with the same name and dimensions have different values,
+  instead of silently replacing the plain coordinate during alignment and merging
+  (:issue:`11607`).
+  By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.

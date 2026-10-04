@@ -760,6 +760,7 @@ def merge_core(
         copy=False,
         indexes=indexes,
         fill_value=fill_value,
+        check_indexed_coords=compat != "override",
     )
 
     for pos, obj in skip_align_objs:
