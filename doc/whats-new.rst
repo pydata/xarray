@@ -29,6 +29,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix reading JSON-native Zarr fill values from non-xarray Zarr writers
+  (:issue:`11332`, :pull:`11665`).
+  By `Om Satpute <https://github.com/omsatpute61-afk>`_.
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.

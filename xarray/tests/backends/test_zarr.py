@@ -2229,36 +2229,48 @@ def test_fill_value_coder_inf_nan(value, dtype) -> None:
 
 
 @requires_zarr
-def test_fill_value_coder_json_bytes() -> None:
+@pytest.mark.parametrize(
+    "value,dtype,expected",
+    [
+        ("hello", np.dtype("S5"), b"hello"),
+        (None, np.dtype("float32"), None),
+        (0.0, np.dtype("float32"), np.float32(0.0)),
+        ("hello", np.dtype("U5"), "hello"),
+    ],
+)
+def test_fill_value_coder_json(value, dtype, expected) -> None:
     from xarray.backends.zarr import FillValueCoder
 
-    decoded = FillValueCoder.decode("hello", np.dtype("S5"))
-    assert decoded == b"hello"
+    decoded = FillValueCoder.decode(value, dtype)
+
+    assert decoded == expected
 
 
 @requires_zarr
-def test_fill_value_coder_json_none() -> None:
-    from xarray.backends.zarr import FillValueCoder
+def test_open_zarr_json_native_fill_value(tmp_path) -> None:
+    import zarr
 
-    decoded = FillValueCoder.decode(None, np.dtype("float32"))
-    assert decoded is None
+    store_path = tmp_path / "test.zarr"
 
+    root = zarr.open_group(store_path, mode="w", zarr_format=3)
+    arr = root.create_array(
+        "data",
+        shape=(3,),
+        chunks=(3,),
+        dtype="float32",
+        fill_value=0.0,
+        dimension_names=["x"],
+        attributes={"_FillValue": 0.0},
+    )
+    arr[:] = np.array([1.0, 2.0, 3.0], dtype="float32")
 
-@requires_zarr
-def test_fill_value_coder_json_float() -> None:
-    from xarray.backends.zarr import FillValueCoder
+    ds = xr.open_zarr(
+        store_path,
+        zarr_format=3,
+        consolidated=False,
+    ).load()
 
-    decoded = FillValueCoder.decode(0.0, np.dtype("float32"))
-    assert decoded == np.float32(0.0)
-
-
-@requires_zarr
-def test_fill_value_coder_json_string() -> None:
-    from xarray.backends.zarr import FillValueCoder
-
-    decoded = FillValueCoder.decode("hello", np.dtype("U5"))
-    assert decoded == "hello"
-
+    np.testing.assert_array_equal(ds["data"], [1.0, 2.0, 3.0])
 
 @requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
