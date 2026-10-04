@@ -20,7 +20,7 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray.utils import fake_target_chunksize
-from xarray.tests import requires_cftime
+from xarray.tests import requires_array_api_strict, requires_cftime
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     )
 
 
-class CustomArrayBase(Generic[ShapeType_co, DType_co]):
+class CustomArrayBase[ShapeType_co, DType_co: np.dtype[Any]]:
     def __init__(self, array: duckarray[Any, DType_co]) -> None:
         self.array: duckarray[Any, DType_co] = array
 
@@ -54,8 +54,8 @@ class CustomArrayBase(Generic[ShapeType_co, DType_co]):
         return self.array.shape
 
 
-class CustomArray(
-    CustomArrayBase[ShapeType_co, DType_co], Generic[ShapeType_co, DType_co]
+class CustomArray[ShapeType_co, DType_co: np.dtype[Any]](
+    CustomArrayBase[ShapeType_co, DType_co]
 ):
     def __array__(
         self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
@@ -66,10 +66,8 @@ class CustomArray(
             return np.asarray(self.array, dtype=dtype)
 
 
-class CustomArrayIndexable(
-    CustomArrayBase[ShapeType_co, DType_co],
-    ExplicitlyIndexed,
-    Generic[ShapeType_co, DType_co],
+class CustomArrayIndexable[ShapeType_co, DType_co: np.dtype[Any]](
+    CustomArrayBase[ShapeType_co, DType_co], ExplicitlyIndexed
 ):
     def __getitem__(
         self, key: IndexKeyLike | CustomArrayIndexable[Any, Any], /
@@ -104,12 +102,8 @@ def check_duck_array_typevar(a: duckarray[Any, DType]) -> duckarray[Any, DType]:
                 from typing import get_protocol_members
 
                 expected_attrs = get_protocol_members(t)
-            elif sys.version_info >= (3, 12):
-                expected_attrs = t.__protocol_attrs__
             else:
-                from typing import _get_protocol_attrs  # type: ignore[attr-defined]
-
-                expected_attrs = _get_protocol_attrs(t)
+                expected_attrs = t.__protocol_attrs__
 
             missing_attrs_ = expected_attrs - actual_attrs
             if missing_attrs_:
@@ -383,13 +377,16 @@ class TestNamedArray(NamedArraySubclassobjects):
         custom_a = CustomArrayIndexable(numpy_a)
         check_duck_array_typevar(custom_a)
 
+    @requires_array_api_strict
     def test_duck_array_class_array_api(self) -> None:
         # Test numpy's array api:
-        nxp = pytest.importorskip("array_api_strict", minversion="1.0")
+        import array_api_strict as nxp
 
         # TODO: nxp doesn't use dtype typevars, so can only use Any for the moment:
-        arrayapi_a: duckarray[Any, Any]  #  duckarray[Any, np.dtype[np.int64]]
-        arrayapi_a = nxp.asarray([2.1, 4], dtype=nxp.int64)
+        arrayapi_a = cast(
+            "duckarray[Any, Any]",  #  duckarray[Any, np.dtype[np.int64]]
+            nxp.asarray([2.1, 4], dtype=nxp.int64),
+        )
         check_duck_array_typevar(arrayapi_a)
 
     def test_new_namedarray(self) -> None:

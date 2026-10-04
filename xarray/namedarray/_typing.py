@@ -4,7 +4,6 @@ from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from enum import Enum
 from types import EllipsisType, ModuleType
 from typing import (
-    TYPE_CHECKING,
     Any,
     Final,
     Literal,
@@ -18,14 +17,6 @@ from typing import (
 
 import numpy as np
 
-try:
-    from typing import TypeAlias
-except ImportError:
-    if TYPE_CHECKING:
-        raise
-    else:
-        Self: Any = None
-
 
 # Singleton type, as per https://github.com/python/typing/pull/240
 class Default(Enum):
@@ -37,7 +28,7 @@ _default = Default.token
 # https://stackoverflow.com/questions/74633074/how-to-type-hint-a-generic-numpy-array
 _T_co = TypeVar("_T_co", covariant=True)
 
-dtype: TypeAlias = np.dtype  # noqa: PYI042
+dtype = np.dtype
 DType = TypeVar("DType", bound=np.dtype[Any])
 DType_co = TypeVar("DType_co", covariant=True, bound=np.dtype[Any])
 # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
@@ -53,35 +44,35 @@ class SupportsDType(Protocol[DType_co]):
     def dtype(self) -> DType_co: ...
 
 
-DTypeLike: TypeAlias = Union[
+DTypeLike = Union[
     np.dtype[ScalarType],
     type[ScalarType],
     SupportsDType[np.dtype[ScalarType]],
 ]
 
 # For unknown shapes Dask uses np.nan, array_api uses None:
-IntOrUnknown: TypeAlias = int
-Shape: TypeAlias = tuple[IntOrUnknown, ...]
-ShapeLike: TypeAlias = Union[SupportsIndex, Sequence[SupportsIndex]]
+IntOrUnknown = int
+Shape = tuple[IntOrUnknown, ...]
+ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
 ShapeType = TypeVar("ShapeType", bound=Any)
 ShapeType_co = TypeVar("ShapeType_co", bound=Any, covariant=True)
 
 
-Axis: TypeAlias = int
-Axes: TypeAlias = tuple[Axis, ...]
+Axis = int
+Axes = tuple[Axis, ...]
 AxisLike = Union[Axis, Axes]
 
-Chunks: TypeAlias = tuple[Shape, ...]
-NormalizedChunks: TypeAlias = tuple[tuple[int, ...], ...]
+Chunks = tuple[Shape, ...]
+NormalizedChunks = tuple[tuple[int, ...], ...]
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
+type T_ChunkDim = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim] | tuple[T_ChunkDim, ...]
+type T_Chunks = T_ChunkDim | Mapping[Any, T_ChunkDim] | tuple[T_ChunkDim, ...]
 
 DimType = TypeVar("DimType", bound=Hashable)
 DimType_co = TypeVar("DimType_co", bound=Hashable, covariant=True)
-DimsLike: TypeAlias = Union[
+DimsLike = Union[
     Iterable[DimType_co], EllipsisType, None
 ]  # single str is also allowed, but luckily str = Iterable[str]
 
@@ -89,11 +80,11 @@ DimsLike: TypeAlias = Union[
 # TODO: np.array_api was bugged and didn't allow (None,), but should!
 # https://github.com/numpy/numpy/pull/25022
 # https://github.com/data-apis/array-api/pull/674
-IndexKey: TypeAlias = Union[int, slice, EllipsisType]
-IndexKeys: TypeAlias = tuple[IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
-IndexKeyLike: TypeAlias = Union[IndexKey, IndexKeys]
+IndexKey = Union[int, slice, EllipsisType]
+IndexKeys = tuple[IndexKey, ...]  #  tuple[Union[_IndexKey, None], ...]
+IndexKeyLike = Union[IndexKey, IndexKeys]
 
-AttrsLike: TypeAlias = Union[Mapping[Any, Any], None]
+AttrsLike = Union[Mapping[Any, Any], None]
 
 
 class SupportsReal(Protocol[_T_co]):
@@ -208,12 +199,12 @@ class arrayapi(array[ShapeType_co, DType_co], Protocol[ShapeType_co, DType_co]):
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _arrayfunction_or_api = (arrayfunction, arrayapi)
 
-duckarray: TypeAlias = Union[  # noqa: PYI042
+duckarray = Union[
     arrayfunction[ShapeType_co, DType_co], arrayapi[ShapeType_co, DType_co]
 ]
 
 # Corresponds to np.typing.NDArray:
-DuckArray: TypeAlias = arrayfunction[Any, np.dtype[ScalarType_co]]
+DuckArray = arrayfunction[Any, np.dtype[ScalarType_co]]
 
 
 @runtime_checkable
@@ -258,7 +249,7 @@ class chunkedarrayapi(
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _chunkedarrayfunction_or_api = (chunkedarrayfunction, chunkedarrayapi)
-chunkedduckarray: TypeAlias = Union[  # noqa: PYI042
+chunkedduckarray = Union[
     chunkedarrayfunction[ShapeType_co, DType_co],
     chunkedarrayapi[ShapeType_co, DType_co],
 ]
@@ -303,10 +294,10 @@ class sparsearrayapi(
 
 # NamedArray can most likely use both __array_function__ and __array_namespace__:
 _sparsearrayfunction_or_api = (sparsearrayfunction, sparsearrayapi)
-sparseduckarray: TypeAlias = Union[  # noqa: PYI042
+sparseduckarray = Union[
     sparsearrayfunction[ShapeType_co, DType_co],
     sparsearrayapi[ShapeType_co, DType_co],
 ]
 
-ErrorHandling: TypeAlias = Literal["raise", "ignore"]
-ErrorHandlingWithWarn: TypeAlias = Literal["raise", "warn", "ignore"]
+ErrorHandling = Literal["raise", "ignore"]
+ErrorHandlingWithWarn = Literal["raise", "warn", "ignore"]

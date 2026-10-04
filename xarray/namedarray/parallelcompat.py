@@ -10,7 +10,7 @@ import functools
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 import numpy as np
 
@@ -190,7 +190,7 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
         return selected[0]
 
 
-class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
+class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
     """
     Interface between a particular parallel computing framework and xarray.
 

@@ -95,7 +95,7 @@ class {obj}{cls}Aggregations:
 
 NAMED_ARRAY_AGGREGATIONS_PREAMBLE = """
 
-class {obj}{cls}Aggregations(Generic[DimType_co]):
+class {obj}{cls}Aggregations(Generic[DimType_co]):  # noqa: UP046
     __slots__ = ()
 
     def reduce(

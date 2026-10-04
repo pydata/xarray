@@ -11,7 +11,7 @@ from xarray.core.types import Self
 from xarray.namedarray._typing import DimsLike, DimType_co
 
 
-class NamedArrayAggregations(Generic[DimType_co]):
+class NamedArrayAggregations(Generic[DimType_co]):  # noqa: UP046
     __slots__ = ()
 
     def reduce(

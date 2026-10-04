@@ -7,7 +7,7 @@ import warnings
 from collections.abc import Iterable, Iterator, Mapping
 from functools import lru_cache
 from numbers import Number
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 from packaging.version import Version
@@ -30,11 +30,6 @@ if TYPE_CHECKING:
     from xarray.core.types import T_ChunkDim
     from xarray.namedarray._typing import DimType, DuckArray, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
-
-
-K = TypeVar("K")
-V = TypeVar("V")
-T = TypeVar("T")
 
 
 @lru_cache
@@ -179,7 +174,7 @@ def infix_dims(
         yield from existing_dims
 
 
-def either_dict_or_kwargs(
+def either_dict_or_kwargs[K, T](
     pos_kwargs: Mapping[K, T] | None,
     kw_kwargs: Mapping[str, T],
     func_name: str,

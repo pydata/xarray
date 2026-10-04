@@ -14,6 +14,7 @@ from typing import (
     TypeVar,
     cast,
     overload,
+    override,
 )
 
 import numpy as np
@@ -226,8 +227,13 @@ def from_array(
     return NamedArray(dims, np.asarray(data), attrs)
 
 
+# Not using PEP 695 type parameters: their variance is inferred, and the mutable
+# data (the `data` setter and `_data`) makes NamedArray invariant. It is meant to
+# be covariant though, e.g. NamedArray[Any, dtype[float64]] should be usable as
+# NamedArray[Any, dtype[Any]], even if assigning to `data` makes that unsound.
 class NamedArray(
-    NamedArrayAggregations[DimType_co], Generic[ShapeType_co, DType_co, DimType_co]
+    NamedArrayAggregations[DimType_co],
+    Generic[ShapeType_co, DType_co, DimType_co],  # noqa: UP046
 ):
     """
     A wrapper around duck arrays with named dimensions
@@ -913,6 +919,7 @@ class NamedArray(
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
