@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
-from types import EllipsisType
+from types import EllipsisType, TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -187,8 +187,11 @@ T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.Extension
 ScalarOrArray = Union["ArrayLike", np.generic]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
-DsCompatible = Union["Dataset", "DaCompatible"]
-DtCompatible = Union["DataTree", "DsCompatible"]
+# Datasets can also be combined with a mapping of variable names to values. The
+# key type is Any, as Mapping is invariant in its key type.
+DsCompatible = Union["Dataset", "DaCompatible", Mapping[Any, "DaCompatible"]]
+# but DataTrees can't
+DtCompatible = Union["DataTree", "Dataset", "DaCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]
@@ -362,9 +365,18 @@ class Closable(Protocol):
 
 
 class Lock(Protocol):
-    def acquire(self, *args, **kwargs) -> Any: ...
+    # The parameters are positional-only, as their names differ between lock
+    # types, e.g. multiprocessing.Lock.acquire(block, timeout).
+    def acquire(self, blocking: bool = ..., /) -> bool: ...
     def release(self) -> None: ...
-    def __enter__(self) -> Any: ...
-    def __exit__(self, *args, **kwargs) -> None: ...
+    # threading locks return the result of acquire(), dask.distributed.Lock self
+    def __enter__(self) -> object: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None: ...
     def __hash__(self) -> int:
         return super().__hash__()

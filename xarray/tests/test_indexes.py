@@ -522,7 +522,8 @@ class TestPandasMultiIndex:
             match=r"multi-index level names \('three',\) not found in indexes",
         ):
             index.sel({"x": {"three": 0}})
-        with pytest.raises(IndexError):
+        # pandas < 3.1 raises an IndexError, later versions a KeyError
+        with pytest.raises((IndexError, KeyError)):
             index.sel({"x": (slice(None), 1, "no_level")})
 
     def test_join(self):
