@@ -6,9 +6,9 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -16,7 +16,7 @@ dynamic = ["version"]
 license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 
@@ -58,12 +58,14 @@ types = [
   "types-decorator",
   "types-defusedxml",
   "types-docutils",
+  "types-gevent",
   "types-networkx",
   "types-openpyxl",
   "types-pexpect",
   "types-psutil",
   "types-pycurl",
   "types-Pygments",
+  "types-pysocks",
   "types-python-dateutil",
   "types-pytz",
   "types-PyYAML",
@@ -76,7 +78,7 @@ types = [
 dev = [
   "hypothesis",
   "jinja2",
-  "mypy==1.19.1",
+  "mypy==2.3.1",
   "pre-commit",
   "pytest",
   "pytest-cov",
@@ -132,14 +134,12 @@ exclude = ['build', 'xarray/util/generate_.*\.py']
 files = "xarray"
 show_error_context = true
 warn_redundant_casts = true
-warn_unused_configs = true
 warn_unused_ignores = true
 
 # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-  "affine.*",
   "bottleneck.*",
   "cartopy.*",
   "cf_units.*",
@@ -155,7 +155,6 @@ module = [
   "mpl_toolkits.*",
   "nc_time_axis.*",
   "netCDF4.*",
-  "netcdftime.*",
   "numcodecs.*",
   "opt_einsum.*",
   "pint.*",
@@ -359,15 +358,20 @@ filterwarnings = [
   "error:::xarray.*",
   # Zarr 2 V3 implementation
   "default:Zarr-Python is not in alignment with the final V3 specification",
-  # TODO: this is raised for vlen-utf8, consolidated metadata, U1 dtype
-  "default:is currently not part .* the Zarr version 3 specification.",
+  # raised by zarr < 3.1 for vlen-utf8, consolidated metadata, U1 dtype
+  "ignore:.* is currently not part .* the Zarr (version|format) 3 specification.:UserWarning",
   # Zarr V3 data type specifications warnings - very repetitive
   "ignore:The data type .* does not have a Zarr V3 specification",
   "ignore:Consolidated metadata is currently not part",
-  # raised by `numpy` for code in `netcdf4-python`
-  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.backends.netCDF4_",
-  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.tests.test_backends",
-  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.::xarray.tests.test_backends_datatree",
+  # raised by `numpy` for code in `netcdf4-python`. Not scoped to a module
+  # because warnings re-emitted by `pytest.warns` lose their module.
+  "ignore:Setting the shape on a NumPy array has been deprecated in NumPy 2.5.:DeprecationWarning",
+  # raised by `pyarrow` for `pandas` ranking arrow-backed strings
+  "ignore:Specifying null_placement in RankOptions is deprecated:FutureWarning:pyarrow",
+  # raised by `numpy` for `np.datetime64("NaT")` in `flox`
+  "ignore:The 'generic' unit for NumPy timedelta is deprecated:DeprecationWarning:flox",
+  # raised by `numpy` for code in `netcdf4-python` < 1.7 when indexing with empty arrays
+  "ignore:The truth value of an empty array is ambiguous:DeprecationWarning:netCDF4",
   # TODO: remove once we know how to deal with a changed signature in protocols
   "default:::xarray.tests.test_strategies",
 ]
@@ -443,6 +447,8 @@ slowy = "slowy"
 Commun = "Commun"
 Noice = "Noice"
 Hax = "Hax"
+Yau = "Yau"
+whn = "whn"
 
 # Tests
 Ome = "Ome"

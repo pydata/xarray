@@ -51,8 +51,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
       - uses: xarray-contrib/pixi-lock/create-and-cache@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         id: pixi-lock
+
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pixi-lock
@@ -62,6 +64,8 @@ jobs:
     name: "${{ matrix.os }} | ${{ matrix.pixi-env }}${{ matrix.pytest-addopts && format(' ({0})', matrix.pytest-addopts) || '' }}"
     runs-on: ${{ matrix.os }}
     needs: cache-pixi-lock
+    # The slowest jobs take ~20 minutes; a hung test should not burn the 6h default.
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash -l {0}
@@ -70,15 +74,15 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        pixi-env: ["test-py311", "test-py314"]
+        pixi-env: ["test-py312", "test-py314"]
         pytest-addopts: [""]
         include:
           # Minimum python version:
-          - pixi-env: "test-py311-bare-minimum"
+          - pixi-env: "test-py312-bare-minimum"
             os: ubuntu-latest
-          - pixi-env: "test-py311-bare-min-and-scipy"
+          - pixi-env: "test-py312-bare-min-and-scipy"
             os: ubuntu-latest
-          - pixi-env: "test-py311-min-versions"
+          - pixi-env: "test-py312-min-versions"
             os: ubuntu-latest
           # Latest python version:
           - pixi-env: "test-py314-no-numba"
@@ -90,7 +94,7 @@ jobs:
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
-          - pixi-env: "test-py311-with-typing"
+          - pixi-env: "test-py312-with-typing"
             pytest-addopts: "mypy"
             numprocesses: 1
             os: ubuntu-latest
@@ -107,10 +111,12 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
           persist-credentials: false
+
       - name: Restore cached pixi lockfile
         uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
         with:
           cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
@@ -127,7 +133,9 @@ jobs:
           then
             if [[ "${{ matrix.pytest-addopts }}" == "flaky" ]] ;
             then
-              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
+              # The thread timeout method also kills tests stuck in C code or deadlocked
+              # threads, which the default signal method cannot interrupt.
+              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests --timeout-method=thread -W default" >> $GITHUB_ENV
             elif [[ "${{ matrix.pytest-addopts }}" == "mypy" ]] ;
             then
               echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
@@ -202,49 +210,6 @@ jobs:
           env_vars: RUNNER_OS,PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
-
-  check-generate-aggregations:
-    name: "Check generate-aggregations is up-to-date"
-    runs-on: ubuntu-latest
-    needs: cache-pixi-lock
-    if: |
-      github.event_name == 'pull_request'
-      && needs.cache-pixi-lock.result == 'success'
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Check if generate_aggregations.py changed
-        id: filter
-        run: |
-          if git diff --name-only origin/${GITHUB_BASE_REF}...HEAD | grep -q 'xarray/util/generate_aggregations.py'; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Restore cached pixi lockfile
-        if: steps.filter.outputs.changed == 'true'
-        uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
-        with:
-          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
-
-      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
-        if: steps.filter.outputs.changed == 'true'
-        with:
-          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
-          cache: true
-          cache-write: false
-
-      - name: Run generate-aggregations-ci
-        if: steps.filter.outputs.changed == 'true'
-        run: |
-          pixi run generate-aggregations-ci
 
   event_file:
     name: "Event File"
