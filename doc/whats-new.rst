@@ -78,6 +78,10 @@ Documentation
 - Fix the backend array indexing examples to pass indexers as a single tuple
   to ``_raw_indexing_method`` (:issue:`7450`, :pull:`11583`).
   By `Seahzee <https://github.com/Seahzee>`_.
+- Fixed the ``kwargs`` entry in the :py:meth:`Dataset.curvefit` and
+  :py:meth:`DataArray.curvefit` docstrings: both take a ``kwargs`` dict, not
+  ``**kwargs`` (:issue:`6891`, :pull:`11536`).
+  By `Advit Arora <https://github.com/advitrocks9>`_.
 
 Performance
 ~~~~~~~~~~~
