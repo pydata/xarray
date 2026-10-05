@@ -78,6 +78,7 @@ extlinks = {
 copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: "
 copybutton_prompt_is_regexp = True
 
+# myst-nb
 nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
 # RTD does not publish the .err.log report, so print tracebacks in the build log
 nb_execution_show_tb = True
@@ -175,6 +176,18 @@ jupyterlite_content_dir = "_build/contents"
 
 # mermaid config
 mermaid_version = "11.6.0"
+
+# sphinx-llm config
+# the markdown builder used for llms.txt can't render these nodes; they are omitted
+# from the generated markdown, so don't turn the warnings into build errors
+llms_txt_suppress_unknown_node_warnings = [
+    "abbreviation",
+    "classifier",
+    "desc_optional",
+    "label",
+    "mermaid",
+    "PassthroughTextElement",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
@@ -328,7 +341,14 @@ intersphinx_mapping = {
     "numba": ("https://numba.readthedocs.io/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
-    "python": ("https://docs.python.org/3/", None),
+    "python": (
+        "https://docs.python.org/3/",
+        (
+            None,
+            # fallback to the latest archived inventory if docs.python.org is down
+            "https://web.archive.org/web/https://docs.python.org/3/objects.inv",
+        ),
+    ),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
     "xarray-tutorial": ("https://tutorial.xarray.dev/", None),
@@ -458,7 +478,26 @@ def update_videos(app: Sphinx):
     LOGGER.info("Videos page updated.")
 
 
+def check_intersphinx_inventories(app: Sphinx) -> None:
+    """Abort the build early if an intersphinx inventory could not be loaded.
+
+    The missing references would otherwise only fail the build (warnings are
+    errors) after it ran completely, which takes a long time.
+    """
+    loaded = app.env.intersphinx_named_inventory  # type: ignore[attr-defined]
+    missing = sorted(set(app.config.intersphinx_mapping) - set(loaded))
+    if missing:
+        LOGGER.error(
+            "Could not load the intersphinx inventories of %s, see the warnings "
+            "above. Aborting the build, try again later if the server is unavailable.",
+            ", ".join(missing),
+        )
+        sys.exit(1)
+
+
 def setup(app: Sphinx):
     app.connect("html-page-context", html_page_context)
+    # run after sphinx.ext.intersphinx loaded the inventories (priority 500)
+    app.connect("builder-inited", check_intersphinx_inventories, priority=900)
     app.connect("builder-inited", update_gallery)
     app.connect("builder-inited", update_videos)

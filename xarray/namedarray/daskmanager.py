@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 import numpy as np
 
@@ -37,12 +37,15 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         self.array_cls = Array
 
+    @override
     def is_chunked_array(self, data: duckarray[Any, Any]) -> bool:
         return is_duck_dask_array(data)
 
+    @override
     def chunks(self, data: Any) -> _NormalizedChunks:
         return data.chunks  # type: ignore[no-any-return]
 
+    @override
     def normalize_chunks(
         self,
         chunks: T_Chunks | _NormalizedChunks,
@@ -62,6 +65,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             previous_chunks=previous_chunks,
         )  # type: ignore[no-untyped-call]
 
+    @override
     def from_array(
         self, data: Any, chunks: T_Chunks | _NormalizedChunks, **kwargs: Any
     ) -> DaskArray | Any:
@@ -80,6 +84,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         return da.from_array(data, chunks, **kwargs)  # type: ignore[no-untyped-call]
 
+    @override
     def compute(
         self, *data: Any, **kwargs: Any
     ) -> tuple[np.ndarray[Any, _DType_co], ...]:
@@ -87,17 +92,20 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         return compute(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
 
+    @override
     def persist(self, *data: Any, **kwargs: Any) -> tuple[DaskArray | Any, ...]:
         from dask import persist
 
         return persist(*data, **kwargs)  # type: ignore[no-untyped-call, no-any-return]
 
+    @override
     @property
     def array_api(self) -> Any:
         from dask import array as da
 
         return da
 
+    @override
     def reduction(
         self,
         arr: T_ChunkedArray,
@@ -120,6 +128,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             keepdims=keepdims,
         )  # type: ignore[no-untyped-call]
 
+    @override
     def scan(
         self,
         func: Callable[..., Any],
@@ -142,6 +151,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             **kwargs,
         )  # type: ignore[no-untyped-call]
 
+    @override
     def apply_gufunc(
         self,
         func: Callable[..., Any],
@@ -174,6 +184,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             **kwargs,
         )  # type: ignore[no-untyped-call]
 
+    @override
     def map_blocks(
         self,
         func: Callable[..., Any],
@@ -197,6 +208,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             **kwargs,
         )  # type: ignore[no-untyped-call]
 
+    @override
     def blockwise(
         self,
         func: Callable[..., Any],
@@ -230,6 +242,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             **kwargs,
         )  # type: ignore[no-untyped-call]
 
+    @override
     def unify_chunks(
         self,
         *args: Any,  # can't type this as mypy assumes args are all same type, but dask unify_chunks args alternate types
@@ -239,6 +252,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
         return unify_chunks(*args, **kwargs)  # type: ignore[no-any-return, no-untyped-call]
 
+    @override
     def store(
         self,
         sources: Any | Sequence[Any],
@@ -253,6 +267,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             **kwargs,
         )
 
+    @override
     def shuffle(
         self, x: DaskArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
     ) -> DaskArray:
@@ -268,12 +283,14 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
             raise NotImplementedError("Only chunks='auto' is supported at present.")
         return dask.array.shuffle(x, indexer, axis, chunks="auto")
 
+    @override
     def get_auto_chunk_size(self) -> int:
         from dask import config as dask_config
         from dask.utils import parse_bytes
 
         return parse_bytes(dask_config.get("array.chunk-size"))
 
+    @override
     def rechunk(
         self, data: Any, chunks: T_Chunks | _NormalizedChunks, **kwargs: Any
     ) -> Any:

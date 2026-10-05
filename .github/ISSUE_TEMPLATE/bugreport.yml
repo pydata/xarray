@@ -35,7 +35,7 @@ body:
       render: Python
       value: |
         # /// script
-        # requires-python = ">=3.11"
+        # requires-python = ">=3.12"
         # dependencies = [
         #   "xarray[complete]@git+https://github.com/pydata/xarray.git@main",
         # ]

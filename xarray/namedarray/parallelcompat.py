@@ -10,7 +10,7 @@ import functools
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 import numpy as np
 
@@ -190,7 +190,7 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
         return selected[0]
 
 
-class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
+class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
     """
     Interface between a particular parallel computing framework and xarray.
 
@@ -357,7 +357,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         from xarray.namedarray.utils import _get_chunk
 
         if _contains_cftime_datetimes(data):
-            chunks2 = _get_chunk(data, chunks, self, preferred_chunks={})  # type: ignore[arg-type]
+            preferred_chunks = dict(enumerate(data.chunks))
+            chunks2 = _get_chunk(
+                data,  # type: ignore[arg-type]
+                chunks,
+                self,
+                preferred_chunks=preferred_chunks,
+                dims=preferred_chunks.keys(),
+            )
         else:
             chunks2 = chunks  # type: ignore[assignment]
         return data.rechunk(chunks2, **kwargs)

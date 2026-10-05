@@ -7,7 +7,7 @@ from collections import ChainMap
 from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, TypeVar, get_args
+from typing import TYPE_CHECKING, Any, TypeVar, get_args, override
 
 import numpy as np
 import pandas as pd
@@ -123,6 +123,7 @@ class NumpyInterpolator(BaseInterpolator):
         else:
             raise ValueError(f"{fill_value} is not a valid fill_value")
 
+    @override
     def __call__(self, x):
         return self.f(
             x,
@@ -576,7 +577,7 @@ def _get_valid_fill_mask(arr, dim, limit):
     ) <= limit
 
 
-def _localize(obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
+def _localize[T](obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
     """Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """

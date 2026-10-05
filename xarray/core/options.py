@@ -321,7 +321,7 @@ class set_options:
         netCDF files with ``open_dataset()`` and ``to_netcdf()`` if ``engine``
         is not explicitly specified. May be any permutation or subset of
         ``['netcdf4', 'h5netcdf', 'scipy']``.
-    use_bottleneck : bool, default: True
+    use_bottleneck : bool, default: False
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.
     use_flox : bool, default: True

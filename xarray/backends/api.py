@@ -13,7 +13,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
-    TypeVar,
     Union,
     cast,
 )
@@ -565,6 +564,14 @@ def open_dataset(
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy".
 
+          .. warning::
+             A custom lock replaces the default locks, which also protect
+             libraries that are not thread-safe, like netCDF-C and HDF5. It
+             must therefore prevent concurrent access to those libraries as
+             well. Also, "netcdf4" only reads metadata while holding the lock if
+             the lock is reentrant, like the default locks. Opening files from
+             several threads with a non-reentrant lock can therefore crash.
+
         See engine open function for kwargs accepted by each specific engine.
 
     Returns
@@ -807,6 +814,14 @@ def open_dataarray(
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy".
 
+          .. warning::
+             A custom lock replaces the default locks, which also protect
+             libraries that are not thread-safe, like netCDF-C and HDF5. It
+             must therefore prevent concurrent access to those libraries as
+             well. Also, "netcdf4" only reads metadata while holding the lock if
+             the lock is reentrant, like the default locks. Opening files from
+             several threads with a non-reentrant lock can therefore crash.
+
         See engine open function for kwargs accepted by each specific engine.
 
     Notes
@@ -1040,6 +1055,14 @@ def open_datatree(
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy".
+
+          .. warning::
+             A custom lock replaces the default locks, which also protect
+             libraries that are not thread-safe, like netCDF-C and HDF5. It
+             must therefore prevent concurrent access to those libraries as
+             well. Also, "netcdf4" only reads metadata while holding the lock if
+             the lock is reentrant, like the default locks. Opening files from
+             several threads with a non-reentrant lock can therefore crash.
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -1285,6 +1308,14 @@ def open_groups(
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy".
 
+          .. warning::
+             A custom lock replaces the default locks, which also protect
+             libraries that are not thread-safe, like netCDF-C and HDF5. It
+             must therefore prevent concurrent access to those libraries as
+             well. Also, "netcdf4" only reads metadata while holding the lock if
+             the lock is reentrant, like the default locks. Opening files from
+             several threads with a non-reentrant lock can therefore crash.
+
         See engine open function for kwargs accepted by each specific engine.
 
     Returns
@@ -1360,14 +1391,11 @@ def open_groups(
     return groups
 
 
-_FLike = TypeVar("_FLike", bound=Union[str, ReadBuffer])
-
-
-def _remove_path(
-    paths: NestedSequence[_FLike], paths_to_remove: set[_FLike]
-) -> NestedSequence[_FLike]:
+def _remove_path[FLike: str | ReadBuffer](
+    paths: NestedSequence[FLike], paths_to_remove: set[FLike]
+) -> NestedSequence[FLike]:
     # Initialize an empty list to store the result
-    result: list[Union[_FLike, NestedSequence[_FLike]]] = []
+    result: list[Union[FLike, NestedSequence[FLike]]] = []
 
     for item in paths:
         if isinstance(item, list):
@@ -1400,7 +1428,7 @@ def open_mfdataset(
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine = None,
     data_vars: (
-        Literal["all", "minimal", "different"] | None | list[str] | CombineKwargDefault
+        Literal["all", "minimal", "different"] | list[str] | CombineKwargDefault | None
     ) = _DATA_VARS_DEFAULT,
     coords=_COORDS_DEFAULT,
     combine: Literal["by_coords", "nested"] = "by_coords",
