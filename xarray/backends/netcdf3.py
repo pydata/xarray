@@ -6,6 +6,8 @@ import numpy as np
 
 from xarray import coding
 from xarray.core.variable import Variable
+from xarray.namedarray.parallelcompat import get_chunked_array_type
+from xarray.namedarray.pycompat import is_chunked_array
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string
@@ -77,6 +79,13 @@ def coerce_nc3_dtype(arr):
     dtype = str(arr.dtype)
     if dtype in _nc3_dtype_coercions:
         new_dtype = _nc3_dtype_coercions[dtype]
+        if is_chunked_array(arr):
+            # Validate each block when it is written rather than computing the
+            # whole array while building a delayed write. Keep the same safety
+            # check as for eager data, including blocks outside the first chunk.
+            return get_chunked_array_type(arr).map_blocks(
+                coerce_nc3_dtype, arr, dtype=np.dtype(new_dtype)
+            )
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():
@@ -109,7 +118,9 @@ def _maybe_prepare_times(var):
     # this keeps backwards compatibility
 
     data = var.data
-    if data.dtype.kind in "iu":
+    # Only int64 can contain the sentinel. Checking narrower integer arrays
+    # needlessly computes chunked data with time-like units (e.g. day counts).
+    if data.dtype.kind == "i" and data.dtype.itemsize == 8:
         units = var.attrs.get("units", None)
         if units is not None and coding.variables._is_time_like(units):
             mask = data == np.iinfo(np.int64).min

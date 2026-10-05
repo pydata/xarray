@@ -29,6 +29,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Defer NetCDF3 integer narrowing checks on chunked arrays until data is written,
+  and avoid computing narrower integer arrays with time-like units while preparing
+  the write (:issue:`10826`). Unsafe casts still raise ``ValueError``.
+  By `Abhisek Behera <https://github.com/abhisek343>`_.
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.
