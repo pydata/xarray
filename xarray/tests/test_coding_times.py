@@ -47,7 +47,6 @@ from xarray.tests import (
     DuckArrayWrapper,
     FirstElementAccessibleArray,
     _all_cftime_date_types,
-    arm_xfail,
     assert_array_equal,
     assert_duckarray_allclose,
     assert_duckarray_equal,
@@ -465,7 +464,6 @@ def test_decode_abbreviation() -> None:
     assert_array_equal(actual, expected)
 
 
-@arm_xfail
 @requires_cftime
 @pytest.mark.parametrize(
     ["num_dates", "units", "expected_list"],

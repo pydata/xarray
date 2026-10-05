@@ -480,16 +480,27 @@ def test_apply_ufunc_dataset(variant, dtype):
     ),
 )
 @pytest.mark.parametrize("value", (10, dtypes.NA))
-def test_align_dataarray(value, variant, unit, error, dtype):
-    if variant == "coords" and (
-        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
-    ):
-        pytest.xfail(
-            reason=(
-                "fill_value is used for both data variables and coords. "
-                "See https://github.com/pydata/xarray/issues/4165"
+def test_align_dataarray(value, variant, unit, error, dtype, request):
+    if variant == "coords":
+        if value != dtypes.NA and error is None:
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason=(
+                        "a scalar fill_value is used for both data variables and "
+                        "coords. See https://github.com/pydata/xarray/issues/4165"
+                    )
+                )
             )
-        )
+        elif (
+            value == dtypes.NA
+            and isinstance(unit, unit_registry.Unit)
+            and unit != unit_registry.m
+        ):
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason="the expected values don't convert coords back to their units"
+                )
+            )
 
     fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
 
@@ -584,16 +595,27 @@ def test_align_dataarray(value, variant, unit, error, dtype):
     ),
 )
 @pytest.mark.parametrize("value", (10, dtypes.NA))
-def test_align_dataset(value, unit, variant, error, dtype):
-    if variant == "coords" and (
-        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
-    ):
-        pytest.xfail(
-            reason=(
-                "fill_value is used for both data variables and coords. "
-                "See https://github.com/pydata/xarray/issues/4165"
+def test_align_dataset(value, unit, variant, error, dtype, request):
+    if variant == "coords":
+        if value != dtypes.NA and error is None:
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason=(
+                        "a scalar fill_value is used for both data variables and "
+                        "coords. See https://github.com/pydata/xarray/issues/4165"
+                    )
+                )
             )
-        )
+        elif (
+            value == dtypes.NA
+            and isinstance(unit, unit_registry.Unit)
+            and unit != unit_registry.m
+        ):
+            request.applymarker(
+                pytest.mark.xfail(
+                    reason="the expected values don't convert coords back to their units"
+                )
+            )
 
     fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
 
@@ -2045,10 +2067,7 @@ class TestVariable:
                 marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
             ),
             method("roll", {"x": 2}),
-            pytest.param(
-                method("rolling_window", "x", 3, "window"),
-                marks=pytest.mark.xfail(reason="converts to ndarray"),
-            ),
+            method("rolling_window", "x", 3, "window"),
             method("reduce", np.std, "x"),
             method("round", 2),
             method("shift", {"x": -2}),
@@ -3873,14 +3892,11 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_computation_objects(self, func, variant, dtype):
-        if variant == "data":
-            if func.name == "rolling_exp":
-                pytest.xfail(reason="numbagg functions are not supported by pint")
-            elif func.name == "rolling":
-                pytest.xfail(
-                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
-                )
+    def test_computation_objects(self, func, variant, dtype, request):
+        if variant == "data" and func.name == "rolling_exp":
+            request.applymarker(
+                pytest.mark.xfail(reason="numbagg functions are not supported by pint")
+            )
 
         unit = unit_registry.m
 
@@ -5339,15 +5355,8 @@ class TestDataset:
             method("groupby", "x"),
             method("groupby_bins", "x", bins=2),
             method("coarsen", x=2),
-            pytest.param(
-                method("rolling", x=3), marks=pytest.mark.xfail(reason="strips units")
-            ),
-            pytest.param(
-                method("rolling_exp", x=3),
-                marks=pytest.mark.xfail(
-                    reason="numbagg functions are not supported by pint"
-                ),
-            ),
+            method("rolling", x=3),
+            pytest.param(method("rolling_exp", x=3), marks=requires_numbagg),
             method("weighted", xr.DataArray(data=np.linspace(0, 1, 5), dims="y")),
         ),
         ids=repr,
@@ -5362,7 +5371,12 @@ class TestDataset:
             "coords",
         ),
     )
-    def test_computation_objects(self, func, variant, dtype):
+    def test_computation_objects(self, func, variant, dtype, request):
+        if variant == "data" and func.name == "rolling_exp":
+            request.applymarker(
+                pytest.mark.xfail(reason="numbagg functions are not supported by pint")
+            )
+
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
             "dims": ((1, 1), unit_registry.m, 1),

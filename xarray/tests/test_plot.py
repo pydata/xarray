@@ -2010,25 +2010,6 @@ class TestImshow(Common2dMixin, PlotTestCase):
     def test_3d_raises_valueerror(self) -> None:
         pass
 
-    @pytest.mark.xfail(
-        reason=(
-            "Failing inside matplotlib. Should probably be fixed upstream because "
-            "other plot functions can handle it. "
-            "Remove this test when it works, already in Common2dMixin"
-        )
-    )
-    def test_dates_are_concise(self) -> None:
-        import matplotlib.dates as mdates
-
-        time = pd.date_range("2000-01-01", "2000-01-10")
-        a = DataArray(np.random.randn(2, len(time)), [("xx", [1, 2]), ("t", time)])
-        self.plotfunc(a, x="t")
-
-        ax = plt.gca()
-
-        assert isinstance(ax.xaxis.get_major_locator(), mdates.AutoDateLocator)
-        assert isinstance(ax.xaxis.get_major_formatter(), mdates.ConciseDateFormatter)
-
     @pytest.mark.slow
     def test_imshow_called(self) -> None:
         # Having both statements ensures the test works properly

@@ -33,9 +33,11 @@ def dataframe_strategy(draw):
     tz = draw(st.timezones())
     dtype = pd.DatetimeTZDtype(unit="ns", tz=tz)
 
+    # Stay a day away from the bounds of the ns range, so that the UTC offset
+    # of the timezone can't push the values out of bounds
     datetimes = st.datetimes(
-        min_value=pd.Timestamp("1677-09-21T00:12:43.145224193"),
-        max_value=pd.Timestamp("2262-04-11T23:47:16.854775807"),
+        min_value=pd.Timestamp("1677-09-22"),
+        max_value=pd.Timestamp("2262-04-10"),
         timezones=st.just(tz),
     )
 
@@ -125,7 +127,6 @@ def test_roundtrip_pandas_dataframe(df) -> None:
     xr.testing.assert_identical(arr, xr.DataArray(roundtripped))
 
 
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/65712")
 @given(df=dataframe_strategy())
 def test_roundtrip_pandas_dataframe_datetime(df) -> None:
     # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.

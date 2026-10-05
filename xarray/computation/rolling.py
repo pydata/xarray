@@ -14,6 +14,7 @@ from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import CoarsenBoundaryOptions, SideOptions, T_Xarray
 from xarray.core.utils import (
+    contains_only_chunked_or_numpy,
     either_dict_or_kwargs,
     is_duck_dask_array,
     module_available,
@@ -780,6 +781,9 @@ class DataArrayRolling(Rolling["DataArray"]):
             # module, so we can use the machinery in `self.reduce`.
             and self.ndim == 1
             and xp is np
+            # wrapped duck arrays like pint quantities also report numpy as their
+            # namespace, but numbagg doesn't support them
+            and contains_only_chunked_or_numpy(self.obj)
         ):
             import numbagg
 
@@ -803,6 +807,8 @@ class DataArrayRolling(Rolling["DataArray"]):
             )
             and self.ndim == 1
             and xp is np
+            # bottleneck strips the units of wrapped duck arrays like pint
+            and contains_only_chunked_or_numpy(self.obj)
         ):
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs

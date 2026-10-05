@@ -60,6 +60,11 @@ Bug Fixes
   copied file-backed dataset can release a file reopened after the original
   dataset is closed (:issue:`10106`, :pull:`11643`).
   By `nightcityblade <https://github.com/nightcityblade>`_.
+- Rolling reductions like ``da.rolling(x=3).mean()`` no longer dispatch to
+  numbagg or bottleneck for wrapped duck arrays like pint quantities, which
+  failed with numbagg and stripped the units with bottleneck (:issue:`3594`,
+  :pull:`11660`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Documentation
@@ -79,6 +84,10 @@ Performance
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Tests now use strict xfails, so tests that unexpectedly pass are reported as
+  failures. Outdated xfail markers have been removed or narrowed down
+  (:pull:`11660`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - The generated arithmetic operators in ``xarray/core/_typed_ops.py`` use PEP 695
   type parameters, are tested with mypy, and CI now checks that they are up to
   date with ``xarray/util/generate_ops.py``. The CI check of the generated
