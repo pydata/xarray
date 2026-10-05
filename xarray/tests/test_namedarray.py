@@ -614,7 +614,7 @@ def test_repr() -> None:
 @pytest.mark.parametrize(
     "input_array, expected_chunksize_faked, expected_dtype",
     [
-        (np.arange(100).reshape(10, 10), 1024, np.int64),
+        (np.arange(100, dtype=np.int64).reshape(10, 10), 1024, np.int64),
         (np.arange(100).reshape(10, 10).astype(np.float32), 1024, np.float32),
     ],
 )
@@ -661,5 +661,6 @@ def test_fake_target_chunksize_cftime() -> None:
 
     faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[arg-type,unused-ignore]
 
-    assert faked_chunksize == 73
+    # sys.getsizeof of the object array is smaller on 32-bit platforms
+    assert faked_chunksize == (73 if sys.maxsize > 2**32 else 146)
     assert dtype == np.float64

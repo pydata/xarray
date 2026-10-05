@@ -1869,7 +1869,7 @@ def test_decode_timedelta_via_units(
     timedeltas = pd.timedelta_range(0, freq="D", periods=3)
     attrs = {"units": "days"}
     var = Variable(["time"], timedeltas, encoding=attrs)
-    encoded = Variable(["time"], np.array([0, 1, 2]), attrs=attrs)
+    encoded = Variable(["time"], np.array([0, 1, 2], dtype=np.int64), attrs=attrs)
     decoded = conventions.decode_cf_variable(
         "foo", encoded, decode_times=decode_times, decode_timedelta=decode_timedelta
     )
