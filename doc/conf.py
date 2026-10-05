@@ -188,6 +188,10 @@ llms_txt_suppress_unknown_node_warnings = [
     "mermaid",
     "PassthroughTextElement",
 ]
+# build the markdown after the html: running both builds at the same time lets their
+# notebook kernels race for the same ports ("ZMQError: Address already in use").
+# See https://github.com/NVIDIA/sphinx-llm/issues/159
+llms_txt_build_parallel = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
@@ -213,7 +217,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "debug.ipynb", "**.ipynb_checkpoints"]
+exclude_patterns = ["_build", "debug.ipynb", "**.ipynb_checkpoints", "README.md"]
 
 
 # The name of the Pygments (syntax highlighting) style to use.
