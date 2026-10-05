@@ -66,6 +66,15 @@ Bug Fixes
   changes if a slice is all-``NaN`` and has to be filled with ``fill_value``
   (:issue:`7527`, :pull:`11544`).
   By `Shurong Cao <https://github.com/CAOShurong>`_.
+- :py:meth:`DataTree.load` now loads non-chunked variables whose name matches
+  a group path. Previously, the "load everything else sequentially" step
+  checked variable names against the ``lazy_data`` dict, which is keyed by
+  group path, so a variable sharing its parent group's name was skipped and
+  stayed lazy. Writing the tree back to the same file it was loaded from then
+  failed with ``NetCDF: Write to read only``, because the lazy variable was
+  read from the file as it was being overwritten
+  (:issue:`11672`, :pull:`11673`).
+  By `mokashang <https://github.com/mokashang>`_.
 
 
 Documentation

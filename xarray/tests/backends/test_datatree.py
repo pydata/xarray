@@ -298,6 +298,24 @@ class NetCDFIOBase:
         assert list(root.dimensions) == ["x"]
         assert list(child.dimensions) == []
 
+    def test_load_datatree_overwrite_same_named_variable(self, tmpdir) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/11672
+        # load_datatree followed by to_netcdf to the same path must succeed
+        # even when a variable shares its parent group's name.
+        filepath = str(tmpdir / "test.nc")
+        original_dt = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"a": 0}),
+                "/b/b": xr.Dataset({"c": 1}),
+            }
+        )
+        original_dt.to_netcdf(filepath, engine=self.engine)
+        load_datatree(filepath, engine=self.engine).to_netcdf(
+            filepath, engine=self.engine
+        )
+        with open_datatree(filepath, engine=self.engine) as roundtrip_dt:
+            assert_identical(original_dt, roundtrip_dt)
+
     @requires_dask
     def test_compute_false(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.nc"
