@@ -48,10 +48,6 @@ Bug Fixes
   copied file-backed dataset can release a file reopened after the original
   dataset is closed (:issue:`10106`, :pull:`11643`).
   By `nightcityblade <https://github.com/nightcityblade>`_.
-- Fix :py:func:`cross` failing on dask arrays when the inputs have a different
-  number of components along ``dim`` and are aligned via their coordinates
-  (:issue:`9327`).
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Rolling reductions like ``da.rolling(x=3).mean()`` no longer dispatch to
   numbagg or bottleneck for wrapped duck arrays like pint quantities, which
   failed with numbagg and stripped the units with bottleneck (:issue:`3594`).
