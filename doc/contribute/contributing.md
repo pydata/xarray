@@ -364,10 +364,13 @@ the next person.
 
 ### About the _xarray_ documentation
 
-The documentation is written in **reStructuredText**, which is almost like writing
-in plain English, and built using [Sphinx](https://www.sphinx-doc.org/). The
-Sphinx Documentation has an excellent [introduction to reST](https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html). Review the Sphinx docs to perform more
-complex changes to the documentation as well.
+The documentation pages are written in [MyST Markdown](https://myst-parser.readthedocs.io/),
+a Markdown flavor that supports Sphinx's roles and directives, and built using
+[Sphinx](https://www.sphinx-doc.org/). The docstrings, the API reference
+(`doc/api.rst` and `doc/api/`) and the changelog (`doc/whats-new.rst`) are written in
+**reStructuredText**, for which the Sphinx documentation has an excellent
+[introduction to reST](https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html).
+A few pages are still written in reStructuredText, but new pages should use MyST Markdown.
 
 Some other important things to know about the docs:
 
@@ -446,51 +449,48 @@ If you want to do a full clean build, do:
 pixi run doc-clean
 ```
 
-### Writing ReST pages
+### Writing documentation pages
 
-Most documentation is either in the docstrings of individual classes and methods, in explicit
-`.rst` files, or in examples and tutorials. All of these use the
-[ReST](https://docutils.sourceforge.io/rst.html) syntax and are processed by
-[Sphinx](https://www.sphinx-doc.org/en/master/).
-
-This section contains additional information and conventions how ReST is used in the
-xarray documentation.
+This section contains additional information and conventions how MyST Markdown is
+used in the xarray documentation. See the
+[MyST syntax guide](https://myst-parser.readthedocs.io/en/latest/syntax/typography.html)
+for everything else.
 
 #### Section formatting
 
-We aim to follow the recommendations from the
-[Python documentation](https://devguide.python.org/documentation/start-documenting/index.html#sections)
-and the [Sphinx reStructuredText documentation](https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#sections)
-for section markup characters,
-
-- `*` with overline, for chapters
-- `=`, for heading
-- `-`, for sections
-- `~`, for subsections
-- `**` text `**`, for **bold** text
+Each page has a single `#` title, followed by `##` for sections, `###` for
+subsections and so on.
 
 #### Referring to other documents and sections
 
 [Sphinx](https://www.sphinx-doc.org/en/master/) allows internal
-[references](https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html) between documents.
+[references](https://www.sphinx-doc.org/en/master/usage/referencing.html) between documents.
+Documents can be linked with the `{doc}` role, and sections with the `{ref}` role
+and a label placed right before the heading:
 
-Documents can be linked with the `:doc:` directive:
+```md
+(my-section)=
 
+## My section
+
+See the {doc}`/getting-started-guide/installing` and {ref}`my-section`.
 ```
-See the :doc:`/getting-started-guide/installing`
 
-See the :doc:`/getting-started-guide/quick-overview`
-```
+For example, `` {doc}`/getting-started-guide/quick-overview` `` renders as
+{doc}`/getting-started-guide/quick-overview`.
 
-will render as:
-
-See the [Installation](https://docs.xarray.dev/en/stable/getting-started-guide/installing.html)
-
-See the [Quick Overview](https://docs.xarray.dev/en/stable/getting-started-guide/quick-overview.html)
+In docstrings and the remaining reStructuredText files, the same roles are written as
+`` :doc:`/getting-started-guide/installing` `` and `` :ref:`my-section` ``.
 
 #### Including figures and files
 
-Image files can be directly included in pages with the `image::` directive.
+Image files can be directly included in pages with the `{image}` directive:
+
+````md
+```{image} ../_static/ci.png
+:alt: Checks of a pull request
+```
+````
 
 (contributing.code)=
 
