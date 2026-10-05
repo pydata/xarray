@@ -60,6 +60,12 @@ Bug Fixes
   copied file-backed dataset can release a file reopened after the original
   dataset is closed (:issue:`10106`, :pull:`11643`).
   By `nightcityblade <https://github.com/nightcityblade>`_.
+- :py:meth:`DataArray.idxmin`, :py:meth:`DataArray.idxmax` and the
+  :py:class:`Dataset` equivalents no longer cast integer labels to ``float64``
+  for floating-point data without any all-``NaN`` slices. The label dtype only
+  changes if a slice is all-``NaN`` and has to be filled with ``fill_value``
+  (:issue:`7527`, :pull:`11544`).
+  By `Shurong Cao <https://github.com/CAOShurong>`_.
 
 
 Documentation
@@ -316,15 +322,6 @@ Bug Fixes
   ``pydap`` raised ``ValueError`` (:issue:`9075`, :issue:`11625`, :pull:`11626`).
   By `Aniruddha Adak <https://github.com/aniruddhaadak80>`_.
 
-- :py:meth:`DataArray.idxmax` / :py:meth:`DataArray.idxmin` and the
-  :py:class:`Dataset` equivalents no longer promote the dtype of the returned
-  label coordinate when no ``fill_value`` is needed. Previously, on floating-point
-  data with at least one fully-valid reduction slice, the integer coordinate
-  labels were silently cast to ``float64`` (e.g. ``idxmax(dim="y")`` returned
-  ``float64`` labels even when ``y`` was ``int64``). The coordinate dtype is now
-  preserved unless a slice is actually all-``NaN`` and gets filled
-  (:issue:`7527`).
-  By `Shurong Cao <https://github.com/CAOShurong>`_.
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
 Documentation
