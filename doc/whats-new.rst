@@ -67,6 +67,9 @@ Documentation
 - Fix the backend array indexing examples to pass indexers as a single tuple
   to ``_raw_indexing_method`` (:issue:`7450`, :pull:`11583`).
   By `Seahzee <https://github.com/Seahzee>`_.
+- Convert several simple documentation pages from reStructuredText to MyST
+  markdown (:issue:`7924`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
 ~~~~~~~~~~~
