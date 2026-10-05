@@ -29,8 +29,8 @@ xarray = { path = "." }
 [target.linux-64.dependencies]
 pydap-server = "*"
 
-[feature.py311.dependencies]
-python = "3.11.*"
+[feature.py312.dependencies]
+python = "3.12.*"
 
 [feature.py313.dependencies]
 python = "3.13.*"
@@ -58,7 +58,7 @@ aiobotocore = "*"
 
 [feature.numba.dependencies]
 numba = "*"
-numbagg = "*"
+numbagg = "!=0.9.5" # 0.9.5 rejects list axes passed by dask.array.nanmedian
 
 [feature.dask.dependencies]
 dask = "*"
@@ -100,7 +100,7 @@ jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
 
 [feature.minimal.dependencies]
 # minimal versions
-python = "3.11.*"
+python = "3.12.*"
 numpy = "1.26.*"
 pandas = "2.2.*"
 
@@ -142,6 +142,8 @@ sparse = "0.15.*"
 toolz = "1.0.*"
 zarr = "3.0.*"
 pyarrow = "*"        # required by dask.dataframe
+# numcodecs warns on import when crc32c is used instead of google-crc32c
+google-crc32c = "*"
 
 
 [feature.test.dependencies]
@@ -170,22 +172,28 @@ pytest --doctest-modules xarray/core/_aggregations.py &&\
 ! pytest --doctest-modules xarray/namedarray/_aggregations.py --accept  &&\
 pytest --doctest-modules xarray/namedarray/_aggregations.py &&\
 echo 'Aggregations generated successfully!'
-""", description = "Generate module and stub file for arithmetic operators of various xarray classes." }
-generate-aggregations-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success! Generate-aggregations matches the committed tree" || echo "Failure :( . Generate-aggregations does not match the committed files"', depends-on = [
+""", description = "Generate the aggregation methods of the xarray classes, including the outputs of their doctests." }
+generate-aggregations-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success! Generate-aggregations matches the committed tree" || ( echo "Failure :( . Generate-aggregations does not match the committed files" && git diff && exit 1 )', depends-on = [
   'generate-aggregations',
+  'pre-commit',
+] }
+generate-ops = { cmd = "python xarray/util/generate_ops.py > xarray/core/_typed_ops.py", description = "Generate the mixin classes with the arithmetic operators of the xarray classes." }
+generate-ops-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success! Generate-ops matches the committed tree" || ( echo "Failure :( . Generate-ops does not match the committed files" && git diff && exit 1 )', depends-on = [
+  'generate-ops',
   'pre-commit',
 ] }
 
 [feature.doc.dependencies]
 python = "3.12.*"
+cartopy_offlinedata = "*"          # Natural Earth data, avoids downloads (and timeouts) while executing notebooks
 kerchunk = "*"
 ipykernel = "*"
 ipywidgets = "*"                   # silence nbsphinx warning
-iris = "!=3.16.0"                  # avoid ncdata failing. See https://github.com/SciTools/ncdata/issues/255
+iris = "*"
 ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
-ncdata = "*"
+ncdata = ">=0.4"                   # support for iris>=3.16. See https://github.com/SciTools/ncdata/issues/255
 pydata-sphinx-theme = "*"
 pyproj = "*"
 rich = "*"                         # for Zarr tree()
@@ -194,7 +202,7 @@ sphinx-autosummary-accessors = "*"
 sphinx-copybutton = "*"
 sphinx-design = "*"
 sphinx-inline-tabs = "*"
-sphinx-llm = ">=0.2.1"
+sphinx-llm = ">=1.1"               # for llms_txt_suppress_unknown_node_warnings
 sphinx = ">=8,<9"
 sphinxcontrib-mermaid = "*"
 sphinxcontrib-srclinks = "*"
@@ -221,7 +229,7 @@ linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in 
 
 
 [feature.typing.dependencies]
-mypy = "==1.19.1"
+mypy = "==2.3.1"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"
@@ -231,6 +239,7 @@ types-decorator = "*"
 types-networkx = "*"
 types-openpyxl = "*"
 types-psutil = "*"
+types-pycurl = "*"
 types-Pygments = "*"
 types-python-dateutil = "*"
 types-pytz = "*"
@@ -242,7 +251,10 @@ pip = "*"
 
 [feature.typing.pypi-dependencies]
 types-defusedxml = "*"
+types-gevent = "*"
 types-pexpect = "*"
+types-pysocks = "*"
+types-xlrd = "*"
 
 # pandas-stubs / scipy-stubs live in their own feature, rather than in `typing`,
 # so that `test-nightly` can source them from PyPI (see the `nightly` feature)
@@ -255,7 +267,7 @@ pandas-stubs = "<=2.3.3.251219"
 scipy-stubs = ">=1.17.1.2"
 
 [feature.typing.tasks]
-mypy = { cmd = "mypy --install-types --non-interactive --cobertura-xml-report mypy_report", description = "Run mypy type checking and generate a Cobertura XML report." }
+mypy = { cmd = "mypy --cobertura-xml-report mypy_report", description = "Run mypy type checking and generate a Cobertura XML report." }
 
 [feature.pre-commit.dependencies]
 pre-commit = "*"
@@ -273,6 +285,7 @@ release-contributors = { cmd = "python ci/release_contributors.py", description 
 [feature.dev.dependencies]
 ipython = ">=9.8.0,<10"
 black = ">=25.1.0,<26"
+jinja2 = "*"            # for xarray/util/generate_ops.py
 
 [feature.policy.pypi-dependencies]
 xarray-minimum-dependency-policy = "*"
@@ -287,17 +300,17 @@ args = ["env"]
 [feature.policy.tasks]
 policy-bare-minimum = [
   { task = "_check-policy", args = [
-    "pixi:test-py311-bare-minimum",
+    "pixi:test-py312-bare-minimum",
   ] },
 ]
 policy-bare-min-and-scipy = [
   { task = "_check-policy", args = [
-    "pixi:test-py311-bare-min-and-scipy",
+    "pixi:test-py312-bare-min-and-scipy",
   ] },
 ]
 policy-min-versions = [
   { task = "_check-policy", args = [
-    "pixi:test-py311-min-versions",
+    "pixi:test-py312-min-versions",
   ] },
 ]
 [feature.policy.tasks.policy]
@@ -305,9 +318,9 @@ policy-min-versions = [
 depends-on = [
   { task = "_check-policy", args = [
     """\
-    pixi:test-py311-bare-minimum \
-    pixi:test-py311-bare-min-and-scipy \
-    pixi:test-py311-min-versions \
+    pixi:test-py312-bare-minimum \
+    pixi:test-py312-bare-min-and-scipy \
+    pixi:test-py312-min-versions \
     """,
   ] },
 ]
@@ -394,8 +407,8 @@ test-py314 = { features = [
   "extras",
 ] }
 
-test-py311 = { features = [
-  "py311",
+test-py312 = { features = [
+  "py312",
   "test",
   "backends",
   "accel",
@@ -405,8 +418,8 @@ test-py311 = { features = [
   "extras",
 ] }
 
-test-py311-with-typing = { features = [
-  "py311",
+test-py312-with-typing = { features = [
+  "py312",
   "test",
   "backends",
   "accel",
@@ -431,13 +444,13 @@ test-py314-with-typing = { features = [
   "typing-stubs",
 ] }
 
-test-py311-bare-minimum = { features = ["test", "minimal"] }
-test-py311-bare-min-and-scipy = { features = [
+test-py312-bare-minimum = { features = ["test", "minimal"] }
+test-py312-bare-min-and-scipy = { features = [
   "test",
   "minimal",
   "minimum-scipy",
 ] }
-test-py311-min-versions = { features = [
+test-py312-min-versions = { features = [
   "test",
   "minimal",
   "minimum-scipy",

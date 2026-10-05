@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 import pandas as pd
 
@@ -31,16 +31,13 @@ if TYPE_CHECKING:
     )
 
 
-T = TypeVar("T")
-
-
-def _infer_concat_order_from_positions(
+def _infer_concat_order_from_positions[T](
     datasets: NestedSequence[T],
 ) -> dict[tuple[int, ...], T]:
     return dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
 
-def _infer_tile_ids_from_nested_list(
+def _infer_tile_ids_from_nested_list[T](
     entry: NestedSequence[T], current_pos: tuple[int, ...]
 ) -> Iterator[tuple[tuple[int, ...], T]]:
     """
@@ -64,11 +61,12 @@ def _infer_tile_ids_from_nested_list(
     combined_tile_ids : dict[tuple(int, ...), obj]
     """
 
-    if not isinstance(entry, str) and isinstance(entry, Sequence):
-        for i, item in enumerate(entry):
-            yield from _infer_tile_ids_from_nested_list(item, current_pos + (i,))
-    else:
-        yield current_pos, cast(T, entry)
+    for i, item in enumerate(entry):
+        position = current_pos + (i,)
+        if not isinstance(item, str) and isinstance(item, Sequence):
+            yield from _infer_tile_ids_from_nested_list(item, position)
+        else:
+            yield position, cast(T, item)
 
 
 def _ensure_same_types(series, dim):
@@ -356,7 +354,7 @@ def _combine_1d(
                 "If you are intending to concatenate datasets, please specify the concatenation dimension explicitly. "
                 "Using merge to concatenate is quite inefficient."
             )
-            raise e
+            raise
 
     return combined
 
@@ -410,15 +408,15 @@ def _nested_combine(
 # Define types for arbitrarily-nested list of lists.
 # Mypy doesn't seem to handle overloads properly with recursive types, so we
 # explicitly expand the first handful of levels of recursion.
-DatasetLike: TypeAlias = DataArray | Dataset
-DatasetHyperCube: TypeAlias = (
+type DatasetLike = DataArray | Dataset
+type DatasetHyperCube = (
     DatasetLike
     | Sequence[DatasetLike]
     | Sequence[Sequence[DatasetLike]]
     | Sequence[Sequence[Sequence[DatasetLike]]]
     | Sequence[Sequence[Sequence[Sequence[DatasetLike]]]]
 )
-DataTreeHyperCube: TypeAlias = (
+type DataTreeHyperCube = (
     DataTree
     | Sequence[DataTree]
     | Sequence[Sequence[DataTree]]
@@ -721,10 +719,7 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-K = TypeVar("K", bound=Hashable)
-
-
-def groupby_defaultdict(
+def groupby_defaultdict[T, K: Hashable](
     iter: list[T],
     key: Callable[[T], K],
 ) -> Iterator[tuple[K, Iterator[T]]]:
@@ -799,9 +794,9 @@ def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     data_vars: Literal["all", "minimal", "different"]
-    | None
     | list[str]
-    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    | CombineKwargDefault
+    | None = _DATA_VARS_DEFAULT,
     coords: str | CombineKwargDefault = _COORDS_DEFAULT,
     fill_value: object = dtypes.NA,
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
