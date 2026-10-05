@@ -7,7 +7,6 @@ import numpy as np
 from xarray import coding
 from xarray.coding.common import lazy_elemwise_func
 from xarray.core.variable import Variable
-from xarray.namedarray.pycompat import is_chunked_array
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string
@@ -79,11 +78,6 @@ def coerce_nc3_dtype(arr):
     dtype = str(arr.dtype)
     if dtype in _nc3_dtype_coercions:
         new_dtype = _nc3_dtype_coercions[dtype]
-        if is_chunked_array(arr):
-            # Validate each block when it is written rather than computing the
-            # whole array while building a delayed write. Keep the same safety
-            # check as for eager data, including blocks outside the first chunk.
-            return lazy_elemwise_func(arr, coerce_nc3_dtype, dtype=np.dtype(new_dtype))
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():
@@ -134,7 +128,8 @@ def encode_nc3_variable(var, name=None):
     ]:
         var = coder.encode(var, name=name)
     data = _maybe_prepare_times(var)
-    data = coerce_nc3_dtype(data)
+    dtype = np.dtype(_nc3_dtype_coercions.get(str(data.dtype), data.dtype))
+    data = lazy_elemwise_func(data, coerce_nc3_dtype, dtype=dtype)
     attrs = encode_nc3_attrs(var.attrs)
     return Variable(var.dims, data, attrs, var.encoding)
 

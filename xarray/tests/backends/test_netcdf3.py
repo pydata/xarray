@@ -18,23 +18,54 @@ from xarray.tests import (
 @pytest.mark.parametrize(
     "dtype", ["int64", "uint64", "uint32", "uint16", "uint8", "bool"]
 )
-def test_coerce_nc3_dtype_lazy(dtype) -> None:
+def test_encode_nc3_variable_lazy(dtype) -> None:
     values = np.array([0, 1, 2], dtype=dtype)
     array = dask_array_api.from_array(values, chunks=1)
     with raise_if_dask_computes():
-        actual = coerce_nc3_dtype(array)
+        actual = encode_nc3_variable(xr.Variable("x", array))
     assert actual.chunks == array.chunks
-    assert_array_equal(actual.compute(), coerce_nc3_dtype(values))
+    assert actual.dtype == coerce_nc3_dtype(values).dtype
+    assert_array_equal(actual.data.compute(), coerce_nc3_dtype(values))
 
 
 @requires_dask
 @pytest.mark.parametrize("dtype", ["int64", "uint64", "uint32", "uint16", "uint8"])
-def test_coerce_nc3_dtype_lazy_unsafe(dtype) -> None:
+def test_encode_nc3_variable_lazy_unsafe(dtype) -> None:
     values = np.array([0, np.iinfo(dtype).max], dtype=dtype)
     with raise_if_dask_computes():
-        actual = coerce_nc3_dtype(dask_array_api.from_array(values, chunks=1))
+        actual = encode_nc3_variable(
+            xr.Variable("x", dask_array_api.from_array(values, chunks=1))
+        )
     with pytest.raises(ValueError, match="could not safely cast"):
-        actual.compute()
+        actual.data.compute()
+
+
+@pytest.mark.parametrize(
+    "dtype", ["int64", "uint64", "uint32", "uint16", "uint8", "bool", "float64"]
+)
+def test_encode_nc3_variable_numpy_lazy(dtype, monkeypatch) -> None:
+    values = np.array([0, 1, 2], dtype=dtype)
+    expected = coerce_nc3_dtype(values)
+    calls = []
+
+    def track_coercion(array):
+        calls.append(array)
+        return coerce_nc3_dtype(array)
+
+    monkeypatch.setattr("xarray.backends.netcdf3.coerce_nc3_dtype", track_coercion)
+    actual = encode_nc3_variable(xr.Variable("x", values))
+    assert actual.dtype == expected.dtype
+    assert not calls
+    assert_array_equal(actual.data, expected)
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("dtype", ["int64", "uint64", "uint32", "uint16", "uint8"])
+def test_encode_nc3_variable_numpy_lazy_unsafe(dtype) -> None:
+    values = np.array([0, np.iinfo(dtype).max], dtype=dtype)
+    actual = encode_nc3_variable(xr.Variable("x", values))
+    with pytest.raises(ValueError, match="could not safely cast"):
+        _ = actual.data
 
 
 @requires_dask
@@ -75,3 +106,15 @@ def test_nc3_write_compute_false(tmp_path, format, dtype, units) -> None:
     with xr.open_dataset(path, decode_times=False, decode_timedelta=False) as actual:
         assert_array_equal(actual["counts"].values, values)
         assert actual["counts"].attrs == attrs
+
+
+@requires_dask
+@requires_netCDF4
+@pytest.mark.parametrize("format", ["NETCDF3_CLASSIC", "NETCDF4_CLASSIC"])
+@pytest.mark.parametrize("chunked", [False, True])
+def test_nc3_write_unsafe(tmp_path, format, chunked) -> None:
+    values = np.array([0, np.iinfo("int64").max], dtype="int64")
+    data = dask_array_api.from_array(values, chunks=1) if chunked else values
+    dataset = xr.Dataset({"counts": ("x", data)})
+    with pytest.raises(ValueError, match="could not safely cast"):
+        dataset.to_netcdf(tmp_path / "unsafe.nc", engine="netcdf4", format=format)
