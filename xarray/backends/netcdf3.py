@@ -5,8 +5,8 @@ import unicodedata
 import numpy as np
 
 from xarray import coding
+from xarray.coding.common import lazy_elemwise_func
 from xarray.core.variable import Variable
-from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
 
 # Special characters that are permitted in netCDF names except in the
@@ -83,9 +83,7 @@ def coerce_nc3_dtype(arr):
             # Validate each block when it is written rather than computing the
             # whole array while building a delayed write. Keep the same safety
             # check as for eager data, including blocks outside the first chunk.
-            return get_chunked_array_type(arr).map_blocks(
-                coerce_nc3_dtype, arr, dtype=np.dtype(new_dtype)
-            )
+            return lazy_elemwise_func(arr, coerce_nc3_dtype, dtype=np.dtype(new_dtype))
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
         if not (cast_arr == arr).all():
