@@ -25,7 +25,6 @@ from xarray.tests import (
     requires_netCDF4,
     requires_pydap,
     requires_zarr,
-    skip_if_server_unreachable,
 )
 from xarray.tests.backends.test_netCDF4 import TestNetCDF4Data as _TestNetCDF4Data
 
@@ -580,10 +579,6 @@ class TestPyDAPDatatreeIO:
         "dap4://test.opendap.org/opendap/dap4/all_aligned_child_nodes.nc.h5"
     )
     simplegroup_datatree_url = "dap4://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5"
-
-    @pytest.fixture(autouse=True)
-    def _skip_if_server_unreachable(self) -> None:
-        skip_if_server_unreachable(self.simplegroup_datatree_url)
 
     def test_open_datatree_unaligned_hierarchy(
         self,

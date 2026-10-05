@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import functools
 import importlib
 import string
-import urllib.error
-import urllib.request
 import warnings
 from contextlib import contextmanager, nullcontext
 from unittest import mock  # noqa: F401
-from urllib.parse import urlsplit
 
 import numpy as np
 import pandas as pd
@@ -300,35 +296,6 @@ def raise_if_dask_computes(max_computes=0):
 
 flaky = pytest.mark.flaky
 network = pytest.mark.network
-
-
-@functools.cache
-def _server_responds(url: str, timeout: float) -> bool:
-    try:
-        with urllib.request.urlopen(
-            urllib.request.Request(url, method="HEAD"), timeout=timeout
-        ):
-            pass
-    except urllib.error.HTTPError:
-        # the server answered, just not with a success status
-        return True
-    except OSError:
-        return False
-    return True
-
-
-def skip_if_server_unreachable(url: str, timeout: float = 10) -> None:
-    """Skip the test if the server hosting ``url`` doesn't respond.
-
-    Fails fast for network tests against external servers, which would
-    otherwise hang until the client's (often minutes long) timeout.
-    """
-    parts = urlsplit(url)
-    # OPeNDAP clients map the dap2:// and dap4:// schemes to https
-    scheme = "https" if parts.scheme in ("dap2", "dap4") else parts.scheme
-    server = f"{scheme}://{parts.netloc}/"
-    if not _server_responds(server, timeout):
-        pytest.skip(f"{server} is not reachable")
 
 
 class ReturnItem:
