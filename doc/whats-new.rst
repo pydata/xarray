@@ -85,7 +85,7 @@ Documentation
   attributes at the path where they are defined, e.g.
   ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
   ``sphinx-codeautolink`` link to them from code examples in other projects
-  (:pull:`PRNUM`).
+  (:pull:`11678`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Clarified the ``rename`` docstrings so they no longer describe the result as a
   "new" object, which could be read as implying it no longer shares memory with
