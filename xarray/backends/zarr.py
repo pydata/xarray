@@ -438,7 +438,7 @@ def _get_zarr_chunks_and_shards(
     if grid["name"] == "rectilinear":
         rectilinear = True
     elif grid["name"] == "regular":
-        # Zarr-python 3.2.1 incorrectly wrote some rectilinear grids as e.g.
+        # Zarr-python 3.2.x incorrectly wrote some rectilinear grids as e.g.
         # {"name": "regular", "configuration": {"chunk_shape": [2, [5, 10, 5]]}}.
         # Like newer zarr-python, read these as the rectilinear grid they describe.
         # See https://github.com/zarr-developers/zarr-python/issues/4374
@@ -450,7 +450,7 @@ def _get_zarr_chunks_and_shards(
                 f"The zarr array {zarr_array.name!r} has invalid chunk grid "
                 f"metadata {grid!r}: a 'regular' chunk grid cannot list chunk "
                 "sizes. This is not spec-compliant, and was likely written by "
-                "the buggy zarr-python version 3.2.1. Since the intent is clear, "
+                "the buggy zarr-python versions 3.2.x. Since the intent is clear, "
                 "Xarray will read it as the rectilinear chunk grid it describes, "
                 "but other zarr readers may reject it. See "
                 "https://github.com/zarr-developers/zarr-python/issues/4374",

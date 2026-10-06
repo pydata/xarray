@@ -2277,7 +2277,7 @@ class TestZarrRectilinearChunksRead:
 
     @staticmethod
     def maybe_warns_invalid_grid(arr):
-        """zarr-python 3.2 writes mixed regular/rectilinear grids as invalid
+        """zarr-python 3.2.x writes mixed regular/rectilinear grids as invalid
         'regular' grid metadata, which xarray reads with a warning."""
         if arr.metadata.to_dict()["chunk_grid"]["name"] == "regular":
             return pytest.warns(UserWarning, match=r"invalid chunk grid")
