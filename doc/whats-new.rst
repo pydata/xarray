@@ -81,6 +81,12 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Add hidden intersphinx inventory entries for methods, properties and
+  attributes at the path where they are defined, e.g.
+  ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
+  ``sphinx-codeautolink`` link to them from code examples in other projects
+  (:pull:`PRNUM`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Clarified the ``rename`` docstrings so they no longer describe the result as a
   "new" object, which could be read as implying it no longer shares memory with
   the original (:issue:`9432`, :pull:`11644`).
