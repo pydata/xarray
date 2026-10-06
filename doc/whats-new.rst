@@ -67,12 +67,8 @@ Bug Fixes
   (:issue:`7527`, :pull:`11544`).
   By `Shurong Cao <https://github.com/CAOShurong>`_.
 - :py:meth:`DataTree.load` now loads non-chunked variables whose name matches
-  a group path. Previously, the "load everything else sequentially" step
-  checked variable names against the ``lazy_data`` dict, which is keyed by
-  group path, so a variable sharing its parent group's name was skipped and
-  stayed lazy. Writing the tree back to the same file it was loaded from then
-  failed with ``NetCDF: Write to read only``, because the lazy variable was
-  read from the file as it was being overwritten
+  a group path, which were previously skipped and stayed lazy, breaking a
+  subsequent write back to the same file
   (:issue:`11672`, :pull:`11673`).
   By `mokashang <https://github.com/mokashang>`_.
 
