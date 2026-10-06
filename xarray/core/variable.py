@@ -40,6 +40,7 @@ from xarray.core.indexing import (
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.utils import (
+    Default,
     OrderedSet,
     _default,
     consolidate_dask_from_array_kwargs,
@@ -55,9 +56,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     maybe_coerce_to_str,
 )
-from xarray.namedarray._typing import Default as NamedArrayDefault
 from xarray.namedarray._typing import DimType_co
-from xarray.namedarray._typing import _default as _namedarray_default
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
@@ -437,51 +436,51 @@ class Variable(
     @overload
     def _new(
         self,
-        dims: NamedArrayDefault = ...,
-        data: NamedArrayDefault = ...,
-        attrs: AttrsLike | NamedArrayDefault = ...,
-    ) -> Variable[DimType_co]: ...
+        dims: Default = ...,
+        data: Default = ...,
+        attrs: AttrsLike | Default = ...,
+    ) -> Self: ...
 
     @overload
     def _new[DimType: Hashable](
         self,
         dims: Iterable[DimType] = ...,
-        data: NamedArrayDefault = ...,
-        attrs: AttrsLike | NamedArrayDefault = ...,
+        data: Default = ...,
+        attrs: AttrsLike | Default = ...,
     ) -> Variable[DimType]: ...
 
     @overload
     def _new(
         self,
-        dims: NamedArrayDefault = ...,
+        dims: Default = ...,
         data: duckarray[Any, Any] = ...,
-        attrs: AttrsLike | NamedArrayDefault = ...,
-    ) -> Variable[DimType_co]: ...
+        attrs: AttrsLike | Default = ...,
+    ) -> Self: ...
 
     @overload
     def _new[DimType: Hashable](
         self,
         dims: Iterable[DimType] = ...,
         data: duckarray[Any, Any] = ...,
-        attrs: AttrsLike | NamedArrayDefault = ...,
+        attrs: AttrsLike | Default = ...,
     ) -> Variable[DimType]: ...
 
     @override
     def _new(
         self,
-        dims: Iterable[Hashable] | NamedArrayDefault = _namedarray_default,
-        data: Any = _namedarray_default,
-        attrs: AttrsLike | NamedArrayDefault = _namedarray_default,
+        dims: Iterable[Hashable] | Default = _default,
+        data: Any = _default,
+        attrs: AttrsLike | Default = _default,
     ) -> Variable[Any]:
-        dims_ = copy.copy(self._dims) if dims is _namedarray_default else dims
+        dims_ = copy.copy(self._dims) if dims is _default else dims
 
         attrs_: AttrsLike
-        if attrs is _namedarray_default:
+        if attrs is _default:
             attrs_ = None if self._attrs is None else self._attrs.copy()
         else:
             attrs_ = attrs
 
-        data_: Any = copy.copy(self._data) if data is _namedarray_default else data
+        data_: Any = copy.copy(self._data) if data is _default else data
 
         cls_: type[Variable[Any]] = type(self)
         return cls_(dims_, data_, attrs_)
@@ -1574,7 +1573,9 @@ class Variable(
         )
         return expanded_var.transpose(*dim)
 
-    def _stack_once(self, dim: list[DimType_co], new_dim: Hashable):
+    def _stack_once[NewDimType: Hashable](
+        self, dim: list[DimType_co], new_dim: NewDimType
+    ) -> Variable[DimType_co | NewDimType]:
         if not set(dim) <= set(self.dims):
             raise ValueError(f"invalid existing dimensions: {dim}")
 
@@ -1596,7 +1597,7 @@ class Variable(
         new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + (new_dim,)
 
-        cls_: type[Variable[Hashable]] = type(self)
+        cls_: type[Variable[DimType_co | NewDimType]] = type(self)
         return cls_(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
 
     @partial(deprecate_dims, old_name="dimensions")
@@ -2479,7 +2480,7 @@ class Variable(
 
     @override
     @property
-    def imag(self) -> Variable[DimType_co]:
+    def imag(self) -> Self:
         """
         The imaginary part of the variable.
 
@@ -2491,7 +2492,7 @@ class Variable(
 
     @override
     @property
-    def real(self) -> Variable[DimType_co]:
+    def real(self) -> Self:
         """
         The real part of the variable.
 
@@ -2722,30 +2723,20 @@ class Variable(
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
     @override
-    def _as_sparse(
-        self, sparse_format=_default, fill_value=_default
-    ) -> Variable[DimType_co]:
+    def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Self:
         """
         Use sparse-array as backend.
         """
-        from xarray.namedarray._typing import _default as _default_named
-
-        if sparse_format is _default:
-            sparse_format = _default_named
-
-        if fill_value is _default:
-            fill_value = _default_named
-
         out = super()._as_sparse(sparse_format, fill_value)
-        return cast("Variable[DimType_co]", out)
+        return cast("Self", out)
 
     @override
-    def _to_dense(self) -> Variable[DimType_co]:
+    def _to_dense(self) -> Self:
         """
         Change backend from sparse to np.array.
         """
         out = super()._to_dense()
-        return cast("Variable[DimType_co]", out)
+        return cast("Self", out)
 
     @override
     def chunk(  # type: ignore[override]
