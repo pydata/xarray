@@ -40,6 +40,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix computing a chunked coordinate backed by a :py:class:`~xarray.indexes.CoordinateTransformIndex`
+  (e.g. :py:class:`~xarray.indexes.RangeIndex`) after selecting a single position: outer indexing with
+  an integer now drops that axis, as with basic indexing
+  (`rasterix#92 <https://github.com/xarray-contrib/rasterix/issues/92>`_).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.
