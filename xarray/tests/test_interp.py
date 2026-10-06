@@ -1314,15 +1314,14 @@ def test_interp_empty_new_coords(method) -> None:
 
 
 @requires_scipy
-@pytest.mark.parametrize("chunk", [False, pytest.param(True, marks=requires_dask)])
-def test_interp_vectorized_empty_dim(chunk: bool) -> None:
+def test_interp_vectorized_empty_dim(use_dask: bool) -> None:
     # the new coordinates vary along the empty dimension "t"
     da = xr.DataArray(
         np.zeros((0, 3, 5)),
         dims=("t", "r", "z"),
         coords={"z": np.linspace(0, 1, 5)},
     )
-    if chunk:
+    if use_dask:
         da = da.chunk()
     new_z = xr.DataArray(np.array([], dtype=float), dims="t")
     actual = da.interp(z=new_z)
