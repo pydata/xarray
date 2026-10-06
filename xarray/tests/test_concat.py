@@ -1491,6 +1491,29 @@ def test_concat_index_not_same_dim() -> None:
         concat([ds1, ds2], dim="x")
 
 
+def test_concat_mixed_numpy_and_extension_coord_dtype() -> None:
+    # GH11317. Passing a pd.Index as the concat dim gives that index a pandas
+    # extension dtype (StringDtype under pandas 3), while a coord built from a
+    # plain list keeps a numpy <U dtype. PandasIndex.concat promoted the two
+    # with np.result_type, which cannot interpret an extension dtype at all.
+    da = DataArray([0], dims=["dim_a"], coords={"dim_a": ["a"]})
+    db = concat([DataArray([0])], pd.Index(["b"], name="dim_a"))
+
+    actual = concat([da, db], dim="dim_a")
+
+    assert list(actual.coords["dim_a"].values) == ["a", "b"]
+    assert actual.sizes["dim_a"] == 2
+
+
+def test_concat_same_numpy_coord_dtypes_still_promote_with_numpy() -> None:
+    # The extension-dtype branch must not swallow the ordinary case: two numpy
+    # string coords of different widths still promote to the wider numpy dtype.
+    da = DataArray([0], dims=["d"], coords={"d": ["aaa"]})
+    db = DataArray([1], dims=["d"], coords={"d": ["b"]})
+
+    assert concat([da, db], dim="d").coords["d"].dtype == np.dtype("<U3")
+
+
 class TestNewDefaults:
     def test_concat_second_empty_with_scalar_data_var_only_on_first(self) -> None:
         ds1 = Dataset(data_vars={"a": ("y", [0.1]), "b": 0.1}, coords={"x": 0.1})
