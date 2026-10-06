@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
+from xarray.backends import writers
 from xarray.backends.netcdf3 import coerce_nc3_dtype, encode_nc3_variable
 from xarray.tests import (
     assert_array_equal,
@@ -11,7 +12,14 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_dask,
     requires_netCDF4,
+    requires_scipy,
 )
+
+_NC3_ENGINE_FORMATS = [
+    pytest.param("scipy", "NETCDF3_CLASSIC", marks=requires_scipy),
+    pytest.param("netcdf4", "NETCDF3_CLASSIC", marks=requires_netCDF4),
+    pytest.param("netcdf4", "NETCDF4_CLASSIC", marks=requires_netCDF4),
+]
 
 
 @requires_dask
@@ -32,12 +40,14 @@ def test_encode_nc3_variable_lazy(dtype) -> None:
 @pytest.mark.parametrize("dtype", ["int64", "uint64", "uint32", "uint16", "uint8"])
 def test_encode_nc3_variable_lazy_unsafe(dtype) -> None:
     values = np.array([0, np.iinfo(dtype).max], dtype=dtype)
+    var = xr.Variable("x", dask_array_api.from_array(values, chunks=1))
     with raise_if_dask_computes():
-        actual = encode_nc3_variable(
-            xr.Variable("x", dask_array_api.from_array(values, chunks=1))
-        )
-    with pytest.raises(ValueError, match="could not safely cast"):
+        actual = encode_nc3_variable(var, name="counts")
+    with pytest.raises(ValueError, match="could not safely cast") as excinfo:
         actual.data.compute()
+    assert excinfo.value.__notes__ == [
+        f"Raised while encoding variable 'counts' with value {var!r}"
+    ]
 
 
 @pytest.mark.parametrize(
@@ -63,9 +73,13 @@ def test_encode_nc3_variable_numpy_lazy(dtype, monkeypatch) -> None:
 @pytest.mark.parametrize("dtype", ["int64", "uint64", "uint32", "uint16", "uint8"])
 def test_encode_nc3_variable_numpy_lazy_unsafe(dtype) -> None:
     values = np.array([0, np.iinfo(dtype).max], dtype=dtype)
-    actual = encode_nc3_variable(xr.Variable("x", values))
-    with pytest.raises(ValueError, match="could not safely cast"):
+    var = xr.Variable("x", values)
+    actual = encode_nc3_variable(var, name="counts")
+    with pytest.raises(ValueError, match="could not safely cast") as excinfo:
         _ = actual.data
+    assert excinfo.value.__notes__ == [
+        f"Raised while encoding variable 'counts' with value {var!r}"
+    ]
 
 
 @requires_dask
@@ -108,13 +122,52 @@ def test_nc3_write_compute_false(tmp_path, format, dtype, units) -> None:
         assert actual["counts"].attrs == attrs
 
 
-@requires_dask
-@requires_netCDF4
-@pytest.mark.parametrize("format", ["NETCDF3_CLASSIC", "NETCDF4_CLASSIC"])
-@pytest.mark.parametrize("chunked", [False, True])
-def test_nc3_write_unsafe(tmp_path, format, chunked) -> None:
+@pytest.mark.parametrize("engine,format", _NC3_ENGINE_FORMATS)
+@pytest.mark.parametrize("chunked", [False, pytest.param(True, marks=requires_dask)])
+def test_nc3_write_unsafe(tmp_path, engine, format, chunked) -> None:
     values = np.array([0, np.iinfo("int64").max], dtype="int64")
     data = dask_array_api.from_array(values, chunks=1) if chunked else values
     dataset = xr.Dataset({"counts": ("x", data)})
-    with pytest.raises(ValueError, match="could not safely cast"):
-        dataset.to_netcdf(tmp_path / "unsafe.nc", engine="netcdf4", format=format)
+    expected_note = (
+        "Raised while encoding variable 'counts' with value "
+        f"{dataset['counts'].variable!r}"
+    )
+    with pytest.raises(ValueError, match="could not safely cast") as excinfo:
+        dataset.to_netcdf(tmp_path / "unsafe.nc", engine=engine, format=format)
+    assert excinfo.value.__notes__ == [expected_note]
+
+
+@requires_dask
+@pytest.mark.parametrize("engine,format", _NC3_ENGINE_FORMATS)
+def test_nc3_write_compute_false_unsafe_note(
+    tmp_path, engine, format, monkeypatch
+) -> None:
+    values = np.array([0, np.iinfo("int64").max], dtype="int64")
+    dataset = xr.Dataset({"counts": ("x", dask_array_api.from_array(values, chunks=1))})
+    expected_note = (
+        "Raised while encoding variable 'counts' with value "
+        f"{dataset['counts'].variable!r}"
+    )
+    stores = []
+    delayed_close = writers.delayed_close_after_writes
+
+    def capture_store(writes, store):
+        stores.append(store)
+        return delayed_close(writes, store)
+
+    monkeypatch.setattr(writers, "delayed_close_after_writes", capture_store)
+    try:
+        with raise_if_dask_computes():
+            write = dataset.to_netcdf(
+                tmp_path / "unsafe-delayed.nc",
+                engine=engine,
+                format=format,
+                compute=False,
+            )
+        with pytest.raises(ValueError, match="could not safely cast") as excinfo:
+            write.compute(scheduler="synchronous")
+        assert excinfo.value.__notes__ == [expected_note]
+    finally:
+        # A failing write never reaches its delayed close task.
+        for store in stores:
+            store.close()

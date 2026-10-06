@@ -52,6 +52,20 @@ def test_infer_dtype_error_on_mixed_types(data):
 
 @requires_scipy
 def test_encoding_failure_note():
+    # Create an arbitrary value that cannot be encoded in netCDF3
+    ds = xr.Dataset({"invalid": np.array([2**63 - 1], dtype=np.int64)})
+    f = io.BytesIO()
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Raised while encoding variable 'invalid' with value <xarray.Variable"
+        ),
+    ):
+        ds.to_netcdf(f, engine="scipy")
+
+
+@requires_scipy
+def test_encoding_failure_note_invalid_attribute():
     # Attributes are encoded eagerly; data coercion is deferred until writing.
     ds = xr.Dataset(
         {"invalid": xr.Variable((), 0, {"invalid_attribute": np.int64(2**63 - 1)})}

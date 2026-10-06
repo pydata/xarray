@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unicodedata
+from functools import partial
 
 import numpy as np
 
@@ -88,6 +89,14 @@ def coerce_nc3_dtype(arr):
     return arr
 
 
+def _coerce_nc3_dtype_with_note(arr, *, note):
+    try:
+        return coerce_nc3_dtype(arr)
+    except ValueError as err:
+        err.add_note(note)
+        raise
+
+
 def encode_nc3_attr_value(value):
     if isinstance(value, bytes):
         pass
@@ -122,6 +131,8 @@ def _maybe_prepare_times(var):
 
 
 def encode_nc3_variable(var, name=None):
+    # Keep diagnostic context without capturing the variable in deferred tasks.
+    note = f"Raised while encoding variable {name!r} with value {var!r}"
     for coder in [
         coding.strings.EncodedStringCoder(allows_unicode=False),
         coding.strings.CharacterArrayCoder(),
@@ -129,7 +140,8 @@ def encode_nc3_variable(var, name=None):
         var = coder.encode(var, name=name)
     data = _maybe_prepare_times(var)
     dtype = np.dtype(_nc3_dtype_coercions.get(str(data.dtype), data.dtype))
-    data = lazy_elemwise_func(data, coerce_nc3_dtype, dtype=dtype)
+    transform = partial(_coerce_nc3_dtype_with_note, note=note)
+    data = lazy_elemwise_func(data, transform, dtype=dtype)
     attrs = encode_nc3_attrs(var.attrs)
     return Variable(var.dims, data, attrs, var.encoding)
 

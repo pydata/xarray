@@ -453,7 +453,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         encoded_variables = {}
         for k, v in variables.items():
             try:
-                encoded_variables[k] = self.encode_variable(v)
+                encoded_variables[k] = self.encode_variable(v, name=k)
             except Exception as e:
                 e.add_note(f"Raised while encoding variable {k!r} with value {v!r}")
                 raise
