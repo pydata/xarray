@@ -4,7 +4,7 @@ import datetime as dt
 import itertools
 import warnings
 from collections import ChainMap
-from collections.abc import Callable, Generator, Hashable, Sequence
+from collections.abc import Callable, Generator, Hashable, Mapping, Sequence
 from functools import partial
 from numbers import Number
 from typing import TYPE_CHECKING, Any, TypeVar, get_args, override
@@ -832,9 +832,12 @@ def _interpnd(
 
     x, new_x = _floatize_x(x, new_x)
 
-    def drop_loop_dims(v: Variable) -> Variable:
-        # the remaining loop dimensions all have size 1 on the destination coordinates
-        return v.squeeze([dim for dim in loop_dims if dim in v.dims])
+    def select_loop_index(v: Variable, indexers: Mapping[Any, int]) -> Variable:
+        # Select `indexers` and drop all loop dimensions of a destination coordinate.
+        # The non-vectorized loop dimensions all have size 1.
+        key = {dim: indexers.get(dim, 0) for dim in loop_dims if dim in v.dims}
+        # no isel without key: v might wrap a numpy scalar (numpy<2)
+        return v.isel(key) if key else v
 
     # the loop dimensions along which the destination coordinates vary
     vectorize_dims = [
@@ -846,7 +849,7 @@ def _interpnd(
         return _interpnd_core(
             var,
             x,
-            [drop_loop_dims(_new_x) for _new_x in new_x],
+            [select_loop_index(_new_x, {}) for _new_x in new_x],
             interp_func,
             interp_kwargs,
         )
@@ -871,10 +874,7 @@ def _interpnd(
         result[tuple(key)] = _interpnd_core(
             var.isel(indexers),
             x,
-            [
-                drop_loop_dims(_new_x.isel(indexers, missing_dims="ignore"))
-                for _new_x in new_x
-            ],
+            [select_loop_index(_new_x, indexers) for _new_x in new_x],
             interp_func,
             interp_kwargs,
         )
