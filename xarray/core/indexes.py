@@ -5,7 +5,7 @@ import copy
 import inspect
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload, override
 
 import numpy as np
 import pandas as pd
@@ -700,6 +700,7 @@ class PandasIndex(Index):
         return type(self)(index, dim, coord_dtype, fastpath=True)
 
     @classmethod
+    @override
     def from_variables(
         cls,
         variables: Mapping[Any, Variable],
@@ -775,6 +776,7 @@ class PandasIndex(Index):
         return new_pd_index
 
     @classmethod
+    @override
     def concat(
         cls,
         indexes: Sequence[Self],
@@ -794,6 +796,7 @@ class PandasIndex(Index):
 
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
+    @override
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
@@ -817,9 +820,11 @@ class PandasIndex(Index):
         )
         return {name: var}
 
+    @override
     def to_pandas_index(self) -> pd.Index:
         return self.index
 
+    @override
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> PandasIndex | None:
@@ -841,6 +846,7 @@ class PandasIndex(Index):
 
         return self._replace(self.index[indxr])  # type: ignore[index,unused-ignore]
 
+    @override
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
@@ -902,11 +908,13 @@ class PandasIndex(Index):
 
         return IndexSelResult({self.dim: indexer})
 
+    @override
     def equals(self, other: Index, *, exclude: frozenset[Hashable] | None = None):
         if not isinstance(other, PandasIndex):
             return False
         return self.index.equals(other.index) and self.dim == other.dim
 
+    @override
     def join(
         self,
         other: Self,
@@ -922,6 +930,7 @@ class PandasIndex(Index):
         coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
+    @override
     def reindex_like(
         self, other: Self, method=None, tolerance=None
     ) -> dict[Hashable, Any]:
@@ -933,8 +942,9 @@ class PandasIndex(Index):
 
         return {self.dim: get_indexer_nd(self.index, other.index, method, tolerance)}
 
+    @override
     def roll(self, shifts: Mapping[Any, int]) -> PandasIndex:
-        shift = shifts[self.dim] % self.index.shape[0]
+        shift = shifts[self.dim] % (self.index.shape[0] or 1)
 
         if shift != 0:
             new_pd_idx = self.index[-shift:].append(self.index[:-shift])
@@ -943,6 +953,7 @@ class PandasIndex(Index):
 
         return self._replace(new_pd_idx)
 
+    @override
     def rename(self, name_dict, dims_dict):
         if self.index.name not in name_dict and self.dim not in dims_dict:
             return self
@@ -952,6 +963,7 @@ class PandasIndex(Index):
         new_dim = dims_dict.get(self.dim, self.dim)
         return self._replace(index, dim=new_dim)
 
+    @override
     def _copy(
         self: T_PandasIndex, deep: bool = True, memo: dict[int, Any] | None = None
     ) -> T_PandasIndex:
@@ -963,6 +975,7 @@ class PandasIndex(Index):
             index = self.index
         return self._replace(index)
 
+    @override
     def __getitem__(self, indexer: Any):
         return self._replace(self.index[indexer])
 
@@ -993,10 +1006,7 @@ def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"
         )
 
 
-T_PDIndex = TypeVar("T_PDIndex", bound=pd.Index)
-
-
-def remove_unused_levels_categories(index: T_PDIndex) -> T_PDIndex:
+def remove_unused_levels_categories[T_PDIndex: pd.Index](index: T_PDIndex) -> T_PDIndex:
     """
     Remove unused levels from MultiIndex and unused categories from CategoricalIndex
     """
@@ -1059,6 +1069,7 @@ class PandasMultiIndex(PandasIndex):
             }
         self.level_coords_dtype = level_coords_dtype
 
+    @override
     def _replace(self, index, dim=None, level_coords_dtype=None) -> PandasMultiIndex:
         if dim is None:
             dim = self.dim
@@ -1068,6 +1079,7 @@ class PandasMultiIndex(PandasIndex):
         return type(self)(index, dim, level_coords_dtype)
 
     @classmethod
+    @override
     def from_variables(
         cls,
         variables: Mapping[Any, Variable],
@@ -1087,6 +1099,7 @@ class PandasMultiIndex(PandasIndex):
         return obj
 
     @classmethod
+    @override
     def concat(
         cls,
         indexes: Sequence[Self],
@@ -1107,6 +1120,7 @@ class PandasMultiIndex(PandasIndex):
         return cls(new_pd_index, dim=dim, level_coords_dtype=level_coords_dtype)
 
     @classmethod
+    @override
     def stack(
         cls, variables: Mapping[Any, Variable], dim: Hashable
     ) -> PandasMultiIndex:
@@ -1150,6 +1164,7 @@ class PandasMultiIndex(PandasIndex):
 
         return cls(index, dim, level_coords_dtype=level_coords_dtype)
 
+    @override
     def unstack(self) -> tuple[dict[Hashable, Index], pd.MultiIndex]:
         clean_index = remove_unused_levels_categories(self.index)
 
@@ -1259,6 +1274,7 @@ class PandasMultiIndex(PandasIndex):
         level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
         return self._replace(index, level_coords_dtype=level_coords_dtype)
 
+    @override
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
@@ -1295,6 +1311,7 @@ class PandasMultiIndex(PandasIndex):
 
         return index_vars
 
+    @override
     def sel(self, labels, method=None, tolerance=None) -> IndexSelResult:
         from xarray.core.dataarray import DataArray
         from xarray.core.variable import Variable
@@ -1460,6 +1477,7 @@ class PandasMultiIndex(PandasIndex):
         else:
             return IndexSelResult({self.dim: indexer})
 
+    @override
     def join(self, other, how: str = "inner"):
         if how == "outer":
             # bug in pandas? need to reset index.name
@@ -1478,6 +1496,7 @@ class PandasMultiIndex(PandasIndex):
 
         return type(self)(index, self.dim, level_coords_dtype=level_coords_dtype)
 
+    @override
     def rename(self, name_dict, dims_dict):
         if not set(self.index.names) & set(name_dict) and self.dim not in dims_dict:
             return self
@@ -1517,6 +1536,7 @@ class CoordinateTransformIndex(Index):
     ):
         self.transform = transform
 
+    @override
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
@@ -1547,6 +1567,7 @@ class CoordinateTransformIndex(Index):
 
         return new_variables
 
+    @override
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Index | None:
@@ -1554,6 +1575,7 @@ class CoordinateTransformIndex(Index):
         # the transform or calculate another transform on a reduced dimension space)
         return None
 
+    @override
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
@@ -1618,6 +1640,7 @@ class CoordinateTransformIndex(Index):
 
         return IndexSelResult(results)
 
+    @override
     def equals(
         self, other: Index, *, exclude: frozenset[Hashable] | None = None
     ) -> bool:
@@ -1625,6 +1648,7 @@ class CoordinateTransformIndex(Index):
             return False
         return self.transform.equals(other.transform, exclude=exclude)
 
+    @override
     def rename(
         self,
         name_dict: Mapping[Any, Hashable],
@@ -1699,10 +1723,9 @@ def create_default_index_implicit(
 
 
 # generic type that represents either a pandas or an xarray index
-T_PandasOrXarrayIndex = TypeVar("T_PandasOrXarrayIndex", Index, pd.Index)
 
 
-class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
+class Indexes[T_PandasOrXarrayIndex: (Index, pd.Index)](collections.abc.Mapping):
     """Immutable proxy for Dataset or DataArray indexes.
 
     It is a mapping where keys are coordinate names and values are either pandas
