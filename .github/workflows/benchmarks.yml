@@ -118,14 +118,16 @@ jobs:
             echo "## $title"
             echo
             if [ $status -eq 0 ] && [ -n "$changes" ]; then
-              # replace asv's markers by something readable
+              # replace asv's markers by something more fun
               sed -E \
-                -e 's/^\| - +\|/| 🟢 better |/' \
-                -e 's/^\| \+ +\|/| 🔴 worse |/' \
-                -e 's/^\| ! +\|/| 🔴 now failing |/' \
-                -e 's/^\| \* +\|/| 🟢 fixed |/' \
-                -e 's/^\| x +\|/| ⚪ not comparable |/' \
+                -e 's/^\| - +\|/| 🚀 |/' \
+                -e 's/^\| \+ +\|/| 🐌 |/' \
+                -e 's/^\| ! +\|/| 💥 |/' \
+                -e 's/^\| \* +\|/| 🩹 |/' \
+                -e 's/^\| x +\|/| 🤷 |/' \
                 <<< "$compare"
+              echo
+              echo "🚀 better · 🐌 worse · 💥 now failing · 🩹 fixed · 🤷 not comparable"
               echo
             fi
             echo "Comparing \`${GITHUB_SHA::8}\` (this PR merged into the base branch) with \`${BASE_SHA::8}\` (base branch)."
