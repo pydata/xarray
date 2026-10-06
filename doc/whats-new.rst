@@ -21,6 +21,17 @@ Breaking Changes
   is now 3.12, in line with xarray's
   :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:class:`~xarray.NamedArray` is now generic in the type of its dimension
+  names, so static type checkers can infer and check them. It takes three type
+  parameters instead of two: annotations like
+  ``NamedArray[Any, np.dtype[np.float64]]`` have to be updated to
+  ``NamedArray[Any, np.dtype[np.float64], str]`` (or ``Hashable`` as the
+  dimension type). In addition, the type aliases and protocols in
+  ``xarray.namedarray._typing`` lost their leading underscore, e.g. ``_Shape`` is
+  now ``Shape``, and its type variables were replaced by PEP 695 type parameters,
+  except for those of ``NamedArray``, which are now ``ShapeType_co``,
+  ``DType_co`` and ``DimType_co`` (:pull:`11223`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Deprecations
