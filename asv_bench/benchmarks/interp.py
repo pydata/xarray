@@ -63,3 +63,30 @@ class InterpolationDask(Interpolation):
         requires_dask()
         super().setup(**kwargs)
         self.ds = self.ds.chunk({"t": 50})
+
+
+class InterpolationVectorized:
+    # the destination coordinates vary along a dimension of the source (GH10683)
+    def setup(self, *args, **kwargs):
+        nt, nr, nz = 100, 50, 50
+        self.da = xr.DataArray(
+            randn((nt, nr, nz)),
+            dims=("t", "r", "z"),
+            coords={
+                "t": np.arange(nt),
+                "r": np.arange(nr),
+                "z": np.linspace(0, 1, nz),
+            },
+        )
+        self.new_z = xr.DataArray(np.linspace(0.1, 0.9, nt), dims="t")
+
+    @parameterized(["method"], (["linear", "cubic"]))
+    def time_interpolation_vectorized(self, method):
+        self.da.interp(z=self.new_z, method=method).compute()
+
+
+class InterpolationVectorizedDask(InterpolationVectorized):
+    def setup(self, *args, **kwargs):
+        requires_dask()
+        super().setup(**kwargs)
+        self.da = self.da.chunk({"t": 25, "r": 25})

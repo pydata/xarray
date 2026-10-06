@@ -40,6 +40,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
+  ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
+  coordinates (:pull:`PRNUM`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.
@@ -100,6 +104,13 @@ Performance
   ones instead of sorting them. This avoids copying the data before
   interpolating (:issue:`9758`, :pull:`11658`).
   By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+- Fix a performance regression in :py:meth:`Dataset.interp` and
+  :py:meth:`DataArray.interp` when the new coordinates vary along a dimension
+  of the interpolated object, e.g. ``da.interp(z=new_z)`` where ``new_z`` has a
+  dimension ``t`` of ``da``. The interpolation now only loops over the
+  dimensions the new coordinates depend on, for numpy and dask arrays alike
+  (:issue:`10683`, :pull:`PRNUM`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Internal Changes

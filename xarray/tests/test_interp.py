@@ -1300,3 +1300,31 @@ def test_dataset_interp_datetime_dask() -> None:
     computed = result.compute()
     expected_time = np.datetime64("2024-01-01") + np.timedelta64(3, "D")
     np.testing.assert_equal(computed["time"].values[0, 0], expected_time)
+
+
+@requires_scipy
+@pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
+def test_interp_empty_new_coords(method) -> None:
+    da = xr.DataArray(np.arange(5.0), dims="x", coords={"x": np.arange(5)})
+    actual = da.interp(x=np.array([], dtype=float), method=method)
+    expected = xr.DataArray(
+        np.array([], dtype=float), dims="x", coords={"x": np.array([], dtype=float)}
+    )
+    assert_identical(actual, expected)
+
+
+@requires_scipy
+@pytest.mark.parametrize("chunk", [False, pytest.param(True, marks=requires_dask)])
+def test_interp_vectorized_empty_dim(chunk: bool) -> None:
+    # the new coordinates vary along the empty dimension "t"
+    da = xr.DataArray(
+        np.zeros((0, 3, 5)),
+        dims=("t", "r", "z"),
+        coords={"z": np.linspace(0, 1, 5)},
+    )
+    if chunk:
+        da = da.chunk()
+    new_z = xr.DataArray(np.array([], dtype=float), dims="t")
+    actual = da.interp(z=new_z)
+    expected = xr.DataArray(np.zeros((0, 3)), dims=("t", "r"), coords={"z": new_z})
+    assert_identical(actual.compute(), expected)
