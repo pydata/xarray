@@ -257,7 +257,8 @@ def _force_native_endianness(var):
 def _force_native_endianness_attr(value):
     # netCDF4-python writes non-native-endian attribute arrays without
     # byte-swapping, silently corrupting the stored values (variable data
-    # is handled by _force_native_endianness above).
+    # is handled by _force_native_endianness above):
+    # https://github.com/Unidata/netcdf4-python/issues/1502
     if isinstance(value, np.ndarray) and value.dtype.byteorder not in ("=", "|"):
         value = value.astype(value.dtype.newbyteorder("="))
     return value

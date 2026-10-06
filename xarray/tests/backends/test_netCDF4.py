@@ -554,13 +554,7 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
 )
 @pytest.mark.parametrize("dtype", ["f8", "i4"])
 def test_roundtrip_non_native_endian_attrs(tmp_path: Path, engine, dtype) -> None:
-    """Test that non-native-endian numeric attribute values round-trip.
-
-    The scipy backend returns attribute values of netCDF-3 files as big-endian
-    arrays; netCDF4-python does not byte-swap attribute arrays on write, so
-    writing them back with the netCDF4 backend silently stored byte-swapped
-    values (e.g. valid_range [0.0, 1.0] became [0.0, 3.03865e-319]).
-    """
+    """Test that non-native-endian numeric attribute values round-trip."""
     values = np.array([1, 2], dtype=np.dtype(dtype).newbyteorder("S"))
     assert not values.dtype.isnative
     ds = xr.Dataset(
