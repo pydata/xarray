@@ -1,0 +1,149 @@
+# Typing tests for the `__array_ufunc__` overloads in xarray/computation/arithmetic.py.
+# The installed NumPy does not necessarily use `__array_ufunc__` protocols for its
+# ufuncs, and if it does, xarray objects match the `ArrayLike` overloads first
+# (they implement `__array__`). Therefore, the helper module mirrors the
+# protocols and the overload order of the ufuncs in numpy/_core/umath.pyi.
+
+- case: test_mypy_array_ufunc_unary
+  files: &ufunc_protocols
+    - path: ufunc_protocols.py
+      content: |
+        from typing import Any, Literal, Protocol, Self, overload
+
+        import numpy as np
+
+
+        class CanUfuncCall1[OutT](Protocol):
+            def __array_ufunc__(
+                self, ufunc: np.ufunc, method: Literal["__call__"], x: Self, /
+            ) -> OutT: ...
+
+
+        class CanUfuncCall2L[OtherT, OutT](Protocol):
+            def __array_ufunc__(
+                self, ufunc: np.ufunc, method: Literal["__call__"], lhs: Self, rhs: OtherT, /
+            ) -> OutT: ...
+
+
+        class CanUfuncCall2R[OtherT, OutT](Protocol):
+            def __array_ufunc__(
+                self, ufunc: np.ufunc, method: Literal["__call__"], lhs: OtherT, rhs: Self, /
+            ) -> OutT: ...
+
+
+        class CanUfuncReduce[OutT](Protocol):
+            def __array_ufunc__(
+                self, ufunc: np.ufunc, method: Literal["reduce"], a: Self, /
+            ) -> OutT: ...
+
+
+        def unary[OutT](x: CanUfuncCall1[OutT], /) -> OutT:
+            raise NotImplementedError
+
+
+        @overload
+        def binary[OtherT, OutT](x1: CanUfuncCall2L[OtherT, OutT], x2: OtherT, /) -> OutT: ...
+        @overload
+        def binary[OtherT, OutT](x1: OtherT, x2: CanUfuncCall2R[OtherT, OutT], /) -> OutT: ...
+        def binary(x1: Any, x2: Any, /) -> Any:
+            raise NotImplementedError
+
+
+        def reduce[OutT](a: CanUfuncReduce[OutT], /) -> OutT:
+            raise NotImplementedError
+  main: |
+    import xarray as xr
+    from ufunc_protocols import unary
+
+    v = xr.Variable("x", [1.0])
+    da = xr.DataArray([1.0], dims="x")
+    ds = xr.Dataset({"a": da})
+
+    reveal_type(unary(v))  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(unary(da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(unary(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+- case: test_mypy_array_ufunc_binary_same_type
+  files: *ufunc_protocols
+  main: |
+    import numpy as np
+    import xarray as xr
+    from ufunc_protocols import binary
+
+    v = xr.Variable("x", [1.0])
+    da = xr.DataArray([1.0], dims="x")
+    ds = xr.Dataset({"a": da})
+
+    reveal_type(binary(v, v))  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(binary(da, da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(ds, ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+- case: test_mypy_array_ufunc_binary_scalars_and_arrays
+  files: *ufunc_protocols
+  main: |
+    import numpy as np
+    import xarray as xr
+    from ufunc_protocols import binary
+
+    da = xr.DataArray([1.0], dims="x")
+    arr: np.ndarray[tuple[int], np.dtype[np.float64]] = np.array([1.0])
+
+    reveal_type(binary(da, 1))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(1, da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(da, 2.5))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(da, True))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(da, np.float64(1)))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(np.float64(1), da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(da, arr))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+
+- case: test_mypy_array_ufunc_binary_mixed_types
+  files: *ufunc_protocols
+  main: |
+    import xarray as xr
+    from ufunc_protocols import binary
+
+    v = xr.Variable("x", [1.0])
+    da = xr.DataArray([1.0], dims="x")
+    ds = xr.Dataset({"a": da})
+
+    reveal_type(binary(v, da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(da, v))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(v, ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(binary(ds, v))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(binary(da, ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(binary(ds, da))  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+- case: test_mypy_array_ufunc_unsupported_method
+  files: *ufunc_protocols
+  main: |
+    import xarray as xr
+    from ufunc_protocols import reduce
+
+    da = xr.DataArray([1.0], dims="x")
+
+    reveal_type(reduce(da))  # N: Revealed type is "Never"
+
+# The ufunc stubs of NumPy >= 2.6 use the `__array_ufunc__` protocols. Not collected
+# for older versions.
+- case: test_mypy_array_ufunc_numpy_ufuncs
+  skip: __import__("numpy").lib.NumpyVersion(__import__("numpy").__version__) < "2.6.0.dev0"
+  main: |
+    import numpy as np
+    import xarray as xr
+
+    v = xr.Variable("x", [1.0])
+    da = xr.DataArray([1.0], dims="x")
+    ds = xr.Dataset({"a": da})
+
+    reveal_type(np.isnan(v))  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(np.isnan(da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(np.isnan(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.exp(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.sqrt(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.subtract(ds, 1))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.maximum(ds, 0))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.greater(ds, 0))  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+    # NumPy checks its `ArrayLike` overloads first, which match DataArray, as it
+    # implements `__array__` (numpy/numpy#25024). Update once this is fixed.
+    reveal_type(np.exp(da))  # N: Revealed type is "Any"
