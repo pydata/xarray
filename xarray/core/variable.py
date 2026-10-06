@@ -791,7 +791,7 @@ class Variable(
                             f"used for indexing: {k}"
                         )
                 if k.dtype.kind == "b":
-                    if self.shape[self.get_axis_num(dim)] != len(k):
+                    if self.shape[self._get_axis_num(dim)] != len(k):
                         raise IndexError(
                             f"Boolean array size {len(k):d} is used to index array "
                             f"with shape {self.shape}."
@@ -1190,7 +1190,7 @@ class Variable(
                 data=chunkmanager.shuffle(
                     array,
                     indexer=indices,
-                    axis=self.get_axis_num(dim),
+                    axis=self._get_axis_num(dim),
                     chunks=chunks,
                 )
             )
@@ -1256,7 +1256,7 @@ class Variable(
         return self.isel(dict.fromkeys(dims, 0))
 
     def _shift_one_dim(self, dim, count, fill_value=dtypes.NA):
-        axis = self.get_axis_num(dim)
+        axis = self._get_axis_num(dim)
 
         if count > 0:
             keep = slice(None, -count)
@@ -1436,7 +1436,7 @@ class Variable(
         return type(self)(self.dims, array, attrs=attrs)
 
     def _roll_one_dim(self, dim, count):
-        axis = self.get_axis_num(dim)
+        axis = self._get_axis_num(dim)
 
         count %= self.shape[axis] or 1
         if count != 0:
@@ -1931,7 +1931,7 @@ class Variable(
         """
         from xarray.structure.merge import merge_attrs
 
-        if not isinstance(dim, str):
+        if isinstance(dim, xr.DataArray | Variable):
             (dim,) = dim.dims
 
         # can't do this lazily: we need to loop through variables at least
@@ -1943,7 +1943,7 @@ class Variable(
         arrays = [v._data for v in variables]
 
         if dim in first_var_dims:
-            axis = first_var.get_axis_num(dim)
+            axis = first_var._get_axis_num(dim)
             dims = first_var_dims
             data = duck_array_ops.concatenate(arrays, axis=axis)
             if positions is not None:
@@ -2957,7 +2957,7 @@ class IndexVariable(Variable[DimType_co]):
         """
         from xarray.structure.merge import merge_attrs
 
-        if not isinstance(dim, str):
+        if isinstance(dim, xr.DataArray | Variable):
             (dim,) = dim.dims
 
         variables = list(variables)
@@ -3078,7 +3078,8 @@ class IndexVariable(Variable[DimType_co]):
             ]
             index = index.set_names(valid_level_names)
         else:
-            index = index.set_names(self.name)
+            # a list, because pandas would interpret a tuple name as several names
+            index = index.set_names([self.name])
         return index
 
     @override

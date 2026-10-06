@@ -47,6 +47,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:class:`~xarray.Variable` methods with dimension names that are not
+  strings: :py:meth:`Variable.concat` failed for any such dimension, and
+  ``shift``, ``roll``, boolean ``isel`` and ``IndexVariable.to_index`` failed
+  for tuple dimension names (:pull:`11677`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
   members of a group are spread over multiple chunks and are not contiguous.
