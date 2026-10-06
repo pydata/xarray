@@ -106,9 +106,29 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
+@overload
+def as_variable[DimType: Hashable](
+    obj: Variable[DimType], name: Hashable = None, auto_convert: bool = True
+) -> Variable[DimType]: ...
+
+
+@overload
+def as_variable[DimType: Hashable](
+    obj: tuple[Iterable[DimType], Any]
+    | tuple[Iterable[DimType], Any, AttrsLike]
+    | tuple[Iterable[DimType], Any, AttrsLike, Mapping[Any, Any] | None],
+    name: Hashable = None,
+    auto_convert: bool = True,
+) -> Variable[DimType]: ...
+
+
+@overload
 def as_variable(
-    obj: T_DuckArray | Any, name=None, auto_convert: bool = True
-) -> Variable | IndexVariable:
+    obj: Any, name: Hashable = None, auto_convert: bool = True
+) -> Variable: ...
+
+
+def as_variable(obj: Any, name: Hashable = None, auto_convert: bool = True) -> Variable:
     """Convert an object into a Variable.
 
     Parameters
@@ -181,14 +201,14 @@ def as_variable(
     elif isinstance(obj, set | dict):
         raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
     elif name is not None:
-        data: T_DuckArray = as_compatible_data(obj)
+        data = as_compatible_data(obj)
         if data.ndim != 1:
             raise MissingDimensionsError(
                 f"cannot set variable {name!r} with {data.ndim!r}-dimensional data "
                 "without explicit dimension names. Pass a tuple of "
                 "(dims, data) instead."
             )
-        obj = Variable(name, data, fastpath=True)
+        obj = Variable((name,), data, fastpath=True)
     else:
         raise TypeError(
             f"Variable {name!r}: unable to convert object into a variable without an "

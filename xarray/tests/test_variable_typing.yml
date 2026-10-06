@@ -118,3 +118,16 @@
     reveal_type(x)  # N: Revealed type is "xarray.core.variable.IndexVariable[str]"
     reveal_type(x.name)  # N: Revealed type is "str"
     reveal_type(IndexVariable((1,), [1, 2]).name)  # N: Revealed type is "int"
+
+- case: test_mypy_as_variable
+  main: |
+    import numpy as np
+    from xarray import Variable
+    from xarray.core.variable import as_variable
+
+    x: Variable[int] = Variable((1,), np.zeros(2))
+    reveal_type(as_variable(x))  # N: Revealed type is "xarray.core.variable.Variable[int]"
+    reveal_type(as_variable(("x", [1, 2])))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(as_variable((["x", "y"], np.zeros((2, 3)), {"units": "m"})))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(as_variable([1, 2], name="x"))  # N: Revealed type is "xarray.core.variable.Variable[typing.Hashable]"
+    reveal_type(as_variable(1))  # N: Revealed type is "xarray.core.variable.Variable[typing.Hashable]"
