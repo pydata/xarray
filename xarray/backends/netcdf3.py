@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import unicodedata
+from functools import partial
 
 import numpy as np
 
 from xarray import coding
+from xarray.coding.common import lazy_elemwise_func
 from xarray.core.variable import Variable
 
 # Special characters that are permitted in netCDF names except in the
@@ -87,6 +89,14 @@ def coerce_nc3_dtype(arr):
     return arr
 
 
+def _coerce_nc3_dtype_with_note(arr, *, note):
+    try:
+        return coerce_nc3_dtype(arr)
+    except ValueError as err:
+        err.add_note(note)
+        raise
+
+
 def encode_nc3_attr_value(value):
     if isinstance(value, bytes):
         pass
@@ -109,7 +119,9 @@ def _maybe_prepare_times(var):
     # this keeps backwards compatibility
 
     data = var.data
-    if data.dtype.kind in "iu":
+    # Only int64 can contain the sentinel. Checking narrower integer arrays
+    # needlessly computes chunked data with time-like units (e.g. day counts).
+    if data.dtype.kind == "i" and data.dtype.itemsize == 8:
         units = var.attrs.get("units", None)
         if units is not None and coding.variables._is_time_like(units):
             mask = data == np.iinfo(np.int64).min
@@ -119,13 +131,17 @@ def _maybe_prepare_times(var):
 
 
 def encode_nc3_variable(var, name=None):
+    # Keep diagnostic context without capturing the variable in deferred tasks.
+    note = f"Raised while encoding variable {name!r} with value {var!r}"
     for coder in [
         coding.strings.EncodedStringCoder(allows_unicode=False),
         coding.strings.CharacterArrayCoder(),
     ]:
         var = coder.encode(var, name=name)
     data = _maybe_prepare_times(var)
-    data = coerce_nc3_dtype(data)
+    dtype = np.dtype(_nc3_dtype_coercions.get(str(data.dtype), data.dtype))
+    transform = partial(_coerce_nc3_dtype_with_note, note=note)
+    data = lazy_elemwise_func(data, transform, dtype=dtype)
     attrs = encode_nc3_attrs(var.attrs)
     return Variable(var.dims, data, attrs, var.encoding)
 

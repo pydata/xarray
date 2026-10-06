@@ -40,6 +40,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Defer NetCDF3 integer narrowing checks on chunked arrays until data is written,
+  and avoid computing narrower integer arrays with time-like units while preparing
+  the write (:issue:`10826`). Unsafe casts still raise ``ValueError``.
+  By `Abhisek Behera <https://github.com/abhisek343>`_.
 - Fix computing a chunked coordinate backed by a :py:class:`~xarray.indexes.CoordinateTransformIndex`
   (e.g. :py:class:`~xarray.indexes.RangeIndex`) after selecting a single position: outer indexing with
   an integer now drops that axis, as with basic indexing

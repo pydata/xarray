@@ -913,7 +913,7 @@ class ZarrBase(CFEncodedBase):
     @requires_dask
     # whether appending also warns about the object dtype depends on the zarr format
     @pytest.mark.filterwarnings(
-        "ignore:variable None has data in the form of a dask array with dtype=object"
+        "ignore:variable string_var(_fixed_length)? has data in the form of a dask array with dtype=object"
     )
     def test_to_zarr_append_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
