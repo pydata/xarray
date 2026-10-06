@@ -13,6 +13,13 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:class:`~xarray.Variable` is now generic in the type of its dimension
+  names, like :py:class:`~xarray.NamedArray`, so static type checkers can infer
+  and check them, e.g. ``Variable(("x", "y"), data).dims`` is a
+  ``tuple[str, ...]``. The dimension type defaults to ``Hashable``, so a bare
+  ``Variable`` (or ``NamedArray[Any, Any]``) annotation keeps its previous
+  meaning (:pull:`PRNUM`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Breaking Changes

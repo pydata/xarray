@@ -2192,7 +2192,7 @@ def test_roundtrip_0size_timedelta(time_unit: PDDatetimeUnitOptions) -> None:
     # regression test for GitHub issue #10310
     encoding = {"units": "days", "dtype": np.dtype("int64")}
     data = np.array([], dtype=f"=m8[{time_unit}]")
-    decoded = Variable(["time"], data, encoding=encoding)
+    decoded: Variable = Variable(["time"], data, encoding=encoding)
     encoded = conventions.encode_cf_variable(decoded, name="foo")
     assert encoded.dtype == encoding["dtype"]
     assert encoded.attrs["units"] == encoding["units"]
