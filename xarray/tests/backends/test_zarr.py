@@ -2079,6 +2079,31 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
             assert mock.call_count == call_count
 
 
+def test_zarr_array_wrapper_async_array() -> None:
+    """Test ZarrArrayWrapper uses public async_array with fallback to _async_array."""
+    from xarray.backends.zarr import ZarrArrayWrapper
+
+    class MockZarrArrayPublic:
+        shape = (10,)
+        dtype = np.dtype("int64")
+        serializer = None
+        async_array = "mock_public_async_array"
+
+    wrapper_public = ZarrArrayWrapper(MockZarrArrayPublic())
+    assert wrapper_public.async_array == "mock_public_async_array"
+    assert wrapper_public._async_array == "mock_public_async_array"
+
+    class MockZarrArrayPrivateFallback:
+        shape = (10,)
+        dtype = np.dtype("int64")
+        serializer = None
+        _async_array = "mock_private_async_array"
+
+    wrapper_fallback = ZarrArrayWrapper(MockZarrArrayPrivateFallback())
+    assert wrapper_fallback.async_array == "mock_private_async_array"
+    assert wrapper_fallback._async_array == "mock_private_async_array"
+
+
 @pytest.fixture(params=["tmp_path", "ZipStore", "Dict"])
 def tmp_store(request, tmp_path):
     if request.param == "tmp_path":
