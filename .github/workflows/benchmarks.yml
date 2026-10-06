@@ -68,6 +68,70 @@ jobs:
           fi
         working-directory: ${{ env.ASV_DIR }}
 
+      - name: Write the PR comment
+        # read by `benchmarks-comment.yml`, which posts it on the PR
+        if: always() && github.event_name == 'pull_request'
+        shell: bash -l {0}
+        env:
+          ASV_FACTOR: 1.5
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # pick one of the given messages at random
+          pick() { local messages=("$@"); echo "${messages[RANDOM % ${#messages[@]}]}"; }
+
+          compare=$(asv compare --split --only-changed --factor "$ASV_FACTOR" "$BASE_SHA" "$GITHUB_SHA" 2>&1)
+          status=$?
+          # the first column of the table marks worse (+), better (-) and failing (x, !) benchmarks
+          changes=$(grep -E '^\| [-+x!] ' <<< "$compare" | cut -c3)
+          if [ $status -ne 0 ]; then
+            title=$(pick \
+              "💥 The benchmarks could not be compared. Somebody tripped over the cable." \
+              "💥 Something went wrong while comparing the benchmarks. Not even asv knows what happened.")
+          elif grep -q '[+x!]' <<< "$changes" && grep -q '[-]' <<< "$changes"; then
+            title=$(pick \
+              "🎢 Some benchmarks got better, some got worse. What a ride!" \
+              "⚖️ You win some, you lose some. Mixed benchmark results ahead.")
+          elif grep -q '[+x!]' <<< "$changes"; then
+            title=$(pick \
+              "🐌 Some benchmarks got worse. Even the snail is concerned." \
+              "🐢 This PR takes the scenic route: some benchmarks got worse." \
+              "🕵️ The benchmarks went the wrong way. Time to put on the detective hat.")
+          elif grep -q '[-]' <<< "$changes"; then
+            title=$(pick \
+              "🚀 Some benchmarks got better. To infinity and beyond!" \
+              "⚡ Zoom zoom! Some benchmarks improved." \
+              "🏎️ New personal best! Some benchmarks got better.")
+          else
+            title=$(pick \
+              "😴 No significant changes. The benchmarks took a nap." \
+              "🧘 No significant changes. Perfectly balanced, as all things should be." \
+              "🥱 No significant changes. Boring, in the best possible way.")
+          fi
+
+          mkdir -p comment
+          echo "$PR_NUMBER" > comment/pr_number
+          {
+            echo "<!-- asv-benchmark-comment -->"
+            echo "## $title"
+            echo
+            if [ $status -eq 0 ] && [ -n "$changes" ]; then
+              echo "$compare"
+              echo
+            fi
+            echo "Comparing \`${GITHUB_SHA::8}\` (this PR merged into the base branch) with \`${BASE_SHA::8}\` (base branch)."
+            echo "Only changes by more than a factor of $ASV_FACTOR are shown, see [the workflow run]($RUN_URL) for all results."
+          } > comment/comment.md
+          cat comment/comment.md
+        working-directory: ${{ env.ASV_DIR }}
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: asv-benchmark-comment
+          path: ${{ env.ASV_DIR }}/comment
+
       - name: Add instructions to artifact
         if: always()
         run: |
