@@ -18,7 +18,7 @@ New Features
   and check them, e.g. ``Variable(("x", "y"), data).dims`` is a
   ``tuple[str, ...]``. The dimension type defaults to ``Hashable``, so a bare
   ``Variable`` (or ``NamedArray[Any, Any]``) annotation keeps its previous
-  meaning (:pull:`PRNUM`).
+  meaning (:pull:`11677`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
