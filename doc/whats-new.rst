@@ -107,7 +107,7 @@ Performance
   By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
 - :py:func:`cov` and :py:func:`corr` now compute the covariance in a single pass
   over the data, so they no longer keep all chunks of dask arrays in memory
-  until the means are computed (:issue:`4804`, :pull:`PRNUM`).
+  until the means are computed (:issue:`4804`, :pull:`11682`).
   Based on work by `Andrew Williams <https://github.com/AndrewILWilliams>`_ and
   `Willi Rath <https://github.com/willirath>`_ in :pull:`5390`.
   By `Michael Niklas <https://github.com/headtr1ck>`_.
