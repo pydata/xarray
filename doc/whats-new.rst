@@ -42,7 +42,7 @@ Bug Fixes
 ~~~~~~~~~
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
-  coordinates (:pull:`PRNUM`).
+  coordinates (:pull:`11681`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix ``InvalidIndexError`` in :py:meth:`DataArrayGroupBy.median` and other
   groupby reductions using flox's ``method="blockwise"`` on dask arrays, when
@@ -109,7 +109,7 @@ Performance
   of the interpolated object, e.g. ``da.interp(z=new_z)`` where ``new_z`` has a
   dimension ``t`` of ``da``. The interpolation now only loops over the
   dimensions the new coordinates depend on, for numpy and dask arrays alike
-  (:issue:`10683`, :pull:`PRNUM`).
+  (:issue:`10683`, :pull:`11681`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
