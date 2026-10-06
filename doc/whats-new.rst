@@ -80,6 +80,9 @@ Bug Fixes
 - Fix the ``netcdf4`` engine silently writing byte-swapped values for
   non-native-endian numeric attribute arrays, such as attributes of netCDF-3
   files read with the ``scipy`` engine (:pull:`11543`).
+- The ``scipy`` engine now returns numeric attribute arrays in native byte
+  order, like variable data, instead of the big-endian byte order of netCDF-3
+  files (:pull:`11543`).
 
 
 Documentation

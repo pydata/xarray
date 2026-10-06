@@ -185,6 +185,18 @@ class TestScipyFilePath(NetCDF3Only, CFEncodedBase):
             for var in expected.variables.values():
                 assert var.dtype.isnative
 
+    @pytest.mark.parametrize("dtype", ["i2", "i4", "f4", "f8"])
+    def test_netcdf3_endianness_attrs(self, dtype) -> None:
+        # netCDF3 stores attribute arrays big-endian, just like variable data
+        values = np.array([1, 2], dtype=dtype)
+        original = Dataset(
+            {"x": ("t", [1.0], {"valid_range": values})}, attrs={"levels": values}
+        )
+        with self.roundtrip(original) as actual:
+            for attr in (actual["x"].attrs["valid_range"], actual.attrs["levels"]):
+                assert attr.dtype == values.dtype
+                np.testing.assert_array_equal(attr, values)
+
     @requires_netCDF4
     def test_nc4_scipy(self) -> None:
         with create_tmp_file(allow_cleanup_failure=True) as tmp_file:

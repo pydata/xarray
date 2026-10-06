@@ -58,10 +58,20 @@ def _decode_string[T](s: bytes | T) -> str | T:
     return s
 
 
+def _force_native_endianness_attr(value: Any) -> Any:
+    # scipy returns numeric attribute arrays in netCDF3's big-endian byte order
+    if isinstance(value, np.ndarray) and not value.dtype.isnative:
+        value = value.astype(value.dtype.newbyteorder("="))
+    return value
+
+
 def _decode_attrs[K, V](d: Mapping[K, V]) -> dict[K, V]:
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
-    return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}
+    return {
+        k: _force_native_endianness_attr(v if k == "_FillValue" else _decode_string(v))
+        for (k, v) in d.items()
+    }
 
 
 class ScipyArrayWrapper(BackendArray):
