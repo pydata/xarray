@@ -6,9 +6,9 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -16,7 +16,7 @@ dynamic = ["version"]
 license = "Apache-2.0"
 name = "xarray"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 
@@ -78,7 +78,7 @@ types = [
 dev = [
   "hypothesis",
   "jinja2",
-  "mypy==2.3.1",
+  "mypy==2.4.0",
   "pre-commit",
   "pytest",
   "pytest-cov",
@@ -447,6 +447,8 @@ slowy = "slowy"
 Commun = "Commun"
 Noice = "Noice"
 Hax = "Hax"
+Yau = "Yau"
+whn = "whn"
 
 # Tests
 Ome = "Ome"
