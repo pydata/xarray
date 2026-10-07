@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from functools import partial
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast, override
 
 import numpy as np
 import pandas as pd
@@ -292,6 +292,10 @@ def as_compatible_data(
             and not isinstance(data.array, UNSUPPORTED_EXTENSION_ARRAY_TYPES)
         ):
             pandas_data = data.array
+        elif isinstance(data, pd.Series) and isinstance(data.dtype, pd.DatetimeTZDtype):
+            # Series.values is deprecated for timezone-aware data; convert
+            # to UTC datetime64 explicitly instead
+            pandas_data = data.to_numpy(dtype=f"datetime64[{data.dtype.unit}]")  # type: ignore[assignment]
         else:
             pandas_data = data.values  # type: ignore[assignment]
         if isinstance(pandas_data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
@@ -351,7 +355,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(NamedArray, AbstractArray, VariableArithmetic):
+class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -410,6 +414,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         if encoding is not None:
             self.encoding = encoding
 
+    @override
     def _new(
         self,
         dims=_default,
@@ -552,6 +557,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             dask="allowed",
         )
 
+    @override
     def _dask_finalize(self, results, array_func, *args, **kwargs):
         data = array_func(results, *args, **kwargs)
         return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
@@ -946,6 +952,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """Return a new Variable without encoding."""
         return self._replace(encoding={})
 
+    @override
     def _copy(
         self,
         deep: bool = True,
@@ -980,6 +987,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         # note: dims is already an immutable tuple
         return self._replace(data=ndata, attrs=attrs, encoding=encoding)
 
+    @override
     def _replace(
         self,
         dims=_default,
@@ -1356,7 +1364,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def _roll_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
 
-        count %= self.shape[axis]
+        count %= self.shape[axis] or 1
         if count != 0:
             indices = [slice(-count, None), slice(None, -count)]
         else:
@@ -1449,6 +1457,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         data = as_indexable(self._data).transpose(axes)
         return self._replace(dims=dim, data=data)
 
+    @override
     @property
     def T(self) -> Self:
         return self.transpose()
@@ -1737,6 +1746,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         xp = duck_array_ops.get_array_namespace(self.data)
         return apply_ufunc(xp.clip, self, min, max, dask="allowed")
 
+    @override
     def reduce(  # type: ignore[override]
         self,
         func: Callable[..., Any],
@@ -2413,6 +2423,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
             keep_attrs=keep_attrs,
         )
 
+    @override
     @property
     def imag(self) -> Variable:
         """
@@ -2424,6 +2435,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._new(data=self.data.imag)
 
+    @override
     @property
     def real(self) -> Variable:
         """
@@ -2438,6 +2450,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
     def __array_wrap__(self, obj, context=None, return_scalar=False):
         return Variable(self.dims, obj)
 
+    @override
     def _unary_op(self, f, *args, **kwargs):
         keep_attrs = kwargs.pop("keep_attrs", None)
         if keep_attrs is None:
@@ -2448,6 +2461,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
                 result.attrs = self.attrs
             return result
 
+    @override
     def _binary_op(self, other, f, reflexive=False):
         if isinstance(other, xr.DataTree | xr.DataArray | xr.Dataset):
             return NotImplemented
@@ -2473,6 +2487,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         result = Variable(dims, new_data, attrs=attrs)
         return result
 
+    @override
     def _inplace_binary_op(self, other, f):
         if isinstance(other, xr.Dataset):
             raise TypeError("cannot add a Dataset to a Variable in-place")
@@ -2652,6 +2667,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         """
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
+    @override
     def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Variable:
         """
         Use sparse-array as backend.
@@ -2667,6 +2683,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         out = super()._as_sparse(sparse_format, fill_value)
         return cast("Variable", out)
 
+    @override
     def _to_dense(self) -> Variable:
         """
         Change backend from sparse to np.array.
@@ -2674,6 +2691,7 @@ class Variable(NamedArray, AbstractArray, VariableArithmetic):
         out = super()._to_dense()
         return cast("Variable", out)
 
+    @override
     def chunk(  # type: ignore[override]
         self,
         chunks: T_Chunks = {},  # noqa: B006  # even though it's technically unsafe, it is being used intentionally here (#4667)
@@ -2777,6 +2795,7 @@ class IndexVariable(Variable):
         if not isinstance(self._data, PandasIndexingAdapter):
             self._data = PandasIndexingAdapter(self._data)
 
+    @override
     def __dask_tokenize__(self) -> object:
         from dask.base import normalize_token
 
@@ -2785,16 +2804,19 @@ class IndexVariable(Variable):
             (type(self), self._dims, self._data.array, self._attrs or None)
         )
 
+    @override
     def load(self):
         # data is already loaded into memory for IndexVariable
         return self
 
+    @override
     async def load_async(self):
         # data is already loaded into memory for IndexVariable
         return self
 
     # https://github.com/python/mypy/issues/1465
     @Variable.data.setter  # type: ignore[attr-defined]
+    @override
     def data(self, data):
         raise ValueError(
             f"Cannot assign to the .data attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "
@@ -2802,12 +2824,14 @@ class IndexVariable(Variable):
         )
 
     @Variable.values.setter  # type: ignore[attr-defined]
+    @override
     def values(self, values):
         raise ValueError(
             f"Cannot assign to the .values attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
+    @override
     def chunk(
         self,
         chunks={},  # noqa: B006  # even though it's unsafe, it is being used intentionally here (#4667)
@@ -2820,14 +2844,17 @@ class IndexVariable(Variable):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 
+    @override
     def _as_sparse(self, sparse_format=_default, fill_value=_default):
         # Dummy
         return self.copy(deep=False)
 
+    @override
     def _to_dense(self):
         # Dummy
         return self.copy(deep=False)
 
+    @override
     def _finalize_indexing_result(self, dims, data):
         if getattr(data, "ndim", 0) != 1:
             # returns Variable rather than IndexVariable if multi-dimensional
@@ -2835,10 +2862,12 @@ class IndexVariable(Variable):
         else:
             return self._replace(dims=dims, data=data)
 
+    @override
     def __setitem__(self, key, value):
         raise TypeError(f"{type(self).__name__} values cannot be modified")
 
     @classmethod
+    @override
     def concat(
         cls,
         variables,
@@ -2890,6 +2919,7 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
+    @override
     def copy(
         self, deep: bool = True, data: T_DuckArray | np.typing.ArrayLike | None = None
     ):
@@ -2934,6 +2964,7 @@ class IndexVariable(Variable):
 
         return self._replace(data=ndata, attrs=attrs, encoding=encoding)
 
+    @override
     def equals(self, other, equiv=None):
         # if equiv is specified, super up
         if equiv is not None:
@@ -2949,12 +2980,14 @@ class IndexVariable(Variable):
     def _data_equals(self, other):
         return self._to_index().equals(other._to_index())
 
+    @override
     def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
         return self.copy(deep=False)
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
+    @override
     def _to_index(self) -> pd.Index:
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objects are immutable.
@@ -2974,6 +3007,7 @@ class IndexVariable(Variable):
             index = index.set_names(self.name)
         return index
 
+    @override
     def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index"""
         index = self._to_index()
@@ -3010,6 +3044,7 @@ class IndexVariable(Variable):
     def name(self, value) -> NoReturn:
         raise AttributeError("cannot modify name of IndexVariable in-place")
 
+    @override
     def _inplace_binary_op(self, other, f):
         raise TypeError(
             "Values of an IndexVariable are immutable and can not be modified inplace"

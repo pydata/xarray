@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import collections
-import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, override
 
 from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
@@ -25,10 +24,7 @@ class NodePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
 
     def __init__(self, *pathsegments):
-        if sys.version_info >= (3, 12):
-            super().__init__(*pathsegments)
-        else:
-            super().__new__(PurePosixPath, *pathsegments)
+        super().__init__(*pathsegments)
         if self.drive:
             raise ValueError("NodePaths cannot have drives")
 
@@ -662,9 +658,6 @@ class TreeNode:
         return self.root is other.root
 
 
-AnyNamedNode = TypeVar("AnyNamedNode", bound="NamedNode")
-
-
 def _validate_name(name: str | None) -> None:
     if name is not None:
         if not isinstance(name, str):
@@ -707,6 +700,7 @@ class NamedNode(TreeNode):
         _validate_name(name)
         self._name = name
 
+    @override
     def __repr__(self, level=0):
         repr_value = "\t" * level + self.__str__() + "\n"
         for child in self.children:
@@ -717,11 +711,13 @@ class NamedNode(TreeNode):
         name_repr = repr(self.name) if self.name is not None else ""
         return f"NamedNode({name_repr})"
 
+    @override
     def _post_attach(self, parent: Self, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
         _validate_name(name)  # is this check redundant?
         self._name = name
 
+    @override
     def _copy_node(
         self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
     ) -> Self:
@@ -802,7 +798,7 @@ class TreeIsomorphismError(ValueError):
     """Error raised if two tree objects do not share the same node structure."""
 
 
-def group_subtrees(
+def group_subtrees[AnyNamedNode: NamedNode](
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
     """Iterate over subtrees grouped by relative paths in breadth-first order.
@@ -868,7 +864,7 @@ def group_subtrees(
             queue.append((path / name, child_nodes))
 
 
-def zip_subtrees(
+def zip_subtrees[AnyNamedNode: NamedNode](
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[AnyNamedNode, ...]]:
     """Zip together subtrees aligned by relative path."""

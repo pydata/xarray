@@ -80,7 +80,7 @@ cartopy = "*"
 seaborn = "*"
 
 [feature.typing.dependencies]
-mypy = "==1.19.1"
+mypy = "==2.4.0"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"
