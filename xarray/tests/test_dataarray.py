@@ -8011,3 +8011,29 @@ class TestArrowPyCapsule:
         np.testing.assert_array_equal(
             table["data"].to_pylist(), np.arange(6, dtype=float)
         )
+
+
+@pytest.mark.parametrize("func", ["idxmin", "idxmax"])
+def test_idxminmax_preserves_coord_dtype(func: str) -> None:
+    # GH7527: the labels keep their dtype if no slice has to be filled
+    array = xr.DataArray(
+        [
+            [2.0, 1.0, 2.0, 0.0, -2.0],
+            [-4.0, np.nan, 2.0, np.nan, -2.0],
+            [np.nan, np.nan, 1.0, np.nan, np.nan],
+        ],
+        dims=["y", "x"],
+        coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
+    )
+    assert getattr(array, func)(dim="y").dtype == np.int64
+    assert getattr(array, func)(dim="x").dtype == np.float64
+
+
+@pytest.mark.parametrize("func", ["idxmin", "idxmax"])
+def test_idxminmax_all_nan_slice_fills_labels(func: str) -> None:
+    array = xr.DataArray(
+        [np.nan, np.nan], dims="x", coords={"x": np.array([1, 2], dtype=np.int64)}
+    )
+    result = getattr(array, func)()
+    assert result.dtype == np.float64
+    assert np.isnan(result)
