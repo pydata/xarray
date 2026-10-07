@@ -44,6 +44,8 @@ Bug Fixes
   ``datetime64`` or ``timedelta64`` dtype now reuses the stored ``units`` and
   ``calendar``, instead of writing the appended values with default units
   (:issue:`10639`).
+- Raise a :py:class:`ValueError` when :py:meth:`~xarray.indexes.RangeIndex.linspace`
+  receives a negative ``num`` instead of creating an index with a negative size.
 - Fix computing a chunked coordinate backed by a :py:class:`~xarray.indexes.CoordinateTransformIndex`
   (e.g. :py:class:`~xarray.indexes.RangeIndex`) after selecting a single position: outer indexing with
   an integer now drops that axis, as with basic indexing
