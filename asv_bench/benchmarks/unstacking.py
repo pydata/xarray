@@ -23,6 +23,19 @@ class Unstacking:
         self.df_missing.unstack()
 
 
+class UnstackingExtraDim:
+    def setup(self):
+        data = np.random.default_rng(0).random((250, 500, 100))
+        self.da_full = xr.DataArray(data, dims=list("abc")).stack(flat_dim=["a", "b"])
+        self.da_missing = self.da_full[..., :-1]
+
+    def time_unstack_fast(self):
+        self.da_full.unstack("flat_dim")
+
+    def time_unstack_slow(self):
+        self.da_missing.unstack("flat_dim")
+
+
 class UnstackingDask(Unstacking):
     def setup(self, *args, **kwargs):
         requires_dask()
