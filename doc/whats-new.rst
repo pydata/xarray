@@ -44,6 +44,8 @@ Bug Fixes
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Raise a :py:class:`ValueError` when :py:meth:`~xarray.indexes.RangeIndex.linspace`
+  receives a negative ``num`` instead of creating an index with a negative size.
 - Fix computing a chunked coordinate backed by a :py:class:`~xarray.indexes.CoordinateTransformIndex`
   (e.g. :py:class:`~xarray.indexes.RangeIndex`) after selecting a single position: outer indexing with
   an integer now drops that axis, as with basic indexing
@@ -309,6 +311,10 @@ Bug Fixes
   for zarr writes. Existing zarr stores written with the old ``int8`` encoding
   are still read correctly. (:issue:`2937`, :pull:`11318`)
   By `Evan Lyall <https://github.com/elyall>`_.
+- Assigning :py:class:`DataTree` children under names containing ``/`` (e.g.
+  ``DataTree(children={"a/b": ...})``) now raises a ``ValueError`` instead of
+  recursing until ``RecursionError`` (:issue:`9490`, :pull:`11620`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - No longer emit a ``SerializationWarning`` about a missing ``_FillValue`` when
   encoding a CF coordinate variable (a 1D variable named after its dimension) to
   an integer dtype. CF forbids missing values in coordinate variables, so a
