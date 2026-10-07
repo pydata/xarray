@@ -246,7 +246,7 @@ class TestNamedArray(NamedArraySubclassobjects):
         data = cast("Callable[..., NDArray[np.int64]]", np.ma.array)(
             [1, 2, 3], mask=mask
         )
-        actual: NamedArray[Any, Any] = from_array(("x",), data)
+        actual: NamedArray[Any, Any, Any] = from_array(("x",), data)
         assert actual.data is data
         np.testing.assert_equal(actual.data, [1, 2, 3])
 
