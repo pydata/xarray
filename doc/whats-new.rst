@@ -40,6 +40,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Don't warn that no index is created when reducing a :py:class:`Dataset`
+  grouped by a data variable without flox (:issue:`9890`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Raise a :py:class:`ValueError` when :py:meth:`~xarray.indexes.RangeIndex.linspace`
   receives a negative ``num`` instead of creating an index with a negative size.
 - Fix computing a chunked coordinate backed by a :py:class:`~xarray.indexes.CoordinateTransformIndex`
