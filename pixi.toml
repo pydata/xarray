@@ -229,7 +229,7 @@ linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in 
 
 
 [feature.typing.dependencies]
-mypy = "==2.3.1"
+mypy = "==2.4.0"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"
