@@ -355,6 +355,16 @@ def _as_array_or_item(data):
     return data
 
 
+def _is_full_ordered_product(index: pd.MultiIndex) -> bool:
+    """Whether index contains every combination of its levels' values in
+    C order, i.e. whether its codes are those of ``MultiIndex.from_product``."""
+    shape = tuple(len(level) for level in index.levels)
+    if len(index) != math.prod(shape):
+        return False
+    flat_codes = np.ravel_multi_index(tuple(index.codes), shape)
+    return bool(np.array_equal(flat_codes, np.arange(len(index))))
+
+
 class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
@@ -1637,6 +1647,12 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         other_dims = [d for d in self.dims if d != dim]
         new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + tuple(new_dim_names)
+
+        if not sparse and _is_full_ordered_product(index):
+            # every combination of labels is present in order: a reshape is
+            # enough and avoids allocating and filling a new array
+            data = duck_array_ops.reshape(reordered.data, new_shape)
+            return self.to_base_variable()._replace(dims=new_dims, data=data)
 
         create_template: Callable
         if fill_value is dtypes.NA:
