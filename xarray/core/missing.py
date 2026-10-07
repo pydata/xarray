@@ -4,7 +4,7 @@ import datetime as dt
 import itertools
 import warnings
 from collections import ChainMap
-from collections.abc import Callable, Generator, Hashable, Mapping, Sequence
+from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
 from typing import TYPE_CHECKING, Any, TypeVar, get_args, override
@@ -700,7 +700,13 @@ def interpolate_variable(
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    in_coords, result_coords = zip(*(v for v in indexes_coords.values()), strict=True)
+    if kwargs.get("method") in ["linear", "nearest"]:
+        # simple speed up for the local interpolation
+        var, indexes_coords = _localize(var, dict(indexes_coords))
+
+    in_coords, result_coords = _floatize_x(
+        *(list(_) for _ in zip(*indexes_coords.values(), strict=True))
+    )
 
     # input coordinates along which we are interpolation are core dimensions
     # the corresponding output coordinates may or may not have the same name,
@@ -760,6 +766,9 @@ def interpolate_variable(
         # TODO: deprecate and have the user rechunk themselves
         dask_gufunc_kwargs=dict(output_sizes=output_sizes, allow_rechunk=True),
         output_dtypes=[dtype],
+        # only loop over the dimensions along which the destination coordinates vary,
+        # np.vectorize would loop over all of them (GH10683)
+        vectorize="shared",
         keep_attrs=True,
     )
     return result
@@ -796,100 +805,33 @@ def _interpnd(
     the other half are destination coordinates.
 
     `data` has the loop dimensions first, followed by the dimensions we
-    interpolate along. The destination coordinates may vary along some of the
-    loop dimensions (following numpy broadcasting rules), e.g. for
-    ``da[t, r, z].interp(z=target[t])``. We loop over only those dimensions,
-    all other loop dimensions are passed to the interpolator in bulk.
+    interpolate along. ``apply_ufunc(..., vectorize="shared")`` only loops over
+    the loop dimensions along which the destination coordinates vary, e.g. ``t``
+    for ``da[t, r, z].interp(z=target[t])``, so the destination coordinates have
+    size 1 along all remaining loop dimensions.
     """
     n_x = len(coords) // 2
-    nloop = data.ndim - n_x
-    # names that do not clash with the dimension names of the destination coordinates
-    loop_dims = tuple(f"__interpnd_loop_dim_{i}__" for i in range(nloop))
-    core_dims = tuple(f"__interpnd_core_dim_{i}__" for i in range(n_x))
+    ndim = data.ndim
+    nconst = ndim - n_x
 
-    # Convert everything to Variables, since that makes applying
-    # `_localize` and `_floatize_x` much easier
-    var = Variable(loop_dims + core_dims, data, fastpath=True)
+    # Convert everything to Variables, since that makes broadcasting the
+    # destination coordinates much easier
     x = [
-        Variable([dim], _x, fastpath=True)
-        for dim, _x in zip(core_dims, coords[:n_x], strict=True)
+        Variable([f"dim_{nconst + dim}"], _x, fastpath=True)
+        for dim, _x in enumerate(coords[:n_x])
     ]
-    new_x = [
-        Variable(loop_dims[nloop - (_x.ndim - len(dims)) :] + dims, _x, fastpath=True)
-        for dims, _x in zip(result_coord_core_dims, coords[n_x:], strict=True)
-    ]
-
-    if interp_kwargs.get("method") in ["linear", "nearest"]:
-        indexes_coords = {
-            _x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x, strict=True)
-        }
-        # simple speed up for the local interpolation
-        var, indexes_coords = _localize(var, indexes_coords)
-        x, new_x = tuple(
-            list(_)
-            for _ in zip(*(indexes_coords[d] for d in indexes_coords), strict=True)
+    new_x = list(
+        broadcast_variables(
+            *(
+                # drop the size-1 loop dimensions
+                Variable(
+                    dims, reshape(_x, _x.shape[_x.ndim - len(dims) :]), fastpath=True
+                )
+                for dims, _x in zip(result_coord_core_dims, coords[n_x:], strict=True)
+            )
         )
-
-    x, new_x = _floatize_x(x, new_x)
-
-    def select_loop_index(v: Variable, indexers: Mapping[Any, int]) -> Variable:
-        # Select `indexers` and drop all loop dimensions of a destination coordinate.
-        # The non-vectorized loop dimensions all have size 1.
-        key = {dim: indexers.get(dim, 0) for dim in loop_dims if dim in v.dims}
-        # no isel without key: v might wrap a numpy scalar (numpy<2)
-        return v.isel(key) if key else v
-
-    # the loop dimensions along which the destination coordinates vary
-    vectorize_dims = [
-        dim
-        for dim in loop_dims
-        if any(_new_x.sizes.get(dim, 1) != 1 for _new_x in new_x)
-    ]
-    if not vectorize_dims:
-        return _interpnd_core(
-            var,
-            x,
-            [select_loop_index(_new_x, {}) for _new_x in new_x],
-            interp_func,
-            interp_kwargs,
-        )
-
-    # Loop over the vectorized dimensions only. This is much faster than
-    # np.vectorize, which would loop over all loop dimensions (GH10683).
-    result_sizes: dict[Hashable, int] = {}
-    for _new_x in new_x:
-        for dim, size in _new_x.sizes.items():
-            if dim not in loop_dims:
-                result_sizes.setdefault(dim, size)
-    # scipy.interpolate.interp1d always forces to float.
-    dtype = float if not issubclass(data.dtype.type, np.inexact) else data.dtype
-    result = np.empty(var.shape[:nloop] + tuple(result_sizes.values()), dtype=dtype)
-
-    vectorize_axes = [loop_dims.index(dim) for dim in vectorize_dims]
-    key: list[int | slice] = [slice(None)] * nloop
-    for index in np.ndindex(*(var.sizes[dim] for dim in vectorize_dims)):
-        indexers = dict(zip(vectorize_dims, index, strict=True))
-        for axis, i in zip(vectorize_axes, index, strict=True):
-            key[axis] = i
-        result[tuple(key)] = _interpnd_core(
-            var.isel(indexers),
-            x,
-            [select_loop_index(_new_x, indexers) for _new_x in new_x],
-            interp_func,
-            interp_kwargs,
-        )
-    return result
-
-
-def _interpnd_core(
-    var: Variable,
-    x: list[Variable],
-    new_x: list[Variable],
-    interp_func: Interpolator | InterpCallable,
-    interp_kwargs,
-) -> np.ndarray:
-    """Interpolate the last ``len(x)`` dimensions of `var` at the points `new_x`."""
-    new_x = list(broadcast_variables(*new_x))
+    )
+    var = Variable([f"dim_{dim}" for dim in range(ndim)], data, fastpath=True)
 
     if len(x) == 1:
         # TODO: narrow interp_func to interpolator here
