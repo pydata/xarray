@@ -108,6 +108,12 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- Speed up the ``repr`` of objects with many coordinates by about 2.5x, which
+  got about twice as slow when the coordinates were ordered by dimension in
+  v2025.10.0 (:pull:`10778`), and their HTML repr by about 15%: the
+  coordinates are no longer converted to :py:class:`DataArray` objects to sort
+  them.
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` no longer sort
   coordinates that are already increasing, and reverse strictly decreasing
   ones instead of sorting them. This avoids copying the data before
