@@ -110,7 +110,7 @@ Performance
 ~~~~~~~~~~~
 - Speed up the ``repr`` of objects with many coordinates by about 2.5x, which
   got about twice as slow when the coordinates were ordered by dimension in
-  v2025.10.0 (:pull:`10778`), and their HTML repr by about 15%: the
+  v2025.10.0 (:pull:`10778`), and their HTML repr by about 15% (:pull:`11691`): the
   coordinates are no longer converted to :py:class:`DataArray` objects to sort
   them.
   By `Michael Niklas <https://github.com/headtr1ck>`_.
