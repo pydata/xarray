@@ -1173,6 +1173,7 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
             kwargs["skipna"] = None
 
         func = getattr(duck_array_ops, name)
+        numeric_only = getattr(func, "numeric_only", False)
 
         available_min_count = getattr(func, "available_min_count", False)
         skip_na_docs = _SKIPNA_DOCSTRING if include_skipna else ""
@@ -1181,7 +1182,8 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         def method(self, keep_attrs: bool | None = None, **kwargs) -> T_Xarray:
             return self._reduce_method(
                 func,
-                **kwargs,
+                include_skipna=include_skipna,
+                numeric_only=numeric_only,
             )(self, keep_attrs=keep_attrs, **kwargs)
 
         method.__name__ = name
