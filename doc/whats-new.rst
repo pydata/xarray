@@ -98,6 +98,11 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
+  docstring, and a section on ``vectorize="shared"`` to the
+  :doc:`apply_ufunc example notebook <examples/apply_ufunc_vectorize_1d>`,
+  which is executed again in the documentation build (:pull:`11681`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Clarified the ``rename`` docstrings so they no longer describe the result as a
   "new" object, which could be read as implying it no longer shares memory with
   the original (:issue:`9432`, :pull:`11644`).
