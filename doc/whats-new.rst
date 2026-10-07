@@ -40,6 +40,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Raise a :py:class:`ValueError` when :py:meth:`~xarray.indexes.RangeIndex.linspace`
+  receives a negative ``num`` instead of creating an index with a negative size.
 - Fix computing a chunked coordinate backed by a :py:class:`~xarray.indexes.CoordinateTransformIndex`
   (e.g. :py:class:`~xarray.indexes.RangeIndex`) after selecting a single position: outer indexing with
   an integer now drops that axis, as with basic indexing
