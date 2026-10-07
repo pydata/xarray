@@ -1331,7 +1331,7 @@ class TestRepr:
         tree_dict = {}
         for f in range(number_of_files):
             for g in range(number_of_groups):
-                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": f * g})
+                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": np.int64(f * g)})
 
         tree = DataTree.from_dict(tree_dict)
         with xr.set_options(display_max_children=3):
@@ -1444,8 +1444,8 @@ class TestRepr:
         stations = xr.DataArray(
             data=np.array(list("abcdef"), dtype="<U1"), dims="station"
         )
-        lon = [-100, -80, -60]
-        lat = [10, 20, 30]
+        lon = np.array([-100, -80, -60], dtype=np.int64)
+        lat = np.array([10, 20, 30], dtype=np.int64)
         # Set up fake data
         wind_speed = xr.DataArray(np.ones((2, 6)) * 2, dims=("time", "station"))
         pressure = xr.DataArray(np.ones((2, 6)) * 3, dims=("time", "station"))
