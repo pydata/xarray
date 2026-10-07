@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import builtins
+import io
 from collections.abc import Hashable
+from pathlib import Path
 from types import EllipsisType
+from typing import IO, Any
 
 import numpy as np
 import pandas as pd
@@ -14,6 +18,7 @@ from xarray.core.utils import (
     flat_items,
     infix_dims,
     iterate_nested,
+    try_read_magic_number_from_path,
 )
 from xarray.tests import assert_array_equal, requires_dask
 
@@ -400,3 +405,43 @@ def test_attempt_import() -> None:
         attempt_import(module="foo")
     with pytest.raises(ImportError, match="The foo package is required"):
         attempt_import(module="foo.bar")
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        pytest.param(b"\x89HDF\r\n\x1a\nmore data", b"\x89HDF\r\n\x1a\n", id="hdf5"),
+        pytest.param(b"CDF", b"CDF", id="shorter-than-count"),
+    ],
+)
+def test_try_read_magic_number_from_path(
+    tmp_path: Path, content: bytes, expected: bytes
+) -> None:
+    path = tmp_path / "file.nc"
+    path.write_bytes(content)
+    assert try_read_magic_number_from_path(path) == expected
+    assert try_read_magic_number_from_path(str(path)) == expected
+
+
+def test_try_read_magic_number_from_path_missing(tmp_path: Path) -> None:
+    assert try_read_magic_number_from_path(tmp_path / "missing.nc") is None
+
+
+def test_try_read_magic_number_from_path_unbuffered(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # a buffered reader would read a whole buffer instead of only the magic
+    # number, which is slow on filesystems with a large block size (GH7697)
+    path = tmp_path / "file.nc"
+    path.write_bytes(b"CDF\x01" + bytes(100))
+    opened: list[IO[Any]] = []
+
+    def spy_open(*args: Any, **kwargs: Any) -> IO[Any]:
+        f = builtins.open(*args, **kwargs)  # noqa: SIM115
+        opened.append(f)
+        return f
+
+    monkeypatch.setattr(utils, "open", spy_open, raising=False)
+    assert try_read_magic_number_from_path(path) == b"CDF\x01" + bytes(4)
+    assert len(opened) == 1
+    assert type(opened[0]) is io.FileIO
