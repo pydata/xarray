@@ -80,7 +80,7 @@ Bug Fixes
   By `Evan Lyall <https://github.com/elyall>`_.
 - Assigning :py:class:`DataTree` children under names containing ``/`` (e.g.
   ``DataTree(children={"a/b": ...})``) now raises a ``ValueError`` instead of
-  recursing until ``RecursionError`` (:issue:`9490`).
+  recursing until ``RecursionError`` (:issue:`9490`, :pull:`11620`).
   By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - No longer emit a ``SerializationWarning`` about a missing ``_FillValue`` when
   encoding a CF coordinate variable (a 1D variable named after its dimension) to
