@@ -3,8 +3,7 @@ from __future__ import annotations
 import copy
 import sys
 from abc import abstractmethod
-from collections.abc import Callable, Mapping
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Generic, cast, overload
 
 import numpy as np
