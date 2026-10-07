@@ -1324,7 +1324,6 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
     ) -> Callable[..., DataArray]:
         """
         Return a wrapped function for injecting reduction methods.
-        see ops.inject_reduce_methods
         """
         kwargs: dict[str, Any] = {}
         if include_skipna:
@@ -1411,7 +1410,6 @@ class DatasetCoarsen(Coarsen["Dataset"]):
     ) -> Callable[..., Dataset]:
         """
         Return a wrapped function for injecting reduction methods.
-        see ops.inject_reduce_methods
         """
         kwargs: dict[str, Any] = {}
         if include_skipna:
