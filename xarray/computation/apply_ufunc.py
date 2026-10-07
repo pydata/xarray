@@ -1193,7 +1193,9 @@ def apply_ufunc(
 
     Examples
     --------
-    Calculate the vector magnitude of two arguments:
+    The examples below go from basic to advanced usage.
+
+    **Element-wise functions.** Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
     ...     func = lambda x, y: np.sqrt(x**2 + y**2)
@@ -1223,17 +1225,19 @@ def apply_ufunc(
     Coordinates:
       * x        (x) float64 24B 0.1 0.2 0.3
 
-    Other examples of how you could use ``apply_ufunc`` to write functions to
-    (very nearly) replicate existing xarray functionality:
+    **Core dimensions.** Functions that operate along a dimension, e.g. a
+    reduction, need ``input_core_dims``. Core dimensions are moved to the end
+    of the arrays passed to ``func``, so here we reduce over ``axis=-1``, like
+    ``.mean("y")``:
 
-    Compute the mean (``.mean``) over one dimension:
-
-    >>> def mean(obj, dim):
-    ...     # note: apply always moves core dimensions to the end
-    ...     return apply_ufunc(
-    ...         np.mean, obj, input_core_dims=[[dim]], kwargs={"axis": -1}
-    ...     )
-    ...
+    >>> da = xr.DataArray(
+    ...     np.arange(6.0).reshape(2, 3), coords={"x": [10, 20], "y": [0, 1, 2]}
+    ... )
+    >>> xr.apply_ufunc(np.mean, da, input_core_dims=[["y"]], kwargs={"axis": -1})
+    <xarray.DataArray (x: 2)> Size: 16B
+    array([1., 4.])
+    Coordinates:
+      * x        (x) int64 16B 10 20
 
     Inner product over a specific dimension (like :py:func:`dot`):
 
@@ -1242,35 +1246,85 @@ def apply_ufunc(
     ...     return result[..., 0, 0]
     ...
     >>> def inner_product(a, b, dim):
-    ...     return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
+    ...     return xr.apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
     ...
+
+    **Output core dimensions.** If ``func`` returns a dimension, list it in
+    ``output_core_dims``. If its size changes, it also has to be listed in
+    ``exclude_dims``, and its coordinates are dropped:
+
+    >>> xr.apply_ufunc(
+    ...     np.diff,
+    ...     da,
+    ...     input_core_dims=[["y"]],
+    ...     output_core_dims=[["y"]],
+    ...     exclude_dims={"y"},
+    ...     kwargs={"axis": -1},
+    ... )
+    <xarray.DataArray (x: 2, y: 2)> Size: 32B
+    array([[1., 1.],
+           [1., 1.]])
+    Coordinates:
+      * x        (x) int64 16B 10 20
+    Dimensions without coordinates: y
 
     Stack objects along a new dimension (like :py:func:`concat`):
 
     >>> def stack(objects, dim, new_coord):
     ...     # note: this version does not stack coordinates
     ...     func = lambda *x: np.stack(x, axis=-1)
-    ...     result = apply_ufunc(
+    ...     result = xr.apply_ufunc(
     ...         func,
     ...         *objects,
     ...         output_core_dims=[[dim]],
     ...         join="outer",
-    ...         dataset_fill_value=np.nan
+    ...         dataset_fill_value=np.nan,
     ...     )
     ...     result[dim] = new_coord
     ...     return result
     ...
 
-    If your function is not vectorized but can be applied only to core
-    dimensions, you can use ``vectorize=True`` to turn into a vectorized
-    function. This wraps :py:func:`numpy.vectorize`, so the operation isn't
-    terribly fast. Here we'll use it to calculate the distance between
-    empirical samples from two probability distributions, using a scipy
+    **Multiple outputs.** A function returning a tuple needs one entry in
+    ``output_core_dims`` per output:
+
+    >>> quotient, remainder = xr.apply_ufunc(
+    ...     np.divmod, da, 4, output_core_dims=[[], []]
+    ... )
+    >>> remainder
+    <xarray.DataArray (x: 2, y: 3)> Size: 48B
+    array([[0., 1., 2.],
+           [3., 0., 1.]])
+    Coordinates:
+      * x        (x) int64 16B 10 20
+      * y        (y) int64 24B 0 1 2
+
+    **Dask arrays.** With ``dask="parallelized"``, ``func`` is applied to each
+    block of a chunked array. Core dimensions must not be split into several
+    chunks:
+
+    >>> xr.apply_ufunc(
+    ...     np.mean,
+    ...     da.chunk(x=1),
+    ...     input_core_dims=[["y"]],
+    ...     kwargs={"axis": -1},
+    ...     dask="parallelized",
+    ...     output_dtypes=[float],
+    ... ).compute()
+    <xarray.DataArray (x: 2)> Size: 16B
+    array([1., 4.])
+    Coordinates:
+      * x        (x) int64 16B 10 20
+
+    **Vectorizing functions.** If your function is not vectorized but can be
+    applied only to core dimensions, you can use ``vectorize=True`` to turn into
+    a vectorized function. This wraps :py:func:`numpy.vectorize`, so the
+    operation isn't terribly fast. Here we'll use it to calculate the distance
+    between empirical samples from two probability distributions, using a scipy
     function that needs to be applied to vectors:
 
     >>> import scipy.stats
     >>> def earth_mover_distance(first_samples, second_samples, dim="ensemble"):
-    ...     return apply_ufunc(
+    ...     return xr.apply_ufunc(
     ...         scipy.stats.wasserstein_distance,
     ...         first_samples,
     ...         second_samples,
@@ -1278,6 +1332,32 @@ def apply_ufunc(
     ...         vectorize=True,
     ...     )
     ...
+
+    **Vectorizing over shared dimensions only.** ``vectorize=True`` calls
+    ``func`` once for every combination of the broadcast dimensions. If
+    ``func`` can handle some of them itself, ``vectorize="shared"`` only loops
+    over the dimensions along which more than one input varies and passes all
+    others in bulk. Here, ``np.quantile`` computes a single quantile per call
+    for all ``x`` at once, but the quantile differs along ``time``:
+
+    >>> data = xr.DataArray(
+    ...     np.arange(24.0).reshape(2, 3, 4), dims=("time", "x", "sample")
+    ... )
+    >>> q = xr.DataArray([0.25, 0.75], dims="time")
+    >>> def quantile(a, q):
+    ...     # a has shape (x, sample), q has size 1 along x
+    ...     return np.quantile(a, q.item(), axis=-1)
+    ...
+    >>> xr.apply_ufunc(
+    ...     quantile, data, q, input_core_dims=[["sample"], []], vectorize="shared"
+    ... )
+    <xarray.DataArray (time: 2, x: 3)> Size: 48B
+    array([[ 0.75,  4.75,  8.75],
+           [14.25, 18.25, 22.25]])
+    Dimensions without coordinates: time, x
+
+    This calls ``quantile`` twice, once per ``time``, while ``vectorize=True``
+    would call it six times, once per ``time`` and ``x``.
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in ``apply_ufunc``. You may find helper functions such as
