@@ -545,6 +545,34 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     assert not entrypoint.guess_can_open(path)
 
 
+@pytest.mark.parametrize(
+    "engine",
+    [
+        pytest.param("netcdf4", marks=requires_netCDF4),
+        pytest.param("h5netcdf", marks=requires_h5netcdf),
+    ],
+)
+@pytest.mark.parametrize("dtype", ["f8", "i4"])
+def test_roundtrip_non_native_endian_attrs(tmp_path: Path, engine, dtype) -> None:
+    """Test that non-native-endian numeric attribute values round-trip."""
+    values = np.array([1, 2], dtype=np.dtype(dtype).newbyteorder("S"))
+    assert not values.dtype.isnative
+    ds = xr.Dataset(
+        {
+            "x": xr.DataArray(
+                [1.0],
+                dims=("d",),
+                attrs={"valid_range": values},
+            )
+        },
+        attrs={"levels": values},
+    )
+    ds.to_netcdf(tmp_path / "test.nc", engine=engine)
+    with xr.open_dataset(tmp_path / "test.nc", engine=engine) as ds2:
+        assert_array_equal(ds2["x"].attrs["valid_range"], [1, 2])
+        assert_array_equal(ds2.attrs["levels"], [1, 2])
+
+
 def _dataset_with_metadata() -> Dataset:
     return Dataset(
         {
