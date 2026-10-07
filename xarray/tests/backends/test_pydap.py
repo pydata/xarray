@@ -99,7 +99,6 @@ class TestPydap:
 @network
 @requires_scipy_or_netCDF4
 @requires_pydap
-@pytest.mark.skip(reason="test.opendap.org is currently returning 403 Forbidden")
 class TestPydapOnline(TestPydap):
     @contextlib.contextmanager
     def create_dap2_datasets(self, **kwargs):
@@ -147,7 +146,6 @@ class TestPydapOnline(TestPydap):
 @requires_pydap
 @network
 @pytest.mark.parametrize("protocol", ["dap2", "dap4"])
-@pytest.mark.skip(reason="test.opendap.org is currently returning 403 Forbidden")
 def test_batchdap4_downloads(tmpdir, protocol) -> None:
     """Test that in dap4, all dimensions are downloaded at once"""
     import pydap

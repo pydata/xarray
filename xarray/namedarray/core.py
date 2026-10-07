@@ -220,7 +220,7 @@ def from_array[DimType_co: Hashable, ShapeType, DType: np.dtype[Any]](
 
     # TODO: dask.array.ma.MaskedArray also exists, better way?
     if isinstance(data, np.ma.MaskedArray):
-        mask = np.asarray(data.mask)
+        mask = np.ma.getmaskarray(data)
         if mask.any():
             # TODO: requires refactoring/vendoring xarray.core.dtypes and
             # xarray.core.duck_array_ops
