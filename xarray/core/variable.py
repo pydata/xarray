@@ -361,8 +361,15 @@ def _is_full_ordered_product(index: pd.MultiIndex) -> bool:
     shape = tuple(len(level) for level in index.levels)
     if len(index) != math.prod(shape):
         return False
-    flat_codes = np.ravel_multi_index(tuple(index.codes), shape)
-    return bool(np.array_equal(flat_codes, np.arange(len(index))))
+    # compare each level's codes with those of a product along its axis,
+    # avoiding temporaries larger than a boolean array of the index's size
+    for axis, (codes, size) in enumerate(zip(index.codes, shape, strict=True)):
+        expected = np.arange(size, dtype=codes.dtype).reshape(
+            [size if i == axis else 1 for i in range(len(shape))]
+        )
+        if not (np.asarray(codes).reshape(shape) == expected).all():
+            return False
+    return True
 
 
 class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic):
