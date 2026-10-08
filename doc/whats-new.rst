@@ -43,6 +43,9 @@ Bug Fixes
 - Allow :py:func:`open_datatree` and :py:func:`open_groups` to pass
   ``use_zarr_fill_value_as_mask`` to the Zarr backend (:issue:`11361`).
   By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
+- Don't warn that no index is created when reducing a :py:class:`Dataset`
+  grouped by a data variable without flox (:issue:`9890`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Raise a :py:class:`ValueError` when :py:meth:`~xarray.indexes.RangeIndex.linspace`
   receives a negative ``num`` instead of creating an index with a negative size.
 - Fix computing a chunked coordinate backed by a :py:class:`~xarray.indexes.CoordinateTransformIndex`
