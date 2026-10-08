@@ -86,6 +86,8 @@ UNSUPPORTED_EXTENSION_ARRAY_TYPES = (
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
+
     from xarray.core.types import (
         ErrorOptionsWithWarn,
         PadModeOptions,
@@ -613,6 +615,25 @@ class Variable(
 
         cls_: type[Variable[Any, Any, Any]] = type(self)
         return cls_(dims_, data_, attrs_)
+
+    if TYPE_CHECKING:
+        # AbstractArray.__array__ cannot type the dtype, so that e.g.
+        # np.asarray(variable) keeps it
+        @overload
+        def __array__(
+            self, dtype: None = None, /, *, copy: bool | None = None
+        ) -> np.ndarray[Any, DType_co]: ...
+        @overload
+        def __array__[DType: np.dtype[Any]](
+            self, dtype: DType, /, *, copy: bool | None = None
+        ) -> np.ndarray[Any, DType]: ...
+        @overload
+        def __array__(
+            self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
+        ) -> np.ndarray[Any, np.dtype[Any]]: ...
+        def __array__(
+            self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
+        ) -> np.ndarray[Any, np.dtype[Any]]: ...
 
     @property
     def _in_memory(self) -> bool:

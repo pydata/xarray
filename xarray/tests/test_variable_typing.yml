@@ -246,3 +246,13 @@
     reveal_type(IndexVariable("x", ["a"]))  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], numpy.dtype[numpy.str_], str]"
     reveal_type(IndexVariable("x", []))  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
     reveal_type(IndexVariable("x", [1, "a"]))  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], Any, str]"
+
+- case: test_mypy_variable_array
+  main: |
+    import numpy as np
+    from xarray import Variable
+
+    v = Variable("x", np.zeros(2))
+    # converting to a numpy array keeps the dtype
+    reveal_type(np.asarray(v))  # N: Revealed type is "numpy.ndarray[tuple[Any, ...], numpy.dtype[numpy.float64]]"
+    reveal_type(v.__array__(np.dtype(np.int8)))  # N: Revealed type is "numpy.ndarray[Any, numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._8Bit]]]"
