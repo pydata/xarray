@@ -36,11 +36,7 @@ from xarray.core.indexing import (
 )
 from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
-from xarray.core.variable import (
-    _is_full_ordered_product,
-    as_compatible_data,
-    as_variable,
-)
+from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import (
     IndexableArray,
     assert_allclose,
@@ -3300,40 +3296,3 @@ def test_explicitly_indexed_array_preserved() -> None:
     var = Variable(["x"], arr)
     result = var.drop_encoding()
     assert isinstance(result._data, indexing.ExplicitlyIndexed)
-
-
-@pytest.mark.parametrize(
-    ("index", "expected"),
-    [
-        pytest.param(
-            pd.MultiIndex.from_product([[0, 1, 2], ["a", "b"], [3, 4]]),
-            True,
-            id="product",
-        ),
-        pytest.param(
-            pd.MultiIndex(
-                levels=[[2, 1, 0], ["b", "a"]],
-                codes=[[0, 0, 1, 1, 2, 2], [0, 1, 0, 1, 0, 1]],
-            ),
-            True,
-            id="product-unsorted-levels",
-        ),
-        pytest.param(
-            pd.MultiIndex.from_product([[0, 1], ["a", "b"]])[::-1],
-            False,
-            id="reversed",
-        ),
-        pytest.param(
-            pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a")]),
-            False,
-            id="missing",
-        ),
-        pytest.param(
-            pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a"), (1, np.nan)]),
-            False,
-            id="nan-label",
-        ),
-    ],
-)
-def test_is_full_ordered_product(index: pd.MultiIndex, expected: bool) -> None:
-    assert _is_full_ordered_product(index) is expected
