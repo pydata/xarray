@@ -44,6 +44,9 @@ Bug Fixes
   ``datetime64`` or ``timedelta64`` dtype now reuses the stored ``units`` and
   ``calendar``, instead of writing the appended values with default units
   (:issue:`10639`).
+- Don't warn that no index is created when reducing a :py:class:`Dataset`
+  grouped by a data variable without flox (:issue:`9890`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Raise a :py:class:`ValueError` when :py:meth:`~xarray.indexes.RangeIndex.linspace`
   receives a negative ``num`` instead of creating an index with a negative size.
 - Fix computing a chunked coordinate backed by a :py:class:`~xarray.indexes.CoordinateTransformIndex`
@@ -92,6 +95,12 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Add hidden intersphinx inventory entries for methods, properties and
+  attributes at the path where they are defined, e.g.
+  ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
+  ``sphinx-codeautolink`` link to them from code examples in other projects
+  (:pull:`11678`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Clarified the ``rename`` docstrings so they no longer describe the result as a
   "new" object, which could be read as implying it no longer shares memory with
   the original (:issue:`9432`, :pull:`11644`).
@@ -304,6 +313,10 @@ Bug Fixes
   for zarr writes. Existing zarr stores written with the old ``int8`` encoding
   are still read correctly. (:issue:`2937`, :pull:`11318`)
   By `Evan Lyall <https://github.com/elyall>`_.
+- Assigning :py:class:`DataTree` children under names containing ``/`` (e.g.
+  ``DataTree(children={"a/b": ...})``) now raises a ``ValueError`` instead of
+  recursing until ``RecursionError`` (:issue:`9490`, :pull:`11620`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - No longer emit a ``SerializationWarning`` about a missing ``_FillValue`` when
   encoding a CF coordinate variable (a 1D variable named after its dimension) to
   an integer dtype. CF forbids missing values in coordinate variables, so a
