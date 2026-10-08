@@ -40,6 +40,12 @@ Breaking Changes
   except for those of ``NamedArray``, which are now ``ShapeType_co``,
   ``DType_co`` and ``DimType_co`` (:pull:`11223`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`Dataset.update`, and so ``ds[name] = ...`` and ``assign``, now raises
+  instead of silently replacing a Dataset's index with an incoming index of a
+  different type (e.g. a custom index by a default ``PandasIndex``) or covering
+  different coordinates. Drop the incoming index with ``drop_indexes`` first
+  (:pull:`11621`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 
 
 Deprecations
@@ -221,12 +227,6 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
-- :py:meth:`Dataset.update`, and so ``ds[name] = ...`` and ``assign``, now raises
-  instead of silently replacing a Dataset's index with an incoming index of a
-  different type (e.g. a custom index by a default ``PandasIndex``) or covering
-  different coordinates. Drop the incoming index with ``drop_indexes`` first
-  (:pull:`11621`).
-  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Disable using bottleneck by default, as certain operations are less numerically
   stable than the equivalent numpy functions. Use
   ``xr.set_options(use_bottleneck=True)`` to opt back in (:pull:`11461`).
