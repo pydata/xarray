@@ -583,7 +583,7 @@ def _localize[T](obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
     """
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
-        if is_chunked_array(new_x._data):
+        if is_chunked_array(new_x._data) or new_x.size == 0:
             continue
         new_x_loaded = new_x.data
         minval = np.nanmin(new_x_loaded)
@@ -700,7 +700,13 @@ def interpolate_variable(
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    in_coords, result_coords = zip(*(v for v in indexes_coords.values()), strict=True)
+    if kwargs.get("method") in ["linear", "nearest"]:
+        # simple speed up for the local interpolation
+        var, indexes_coords = _localize(var, dict(indexes_coords))
+
+    in_coords, result_coords = _floatize_x(
+        *(list(_) for _ in zip(*indexes_coords.values(), strict=True))
+    )
 
     # input coordinates along which we are interpolation are core dimensions
     # the corresponding output coordinates may or may not have the same name,
@@ -760,7 +766,9 @@ def interpolate_variable(
         # TODO: deprecate and have the user rechunk themselves
         dask_gufunc_kwargs=dict(output_sizes=output_sizes, allow_rechunk=True),
         output_dtypes=[dtype],
-        vectorize=bool(vectorize_dims),
+        # only loop over the dimensions along which the destination coordinates vary,
+        # np.vectorize would loop over all of them (GH10683)
+        vectorize="shared",
         keep_attrs=True,
     )
     return result
@@ -795,13 +803,19 @@ def _interpnd(
     Core nD array interpolation routine.
     The first half arrays in `coords` are original coordinates,
     the other half are destination coordinates.
+
+    `data` has the loop dimensions first, followed by the dimensions we
+    interpolate along. ``apply_ufunc(..., vectorize="shared")`` only loops over
+    the loop dimensions along which the destination coordinates vary, e.g. ``t``
+    for ``da[t, r, z].interp(z=target[t])``, so the destination coordinates have
+    size 1 along all remaining loop dimensions.
     """
     n_x = len(coords) // 2
     ndim = data.ndim
     nconst = ndim - n_x
 
-    # Convert everything to Variables, since that makes applying
-    # `_localize` and `_floatize_x` much easier
+    # Convert everything to Variables, since that makes broadcasting the
+    # destination coordinates much easier
     x: list[Variable] = [
         Variable([f"dim_{nconst + dim}"], _x, fastpath=True)
         for dim, _x in enumerate(coords[:n_x])
@@ -809,36 +823,26 @@ def _interpnd(
     new_x = list(
         broadcast_variables(
             *(
-                Variable(dims, _x, fastpath=True)
+                # drop the size-1 loop dimensions
+                Variable(
+                    dims, reshape(_x, _x.shape[_x.ndim - len(dims) :]), fastpath=True
+                )
                 for dims, _x in zip(result_coord_core_dims, coords[n_x:], strict=True)
             )
         )
     )
     var = Variable([f"dim_{dim}" for dim in range(ndim)], data, fastpath=True)
 
-    if interp_kwargs.get("method") in ["linear", "nearest"]:
-        indexes_coords = {
-            _x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x, strict=True)
-        }
-        # simple speed up for the local interpolation
-        var, indexes_coords = _localize(var, indexes_coords)
-        x, new_x = tuple(
-            list(_)
-            for _ in zip(*(indexes_coords[d] for d in indexes_coords), strict=True)
-        )
-
-    x_list, new_x_list = _floatize_x(x, new_x)
-
     if len(x) == 1:
         # TODO: narrow interp_func to interpolator here
-        return _interp1d(var, x_list, new_x_list, interp_func, interp_kwargs)  # type: ignore[arg-type]
+        return _interp1d(var, x, new_x, interp_func, interp_kwargs)  # type: ignore[arg-type]
 
     # move the interpolation axes to the start position
     data = transpose(var._data, range(-len(x), var.ndim - len(x)))
 
     # stack new_x to 1 vector, with reshape
-    xi = stack([ravel(x1.data) for x1 in new_x_list], axis=-1)
-    rslt: np.ndarray = interp_func(x_list, data, xi, **interp_kwargs)  # type: ignore[assignment]
+    xi = stack([ravel(x1.data) for x1 in new_x], axis=-1)
+    rslt: np.ndarray = interp_func(x, data, xi, **interp_kwargs)  # type: ignore[assignment]
     # move back the interpolation axes to the last position
     rslt = transpose(rslt, range(-rslt.ndim + 1, 1))
     return reshape(rslt, rslt.shape[:-1] + new_x[0].shape)

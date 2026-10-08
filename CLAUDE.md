@@ -32,6 +32,11 @@ uv run dmypy run  # Type checking with mypy
   2. Related third-party imports
   3. Local application/library specific imports
 
+### Docstrings
+
+- Use the numpy docstring style (`Parameters`, `Returns`, ... sections), also
+  for private functions
+
 ## GitHub Interaction Guidelines
 
 - **NEVER impersonate the user on GitHub**, always sign off with something like

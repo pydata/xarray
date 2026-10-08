@@ -20,7 +20,7 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 
@@ -704,6 +704,139 @@ def _vectorize(func, signature, output_dtypes, exclude_dims):
     return func
 
 
+def _vectorize_shared[T](
+    func: Callable[..., T],
+    signature: _UFuncSignature,
+    output_dtypes: Sequence | None,
+    output_core_sizes: Mapping[Hashable, int],
+) -> Callable[..., T]:
+    """Vectorize ``func`` over the loop dimensions shared by several inputs.
+
+    Like :py:class:`numpy.vectorize` with a signature, but ``func`` is only
+    looped over the loop (non-core) dimensions along which more than one input
+    varies, i.e. has a size other than 1. All other loop dimensions are passed
+    to ``func`` in bulk.
+
+    Parameters
+    ----------
+    func : callable
+        Function to vectorize. It must accept inputs with leading loop
+        dimensions that broadcast against each other following numpy's rules,
+        and return outputs with the broadcast loop dimensions followed by the
+        output core dimensions.
+    signature : _UFuncSignature
+        Core dimensions signature for the operation.
+    output_dtypes : sequence of dtype or None
+        Dtypes of the outputs. If None, they are taken from the results of
+        ``func``, so they are required if the loop is empty.
+    output_core_sizes : mapping of hashable to int
+        Sizes of the output core dimensions. Only needed if the loop is empty,
+        so that ``func`` is never called.
+
+    Returns
+    -------
+    callable
+        Vectorized version of ``func``, taking the same arguments.
+    """
+    input_core_ndims = [len(dims) for dims in signature.input_core_dims]
+    num_outputs = signature.num_outputs
+
+    @functools.wraps(func)
+    def wrapper(*args: Any) -> T:
+        loop_shapes = [
+            np.shape(arg)[: np.ndim(arg) - ndim]
+            for arg, ndim in zip(args, input_core_ndims, strict=True)
+        ]
+        broadcast_shape = np.broadcast_shapes(*loop_shapes)
+        nloop = len(broadcast_shape)
+        # loop dimensions are aligned to the right, as in numpy broadcasting
+        offsets = [nloop - len(shape) for shape in loop_shapes]
+        loop_axes = [
+            axis
+            for axis in range(nloop)
+            if sum(
+                axis >= offset and shape[axis - offset] != 1
+                for shape, offset in zip(loop_shapes, offsets, strict=True)
+            )
+            > 1
+        ]
+        if not loop_axes:
+            return func(*args)
+
+        outputs = None
+        output_key: list[int | slice] = [slice(None)] * nloop
+        for index in np.ndindex(*(broadcast_shape[axis] for axis in loop_axes)):
+            loop_index = dict(zip(loop_axes, index, strict=True))
+            sliced_args = []
+            for arg, shape, offset in zip(args, loop_shapes, offsets, strict=True):
+                # select the loop index, or the only element along a size-1 axis
+                key = tuple(
+                    (loop_index[axis] if shape[axis - offset] != 1 else 0)
+                    if axis in loop_index
+                    else slice(None)
+                    for axis in range(offset, nloop)
+                )
+                sliced_args.append(arg[key] if key else arg)
+
+            result = func(*sliced_args)
+            results: tuple[Any, ...]
+            if num_outputs == 1:
+                results = (result,)
+            elif isinstance(result, tuple) and len(result) == num_outputs:
+                results = result
+            else:
+                raise ValueError(
+                    f"applied function does not have the number of outputs "
+                    f"specified in the ufunc signature. Expected {num_outputs} "
+                    f"outputs, got {result!r}"
+                )
+
+            if outputs is None:
+                outputs = tuple(
+                    np.empty_like(
+                        result,
+                        shape=broadcast_shape
+                        + np.shape(result)[np.ndim(result) - len(core_dims) :],
+                        dtype=None if output_dtypes is None else output_dtypes[i],
+                    )
+                    for i, (result, core_dims) in enumerate(
+                        zip(results, signature.output_core_dims, strict=True)
+                    )
+                )
+
+            for axis, i in loop_index.items():
+                output_key[axis] = i
+            for output, result in zip(outputs, results, strict=True):
+                output[tuple(output_key)] = result
+
+        if outputs is None:
+            # the loop is empty, so func was never called
+            missing_dims = {
+                dim
+                for dims in signature.output_core_dims
+                for dim in dims
+                if dim not in output_core_sizes
+            }
+            if output_dtypes is None or missing_dims:
+                raise ValueError(
+                    "cannot vectorize over an empty loop dimension unless "
+                    "``output_dtypes`` is set and the sizes of all output core "
+                    "dimensions are known"
+                )
+            outputs = tuple(
+                np.empty(
+                    broadcast_shape + tuple(output_core_sizes[dim] for dim in dims),
+                    dtype=dtype,
+                )
+                for dims, dtype in zip(
+                    signature.output_core_dims, output_dtypes, strict=True
+                )
+            )
+        return cast(T, outputs[0] if num_outputs == 1 else outputs)
+
+    return wrapper
+
+
 def apply_variable_ufunc(
     func,
     *args,
@@ -711,7 +844,7 @@ def apply_variable_ufunc(
     exclude_dims=frozenset(),
     dask="forbidden",
     output_dtypes=None,
-    vectorize=False,
+    vectorize: bool | Literal["shared"] = False,
     keep_attrs="override",
     dask_gufunc_kwargs=None,
 ) -> Variable | tuple[Variable, ...]:
@@ -794,12 +927,20 @@ def apply_variable_ufunc(
                         f"dimension '{key}' in 'output_core_dims' needs corresponding (dim, size) in 'output_sizes'"
                     )
 
+            if vectorize == "shared":
+                numpy_func = _vectorize_shared(
+                    numpy_func,
+                    signature,
+                    output_dtypes,
+                    output_core_sizes={**dim_sizes, **output_sizes},
+                )
+
             def func(*arrays):
                 res = chunkmanager.apply_gufunc(
                     numpy_func,
                     signature.to_gufunc_string(exclude_dims),
                     *arrays,
-                    vectorize=vectorize,
+                    vectorize=vectorize is True,
                     output_dtypes=output_dtypes,
                     **dask_gufunc_kwargs,
                 )
@@ -812,6 +953,14 @@ def apply_variable_ufunc(
             raise ValueError(
                 f"unknown setting for chunked array handling in apply_ufunc: {dask}"
             )
+    elif vectorize == "shared":
+        output_sizes = (dask_gufunc_kwargs or {}).get("output_sizes", {})
+        func = _vectorize_shared(
+            func,
+            signature,
+            output_dtypes,
+            output_core_sizes={**dim_sizes, **output_sizes},
+        )
     elif vectorize:
         func = _vectorize(
             func, signature, output_dtypes=output_dtypes, exclude_dims=exclude_dims
@@ -899,7 +1048,7 @@ def apply_ufunc(
     input_core_dims: Sequence[Sequence] | None = None,
     output_core_dims: Sequence[Sequence] | None = ((),),
     exclude_dims: AbstractSet = frozenset(),
-    vectorize: bool = False,
+    vectorize: bool | Literal["shared"] = False,
     join: JoinOptions = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
@@ -959,11 +1108,23 @@ def apply_ufunc(
         will be dropped. Each excluded dimension must also appear in
         ``input_core_dims`` for at least one argument. Only dimensions listed
         here are allowed to change size between input and output objects.
-    vectorize : bool, optional
+    vectorize : bool or "shared", optional
         If True, then assume ``func`` only takes arrays defined over core
         dimensions as input and vectorize it automatically with
         :py:func:`numpy.vectorize`. This option exists for convenience, but is
         almost always slower than supplying a pre-vectorized function.
+
+        If "shared", only loop over the broadcast dimensions along which more
+        than one input varies, and pass all other broadcast dimensions to
+        ``func`` in bulk. ``func`` then has to accept inputs with leading
+        broadcast dimensions that broadcast against each other following
+        numpy's rules, e.g. an input of shape ``(t, r, z)`` together with an
+        input of shape ``(1, z)``, and return outputs with the broadcast
+        dimensions followed by the output core dimensions. This is much faster
+        than ``vectorize=True`` if some broadcast dimensions only appear on a
+        single input. If the loop is empty, ``output_dtypes`` and the sizes of
+        all output core dimensions (from the inputs or ``output_sizes`` in
+        ``dask_gufunc_kwargs``) are required.
     join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
@@ -1050,7 +1211,9 @@ def apply_ufunc(
 
     Examples
     --------
-    Calculate the vector magnitude of two arguments:
+    The examples below go from basic to advanced usage.
+
+    **Element-wise functions.** Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
     ...     func = lambda x, y: np.sqrt(x**2 + y**2)
@@ -1080,17 +1243,19 @@ def apply_ufunc(
     Coordinates:
       * x        (x) float64 24B 0.1 0.2 0.3
 
-    Other examples of how you could use ``apply_ufunc`` to write functions to
-    (very nearly) replicate existing xarray functionality:
+    **Core dimensions.** Functions that operate along a dimension, e.g. a
+    reduction, need ``input_core_dims``. Core dimensions are moved to the end
+    of the arrays passed to ``func``, so here we reduce over ``axis=-1``, like
+    ``.mean("y")``:
 
-    Compute the mean (``.mean``) over one dimension:
-
-    >>> def mean(obj, dim):
-    ...     # note: apply always moves core dimensions to the end
-    ...     return apply_ufunc(
-    ...         np.mean, obj, input_core_dims=[[dim]], kwargs={"axis": -1}
-    ...     )
-    ...
+    >>> da = xr.DataArray(
+    ...     np.arange(6.0).reshape(2, 3), coords={"x": [10, 20], "y": [0, 1, 2]}
+    ... )
+    >>> xr.apply_ufunc(np.mean, da, input_core_dims=[["y"]], kwargs={"axis": -1})
+    <xarray.DataArray (x: 2)> Size: 16B
+    array([1., 4.])
+    Coordinates:
+      * x        (x) int64 16B 10 20
 
     Inner product over a specific dimension (like :py:func:`dot`):
 
@@ -1099,35 +1264,85 @@ def apply_ufunc(
     ...     return result[..., 0, 0]
     ...
     >>> def inner_product(a, b, dim):
-    ...     return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
+    ...     return xr.apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
     ...
+
+    **Output core dimensions.** If ``func`` returns a dimension, list it in
+    ``output_core_dims``. If its size changes, it also has to be listed in
+    ``exclude_dims``, and its coordinates are dropped:
+
+    >>> xr.apply_ufunc(
+    ...     np.diff,
+    ...     da,
+    ...     input_core_dims=[["y"]],
+    ...     output_core_dims=[["y"]],
+    ...     exclude_dims={"y"},
+    ...     kwargs={"axis": -1},
+    ... )
+    <xarray.DataArray (x: 2, y: 2)> Size: 32B
+    array([[1., 1.],
+           [1., 1.]])
+    Coordinates:
+      * x        (x) int64 16B 10 20
+    Dimensions without coordinates: y
 
     Stack objects along a new dimension (like :py:func:`concat`):
 
     >>> def stack(objects, dim, new_coord):
     ...     # note: this version does not stack coordinates
     ...     func = lambda *x: np.stack(x, axis=-1)
-    ...     result = apply_ufunc(
+    ...     result = xr.apply_ufunc(
     ...         func,
     ...         *objects,
     ...         output_core_dims=[[dim]],
     ...         join="outer",
-    ...         dataset_fill_value=np.nan
+    ...         dataset_fill_value=np.nan,
     ...     )
     ...     result[dim] = new_coord
     ...     return result
     ...
 
-    If your function is not vectorized but can be applied only to core
-    dimensions, you can use ``vectorize=True`` to turn into a vectorized
-    function. This wraps :py:func:`numpy.vectorize`, so the operation isn't
-    terribly fast. Here we'll use it to calculate the distance between
-    empirical samples from two probability distributions, using a scipy
+    **Multiple outputs.** A function returning a tuple needs one entry in
+    ``output_core_dims`` per output:
+
+    >>> quotient, remainder = xr.apply_ufunc(
+    ...     np.divmod, da, 4, output_core_dims=[[], []]
+    ... )
+    >>> remainder
+    <xarray.DataArray (x: 2, y: 3)> Size: 48B
+    array([[0., 1., 2.],
+           [3., 0., 1.]])
+    Coordinates:
+      * x        (x) int64 16B 10 20
+      * y        (y) int64 24B 0 1 2
+
+    **Dask arrays.** With ``dask="parallelized"``, ``func`` is applied to each
+    block of a chunked array. Core dimensions must not be split into several
+    chunks:
+
+    >>> xr.apply_ufunc(
+    ...     np.mean,
+    ...     da.chunk(x=1),
+    ...     input_core_dims=[["y"]],
+    ...     kwargs={"axis": -1},
+    ...     dask="parallelized",
+    ...     output_dtypes=[float],
+    ... ).compute()
+    <xarray.DataArray (x: 2)> Size: 16B
+    array([1., 4.])
+    Coordinates:
+      * x        (x) int64 16B 10 20
+
+    **Vectorizing functions.** If your function is not vectorized but can be
+    applied only to core dimensions, you can use ``vectorize=True`` to turn into
+    a vectorized function. This wraps :py:func:`numpy.vectorize`, so the
+    operation isn't terribly fast. Here we'll use it to calculate the distance
+    between empirical samples from two probability distributions, using a scipy
     function that needs to be applied to vectors:
 
     >>> import scipy.stats
     >>> def earth_mover_distance(first_samples, second_samples, dim="ensemble"):
-    ...     return apply_ufunc(
+    ...     return xr.apply_ufunc(
     ...         scipy.stats.wasserstein_distance,
     ...         first_samples,
     ...         second_samples,
@@ -1135,6 +1350,32 @@ def apply_ufunc(
     ...         vectorize=True,
     ...     )
     ...
+
+    **Vectorizing over shared dimensions only.** ``vectorize=True`` calls
+    ``func`` once for every combination of the broadcast dimensions. If
+    ``func`` can handle some of them itself, ``vectorize="shared"`` only loops
+    over the dimensions along which more than one input varies and passes all
+    others in bulk. Here, ``np.quantile`` computes a single quantile per call
+    for all ``x`` at once, but the quantile differs along ``time``:
+
+    >>> data = xr.DataArray(
+    ...     np.arange(24.0).reshape(2, 3, 4), dims=("time", "x", "sample")
+    ... )
+    >>> q = xr.DataArray([0.25, 0.75], dims="time")
+    >>> def quantile(a, q):
+    ...     # a has shape (x, sample), q has size 1 along x
+    ...     return np.quantile(a, q.item(), axis=-1)
+    ...
+    >>> xr.apply_ufunc(
+    ...     quantile, data, q, input_core_dims=[["sample"], []], vectorize="shared"
+    ... )
+    <xarray.DataArray (time: 2, x: 3)> Size: 48B
+    array([[ 0.75,  4.75,  8.75],
+           [14.25, 18.25, 22.25]])
+    Dimensions without coordinates: time, x
+
+    This calls ``quantile`` twice, once per ``time``, while ``vectorize=True``
+    would call it six times, once per ``time`` and ``x``.
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in ``apply_ufunc``. You may find helper functions such as
@@ -1174,6 +1415,11 @@ def apply_ufunc(
         kwargs = {}
 
     signature = _UFuncSignature(input_core_dims, output_core_dims)
+
+    if vectorize not in (True, False, "shared"):
+        raise ValueError(f"vectorize must be a bool or 'shared', got {vectorize!r}")
+    if vectorize != "shared":
+        vectorize = bool(vectorize)
 
     if exclude_dims:
         if not isinstance(exclude_dims, set):

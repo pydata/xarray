@@ -13,6 +13,11 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:func:`apply_ufunc` supports ``vectorize="shared"``, which only loops over
+  the broadcast dimensions along which more than one input varies and passes
+  all other broadcast dimensions to ``func`` in bulk. This is much faster than
+  ``vectorize=True`` if ``func`` can broadcast its inputs, for numpy and dask
+  arrays alike (:pull:`11681`).
 - :py:class:`~xarray.Variable` is now generic in the type of its dimension
   names, like :py:class:`~xarray.NamedArray`: it is defined as
   ``class Variable(NamedArray[Any, Any, DimType_co])``, so static type checkers
@@ -48,6 +53,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
+  ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
+  coordinates (:pull:`11681`).
 - Fix :py:class:`~xarray.Variable` methods with dimension names that are not
   strings: :py:meth:`Variable.concat` failed for any such dimension, and
   ``shift``, ``roll``, boolean ``isel`` and ``IndexVariable.to_index`` failed
@@ -109,6 +117,11 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
+  docstring, and a section on ``vectorize="shared"`` to the
+  :doc:`apply_ufunc example notebook <examples/apply_ufunc_vectorize_1d>`,
+  which is executed again in the documentation build (:pull:`11681`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Add hidden intersphinx inventory entries for methods, properties and
   attributes at the path where they are defined, e.g.
   ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
@@ -140,6 +153,13 @@ Performance
   ones instead of sorting them. This avoids copying the data before
   interpolating (:issue:`9758`, :pull:`11658`).
   By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+- Fix a performance regression in :py:meth:`Dataset.interp` and
+  :py:meth:`DataArray.interp` when the new coordinates vary along a dimension
+  of the interpolated object, e.g. ``da.interp(z=new_z)`` where ``new_z`` has a
+  dimension ``t`` of ``da``. The interpolation now only loops over the
+  dimensions the new coordinates depend on, for numpy and dask arrays alike
+  (:issue:`10683`, :pull:`11681`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Internal Changes
