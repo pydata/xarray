@@ -36,6 +36,16 @@ class UnstackingExtraDim:
         self.da_missing.unstack("flat_dim")
 
 
+class UnstackingMemory:
+    def setup(self):
+        # small dtype, so that index-sized temporaries dominate the peak memory
+        data = np.zeros((5000, 2000), dtype=np.int8)
+        self.da_full = xr.DataArray(data, dims=list("ab")).stack(flat_dim=["a", "b"])
+
+    def peakmem_unstack_fast(self):
+        self.da_full.unstack("flat_dim")
+
+
 class UnstackingDask(Unstacking):
     def setup(self, *args, **kwargs):
         requires_dask()
