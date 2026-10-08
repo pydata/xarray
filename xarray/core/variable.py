@@ -30,6 +30,7 @@ from xarray.computation.arithmetic import VariableArithmetic
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, utils
 from xarray.core.common import AbstractArray
 from xarray.core.extension_array import PandasExtensionArray
+from xarray.core.indexes import is_full_ordered_product
 from xarray.core.indexing import (
     BasicIndexer,
     CoordinateTransformIndexingAdapter,
@@ -1696,10 +1697,14 @@ class Variable(
         dim: DimType_co,  # type: ignore[misc]
         fill_value=dtypes.NA,
         sparse: bool = False,
+        full_product: bool | None = None,
     ) -> Variable:
         """
         Unstacks this variable given an index to unstack and the name of the
         dimension to which the index refers.
+
+        ``full_product`` is the result of ``is_full_ordered_product(index)``,
+        which is computed if not given.
         """
 
         reordered = self.transpose(..., dim)
@@ -1712,6 +1717,14 @@ class Variable(
         other_dims = [d for d in self.dims if d != dim]
         new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + tuple(new_dim_names)
+
+        if full_product is None:
+            full_product = is_full_ordered_product(index)
+        if not sparse and full_product:
+            # every combination of labels is present in order: a reshape is
+            # enough and avoids allocating and filling a new array
+            data = duck_array_ops.reshape(reordered.data, new_shape)
+            return self.to_base_variable()._replace(dims=new_dims, data=data)
 
         create_template: Callable
         if fill_value is dtypes.NA:
