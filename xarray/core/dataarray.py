@@ -280,7 +280,7 @@ class _NumpyEncoder(json.JSONEncoder):
 
 
 class DataArray(
-    AbstractArray,
+    AbstractArray[Hashable],
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
@@ -2697,7 +2697,7 @@ class DataArray(
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new DataArray with renamed coordinates, dimensions or a new name.
+        """Returns a DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
         ----------
@@ -6710,7 +6710,7 @@ class DataArray(
             If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
             raise an exception. If 'ignore', the coefficients and covariances for the
             coordinates where the fitting failed will be NaN.
-        **kwargs : optional
+        kwargs : dict[str, Any], optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns

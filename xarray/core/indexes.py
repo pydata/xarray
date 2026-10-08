@@ -3,6 +3,7 @@ from __future__ import annotations
 import collections.abc
 import copy
 import inspect
+import math
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, TypeVar, cast, overload, override
@@ -816,7 +817,7 @@ class PandasIndex(Index):
 
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
         var = IndexVariable(
-            self.dim, data, attrs=attrs, encoding=encoding, fastpath=True
+            (self.dim,), data, attrs=attrs, encoding=encoding, fastpath=True
         )
         return {name: var}
 
@@ -1037,6 +1038,23 @@ def remove_unused_levels_categories[T_PDIndex: pd.Index](index: T_PDIndex) -> T_
     return index
 
 
+def is_full_ordered_product(index: pd.MultiIndex) -> bool:
+    """Whether index contains every combination of its levels' values in
+    C order, i.e. whether its codes are those of ``MultiIndex.from_product``."""
+    shape = tuple(len(level) for level in index.levels)
+    if len(index) != math.prod(shape):
+        return False
+    # compare each level's codes with those of a product along its axis,
+    # avoiding temporaries larger than a boolean array of the index's size
+    for axis, (codes, size) in enumerate(zip(index.codes, shape, strict=True)):
+        expected = np.arange(size, dtype=codes.dtype).reshape(
+            [size if i == axis else 1 for i in range(len(shape))]
+        )
+        if not (np.asarray(codes).reshape(shape) == expected).all():
+            return False
+    return True
+
+
 class PandasMultiIndex(PandasIndex):
     """Wrap a pandas.MultiIndex as an xarray compatible index."""
 
@@ -1166,9 +1184,16 @@ class PandasMultiIndex(PandasIndex):
 
     @override
     def unstack(self) -> tuple[dict[Hashable, Index], pd.MultiIndex]:
-        clean_index = remove_unused_levels_categories(self.index)
+        if is_full_ordered_product(self.index) and not any(
+            isinstance(level, pd.CategoricalIndex) for level in self.index.levels
+        ):
+            # every level value is used exactly once per combination: the index
+            # has no unused levels and is unique, skip the expensive checks
+            clean_index = self.index
+        else:
+            clean_index = remove_unused_levels_categories(self.index)
 
-        if not clean_index.is_unique:
+        if clean_index is not self.index and not clean_index.is_unique:
             raise ValueError(
                 "Cannot unstack MultiIndex containing duplicates. Make sure entries "
                 f"are unique, e.g., by  calling ``.drop_duplicates('{self.dim}')``, "
@@ -1302,7 +1327,7 @@ class PandasMultiIndex(PandasIndex):
 
             data = PandasMultiIndexingAdapter(self.index, dtype=dtype, level=level)  # type: ignore[arg-type]  # TODO: are Hashables ok?
             index_vars[name] = IndexVariable(
-                self.dim,
+                (self.dim,),
                 data,
                 attrs=attrs,
                 encoding=encoding,
@@ -1542,7 +1567,7 @@ class CoordinateTransformIndex(Index):
     ) -> IndexVars:
         from xarray.core.variable import Variable
 
-        new_variables = {}
+        new_variables: dict[Hashable, Variable] = {}
 
         for name in self.transform.coord_names:
             # copy attributes, if any
