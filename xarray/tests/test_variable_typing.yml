@@ -16,106 +16,112 @@
     from xarray import Variable
 
     # no dims to infer from, so the default dim type is used
-    reveal_type(Variable((), 0))  # N: Revealed type is "xarray.core.variable.Variable[typing.Hashable]"
-    reveal_type(Variable([], 0))  # N: Revealed type is "xarray.core.variable.Variable[typing.Hashable]"
+    reveal_type(Variable((), 0))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, typing.Hashable]"
+    reveal_type(Variable([], 0))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, typing.Hashable]"
 
 - case: test_mypy_variable_default_dim_type
   main: |
     from xarray import Variable
 
     def f(v: Variable) -> None:
-        reveal_type(v)  # N: Revealed type is "xarray.core.variable.Variable[typing.Hashable]"
+        reveal_type(v)  # N: Revealed type is "xarray.core.variable.Variable[Any, Any, typing.Hashable]"
         reveal_type(v.dims)  # N: Revealed type is "tuple[typing.Hashable, ...]"
 
 - case: test_mypy_variable_covariant
   main: |
+    from typing import Any
     import numpy as np
     from xarray import Variable
 
     def f(v: Variable) -> None: ...
 
     f(Variable(("x",), np.zeros(2)))
-    v: Variable[int] = Variable(("x",), np.zeros(2))
+    v: Variable[Any, Any, int] = Variable(("x",), np.zeros(2))
   out: |
-    main:7: error: Argument 1 to "Variable" has incompatible type "tuple[str]"; expected "Iterable[int]"  [arg-type]
+    main:8: error: Argument 1 to "Variable" has incompatible type "tuple[str]"; expected "Iterable[int]"  [arg-type]
 
 - case: test_mypy_variable_sizes
   main: |
+    from typing import Any
     import numpy as np
     from xarray import Variable
 
-    x: Variable[tuple[str, int]] = Variable((("a", 1),), np.zeros(2))
+    x: Variable[Any, Any, tuple[str, int]] = Variable((("a", 1),), np.zeros(2))
     reveal_type(x.sizes)  # N: Revealed type is "dict[tuple[str, int], int]"
     reveal_type(x.chunksizes)  # N: Revealed type is "typing.Mapping[tuple[str, int], tuple[int, ...]]"
 
 - case: test_mypy_variable_get_axis_num
   main: |
+    from typing import Any
     import numpy as np
     from xarray import Variable
 
-    x: Variable[str] = Variable(("x", "y"), np.zeros((2, 3)))
+    x: Variable[Any, Any, str] = Variable(("x", "y"), np.zeros((2, 3)))
     reveal_type(x.get_axis_num("x"))  # N: Revealed type is "int"
     reveal_type(x.get_axis_num(["x", "y"]))  # N: Revealed type is "tuple[int, ...]"
 
-    y: Variable[int] = Variable((1, 2), np.zeros((2, 3)))
+    y: Variable[Any, Any, int] = Variable((1, 2), np.zeros((2, 3)))
     reveal_type(y.get_axis_num(1))  # N: Revealed type is "int"
     y.get_axis_num(1.5)
   out: |
-    main:10: error: No overload variant of "get_axis_num" of "NamedArray" matches argument type "float"  [call-overload]
-    main:10: note: Possible overload variants:
-    main:10: note:     def get_axis_num(self, dim: str) -> int
-    main:10: note:     def get_axis_num(self, dim: Iterable[int]) -> tuple[int, ...]
-    main:10: note:     def get_axis_num(self, dim: int) -> int
+    main:11: error: No overload variant of "get_axis_num" of "NamedArray" matches argument type "float"  [call-overload]
+    main:11: note: Possible overload variants:
+    main:11: note:     def get_axis_num(self, dim: str) -> int
+    main:11: note:     def get_axis_num(self, dim: Iterable[int]) -> tuple[int, ...]
+    main:11: note:     def get_axis_num(self, dim: int) -> int
 
 - case: test_mypy_variable_keeps_dims
   main: |
+    from typing import Any
     import numpy as np
     from xarray import Variable
 
-    x: Variable[str] = Variable(("x", "y"), np.zeros((2, 3)))
+    x: Variable[Any, Any, str] = Variable(("x", "y"), np.zeros((2, 3)))
     reveal_type(x.isel(x=0).dims)  # N: Revealed type is "tuple[str, ...]"
-    reveal_type(x.copy())  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(x.copy())  # N: Revealed type is "xarray.core.variable.Variable[Any, Any, str]"
     reveal_type(x.transpose("y", ...).dims)  # N: Revealed type is "tuple[str, ...]"
     reveal_type(x.T.dims)  # N: Revealed type is "tuple[str, ...]"
     reveal_type(x.astype(int).dims)  # N: Revealed type is "tuple[str, ...]"
     reveal_type(x.real.dims)  # N: Revealed type is "tuple[str, ...]"
-    reveal_type(x.to_base_variable())  # N: Revealed type is "xarray.core.variable.Variable[str]"
-    reveal_type(x.to_index_variable())  # N: Revealed type is "xarray.core.variable.IndexVariable[str]"
+    reveal_type(x.to_base_variable())  # N: Revealed type is "xarray.core.variable.Variable[Any, Any, str]"
+    reveal_type(x.to_index_variable())  # N: Revealed type is "xarray.core.variable.IndexVariable[Any, Any, str]"
     x.transpose(1)
   out: |
-    main:13: error: Argument 1 to "transpose" of "Variable" has incompatible type "int"; expected "str | EllipsisType"  [arg-type]
+    main:14: error: Argument 1 to "transpose" of "Variable" has incompatible type "int"; expected "str | EllipsisType"  [arg-type]
 
 - case: test_mypy_variable_reduce_dims
   main: |
+    from typing import Any
     import numpy as np
     from xarray import Variable
 
-    x: Variable[int] = Variable((1, 2), np.zeros((2, 3)))
+    x: Variable[Any, Any, int] = Variable((1, 2), np.zeros((2, 3)))
     reveal_type(x.reduce(np.sum, dim=[1]).dims)  # N: Revealed type is "tuple[int, ...]"
     reveal_type(x.sum(dim=[1]).dims)  # N: Revealed type is "tuple[int, ...]"
     x.reduce(np.sum, dim=["x"])
   out: |
-    main:7: error: List item 0 has incompatible type "str"; expected "int"  [list-item]
+    main:8: error: List item 0 has incompatible type "str"; expected "int"  [list-item]
 
 - case: test_mypy_variable_new_dims
   main: |
+    from typing import Any
     import numpy as np
     from xarray import Variable
 
-    x: Variable[str] = Variable(("x",), np.zeros(2))
+    x: Variable[Any, Any, str] = Variable(("x",), np.zeros(2))
     # keeps the dim type
-    reveal_type(x._new())  # N: Revealed type is "xarray.core.variable.Variable[str]"
-    reveal_type(x._new(data=np.zeros(2, dtype=np.int8)))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(x._new())  # N: Revealed type is "xarray.core.variable.Variable[Any, Any, str]"
+    reveal_type(x._new(data=np.zeros(2, dtype=np.int8)))  # N: Revealed type is "xarray.core.variable.Variable[Any, numpy.dtype[Any], str]"
     # changes the dim type
-    reveal_type(x._new(dims=(1,)))  # N: Revealed type is "xarray.core.variable.Variable[int]"
-    reveal_type(x._new(dims=(1,), data=np.zeros(2)))  # N: Revealed type is "xarray.core.variable.Variable[int]"
+    reveal_type(x._new(dims=(1,)))  # N: Revealed type is "xarray.core.variable.Variable[Any, Any, int]"
+    reveal_type(x._new(dims=(1,), data=np.zeros(2)))  # N: Revealed type is "xarray.core.variable.Variable[Any, numpy.dtype[numpy.float64], int]"
 
 - case: test_mypy_index_variable_name
   main: |
     from xarray.core.variable import IndexVariable
 
     x = IndexVariable(("x",), [1, 2])
-    reveal_type(x)  # N: Revealed type is "xarray.core.variable.IndexVariable[str]"
+    reveal_type(x)  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], Any, str]"
     reveal_type(x.name)  # N: Revealed type is "str"
     reveal_type(IndexVariable((1,), [1, 2]).name)  # N: Revealed type is "int"
 
@@ -125,9 +131,39 @@
     from xarray import Variable
     from xarray.core.variable import as_variable
 
-    x: Variable[int] = Variable((1,), np.zeros(2))
-    reveal_type(as_variable(x))  # N: Revealed type is "xarray.core.variable.Variable[int]"
-    reveal_type(as_variable(("x", [1, 2])))  # N: Revealed type is "xarray.core.variable.Variable[str]"
-    reveal_type(as_variable((["x", "y"], np.zeros((2, 3)), {"units": "m"})))  # N: Revealed type is "xarray.core.variable.Variable[str]"
-    reveal_type(as_variable([1, 2], name="x"))  # N: Revealed type is "xarray.core.variable.Variable[typing.Hashable]"
-    reveal_type(as_variable(1))  # N: Revealed type is "xarray.core.variable.Variable[typing.Hashable]"
+    x = Variable((1,), np.zeros(2))
+    reveal_type(as_variable(x))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], int]"
+    reveal_type(as_variable(("x", [1, 2])))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
+    reveal_type(as_variable((["x", "y"], np.zeros((2, 3)), {"units": "m"})))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
+    reveal_type(as_variable([1, 2], name="x"))  # N: Revealed type is "xarray.core.variable.Variable[Any, Any, typing.Hashable]"
+    reveal_type(as_variable(1))  # N: Revealed type is "xarray.core.variable.Variable[Any, Any, typing.Hashable]"
+
+- case: test_mypy_variable_init_dtype
+  main: |
+    import numpy as np
+    from xarray import IndexVariable, Variable
+
+    ints: np.ndarray[tuple[int], np.dtype[np.int8]] = np.zeros(2, dtype=np.int8)
+
+    # the dtype is inferred from duck arrays, the shape is unknown
+    reveal_type(Variable("x", np.zeros(2)))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(Variable("x", ints))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._8Bit]], str]"
+    reveal_type(IndexVariable("x", np.zeros(2)))  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    # array-likes are converted, so their dtype is unknown
+    reveal_type(Variable("x", [1, 2]))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
+
+- case: test_mypy_variable_dtype
+  main: |
+    import numpy as np
+    from xarray import Variable
+
+    x = Variable(("x", "y"), np.zeros((2, 3)))
+    # these keep the dtype
+    reveal_type(x.isel(x=0))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(x.transpose())  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(x.copy())  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(x.dtype)  # N: Revealed type is "numpy.dtype[numpy.float64]"
+    # these can change it
+    reveal_type(x.astype(int))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
+    reveal_type(x.real)  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
+    reveal_type(x.reduce(np.mean))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"

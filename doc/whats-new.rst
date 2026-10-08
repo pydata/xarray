@@ -13,13 +13,17 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- :py:class:`~xarray.Variable` is now generic in the type of its dimension
-  names, like :py:class:`~xarray.NamedArray`: it is defined as
-  ``class Variable(NamedArray[Any, Any, DimType_co])``, so static type checkers
-  can infer and check the dimension names, e.g.
-  ``Variable(("x", "y"), data).dims`` is a ``tuple[str, ...]``. The dimension
-  type defaults to ``Hashable``, so a bare ``Variable`` annotation means
-  ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
+- :py:class:`~xarray.Variable` is now generic in the types of its shape, dtype
+  and dimension names, like :py:class:`~xarray.NamedArray`: it is defined as
+  ``class Variable(NamedArray[ShapeType_co, DType_co, DimType_co])``, so static
+  type checkers can infer and check them, e.g.
+  ``Variable(("x", "y"), np.zeros((2, 3)))`` is a
+  ``Variable[tuple[int, ...], np.dtype[np.float64], str]``. Operations that can
+  change the dtype or shape return a ``Variable`` with the respective types, e.g.
+  comparisons have a boolean dtype. The dimension type defaults to
+  ``Hashable``, so a bare ``Variable`` annotation means
+  ``Variable[Any, Any, Hashable]`` and keeps its previous meaning
+  (:pull:`11677`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 

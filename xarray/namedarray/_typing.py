@@ -35,7 +35,7 @@ _default = Default.token
 # their variance would be inferred as invariant, see the comment there.
 DType_co = TypeVar("DType_co", covariant=True, bound=np.dtype[Any])
 ShapeType_co = TypeVar("ShapeType_co", bound=Any, covariant=True)
-# The default (PEP 696) makes a bare `Variable` mean `Variable[Hashable]`.
+# The default (PEP 696) makes a bare `Variable` mean `Variable[Any, Any, Hashable]`.
 # TODO: remove the version check once Python 3.13 is the minimum.
 if TYPE_CHECKING or sys.version_info >= (3, 13):
     DimType_co = TypeVar("DimType_co", bound=Hashable, covariant=True, default=Hashable)
