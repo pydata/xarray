@@ -110,7 +110,9 @@ Performance
 - :py:meth:`Dataset.unstack` and :py:meth:`DataArray.unstack` reshape the data
   instead of copying it when the MultiIndex contains every combination of its
   levels in order, e.g. after :py:meth:`Dataset.stack`. The unstacked data is
-  then a view of the original data (:issue:`11455`, :pull:`11688`).
+  then a view of the original data. In that case, the expensive cleaning and
+  uniqueness checks of the MultiIndex are skipped as well (:issue:`11455`,
+  :pull:`11688`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
