@@ -13,6 +13,7 @@ from typing import (
     Any,
     Generic,
     Literal,
+    Never,
     NoReturn,
     cast,
     overload,
@@ -95,7 +96,13 @@ if TYPE_CHECKING:
         T_DuckArray,
         T_VarPadConstantValues,
     )
-    from xarray.namedarray._typing import AttrsLike, DimsLike, Shape, duckarray
+    from xarray.namedarray._typing import (
+        AttrsLike,
+        DimsLike,
+        NestedList,
+        Shape,
+        duckarray,
+    )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -417,17 +424,80 @@ class Variable(
 
     __slots__ = ("_attrs", "_data", "_dims", "_encoding")
 
-    # The dtype is inferred from duck arrays, like for NamedArray. Their shape
-    # type cannot be inferred, so it is Shape, numpy's type for unknown shapes.
-    # Any would make mypy lose all type arguments in overloaded functions with
-    # a fallback for Any, e.g. as_variable. as_compatible_data can change the
-    # dtype in rare cases, e.g. for masked arrays or object arrays of datetimes,
-    # which is not reflected here.
+    # The dtype is inferred from duck arrays, like for NamedArray, and from Python
+    # scalars and lists, as numpy converts them. Their shape type cannot be
+    # inferred, so it is Shape, numpy's type for unknown shapes. Any would make
+    # mypy lose all type arguments in overloaded functions with a fallback for
+    # Any, e.g. as_variable. as_compatible_data can change the dtype in rare
+    # cases, e.g. for masked arrays or object arrays of datetimes, which is not
+    # reflected here. The overloads for lists are tried in order, so e.g. a list
+    # literal of ints is not taken for a list of floats. Tuples are not
+    # included, as they become 0-d object arrays.
     @overload
     def __init__(
         self: Variable[Shape, DType_co, DimType_co],
         dims: Iterable[DimType_co],
         data: duckarray[Any, DType_co],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.float64], DimType_co],
+        dims: Iterable[DimType_co],
+        data: list[Never],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.bool_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: bool | NestedList[bool],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.int_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: int | NestedList[int],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.float64], DimType_co],
+        dims: Iterable[DimType_co],
+        data: float | NestedList[float],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.complex128], DimType_co],
+        dims: Iterable[DimType_co],
+        data: complex | NestedList[complex],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.str_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: str | NestedList[str],
         attrs: AttrsLike = None,
         encoding: Mapping[Any, Any] | None = None,
         fastpath: bool = False,
@@ -2891,6 +2961,66 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
         self: IndexVariable[Shape, DType_co, DimType_co],
         dims: Iterable[DimType_co],
         data: duckarray[Any, DType_co],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.float64], DimType_co],
+        dims: Iterable[DimType_co],
+        data: list[Never],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.bool_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: bool | NestedList[bool],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.int_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: int | NestedList[int],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.float64], DimType_co],
+        dims: Iterable[DimType_co],
+        data: float | NestedList[float],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.complex128], DimType_co],
+        dims: Iterable[DimType_co],
+        data: complex | NestedList[complex],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.str_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: str | NestedList[str],
         attrs: AttrsLike = None,
         encoding: Mapping[Any, Any] | None = None,
         fastpath: bool = False,

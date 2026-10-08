@@ -25,7 +25,7 @@ def test_variable_typed_ops() -> None:
     # __radd__ as an example of reflexive binary ops
     _test(_int + var)
     _test(_list + var)
-    _test(_ndarray + var)
+    _test(_ndarray + var)  # type: ignore[arg-type]  # numpy problem
 
     # __eq__ as an example of cmp ops
     _test(var == _int)

@@ -34,12 +34,12 @@
 
     v = Variable("x", [1.0])
 
-    reveal_type(-v)  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
-    reveal_type(+v)  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
+    reveal_type(-v)  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(+v)  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
     reveal_type(abs(v))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
-    reveal_type(~v)  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
-    reveal_type(v.round(2))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
-    reveal_type(v.conj())  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
+    reveal_type(~v)  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(v.round(2))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(v.conj())  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
 
 - case: test_mypy_variable_ops_return_variable
   main: |

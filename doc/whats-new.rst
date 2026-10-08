@@ -18,7 +18,9 @@ New Features
   ``class Variable(NamedArray[ShapeType_co, DType_co, DimType_co])``, so static
   type checkers can infer and check them, e.g.
   ``Variable(("x", "y"), np.zeros((2, 3)))`` is a
-  ``Variable[tuple[int, ...], np.dtype[np.float64], str]``. Operations that can
+  ``Variable[tuple[int, ...], np.dtype[np.float64], str]``. The dtype is also
+  inferred from lists and scalars, e.g. ``Variable("x", [1, 2])`` has an integer
+  dtype, also in :py:func:`~xarray.namedarray.core.from_array`. Operations that can
   change the dtype or shape return a ``Variable`` with the respective types, e.g.
   comparisons have a boolean dtype. The dimension type defaults to
   ``Hashable``, so a bare ``Variable`` annotation means

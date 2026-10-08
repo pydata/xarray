@@ -207,6 +207,11 @@ type duckarray[ShapeType, DType: np.dtype[Any]] = (  # noqa: PYI042
 # Corresponds to np.typing.NDArray:
 type DuckArray[ScalarType: np.generic] = arrayfunction[Any, np.dtype[ScalarType]]
 
+# Lists of Python scalars, which numpy converts to arrays of a known dtype, e.g.
+# list[float] to float64. Nested up to three levels: lists are invariant, so a
+# recursive alias would not match e.g. list[list[int]].
+type NestedList[T] = list[T] | list[list[T]] | list[list[list[T]]]
+
 
 @runtime_checkable
 class chunkedarray[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Protocol):

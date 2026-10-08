@@ -16,8 +16,8 @@
     from xarray import Variable
 
     # no dims to infer from, so the default dim type is used
-    reveal_type(Variable((), 0))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, typing.Hashable]"
-    reveal_type(Variable([], 0))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, typing.Hashable]"
+    reveal_type(Variable((), 0))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], typing.Hashable]"
+    reveal_type(Variable([], 0))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], typing.Hashable]"
 
 - case: test_mypy_variable_default_dim_type
   main: |
@@ -121,7 +121,7 @@
     from xarray.core.variable import IndexVariable
 
     x = IndexVariable(("x",), [1, 2])
-    reveal_type(x)  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], Any, str]"
+    reveal_type(x)  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], str]"
     reveal_type(x.name)  # N: Revealed type is "str"
     reveal_type(IndexVariable((1,), [1, 2]).name)  # N: Revealed type is "int"
 
@@ -149,8 +149,25 @@
     reveal_type(Variable("x", np.zeros(2)))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
     reveal_type(Variable("x", ints))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._8Bit]], str]"
     reveal_type(IndexVariable("x", np.zeros(2)))  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
-    # array-likes are converted, so their dtype is unknown
-    reveal_type(Variable("x", [1, 2]))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
+
+- case: test_mypy_variable_init_python_data
+  main: |
+    from xarray import IndexVariable, Variable
+
+    # Python scalars and lists, as numpy converts them
+    reveal_type(Variable("x", [True, False]))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.bool[bool]], str]"
+    reveal_type(Variable("x", [1, 2]))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], str]"
+    reveal_type(Variable("x", [1, 2.5]))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(Variable("x", [1j]))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.complex128], str]"
+    reveal_type(Variable("x", ["a", "b"]))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.str_], str]"
+    reveal_type(Variable(("x", "y"), [[1.0], [2.0]]))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(Variable((), 1.5))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], typing.Hashable]"
+    reveal_type(IndexVariable("x", [1, 2]))  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], str]"
+    # an empty list becomes float64
+    reveal_type(Variable("x", []))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    # mixed lists and tuples (which become 0-d object arrays) have an unknown dtype
+    reveal_type(Variable("x", [1, "a"]))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
+    reveal_type(Variable((), (1, 2)))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, typing.Hashable]"
 
 - case: test_mypy_variable_dtype
   main: |
