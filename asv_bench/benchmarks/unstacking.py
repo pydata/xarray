@@ -81,5 +81,5 @@ class UnstackingSparse(Unstacking):
     def peakmem_unstack_to_sparse_3d(self):
         self.da_eye_3d.unstack(sparse=True)
 
-    def time_unstack_pandas_slow(self):
-        pass
+    # pandas does not support sparse arrays, don't time an empty function
+    time_unstack_pandas_slow = None
