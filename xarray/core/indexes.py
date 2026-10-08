@@ -816,7 +816,7 @@ class PandasIndex(Index):
 
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
         var = IndexVariable(
-            self.dim, data, attrs=attrs, encoding=encoding, fastpath=True
+            (self.dim,), data, attrs=attrs, encoding=encoding, fastpath=True
         )
         return {name: var}
 
@@ -1302,7 +1302,7 @@ class PandasMultiIndex(PandasIndex):
 
             data = PandasMultiIndexingAdapter(self.index, dtype=dtype, level=level)  # type: ignore[arg-type]  # TODO: are Hashables ok?
             index_vars[name] = IndexVariable(
-                self.dim,
+                (self.dim,),
                 data,
                 attrs=attrs,
                 encoding=encoding,
@@ -1542,7 +1542,7 @@ class CoordinateTransformIndex(Index):
     ) -> IndexVars:
         from xarray.core.variable import Variable
 
-        new_variables = {}
+        new_variables: dict[Hashable, Variable] = {}
 
         for name in self.transform.coord_names:
             # copy attributes, if any

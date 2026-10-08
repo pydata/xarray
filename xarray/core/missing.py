@@ -816,7 +816,7 @@ def _interpnd(
 
     # Convert everything to Variables, since that makes broadcasting the
     # destination coordinates much easier
-    x = [
+    x: list[Variable] = [
         Variable([f"dim_{nconst + dim}"], _x, fastpath=True)
         for dim, _x in enumerate(coords[:n_x])
     ]
