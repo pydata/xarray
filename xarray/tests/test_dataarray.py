@@ -2894,6 +2894,25 @@ class TestDataArray:
         actual = stacked.unstack("allpoints")
         assert_identical(orig, actual)
 
+    @pytest.mark.parametrize(
+        "x",
+        [
+            pytest.param([0, 1, 2], id="increasing"),
+            pytest.param([2, 1, 0], id="decreasing"),
+        ],
+    )
+    def test_stack_sel_tuple_slice(self, x: list[int]) -> None:
+        # the stacked index claimed not to be lexsorted, so slicing it with tuples
+        # raised an UnsortedIndexError
+        orig = DataArray(
+            np.arange(6).reshape(3, 2),
+            coords={"x": x, "y": ["a", "b"]},
+            dims=["x", "y"],
+        )
+        stacked = orig.stack(z=["x", "y"])
+        actual = stacked.sel(z=slice((x[0], "b"), (x[1], "a")))
+        assert_identical(actual, stacked.isel(z=slice(1, 3)))
+
     def test_unstack_pandas_consistency(self) -> None:
         df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
         s = df.set_index(["x", "y"])["foo"]

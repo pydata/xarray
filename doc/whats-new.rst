@@ -48,6 +48,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix ``UnsortedIndexError`` when selecting a slice of tuples, e.g.
+  ``da.stack(z=["x", "y"]).sel(z=slice((0, "b"), (1, "a")))``, from a dimension
+  created by :py:meth:`Dataset.stack` or :py:meth:`DataArray.stack`. Their
+  MultiIndex claimed not to be sorted at all (:pull:`11694`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix a bug where assigning a named ``pandas.Series`` as a coordinate
   (e.g. ``da.assign_coords(new_coord=series)``) ignored the Series'
   index name and used the keyword argument as the dimension instead,
