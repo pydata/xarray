@@ -1146,9 +1146,12 @@ class PandasMultiIndex(PandasIndex):
         # from_product sorts by default, so we can't use that always
         # https://github.com/pydata/xarray/issues/980
         # https://github.com/pandas-dev/pandas/issues/14672
+        # Don't pass sortorder: it is the number of levels that the codes are
+        # lexsorted by, which pandas computes when needed. sortorder=0 claimed
+        # that they are not sorted at all, which broke slicing with tuples.
         if all(index.is_monotonic_increasing for index in level_indexes):
             index = pd.MultiIndex.from_product(
-                level_indexes, sortorder=0, names=list(variables.keys())
+                level_indexes, names=list(variables.keys())
             )
         else:
             split_labels, levels = zip(
@@ -1158,7 +1161,7 @@ class PandasMultiIndex(PandasIndex):
             labels = [x.ravel().tolist() for x in labels_mesh]
 
             index = pd.MultiIndex(
-                levels=levels, codes=labels, sortorder=0, names=list(variables.keys())
+                levels=levels, codes=labels, names=list(variables.keys())
             )
         level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
