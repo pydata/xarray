@@ -13,6 +13,14 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:class:`~xarray.Variable` is now generic in the type of its dimension
+  names, like :py:class:`~xarray.NamedArray`: it is defined as
+  ``class Variable(NamedArray[Any, Any, DimType_co])``, so static type checkers
+  can infer and check the dimension names, e.g.
+  ``Variable(("x", "y"), data).dims`` is a ``tuple[str, ...]``. The dimension
+  type defaults to ``Hashable``, so a bare ``Variable`` annotation means
+  ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Breaking Changes
@@ -45,6 +53,11 @@ Bug Fixes
   instead of silently replacing the plain coordinate during alignment and merging
   (:issue:`11607`).
   By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
+- Fix :py:class:`~xarray.Variable` methods with dimension names that are not
+  strings: :py:meth:`Variable.concat` failed for any such dimension, and
+  ``shift``, ``roll``, boolean ``isel`` and ``IndexVariable.to_index`` failed
+  for tuple dimension names (:pull:`11677`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Don't warn that no index is created when reducing a :py:class:`Dataset`
   grouped by a data variable without flox (:issue:`9890`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.

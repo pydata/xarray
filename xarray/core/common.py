@@ -10,6 +10,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Concatenate,
+    Generic,
     ParamSpec,
     TypeVar,
     Union,
@@ -29,6 +30,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     is_scalar,
 )
+from xarray.namedarray._typing import DimType_co
 from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import is_chunked_array
@@ -155,7 +157,9 @@ class ImplementsDatasetReduce:
     ).strip()
 
 
-class AbstractArray:
+# PEP 695 type parameters are not used here, because Variable needs the
+# explicitly covariant DimType_co.
+class AbstractArray(Generic[DimType_co]):  # noqa: UP046
     """Shared base class for DataArray and Variable."""
 
     __slots__ = ()
@@ -227,12 +231,14 @@ class AbstractArray:
     def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
 
     @overload
-    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
+    def get_axis_num(self, dim: Iterable[DimType_co]) -> tuple[int, ...]: ...
 
     @overload
-    def get_axis_num(self, dim: Hashable) -> int: ...
+    def get_axis_num(self, dim: DimType_co) -> int: ...  # type: ignore[misc]
 
-    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
+    def get_axis_num(
+        self, dim: str | DimType_co | Iterable[DimType_co]
+    ) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -260,7 +266,7 @@ class AbstractArray:
             ) from err
 
     @property
-    def sizes(self: Any) -> Mapping[Hashable, int]:
+    def sizes(self: Any) -> Mapping[DimType_co, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
