@@ -538,6 +538,18 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
 
             nanname = "nan" + name
             func = getattr(nanops, nanname)
+        elif name in ["min", "max"] and dtypes.is_object(values.dtype):
+            # numpy's min/max of object arrays give order-dependent results
+            # when NaN is present, so compute ignoring nulls and then mask
+            # every slice that contains a null
+            from xarray.computation import nanops
+
+            nanfunc = getattr(nanops, "nan" + name)
+
+            def func(values, axis=None, **kwargs):
+                result = nanfunc(values, axis=axis, **kwargs)
+                return where_method(result, ~array_any(isnull(values), axis=axis))
+
         else:
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)

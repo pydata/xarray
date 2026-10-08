@@ -13,7 +13,6 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 from pandas.core.indexes.datetimes import DatetimeIndex
 
 # remove once numpy 2.0 is the oldest supported version
@@ -360,7 +359,7 @@ class TestDataset:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 3{6 if Version(pd.__version__) >= Version("3.0.0dev0") else 2}B b c b a c a c a{var5}
+                var4     (dim1) category {data["var4"].nbytes}B b c b a c a c a{var5}
             Attributes:
                 foo:      bar"""
         )
@@ -3398,6 +3397,17 @@ class TestDataset:
 
             assert data.attrs["Test"] is not copied.attrs["Test"]
 
+    def test_copy_preserves_close(self) -> None:
+        calls: list[None] = []
+        data = create_test_data()
+        data.set_close(lambda: calls.append(None))
+
+        copied = data.copy()
+        data.close()
+        copied.close()
+
+        assert calls == [None, None]
+
     def test_copy_with_data(self) -> None:
         orig = create_test_data()
         new_data = {k: np.random.randn(*v.shape) for k, v in orig.data_vars.items()}
@@ -5468,7 +5478,9 @@ class TestDataset:
 
         # test a case with a MultiIndex along a single dimension
         data_dict = dict(
-            x=[1, 2, 1, 2, 1], y=["a", "a", "b", "b", "b"], z=[5, 10, 15, 20, 25]
+            x=np.array([1, 2, 1, 2, 1], dtype=np.int64),
+            y=["a", "a", "b", "b", "b"],
+            z=np.array([5, 10, 15, 20, 25], dtype=np.int64),
         )
         data_dict_w_dims = {k: ("single_dim", v) for k, v in data_dict.items()}
 
@@ -5486,7 +5498,10 @@ class TestDataset:
             [list(range(6)), list("ab")], names=["A", "B"]
         )
         ds = DataArray(
-            range(12), [("MI", mindex_single)], dims="MI", name="test"
+            np.arange(12, dtype=np.int64),
+            [("MI", mindex_single)],
+            dims="MI",
+            name="test",
         )._to_dataset_whole()
         ds.coords["C"] = "a single value"
         ds.coords["D"] = ds.coords["A"] ** 2
@@ -6384,6 +6399,34 @@ class TestDataset:
         actual = data["a"].mean("x").to_dataset()
         assert_identical(actual, expected)
 
+    @pytest.mark.parametrize(
+        "reduce",
+        [
+            lambda ds: ds.mean("x"),
+            lambda ds: ds.quantile(0.5, dim="x"),
+            lambda ds: ds.integrate("x"),
+        ],
+        ids=["mean", "quantile", "integrate"],
+    )
+    def test_reduce_drops_spanning_index(self, reduce) -> None:
+        class CustomIndex(Index): ...
+
+        spanning_index = CustomIndex()
+        coords = {"x": ("x", [0.0, 1.0, 2.0]), "y": ("y", [3.0, 4.0])}
+        ds = Dataset(
+            {"a": (("x", "y"), np.arange(6).reshape(3, 2))},
+            coords=Coordinates(
+                coords, indexes={"x": spanning_index, "y": spanning_index}
+            ),
+        ).assign_coords(z=("z", [5.0, 6.0]))
+
+        result = reduce(ds)
+
+        assert "y" in result.coords
+        assert "x" not in result.xindexes
+        assert "y" not in result.xindexes
+        assert result.xindexes["z"].equals(ds.xindexes["z"])
+
     def test_mean_uint_dtype(self) -> None:
         data = xr.Dataset(
             {
@@ -7098,6 +7141,16 @@ class TestDataset:
         ds = create_test_data(seed=1)
         with pytest.raises(ValueError, match=r"'label' argument has to"):
             ds.diff("dim2", label="raise_me")  # type: ignore[arg-type]
+
+    def test_dataset_diff_exception_invalid_dim(self) -> None:
+        # GH7748: diff along a non-existent dimension should raise instead of
+        # silently returning the object unchanged.
+        ds = create_test_data(seed=1)
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim")
+        # the check runs before the ``n == 0`` short-circuit
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim", n=0)
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": -10}])
     def test_shift(self, fill_value) -> None:

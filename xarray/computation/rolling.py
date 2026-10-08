@@ -5,7 +5,7 @@ import itertools
 import math
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, override
 
 import numpy as np
 
@@ -89,7 +89,7 @@ min_count : int, default: None
     and skipna=True, the result will be a float array."""
 
 
-class Rolling(Generic[T_Xarray]):
+class Rolling[T_Xarray: (DataArray, Dataset)]:
     """A object that implements the moving window pattern.
 
     See Also
@@ -625,6 +625,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         counts = self._counts(keep_attrs=False)
         return result.where(counts >= self.min_periods)
 
+    @override
     def _counts(self, keep_attrs: bool | None) -> DataArray:
         """Number of non-nan entries in each rolling window."""
 
@@ -948,6 +949,7 @@ class DatasetRolling(Rolling["Dataset"]):
             **kwargs,
         )
 
+    @override
     def _counts(self, keep_attrs: bool | None) -> Dataset:
         return self._dataset_implementation(
             DataArrayRolling._counts, keep_attrs=keep_attrs
@@ -1071,7 +1073,7 @@ class DatasetRolling(Rolling["Dataset"]):
         return Dataset(dataset, coords=coords, attrs=attrs)
 
 
-class Coarsen(Generic[T_Xarray]):
+class Coarsen[T_Xarray: (DataArray, Dataset)]:
     """A object that implements the coarsen.
 
     See Also
@@ -1171,6 +1173,7 @@ class Coarsen(Generic[T_Xarray]):
             kwargs["skipna"] = None
 
         func = getattr(duck_array_ops, name)
+        numeric_only = getattr(func, "numeric_only", False)
 
         available_min_count = getattr(func, "available_min_count", False)
         skip_na_docs = _SKIPNA_DOCSTRING if include_skipna else ""
@@ -1179,7 +1182,8 @@ class Coarsen(Generic[T_Xarray]):
         def method(self, keep_attrs: bool | None = None, **kwargs) -> T_Xarray:
             return self._reduce_method(
                 func,
-                **kwargs,
+                include_skipna=include_skipna,
+                numeric_only=numeric_only,
             )(self, keep_attrs=keep_attrs, **kwargs)
 
         method.__name__ = name
@@ -1320,7 +1324,6 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
     ) -> Callable[..., DataArray]:
         """
         Return a wrapped function for injecting reduction methods.
-        see ops.inject_reduce_methods
         """
         kwargs: dict[str, Any] = {}
         if include_skipna:
@@ -1407,7 +1410,6 @@ class DatasetCoarsen(Coarsen["Dataset"]):
     ) -> Callable[..., Dataset]:
         """
         Return a wrapped function for injecting reduction methods.
-        see ops.inject_reduce_methods
         """
         kwargs: dict[str, Any] = {}
         if include_skipna:

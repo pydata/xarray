@@ -1,6 +1,6 @@
 import math
 from collections.abc import Hashable, Mapping
-from typing import Any
+from typing import Any, override
 
 import numpy as np
 import pandas as pd
@@ -65,16 +65,19 @@ class RangeCoordinateTransform(CoordinateTransform):
             # For empty arrays, default to 1.0
             return 1.0
 
+    @override
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
         positions = dim_positions[self.dim]
         labels = self.start + positions * self.step
         return {self.coord_name: labels}
 
+    @override
     def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
         labels = coord_labels[self.coord_name]
         positions = (labels - self.start) / self.step
         return {self.dim: positions}
 
+    @override
     def equals(
         self,
         other: CoordinateTransform,
@@ -164,6 +167,7 @@ class RangeIndex(CoordinateTransformIndex):
     def __init__(self, transform: RangeCoordinateTransform):
         super().__init__(transform)
 
+    @override
     def equals(
         self,
         other: "Index",
@@ -344,6 +348,9 @@ class RangeIndex(CoordinateTransformIndex):
             x        RangeIndex (start=0, stop=1.25, step=0.25)
 
         """
+        if num < 0:
+            raise ValueError(f"Number of samples, {num}, must be non-negative.")
+
         if coord_name is None:
             coord_name = dim
 
@@ -357,6 +364,7 @@ class RangeIndex(CoordinateTransformIndex):
         return cls(transform)
 
     @classmethod
+    @override
     def from_variables(
         cls,
         variables: Mapping[Any, Variable],
@@ -396,6 +404,7 @@ class RangeIndex(CoordinateTransformIndex):
     def size(self) -> int:
         return self.transform.dim_size[self.dim]
 
+    @override
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Index | None:
@@ -418,6 +427,7 @@ class RangeIndex(CoordinateTransformIndex):
             pd_index = pd.Index(values, name=self.coord_name)
             return PandasIndex(pd_index, new_dim, coord_dtype=values.dtype)
 
+    @override
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
@@ -466,10 +476,12 @@ class RangeIndex(CoordinateTransformIndex):
 
         return result
 
+    @override
     def to_pandas_index(self) -> pd.Index:
         values = self.transform.generate_coords()
         return pd.Index(values[self.dim])
 
+    @override
     def _repr_inline_(self, max_width) -> str:
         params_fmt = (
             f"start={self.start:.3g}, stop={self.stop:.3g}, step={self.step:.3g}"

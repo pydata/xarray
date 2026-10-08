@@ -24,6 +24,26 @@ def test_coarsen_absent_dims_error(ds: Dataset) -> None:
         ds.coarsen(foo=2)
 
 
+@pytest.mark.parametrize("skipna", [True, False, None])
+def test_coarsen_skipna(skipna):
+    # create data with NaNs in every other element
+    data = np.arange(10, dtype=float)
+    data[::2] = np.nan
+    ds = Dataset({"x": ("x", data)})
+    # window length of 2, so each window will contain one NaN and one non-NaN value
+    actual = ds.coarsen(x=2).mean(skipna=skipna)
+    if skipna is None or skipna is True:
+        # if we are skipping NaNs, mean in each window should just be the non-NaN value
+        expected_data = data[1::2]
+        expected = Dataset({"x": ("x", expected_data)})
+        assert_equal(actual, expected)
+    else:
+        # if we are not skipping NaNs, mean in each window should be NaN
+        expected_data = np.full_like(data[::2], np.nan)
+        expected = Dataset({"x": ("x", expected_data)})
+        assert_equal(actual, expected)
+
+
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
 def test_coarsen_dataset(ds, use_dask, boundary, side):
     if use_dask:
