@@ -51,7 +51,7 @@ Bug Fixes
 - Fix ``UnsortedIndexError`` when selecting a slice of tuples, e.g.
   ``da.stack(z=["x", "y"]).sel(z=slice((0, "b"), (1, "a")))``, from a dimension
   created by :py:meth:`Dataset.stack` or :py:meth:`DataArray.stack`. Their
-  MultiIndex claimed not to be sorted at all.
+  MultiIndex claimed not to be sorted at all (:pull:`11694`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix :py:class:`~xarray.Variable` methods with dimension names that are not
   strings: :py:meth:`Variable.concat` failed for any such dimension, and
