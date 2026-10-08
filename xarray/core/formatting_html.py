@@ -117,14 +117,15 @@ def summarize_variable(name, var, is_index=False, dtype=None) -> str:
     )
 
 
-def summarize_coords(variables) -> str:
+def summarize_coords(coords) -> str:
     li_items = []
-    dims = tuple(variables._data.dims)
+    dims = tuple(coords._data.dims)
+    # sort the variables, constructing a DataArray for every coordinate is slow
     dim_ordered_coords = sorted(
-        variables.items(), key=partial(_coord_sort_key, dims=dims)
+        coords.variables.items(), key=partial(_coord_sort_key, dims=dims)
     )
     for k, v in dim_ordered_coords:
-        li_content = summarize_variable(k, v, is_index=k in variables.xindexes)
+        li_content = summarize_variable(k, v, is_index=k in coords.xindexes)
         li_items.append(f"<li class='xr-var-item'>{li_content}</li>")
 
     vars_li = "".join(li_items)
