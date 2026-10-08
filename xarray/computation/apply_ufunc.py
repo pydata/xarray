@@ -20,7 +20,7 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 
@@ -704,12 +704,12 @@ def _vectorize(func, signature, output_dtypes, exclude_dims):
     return func
 
 
-def _vectorize_shared(
-    func: Callable,
+def _vectorize_shared[T](
+    func: Callable[..., T],
     signature: _UFuncSignature,
     output_dtypes: Sequence | None,
     output_core_sizes: Mapping[Hashable, int],
-) -> Callable:
+) -> Callable[..., T]:
     """Vectorize ``func`` over the loop dimensions shared by several inputs.
 
     Like :py:class:`numpy.vectorize` with a signature, but ``func`` is only
@@ -742,7 +742,7 @@ def _vectorize_shared(
     num_outputs = signature.num_outputs
 
     @functools.wraps(func)
-    def wrapper(*args):
+    def wrapper(*args: Any) -> T:
         loop_shapes = [
             np.shape(arg)[: np.ndim(arg) - ndim]
             for arg, ndim in zip(args, input_core_ndims, strict=True)
@@ -778,14 +778,17 @@ def _vectorize_shared(
                 )
                 sliced_args.append(arg[key] if key else arg)
 
-            results = func(*sliced_args)
+            result = func(*sliced_args)
+            results: tuple[Any, ...]
             if num_outputs == 1:
-                results = (results,)
-            elif not isinstance(results, tuple) or len(results) != num_outputs:
+                results = (result,)
+            elif isinstance(result, tuple) and len(result) == num_outputs:
+                results = result
+            else:
                 raise ValueError(
                     f"applied function does not have the number of outputs "
                     f"specified in the ufunc signature. Expected {num_outputs} "
-                    f"outputs, got {results!r}"
+                    f"outputs, got {result!r}"
                 )
 
             if outputs is None:
@@ -829,7 +832,7 @@ def _vectorize_shared(
                     signature.output_core_dims, output_dtypes, strict=True
                 )
             )
-        return outputs[0] if num_outputs == 1 else outputs
+        return cast(T, outputs[0] if num_outputs == 1 else outputs)
 
     return wrapper
 
