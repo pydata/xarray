@@ -147,6 +147,12 @@ Performance
   ones instead of sorting them. This avoids copying the data before
   interpolating (:issue:`9758`, :pull:`11658`).
   By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+- Guessing the engine of a local file in :py:func:`open_dataset` and
+  :py:func:`open_mfdataset` now only reads its magic number, instead of a
+  whole buffer of the size of the filesystem block size. This speeds up opening
+  many files on parallel filesystems like Lustre or GPFS (:issue:`7697`,
+  :pull:`11687`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Internal Changes
