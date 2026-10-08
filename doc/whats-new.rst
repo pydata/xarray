@@ -48,6 +48,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix a bug where assigning a named ``pandas.Series`` as a coordinate
+  (e.g. ``da.assign_coords(new_coord=series)``) ignored the Series'
+  index name and used the keyword argument as the dimension instead,
+  causing a confusing ``CoordinateValidationError``
+  (:issue:`9284`, :pull:`11664`).
+  By `Anirban Mandal <https://github.com/CoderAnirban71>`_.
 - Fix :py:class:`~xarray.Variable` methods with dimension names that are not
   strings: :py:meth:`Variable.concat` failed for any such dimension, and
   ``shift``, ``roll``, boolean ``isel`` and ``IndexVariable.to_index`` failed

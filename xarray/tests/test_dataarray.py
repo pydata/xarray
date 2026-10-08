@@ -515,6 +515,28 @@ class TestDataArray:
         actual = DataArray(IndexVariable("foo", ["a", "b"]))
         assert_identical(expected, actual)
 
+    def test_assign_coords_from_named_pandas_series(self) -> None:
+        # GH9284: assigning a pandas Series (with a named index) as a
+        # coordinate should use the Series' index name as the dimension,
+        # not the keyword/dict key used in assign_coords.
+        da = DataArray(
+            np.random.rand(3, 4),
+            dims=("lat", "lon"),
+            coords={"lat": [10.0, 20.0, 30.0], "lon": [100.0, 101.0, 102.0, 103.0]},
+        )
+        series = pd.Series(
+            [1.0, 2.0, 3.0], index=pd.Index([10.0, 20.0, 30.0], name="lat")
+        )
+        actual = da.assign_coords(new_coord=series)
+        assert actual["new_coord"].dims == ("lat",)
+        assert_equal(actual["new_coord"].variable, Variable(("lat",), [1.0, 2.0, 3.0]))
+
+        # a Series with an unnamed index should fall back to using the
+        # assign_coords keyword as the dimension name, as before
+        unnamed_series = pd.Series([4.0, 5.0, 6.0])
+        actual2 = da.assign_coords(other_coord=("lat", unnamed_series))
+        assert actual2["other_coord"].dims == ("lat",)
+
     @requires_dask
     def test_constructor_from_self_described_chunked(self) -> None:
         expected = DataArray(
