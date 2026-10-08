@@ -160,7 +160,7 @@ def as_variable(
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
     elif isinstance(obj, pd.Series) and obj.index.name is not None:
-        obj = DataArray(obj).variable
+        obj = Variable(obj.index.name, obj)
     elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
         obj = Variable(obj.name, obj)
     elif isinstance(obj, Coordinates):
