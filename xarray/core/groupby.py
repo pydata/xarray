@@ -1246,7 +1246,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
                     # all associated levels properly.
                     coordinates_from_variable(
                         IndexVariable(
-                            dims=grouper.name,
+                            dims=(grouper.name,),
                             data=output_index,
                             attrs=grouper.codes.attrs,
                         )
