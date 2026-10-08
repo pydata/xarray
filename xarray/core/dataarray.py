@@ -280,7 +280,7 @@ class _NumpyEncoder(json.JSONEncoder):
 
 
 class DataArray(
-    AbstractArray,
+    AbstractArray[Hashable],
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
