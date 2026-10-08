@@ -23,7 +23,7 @@ New Features
   comparisons have a boolean dtype. The dimension type defaults to
   ``Hashable``, so a bare ``Variable`` annotation means
   ``Variable[Any, Any, Hashable]`` and keeps its previous meaning
-  (:pull:`11677`).
+  (:pull:`11677`, :pull:`11693`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
