@@ -5,7 +5,7 @@ import threading
 import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMapping
-from contextlib import AbstractContextManager, contextmanager
+from contextlib import AbstractContextManager, contextmanager, suppress
 from typing import Any, Literal, TypeVar, cast, override
 
 from xarray.backends.locks import acquire
@@ -48,6 +48,35 @@ T_File = TypeVar("T_File", bound=Closable)
 REF_COUNTS: dict[Any, int] = {}
 
 _OMIT_MODE = utils.ReprObject("<omitted>")
+
+
+def _close_cached_file[T: Closable](cache: MutableMapping[Any, T], key: Any) -> None:
+    """Close the file cached under ``key``, also if it was evicted while pinned.
+
+    The caller must hold the lock of the file's manager.
+    """
+    file = cache.pop(key, None)
+    with _PIN_LOCK:
+        evicted = _EVICTED_PINNED.pop(key, None)
+    for f in (file, evicted):
+        if f is not None:
+            f.close()
+
+
+def _close_when_unlocked[T: Closable](
+    cache: MutableMapping[Any, T],
+    key: Any,
+    lock: Lock,
+    ref_counts: Mapping[Any, int],
+) -> None:
+    """Close the file cached under ``key`` once ``lock`` is free.
+
+    Runs in a separate thread, see ``CachingFileManager.__del__``.
+    """
+    with lock:
+        # a new manager for the same file, e.g. unpickled, may use it by now
+        if key not in ref_counts:
+            _close_cached_file(cache, key)
 
 
 class FileManager[T_File: Closable]:
@@ -292,13 +321,7 @@ class CachingFileManager(FileManager[T_File]):
         # TODO: remove needs_lock if/when we have a reentrant lock in
         # dask.distributed: https://github.com/dask/dask/issues/3832
         with self._optional_lock(needs_lock):
-            default = None
-            file = self._cache.pop(self._key, default)
-            with _PIN_LOCK:
-                evicted = _EVICTED_PINNED.pop(self._key, None)
-            for f in (file, evicted):
-                if f is not None:
-                    f.close()
+            _close_cached_file(self._cache, self._key)
 
     def __del__(self) -> None:
         # If we're the only CachingFileManger referencing an unclosed file,
@@ -312,11 +335,30 @@ class CachingFileManager(FileManager[T_File]):
 
         if not ref_count and self._key in self._cache:
             if acquire(self._lock, blocking=False):
-                # Only close files if we can do so immediately.
                 try:
                     self.close(needs_lock=False)
                 finally:
                     self._lock.release()
+            else:
+                # Another thread holds the lock. Waiting for it here could
+                # deadlock, as garbage collection can run __del__ anywhere, so
+                # close the file in a separate thread once the lock is free.
+                # Leaving it open is no option: with several files open on the
+                # same path, closing one of them can crash HDF5 later (GH11088).
+                # At interpreter shutdown, no thread can be started anymore, and
+                # the file is left open.
+                with suppress(RuntimeError):
+                    threading.Thread(
+                        target=_close_when_unlocked,
+                        args=(
+                            self._cache,
+                            self._key,
+                            self._lock,
+                            self._ref_counter._counts,
+                        ),
+                        name="xarray-close-file",
+                        daemon=True,
+                    ).start()
 
             if OPTIONS["warn_for_unclosed_files"]:
                 warnings.warn(

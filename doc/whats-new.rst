@@ -90,6 +90,13 @@ Bug Fixes
   turn into separate locks when datasets are sent to another process, e.g. to a
   dask distributed worker (:issue:`9779`, :issue:`11088`, :pull:`11629`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix occasional segfaults when reading netCDF4 files with variable-length
+  strings with :py:func:`open_mfdataset` and ``parallel=True`` on a dask
+  distributed cluster. Files whose manager was garbage collected while another
+  thread held the lock stayed open, and with several files open on the same
+  path, HDF5 can crash once one of them is closed. These files are now closed
+  as soon as the lock is free (:issue:`11088`, :pull:`11692`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`Dataset.copy` now preserves its resource-closing callback, so a
   copied file-backed dataset can release a file reopened after the original
   dataset is closed (:issue:`10106`, :pull:`11643`).
