@@ -773,7 +773,14 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
         raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
     if filename_or_obj.tell() != 0:
         filename_or_obj.seek(0)
-    magic_number = filename_or_obj.read(count)
+    # unbuffered files can return fewer bytes than requested, so read until
+    # `count` bytes or the end of the file
+    magic_number = b""
+    while len(magic_number) < count:
+        chunk = filename_or_obj.read(count - len(magic_number))
+        if not chunk:
+            break
+        magic_number += chunk
     filename_or_obj.seek(0)
     return magic_number
 
@@ -786,13 +793,7 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
             # follows the filesystem block size and can be several MB on parallel
             # filesystems, effectively reading entire small files (GH7697).
             with open(path, "rb", buffering=0) as f:
-                magic_number = b""
-                while len(magic_number) < count:
-                    chunk = f.read(count - len(magic_number))
-                    if not chunk:
-                        break
-                    magic_number += chunk
-                return magic_number
+                return read_magic_number_from_file(f, count)
         except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
     return None
