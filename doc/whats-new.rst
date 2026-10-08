@@ -53,6 +53,12 @@ Bug Fixes
   created by :py:meth:`Dataset.stack` or :py:meth:`DataArray.stack`. Their
   MultiIndex claimed not to be sorted at all (:pull:`11694`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix a bug where assigning a named ``pandas.Series`` as a coordinate
+  (e.g. ``da.assign_coords(new_coord=series)``) ignored the Series'
+  index name and used the keyword argument as the dimension instead,
+  causing a confusing ``CoordinateValidationError``
+  (:issue:`9284`, :pull:`11664`).
+  By `Anirban Mandal <https://github.com/CoderAnirban71>`_.
 - Fix :py:class:`~xarray.Variable` methods with dimension names that are not
   strings: :py:meth:`Variable.concat` failed for any such dimension, and
   ``shift``, ``roll``, boolean ``isel`` and ``IndexVariable.to_index`` failed
@@ -152,6 +158,13 @@ Performance
   ones instead of sorting them. This avoids copying the data before
   interpolating (:issue:`9758`, :pull:`11658`).
   By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+- :py:meth:`Dataset.unstack` and :py:meth:`DataArray.unstack` reshape the data
+  instead of copying it when the MultiIndex contains every combination of its
+  levels in order, e.g. after :py:meth:`Dataset.stack`. The unstacked data is
+  then a view of the original data. In that case, the expensive cleaning and
+  uniqueness checks of the MultiIndex are skipped as well (:issue:`11455`,
+  :pull:`11688`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Guessing the engine of a local file in :py:func:`open_dataset` and
   :py:func:`open_mfdataset` now only reads its magic number, instead of a
   whole buffer of the size of the filesystem block size. This speeds up opening

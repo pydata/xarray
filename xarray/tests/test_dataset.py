@@ -4346,6 +4346,61 @@ class TestDataset:
         actual = stacked.isel(z=slice(None, None, -1)).unstack("z")
         assert actual.identical(ds[["b"]])
 
+    @pytest.mark.parametrize(
+        "stacked_dim_first",
+        [
+            pytest.param(True, id="stacked-first"),
+            pytest.param(False, id="stacked-last"),
+        ],
+    )
+    def test_unstack_full_product_is_view(self, stacked_dim_first: bool) -> None:
+        data = np.arange(24).reshape(6, 4)
+        index = pd.MultiIndex.from_product([[0, 1, 2], ["a", "b"]], names=["x", "y"])
+        coords = Coordinates.from_pandas_multiindex(index, "z")
+        if stacked_dim_first:
+            ds = Dataset({"v": (("z", "w"), data)}, coords=coords)
+        else:
+            ds = Dataset({"v": (("w", "z"), data.T)}, coords=coords)
+        expected = Dataset(
+            {"v": (("w", "x", "y"), data.T.reshape(4, 3, 2))},
+            coords={"x": [0, 1, 2], "y": ["a", "b"]},
+        )
+
+        actual = ds.unstack("z")
+        assert_identical(actual, expected)
+        assert np.shares_memory(actual["v"].values, ds["v"].values)
+
+    @pytest.mark.parametrize(
+        "index",
+        [
+            pytest.param(
+                pd.MultiIndex.from_product([[1, 0], ["b", "a"]], names=["x", "y"]),
+                id="unsorted-levels",
+            ),
+            pytest.param(
+                pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])[
+                    ::-1
+                ],
+                id="reversed",
+            ),
+            pytest.param(
+                pd.MultiIndex.from_tuples(
+                    [(0, "a"), (0, "b"), (1, "a")], names=["x", "y"]
+                ),
+                id="missing",
+            ),
+        ],
+    )
+    def test_unstack_not_full_product(self, index: pd.MultiIndex) -> None:
+        values = np.arange(len(index), dtype=float)
+        coords = Coordinates.from_pandas_multiindex(index, "z")
+        ds = Dataset({"v": ("z", values)}, coords=coords)
+        expected = pd.Series(values, index=index, name="v").to_xarray().to_dataset()
+
+        actual = ds.unstack("z")
+        assert_equal(actual, expected)
+        assert not np.shares_memory(actual["v"].values, ds["v"].values)
+
     def test_to_stacked_array_invalid_sample_dims(self) -> None:
         data = xr.Dataset(
             data_vars={"a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]), "b": ("x", [6, 7])},
