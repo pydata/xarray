@@ -8,7 +8,7 @@ from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, S
 from functools import partial
 from os import PathLike
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, TypeVar, overload, override
 
 import numpy as np
 import pandas as pd
@@ -236,7 +236,7 @@ def _check_data_shape(
     return data
 
 
-class _LocIndexer(Generic[T_DataArray]):
+class _LocIndexer[T_DataArray: DataArray]:
     __slots__ = ("data_array",)
 
     def __init__(self, data_array: T_DataArray):
@@ -280,7 +280,7 @@ class _NumpyEncoder(json.JSONEncoder):
 
 
 class DataArray(
-    AbstractArray,
+    AbstractArray[Hashable],
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
@@ -1005,6 +1005,7 @@ class DataArray(
 
         return self._replace_maybe_drop_dims(var, name=key)
 
+    @override
     def __getitem__(self, key: Any) -> Self:
         if isinstance(key, str):
             return self._getitem_coord(key)
@@ -1033,12 +1034,14 @@ class DataArray(
     def __delitem__(self, key: Any) -> None:
         del self.coords[key]
 
+    @override
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for attribute-style access"""
         yield from self._item_sources
         yield self.attrs
 
+    @override
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
@@ -2694,7 +2697,7 @@ class DataArray(
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new DataArray with renamed coordinates, dimensions or a new name.
+        """Returns a DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
         ----------
@@ -3995,6 +3998,7 @@ class DataArray(
         """
         return ops.fillna(self, other, join="outer")
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -5007,6 +5011,7 @@ class DataArray(
         # compatible with matmul
         return computation.dot(other, self)
 
+    @override
     def _unary_op(self, f: Callable, *args, **kwargs) -> Self:
         keep_attrs = kwargs.pop("keep_attrs", None)
         if keep_attrs is None:
@@ -5022,6 +5027,7 @@ class DataArray(
                 da.attrs = self.attrs
             return da
 
+    @override
     def _binary_op(
         self, other: DaCompatible, f: Callable, reflexive: bool = False
     ) -> Self:
@@ -5048,6 +5054,7 @@ class DataArray(
 
         return self._replace(variable, coords, name, indexes=indexes)
 
+    @override
     def _inplace_binary_op(self, other: DaCompatible, f: Callable) -> Self:
         from xarray.core.groupby import GroupBy
 
@@ -6703,7 +6710,7 @@ class DataArray(
             If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
             raise an exception. If 'ignore', the coefficients and covariances for the
             coordinates where the fitting failed will be NaN.
-        **kwargs : optional
+        kwargs : dict[str, Any], optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns

@@ -4,7 +4,7 @@ import functools
 import itertools
 import warnings
 from collections.abc import Callable, Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import numpy as np
 
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from matplotlib.text import Annotation
 
     from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
@@ -84,7 +85,7 @@ def _auto_grid(
 T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
 
 
-class FacetGrid(Generic[T_DataArrayOrSet]):
+class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
     """
     Initialize the Matplotlib figure and FacetGrid object.
 
