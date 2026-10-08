@@ -66,7 +66,6 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
-from enum import Enum
 from pathlib import Path
 from types import EllipsisType, ModuleType
 from typing import (
@@ -83,6 +82,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from xarray.namedarray._typing import Default, _default  # noqa: F401
 from xarray.namedarray.utils import (  # noqa: F401
     ReprObject,
     drop_missing_dims,
@@ -1174,14 +1174,6 @@ class UncachedAccessor[Accessor]:
             return self._accessor
 
         return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
-
-
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(Enum):
-    token = 0
-
-
-_default = Default.token
 
 
 def iterate_nested(nested_list):
