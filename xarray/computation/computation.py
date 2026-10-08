@@ -26,6 +26,7 @@ from xarray.core.types import Dims, T_DataArray
 from xarray.core.utils import (
     is_scalar,
     parse_dims_as_set,
+    parse_dims_as_tuple,
 )
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -272,25 +273,28 @@ def _cov_corr(
     da_a = da_a.where(valid_values)
     da_b = da_b.where(valid_values)
 
-    # 3. Detrend along the given dim
-    if weights is not None:
-        demeaned_da_a = da_a - da_a.weighted(weights).mean(dim=dim)
-        demeaned_da_b = da_b - da_b.weighted(weights).mean(dim=dim)
-    else:
-        demeaned_da_a = da_a - da_a.mean(dim=dim)
-        demeaned_da_b = da_b - da_b.mean(dim=dim)
+    # 3. Shift both arrays by a value close to their mean along the given dim.
+    # The one-pass formula below suffers from catastrophic cancellation if the mean
+    # is large compared to the spread of the data, the shift avoids that.
+    # The shift only uses the first few values, so it does not need another pass
+    # over the data, and it falls back to 0 if they are all invalid.
+    reduce_dims = parse_dims_as_tuple(dim, da_a.dims)
+    sample = {d: slice(0, 10) for d in reduce_dims}
+    da_a = da_a - da_a.isel(sample).mean(dim=reduce_dims, skipna=True).fillna(0)
+    da_b = da_b - da_b.isel(sample).mean(dim=reduce_dims, skipna=True).fillna(0)
 
-    # 4. Compute covariance along the given dim
+    # 4. Compute covariance along the given dim with the one-pass formula
+    # cov(a, b) = E[conj(a) * b] - conj(E[a]) * E[b]. Unlike first subtracting the
+    # means and then computing the mean of the product, this does not require to
+    # keep all chunks of dask arrays in memory until the means are computed (GH4804).
     # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
     # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    if weights is not None:
-        cov = (
-            (demeaned_da_a.conj() * demeaned_da_b)
-            .weighted(weights)
-            .mean(dim=dim, skipna=True)
-        )
-    else:
-        cov = (demeaned_da_a.conj() * demeaned_da_b).mean(dim=dim, skipna=True)
+    def _mean(da: DataArray) -> DataArray:
+        if weights is not None:
+            return da.weighted(weights).mean(dim=reduce_dims, skipna=True)
+        return da.mean(dim=reduce_dims, skipna=True)
+
+    cov = _mean(da_a.conj() * da_b) - _mean(da_a).conj() * _mean(da_b)
 
     if method == "cov":
         # Adjust covariance for degrees of freedom
