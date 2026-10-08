@@ -715,13 +715,28 @@ def _vectorize_shared(
     Like :py:class:`numpy.vectorize` with a signature, but ``func`` is only
     looped over the loop (non-core) dimensions along which more than one input
     varies, i.e. has a size other than 1. All other loop dimensions are passed
-    to ``func`` in bulk, so ``func`` must accept inputs with leading loop
-    dimensions that broadcast against each other following numpy's rules, and
-    return outputs with the broadcast loop dimensions followed by the output
-    core dimensions.
+    to ``func`` in bulk.
 
-    ``output_core_sizes`` maps output core dimensions to their sizes; it is only
-    needed if the loop is empty, so that ``func`` is never called.
+    Parameters
+    ----------
+    func : callable
+        Function to vectorize. It must accept inputs with leading loop
+        dimensions that broadcast against each other following numpy's rules,
+        and return outputs with the broadcast loop dimensions followed by the
+        output core dimensions.
+    signature : _UFuncSignature
+        Core dimensions signature for the operation.
+    output_dtypes : sequence of dtype or None
+        Dtypes of the outputs. If None, they are taken from the results of
+        ``func``, so they are required if the loop is empty.
+    output_core_sizes : mapping of hashable to int
+        Sizes of the output core dimensions. Only needed if the loop is empty,
+        so that ``func`` is never called.
+
+    Returns
+    -------
+    callable
+        Vectorized version of ``func``, taking the same arguments.
     """
     input_core_ndims = [len(dims) for dims in signature.input_core_dims]
     num_outputs = signature.num_outputs
