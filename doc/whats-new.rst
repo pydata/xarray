@@ -86,7 +86,8 @@ Bug Fixes
   By `Shurong Cao <https://github.com/CAOShurong>`_.
 - Fix issues with :py:meth:`DataArray.coarsen()` and :py:meth:`Dataset.coarsen()`
   breaking when applying a reduction method with the ``skipna`` kwarg specified.
-  This was due to a bug in the reduction method generation introduced in :pull:`11556`.
+  This was due to a bug in the reduction method generation introduced in :pull:`11556`
+  (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
 
 
