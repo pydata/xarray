@@ -443,6 +443,17 @@ class Variable(
         fastpath: bool = False,
     ) -> None: ...
 
+    # the data of another Variable is used as is
+    @overload
+    def __init__(
+        self: Variable[Shape, DType_co, DimType_co],
+        dims: Iterable[DimType_co],
+        data: Variable[Any, DType_co, Any],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
     @overload
     def __init__(
         self: Variable[Shape, np.dtype[np.float64], DimType_co],
@@ -2961,6 +2972,17 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
         self: IndexVariable[Shape, DType_co, DimType_co],
         dims: Iterable[DimType_co],
         data: duckarray[Any, DType_co],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    # the data of another Variable is used as is
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, DType_co, DimType_co],
+        dims: Iterable[DimType_co],
+        data: Variable[Any, DType_co, Any],
         attrs: AttrsLike = None,
         encoding: Mapping[Any, Any] | None = None,
         fastpath: bool = False,

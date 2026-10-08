@@ -204,6 +204,17 @@
     # other numpy scalars are not duck arrays for type checkers
     reveal_type(Variable((), np.float32(1)))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, typing.Hashable]"
 
+- case: test_mypy_variable_init_from_variable
+  main: |
+    import numpy as np
+    from xarray import IndexVariable, Variable
+
+    # the data of another Variable is used, so its dtype is kept
+    v = Variable("x", np.zeros(2))
+    reveal_type(Variable("y", v))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    reveal_type(Variable("y", IndexVariable("x", ["a"])))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.str_], str]"
+    reveal_type(IndexVariable("y", v))  # N: Revealed type is "xarray.core.variable.IndexVariable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+
 - case: test_mypy_variable_init_nested_lists
   main: |
     from xarray import Variable
@@ -220,7 +231,6 @@
 
     # data whose dtype is not visible to type checkers
     reveal_type(Variable("x", pd.Index([1.0])))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
-    reveal_type(Variable("x", Variable("x", np.zeros(2))))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
     reveal_type(Variable("x", DataArray([1.0], dims="x")))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[Any], str]"
     # a list of Any matches several overloads, so mypy makes the whole result Any
     xs: list[Any] = [1.0]
