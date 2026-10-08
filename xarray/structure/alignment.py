@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from itertools import starmap
-from typing import TYPE_CHECKING, Any, Final, get_args, overload
+from typing import TYPE_CHECKING, Any, Final, cast, get_args, overload
 
 import numpy as np
 import pandas as pd
@@ -162,6 +162,7 @@ class Aligner[T_Alignable: Alignable]:
     exclude_dims: frozenset[Hashable]
     exclude_vars: frozenset[Hashable]
     copy: bool
+    check_indexed_coords: bool
     fill_value: Any
     sparse: bool
     indexes: dict[MatchingIndexKey, Index]
@@ -186,6 +187,7 @@ class Aligner[T_Alignable: Alignable]:
         method: str | None = None,
         tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
+        check_indexed_coords: bool = True,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
     ):
@@ -200,6 +202,7 @@ class Aligner[T_Alignable: Alignable]:
         self.join = join
 
         self.copy = copy
+        self.check_indexed_coords = check_indexed_coords
         self.fill_value = fill_value
         self.sparse = sparse
 
@@ -669,6 +672,8 @@ class Aligner[T_Alignable: Alignable]:
         self.find_matching_unindexed_dims()
         self.align_indexes()
         self.assert_unindexed_dim_sizes_equal()
+        if self.check_indexed_coords and self.join != "override":
+            self.assert_no_conflicting_indexed_coords()
 
         if self.join == "override":
             self.override_indexes()
@@ -676,6 +681,36 @@ class Aligner[T_Alignable: Alignable]:
             self.results = self.objects
         else:
             self.reindex_all()
+
+    def assert_no_conflicting_indexed_coords(self) -> None:
+        """Check that unindexed coordinates don't conflict with an index."""
+        for obj, matching_indexes in zip(
+            self.objects, self.objects_matching_indexes, strict=True
+        ):
+            obj_coords = cast(Any, getattr(obj, "coords", obj))
+            for key in self.aligned_indexes:
+                if matching_indexes.get(key) is not None:
+                    continue
+
+                aligned_idx_vars = self.aligned_index_vars[key]
+                dims = {d for var in aligned_idx_vars.values() for d in var.dims}
+                if not dims <= set(obj.dims) or dims & self.exclude_dims:
+                    continue
+
+                for name, aligned_var in aligned_idx_vars.items():
+                    # Dimension coordinates follow the join's normal reindexing
+                    # rules; this check is for auxiliary metadata coordinates.
+                    if name not in obj_coords or name in obj.dims:
+                        continue
+
+                    obj_var = obj_coords[name].variable
+                    if obj_var.dims == aligned_var.dims and not obj_var.equals(
+                        aligned_var
+                    ):
+                        raise AlignmentError(
+                            f"conflicting values for coordinate {name!r} "
+                            "between indexed and unindexed objects"
+                        )
 
 
 @overload
@@ -991,6 +1026,7 @@ def deep_align(
     exclude: str | Iterable[Hashable] = frozenset(),
     raise_on_invalid: bool = True,
     fill_value=dtypes.NA,
+    check_indexed_coords: bool = True,
 ) -> list[Any]:
     """Align objects for merging, recursing into dictionary values.
 
@@ -1043,14 +1079,17 @@ def deep_align(
         else:
             out.append(variables)
 
-    aligned = align(
-        *targets,
+    aligner = Aligner(
+        targets,
         join=join,
         copy=copy,
         indexes=indexes,
-        exclude=exclude,
+        exclude_dims=exclude,
+        check_indexed_coords=check_indexed_coords,
         fill_value=fill_value,
     )
+    aligner.align()
+    aligned = aligner.results
 
     for position, key, aligned_obj in zip(positions, keys, aligned, strict=True):
         if key is no_key:

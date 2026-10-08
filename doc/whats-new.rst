@@ -48,6 +48,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Raise an :py:class:`AlignmentError` when an indexed auxiliary coordinate and
+  a plain auxiliary coordinate with the same name and dimensions have different values,
+  instead of silently replacing the plain coordinate during alignment and merging
+  (:issue:`11607`).
+  By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - Fix :py:class:`~xarray.Variable` methods with dimension names that are not
   strings: :py:meth:`Variable.concat` failed for any such dimension, and
   ``shift``, ``roll``, boolean ``isel`` and ``IndexVariable.to_index`` failed
