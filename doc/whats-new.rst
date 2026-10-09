@@ -52,6 +52,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
+  with ``cache=False`` failing on Windows, because the downloaded file was
+  removed while still open (:pull:`11703`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix dark mode detection in VS Code by adding VS Code CSS variable support to the HTML representation CSS. (:pull:`11284`).
   By `Maksymilian Wasilewski <https://github.com/maksmondeo>`_.
 - Fix ``TypeError`` on import when ``importlib.metadata.version`` returns ``None``
@@ -200,6 +204,11 @@ Internal Changes
   ``ArrayLike`` overloads, static type checkers infer e.g. ``np.exp(da)`` as
   :py:class:`DataArray` and ``np.add(da, ds)`` as :py:class:`Dataset`
   instead of ``np.ndarray`` (:issue:`6524`, :issue:`8388`, :pull:`11667`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Remove the unused ``xarray/namedarray/dtypes.py``, a stale copy of
+  ``xarray/core/dtypes.py``, exclude the code generators in ``xarray/util``
+  from the test coverage and test ``xarray.tutorial`` without network access
+  (:pull:`11703`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
