@@ -48,6 +48,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- The indices returned by ``argmin`` and ``argmax`` of :py:class:`~computation.rolling.DataArrayRolling`
+  and :py:class:`~computation.rolling.DatasetRolling` no longer count the padding of windows
+  that extend beyond the array, but start at the first value of the window within
+  the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
+  shifted by the number of missing values in front of the array (:issue:`11336`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix ``UnsortedIndexError`` when selecting a slice of tuples, e.g.
   ``da.stack(z=["x", "y"]).sel(z=slice((0, "b"), (1, "a")))``, from a dimension
   created by :py:meth:`Dataset.stack` or :py:meth:`DataArray.stack`. Their

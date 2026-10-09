@@ -42,6 +42,18 @@ def test_cumulative(d, func, min_periods) -> None:
     assert_identical(result, expected)
 
 
+@pytest.mark.parametrize("func", ["argmin", "argmax"])
+def test_cumulative_argminmax(func) -> None:
+    # GH11336
+    da = DataArray([1, 2, 1.5, 3.5, 4], dims="time")
+    result = getattr(da.cumulative("time"), func)()
+    expected = {"argmin": [0, 0, 0, 0, 0], "argmax": [0, 1, 1, 3, 4]}[func]
+    np.testing.assert_array_equal(result.values, expected)
+
+    result = getattr(da.to_dataset(name="a").cumulative("time"), func)()
+    np.testing.assert_array_equal(result["a"].values, expected)
+
+
 def test_cumulative_vs_cum(d) -> None:
     result = d.cumulative("z").sum()
     expected = d.cumsum("z")
@@ -68,6 +80,33 @@ class TestDataArrayRolling:
             expected = window_da.mean("time")
 
             np.testing.assert_allclose(actual.values, expected.values)
+
+    @pytest.mark.parametrize("name", ["argmin", "argmax"])
+    @pytest.mark.parametrize("center", [True, False])
+    @pytest.mark.parametrize("size", [1, 2, 3, 4, 10])
+    @pytest.mark.parametrize(
+        "backend",
+        [
+            "numpy",
+            pytest.param("bottleneck", marks=requires_bottleneck),
+            pytest.param("dask", marks=requires_dask),
+        ],
+    )
+    def test_rolling_argminmax_vs_iter(
+        self, name: str, center: bool, size: int, backend: str
+    ) -> None:
+        # GH11336: the index is relative to the part of the window within the array
+        da = DataArray([3.0, 1, 4, 1.5, 5, 9, 2, 6, 5.5, 3.5, 8, 7], dims="time")
+        rolling_obj = da.rolling(time=size, center=center, min_periods=1)
+        expected = [getattr(window, name)("time").item() for _, window in rolling_obj]
+
+        if backend == "dask":
+            rolling_obj = da.chunk(time=6).rolling(
+                time=size, center=center, min_periods=1
+            )
+        with set_options(use_bottleneck=backend != "numpy", use_numbagg=False):
+            actual = getattr(rolling_obj, name)()
+        np.testing.assert_array_equal(actual.values, expected)
 
     @pytest.mark.parametrize("da", (1,), indirect=True)
     def test_rolling_repr(self, da) -> None:
@@ -129,11 +168,11 @@ class TestDataArrayRolling:
         expected = getattr(bn, func_name)(
             da.values, window=window, axis=1, min_count=min_periods
         )
-        # index 0 is at the rightmost edge of the window
-        # need to reverse index here
-        # see GH #8541
+        # bottleneck counts from the rightmost edge of the window, xarray from the
+        # first value of the window within the array (GH #8541, GH #11336)
         if func_name in ["move_argmin", "move_argmax"]:
-            expected = window - 1 - expected
+            i = np.arange(da.sizes["time"])[:, np.newaxis]
+            expected = np.minimum(i, window - 1) - expected
 
         # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
         np.testing.assert_allclose(actual.values, expected)
