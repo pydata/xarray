@@ -1,8 +1,7 @@
-"""Helpers to render diagnostic reports (show_versions, show_backends) as markdown.
+"""Helpers to render diagnostic reports (show_versions, show_backends).
 
-The markdown is designed to be readable as plain text in a terminal, to render
-nicely when pasted into a GitHub issue and to be displayed as rich output in
-notebooks.
+Reports are printed as plain text in terminals, displayed as formatted markdown
+in notebooks and can be printed as markdown to paste them into GitHub issues.
 """
 
 from __future__ import annotations
@@ -69,17 +68,27 @@ def _in_rich_frontend() -> bool:
     return shell is not None and type(shell).__name__ == "ZMQInteractiveShell"
 
 
-def show_report(title: str, body: str, file: TextIO | None = None) -> None:
-    """Print a markdown report, or display it as rich output in notebooks.
+def show_report(
+    title: str,
+    text: str,
+    markdown: str,
+    file: TextIO | None = None,
+    as_markdown: bool = False,
+) -> None:
+    """Print a report as plain text or markdown, or display it in notebooks.
 
-    When printed, the report is wrapped in a ``<details>`` block, so it can be
-    pasted as is into a GitHub issue.
+    In Jupyter notebooks the markdown is displayed formatted, unless a ``file``
+    is given or ``as_markdown`` is requested. The printed markdown is wrapped
+    in a ``<details>`` block, so it can be pasted as is into a GitHub issue.
     """
-    if file is None and _in_rich_frontend():
+    if file is None and not as_markdown and _in_rich_frontend():
         from IPython.display import Markdown, display
 
-        display(Markdown(f"**{title}**\n\n{body}"))
+        display(Markdown(f"**{title}**\n\n{markdown}"))
         return
 
-    text = f"<details><summary>{title}</summary>\n\n{body}\n\n</details>"
-    print(text, file=sys.stdout if file is None else file)
+    if as_markdown:
+        out = f"<details><summary>{title}</summary>\n\n{markdown}\n\n</details>"
+    else:
+        out = f"{title}\n{'-' * len(title)}\n{text}"
+    print(out, file=sys.stdout if file is None else file)

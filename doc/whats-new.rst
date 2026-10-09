@@ -26,9 +26,9 @@ New Features
   (:issue:`6577`, :pull:`11700`).
   By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_ and
   `Michael Niklas <https://github.com/headtr1ck>`_.
-- :py:func:`~xarray.show_versions` now prints markdown tables wrapped in a
-  ``<details>`` block that can be pasted as is into GitHub issues, and displays
-  formatted tables in Jupyter notebooks. Package versions are read from the
+- :py:func:`~xarray.show_versions` displays formatted tables in Jupyter
+  notebooks and gained a ``markdown`` option to print markdown that can be pasted
+  as is into GitHub issues. Package versions are read from the
   package metadata, so the packages are no longer imported (:pull:`11700`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 

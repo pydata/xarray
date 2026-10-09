@@ -150,31 +150,32 @@ def _engine_sources() -> dict[str, tuple[str, str | None]]:
     return sources
 
 
-def show_backends(file: TextIO | None = None) -> None:
+def show_backends(file: TextIO | None = None, markdown: bool = False) -> None:
     """Print the available backends (engines) and information about them.
 
     The backends are listed in the order in which they are tried when opening
     a file without specifying the ``engine``.
     Use :py:func:`xarray.backends.list_engines` to get the backend objects.
-
-    The output is markdown that can be pasted as is into a GitHub issue.
-    In Jupyter notebooks it is displayed formatted instead; pass
-    ``file=sys.stdout`` to get the markdown to copy.
+    In Jupyter notebooks the backends are displayed formatted.
 
     Parameters
     ----------
     file : file-like, optional
         print to the given file-like object. Defaults to sys.stdout.
+    markdown : bool, default: False
+        print a markdown list wrapped in a ``<details>`` block, which can be
+        pasted as is into a GitHub issue.
     """
     engines = list_engines()
     sources = _engine_sources()
 
-    lines = []
+    text_lines = []
+    md_lines = []
     for name, backend in engines.items():
         package, version = sources.get(name, ("unknown", None))
-        header = f"- **{name}**: `{type(backend).__name__}` from {package}"
+        summary = f"from {package}"
         if version is not None:
-            header += f" {version}"
+            summary += f" {version}"
         details = []
         if package == "xarray" and name in BACKEND_ENTRYPOINTS:
             dependency = BACKEND_ENTRYPOINTS[name][0]
@@ -183,15 +184,22 @@ def show_backends(file: TextIO | None = None) -> None:
         if backend.supports_groups:
             details.append("supports groups")
         if details:
-            header += f" ({', '.join(details)})"
-        lines.append(header)
-        if backend.description:
-            lines.append(f"  - {' '.join(backend.description.split())}")
-        if backend.url:
-            lines.append(f"  - {backend.url}")
+            summary += f" ({', '.join(details)})"
+        cls_name = type(backend).__name__
+        text_lines.append(f"{name}: {cls_name} {summary}")
+        md_lines.append(f"- **{name}**: `{cls_name}` {summary}")
 
-    body = "\n".join(lines) or "No backends available."
-    show_report("AVAILABLE BACKENDS", body, file=file)
+        extra = []
+        if backend.description:
+            extra.append(" ".join(backend.description.split()))
+        if backend.url:
+            extra.append(backend.url)
+        text_lines.extend(f"    {line}" for line in extra)
+        md_lines.extend(f"  - {line}" for line in extra)
+
+    text = "\n".join(text_lines) or "No backends available."
+    md = "\n".join(md_lines) or "No backends available."
+    show_report("AVAILABLE BACKENDS", text, md, file=file, as_markdown=markdown)
 
 
 def guess_engine(

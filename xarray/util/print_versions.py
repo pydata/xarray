@@ -118,17 +118,18 @@ DEPENDENCIES = [
 ]
 
 
-def show_versions(file: TextIO | None = None) -> None:
+def show_versions(file: TextIO | None = None, markdown: bool = False) -> None:
     """Print the versions of xarray and its dependencies.
 
-    The output is markdown that can be pasted as is into a GitHub issue.
-    In Jupyter notebooks it is displayed as formatted tables instead; pass
-    ``file=sys.stdout`` to get the markdown to copy.
+    In Jupyter notebooks the versions are displayed as formatted tables.
 
     Parameters
     ----------
     file : file-like, optional
         print to the given file-like object. Defaults to sys.stdout.
+    markdown : bool, default: False
+        print markdown tables wrapped in a ``<details>`` block, which can be
+        pasted as is into a GitHub issue.
     """
     sys_info = get_sys_info()
 
@@ -137,21 +138,27 @@ def show_versions(file: TextIO | None = None) -> None:
     except Exception as e:
         sys_info.append(("libhdf5 / libnetcdf", f"error: {e}"))
 
+    sys_info = [(k, v) for k, v in sys_info if v not in (None, "")]
     versions = {name: package_version(name) for name in DEPENDENCIES}
     installed = [(name, ver) for name, ver in versions.items() if ver is not None]
-    missing = [name for name, ver in versions.items() if ver is None]
+    missing = ", ".join(name for name, ver in versions.items() if ver is None)
+    not_installed = f"Not installed: {missing or 'none'}"
 
-    body = "\n\n".join(
+    text = "\n\n".join(
         [
-            markdown_table(
-                ("system", "info"),
-                [(k, v) for k, v in sys_info if v not in (None, "")],
-            ),
-            markdown_table(("package", "version"), installed),
-            f"Not installed: {', '.join(missing) or 'none'}",
+            "\n".join(f"{k}: {v}" for k, v in sys_info),
+            "\n".join(f"{k}: {v}" for k, v in installed),
+            not_installed,
         ]
     )
-    show_report("INSTALLED VERSIONS", body, file=file)
+    md = "\n\n".join(
+        [
+            markdown_table(("system", "info"), sys_info),
+            markdown_table(("package", "version"), installed),
+            not_installed,
+        ]
+    )
+    show_report("INSTALLED VERSIONS", text, md, file=file, as_markdown=markdown)
 
 
 if __name__ == "__main__":

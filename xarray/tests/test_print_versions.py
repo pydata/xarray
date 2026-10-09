@@ -18,11 +18,20 @@ def test_show_versions() -> None:
     f = io.StringIO()
     xarray.show_versions(file=f)
     out = f.getvalue()
+    assert out.startswith("INSTALLED VERSIONS\n------------------\n")
+    assert f"\nxarray: {importlib.metadata.version('xarray')}\n" in out
+    assert "Not installed: " in out
+
+
+@pytest.mark.filterwarnings("ignore:Setuptools is replacing distutils:UserWarning")
+def test_show_versions_markdown() -> None:
+    f = io.StringIO()
+    xarray.show_versions(file=f, markdown=True)
+    out = f.getvalue()
     assert out.startswith("<details><summary>INSTALLED VERSIONS</summary>\n\n")
     assert out.endswith("\n</details>\n")
+    assert "| package " in out
     assert "| xarray " in out
-    assert xarray.__version__ in out
-    assert "Not installed: " in out
 
 
 def test_package_version() -> None:
@@ -45,19 +54,35 @@ def test_markdown_table() -> None:
     assert actual == expected
 
 
-def test_show_report_rich_frontend(monkeypatch) -> None:
+def test_show_report(monkeypatch) -> None:
     displayed: list[str] = []
     display_mod = types.ModuleType("IPython.display")
     display_mod.Markdown = lambda text: text  # type: ignore[attr-defined]
     display_mod.display = displayed.append  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "IPython.display", display_mod)
+
+    def show(**kwargs) -> str:
+        f = io.StringIO()
+        _report.show_report("TITLE", "text", "*md*", file=f, **kwargs)
+        return f.getvalue()
+
+    assert show() == "TITLE\n-----\ntext\n"
+    assert show(as_markdown=True) == (
+        "<details><summary>TITLE</summary>\n\n*md*\n\n</details>\n"
+    )
+
+    # in notebooks the markdown is displayed, unless printing is requested
     monkeypatch.setattr(_report, "_in_rich_frontend", lambda: True)
-
-    _report.show_report("TITLE", "body")
-    assert displayed == ["**TITLE**\n\nbody"]
-
-    # an explicit file always gets the plain markdown
-    f = io.StringIO()
-    _report.show_report("TITLE", "body", file=f)
-    assert f.getvalue() == "<details><summary>TITLE</summary>\n\nbody\n\n</details>\n"
+    _report.show_report("TITLE", "text", "*md*")
+    assert displayed == ["**TITLE**\n\n*md*"]
+    assert show() == "TITLE\n-----\ntext\n"
+    stdout = io.StringIO()
+    monkeypatch.setattr(sys, "stdout", stdout)
+    _report.show_report("TITLE", "text", "*md*", as_markdown=True)
+    assert stdout.getvalue().startswith("<details>")
     assert len(displayed) == 1
+
+
+def test_in_rich_frontend_without_ipython(monkeypatch) -> None:
+    monkeypatch.delitem(sys.modules, "IPython", raising=False)
+    assert not _report._in_rich_frontend()

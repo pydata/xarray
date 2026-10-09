@@ -384,15 +384,31 @@ def test_show_backends() -> None:
     ep.dist = dist
     ep.load.return_value = DummyDescribedBackend
 
-    f = io.StringIO()
+    text = io.StringIO()
+    md = io.StringIO()
     with mock.patch(
         "xarray.backends.plugins.entry_points", return_value=EntryPoints([ep])
     ):
         list_engines.cache_clear()
-        xr.show_backends(file=f)
+        xr.show_backends(file=text)
+        xr.show_backends(file=md, markdown=True)
     refresh_engines()
-    out = f.getvalue()
 
+    out = text.getvalue()
+    assert out.startswith("AVAILABLE BACKENDS\n------------------\n")
+    expected_dummy = (
+        "dummy: DummyDescribedBackend from dummy-pkg 1.2.3 (supports groups)\n"
+        "    Open dummy files\n"
+        "    https://example.com/dummy\n"
+    )
+    assert expected_dummy in out
+    assert "store: StoreBackendEntrypoint from xarray\n" in out
+    # backends that are not installed are not listed
+    assert ("\nscipy: " in out) == has_scipy
+    if has_scipy:
+        assert "scipy: ScipyBackendEntrypoint from xarray (using scipy " in out
+
+    out = md.getvalue()
     assert out.startswith("<details><summary>AVAILABLE BACKENDS</summary>\n\n")
     expected_dummy = (
         "- **dummy**: `DummyDescribedBackend` from dummy-pkg 1.2.3 (supports groups)\n"
@@ -400,17 +416,7 @@ def test_show_backends() -> None:
         "  - https://example.com/dummy\n"
     )
     assert expected_dummy in out
-    expected_store = (
-        "- **store**: `StoreBackendEntrypoint` from xarray\n"
-        "  - Open AbstractDataStore instances in Xarray\n"
-        "  - https://docs.xarray.dev/en/stable/generated/"
-        "xarray.backends.StoreBackendEntrypoint.html\n"
-    )
-    assert expected_store in out
-    # backends that are not installed are not listed
-    assert ("**scipy**" in out) == has_scipy
-    if has_scipy:
-        assert "`ScipyBackendEntrypoint` from xarray (using scipy " in out
+    assert "- **store**: `StoreBackendEntrypoint` from xarray\n" in out
 
 
 @requires_h5netcdf
