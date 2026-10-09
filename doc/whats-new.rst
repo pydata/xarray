@@ -48,6 +48,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix ``TypeError`` on import when ``importlib.metadata.version`` returns ``None``
+  for an installed package, e.g. with some editable installs or custom import hooks
+  in QGIS. Such packages are now treated as not meeting a minimum version
+  (:issue:`11344`, :pull:`11379`).
+  By `Jay <https://github.com/jaythehardcoder>`_.
 - Fix reading JSON-native Zarr fill values from non-xarray Zarr writers
   (:issue:`11332`, :pull:`11665`).
   By `Om Satpute <https://github.com/omsatpute61-afk>`_.
