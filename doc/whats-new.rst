@@ -13,6 +13,14 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`DataArray.idxmin` and :py:meth:`DataArray.idxmax` accept a sequence
+  of dimensions or ``...``, and return a dict of the coordinate labels along each
+  dimension, like :py:meth:`DataArray.argmin`. Without ``dim``, arrays with more
+  than one dimension now use all dimensions instead of raising an error.
+  :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` raise an informative
+  error for multiple dimensions (:issue:`10112`, :pull:`10680`).
+  By `Giacomo Caria <https://github.com/gcaria>`_ and
+  `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:class:`~xarray.Variable` is now generic in the type of its dimension
   names, like :py:class:`~xarray.NamedArray`: it is defined as
   ``class Variable(NamedArray[Any, Any, DimType_co])``, so static type checkers

@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import functools
 from collections import Counter
-from collections.abc import Callable, Hashable
+from collections.abc import Callable, Hashable, Sequence
+from types import EllipsisType
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
@@ -953,7 +954,7 @@ def _calc_idxminmax(
     *,
     array,
     func: Callable,
-    dim: Hashable | None = None,
+    dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
     skipna: bool | None = None,
     fill_value: Any = dtypes.NA,
     keep_attrs: bool | None = None,
@@ -971,12 +972,12 @@ def _calc_idxminmax(
         # it is okay to guess the dim if there is only 1
         dim = array.dims[0]
     else:
-        # The dim is not specified and ambiguous.  Don't guess.
-        raise ValueError("Must supply 'dim' argument for multidimensional arrays")
+        # like the future behavior of argmin/argmax without dim, use all dims
+        dim = array.dims
 
-    dim_is_str = isinstance(dim, str)
-    # Standardize to an iterable format
-    dims = [dim] if dim_is_str else dim
+    # like argmin/argmax, a sequence of dims (other than a str) returns a dict
+    single_dim = not isinstance(dim, Sequence) or isinstance(dim, str)
+    dims = [dim] if single_dim else list(cast(Sequence[Hashable], dim))
 
     for _dim in dims:
         if _dim not in array.dims:
@@ -999,11 +1000,12 @@ def _calc_idxminmax(
     # This will run argmin or argmax.
     index = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
     # Force dictionary format in case of single dim so that we can iterate over it in for loop below
-    if dim_is_str:
+    if single_dim:
         index = {dim: index}
 
     res = {}
-    for _dim, _da_idx in zip(dims, index.values(), strict=False):
+    for _dim in dims:
+        _da_idx = index[_dim]
         # Handle chunked arrays (e.g. dask).
         coord = array[_dim]._variable.to_base_variable()
         if is_chunked_array(array.data):
@@ -1025,6 +1027,6 @@ def _calc_idxminmax(
         _res.attrs = _da_idx.attrs
         res[_dim] = _res
 
-    if dim_is_str:
+    if single_dim:
         return res[dim]
     return res

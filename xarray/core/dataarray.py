@@ -6137,28 +6137,65 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    def idxmin(
+    @overload
+    def idxmin(  # type: ignore[overload-overlap]
         self,
-        dim: Hashable | None = None,
+        dim: str,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the minimum value along a dimension.
+    ) -> Self: ...
+
+    @overload
+    def idxmin(
+        self,
+        dim: Sequence[Hashable] | EllipsisType,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
+    @overload
+    def idxmin(
+        self,
+        dim: None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]: ...
+
+    def idxmin(
+        self,
+        dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the minimum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to minimum
         values along that dimension.
+
+        If a sequence of dimensions or ``...`` is passed to ``dim``, the
+        minimum is taken over all of them and a dict of `DataArray` objects,
+        one for each dimension, is returned instead, like
+        :py:meth:`~DataArray.argmin`. The result can be passed to
+        :py:meth:`~DataArray.sel`.
 
         In comparison to :py:meth:`~DataArray.argmin`, this returns the
         coordinate label while :py:meth:`~DataArray.argmin` returns the index.
 
         Parameters
         ----------
-        dim : str, optional
-            Dimension over which to apply `idxmin`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : Hashable, sequence of Hashable or ..., optional
+            Dimension(s) over which to apply `idxmin`. ``...`` means all
+            dimensions. If not given, the only dimension of a 1D array is used,
+            and all dimensions of an array with 2 or more dimensions.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
@@ -6177,9 +6214,11 @@ class DataArray(
 
         Returns
         -------
-        reduced : DataArray
+        reduced : DataArray or dict of DataArray
             New `DataArray` object with `idxmin` applied to its data and the
-            indicated dimension removed.
+            indicated dimension removed, or a dict of them mapping each
+            dimension to its coordinate labels if ``dim`` is a sequence or
+            ``...``.
 
         See Also
         --------
@@ -6224,6 +6263,10 @@ class DataArray(
         array([16.,  0.,  4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmin(dim=["y", "x"])
+        {'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(0), 'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.)}
         """
         return computation._calc_idxminmax(
             array=self,
@@ -6234,28 +6277,65 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    def idxmax(
+    @overload
+    def idxmax(  # type: ignore[overload-overlap]
         self,
-        dim: Hashable = None,
+        dim: str,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the maximum value along a dimension.
+    ) -> Self: ...
+
+    @overload
+    def idxmax(
+        self,
+        dim: Sequence[Hashable] | EllipsisType,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
+    @overload
+    def idxmax(
+        self,
+        dim: None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]: ...
+
+    def idxmax(
+        self,
+        dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the maximum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to maximum
         values along that dimension.
+
+        If a sequence of dimensions or ``...`` is passed to ``dim``, the
+        maximum is taken over all of them and a dict of `DataArray` objects,
+        one for each dimension, is returned instead, like
+        :py:meth:`~DataArray.argmax`. The result can be passed to
+        :py:meth:`~DataArray.sel`.
 
         In comparison to :py:meth:`~DataArray.argmax`, this returns the
         coordinate label while :py:meth:`~DataArray.argmax` returns the index.
 
         Parameters
         ----------
-        dim : Hashable, optional
-            Dimension over which to apply `idxmax`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : Hashable, sequence of Hashable or ..., optional
+            Dimension(s) over which to apply `idxmax`. ``...`` means all
+            dimensions. If not given, the only dimension of a 1D array is used,
+            and all dimensions of an array with 2 or more dimensions.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
@@ -6274,9 +6354,11 @@ class DataArray(
 
         Returns
         -------
-        reduced : DataArray
+        reduced : DataArray or dict of DataArray
             New `DataArray` object with `idxmax` applied to its data and the
-            indicated dimension removed.
+            indicated dimension removed, or a dict of them mapping each
+            dimension to its coordinate labels if ``dim`` is a sequence or
+            ``...``.
 
         See Also
         --------
@@ -6321,6 +6403,10 @@ class DataArray(
         array([0., 4., 4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmax(dim=["y", "x"])
+        {'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(-1), 'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.)}
         """
         return computation._calc_idxminmax(
             array=self,

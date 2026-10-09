@@ -9476,6 +9476,14 @@ class Dataset(
             int      <U1 4B 'e'
             float    (y) <U1 12B 'e' 'a' 'c'
         """
+        if dim is ... or (isinstance(dim, Sequence) and not isinstance(dim, str)):
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.idxmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.idxmin() with a sequence or ... for dim"
+            )
+        if dim is None and any(var.ndim > 1 for var in self.data_vars.values()):
+            raise ValueError("Must supply 'dim' argument for multidimensional arrays")
         return self.map(
             methodcaller(
                 "idxmin",
@@ -9574,6 +9582,14 @@ class Dataset(
             int      <U1 4B 'b'
             float    (y) <U1 12B 'a' 'c' 'c'
         """
+        if dim is ... or (isinstance(dim, Sequence) and not isinstance(dim, str)):
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.idxmax() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.idxmax() with a sequence or ... for dim"
+            )
+        if dim is None and any(var.ndim > 1 for var in self.data_vars.values()):
+            raise ValueError("Must supply 'dim' argument for multidimensional arrays")
         return self.map(
             methodcaller(
                 "idxmax",

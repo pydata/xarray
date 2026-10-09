@@ -6093,9 +6093,13 @@ class TestReduce2D(TestReduce):
 
         assert_identical(ar0, ar0)
 
-        # No dimension specified
-        with pytest.raises(ValueError):
-            ar0.idxmin()
+        # No dimension specified: all dimensions, like ...
+        result_nodim = ar0.idxmin()
+        assert isinstance(result_nodim, dict)
+        expected_nodim = ar0.idxmin(...)
+        assert result_nodim.keys() == expected_nodim.keys()
+        for key in expected_nodim:
+            assert_identical(result_nodim[key], expected_nodim[key])
 
         # dim doesn't exist
         with pytest.raises(KeyError):
@@ -6231,9 +6235,13 @@ class TestReduce2D(TestReduce):
         else:
             ar0 = ar0_raw
 
-        # No dimension specified
-        with pytest.raises(ValueError):
-            ar0.idxmax()
+        # No dimension specified: all dimensions, like ...
+        result_nodim = ar0.idxmax()
+        assert isinstance(result_nodim, dict)
+        expected_nodim = ar0.idxmax(...)
+        assert result_nodim.keys() == expected_nodim.keys()
+        for key in expected_nodim:
+            assert_identical(result_nodim[key], expected_nodim[key])
 
         # dim doesn't exist
         with pytest.raises(KeyError):
@@ -6487,9 +6495,6 @@ class TestReduce2D(TestReduce):
         for key in expected3:
             assert_identical(result3[key], expected3[key])
 
-    @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
-    )
     def test_idxmin_dim(
         self,
         x: np.ndarray,
@@ -6544,7 +6549,7 @@ class TestReduce2D(TestReduce):
         ar_expected0 = ar.sel(expected0)
         expected3 = {
             "y": ar_expected0.idxmin(),
-            "x": ar.coords["x"][minindex[ar_expected0.argmin().item()]]
+            "x": ar.coords["x"][minindex[ar_expected0.argmin("y").item()]]
             .reset_coords(drop=True)
             .assign_attrs(self.attrs),
         }
@@ -6552,9 +6557,6 @@ class TestReduce2D(TestReduce):
         for key in expected3:
             assert_identical(result3[key], expected3[key])
 
-    @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
-    )
     def test_idxmax_dim(
         self,
         x: np.ndarray,
@@ -6609,7 +6611,7 @@ class TestReduce2D(TestReduce):
         ar_expected0 = ar.sel(expected0)
         expected3 = {
             "y": ar_expected0.idxmax(),
-            "x": ar.coords["x"][maxindex[ar_expected0.argmax().item()]]
+            "x": ar.coords["x"][maxindex[ar_expected0.argmax("y").item()]]
             .reset_coords(drop=True)
             .assign_attrs(self.attrs),
         }
