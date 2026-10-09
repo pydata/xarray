@@ -42,10 +42,19 @@ def _backend_options(backend):
     )
 
 
-def _requires_method(obj, name):
-    # skip methods that don't exist in older versions
-    if not hasattr(obj, name):
-        raise NotImplementedError(f"{type(obj).__name__}.{name} doesn't exist")
+def _requires_rolling_method(func, *args):
+    """
+    Setup of benchmarks whose first parameter is a rolling method, to skip the
+    methods that don't exist in older versions or in pandas (if the last
+    parameter is "pandas"). asv only skips benchmarks when a setup raises
+    NotImplementedError, not the benchmark itself.
+    """
+    if args and args[-1] == "pandas":
+        rolling = pd.Series([0.0]).rolling(1)
+    else:
+        rolling = xr.DataArray([0.0], dims="x").rolling(x=1)
+    if not hasattr(rolling, func):
+        raise NotImplementedError(f"{type(rolling).__name__}.{func} doesn't exist")
 
 
 class Rolling:
@@ -75,13 +84,13 @@ class Rolling:
             rolling = self.da_long.to_series().rolling(
                 window=window, center=center, min_periods=1
             )
-            _requires_method(rolling, func)
             getattr(rolling, func)()
         else:
             rolling = self.da_long.rolling(x=window, center=center, min_periods=1)
-            _requires_method(rolling, func)
             with _backend_options(backend):
                 getattr(rolling, func)().load()
+
+    time_rolling_long.setup = _requires_rolling_method
 
     @parameterized(["window_"], ([20, 40],))
     def time_rolling_np(self, window_):
@@ -118,10 +127,10 @@ class Cumulative:
         ["func", "backend"], (["sum", "mean", "max", "argmax", "idxmax"], BACKENDS)
     )
     def time_cumulative(self, func, backend):
-        cumulative = self.da.cumulative("t")
-        _requires_method(cumulative, func)
         with _backend_options(backend):
-            getattr(cumulative, func)().load()
+            getattr(self.da.cumulative("t"), func)().load()
+
+    time_cumulative.setup = _requires_rolling_method
 
     def time_cumsum(self):
         # reference for time_cumulative with func="sum"
