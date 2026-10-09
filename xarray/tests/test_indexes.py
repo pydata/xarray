@@ -19,6 +19,7 @@ from xarray.core.indexes import (
     PandasIndex,
     PandasMultiIndex,
     _asarray_tuplesafe,
+    is_full_ordered_product,
     safe_cast_to_index,
 )
 from xarray.core.variable import IndexVariable, Variable
@@ -825,3 +826,40 @@ def test_set_xindex_factory_method_pattern() -> None:
     assert "time" in result.variables
     assert "valid_time" in result.variables
     assert_array_equal(result.valid_time.data, result.time.data + 1)
+
+
+@pytest.mark.parametrize(
+    ("index", "expected"),
+    [
+        pytest.param(
+            pd.MultiIndex.from_product([[0, 1, 2], ["a", "b"], [3, 4]]),
+            True,
+            id="product",
+        ),
+        pytest.param(
+            pd.MultiIndex(
+                levels=[[2, 1, 0], ["b", "a"]],
+                codes=[[0, 0, 1, 1, 2, 2], [0, 1, 0, 1, 0, 1]],
+            ),
+            True,
+            id="product-unsorted-levels",
+        ),
+        pytest.param(
+            pd.MultiIndex.from_product([[0, 1], ["a", "b"]])[::-1],
+            False,
+            id="reversed",
+        ),
+        pytest.param(
+            pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a")]),
+            False,
+            id="missing",
+        ),
+        pytest.param(
+            pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a"), (1, np.nan)]),
+            False,
+            id="nan-label",
+        ),
+    ],
+)
+def test_is_full_ordered_product(index: pd.MultiIndex, expected: bool) -> None:
+    assert is_full_ordered_product(index) is expected

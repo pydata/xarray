@@ -66,6 +66,7 @@ from xarray.core.indexes import (
     assert_no_index_corrupted,
     create_default_index_implicit,
     filter_indexes_from_coords,
+    is_full_ordered_product,
     isel_indexes,
     remove_unused_levels_categories,
     roll_indexes,
@@ -4355,7 +4356,7 @@ class Dataset(
         name_dict: Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new object with renamed variables, coordinates and dimensions.
+        """Returns an object with renamed variables, coordinates and dimensions.
 
         Parameters
         ----------
@@ -4385,7 +4386,7 @@ class Dataset(
         dims_dict: Mapping[Any, Hashable] | None = None,
         **dims: Hashable,
     ) -> Self:
-        """Returns a new object with renamed dimensions only.
+        """Returns an object with renamed dimensions only.
 
         Parameters
         ----------
@@ -4432,7 +4433,7 @@ class Dataset(
         name_dict: Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new object with renamed variables including coordinates
+        """Returns an object with renamed variables including coordinates
 
         Parameters
         ----------
@@ -5558,6 +5559,7 @@ class Dataset(
 
         new_indexes, clean_index = index.unstack()
         indexes.update(new_indexes)
+        full_product = is_full_ordered_product(clean_index)
 
         for idx in new_indexes.values():
             variables.update(idx.create_variables(index_vars))
@@ -5575,6 +5577,7 @@ class Dataset(
                         dim=dim,
                         fill_value=fill_value_,
                         sparse=sparse,
+                        full_product=full_product,
                     )
                 else:
                     variables[name] = var
@@ -9465,13 +9468,13 @@ class Dataset(
             int      int64 8B 4
             float    (y) int64 24B 4 0 2
         >>> ds.idxmin(dim="x")
-        <xarray.Dataset> Size: 52B
+        <xarray.Dataset> Size: 40B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
         Data variables:
             int      <U1 4B 'e'
-            float    (y) object 24B 'e' 'a' 'c'
+            float    (y) <U1 12B 'e' 'a' 'c'
         """
         return self.map(
             methodcaller(
@@ -9563,13 +9566,13 @@ class Dataset(
             int      int64 8B 1
             float    (y) int64 24B 0 2 2
         >>> ds.idxmax(dim="x")
-        <xarray.Dataset> Size: 52B
+        <xarray.Dataset> Size: 40B
         Dimensions:  (y: 3)
         Coordinates:
           * y        (y) int64 24B -1 0 1
         Data variables:
             int      <U1 4B 'b'
-            float    (y) object 24B 'a' 'c' 'c'
+            float    (y) <U1 12B 'a' 'c' 'c'
         """
         return self.map(
             methodcaller(
@@ -10065,7 +10068,7 @@ class Dataset(
             If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
             raise an exception. If 'ignore', the coefficients and covariances for the
             coordinates where the fitting failed will be NaN.
-        **kwargs : optional
+        kwargs : dict[str, Any], optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
