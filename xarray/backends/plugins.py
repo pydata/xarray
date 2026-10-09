@@ -214,6 +214,12 @@ def guess_engine(
         if not is_remote_uri(store_spec_str) and not os.path.exists(store_spec_str):
             raise FileNotFoundError(f"No such file: '{store_spec_str}'")
 
+    if isinstance(store_spec, list | tuple):
+        raise ValueError(
+            f"open_dataset opens a single file, but got a {type(store_spec).__name__}. "
+            "Use open_mfdataset to open multiple files as a single dataset."
+        )
+
     raise ValueError(error_msg)
 
 
