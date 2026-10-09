@@ -8075,11 +8075,11 @@ class Dataset(
         slice_start = {dim: slice(None, -1)}
         slice_end = {dim: slice(1, None)}
 
-        # prepare new coordinate
+        # the coordinates of the n-th differences are the upper or lower n labels
         if label == "upper":
-            slice_new = slice_end
+            slice_new = {dim: slice(n, None)}
         elif label == "lower":
-            slice_new = slice_start
+            slice_new = {dim: slice(None, -n)}
         else:
             raise ValueError("The 'label' argument has to be either 'upper' or 'lower'")
 
@@ -8091,18 +8091,17 @@ class Dataset(
                 variables[name] = index_vars[name]
             elif dim in var.dims:
                 if name in self.data_vars:
-                    variables[name] = var.isel(slice_end) - var.isel(slice_start)
+                    # loop instead of recursing over the whole dataset, which hits
+                    # the recursion limit for large n
+                    for _ in range(n):
+                        var = var.isel(slice_end) - var.isel(slice_start)
+                    variables[name] = var
                 else:
                     variables[name] = var.isel(slice_new)
             else:
                 variables[name] = var
 
-        difference = self._replace_with_new_dims(variables, indexes=indexes)
-
-        if n > 1:
-            return difference.diff(dim, n - 1)
-        else:
-            return difference
+        return self._replace_with_new_dims(variables, indexes=indexes)
 
     def shift(
         self,
