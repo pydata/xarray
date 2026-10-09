@@ -1,6 +1,18 @@
 /* CSS stylesheet for displaying xarray objects in notebooks */
 
 :root {
+  /* VS Code: tint the rows with a bit of the text color, which works for light
+     and dark themes. Invalid, and so ignored below, outside of VS Code. */
+  --xr-vscode-row-even: color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 3%,
+    var(--vscode-editor-background)
+  );
+  --xr-vscode-row-odd: color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 7%,
+    var(--vscode-editor-background)
+  );
   --xr-font-color0: var(
     --vscode-editor-foreground,
     var(--jp-content-font-color0, var(--pst-color-text-base, rgba(0, 0, 0, 1)))
@@ -38,14 +50,14 @@
     var(--jp-layout-color0, var(--pst-color-on-background, white))
   );
   --xr-background-color-row-even: var(
-    --vscode-list-hoverBackground,
+    --xr-vscode-row-even,
     var(
       --jp-layout-color1,
       hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
     )
   );
   --xr-background-color-row-odd: var(
-    --vscode-list-inactiveSelectionBackground,
+    --xr-vscode-row-odd,
     var(
       --jp-layout-color2,
       hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
@@ -97,14 +109,14 @@ body.vscode-dark {
     var(--jp-layout-color0, var(--pst-color-on-background, #111111))
   );
   --xr-background-color-row-even: var(
-    --vscode-list-hoverBackground,
+    --xr-vscode-row-even,
     var(
       --jp-layout-color1,
       hsl(from var(--pst-color-on-background, #111111) h s calc(l + 5))
     )
   );
   --xr-background-color-row-odd: var(
-    --vscode-list-inactiveSelectionBackground,
+    --xr-vscode-row-odd,
     var(
       --jp-layout-color2,
       hsl(from var(--pst-color-on-background, #111111) h s calc(l + 15))
@@ -261,6 +273,20 @@ body.vscode-dark {
   grid-column: 2 / -1;
 }
 
+/* leave the icon columns for the toggles of all attributes and data */
+.xr-section-inline-details.xr-has-toggle-all {
+  grid-column: 2 / 5;
+}
+
+.xr-all-attrs-in + label,
+.xr-all-data-in + label {
+  padding: 4px 1px 0;
+}
+
+.xr-section-summary-in:not(:checked) ~ input + label {
+  visibility: hidden;
+}
+
 .xr-section-details {
   grid-column: 1 / -1;
   margin-top: 4px;
@@ -403,6 +429,15 @@ body.vscode-dark {
   display: contents;
 }
 
+/* row color, also used by hovered attribute names in the expanded attributes */
+.xr-var-item {
+  --xr-row-color: var(--xr-background-color-row-even);
+}
+
+.xr-var-list > li:nth-child(odd) {
+  --xr-row-color: var(--xr-background-color-row-odd);
+}
+
 .xr-var-item > div,
 .xr-var-item label,
 .xr-var-item > .xr-var-name span {
@@ -471,8 +506,8 @@ body.vscode-dark {
 .xr-index-data {
   display: none;
   border-top: 2px dotted var(--xr-background-color);
-  padding-bottom: 20px !important;
-  padding-top: 10px !important;
+  padding-bottom: 6px !important;
+  padding-top: 4px !important;
 }
 
 .xr-var-attrs-in + label,
@@ -487,6 +522,37 @@ body.vscode-dark {
   display: block;
 }
 
+/* the toggles of a section invert the shown attributes and data of all items */
+.xr-all-attrs-in:checked
+  ~ .xr-section-details
+  .xr-var-attrs-in:enabled:not(:checked)
+  ~ .xr-var-attrs,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-var-data-in:not(:checked)
+  ~ .xr-var-data,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-index-data-in:not(:checked)
+  ~ .xr-index-data {
+  display: block;
+}
+
+.xr-all-attrs-in:checked
+  ~ .xr-section-details
+  .xr-var-attrs-in:checked
+  ~ .xr-var-attrs,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-var-data-in:checked
+  ~ .xr-var-data,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-index-data-in:checked
+  ~ .xr-index-data {
+  display: none;
+}
+
 .xr-var-data > table {
   float: right;
 }
@@ -495,6 +561,11 @@ body.vscode-dark {
 .xr-index-data > pre,
 .xr-var-data > table > tbody > tr {
   background-color: transparent !important;
+}
+
+.xr-var-data > pre,
+.xr-index-data > pre {
+  margin: 0 !important;
 }
 
 .xr-var-name span,
@@ -519,6 +590,18 @@ dl.xr-attrs {
   grid-template-columns: 125px auto;
 }
 
+/* indent the attributes and data of a variable below its name, keeping the
+   attribute values aligned with the dimensions */
+.xr-var-attrs > dl.xr-attrs {
+  padding-left: 40px !important;
+  grid-template-columns: 110px auto;
+}
+
+.xr-var-data,
+.xr-index-data {
+  padding-left: 40px !important;
+}
+
 .xr-attrs dt,
 .xr-attrs dd {
   padding: 0;
@@ -531,11 +614,12 @@ dl.xr-attrs {
 .xr-attrs dt {
   font-weight: normal;
   grid-column: 1;
+  color: var(--xr-font-color2);
 }
 
 .xr-attrs dt:hover span {
   display: inline-block;
-  background: var(--xr-background-color);
+  background: var(--xr-row-color, var(--xr-background-color));
   padding-right: 10px;
 }
 
@@ -559,8 +643,62 @@ dl.xr-attrs {
 
 .xr-var-attrs-in:checked + label > .xr-icon-file-text2,
 .xr-var-data-in:checked + label > .xr-icon-database,
-.xr-index-data-in:checked + label > .xr-icon-database {
+.xr-index-data-in:checked + label > .xr-icon-database,
+.xr-all-attrs-in:checked + label > .xr-icon-file-text2,
+.xr-all-data-in:checked + label > .xr-icon-database,
+.xr-all-attrs-in:checked
+  ~ .xr-section-details
+  .xr-var-attrs-in:enabled:not(:checked)
+  + label
+  > .xr-icon-file-text2,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-var-data-in:not(:checked)
+  + label
+  > .xr-icon-database,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-index-data-in:not(:checked)
+  + label
+  > .xr-icon-database {
   color: var(--xr-font-color0);
   filter: drop-shadow(1px 1px 5px var(--xr-font-color2));
   stroke-width: 0.8px;
+}
+
+/* partial state of the toggles of a section, if single items are inverted */
+.xr-section-item:has(.xr-var-attrs-in:enabled:checked)
+  > .xr-all-attrs-in:checked
+  + label
+  > .xr-icon-file-text2,
+.xr-section-item:has(.xr-var-data-in:checked)
+  > .xr-all-data-in:checked
+  + label
+  > .xr-icon-database,
+.xr-section-item:has(.xr-index-data-in:checked)
+  > .xr-all-data-in:checked
+  + label
+  > .xr-icon-database {
+  filter: none;
+  stroke-width: 0;
+}
+
+.xr-all-attrs-in:checked
+  ~ .xr-section-details
+  .xr-var-attrs-in:checked
+  + label
+  > .xr-icon-file-text2,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-var-data-in:checked
+  + label
+  > .xr-icon-database,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-index-data-in:checked
+  + label
+  > .xr-icon-database {
+  color: inherit;
+  filter: none;
+  stroke-width: 0;
 }

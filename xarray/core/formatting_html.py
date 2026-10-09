@@ -8,7 +8,7 @@ from functools import lru_cache, partial
 from html import escape
 from importlib.resources import files
 from math import ceil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from xarray.core.formatting import (
     _coord_sort_key,
@@ -66,7 +66,7 @@ def format_dims(dim_sizes, dims_with_index) -> str:
 
 def summarize_attrs(attrs) -> str:
     attrs_dl = "".join(
-        f"<dt><span>{escape(str(k))} :</span></dt><dd>{escape(str(v))}</dd>"
+        f"<dt><span>{escape(str(k))}</span></dt><dd>{escape(str(v))}</dd>"
         for k, v in attrs.items()
     )
 
@@ -178,6 +178,31 @@ def summarize_indexes(indexes) -> str:
     return f"<ul class='xr-var-list'>{indexes_li}</ul>"
 
 
+def _toggle_all(attrs_enabled: bool | None) -> str:
+    """Inputs to show/hide the attributes and data of all items of a section.
+
+    ``attrs_enabled=None`` leaves out the attributes toggle, e.g. for indexes.
+    """
+    if attrs_enabled is None:
+        # need empty input + label here to conform to the fixed CSS grid layout
+        attrs = "<input type='checkbox' disabled/><label></label>"
+    else:
+        attrs_id = "attrs-all-" + str(uuid.uuid4())
+        disabled = "" if attrs_enabled else " disabled"
+        attrs = (
+            f"<input id='{attrs_id}' class='xr-all-attrs-in' type='checkbox'{disabled}>"
+            f"<label for='{attrs_id}' title='Show/Hide all attributes'>"
+            f"{_icon('icon-file-text2')}</label>"
+        )
+    data_id = "data-all-" + str(uuid.uuid4())
+    data = (
+        f"<input id='{data_id}' class='xr-all-data-in' type='checkbox'>"
+        f"<label for='{data_id}' title='Show/Hide all data reprs'>"
+        f"{_icon('icon-database')}</label>"
+    )
+    return attrs + data
+
+
 def collapsible_section(
     header: str,
     inline_details="",
@@ -186,6 +211,7 @@ def collapsible_section(
     enabled=True,
     collapsed=False,
     span_grid=False,
+    toggle_all="",
 ) -> str:
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
@@ -199,8 +225,14 @@ def collapsible_section(
     html = (
         f"<input id='{data_id}' class='xr-section-summary-in' type='checkbox'{enabled_attr}{collapsed_attr} />"
         f"<label for='{data_id}' class='xr-section-summary{span_grid_attr}'{tip}>{header}{n_items_span}</label>"
-        f"<div class='xr-section-inline-details'>{inline_details}</div>"
     )
+    if toggle_all:
+        html += (
+            "<div class='xr-section-inline-details xr-has-toggle-all'>"
+            f"{inline_details}</div>{toggle_all}"
+        )
+    else:
+        html += f"<div class='xr-section-inline-details'>{inline_details}</div>"
     if details:
         html += f"<div class='xr-section-details'>{details}</div>"
     return html
@@ -213,6 +245,7 @@ def _mapping_section(
     max_items_collapse,
     expand_option_name,
     enabled=True,
+    toggle_all: Literal["variables", "indexes"] | None = None,
     **kwargs,
 ) -> str:
     n_items = len(mapping)
@@ -221,12 +254,21 @@ def _mapping_section(
     )
     collapsed = not expanded
 
+    if toggle_all == "variables":
+        variables = getattr(mapping, "variables", mapping)
+        toggle_all_html = _toggle_all(any(v.attrs for v in variables.values()))
+    elif toggle_all == "indexes":
+        toggle_all_html = _toggle_all(None)
+    else:
+        toggle_all_html = ""
+
     return collapsible_section(
         f"{name}:",
         details=details_func(mapping, **kwargs),
         n_items=n_items,
         enabled=enabled,
         collapsed=collapsed,
+        toggle_all=toggle_all_html,
     )
 
 
@@ -264,6 +306,7 @@ def array_section(obj) -> str:
 coord_section = partial(
     _mapping_section,
     name="Coordinates",
+    toggle_all="variables",
     details_func=summarize_coords,
     max_items_collapse=25,
     expand_option_name="display_expand_coords",
@@ -272,6 +315,7 @@ coord_section = partial(
 datavar_section = partial(
     _mapping_section,
     name="Data variables",
+    toggle_all="variables",
     details_func=summarize_vars,
     max_items_collapse=15,
     expand_option_name="display_expand_data_vars",
@@ -280,6 +324,7 @@ datavar_section = partial(
 index_section = partial(
     _mapping_section,
     name="Indexes",
+    toggle_all="indexes",
     details_func=summarize_indexes,
     max_items_collapse=0,
     expand_option_name="display_expand_indexes",
@@ -397,6 +442,7 @@ def dataset_repr(ds) -> str:
 inherited_coord_section = partial(
     _mapping_section,
     name="Inherited coordinates",
+    toggle_all="variables",
     details_func=summarize_coords,
     max_items_collapse=25,
     expand_option_name="display_expand_coords",
