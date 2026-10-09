@@ -204,7 +204,7 @@ Internal Changes
 - Remove the unused ``xarray/namedarray/dtypes.py``, a stale copy of
   ``xarray/core/dtypes.py``, exclude the code generators in ``xarray/util``
   from the test coverage and test ``xarray.tutorial`` without network access
-  (:pull:`XXXXX`).
+  (:pull:`11703`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
