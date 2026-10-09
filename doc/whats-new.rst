@@ -48,6 +48,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Appending to a Zarr store whose time variable is stored with a native
+  ``datetime64`` or ``timedelta64`` dtype now reuses the stored ``units`` and
+  ``calendar``, instead of writing the appended values with default units
+  (:issue:`10639`).
 - Fix ``UnsortedIndexError`` when selecting a slice of tuples, e.g.
   ``da.stack(z=["x", "y"]).sel(z=slice((0, "b"), (1, "a")))``, from a dimension
   created by :py:meth:`Dataset.stack` or :py:meth:`DataArray.stack`. Their
