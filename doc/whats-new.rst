@@ -24,7 +24,7 @@ New Features
 - The ``in`` operator on :py:class:`DataTree` now accepts the same unix-like
   paths as indexing, so ``key in tree`` is ``True`` exactly when ``tree[key]``
   succeeds, e.g. ``"group/subgroup" in tree`` or ``"/group/var" in tree``.
-  Previously only names in the current node were found (:issue:`9354`).
+  Previously only names in the current node were found (:issue:`9354`, :pull:`11701`).
   By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 
 
@@ -55,7 +55,7 @@ Bug Fixes
 ~~~~~~~~~
 - Indexing a :py:class:`DataTree` with a path that continues past a variable,
   e.g. ``tree["group/var/x"]``, now raises ``KeyError`` instead of
-  ``AttributeError`` (:issue:`9354`).
+  ``AttributeError`` (:issue:`9354`, :pull:`11701`).
   By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - Fix ``TypeError`` on import when ``importlib.metadata.version`` returns ``None``
   for an installed package, e.g. with some editable installs or custom import hooks
