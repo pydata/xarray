@@ -7,9 +7,16 @@ import platform
 import struct
 import subprocess
 import sys
+from html import escape
 from typing import TextIO
 
-from xarray.util._report import markdown_table, package_version, show_report
+from xarray.util._report import (
+    html_columns,
+    html_table,
+    markdown_table,
+    package_version,
+    show_report,
+)
 
 
 def get_sys_info():
@@ -158,7 +165,16 @@ def show_versions(file: TextIO | None = None, markdown: bool = False) -> None:
             not_installed,
         ]
     )
-    show_report("INSTALLED VERSIONS", text, md, file=file, as_markdown=markdown)
+    html = (
+        html_columns(
+            html_table("System", sys_info),
+            html_table("Packages", installed),
+        )
+        + f"<p>{escape(not_installed)}</p>"
+    )
+    show_report(
+        "INSTALLED VERSIONS", text, md, file=file, as_markdown=markdown, html=html
+    )
 
 
 if __name__ == "__main__":

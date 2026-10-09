@@ -10,6 +10,7 @@ import functools
 import importlib.metadata
 import sys
 from collections.abc import Iterable, Mapping, Sequence
+from html import escape
 from typing import TextIO
 
 
@@ -59,6 +60,23 @@ def markdown_table(header: Sequence[str], rows: Iterable[Sequence[object]]) -> s
     return "\n".join(lines)
 
 
+def html_table(title: str, rows: Iterable[Sequence[object]]) -> str:
+    """Render a titled HTML table for the notebook display."""
+    body = "".join(
+        "<tr>"
+        + "".join(f'<td style="text-align: left">{escape(str(c))}</td>' for c in row)
+        + "</tr>"
+        for row in rows
+    )
+    return f"<div><strong>{escape(title)}</strong><table>{body}</table></div>"
+
+
+def html_columns(*blocks: str) -> str:
+    """Lay out HTML blocks side by side, wrapping when there is not enough space."""
+    style = "display: flex; flex-wrap: wrap; gap: 0 3em; align-items: flex-start"
+    return f'<div style="{style}">{"".join(blocks)}</div>'
+
+
 def _in_rich_frontend() -> bool:
     """Whether we run in a frontend that can display markdown, e.g. Jupyter."""
     ipython = sys.modules.get("IPython")
@@ -74,17 +92,22 @@ def show_report(
     markdown: str,
     file: TextIO | None = None,
     as_markdown: bool = False,
+    html: str | None = None,
 ) -> None:
     """Print a report as plain text or markdown, or display it in notebooks.
 
-    In Jupyter notebooks the markdown is displayed formatted, unless a ``file``
-    is given or ``as_markdown`` is requested. The printed markdown is wrapped
-    in a ``<details>`` block, so it can be pasted as is into a GitHub issue.
+    In Jupyter notebooks the ``html``, or else the markdown, is displayed
+    formatted, unless a ``file`` is given or ``as_markdown`` is requested.
+    The printed markdown is wrapped in a ``<details>`` block, so it can be
+    pasted as is into a GitHub issue.
     """
     if file is None and not as_markdown and _in_rich_frontend():
-        from IPython.display import Markdown, display
+        from IPython.display import HTML, Markdown, display
 
-        display(Markdown(f"**{title}**\n\n{markdown}"))
+        if html is not None:
+            display(HTML(f"<h4>{escape(title)}</h4>{html}"))
+        else:
+            display(Markdown(f"#### {title}\n\n{markdown}"))
         return
 
     if as_markdown:

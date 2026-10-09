@@ -58,6 +58,7 @@ def test_show_report(monkeypatch) -> None:
     displayed: list[str] = []
     display_mod = types.ModuleType("IPython.display")
     display_mod.Markdown = lambda text: text  # type: ignore[attr-defined]
+    display_mod.HTML = lambda text: f"html:{text}"  # type: ignore[attr-defined]
     display_mod.display = displayed.append  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "IPython.display", display_mod)
 
@@ -74,7 +75,10 @@ def test_show_report(monkeypatch) -> None:
     # in notebooks the markdown is displayed, unless printing is requested
     monkeypatch.setattr(_report, "_in_rich_frontend", lambda: True)
     _report.show_report("TITLE", "text", "*md*")
-    assert displayed == ["**TITLE**\n\n*md*"]
+    assert displayed == ["#### TITLE\n\n*md*"]
+    _report.show_report("TITLE", "text", "*md*", html="<p>x</p>")
+    assert displayed[-1] == "html:<h4>TITLE</h4><p>x</p>"
+    del displayed[-1]
     assert show() == "TITLE\n-----\ntext\n"
     stdout = io.StringIO()
     monkeypatch.setattr(sys, "stdout", stdout)
@@ -86,3 +90,11 @@ def test_show_report(monkeypatch) -> None:
 def test_in_rich_frontend_without_ipython(monkeypatch) -> None:
     monkeypatch.delitem(sys.modules, "IPython", raising=False)
     assert not _report._in_rich_frontend()
+
+
+def test_html_table() -> None:
+    actual = _report.html_table("T<", [("a", "<b>")])
+    assert actual == (
+        '<div><strong>T&lt;</strong><table><tr><td style="text-align: left">a</td>'
+        '<td style="text-align: left">&lt;b&gt;</td></tr></table></div>'
+    )
