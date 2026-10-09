@@ -168,16 +168,11 @@ class TestDataArrayRolling:
         expected = getattr(bn, func_name)(
             da.values, window=window, axis=1, min_count=min_periods
         )
-        # index 0 is at the rightmost edge of the window
-        # need to reverse index here
-        # see GH #8541
+        # bottleneck counts from the rightmost edge of the window, xarray from the
+        # first value of the window within the array (GH #8541, GH #11336)
         if func_name in ["move_argmin", "move_argmax"]:
-            expected = window - 1 - expected
-            # the index is relative to the start of the window within the array
-            # see GH #11336
-            expected -= np.maximum(window - 1 - np.arange(da.sizes["time"]), 0)[
-                :, np.newaxis
-            ]
+            i = np.arange(da.sizes["time"])[:, np.newaxis]
+            expected = np.minimum(i, window - 1) - expected
 
         # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
         np.testing.assert_allclose(actual.values, expected)
