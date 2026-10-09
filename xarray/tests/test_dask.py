@@ -32,7 +32,7 @@ from xarray.tests import (
     requires_pint,
     requires_scipy_or_netCDF4,
 )
-from xarray.tests.test_backends import create_tmp_file
+from xarray.tests.backends.base import create_tmp_file
 
 dask = pytest.importorskip("dask")
 pytest.importorskip("dask.array")
@@ -1210,6 +1210,18 @@ def test_auto_chunk_da(obj):
     assert actual.chunks == expected.chunks
 
 
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_partial_auto_chunk_zero_len_dim(obj):
+    obj = obj.isel(x=[])
+    obj.chunk({"y": "auto"})
+
+
+@pytest.mark.parametrize("obj", [make_ds()])
+def test_partial_auto_chunk_zero_len_dim_variable(obj):
+    obj = obj.isel(x=[])["a"].variable
+    obj.chunk({"y": "auto"})
+
+
 def test_auto_chunk_da_cftime():
     yrs = np.arange(2000, 2120)
     cftime_dates = xr.date_range(
@@ -1223,6 +1235,20 @@ def test_auto_chunk_da_cftime():
     expected = da.data.rechunk({0: 10, 1: 120})
     np.testing.assert_array_equal(actual, expected)
     assert actual.chunks == expected.chunks
+
+
+@pytest.mark.parametrize(
+    ("chunks", "expected"),
+    [({"x": 2, "y": 3}, ((2,), (3,))), ({"x": 2}, ((2,), (1, 1, 1)))],
+    ids=lambda x: f"{x}",
+)
+def test_rechunk_multi_dimensional_da_cftime(chunks, expected):
+    times = xr.date_range("2000", periods=6, use_cftime=True)
+    times = times.to_numpy().reshape((2, 3))
+    da = xr.DataArray(times, dims=["x", "y"])
+    da = da.chunk({"x": 1, "y": 1})
+    result = da.chunk(chunks).chunks
+    assert result == expected
 
 
 def test_map_blocks_error(map_da, map_ds):
@@ -1392,6 +1418,8 @@ def test_map_blocks_change_name(map_da):
     assert_identical(actual, expected)
 
 
+# filling integer variables with NaN is intentional
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_kwargs(obj):
     expected = xr.full_like(obj, fill_value=np.nan)

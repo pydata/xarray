@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from itertools import starmap
-from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, get_args, overload
+from typing import TYPE_CHECKING, Any, Final, get_args, overload
 
 import numpy as np
 import pandas as pd
@@ -140,7 +140,7 @@ IndexesToAlign = dict[MatchingIndexKey, Index]
 IndexVarsToAlign = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
 
-class Aligner(Generic[T_Alignable]):
+class Aligner[T_Alignable: Alignable]:
     """Implements all the complex logic for the re-indexing and alignment of Xarray
     objects.
 
@@ -415,11 +415,22 @@ class Aligner(Generic[T_Alignable]):
                 if name in new_indexes:
                     other_idx = new_indexes[name]
                     other_var = new_index_vars[name]
-                    raise AlignmentError(
-                        f"cannot align objects on coordinate {name!r} because of conflicting indexes\n"
-                        f"first index: {idx!r}\nsecond index: {other_idx!r}\n"
-                        f"first variable: {var!r}\nsecond variable: {other_var!r}\n"
-                    )
+                    # `idx` and `other_idx` may be genuinely equal (e.g., a
+                    # multi-dimensional CoordinateTransformIndex covering the same
+                    # grid) yet fall into different `MatchingIndexKey` groups because
+                    # their associated coordinate variables have a different `dims`
+                    # order (e.g. one object was transposed). Only raise once we know
+                    # they are not actually equal.
+                    if not indexes_all_equal(
+                        [(idx, {name: var}), (other_idx, {name: other_var})],
+                        self.exclude_dims,
+                    ):
+                        raise AlignmentError(
+                            f"cannot align objects on coordinate {name!r} because of conflicting indexes\n"
+                            f"first index: {idx!r}\nsecond index: {other_idx!r}\n"
+                            f"first variable: {var!r}\nsecond variable: {other_var!r}\n"
+                        )
+                    continue
                 new_indexes[name] = idx
                 new_index_vars[name] = var
 
@@ -667,15 +678,8 @@ class Aligner(Generic[T_Alignable]):
             self.reindex_all()
 
 
-T_Obj1 = TypeVar("T_Obj1", bound="Alignable")
-T_Obj2 = TypeVar("T_Obj2", bound="Alignable")
-T_Obj3 = TypeVar("T_Obj3", bound="Alignable")
-T_Obj4 = TypeVar("T_Obj4", bound="Alignable")
-T_Obj5 = TypeVar("T_Obj5", bound="Alignable")
-
-
 @overload
-def align(
+def align[T_Obj1: Alignable](
     obj1: T_Obj1,
     /,
     *,
@@ -688,7 +692,7 @@ def align(
 
 
 @overload
-def align(
+def align[T_Obj1: Alignable, T_Obj2: Alignable](
     obj1: T_Obj1,
     obj2: T_Obj2,
     /,
@@ -702,7 +706,7 @@ def align(
 
 
 @overload
-def align(
+def align[T_Obj1: Alignable, T_Obj2: Alignable, T_Obj3: Alignable](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -717,7 +721,12 @@ def align(
 
 
 @overload
-def align(
+def align[
+    T_Obj1: Alignable,
+    T_Obj2: Alignable,
+    T_Obj3: Alignable,
+    T_Obj4: Alignable,
+](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -733,7 +742,13 @@ def align(
 
 
 @overload
-def align(
+def align[
+    T_Obj1: Alignable,
+    T_Obj2: Alignable,
+    T_Obj3: Alignable,
+    T_Obj4: Alignable,
+    T_Obj5: Alignable,
+](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -1125,10 +1140,12 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
     dims_map = {}
     for arg in args:
         for dim in arg.dims:
-            if dim not in common_coords and dim not in exclude:
+            if dim in exclude:
+                continue
+            if dim not in dims_map:
                 dims_map[dim] = arg.sizes[dim]
-                if dim in arg._indexes:
-                    common_coords.update(arg.xindexes.get_all_coords(dim))
+            if dim in arg._indexes and dim not in common_coords:
+                common_coords.update(arg.xindexes.get_all_coords(dim))
 
     return dims_map, common_coords
 
@@ -1173,19 +1190,19 @@ def _broadcast_helper(
 
 
 @overload
-def broadcast(
+def broadcast[T_Obj1: Alignable](
     obj1: T_Obj1, /, *, exclude: str | Iterable[Hashable] | None = None
 ) -> tuple[T_Obj1]: ...
 
 
 @overload
-def broadcast(
+def broadcast[T_Obj1: Alignable, T_Obj2: Alignable](
     obj1: T_Obj1, obj2: T_Obj2, /, *, exclude: str | Iterable[Hashable] | None = None
 ) -> tuple[T_Obj1, T_Obj2]: ...
 
 
 @overload
-def broadcast(
+def broadcast[T_Obj1: Alignable, T_Obj2: Alignable, T_Obj3: Alignable](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -1196,7 +1213,12 @@ def broadcast(
 
 
 @overload
-def broadcast(
+def broadcast[
+    T_Obj1: Alignable,
+    T_Obj2: Alignable,
+    T_Obj3: Alignable,
+    T_Obj4: Alignable,
+](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,
@@ -1208,7 +1230,13 @@ def broadcast(
 
 
 @overload
-def broadcast(
+def broadcast[
+    T_Obj1: Alignable,
+    T_Obj2: Alignable,
+    T_Obj3: Alignable,
+    T_Obj4: Alignable,
+    T_Obj5: Alignable,
+](
     obj1: T_Obj1,
     obj2: T_Obj2,
     obj3: T_Obj3,

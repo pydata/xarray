@@ -678,10 +678,6 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 
 @requires_bottleneck
-@pytest.mark.parametrize(
-    "use_cftime",
-    [False, pytest.param(True, marks=requires_cftime)],
-)
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3h", np.timedelta64(3, "h"), pd.to_timedelta("3h")]

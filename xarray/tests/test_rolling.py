@@ -13,7 +13,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     dask_array_api,
-    has_dask,
+    requires_bottleneck,
     requires_dask,
     requires_dask_ge_2024_11_0,
     requires_numbagg,
@@ -109,17 +109,17 @@ class TestDataArrayRolling:
         ):
             da.rolling(foo=2)
 
-    @requires_dask
+    @requires_bottleneck
     @pytest.mark.parametrize(
         "name", ("sum", "mean", "std", "min", "max", "median", "argmin", "argmax")
     )
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
-    @pytest.mark.parametrize("backend", ["numpy", "dask"], indirect=True)
     def test_rolling_wrapped_bottleneck(
         self, da, name, center, min_periods, compute_backend
     ) -> None:
-        bn = pytest.importorskip("bottleneck", minversion="1.1")
+        import bottleneck as bn
+
         # Test all bottleneck functions
         rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
@@ -152,8 +152,10 @@ class TestDataArrayRolling:
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
     @pytest.mark.parametrize("window", (7, 8))
-    @pytest.mark.parametrize("backend", ["dask"], indirect=True)
-    def test_rolling_wrapped_dask(self, da, name, center, min_periods, window) -> None:
+    def test_rolling_wrapped_dask(
+        self, da_numpy, name, center, min_periods, window
+    ) -> None:
+        da = da_numpy.chunk()
         # dask version
         rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
         actual = getattr(rolling_obj, name)().load()
@@ -177,11 +179,10 @@ class TestDataArrayRolling:
         actual = getattr(rolling_obj, name)().load()
         assert_allclose(actual, expected)
 
+    @requires_dask
     @pytest.mark.parametrize("center", (True, None))
     def test_rolling_wrapped_dask_nochunk(self, center) -> None:
         # GH:2113
-        pytest.importorskip("dask.array")
-
         da_day_clim = xr.DataArray(
             np.arange(1, 367), coords=[np.arange(1, 367)], dims="dayofyear"
         )
@@ -434,6 +435,62 @@ class TestDataArrayRolling:
         chunked_result = data.chunk({"x": 1}).rolling(x=3, min_periods=1).mean()
         assert chunked_result.dtype == unchunked_result.dtype
 
+    @requires_bottleneck
+    @requires_dask_ge_2024_11_0
+    @pytest.mark.parametrize(
+        "name, center, dtype",
+        [
+            pytest.param(
+                name,
+                center,
+                dtype,
+                marks=pytest.mark.skip(
+                    reason="centered bool bottleneck path fails for numpy-backed arrays"
+                )
+                if center and dtype is bool and name in ("std", "median")
+                else (),
+            )
+            for name in (
+                "sum",
+                "mean",
+                "std",
+                "var",
+                "min",
+                "max",
+                "median",
+                "argmin",
+                "argmax",
+            )
+            for center in (False, True)
+            for dtype in (bool, np.int8, np.int64)
+        ],
+    )
+    def test_rolling_bottleneck_dask_dtype_matches_numpy(
+        self, name, center, dtype
+    ) -> None:
+        raw = np.arange(100 * 4).reshape(100, 4)
+        data = raw % 3 == 0 if dtype is bool else raw.astype(dtype)
+        unchunked = DataArray(data, dims=("t", "a")).rolling(
+            t=72, min_periods=72, center=center
+        )
+        chunked = (
+            DataArray(data, dims=("t", "a"))
+            .chunk({"t": 40})
+            .rolling(t=72, min_periods=72, center=center)
+        )
+
+        with set_options(use_numbagg=False, use_bottleneck=True):
+            expected = getattr(unchunked, name)()
+            actual = getattr(chunked, name)()
+        actual_block = actual.data.blocks[0, 0].compute()
+        computed = actual.compute()
+
+        assert actual.dtype == expected.dtype
+        assert actual.data._meta.dtype == expected.dtype
+        assert actual_block.dtype == expected.dtype
+        assert computed.dtype == expected.dtype
+        assert_allclose(computed, expected)
+
     def test_rolling_mean_bool(self) -> None:
         bool_raster = DataArray(
             data=[0, 1, 1, 0, 1, 0],
@@ -448,6 +505,15 @@ class TestDataArrayRolling:
         result = bool_raster.rolling(x=3, center=True).mean()
         assert_allclose(result, expected)
 
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    def test_rolling_keepdims_warns(self, func) -> None:
+        da = DataArray(np.arange(10), dims="x")
+        with pytest.warns(
+            FutureWarning,
+            match="Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+        ):
+            getattr(da.rolling(x=3), func)(keepdims=True)
+
 
 @requires_numbagg
 class TestDataArrayRollingExp:
@@ -456,10 +522,9 @@ class TestDataArrayRollingExp:
         "window_type, window",
         [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]],
     )
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     @pytest.mark.parametrize("func", ["mean", "sum", "var", "std"])
-    def test_rolling_exp_runs(self, da, dim, window_type, window, func) -> None:
-        da = da.where(da > 0.2)
+    def test_rolling_exp_runs(self, da_numpy, dim, window_type, window, func) -> None:
+        da = da_numpy.where(da_numpy > 0.2)
 
         rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
         result = getattr(rolling_exp, func)()
@@ -470,9 +535,8 @@ class TestDataArrayRollingExp:
         "window_type, window",
         [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]],
     )
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-    def test_rolling_exp_mean_pandas(self, da, dim, window_type, window) -> None:
-        da = da.isel(a=0).where(lambda x: x > 0.2)
+    def test_rolling_exp_mean_pandas(self, da_numpy, dim, window_type, window) -> None:
+        da = da_numpy.isel(a=0).where(lambda x: x > 0.2)
 
         result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
         assert isinstance(result, DataArray)
@@ -487,14 +551,13 @@ class TestDataArrayRollingExp:
 
         assert_allclose(expected.variable, result.variable)
 
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     @pytest.mark.parametrize("func", ["mean", "sum"])
-    def test_rolling_exp_keep_attrs(self, da, func) -> None:
+    def test_rolling_exp_keep_attrs(self, da_numpy, func) -> None:
         attrs = {"attrs": "da"}
-        da.attrs = attrs
+        da_numpy.attrs = attrs
 
-        # Equivalent of `da.rolling_exp(time=10).mean`
-        rolling_exp_func = getattr(da.rolling_exp(time=10), func)
+        # Equivalent of `da_numpy.rolling_exp(time=10).mean`
+        rolling_exp_func = getattr(da_numpy.rolling_exp(time=10), func)
 
         # attrs are kept per default
         result = rolling_exp_func()
@@ -522,7 +585,7 @@ class TestDataArrayRollingExp:
             UserWarning,
             match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect.",
         ):
-            da.rolling_exp(time=10, keep_attrs=True)
+            da_numpy.rolling_exp(time=10, keep_attrs=True)
 
 
 class TestDatasetRolling:
@@ -651,37 +714,37 @@ class TestDatasetRolling:
             )
             assert_identical(one, two)
 
+    @requires_bottleneck
     @pytest.mark.parametrize(
         "name", ("sum", "mean", "std", "var", "min", "max", "median")
     )
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))
     @pytest.mark.parametrize("key", ("z1", "z2"))
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     def test_rolling_wrapped_bottleneck(
-        self, ds, name, center, min_periods, key, compute_backend
+        self, ds_numpy, name, center, min_periods, key, compute_backend
     ) -> None:
-        bn = pytest.importorskip("bottleneck", minversion="1.1")
+        import bottleneck as bn
 
         # Test all bottleneck functions
-        rolling_obj = ds.rolling(time=7, min_periods=min_periods)
+        rolling_obj = ds_numpy.rolling(time=7, min_periods=min_periods)
 
         func_name = f"move_{name}"
         actual = getattr(rolling_obj, name)()
         if key == "z1":  # z1 does not depend on 'Time' axis. Stored as it is.
-            expected = ds[key]
+            expected = ds_numpy[key]
         elif key == "z2":
             expected = getattr(bn, func_name)(
-                ds[key].values, window=7, axis=0, min_count=min_periods
+                ds_numpy[key].values, window=7, axis=0, min_count=min_periods
             )
         else:
             raise ValueError
         np.testing.assert_allclose(actual[key].values, expected)
 
         # Test center
-        rolling_obj = ds.rolling(time=7, center=center)
+        rolling_obj = ds_numpy.rolling(time=7, center=center)
         actual = getattr(rolling_obj, name)()["time"]
-        assert_allclose(actual, ds["time"])
+        assert_allclose(actual, ds_numpy["time"])
 
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
@@ -786,16 +849,25 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("ds", (1, 2), indirect=True)
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
-    @pytest.mark.parametrize("window", (1, 2, 3, 4))
     @pytest.mark.parametrize(
-        "name", ("sum", "mean", "std", "var", "min", "max", "median")
+        "name, window",
+        [
+            pytest.param(
+                name,
+                window,
+                marks=pytest.mark.skip(
+                    reason="std with window == 1 is unstable in bottleneck"
+                )
+                if name == "std" and window == 1
+                else (),
+            )
+            for name in ("sum", "mean", "std", "var", "min", "max", "median")
+            for window in (1, 2, 3, 4)
+        ],
     )
     def test_rolling_reduce(self, ds, center, min_periods, window, name) -> None:
         if min_periods is not None and window < min_periods:
             min_periods = window
-
-        if name == "std" and window == 1:
-            pytest.skip("std with window == 1 is unstable in bottleneck")
 
         rolling_obj = ds.rolling(time=window, center=center, min_periods=min_periods)
 
@@ -815,9 +887,8 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("center", (True, False))
     @pytest.mark.parametrize("min_periods", (None, 1))
     @pytest.mark.parametrize("name", ("sum", "max"))
-    @pytest.mark.parametrize("dask", (True, False))
-    def test_ndrolling_reduce(self, ds, center, min_periods, name, dask) -> None:
-        if dask and has_dask:
+    def test_ndrolling_reduce(self, ds, center, min_periods, name, use_dask) -> None:
+        if use_dask:
             ds = ds.chunk({"x": 4})
 
         rolling_obj = ds.rolling(time=4, x=3, center=center, min_periods=min_periods)
@@ -845,15 +916,14 @@ class TestDatasetRolling:
 
     @pytest.mark.parametrize("center", (True, False, (True, False)))
     @pytest.mark.parametrize("fill_value", (np.nan, 0.0))
-    @pytest.mark.parametrize("dask", (True, False))
-    def test_ndrolling_construct(self, center, fill_value, dask) -> None:
+    def test_ndrolling_construct(self, center, fill_value, use_dask) -> None:
         da = DataArray(
             np.arange(5 * 6 * 7).reshape(5, 6, 7).astype(float),
             dims=["x", "y", "z"],
             coords={"x": ["a", "b", "c", "d", "e"], "y": np.arange(6)},
         )
         ds = xr.Dataset({"da": da})
-        if dask and has_dask:
+        if use_dask:
             ds = ds.chunk({"x": 4})
 
         actual = ds.rolling(x=3, z=2, center=center).construct(
@@ -888,31 +958,36 @@ class TestDatasetRolling:
         expected = getattr(getattr(ds.rolling(time=4), name)().rolling(x=3), name)()
         assert_allclose(actual, expected)
 
+    @pytest.mark.parametrize("func", ["mean", "sum", "std"])
+    def test_rolling_keepdims_warns(self, func) -> None:
+        ds = Dataset({"da": ("x", np.arange(10))})
+        with pytest.warns(
+            FutureWarning,
+            match="Passing the 'keepdims' kwarg to reduction is not supported and will be ignored.",
+        ):
+            getattr(ds.rolling(x=3), func)(keepdims=True)
+
 
 @requires_numbagg
 class TestDatasetRollingExp:
-    @pytest.mark.parametrize(
-        "backend", ["numpy", pytest.param("dask", marks=requires_dask)], indirect=True
-    )
     def test_rolling_exp(self, ds) -> None:
         result = ds.rolling_exp(time=10, window_type="span").mean()
         assert isinstance(result, Dataset)
 
-    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-    def test_rolling_exp_keep_attrs(self, ds) -> None:
+    def test_rolling_exp_keep_attrs(self, ds_numpy) -> None:
         attrs_global = {"attrs": "global"}
         attrs_z1 = {"attr": "z1"}
 
-        ds.attrs = attrs_global
-        ds.z1.attrs = attrs_z1
+        ds_numpy.attrs = attrs_global
+        ds_numpy.z1.attrs = attrs_z1
 
         # attrs are kept per default
-        result = ds.rolling_exp(time=10).mean()
+        result = ds_numpy.rolling_exp(time=10).mean()
         assert result.attrs == attrs_global
         assert result.z1.attrs == attrs_z1
 
         # discard attrs
-        result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+        result = ds_numpy.rolling_exp(time=10).mean(keep_attrs=False)
         assert result.attrs == {}
         # TODO: from #8114 — this arguably should be empty, but `apply_ufunc` doesn't do
         # that at the moment. We should change in `apply_func` rather than
@@ -922,19 +997,19 @@ class TestDatasetRollingExp:
 
         # test discard attrs using global option
         with set_options(keep_attrs=False):
-            result = ds.rolling_exp(time=10).mean()
+            result = ds_numpy.rolling_exp(time=10).mean()
         assert result.attrs == {}
         # See above
         # assert result.z1.attrs == {}
 
         # keyword takes precedence over global option
         with set_options(keep_attrs=False):
-            result = ds.rolling_exp(time=10).mean(keep_attrs=True)
+            result = ds_numpy.rolling_exp(time=10).mean(keep_attrs=True)
         assert result.attrs == attrs_global
         assert result.z1.attrs == attrs_z1
 
         with set_options(keep_attrs=True):
-            result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+            result = ds_numpy.rolling_exp(time=10).mean(keep_attrs=False)
         assert result.attrs == {}
         # See above
         # assert result.z1.attrs == {}
@@ -943,4 +1018,4 @@ class TestDatasetRollingExp:
             UserWarning,
             match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect.",
         ):
-            ds.rolling_exp(time=10, keep_attrs=True)
+            ds_numpy.rolling_exp(time=10, keep_attrs=True)

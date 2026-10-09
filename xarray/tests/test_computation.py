@@ -20,12 +20,12 @@ from xarray.computation.apply_ufunc import (
     ordered_set_union,
     unified_dim_sizes,
 )
+from xarray.core.treenode import TreeIsomorphismError
 from xarray.core.utils import result_name
 from xarray.structure.alignment import broadcast
 from xarray.tests import (
     dask_array_api,
     dask_array_type,
-    has_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -122,6 +122,108 @@ def test_apply_identity() -> None:
     assert_identical(data_array, apply_identity(data_array.groupby("x")))
     assert_identical(dataset, apply_identity(dataset))
     assert_identical(dataset, apply_identity(dataset.groupby("x")))
+
+
+def test_apply_identity_datatree() -> None:
+    tree = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [1, 2])}, coords={"n": [10, 20]}),
+            "/child": xr.Dataset({"x": ("n", [3, 4])}),
+        },
+        name="tree",
+    )
+
+    actual = apply_ufunc(identity, tree)
+
+    assert_identical(tree, actual)
+
+
+def test_apply_datatree_with_core_dims_and_scalar() -> None:
+    tree = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [1, 2])}),
+            "/child": xr.Dataset({"x": ("n", [3, 4])}),
+        }
+    )
+    expected = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": 7}),
+            "/child": xr.Dataset({"x": 15}),
+        }
+    )
+
+    actual = apply_ufunc(
+        lambda values, factor, offset: values.sum(axis=-1) * factor + offset,
+        tree,
+        2,
+        input_core_dims=[["n"], []],
+        kwargs={"offset": 1},
+    )
+
+    assert_identical(expected, actual)
+
+
+def test_apply_non_isomorphic_datatrees() -> None:
+    left = xr.DataTree.from_dict({"/child": xr.Dataset({"x": 1})})
+    right = xr.DataTree.from_dict({"/other": xr.Dataset({"x": 2})})
+
+    with pytest.raises(
+        TreeIsomorphismError, match="children at root node do not match"
+    ):
+        apply_ufunc(operator.add, left, right)
+
+
+def test_apply_two_datatrees() -> None:
+    left = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [1, 2])}),
+            "/child": xr.Dataset({"x": ("n", [3, 4])}),
+        }
+    )
+    right = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [10, 20])}),
+            "/child": xr.Dataset({"x": ("n", [30, 40])}),
+        }
+    )
+    expected = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [11, 22])}),
+            "/child": xr.Dataset({"x": ("n", [33, 44])}),
+        }
+    )
+
+    actual = apply_ufunc(operator.add, left, right)
+
+    assert_identical(expected, actual)
+
+
+def test_apply_datatree_two_outputs() -> None:
+    tree = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset({"x": ("n", [1, 2])}),
+            "/child": xr.Dataset({"x": ("n", [3, 4])}),
+        },
+        name="tree",
+    )
+
+    actual_min, actual_max = apply_ufunc(
+        lambda values: (values.min(axis=-1), values.max(axis=-1)),
+        tree,
+        input_core_dims=[["n"]],
+        output_core_dims=[[], []],
+    )
+
+    expected_min = xr.DataTree.from_dict(
+        {"/": xr.Dataset({"x": 1}), "/child": xr.Dataset({"x": 3})},
+        name="tree",
+    )
+    expected_max = xr.DataTree.from_dict(
+        {"/": xr.Dataset({"x": 2}), "/child": xr.Dataset({"x": 4})},
+        name="tree",
+    )
+    assert_identical(expected_min, actual_min)
+    assert_identical(expected_max, actual_max)
 
 
 def add(a, b):
@@ -2006,11 +2108,7 @@ def test_output_wrong_dim_size() -> None:
     )
 
 
-@pytest.mark.parametrize("use_dask", [True, False])
 def test_dot(use_dask: bool) -> None:
-    if use_dask and not has_dask:
-        pytest.skip("test for dask.")
-
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
     c = np.arange(5 * 60).reshape(5, 60)
@@ -2135,12 +2233,8 @@ def test_dot(use_dask: bool) -> None:
     pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
-@pytest.mark.parametrize("use_dask", [True, False])
 def test_dot_align_coords(use_dask: bool) -> None:
     # GH 3694
-
-    if use_dask and not has_dask:
-        pytest.skip("test for dask.")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -2283,9 +2377,6 @@ def test_where_attrs() -> None:
 
 
 @pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
-)
-@pytest.mark.parametrize(
     ["x", "coeffs", "expected"],
     [
         pytest.param(
@@ -2419,8 +2510,6 @@ def test_polyval(
     expected: xr.DataArray | xr.Dataset,
 ) -> None:
     if use_dask:
-        if not has_dask:
-            pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
 
@@ -2431,9 +2520,6 @@ def test_polyval(
 
 
 @requires_cftime
-@pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
-)
 @pytest.mark.parametrize("date", ["1970-01-01", "0753-04-21"])
 def test_polyval_cftime(use_dask: bool, date: str) -> None:
     import cftime
@@ -2445,8 +2531,6 @@ def test_polyval_cftime(use_dask: bool, date: str) -> None:
     coeffs = xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]})
 
     if use_dask:
-        if not has_dask:
-            pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
 
@@ -2475,9 +2559,15 @@ def test_polyval_degree_dim_checks() -> None:
         xr.polyval(x, coeffs.assign_coords(degree=coeffs.degree.astype(float)))
 
 
-@pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
-)
+def test_polyval_timedelta_nat() -> None:
+    # NaT in a timedelta coordinate must propagate as NaN, not a huge sentinel value (GH #11462).
+    x = xr.DataArray(np.array([0, "NaT", 2], dtype="timedelta64[D]"), dims="x")
+    coeffs = xr.DataArray([2.0, 1.0], dims="degree", coords={"degree": [1, 0]})
+    actual = xr.polyval(x, coeffs)
+    assert np.isnan(actual.values[1])
+    assert not np.isnan(actual.values[[0, 2]]).any()
+
+
 @pytest.mark.parametrize(
     "x",
     [
@@ -2514,8 +2604,6 @@ def test_polyfit_polyval_integration(
 ) -> None:
     y.coords["x"] = x
     if use_dask:
-        if not has_dask:
-            pytest.skip("requires dask")
         y = y.chunk({"x": 2})
 
     fit = y.polyfit(dim="x", deg=2)
@@ -2524,7 +2612,6 @@ def test_polyfit_polyval_integration(
     xr.testing.assert_allclose(evaluated.variable, expected.variable)
 
 
-@pytest.mark.parametrize("use_dask", [False, True])
 @pytest.mark.parametrize(
     "a, b, ae, be, dim, axis",
     [
@@ -2626,8 +2713,6 @@ def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
     expected = np.cross(ae, be, axis=axis)
 
     if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
         a = a.chunk()
         b = b.chunk()
 

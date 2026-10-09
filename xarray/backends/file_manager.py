@@ -5,8 +5,8 @@ import threading
 import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMapping
-from contextlib import AbstractContextManager, contextmanager
-from typing import Any, Generic, Literal, TypeVar, cast
+from contextlib import AbstractContextManager, contextmanager, suppress
+from typing import Any, Literal, TypeVar, cast, override
 
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
@@ -14,11 +14,34 @@ from xarray.core import utils
 from xarray.core.options import OPTIONS
 from xarray.core.types import Closable, Lock
 
+# Files are pinned while in use inside CachingFileManager.acquire_context().
+# A pinned file evicted from FILE_CACHE by another thread is not closed right
+# away, as that thread may still be reading from it. Instead it is parked in
+# _EVICTED_PINNED until it is acquired again or the last user unpins it.
+_PIN_COUNTS: dict[Any, int] = {}
+_EVICTED_PINNED: dict[Any, Closable] = {}
+
+
+def _close_unless_pinned(key: Any, file: Closable) -> None:
+    with _PIN_LOCK:
+        if _PIN_COUNTS.get(key):
+            _EVICTED_PINNED[key] = file
+            return
+    file.close()
+
+
 # Global cache for storing open files.
 FILE_CACHE: LRUCache[Any, Closable] = LRUCache(
-    maxsize=OPTIONS["file_cache_maxsize"], on_evict=lambda k, v: v.close()
+    maxsize=OPTIONS["file_cache_maxsize"], on_evict=_close_unless_pinned
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
+
+# Guards the pin state. It is the reentrant lock of FILE_CACHE, as evicting a
+# file from the cache updates the pin state while holding the cache's lock, and
+# garbage collection can run a manager's __del__, which closes its file and
+# removes it from the cache, while a thread holds either. Separate locks could
+# deadlock there.
+_PIN_LOCK = FILE_CACHE._lock
 
 T_File = TypeVar("T_File", bound=Closable)
 
@@ -27,7 +50,36 @@ REF_COUNTS: dict[Any, int] = {}
 _OMIT_MODE = utils.ReprObject("<omitted>")
 
 
-class FileManager(Generic[T_File]):
+def _close_cached_file[T: Closable](cache: MutableMapping[Any, T], key: Any) -> None:
+    """Close the file cached under ``key``, also if it was evicted while pinned.
+
+    The caller must hold the lock of the file's manager.
+    """
+    file = cache.pop(key, None)
+    with _PIN_LOCK:
+        evicted = _EVICTED_PINNED.pop(key, None)
+    for f in (file, evicted):
+        if f is not None:
+            f.close()
+
+
+def _close_when_unlocked[T: Closable](
+    cache: MutableMapping[Any, T],
+    key: Any,
+    lock: Lock,
+    ref_counts: Mapping[Any, int],
+) -> None:
+    """Close the file cached under ``key`` once ``lock`` is free.
+
+    Runs in a separate thread, see ``CachingFileManager.__del__``.
+    """
+    with lock:
+        # a new manager for the same file, e.g. unpickled, may use it by now
+        if key not in ref_counts:
+            _close_cached_file(cache, key)
+
+
+class FileManager[T_File: Closable]:
     """Manager for acquiring and closing a file object.
 
     Use FileManager subclasses (CachingFileManager in particular) on backend
@@ -89,7 +141,7 @@ class CachingFileManager(FileManager[T_File]):
         *args: Any,
         mode: Any = _OMIT_MODE,
         kwargs: Mapping[str, Any] | None = None,
-        lock: Lock | None | Literal[False] = None,
+        lock: Lock | Literal[False] | None = None,
         cache: MutableMapping[Any, T_File] | None = None,
         manager_id: Hashable | None = None,
         ref_counts: dict[Any, int] | None = None,
@@ -183,6 +235,7 @@ class CachingFileManager(FileManager[T_File]):
         else:
             yield
 
+    @override
     def acquire(self, needs_lock: bool = True) -> T_File:
         """Acquire a file object from the manager.
 
@@ -202,15 +255,39 @@ class CachingFileManager(FileManager[T_File]):
         return file
 
     @contextmanager
+    @override
     def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
-        """Context manager for acquiring a file."""
-        file, cached = self._acquire_with_cache_info(needs_lock)
+        """Context manager for acquiring a file.
+
+        The file stays open until the context exits, even if it is evicted
+        from the cache in the meantime.
+        """
+        with self._pinned():
+            file, cached = self._acquire_with_cache_info(needs_lock)
+            try:
+                yield file
+            except Exception:
+                if not cached:
+                    self.close(needs_lock)
+                raise
+
+    @contextmanager
+    def _pinned(self) -> Iterator[None]:
+        """Keep the file open while in use, even if it is evicted meanwhile."""
+        with _PIN_LOCK:
+            _PIN_COUNTS[self._key] = _PIN_COUNTS.get(self._key, 0) + 1
         try:
-            yield file
-        except Exception:
-            if not cached:
-                self.close(needs_lock)
-            raise
+            yield
+        finally:
+            with _PIN_LOCK:
+                count = _PIN_COUNTS.pop(self._key) - 1
+                if count:
+                    _PIN_COUNTS[self._key] = count
+                    file = None
+                else:
+                    file = _EVICTED_PINNED.pop(self._key, None)
+            if file is not None:
+                file.close()
 
     def _acquire_with_cache_info(self, needs_lock: bool = True) -> tuple[T_File, bool]:
         """Acquire a file, returning the file and whether it was cached."""
@@ -218,6 +295,13 @@ class CachingFileManager(FileManager[T_File]):
             try:
                 file = self._cache[self._key]
             except KeyError:
+                with _PIN_LOCK:
+                    evicted = _EVICTED_PINNED.pop(self._key, None)
+                if evicted is not None:
+                    # still open because it is in use, so reuse it
+                    file = cast(T_File, evicted)
+                    self._cache[self._key] = file
+                    return file, True
                 kwargs = self._kwargs
                 if self._mode is not _OMIT_MODE:
                     kwargs = kwargs.copy()
@@ -231,15 +315,13 @@ class CachingFileManager(FileManager[T_File]):
             else:
                 return file, True
 
+    @override
     def close(self, needs_lock: bool = True) -> None:
         """Explicitly close any associated file object (if necessary)."""
         # TODO: remove needs_lock if/when we have a reentrant lock in
         # dask.distributed: https://github.com/dask/dask/issues/3832
         with self._optional_lock(needs_lock):
-            default = None
-            file = self._cache.pop(self._key, default)
-            if file is not None:
-                file.close()
+            _close_cached_file(self._cache, self._key)
 
     def __del__(self) -> None:
         # If we're the only CachingFileManger referencing an unclosed file,
@@ -253,11 +335,30 @@ class CachingFileManager(FileManager[T_File]):
 
         if not ref_count and self._key in self._cache:
             if acquire(self._lock, blocking=False):
-                # Only close files if we can do so immediately.
                 try:
                     self.close(needs_lock=False)
                 finally:
                     self._lock.release()
+            else:
+                # Another thread holds the lock. Waiting for it here could
+                # deadlock, as garbage collection can run __del__ anywhere, so
+                # close the file in a separate thread once the lock is free.
+                # Leaving it open is no option: with several files open on the
+                # same path, closing one of them can crash HDF5 later (GH11088).
+                # At interpreter shutdown, no thread can be started anymore, and
+                # the file is left open.
+                with suppress(RuntimeError):
+                    threading.Thread(
+                        target=_close_when_unlocked,
+                        args=(
+                            self._cache,
+                            self._key,
+                            self._lock,
+                            self._ref_counter._counts,
+                        ),
+                        name="xarray-close-file",
+                        daemon=True,
+                    ).start()
 
             if OPTIONS["warn_for_unclosed_files"]:
                 warnings.warn(
@@ -355,7 +456,7 @@ class PickleableFileManager(FileManager[T_File]):
         opener: Callable[..., T_File],
         *args: Any,
         mode: Any = _OMIT_MODE,
-        lock: Lock | None | Literal[False] = None,
+        lock: Lock | Literal[False] | None = None,
         kwargs: Mapping[str, Any] | None = None,
     ):
         kwargs = {} if kwargs is None else dict(kwargs)
@@ -383,15 +484,18 @@ class PickleableFileManager(FileManager[T_File]):
         assert file is not None
         return file
 
+    @override
     def acquire(self, needs_lock: bool = True) -> T_File:
         del needs_lock  # unused
         return self._get_unclosed_file()
 
     @contextmanager
+    @override
     def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
         del needs_lock  # unused
         yield self._get_unclosed_file()
 
+    @override
     def close(self, needs_lock: bool = True) -> None:
         if not self._closed:
             file = self._get_unclosed_file()
@@ -458,7 +562,7 @@ class DummyFileManager(FileManager[T_File]):
         value: T_File,
         *,
         close: Callable[[], None] | None = None,
-        lock: Lock | None | Literal[False] = None,
+        lock: Lock | Literal[False] | None = None,
     ):
         if close is None:
             close = value.close
@@ -466,15 +570,18 @@ class DummyFileManager(FileManager[T_File]):
         self._value = value
         self._close = close
 
+    @override
     def acquire(self, needs_lock: bool = True) -> T_File:
         del needs_lock  # unused
         return self._value
 
     @contextmanager
+    @override
     def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
         del needs_lock  # unused
         yield self._value
 
+    @override
     def close(self, needs_lock: bool = True) -> None:
         if needs_lock and self._lock:
             with self._lock:
