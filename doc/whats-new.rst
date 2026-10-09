@@ -48,6 +48,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix dark mode detection in VS Code by adding VS Code CSS variable support to the HTML representation CSS. (:pull:`11284`).
+  By `Maksymilian Wasilewski <https://github.com/maksmondeo>`_.
 - Fix ``UnsortedIndexError`` when selecting a slice of tuples, e.g.
   ``da.stack(z=["x", "y"]).sel(z=slice((0, "b"), (1, "a")))``, from a dimension
   created by :py:meth:`Dataset.stack` or :py:meth:`DataArray.stack`. Their
@@ -684,8 +686,6 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
-- Fix dark mode detection in VS Code by adding VS Code CSS variable support to the HTML representation CSS. (:pull:`11284`).
-  By `Maksymilian Wasilewski <https://github.com/maksmondeo>`_.
 - Fix multi-coordinate indexes being dropped in :py:meth:`DataArray._replace_maybe_drop_dims`
   (e.g. after reducing over an unrelated dimension) and in :py:meth:`Dataset._copy_listed`
   (e.g. when subsetting a Dataset by variable names). Both paths now consult
