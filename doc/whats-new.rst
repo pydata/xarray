@@ -201,6 +201,11 @@ Internal Changes
   :py:class:`DataArray` and ``np.add(da, ds)`` as :py:class:`Dataset`
   instead of ``np.ndarray`` (:issue:`6524`, :issue:`8388`, :pull:`11667`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Remove the unused ``xarray/namedarray/dtypes.py``, a stale copy of
+  ``xarray/core/dtypes.py``, exclude the code generators in ``xarray/util``
+  from the test coverage and test ``xarray.tutorial`` without network access
+  (:pull:`XXXXX`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
