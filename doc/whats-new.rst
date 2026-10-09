@@ -21,6 +21,16 @@ New Features
   type defaults to ``Hashable``, so a bare ``Variable`` annotation means
   ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add :py:func:`~xarray.show_backends` to print the available IO backends,
+  including those of other packages, and in which order they are tried
+  (:issue:`6577`, :pull:`11700`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_ and
+  `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:func:`~xarray.show_versions` displays formatted tables in Jupyter
+  notebooks and gained a ``markdown`` option to print markdown that can be pasted
+  as is into GitHub issues. Package versions are read from the
+  package metadata, so the packages are no longer imported (:pull:`11700`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Breaking Changes

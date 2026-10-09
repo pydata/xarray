@@ -151,6 +151,7 @@ module = [
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
+  "IPython.*",
   "iris.*",
   "mpl_toolkits.*",
   "nc_time_axis.*",
