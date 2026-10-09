@@ -1246,7 +1246,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
                     # all associated levels properly.
                     coordinates_from_variable(
                         IndexVariable(
-                            dims=grouper.name,
+                            dims=(grouper.name,),
                             data=output_index,
                             attrs=grouper.codes.attrs,
                         )
@@ -1946,6 +1946,9 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             coords="different",
             compat="equals",
             join="outer",
+            # the index is created by assigning the group coordinates below, and
+            # creating it here warns if the group is a data variable (GH9890)
+            create_index_for_new_dim=False,
         )
         combined = _maybe_reorder(combined, dim, positions, N=self.group1d.size)
         # assign coord when the applied function does not return that coord

@@ -59,7 +59,7 @@
     da = xr.DataArray([1.0], dims="x")
     ds = xr.Dataset({"a": da})
 
-    reveal_type(unary(v))  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(unary(v))  # N: Revealed type is "xarray.core.variable.Variable[str]"
     reveal_type(unary(da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type(unary(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
 
@@ -74,7 +74,7 @@
     da = xr.DataArray([1.0], dims="x")
     ds = xr.Dataset({"a": da})
 
-    reveal_type(binary(v, v))  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(binary(v, v))  # N: Revealed type is "xarray.core.variable.Variable[str]"
     reveal_type(binary(da, da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type(binary(ds, ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
 
@@ -135,7 +135,7 @@
     da = xr.DataArray([1.0], dims="x")
     ds = xr.Dataset({"a": da})
 
-    reveal_type(np.isnan(v))  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(np.isnan(v))  # N: Revealed type is "xarray.core.variable.Variable[str]"
     reveal_type(np.isnan(da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type(np.isnan(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
     reveal_type(np.exp(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
