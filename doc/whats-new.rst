@@ -52,6 +52,17 @@ Bug Fixes
   ``datetime64`` or ``timedelta64`` dtype now reuses the stored ``units`` and
   ``calendar``, instead of writing the appended values with default units
   (:issue:`10639`).
+- Fix ``UnsortedIndexError`` when selecting a slice of tuples, e.g.
+  ``da.stack(z=["x", "y"]).sel(z=slice((0, "b"), (1, "a")))``, from a dimension
+  created by :py:meth:`Dataset.stack` or :py:meth:`DataArray.stack`. Their
+  MultiIndex claimed not to be sorted at all (:pull:`11694`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix a bug where assigning a named ``pandas.Series`` as a coordinate
+  (e.g. ``da.assign_coords(new_coord=series)``) ignored the Series'
+  index name and used the keyword argument as the dimension instead,
+  causing a confusing ``CoordinateValidationError``
+  (:issue:`9284`, :pull:`11664`).
+  By `Anirban Mandal <https://github.com/CoderAnirban71>`_.
 - Fix :py:class:`~xarray.Variable` methods with dimension names that are not
   strings: :py:meth:`Variable.concat` failed for any such dimension, and
   ``shift``, ``roll``, boolean ``isel`` and ``IndexVariable.to_index`` failed
@@ -93,6 +104,13 @@ Bug Fixes
   for the threaded scheduler are now reentrant. The global locks also no longer
   turn into separate locks when datasets are sent to another process, e.g. to a
   dask distributed worker (:issue:`9779`, :issue:`11088`, :pull:`11629`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix occasional segfaults when reading netCDF4 files with variable-length
+  strings with :py:func:`open_mfdataset` and ``parallel=True`` on a dask
+  distributed cluster. Files whose manager was garbage collected while another
+  thread held the lock stayed open, and with several files open on the same
+  path, HDF5 can crash once one of them is closed. These files are now closed
+  as soon as the lock is free (:issue:`11088`, :pull:`11692`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`Dataset.copy` now preserves its resource-closing callback, so a
   copied file-backed dataset can release a file reopened after the original
@@ -144,6 +162,19 @@ Performance
   ones instead of sorting them. This avoids copying the data before
   interpolating (:issue:`9758`, :pull:`11658`).
   By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+- :py:meth:`Dataset.unstack` and :py:meth:`DataArray.unstack` reshape the data
+  instead of copying it when the MultiIndex contains every combination of its
+  levels in order, e.g. after :py:meth:`Dataset.stack`. The unstacked data is
+  then a view of the original data. In that case, the expensive cleaning and
+  uniqueness checks of the MultiIndex are skipped as well (:issue:`11455`,
+  :pull:`11688`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Guessing the engine of a local file in :py:func:`open_dataset` and
+  :py:func:`open_mfdataset` now only reads its magic number, instead of a
+  whole buffer of the size of the filesystem block size. This speeds up opening
+  many files on parallel filesystems like Lustre or GPFS (:issue:`7697`,
+  :pull:`11687`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Internal Changes
