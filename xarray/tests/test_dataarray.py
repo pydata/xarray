@@ -6488,7 +6488,7 @@ class TestReduce2D(TestReduce):
             assert_identical(result3[key], expected3[key])
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_idxmin_dim(
         self,
@@ -6512,6 +6512,9 @@ class TestReduce2D(TestReduce):
         expected0list = [coordarr.isel(x=indi, drop=True) for indi in minindex]
         expected0 = {"x": xr.concat(expected0list, dim=ar.coords["y"])}
         expected0["x"].name = "x"
+        expected0[
+            "x"
+        ].attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result0 = ar.idxmin(dim=["x"])
         for key in expected0:
@@ -6530,7 +6533,7 @@ class TestReduce2D(TestReduce):
         expected2list = [coordarr.isel(x=indi, drop=True) for indi in minindex]
         expected2 = {"x": xr.concat(expected2list, dim=ar.coords["y"])}
         expected2["x"].name = "x"
-        expected2["x"].attrs = {}
+        expected2["x"].attrs = self.attrs
 
         result2 = ar.idxmin(dim=["x"], skipna=False)
 
@@ -6541,16 +6544,16 @@ class TestReduce2D(TestReduce):
         ar_expected0 = ar.sel(expected0)
         expected3 = {
             "y": ar_expected0.idxmin(),
-            "x": ar.coords["x"][minindex[ar_expected0.argmin().item()]].reset_coords(
-                drop=True
-            ),
+            "x": ar.coords["x"][minindex[ar_expected0.argmin().item()]]
+            .reset_coords(drop=True)
+            .assign_attrs(self.attrs),
         }
 
         for key in expected3:
             assert_identical(result3[key], expected3[key])
 
     @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+        "ignore:Behaviour of argmin/argmax with neither dim nor :FutureWarning"
     )
     def test_idxmax_dim(
         self,
@@ -6574,6 +6577,9 @@ class TestReduce2D(TestReduce):
         expected0list = [coordarr.isel(x=indi, drop=True) for indi in maxindex]
         expected0 = {"x": xr.concat(expected0list, dim=ar.coords["y"])}
         expected0["x"].name = "x"
+        expected0[
+            "x"
+        ].attrs = self.attrs  # Default keeps attrs for reduction operations
 
         result0 = ar.idxmax(dim=["x"])
         for key in expected0:
@@ -6592,7 +6598,7 @@ class TestReduce2D(TestReduce):
         expected2list = [coordarr.isel(x=indi, drop=True) for indi in maxindex]
         expected2 = {"x": xr.concat(expected2list, dim=ar.coords["y"])}
         expected2["x"].name = "x"
-        expected2["x"].attrs = {}
+        expected2["x"].attrs = self.attrs
 
         result2 = ar.idxmax(dim=["x"], skipna=False)
 
@@ -6603,9 +6609,9 @@ class TestReduce2D(TestReduce):
         ar_expected0 = ar.sel(expected0)
         expected3 = {
             "y": ar_expected0.idxmax(),
-            "x": ar.coords["x"][maxindex[ar_expected0.argmax().item()]].reset_coords(
-                drop=True
-            ),
+            "x": ar.coords["x"][maxindex[ar_expected0.argmax().item()]]
+            .reset_coords(drop=True)
+            .assign_attrs(self.attrs),
         }
 
         for key in expected3:
@@ -7311,7 +7317,12 @@ class TestReduce3D(TestReduce):
         result0 = ar.idxmin(dim=["x"])
         assert isinstance(result0, dict)
         expected0 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("y", "z"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value],
+                dims=("y", "z"),
+                name=key,
+                attrs=self.attrs,
+            )
             for key, value in minindices_x.items()
         }
         for key in expected0:
@@ -7320,7 +7331,12 @@ class TestReduce3D(TestReduce):
         result1 = ar.idxmin(dim=["y"])
         assert isinstance(result1, dict)
         expected1 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("x", "z"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value],
+                dims=("x", "z"),
+                name=key,
+                attrs=self.attrs,
+            )
             for key, value in minindices_y.items()
         }
         for key in expected1:
@@ -7329,7 +7345,12 @@ class TestReduce3D(TestReduce):
         result2 = ar.idxmin(dim=["z"])
         assert isinstance(result2, dict)
         expected2 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("x", "y"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value],
+                dims=("x", "y"),
+                name=key,
+                attrs=self.attrs,
+            )
             for key, value in minindices_z.items()
         }
         for key in expected2:
@@ -7338,7 +7359,9 @@ class TestReduce3D(TestReduce):
         result3 = ar.idxmin(dim=("x", "y"))
         assert isinstance(result3, dict)
         expected3 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("z"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value], dims=("z"), name=key, attrs=self.attrs
+            )
             for key, value in minindices_xy.items()
         }
         for key in expected3:
@@ -7347,7 +7370,9 @@ class TestReduce3D(TestReduce):
         result4 = ar.idxmin(dim=("x", "z"))
         assert isinstance(result4, dict)
         expected4 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("y"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value], dims=("y"), name=key, attrs=self.attrs
+            )
             for key, value in minindices_xz.items()
         }
         for key in expected4:
@@ -7356,7 +7381,9 @@ class TestReduce3D(TestReduce):
         result5 = ar.idxmin(dim=("y", "z"))
         assert isinstance(result5, dict)
         expected5 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("x"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value], dims=("x"), name=key, attrs=self.attrs
+            )
             for key, value in minindices_yz.items()
         }
         for key in expected5:
@@ -7365,7 +7392,7 @@ class TestReduce3D(TestReduce):
         result6 = ar.idxmin(...)
         assert isinstance(result6, dict)
         expected6 = {
-            key: xr.DataArray(ar.coords[key].values[value], name=key)
+            key: xr.DataArray(ar.coords[key].values[value], name=key, attrs=self.attrs)
             for key, value in minindices_xyz.items()
         }
         for key in expected6:
@@ -7381,7 +7408,7 @@ class TestReduce3D(TestReduce):
             for key in minindices_x
         }
         expected7 = {
-            key: xr.DataArray(value, dims=("y", "z"))
+            key: xr.DataArray(value, dims=("y", "z"), attrs=self.attrs)
             for key, value in minindices_x.items()
         }
 
@@ -7399,7 +7426,7 @@ class TestReduce3D(TestReduce):
             for key in minindices_y
         }
         expected8 = {
-            key: xr.DataArray(value, dims=("x", "z"))
+            key: xr.DataArray(value, dims=("x", "z"), attrs=self.attrs)
             for key, value in minindices_y.items()
         }
 
@@ -7417,7 +7444,7 @@ class TestReduce3D(TestReduce):
             for key in minindices_z
         }
         expected9 = {
-            key: xr.DataArray(value, dims=("x", "y"))
+            key: xr.DataArray(value, dims=("x", "y"), attrs=self.attrs)
             for key, value in minindices_z.items()
         }
 
@@ -7435,7 +7462,7 @@ class TestReduce3D(TestReduce):
             for key in minindices_xy
         }
         expected10 = {
-            key: xr.DataArray(value, dims="z") for key, value in minindices_xy.items()
+            key: xr.DataArray(value, dims="z", attrs=self.attrs) for key, value in minindices_xy.items()
         }
 
         result10 = ar.idxmin(dim=("x", "y"), skipna=False)
@@ -7452,7 +7479,7 @@ class TestReduce3D(TestReduce):
             for key in minindices_xz
         }
         expected11 = {
-            key: xr.DataArray(value, dims="y") for key, value in minindices_xz.items()
+            key: xr.DataArray(value, dims="y", attrs=self.attrs) for key, value in minindices_xz.items()
         }
 
         result11 = ar.idxmin(dim=("x", "z"), skipna=False)
@@ -7469,7 +7496,7 @@ class TestReduce3D(TestReduce):
             for key in minindices_yz
         }
         expected12 = {
-            key: xr.DataArray(value, dims="x") for key, value in minindices_yz.items()
+            key: xr.DataArray(value, dims="x", attrs=self.attrs) for key, value in minindices_yz.items()
         }
 
         result12 = ar.idxmin(dim=("y", "z"), skipna=False)
@@ -7485,7 +7512,7 @@ class TestReduce3D(TestReduce):
             )
             for key in minindices_xyz
         }
-        expected13 = {key: xr.DataArray(value) for key, value in minindices_xyz.items()}
+        expected13 = {key: xr.DataArray(value, attrs=self.attrs) for key, value in minindices_xyz.items()}
 
         result13 = ar.idxmin(..., skipna=False)
         assert isinstance(result13, dict)
@@ -7544,7 +7571,12 @@ class TestReduce3D(TestReduce):
         result0 = ar.idxmax(dim=["x"])
         assert isinstance(result0, dict)
         expected0 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("y", "z"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value],
+                dims=("y", "z"),
+                name=key,
+                attrs=self.attrs,
+            )
             for key, value in maxindices_x.items()
         }
         for key in expected0:
@@ -7553,7 +7585,12 @@ class TestReduce3D(TestReduce):
         result1 = ar.idxmax(dim=["y"])
         assert isinstance(result1, dict)
         expected1 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("x", "z"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value],
+                dims=("x", "z"),
+                name=key,
+                attrs=self.attrs,
+            )
             for key, value in maxindices_y.items()
         }
         for key in expected1:
@@ -7562,7 +7599,12 @@ class TestReduce3D(TestReduce):
         result2 = ar.idxmax(dim=["z"])
         assert isinstance(result2, dict)
         expected2 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("x", "y"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value],
+                dims=("x", "y"),
+                name=key,
+                attrs=self.attrs,
+            )
             for key, value in maxindices_z.items()
         }
         for key in expected2:
@@ -7571,7 +7613,9 @@ class TestReduce3D(TestReduce):
         result3 = ar.idxmax(dim=("x", "y"))
         assert isinstance(result3, dict)
         expected3 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("z"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value], dims=("z"), name=key, attrs=self.attrs
+            )
             for key, value in maxindices_xy.items()
         }
         for key in expected3:
@@ -7580,7 +7624,9 @@ class TestReduce3D(TestReduce):
         result4 = ar.idxmax(dim=("x", "z"))
         assert isinstance(result4, dict)
         expected4 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("y"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value], dims=("y"), name=key, attrs=self.attrs
+            )
             for key, value in maxindices_xz.items()
         }
         for key in expected4:
@@ -7589,7 +7635,9 @@ class TestReduce3D(TestReduce):
         result5 = ar.idxmax(dim=("y", "z"))
         assert isinstance(result5, dict)
         expected5 = {
-            key: xr.DataArray(ar.coords[key].values[value], dims=("x"), name=key)
+            key: xr.DataArray(
+                ar.coords[key].values[value], dims=("x"), name=key, attrs=self.attrs
+            )
             for key, value in maxindices_yz.items()
         }
         for key in expected5:
@@ -7598,7 +7646,7 @@ class TestReduce3D(TestReduce):
         result6 = ar.idxmax(...)
         assert isinstance(result6, dict)
         expected6 = {
-            key: xr.DataArray(ar.coords[key].values[value], name=key)
+            key: xr.DataArray(ar.coords[key].values[value], name=key, attrs=self.attrs)
             for key, value in maxindices_xyz.items()
         }
         for key in expected6:
@@ -7614,7 +7662,7 @@ class TestReduce3D(TestReduce):
             for key in maxindices_x
         }
         expected7 = {
-            key: xr.DataArray(value, dims=("y", "z"))
+            key: xr.DataArray(value, dims=("y", "z"), attrs=self.attrs)
             for key, value in maxindices_x.items()
         }
 
@@ -7632,7 +7680,7 @@ class TestReduce3D(TestReduce):
             for key in maxindices_y
         }
         expected8 = {
-            key: xr.DataArray(value, dims=("x", "z"))
+            key: xr.DataArray(value, dims=("x", "z"), attrs=self.attrs)
             for key, value in maxindices_y.items()
         }
 
@@ -7650,7 +7698,7 @@ class TestReduce3D(TestReduce):
             for key in maxindices_z
         }
         expected9 = {
-            key: xr.DataArray(value, dims=("x", "y"))
+            key: xr.DataArray(value, dims=("x", "y"), attrs=self.attrs)
             for key, value in maxindices_z.items()
         }
 
@@ -7668,7 +7716,7 @@ class TestReduce3D(TestReduce):
             for key in maxindices_xy
         }
         expected10 = {
-            key: xr.DataArray(value, dims="z") for key, value in maxindices_xy.items()
+            key: xr.DataArray(value, dims="z", attrs=self.attrs) for key, value in maxindices_xy.items()
         }
 
         result10 = ar.idxmax(dim=("x", "y"), skipna=False)
@@ -7685,7 +7733,7 @@ class TestReduce3D(TestReduce):
             for key in maxindices_xz
         }
         expected11 = {
-            key: xr.DataArray(value, dims="y") for key, value in maxindices_xz.items()
+            key: xr.DataArray(value, dims="y", attrs=self.attrs) for key, value in maxindices_xz.items()
         }
 
         result11 = ar.idxmax(dim=("x", "z"), skipna=False)
@@ -7702,7 +7750,7 @@ class TestReduce3D(TestReduce):
             for key in maxindices_yz
         }
         expected12 = {
-            key: xr.DataArray(value, dims="x") for key, value in maxindices_yz.items()
+            key: xr.DataArray(value, dims="x", attrs=self.attrs) for key, value in maxindices_yz.items()
         }
 
         result12 = ar.idxmax(dim=("y", "z"), skipna=False)
@@ -7718,7 +7766,7 @@ class TestReduce3D(TestReduce):
             )
             for key in maxindices_xyz
         }
-        expected13 = {key: xr.DataArray(value) for key, value in maxindices_xyz.items()}
+        expected13 = {key: xr.DataArray(value, attrs=self.attrs) for key, value in maxindices_xyz.items()}
 
         result13 = ar.idxmax(..., skipna=False)
         assert isinstance(result13, dict)
