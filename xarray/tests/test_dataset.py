@@ -6502,6 +6502,18 @@ class TestDataset:
         actual = ds.idxmax()
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("func", ["idxmin", "idxmax"])
+    @pytest.mark.parametrize("dim", [["x"], ("x", "y"), ...])
+    def test_idxminmax_multiple_dims_raises(self, func, dim) -> None:
+        ds = Dataset(
+            {"a": (("x", "y"), [[1, 2], [3, 0]])}, coords={"x": [0, 1], "y": [0, 1]}
+        )
+        with pytest.raises(ValueError, match="returns a dict"):
+            getattr(ds, func)(dim)
+        # without dim, multidimensional variables need a dim
+        with pytest.raises(ValueError, match="Must supply 'dim'"):
+            getattr(ds, func)()
+
         expected = Dataset({"x": b"a"})
         ds = Dataset({"x": ("y", np.array(["a", "b"], "S1"))})
         actual = ds.min()
