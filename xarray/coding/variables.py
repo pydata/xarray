@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 from collections.abc import Hashable, MutableMapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, override
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,7 @@ from xarray.coding.common import (
 )
 from xarray.coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.core import dtypes, duck_array_ops, indexing
+from xarray.core.types import Self
 from xarray.core.variable import Variable
 
 if TYPE_CHECKING:
@@ -53,18 +54,29 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __init__(self, array) -> None:
         self.array = indexing.as_indexable(array)
 
+    @override
     @property
     def dtype(self) -> np.dtype:
         return np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
 
+    @override
     def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
+        return type(self)(self.array.oindex[key])
 
+    @override
     def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
+        return type(self)(self.array.vindex[key])
 
-    def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+    @override
+    def __getitem__(self, key) -> Self:
+        return type(self)(self.array[key])
+
+    @override
+    def get_duck_array(self):
+        return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
+
+    def transpose(self, order):
+        return type(self)(self.array.transpose(order))
 
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -91,32 +103,45 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     def __init__(self, array) -> None:
         self.array = indexing.as_indexable(array)
 
+    @override
     @property
     def dtype(self) -> np.dtype:
         return np.dtype("bool")
 
+    @override
     def _oindex_get(self, key):
-        return np.asarray(self.array.oindex[key], dtype=self.dtype)
+        return type(self)(self.array.oindex[key])
 
+    @override
     def _vindex_get(self, key):
-        return np.asarray(self.array.vindex[key], dtype=self.dtype)
+        return type(self)(self.array.vindex[key])
 
-    def __getitem__(self, key) -> np.ndarray:
-        return np.asarray(self.array[key], dtype=self.dtype)
+    @override
+    def __getitem__(self, key) -> Self:
+        return type(self)(self.array[key])
+
+    @override
+    def get_duck_array(self):
+        return duck_array_ops.astype(self.array.get_duck_array(), dtype=self.dtype)
+
+    def transpose(self, order):
+        return type(self)(self.array.transpose(order))
 
 
 def _apply_mask(
     data: np.ndarray,
     encoded_fill_values: list,
     decoded_fill_value: Any,
-    dtype: np.typing.DTypeLike,
+    dtype: np.typing.DTypeLike | None,
 ) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
-    data = np.asarray(data, dtype=dtype)
-    condition = False
-    for fv in encoded_fill_values:
-        condition |= data == fv
-    return np.where(condition, decoded_fill_value, data)
+    data = np.array(data, dtype=dtype, copy=True)
+    if encoded_fill_values:
+        condition = False
+        for fv in encoded_fill_values:
+            condition |= data == fv
+        data[condition] = decoded_fill_value
+    return data
 
 
 def _is_time_like(units):
@@ -157,10 +182,8 @@ def _check_fill_values(attrs, name, dtype):
     Issue SerializationWarning if appropriate.
     """
     raw_fill_dict = {}
-    [
+    for attr in ("missing_value", "_FillValue"):
         pop_to(attrs, raw_fill_dict, attr, name=name)
-        for attr in ("missing_value", "_FillValue")
-    ]
     encoded_fill_values = set()
     for k in list(raw_fill_dict):
         v = raw_fill_dict[k]
@@ -264,6 +287,7 @@ class CFMaskCoder(VariableCoder):
         self.decode_times = decode_times
         self.decode_timedelta = decode_timedelta
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
@@ -291,15 +315,12 @@ class CFMaskCoder(VariableCoder):
         if fv_exists:
             # Ensure _FillValue is cast to same dtype as data's
             # but not for packed data
-            encoding["_FillValue"] = (
-                _encode_unsigned_fill_value(name, fv, dtype)
-                if has_unsigned
-                else (
-                    dtype.type(fv)
-                    if "add_offset" not in encoding and "scale_factor" not in encoding
-                    else fv
-                )
-            )
+            if has_unsigned:
+                encoding["_FillValue"] = _encode_unsigned_fill_value(name, fv, dtype)
+            elif "add_offset" not in encoding and "scale_factor" not in encoding:
+                encoding["_FillValue"] = dtype.type(fv)
+            else:
+                encoding["_FillValue"] = fv
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
 
         if mv_exists:
@@ -345,11 +366,22 @@ class CFMaskCoder(VariableCoder):
         if fill_value is not None and has_unsigned:
             pop_to(encoding, attrs, "_Unsigned")
             # XXX: Is this actually needed? Doesn't the backend handle this?
-            data = duck_array_ops.astype(duck_array_ops.around(data), dtype)
+            # two-stage casting to prevent undefined cast from float to unsigned int
+            # first float -> int with corresponding itemsize
+            # second int -> int/uint to final itemsize
+            signed_dtype = np.dtype(f"i{data.itemsize}")
+            data = duck_array_ops.astype(
+                duck_array_ops.astype(
+                    duck_array_ops.around(data), signed_dtype, copy=False
+                ),
+                dtype,
+                copy=False,
+            )
             attrs["_FillValue"] = fill_value
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None):
         raw_fill_dict, encoded_fill_values = _check_fill_values(
             variable.attrs, name, variable.dtype
@@ -359,11 +391,9 @@ class CFMaskCoder(VariableCoder):
 
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        # Even if _Unsigned is use, retain on-disk _FillValue
-        [
+        # Even if _Unsigned is used, retain on-disk _FillValue
+        for attr, value in raw_fill_dict.items():
             safe_setitem(encoding, attr, value, name=name)
-            for attr, value in raw_fill_dict.items()
-        ]
 
         if "_Unsigned" in attrs:
             unsigned = pop_to(attrs, encoding, "_Unsigned")
@@ -410,7 +440,9 @@ class CFMaskCoder(VariableCoder):
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
 
-def _scale_offset_decoding(data, scale_factor, add_offset, dtype: np.typing.DTypeLike):
+def _scale_offset_decoding(
+    data, scale_factor, add_offset, dtype: np.typing.DTypeLike | None
+):
     data = data.astype(dtype=dtype, copy=True)
     if scale_factor is not None:
         data *= scale_factor
@@ -485,6 +517,7 @@ class CFScaleOffsetCoder(VariableCoder):
         self.decode_times = decode_times
         self.decode_timedelta = decode_timedelta
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
@@ -503,6 +536,7 @@ class CFScaleOffsetCoder(VariableCoder):
 
         return Variable(dims, data, attrs, encoding, fastpath=True)
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         _attrs = variable.attrs
         if "scale_factor" in _attrs or "add_offset" in _attrs:
@@ -510,9 +544,9 @@ class CFScaleOffsetCoder(VariableCoder):
 
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            if np.ndim(scale_factor) > 0:
+            if duck_array_ops.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
-            if np.ndim(add_offset) > 0:
+            if duck_array_ops.ndim(add_offset) > 0:
                 add_offset = np.asarray(add_offset).item()
             # if we have a _FillValue/masked_value in encoding we already have the wanted
             # floating point dtype here (via CFMaskCoder), so no check is necessary
@@ -542,6 +576,7 @@ class CFScaleOffsetCoder(VariableCoder):
 class DefaultFillvalueCoder(VariableCoder):
     """Encode default _FillValue if needed."""
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
         # make NaN the fill value for float types
@@ -555,6 +590,7 @@ class DefaultFillvalueCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         raise NotImplementedError()
 
@@ -562,6 +598,7 @@ class DefaultFillvalueCoder(VariableCoder):
 class BooleanCoder(VariableCoder):
     """Code boolean values."""
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if (
             (variable.dtype == bool)
@@ -576,6 +613,7 @@ class BooleanCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if variable.attrs.get("dtype", False) == "bool":
             dims, data, attrs, encoding = unpack_for_decoding(variable)
@@ -591,9 +629,11 @@ class BooleanCoder(VariableCoder):
 class EndianCoder(VariableCoder):
     """Decode Endianness to native."""
 
+    @override
     def encode(self):
         raise NotImplementedError()
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         dims, data, attrs, encoding = unpack_for_decoding(variable)
         if not data.dtype.isnative:
@@ -606,6 +646,7 @@ class EndianCoder(VariableCoder):
 class NonStringCoder(VariableCoder):
     """Encode NonString variables if dtypes differ."""
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if "dtype" in variable.encoding and variable.encoding["dtype"] not in (
             "S1",
@@ -615,10 +656,14 @@ class NonStringCoder(VariableCoder):
             dtype = np.dtype(encoding.pop("dtype"))
             if dtype != variable.dtype:
                 if np.issubdtype(dtype, np.integer):
+                    # CF coordinate variables are not allowed to have missing values, so
+                    # they do not need a _FillValue. For simplicity we don't warn with 1D dimension coordinates.
+                    # http://cfconventions.org/cf-conventions/cf-conventions.html#missing-data
                     if (
                         np.issubdtype(variable.dtype, np.floating)
                         and "_FillValue" not in variable.attrs
                         and "missing_value" not in variable.attrs
+                        and dims != (name,)
                     ):
                         warnings.warn(
                             f"saving variable {name} with floating "
@@ -633,14 +678,17 @@ class NonStringCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self):
         raise NotImplementedError()
 
 
 class ObjectVLenStringCoder(VariableCoder):
+    @override
     def encode(self):
         raise NotImplementedError
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         if variable.dtype.kind == "O" and variable.encoding.get("dtype", False) is str:
             variable = variable.astype(variable.encoding["dtype"])
@@ -652,19 +700,24 @@ class ObjectVLenStringCoder(VariableCoder):
 class Numpy2StringDTypeCoder(VariableCoder):
     # Convert Numpy 2 StringDType arrays to object arrays for backwards compatibility
     # TODO: remove this if / when we decide to allow StringDType arrays in Xarray
+    @override
     def encode(self):
         raise NotImplementedError
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        if variable.dtype.kind == "T":
+        if (
+            variable.dtype.kind == "T"
+            and variable.encoding.get("dtype") != variable.dtype
+        ):
             return variable.astype(object)
-        else:
-            return variable
+        return variable
 
 
 class NativeEnumCoder(VariableCoder):
     """Encode Enum into variable dtype metadata."""
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if (
             "dtype" in variable.encoding
@@ -677,5 +730,6 @@ class NativeEnumCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         raise NotImplementedError()

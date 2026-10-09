@@ -6,7 +6,17 @@ from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    Generic,
+    ParamSpec,
+    TypeVar,
+    Union,
+    overload,
+    override,
+)
 
 import numpy as np
 import pandas as pd
@@ -20,6 +30,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     is_scalar,
 )
+from xarray.namedarray._typing import DimType_co
 from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import is_chunked_array
@@ -29,7 +40,7 @@ try:
 except ImportError:
     cftime = None
 
-# Used as a sentinel value to indicate a all dimensions
+# Used as a sentinel value to indicate all dimensions
 ALL_DIMS = ...
 
 
@@ -146,7 +157,9 @@ class ImplementsDatasetReduce:
     ).strip()
 
 
-class AbstractArray:
+# PEP 695 type parameters are not used here, because Variable needs the
+# explicitly covariant DimType_co.
+class AbstractArray(Generic[DimType_co]):  # noqa: UP046
     """Shared base class for DataArray and Variable."""
 
     __slots__ = ()
@@ -164,7 +177,7 @@ class AbstractArray:
         return complex(self.values)
 
     def __array__(
-        self: Any, dtype: np.typing.DTypeLike = None, /, *, copy: bool | None = None
+        self: Any, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
             if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
@@ -218,12 +231,14 @@ class AbstractArray:
     def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
 
     @overload
-    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
+    def get_axis_num(self, dim: Iterable[DimType_co]) -> tuple[int, ...]: ...
 
     @overload
-    def get_axis_num(self, dim: Hashable) -> int: ...
+    def get_axis_num(self, dim: DimType_co) -> int: ...  # type: ignore[misc]
 
-    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
+    def get_axis_num(
+        self, dim: str | DimType_co | Iterable[DimType_co]
+    ) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -251,7 +266,7 @@ class AbstractArray:
             ) from err
 
     @property
-    def sizes(self: Any) -> Mapping[Hashable, int]:
+    def sizes(self: Any) -> Mapping[DimType_co, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -376,6 +391,7 @@ class TreeAttrAccessMixin(AttrAccessMixin):
 
     __slots__ = ()
 
+    @override
     def __init_subclass__(cls, **kwargs):
         """This method overrides the check from ``AttrAccessMixin`` that ensures
         ``__dict__`` is absent in a class, with ``__slots__`` used instead.
@@ -457,7 +473,7 @@ class DataWithCoords(AttrAccessMixin):
         numpy.squeeze
         """
         dims = get_squeeze_dims(self, dim, axis)
-        return self.isel(drop=drop, **{d: 0 for d in dims})
+        return self.isel(dict.fromkeys(dims, 0), drop=drop)
 
     def clip(
         self,
@@ -621,8 +637,8 @@ class DataWithCoords(AttrAccessMixin):
         Coordinates:
             lon             (x, y) float64 32B 260.2 260.7 260.2 260.8
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
-            reference_time  datetime64[ns] 8B 2014-09-05
+          * time            (time) datetime64[us] 32B 2014-09-06 ... 2014-09-09
+            reference_time  datetime64[us] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
@@ -635,8 +651,8 @@ class DataWithCoords(AttrAccessMixin):
         Coordinates:
             lon             (x, y) float64 32B -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 32B 42.25 42.21 42.63 42.59
-          * time            (time) datetime64[ns] 32B 2014-09-06 ... 2014-09-09
-            reference_time  datetime64[ns] 8B 2014-09-05
+          * time            (time) datetime64[us] 32B 2014-09-06 ... 2014-09-09
+            reference_time  datetime64[us] 8B 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 128B 20.0 20.8 21.6 ... 30.4 31.2 32.0
@@ -988,12 +1004,12 @@ class DataWithCoords(AttrAccessMixin):
         <xarray.DataArray (time: 12)> Size: 96B
         array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 96B 1999-12-15 2000-01-15 ... 2000-11-15
+          * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.resample(time="QS-DEC").mean()
         <xarray.DataArray (time: 4)> Size: 32B
         array([ 1.,  4.,  7., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 32B 1999-12-01 2000-03-01 ... 2000-09-01
+          * time     (time) datetime64[us] 32B 1999-12-01 2000-03-01 ... 2000-09-01
 
         Upsample monthly time-series data to daily data:
 
@@ -1041,7 +1057,7 @@ class DataWithCoords(AttrAccessMixin):
                10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
                10.96774194, 11.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         Limit scope of upsampling method
 
@@ -1074,7 +1090,7 @@ class DataWithCoords(AttrAccessMixin):
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan,
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
+          * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
 
         See Also
         --------
@@ -1118,7 +1134,7 @@ class DataWithCoords(AttrAccessMixin):
                 f"Received {type(freq)} instead."
             )
 
-        rgrouper = ResolvedGrouper(grouper, group, self, eagerly_compute_group=False)
+        rgrouper = ResolvedGrouper(grouper, group, self)
 
         return resample_cls(
             self,
@@ -1201,14 +1217,6 @@ class DataWithCoords(AttrAccessMixin):
                [ 10,  11, -12, -13, -14],
                [ 15, -16, -17, -18, -19],
                [-20, -21, -22, -23, -24]])
-        Dimensions without coordinates: x, y
-
-        >>> a.where(a.x + a.y < 4, drop=True)
-        <xarray.DataArray (x: 4, y: 4)> Size: 128B
-        array([[ 0.,  1.,  2.,  3.],
-               [ 5.,  6.,  7., nan],
-               [10., 11., nan, nan],
-               [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
         See Also
@@ -1314,7 +1322,7 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.isnull,
@@ -1357,7 +1365,7 @@ class DataWithCoords(AttrAccessMixin):
         from xarray.computation.apply_ufunc import apply_ufunc
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         return apply_ufunc(
             duck_array_ops.notnull,
@@ -1701,11 +1709,11 @@ def full_like(
 
     if isinstance(other, Dataset):
         if not isinstance(fill_value, dict):
-            fill_value = {k: fill_value for k in other.data_vars.keys()}
+            fill_value = dict.fromkeys(other.data_vars.keys(), fill_value)
 
         dtype_: Mapping[Any, DTypeLikeSave]
         if not isinstance(dtype, Mapping):
-            dtype_ = {k: dtype for k in other.data_vars.keys()}
+            dtype_ = dict.fromkeys(other.data_vars.keys(), dtype)
         else:
             dtype_ = dtype
 
@@ -1782,7 +1790,7 @@ def _full_like_variable(
             other.shape,
             fill_value,
             dtype=dtype,
-            chunks=chunks if chunks else other.data.chunks,
+            chunks=chunks or other.data.chunks,
             **from_array_kwargs,
         )
     else:
@@ -2073,18 +2081,18 @@ def get_chunksizes(
     return Frozen(chunks)
 
 
-def is_np_datetime_like(dtype: DTypeLike) -> bool:
+def is_np_datetime_like(dtype: DTypeLike | None) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
-def is_np_timedelta_like(dtype: DTypeLike) -> bool:
+def is_np_timedelta_like(dtype: DTypeLike | None) -> bool:
     """Check whether dtype is of the timedelta64 dtype."""
     return np.issubdtype(dtype, np.timedelta64)
 
 
 def _contains_cftime_datetimes(array: Any) -> bool:
-    """Check if a array inside a Variable contains cftime.datetime objects"""
+    """Check if an array inside a Variable contains cftime.datetime objects"""
     if cftime is None:
         return False
 
@@ -2108,3 +2116,21 @@ def _contains_datetime_like_objects(var: T_Variable) -> bool:
     np.datetime64, np.timedelta64, or cftime.datetime)
     """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
+
+
+def _is_numeric_aggregatable_dtype(var: T_Variable) -> bool:
+    """Check if a variable's dtype can be used in numeric aggregations like mean().
+
+    This includes:
+    - Numeric types (int, float, complex)
+    - Boolean type
+    - Datetime types (datetime64, timedelta64)
+    - Object arrays containing datetime-like objects (e.g., cftime)
+    """
+    return (
+        np.issubdtype(var.dtype, np.number)
+        or (var.dtype == np.bool_)
+        or np.issubdtype(var.dtype, np.datetime64)
+        or np.issubdtype(var.dtype, np.timedelta64)
+        or _contains_cftime_datetimes(var._data)
+    )

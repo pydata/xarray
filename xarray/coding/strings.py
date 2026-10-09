@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from functools import partial
+from typing import override
 
 import numpy as np
 
@@ -15,7 +17,7 @@ from xarray.coding.variables import (
     unpack_for_encoding,
 )
 from xarray.core import indexing
-from xarray.core.utils import module_available
+from xarray.core.utils import emit_user_level_warning, module_available
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -39,7 +41,7 @@ def check_vlen_dtype(dtype):
 
 
 def is_unicode_dtype(dtype):
-    return dtype.kind == "U" or check_vlen_dtype(dtype) is str
+    return dtype.kind in ("U", "T") or check_vlen_dtype(dtype) is str
 
 
 def is_bytes_dtype(dtype):
@@ -52,8 +54,17 @@ class EncodedStringCoder(VariableCoder):
     def __init__(self, allows_unicode=True):
         self.allows_unicode = allows_unicode
 
+    @override
     def encode(self, variable: Variable, name=None) -> Variable:
         dims, data, attrs, encoding = unpack_for_encoding(variable)
+
+        # StringDType: replace nulls and convert to fixed-width unicode (U),
+        # which all backends support natively (GH11199)
+        if data.dtype.kind == "T":
+            data = np.asarray(data, dtype=object)
+            data[data == None] = ""
+            data = np.asarray(data, dtype="U")
+            variable = Variable(dims, data, attrs, encoding)
 
         contains_unicode = is_unicode_dtype(data.dtype)
         encode_as_char = encoding.get("dtype") == "S1"
@@ -78,6 +89,7 @@ class EncodedStringCoder(VariableCoder):
             variable.encoding = encoding
             return variable
 
+    @override
     def decode(self, variable: Variable, name=None) -> Variable:
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
@@ -113,22 +125,50 @@ def ensure_fixed_length_bytes(var: Variable) -> Variable:
         return var
 
 
+def validate_char_dim_name(strlen, encoding, name) -> str:
+    """Check character array dimension naming and size and return it."""
+
+    if (char_dim_name := encoding.pop("char_dim_name", None)) is not None:
+        # 1 - extract all characters up to last number sequence
+        # 2 - extract last number sequence
+        match = re.search(r"^(.*?)(\d+)(?!.*\d)", char_dim_name)
+        if match:
+            new_dim_name = match.group(1)
+            if int(match.group(2)) != strlen:
+                emit_user_level_warning(
+                    f"String dimension naming mismatch on variable {name!r}. {char_dim_name!r} provided by encoding, but data has length of '{strlen}'. Using '{new_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
+                    "To silence this warning either remove 'char_dim_name' from encoding or provide a fitting name."
+                )
+            char_dim_name = f"{new_dim_name}{strlen}"
+        elif (
+            original_shape := encoding.get("original_shape", [-1])[-1]
+        ) != -1 and original_shape != strlen:
+            emit_user_level_warning(
+                f"String dimension length mismatch on variable {name!r}. '{original_shape}' provided by encoding, but data has length of '{strlen}'. Using '{char_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
+                f"To silence this warning remove 'original_shape' from encoding."
+            )
+            char_dim_name = f"{char_dim_name}{strlen}"
+    else:
+        char_dim_name = f"string{strlen}"
+
+    return char_dim_name
+
+
 class CharacterArrayCoder(VariableCoder):
     """Transforms between arrays containing bytes and character arrays."""
 
+    @override
     def encode(self, variable, name=None):
         variable = ensure_fixed_length_bytes(variable)
 
         dims, data, attrs, encoding = unpack_for_encoding(variable)
         if data.dtype.kind == "S" and encoding.get("dtype") is not str:
             data = bytes_to_char(data)
-            if "char_dim_name" in encoding.keys():
-                char_dim_name = encoding.pop("char_dim_name")
-            else:
-                char_dim_name = f"string{data.shape[-1]}"
+            char_dim_name = validate_char_dim_name(data.shape[-1], encoding, name)
             dims = dims + (char_dim_name,)
         return Variable(dims, data, attrs, encoding)
 
+    @override
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
@@ -221,7 +261,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     values, when accessed, are automatically stacked along the last dimension.
 
     >>> indexer = indexing.BasicIndexer((slice(None),))
-    >>> StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer]
+    >>> np.array(StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer])
     array(b'abc', dtype='|S3')
     """
 
@@ -238,26 +278,36 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
             )
         self.array = indexing.as_indexable(array)
 
+    @override
     @property
     def dtype(self):
         return np.dtype("S" + str(self.array.shape[-1]))
 
+    @override
     @property
     def shape(self) -> tuple[int, ...]:
         return self.array.shape[:-1]
 
+    @override
     def __repr__(self):
         return f"{type(self).__name__}({self.array!r})"
 
+    @override
     def _vindex_get(self, key):
-        return _numpy_char_to_bytes(self.array.vindex[key])
+        return type(self)(self.array.vindex[key])
 
+    @override
     def _oindex_get(self, key):
-        return _numpy_char_to_bytes(self.array.oindex[key])
+        return type(self)(self.array.oindex[key])
 
+    @override
     def __getitem__(self, key):
         # require slicing the last dimension completely
         key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
         if key.tuple[-1] != slice(None):
             raise IndexError("too many indices")
-        return _numpy_char_to_bytes(self.array[key])
+        return type(self)(self.array[key])
+
+    @override
+    def get_duck_array(self):
+        return _numpy_char_to_bytes(self.array.get_duck_array())

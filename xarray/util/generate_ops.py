@@ -3,8 +3,11 @@
 For internal xarray development use only. Requires that jinja2 is installed.
 
 Usage:
-    python -m pip install jinja2
+    pixi run generate-ops
+
+or, without pixi:
     python xarray/util/generate_ops.py > xarray/core/_typed_ops.py
+    pre-commit run --files xarray/core/_typed_ops.py
 
 """
 
@@ -72,7 +75,7 @@ UNARY_OPS = (
     ("__invert__", "operator.invert"),
 )
 # round method and numpy/pandas unary methods which don't modify the data shape,
-# so the result should still be wrapped in an Variable/DataArray/Dataset
+# so the result should still be wrapped in a Variable/DataArray/Dataset
 OTHER_UNARY_METHODS = (
     ("round", "ops.round_"),
     ("argsort", "ops.argsort"),
@@ -82,17 +85,21 @@ OTHER_UNARY_METHODS = (
 
 
 required_method_binary = """
-    def _binary_op(
+    def _binary_op{{ type_params }}(
         self, other: {{ other_type }}, f: Callable, reflexive: bool = False
     ) -> {{ return_type }}:
         raise NotImplementedError"""
 template_binop = """
-    def {{ method }}(self, other: {{ other_type }}) -> {{ return_type }}:{{ type_ignore }}
+    def {{ method }}{{ type_params }}(self, other: {{ other_type }}) -> {{ return_type }}:{{ type_ignore }}
         return self._binary_op(other, {{ func }})"""
 template_binop_overload = """
 {%- for overload_type in overload_types %}
-    @overload{{ overload_type_ignore if overload_type == overload_types[0] else "" }}
+    @overload{{ overload_type_ignore if loop.first else "" }}
+{%- if overload_type in subclass_overload_types %}
+    def {{ method }}[T: {{ overload_type }}](self, other: T) -> T: ...
+{%- else %}
     def {{ method }}(self, other: {{ overload_type }}) -> {{ overload_type }}: ...
+{%- endif %}
 {% endfor %}
     @overload
     def {{method}}(self, other: {{ other_type }}) -> {{ return_type }}: ...
@@ -100,7 +107,7 @@ template_binop_overload = """
     def {{ method }}(self, other: {{ other_type }}) -> {{ return_type }} | {{ ' | '.join(overload_types) }}:{{ type_ignore }}
         return self._binary_op(other, {{ func }})"""
 template_reflexive = """
-    def {{ method }}(self, other: {{ other_type }}) -> {{ return_type }}:
+    def {{ method }}{{ type_params }}(self, other: {{ other_type }}) -> {{ return_type }}:
         return self._binary_op(other, {{ func }}, reflexive=True)"""
 
 required_method_inplace = """
@@ -124,19 +131,19 @@ unhashable = """
     # and it should be declared as follows:
     __hash__: None  # type:ignore[assignment]"""
 
-# For some methods we override return type `bool` defined by base class `object`.
-# We need to add "# type: ignore[override]"
-# Keep an eye out for:
+# __eq__ and __ne__ return an array instead of the `bool` of `object.__eq__`, so
+# they need a "# type: ignore[override]". Keep an eye out for:
 # https://discuss.python.org/t/make-type-hints-for-eq-of-primitives-less-strict/34240
-# The type ignores might not be necessary anymore at some point.
 #
-# We require a "hack" to tell type checkers that e.g. Variable + DataArray = DataArray
-# In reality this returns NotImplemented, but this is not a valid type in python 3.9.
-# Therefore, we return DataArray. In reality this would call DataArray.__add__(Variable)
-# TODO: change once python 3.10 is the minimum.
+# The overloads tell type checkers that e.g. Variable + DataArray = DataArray. At
+# runtime, Variable.__add__ returns NotImplemented and Python calls
+# DataArray.__radd__ instead. Type checkers would do the same, if Variable.__add__
+# didn't accept a DataArray. But VarCompatible contains ArrayLike, which every
+# object with an __array__ method matches, so it does accept DataArray.
 #
-# Mypy seems to require that __iadd__ and __add__ have the same signature.
-# This requires some extra type: ignores[misc] in the inplace methods :/
+# In-place operations keep the type of the left operand, e.g. Variable += DataArray
+# is still a Variable. Mypy reports this as incompatible with the overloads of the
+# corresponding binary operator, which requires a "# type: ignore[misc]".
 
 
 def _type_ignore(ignore: str) -> str:
@@ -148,9 +155,16 @@ OpsType = tuple[FuncType, str, dict[str, Any]]
 
 
 def binops(
-    other_type: str, return_type: str = "Self", type_ignore_eq: str = "override"
+    other_type: str,
+    return_type: str = "Self",
+    type_ignore_eq: str = "override",
+    type_params: str = "",
 ) -> list[OpsType]:
-    extras = {"other_type": other_type, "return_type": return_type}
+    extras = {
+        "other_type": other_type,
+        "return_type": return_type,
+        "type_params": type_params,
+    }
     return [
         ([(None, None)], required_method_binary, extras),
         (BINOPS_NUM + BINOPS_CMP, template_binop, extras | {"type_ignore": ""}),
@@ -167,10 +181,21 @@ def binops(
 def binops_overload(
     other_type: str,
     overload_types: list[str],
+    subclass_overload_types: Sequence[str] = (),
     return_type: str = "Self",
     type_ignore_eq: str = "override",
 ) -> list[OpsType]:
-    extras = {"other_type": other_type, "return_type": return_type}
+    """Binary operations with an overload for each of ``overload_types``.
+
+    The overloads of ``subclass_overload_types`` return the type of ``other``, so
+    that subclasses are kept.
+    """
+    extras = {
+        "other_type": other_type,
+        "return_type": return_type,
+        "type_params": "",
+        "subclass_overload_types": subclass_overload_types,
+    }
     return [
         ([(None, None)], required_method_binary, extras),
         (
@@ -218,36 +243,38 @@ def unops() -> list[OpsType]:
     ]
 
 
-# We use short names T_DA and T_DS to keep below 88 lines so
-# ruff does not reformat everything. When reformatting, the
-# type-ignores end up in the wrong line :/
-
-ops_info = {}
-# TODO add inplace ops for DataTree?
-ops_info["DataTreeOpsMixin"] = binops(other_type="DtCompatible") + unops()
-ops_info["DatasetOpsMixin"] = (
-    binops_overload(other_type="DsCompatible", overload_types=["DataTree"])
-    + inplace(other_type="DsCompatible", type_ignore="misc")
-    + unops()
-)
-ops_info["DataArrayOpsMixin"] = (
-    binops_overload(other_type="DaCompatible", overload_types=["Dataset", "DataTree"])
-    + inplace(other_type="DaCompatible", type_ignore="misc")
-    + unops()
-)
-ops_info["VariableOpsMixin"] = (
-    binops_overload(
-        other_type="VarCompatible", overload_types=["T_DA", "Dataset", "DataTree"]
-    )
-    + inplace(other_type="VarCompatible", type_ignore="misc")
-    + unops()
-)
-ops_info["DatasetGroupByOpsMixin"] = binops(
-    other_type="Dataset | DataArray", return_type="Dataset"
-)
-ops_info["DataArrayGroupByOpsMixin"] = binops(
-    other_type="T_Xarray", return_type="T_Xarray"
-)
+ops_info = {
+    # TODO add inplace ops for DataTree?
+    "DataTreeOpsMixin": binops(other_type="DtCompatible") + unops(),
+    "DatasetOpsMixin": (
+        binops_overload(other_type="DsCompatible", overload_types=["DataTree"])
+        + inplace(other_type="DsCompatible", type_ignore="misc")
+        + unops()
+    ),
+    "DataArrayOpsMixin": (
+        binops_overload(
+            other_type="DaCompatible", overload_types=["Dataset", "DataTree"]
+        )
+        + inplace(other_type="DaCompatible", type_ignore="misc")
+        + unops()
+    ),
+    "VariableOpsMixin": (
+        binops_overload(
+            other_type="VarCompatible",
+            overload_types=["DataArray", "Dataset", "DataTree"],
+            subclass_overload_types=["DataArray"],
+        )
+        + inplace(other_type="VarCompatible", type_ignore="misc")
+        + unops()
+    ),
+    "DatasetGroupByOpsMixin": binops(
+        other_type="Dataset | DataArray", return_type="Dataset"
+    ),
+    # the result has the type of the other operand
+    "DataArrayGroupByOpsMixin": binops(
+        other_type="T", return_type="T", type_params="[T: (DataArray, Dataset)]"
+    ),
+}
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with arithmetic operators."""
@@ -258,24 +285,16 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Self, overload
 
-from xarray.core import nputils
 from xarray.computation import ops
-from xarray.core.types import (
-    DaCompatible,
-    DsCompatible,
-    DtCompatible,
-    Self,
-    T_Xarray,
-    VarCompatible,
-)
+from xarray.core import nputils
+from xarray.core.types import DaCompatible, DsCompatible, DtCompatible, VarCompatible
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.datatree import DataTree
-    from xarray.core.types import T_DataArray as T_DA'''
+    from xarray.core.datatree import DataTree'''
 
 
 CLASS_PREAMBLE = """{newline}

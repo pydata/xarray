@@ -100,7 +100,7 @@ class TestFamilyTree:
         john: TreeNode = TreeNode()
 
         with pytest.raises(TypeError):
-            john.children = {"Kate": 666}
+            john.children = {"Kate": 666}  # type: ignore[dict-item]
 
         with pytest.raises(InvalidTreeError, match="Cannot add same node"):
             john.children = {"Kate": kate, "Evil_Kate": kate}
@@ -379,12 +379,12 @@ class TestAncestry:
     def test_lineage(self) -> None:
         _, leaf_f = create_test_tree()
         expected = ["f", "e", "b", "a"]
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             assert [node.name for node in leaf_f.lineage] == expected
 
     def test_ancestors(self) -> None:
         _, leaf_f = create_test_tree()
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             ancestors = leaf_f.ancestors
         expected = ["a", "b", "e", "f"]
         for node, expected_name in zip(ancestors, expected, strict=True):

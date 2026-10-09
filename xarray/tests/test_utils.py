@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import builtins
+import io
 from collections.abc import Hashable
+from pathlib import Path
 from types import EllipsisType
+from typing import IO, Any
 
 import numpy as np
 import pandas as pd
@@ -11,8 +15,11 @@ from xarray.core import duck_array_ops, utils
 from xarray.core.utils import (
     attempt_import,
     either_dict_or_kwargs,
+    flat_items,
     infix_dims,
     iterate_nested,
+    read_magic_number_from_file,
+    try_read_magic_number_from_path,
 )
 from xarray.tests import assert_array_equal, requires_dask
 
@@ -23,7 +30,7 @@ class TestAlias:
             pass
 
         old_method = utils.alias(new_method, "old_method")
-        assert "deprecated" in old_method.__doc__
+        assert "deprecated" in old_method.__doc__  # type: ignore[operator]
         with pytest.warns(Warning, match="deprecated"):
             old_method()
 
@@ -79,6 +86,15 @@ class TestDictionaries:
         assert utils.equivalent(np.array([0]), [0])
         assert utils.equivalent(np.arange(3), 1.0 * np.arange(3))
         assert not utils.equivalent(0, np.zeros(3))
+        # Test NaN comparisons (issue #10833)
+        # Python float NaN
+        assert utils.equivalent(float("nan"), float("nan"))
+        # NumPy scalar NaN (various dtypes)
+        assert utils.equivalent(np.float64(np.nan), np.float64(np.nan))
+        assert utils.equivalent(np.float32(np.nan), np.float32(np.nan))
+        # Mixed: Python float NaN vs NumPy scalar NaN
+        assert utils.equivalent(float("nan"), np.float64(np.nan))
+        assert utils.equivalent(np.float64(np.nan), float("nan"))
 
     def test_safe(self):
         # should not raise exception:
@@ -102,10 +118,10 @@ class TestDictionaries:
             utils.compat_dict_union(self.x, self.z)
 
     def test_dict_equiv(self):
-        x = {}
+        x: dict = {}
         x["a"] = 3
         x["b"] = np.array([1, 2, 3])
-        y = {}
+        y: dict = {}
         y["b"] = np.array([1.0, 2.0, 3.0])
         y["a"] = 3
         assert utils.dict_equiv(x, y)  # two nparrays are equal
@@ -129,11 +145,11 @@ class TestDictionaries:
     def test_frozen(self):
         x = utils.Frozen(self.x)
         with pytest.raises(TypeError):
-            x["foo"] = "bar"
+            x["foo"] = "bar"  # type: ignore[index]
         with pytest.raises(TypeError):
-            del x["a"]
+            del x["a"]  # type: ignore[attr-defined]
         with pytest.raises(AttributeError):
-            x.update(self.y)
+            x.update(self.y)  # type: ignore[attr-defined]
         assert x.mapping == self.x
         assert repr(x) in (
             "Frozen({'a': 'A', 'b': 'B'})",
@@ -149,6 +165,13 @@ class TestDictionaries:
         assert len(x) == 1
         assert repr(x) == "FilteredMapping(keys={'a'}, mapping={'a': 1, 'b': 2})"
         assert dict(x) == {"a": 1}
+
+
+def test_flat_items() -> None:
+    mapping = {"x": {"y": 1, "z": 2}, "x/y": 3}
+    actual = list(flat_items(mapping))
+    expected = [("x/y", 1), ("x/z", 2), ("x/y", 3)]
+    assert actual == expected
 
 
 def test_repr_object():
@@ -231,11 +254,11 @@ def test_hidden_key_dict():
 
 
 def test_either_dict_or_kwargs():
-    result = either_dict_or_kwargs(dict(a=1), None, "foo")
+    result = either_dict_or_kwargs(dict(a=1), {}, "foo")
     expected = dict(a=1)
     assert result == expected
 
-    result = either_dict_or_kwargs(None, dict(a=1), "foo")
+    result = either_dict_or_kwargs({}, dict(a=1), "foo")
     expected = dict(a=1)
     assert result == expected
 
@@ -300,7 +323,7 @@ def test_parse_dims_set() -> None:
 @pytest.mark.parametrize(
     "dim", [pytest.param(None, id="None"), pytest.param(..., id="ellipsis")]
 )
-def test_parse_dims_replace_none(dim: None | EllipsisType) -> None:
+def test_parse_dims_replace_none(dim: EllipsisType | None) -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     actual = utils.parse_dims_as_tuple(dim, all_dims, replace_none=True)
     assert actual == all_dims
@@ -383,3 +406,74 @@ def test_attempt_import() -> None:
         attempt_import(module="foo")
     with pytest.raises(ImportError, match="The foo package is required"):
         attempt_import(module="foo.bar")
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        pytest.param(b"\x89HDF\r\n\x1a\nmore data", b"\x89HDF\r\n\x1a\n", id="hdf5"),
+        pytest.param(b"CDF", b"CDF", id="shorter-than-count"),
+    ],
+)
+def test_try_read_magic_number_from_path(
+    tmp_path: Path, content: bytes, expected: bytes
+) -> None:
+    path = tmp_path / "file.nc"
+    path.write_bytes(content)
+    assert try_read_magic_number_from_path(path) == expected
+    assert try_read_magic_number_from_path(str(path)) == expected
+
+
+class _ShortReadFile(io.RawIOBase):
+    """Unbuffered file that returns at most one byte per read."""
+
+    def __init__(self, content: bytes) -> None:
+        self._file = io.BytesIO(content)
+
+    def readable(self) -> bool:
+        return True
+
+    def seekable(self) -> bool:
+        return True
+
+    def readinto(self, buffer: Any) -> int:
+        data = self._file.read(min(len(buffer), 1))
+        buffer[: len(data)] = data
+        return len(data)
+
+    def seek(self, offset: int, whence: int = io.SEEK_SET) -> int:
+        return self._file.seek(offset, whence)
+
+    def tell(self) -> int:
+        return self._file.tell()
+
+
+def test_read_magic_number_from_file_short_reads() -> None:
+    f = _ShortReadFile(b"\x89HDF\r\n\x1a\nmore data")
+    assert read_magic_number_from_file(f) == b"\x89HDF\r\n\x1a\n"
+    assert f.tell() == 0
+    assert read_magic_number_from_file(_ShortReadFile(b"CDF")) == b"CDF"
+
+
+def test_try_read_magic_number_from_path_missing(tmp_path: Path) -> None:
+    assert try_read_magic_number_from_path(tmp_path / "missing.nc") is None
+
+
+def test_try_read_magic_number_from_path_unbuffered(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # a buffered reader would read a whole buffer instead of only the magic
+    # number, which is slow on filesystems with a large block size (GH7697)
+    path = tmp_path / "file.nc"
+    path.write_bytes(b"CDF\x01" + bytes(100))
+    opened: list[IO[Any]] = []
+
+    def spy_open(*args: Any, **kwargs: Any) -> IO[Any]:
+        f = builtins.open(*args, **kwargs)  # noqa: SIM115
+        opened.append(f)
+        return f
+
+    monkeypatch.setattr(utils, "open", spy_open, raising=False)
+    assert try_read_magic_number_from_path(path) == b"CDF\x01" + bytes(4)
+    assert len(opened) == 1
+    assert type(opened[0]) is io.FileIO

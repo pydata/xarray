@@ -15,7 +15,7 @@ integer_types = (int, np.integer)
 if TYPE_CHECKING:
     ModType = Literal["dask", "pint", "cupy", "sparse", "cubed", "numbagg"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
-    from xarray.namedarray._typing import _DType, _ShapeType, duckarray
+    from xarray.namedarray._typing import duckarray
 
 
 class DuckArrayModule:
@@ -97,7 +97,7 @@ def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
 
 
 def to_numpy(
-    data: duckarray[Any, Any], **kwargs: dict[str, Any]
+    data: duckarray[Any, Any], **kwargs: Any
 ) -> np.ndarray[Any, np.dtype[Any]]:
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -127,7 +127,9 @@ def to_numpy(
     return data
 
 
-def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, _DType]:
+def to_duck_array[ShapeType, DType: np.dtype[Any]](
+    data: Any, **kwargs: dict[str, Any]
+) -> duckarray[ShapeType, DType]:
     from xarray.core.indexing import (
         ExplicitlyIndexed,
         ImplicitToExplicitIndexingAdapter,
@@ -144,4 +146,18 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
     elif is_duck_array(data):
         return data
     else:
-        return np.asarray(data)  # type: ignore[return-value]
+        return np.asarray(data)  # type: ignore[return-value, unused-ignore]
+
+
+async def async_to_duck_array[ShapeType, DType: np.dtype[Any]](
+    data: Any, **kwargs: dict[str, Any]
+) -> duckarray[ShapeType, DType]:
+    from xarray.core.indexing import (
+        ExplicitlyIndexed,
+        ImplicitToExplicitIndexingAdapter,
+    )
+
+    if isinstance(data, ExplicitlyIndexed | ImplicitToExplicitIndexingAdapter):
+        return await data.async_get_duck_array()  # type: ignore[union-attr, no-any-return]
+    else:
+        return to_duck_array(data, **kwargs)

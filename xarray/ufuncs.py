@@ -1,3 +1,5 @@
+from typing import override
+
 """xarray specific universal functions."""
 
 import textwrap
@@ -11,7 +13,6 @@ from xarray.core.groupby import GroupBy
 
 def _walk_array_namespaces(obj, namespaces):
     if isinstance(obj, xr.DataTree):
-        # TODO: DataTree doesn't actually support ufuncs yet
         for node in obj.subtree:
             _walk_array_namespaces(node.dataset, namespaces)
     elif isinstance(obj, xr.Dataset):
@@ -39,7 +40,7 @@ def get_array_namespace(*args):
         names = [module.__name__ for module in xps]
         raise ValueError(f"Mixed array types {names} are not supported.")
 
-    return next(iter(xps)) if len(xps) else np
+    return next(iter(xps)) if xps else np
 
 
 class _ufunc_wrapper(ABC):
@@ -68,6 +69,7 @@ class _ufunc_wrapper(ABC):
 class _unary_ufunc(_ufunc_wrapper):
     """Wrapper for dispatching unary ufuncs."""
 
+    @override
     def __call__(self, x, /, **kwargs):
         xp = get_array_namespace(x)
         func = getattr(xp, self.__name__)
@@ -77,6 +79,7 @@ class _unary_ufunc(_ufunc_wrapper):
 class _binary_ufunc(_ufunc_wrapper):
     """Wrapper for dispatching binary ufuncs."""
 
+    @override
     def __call__(self, x, y, /, **kwargs):
         xp = get_array_namespace(x, y)
         func = getattr(xp, self.__name__)

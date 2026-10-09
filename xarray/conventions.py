@@ -4,7 +4,7 @@ import itertools
 import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 import numpy as np
 
@@ -18,7 +18,7 @@ from xarray.core.common import (
 )
 from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import IndexVariable, Variable
-from xarray.namedarray.utils import is_duck_dask_array
+from xarray.namedarray.utils import is_duck_array
 
 CF_RELATED_DATA = (
     "bounds",
@@ -37,7 +37,16 @@ CF_RELATED_DATA_NEEDS_PARSING = (
     "cell_measures",
     "formula_terms",
 )
-
+ZARR_CODERS = (
+    CFDatetimeCoder(),
+    CFTimedeltaCoder(),
+    variables.CFScaleOffsetCoder(),
+    variables.CFMaskCoder(),
+    variables.NativeEnumCoder(),
+    variables.NonStringCoder(),
+    variables.DefaultFillvalueCoder(),
+)
+DEFAULT_CODERS = ZARR_CODERS + (variables.BooleanCoder(),)
 
 if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
@@ -66,7 +75,7 @@ def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
 
 
 def encode_cf_variable(
-    var: Variable, needs_copy: bool = True, name: T_Name = None
+    var: Variable, needs_copy: bool = True, name: T_Name = None, coders=None
 ) -> Variable:
     """
     Converts a Variable into a Variable which follows some
@@ -81,6 +90,8 @@ def encode_cf_variable(
     ----------
     var : Variable
         A variable holding un-encoded data.
+    coders : list of VariableCoder, optional
+        List of coders to apply. If None, uses the default CF coder chain.
 
     Returns
     -------
@@ -89,16 +100,10 @@ def encode_cf_variable(
     """
     ensure_not_multiindex(var, name=name)
 
-    for coder in [
-        CFDatetimeCoder(),
-        CFTimedeltaCoder(),
-        variables.CFScaleOffsetCoder(),
-        variables.CFMaskCoder(),
-        variables.NativeEnumCoder(),
-        variables.NonStringCoder(),
-        variables.DefaultFillvalueCoder(),
-        variables.BooleanCoder(),
-    ]:
+    if coders is None:
+        coders = DEFAULT_CODERS
+
+    for coder in coders:
         var = coder.encode(var, name=name)
 
     for attr_name in CF_RELATED_DATA:
@@ -173,12 +178,13 @@ def decode_cf_variable(
 
     original_dtype = var.dtype
 
-    decode_timedelta_was_none = decode_timedelta is None
     if decode_timedelta is None:
         if isinstance(decode_times, CFDatetimeCoder):
             decode_timedelta = CFTimedeltaCoder(time_unit=decode_times.time_unit)
+        elif decode_times:
+            decode_timedelta = CFTimedeltaCoder()
         else:
-            decode_timedelta = True if decode_times else False
+            decode_timedelta = False
 
     if concat_characters:
         if stack_char_dim:
@@ -204,11 +210,10 @@ def decode_cf_variable(
             var = coder.decode(var, name=name)
 
     if decode_timedelta:
-        if not isinstance(decode_timedelta, CFTimedeltaCoder):
-            decode_timedelta = CFTimedeltaCoder()
-        decode_timedelta._emit_decode_timedelta_future_warning = (
-            decode_timedelta_was_none
-        )
+        if isinstance(decode_timedelta, bool):
+            decode_timedelta = CFTimedeltaCoder(
+                decode_via_units=decode_timedelta, decode_via_dtype=decode_timedelta
+            )
         var = decode_timedelta.decode(var, name=name)
     if decode_times:
         # remove checks after end of deprecation cycle
@@ -221,20 +226,19 @@ def decode_cf_variable(
                     "Example usage:\n"
                     "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
                     "    ds = xr.open_dataset(decode_times=time_coder)\n",
-                    DeprecationWarning,
+                    FutureWarning,
                 )
             decode_times = CFDatetimeCoder(use_cftime=use_cftime)
-        else:
-            if use_cftime is not None:
-                raise TypeError(
-                    "Usage of 'use_cftime' as a kwarg is not allowed "
-                    "if a 'CFDatetimeCoder' instance is passed to "
-                    "'decode_times'. Please set 'use_cftime' "
-                    "when initializing 'CFDatetimeCoder' instead.\n"
-                    "Example usage:\n"
-                    "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
-                    "    ds = xr.open_dataset(decode_times=time_coder)\n",
-                )
+        elif use_cftime is not None:
+            raise TypeError(
+                "Usage of 'use_cftime' as a kwarg is not allowed "
+                "if a 'CFDatetimeCoder' instance is passed to "
+                "'decode_times'. Please set 'use_cftime' "
+                "when initializing 'CFDatetimeCoder' instead.\n"
+                "Example usage:\n"
+                "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
+                "    ds = xr.open_dataset(decode_times=time_coder)\n",
+            )
         var = decode_times.decode(var, name=name)
 
     if decode_endianness and not var.dtype.isnative:
@@ -247,7 +251,15 @@ def decode_cf_variable(
 
     encoding.setdefault("dtype", original_dtype)
 
-    if not is_duck_dask_array(data):
+    if (
+        # we don't need to lazily index duck arrays
+        not is_duck_array(data)
+        # These arrays already support lazy indexing
+        # OR for IndexingAdapters, it makes no sense to wrap them
+        and not isinstance(data, indexing.ExplicitlyIndexedNDArrayMixin)
+    ):
+        # this path applies to bare BackendArray objects.
+        # It is not hit for any internal Xarray backend
         data = indexing.LazilyIndexedArray(data)
 
     return Variable(dimensions, data, attributes, encoding=encoding, fastpath=True)
@@ -274,12 +286,11 @@ def _update_bounds_attributes(variables: T_Variables) -> None:
         attrs = v.attrs
         units = attrs.get("units")
         has_date_units = isinstance(units, str) and "since" in units
-        if has_date_units and "bounds" in attrs:
-            if attrs["bounds"] in variables:
-                bounds_attrs = variables[attrs["bounds"]].attrs
-                bounds_attrs.setdefault("units", attrs["units"])
-                if "calendar" in attrs:
-                    bounds_attrs.setdefault("calendar", attrs["calendar"])
+        if has_date_units and "bounds" in attrs and attrs["bounds"] in variables:
+            bounds_attrs = variables[attrs["bounds"]].attrs
+            bounds_attrs.setdefault("units", attrs["units"])
+            if "calendar" in attrs:
+                bounds_attrs.setdefault("calendar", attrs["calendar"])
 
 
 def _update_bounds_encoding(variables: T_Variables) -> None:
@@ -323,19 +334,16 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                 f"{name} before writing to a file.",
             )
 
-        if has_date_units and "bounds" in attrs:
-            if attrs["bounds"] in variables:
-                bounds_encoding = variables[attrs["bounds"]].encoding
-                bounds_encoding.setdefault("units", encoding["units"])
-                if "calendar" in encoding:
-                    bounds_encoding.setdefault("calendar", encoding["calendar"])
+        if has_date_units and "bounds" in attrs and attrs["bounds"] in variables:
+            bounds_encoding = variables[attrs["bounds"]].encoding
+            bounds_encoding.setdefault("units", encoding["units"])
+            if "calendar" in encoding:
+                bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
-T = TypeVar("T")
-U = TypeVar("U")
-
-
-def _item_or_default(obj: Mapping[Any, T | U] | T, key: Hashable, default: T) -> T | U:
+def _item_or_default[T, U](
+    obj: Mapping[Any, T | U] | T, key: Hashable, default: T
+) -> T | U:
     """
     Return item by key if obj is mapping and key is present, else return default value.
     """
@@ -407,13 +415,16 @@ def decode_cf_variables(
                 v,
                 concat_characters=_item_or_default(concat_characters, k, True),
                 mask_and_scale=_item_or_default(mask_and_scale, k, True),
-                decode_times=_item_or_default(decode_times, k, True),
+                decode_times=cast(
+                    bool | CFDatetimeCoder, _item_or_default(decode_times, k, True)
+                ),
                 stack_char_dim=stack_char_dim,
                 use_cftime=_item_or_default(use_cftime, k, None),
                 decode_timedelta=_item_or_default(decode_timedelta, k, None),
             )
         except Exception as e:
-            raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
+            e.add_note(f"Raised while decoding variable {k!r} with value {v!r}")
+            raise
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
@@ -785,7 +796,13 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     # add encoding for time bounds variables if present.
     _update_bounds_encoding(variables)
 
-    new_vars = {k: encode_cf_variable(v, name=k) for k, v in variables.items()}
+    new_vars = {}
+    for k, v in variables.items():
+        try:
+            new_vars[k] = encode_cf_variable(v, name=k)
+        except Exception as e:
+            e.add_note(f"Raised while encoding variable {k!r} with value {v!r}")
+            raise
 
     # Remove attrs from bounds variables (issue #2921)
     for var in new_vars.values():
@@ -803,8 +820,11 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
                 "leap_year",
                 "month_lengths",
             ]:
-                if attr in new_vars[bounds].attrs and attr in var.attrs:
-                    if new_vars[bounds].attrs[attr] == var.attrs[attr]:
-                        new_vars[bounds].attrs.pop(attr)
+                if (
+                    attr in new_vars[bounds].attrs
+                    and attr in var.attrs
+                    and new_vars[bounds].attrs[attr] == var.attrs[attr]
+                ):
+                    new_vars[bounds].attrs.pop(attr)
 
     return new_vars, attributes

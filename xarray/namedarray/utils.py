@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 import importlib
+import itertools
+import sys
 import warnings
 from collections.abc import Hashable, Iterable, Iterator, Mapping
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from numbers import Number
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 from packaging.version import Version
 
-from xarray.namedarray._typing import ErrorOptionsWithWarn, _DimsLike
+from xarray.namedarray._typing import ErrorHandlingWithWarn
 
 if TYPE_CHECKING:
+    from types import EllipsisType
     from typing import TypeGuard
 
     from numpy.typing import NDArray
@@ -23,12 +27,9 @@ if TYPE_CHECKING:
         DaskArray = NDArray  # type: ignore[assignment, misc]
         DaskCollection: Any = NDArray  # type: ignore[no-redef]
 
-    from xarray.namedarray._typing import _Dim, duckarray
-
-
-K = TypeVar("K")
-V = TypeVar("V")
-T = TypeVar("T")
+    from xarray.core.types import T_ChunkDim
+    from xarray.namedarray._typing import DuckArray, duckarray
+    from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
 @lru_cache
@@ -103,11 +104,11 @@ def is_dict_like(value: Any) -> TypeGuard[Mapping[Any, Any]]:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
-def drop_missing_dims(
-    supplied_dims: Iterable[_Dim],
-    dims: Iterable[_Dim],
-    missing_dims: ErrorOptionsWithWarn,
-) -> _DimsLike:
+def drop_missing_dims[DimType: Hashable](
+    supplied_dims: Iterable[DimType | EllipsisType],
+    dims: Iterable[DimType],
+    missing_dims: ErrorHandlingWithWarn,
+) -> tuple[DimType | EllipsisType, ...]:
     """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
     are not present in dims.
 
@@ -117,39 +118,33 @@ def drop_missing_dims(
     dims : Iterable of Hashable
     missing_dims : {"raise", "warn", "ignore"}
     """
+    supplied_dims_tuple = tuple(supplied_dims)
+    supplied_dims_set = {val for val in supplied_dims_tuple if val is not ...}
+    dims_set = set(dims)
 
-    if missing_dims == "raise":
-        supplied_dims_set = {val for val in supplied_dims if val is not ...}
-        if invalid := supplied_dims_set - set(dims):
-            raise ValueError(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
-            )
+    if missing_dims in ("raise", "warn"):
+        if invalid := supplied_dims_set - dims_set:
+            msg = f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+            if missing_dims == "raise":
+                raise ValueError(msg)
+            warnings.warn(msg, stacklevel=2)
 
-        return supplied_dims
+        if missing_dims == "raise":
+            return supplied_dims_tuple
 
-    elif missing_dims == "warn":
-        if invalid := set(supplied_dims) - set(dims):
-            warnings.warn(
-                f"Dimensions {invalid} do not exist. Expected one or more of {dims}",
-                stacklevel=2,
-            )
-
-        return [val for val in supplied_dims if val in dims or val is ...]
-
-    elif missing_dims == "ignore":
-        return [val for val in supplied_dims if val in dims or val is ...]
-
-    else:
+    elif missing_dims != "ignore":
         raise ValueError(
             f"Unrecognised option {missing_dims} for missing_dims argument"
         )
 
+    return tuple(d for d in supplied_dims_tuple if d in dims_set or d is ...)
 
-def infix_dims(
-    dims_supplied: Iterable[_Dim],
-    dims_all: Iterable[_Dim],
-    missing_dims: ErrorOptionsWithWarn = "raise",
-) -> Iterator[_Dim]:
+
+def infix_dims[DimType: Hashable](
+    dims_supplied: Iterable[DimType | EllipsisType],
+    dims_all: Iterable[DimType],
+    missing_dims: ErrorHandlingWithWarn = "raise",
+) -> Iterator[DimType]:
     """
     Resolves a supplied list containing an ellipsis representing other items, to
     a generator with the 'realized' list of all items
@@ -168,7 +163,10 @@ def infix_dims(
             else:
                 yield d
     else:
-        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
+        existing_dims = cast(
+            "tuple[DimType, ...]",
+            drop_missing_dims(dims_supplied, dims_all, missing_dims),
+        )
         if set(existing_dims) ^ set(dims_all):
             raise ValueError(
                 f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
@@ -176,15 +174,15 @@ def infix_dims(
         yield from existing_dims
 
 
-def either_dict_or_kwargs(
-    pos_kwargs: Mapping[Any, T] | None,
+def either_dict_or_kwargs[K, T](
+    pos_kwargs: Mapping[K, T] | None,
     kw_kwargs: Mapping[str, T],
     func_name: str,
-) -> Mapping[Hashable, T]:
+) -> Mapping[K, T]:
     if pos_kwargs is None or pos_kwargs == {}:
         # Need an explicit cast to appease mypy due to invariance; see
         # https://github.com/python/mypy/issues/6228
-        return cast(Mapping[Hashable, T], kw_kwargs)
+        return cast(Mapping[K, T], kw_kwargs)
 
     if not is_dict_like(pos_kwargs):
         raise ValueError(f"the first argument to .{func_name} must be a dictionary")
@@ -193,6 +191,106 @@ def either_dict_or_kwargs(
             f"cannot specify both keyword and positional arguments to .{func_name}"
         )
     return pos_kwargs
+
+
+def _get_chunk(  # type: ignore[no-untyped-def]
+    data: DuckArray[Any],
+    chunks,
+    chunkmanager: ChunkManagerEntrypoint[Any],
+    *,
+    preferred_chunks,
+    dims=None,
+) -> Mapping[Any, T_ChunkDim]:
+    """
+    Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
+    """
+    from xarray.core.common import _contains_cftime_datetimes
+    from xarray.core.utils import emit_user_level_warning
+    from xarray.structure.chunks import _get_breaks_cached
+
+    dims = chunks.keys() if dims is None else dims
+    shape = data.shape
+
+    # Determine the explicit requested chunks.
+    preferred_chunk_shape = tuple(
+        itertools.starmap(preferred_chunks.get, zip(dims, shape, strict=True))
+    )
+    if isinstance(chunks, Number) or (chunks == "auto"):
+        chunks = dict.fromkeys(dims, chunks)
+    chunk_shape = tuple(
+        chunks.get(dim, None) or preferred_chunk_sizes
+        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape, strict=True)
+    )
+
+    limit: int | None
+    if _contains_cftime_datetimes(data):
+        limit, dtype = fake_target_chunksize(data, chunkmanager.get_auto_chunk_size())
+    else:
+        limit = None
+        dtype = data.dtype
+
+    chunk_shape = chunkmanager.normalize_chunks(
+        chunk_shape,
+        shape=shape,
+        dtype=dtype,
+        limit=limit,
+        previous_chunks=preferred_chunk_shape,
+    )
+
+    # Warn where requested chunks break preferred chunks, provided that the variable
+    # contains data.
+    if data.size:  # type: ignore[unused-ignore,attr-defined]  # DuckArray protocol doesn't include 'size' - should it?
+        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape, strict=True):
+            if preferred_chunk_sizes := preferred_chunks.get(dim):
+                disagreement = _get_breaks_cached(
+                    size=size,
+                    chunk_sizes=chunk_sizes,
+                    preferred_chunk_sizes=preferred_chunk_sizes,
+                )
+                if disagreement:
+                    emit_user_level_warning(
+                        "The specified chunks separate the stored chunks along "
+                        f'dimension "{dim}" starting at index {disagreement}. This could '
+                        "degrade performance. Instead, consider rechunking after loading.",
+                    )
+
+    return dict(zip(dims, chunk_shape, strict=True))
+
+
+def fake_target_chunksize(
+    data: DuckArray[Any],
+    limit: int,
+) -> tuple[int, np.dtype[Any]]:
+    """
+    The `normalize_chunks` algorithm takes a size `limit` in bytes, but will not
+    work for object dtypes.  So we rescale the `limit` to an appropriate one based
+    on `float64` dtype, and pass that to `normalize_chunks`.
+
+    Arguments
+    ---------
+    data : Variable or ChunkedArray
+        The data for which we want to determine chunk sizes.
+    limit : int
+        The target chunk size in bytes. Passed to the chunk manager's `normalize_chunks` method.
+    """
+
+    # Short circuit for non-object dtypes
+    from xarray.core.common import _contains_cftime_datetimes
+
+    if not _contains_cftime_datetimes(data):
+        return limit, data.dtype
+
+    from xarray.core.formatting import first_n_items
+
+    output_dtype = np.dtype(np.float64)
+
+    nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
+
+    f64_nbytes = output_dtype.itemsize
+
+    limit = int(limit * (f64_nbytes / nbytes_approx))
+
+    return limit, output_dtype
 
 
 class ReprObject:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 
 import xarray
@@ -69,6 +71,34 @@ def test_nested_options() -> None:
     assert OPTIONS["display_width"] == original
 
 
+def test_netcdf_engine_order() -> None:
+    original = OPTIONS["netcdf_engine_order"]
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "option 'netcdf_engine_order' given an invalid value: ['invalid']. "
+            "Expected a subset of ['h5netcdf', 'netcdf4', 'scipy']"
+        ),
+    ):
+        xarray.set_options(netcdf_engine_order=["invalid"])
+    assert OPTIONS["netcdf_engine_order"] == original
+
+
+def test_facetgrid_figsize() -> None:
+    with pytest.raises(ValueError):
+        xarray.set_options(facetgrid_figsize="invalid")
+    with pytest.raises(ValueError):
+        xarray.set_options(facetgrid_figsize=(1.0,))
+    with pytest.raises(ValueError):
+        xarray.set_options(facetgrid_figsize=(1.0, 2.0, 3.0))
+    with xarray.set_options(facetgrid_figsize="rcparams"):
+        assert OPTIONS["facetgrid_figsize"] == "rcparams"
+    with xarray.set_options(facetgrid_figsize="computed"):
+        assert OPTIONS["facetgrid_figsize"] == "computed"
+    with xarray.set_options(facetgrid_figsize=(12.0, 8.0)):
+        assert OPTIONS["facetgrid_figsize"] == (12.0, 8.0)
+
+
 def test_display_style() -> None:
     original = "html"
     assert OPTIONS["display_style"] == original
@@ -97,12 +127,14 @@ class TestAttrRetention:
         ds = create_test_dataset_attrs()
         original_attrs = ds.attrs
 
-        # Test default behaviour
+        # Test default behaviour (keeps attrs for reduction operations)
         result = ds.mean()
-        assert result.attrs == {}
+        assert result.attrs == original_attrs
         with xarray.set_options(keep_attrs="default"):
             result = ds.mean()
-            assert result.attrs == {}
+            assert (
+                result.attrs == original_attrs
+            )  # "default" uses operation's default which is True for reduce
 
         with xarray.set_options(keep_attrs=True):
             result = ds.mean()
@@ -117,12 +149,14 @@ class TestAttrRetention:
         da = create_test_dataarray_attrs()
         original_attrs = da.attrs
 
-        # Test default behaviour
+        # Test default behaviour (keeps attrs for reduction operations)
         result = da.mean()
-        assert result.attrs == {}
+        assert result.attrs == original_attrs
         with xarray.set_options(keep_attrs="default"):
             result = da.mean()
-            assert result.attrs == {}
+            assert (
+                result.attrs == original_attrs
+            )  # "default" uses operation's default which is True for reduce
 
         with xarray.set_options(keep_attrs=True):
             result = da.mean()

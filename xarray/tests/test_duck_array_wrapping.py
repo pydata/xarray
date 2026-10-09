@@ -1,8 +1,19 @@
+import importlib
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.tests import (
+    get_dask_chunkmanager,
+    has_dask_array_expr,
+    requires_cupy,
+    requires_dask,
+    requires_jax,
+    requires_pint,
+    requires_sparse,
+)
 
 # Don't run cupy in CI because it requires a GPU
 NAMESPACE_ARRAYS = {
@@ -101,16 +112,48 @@ NAMESPACE_ARRAYS = {
     },
 }
 
+NAMESPACE_REQUIREMENTS = {
+    "cupy": requires_cupy,
+    "dask.array": requires_dask,
+    "jax.numpy": requires_jax,
+    "pint": requires_pint,
+    "sparse": requires_sparse,
+}
+NAMESPACES = [
+    pytest.param(namespace, marks=NAMESPACE_REQUIREMENTS[namespace])
+    for namespace in NAMESPACE_ARRAYS
+]
+
+try:
+    import jax  # type: ignore[import-not-found,unused-ignore]
+
+    # enable double-precision
+    jax.config.update("jax_enable_x64", True)
+except ImportError:
+    pass
+
 
 class _BaseTest:
     def setup_for_test(self, request, namespace):
         self.namespace = namespace
-        self.xp = pytest.importorskip(namespace)
-        self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["array"])
-        self.constructor = getattr(
-            self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["constructor"]
-        )
         xarray_method = request.node.name.split("test_")[1].split("[")[0]
+        if namespace == "dask.array" and has_dask_array_expr:
+            if xarray_method in {"groupby", "groupby_bins", "resample"}:
+                pytest.xfail("flox groupby currently builds legacy dask arrays")
+            chunkmanager = get_dask_chunkmanager()
+            self.xp = chunkmanager.array_api
+            self.Array = chunkmanager.array_cls
+
+            def constructor(data):
+                return chunkmanager.from_array(data, chunks=data.shape)
+
+            self.constructor = constructor
+        else:
+            self.xp = importlib.import_module(namespace)
+            self.Array = getattr(self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["array"])
+            self.constructor = getattr(
+                self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["constructor"]
+            )
         if xarray_method in NAMESPACE_ARRAYS[namespace]["xfails"]:
             reason = NAMESPACE_ARRAYS[namespace]["xfails"][xarray_method]
             pytest.xfail(f"xfail for {self.namespace}: {reason}")
@@ -127,7 +170,7 @@ class _BaseTest:
         )
 
 
-@pytest.mark.parametrize("namespace", NAMESPACE_ARRAYS)
+@pytest.mark.parametrize("namespace", NAMESPACES)
 class TestTopLevelMethods(_BaseTest):
     @pytest.fixture(autouse=True)
     def setUp(self, request, namespace):
@@ -155,7 +198,7 @@ class TestTopLevelMethods(_BaseTest):
         assert isinstance(result.data, self.Array)
 
     def test_merge(self):
-        result = xr.merge([self.x1, self.x2], compat="override")
+        result = xr.merge([self.x1, self.x2], compat="override", join="outer")
         assert isinstance(result.foo.data, self.Array)
 
     def test_where(self):
@@ -189,7 +232,7 @@ class TestTopLevelMethods(_BaseTest):
         assert isinstance(result.data, self.Array)
 
 
-@pytest.mark.parametrize("namespace", NAMESPACE_ARRAYS)
+@pytest.mark.parametrize("namespace", NAMESPACES)
 class TestDataArrayMethods(_BaseTest):
     @pytest.fixture(autouse=True)
     def setUp(self, request, namespace):
@@ -434,6 +477,8 @@ class TestDataArrayMethods(_BaseTest):
         result = self.x.argsort()
         assert isinstance(result.data, self.Array)
 
+    # only checks the array type, the data contains NaN
+    @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
     def test_astype(self):
         result = self.x.astype(int)
         assert isinstance(result.data, self.Array)

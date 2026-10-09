@@ -8,7 +8,7 @@
 I propose the addition of Grouper objects to Xarray's public API so that
 
 ```python
-Dataset.groupby(x=BinGrouper(bins=np.arange(10, 2))))
+Dataset.groupby(x=BinGrouper(bins=np.arange(10, 2)))
 ```
 
 is identical to today's syntax:
@@ -27,7 +27,7 @@ results = []
 for element in unique_labels:
     subset = ds.sel(x=(ds.x == element))  # split
     # subset = ds.where(ds.x == element, drop=True)  # alternative
-    result = subset.mean() # apply
+    result = subset.mean()  # apply
     results.append(result)
 
 xr.concat(results)  # combine
@@ -36,7 +36,7 @@ xr.concat(results)  # combine
 to
 
 ```python
-ds.groupby('x').mean()  # splits, applies, and combines
+ds.groupby("x").mean()  # splits, applies, and combines
 ```
 
 Efficient vectorized implementations of this pattern are implemented in numpy's [`ufunc.at`](https://numpy.org/doc/stable/reference/generated/numpy.ufunc.at.html), [`ufunc.reduceat`](https://numpy.org/doc/stable/reference/generated/numpy.ufunc.reduceat.html), [`numbagg.grouped`](https://github.com/numbagg/numbagg/blob/main/numbagg/grouped.py), [`numpy_groupies`](https://github.com/ml31415/numpy-groupies), and probably more.
@@ -110,10 +110,12 @@ All Grouper objects will subclass from a Grouper object
 ```python
 import abc
 
+
 class Grouper(abc.ABC):
     @abc.abstractmethod
     def factorize(self, by: DataArray):
         raise NotImplementedError
+
 
 class CustomGrouper(Grouper):
     def factorize(self, by: DataArray):

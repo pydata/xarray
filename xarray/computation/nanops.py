@@ -29,7 +29,9 @@ def _maybe_null_out(result, axis, mask, min_count=1):
         dtype, fill_value = dtypes.maybe_promote(result.dtype)
         result = where(null_mask, fill_value, astype(result, dtype))
 
-    elif getattr(result, "dtype", None) not in dtypes.NAT_TYPES:
+    elif (dtype := getattr(result, "dtype", None)) and getattr(
+        dtype, "kind", None
+    ) not in {"m", "M"}:
         null_mask = mask.size - duck_array_ops.sum(mask)
         result = where(null_mask < min_count, np.nan, result)
 
@@ -105,14 +107,12 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """In house nanmean. ddof argument will be used in _nanvar method"""
-    from xarray.core.duck_array_ops import count, fillna, where_method
-
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)
     # As dtype inference is impossible for object dtype, we assume float
     # https://github.com/dask/dask/issues/3162
     if dtype is None and value.dtype.kind == "O":
-        dtype = value.dtype if value.dtype.kind in ["cf"] else float
+        dtype = float
 
     data = np.sum(value, axis=axis, dtype=dtype, **kwargs)
     data = data / (valid_count - ddof)
@@ -153,11 +153,21 @@ def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
     if a.dtype.kind == "O":
         return _nanvar_object(a, axis=axis, dtype=dtype, ddof=ddof)
 
-    return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"Degrees of freedom <= 0 for slice", category=RuntimeWarning
+        )
+
+        return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
-    return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"Degrees of freedom <= 0 for slice", category=RuntimeWarning
+        )
+
+        return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):

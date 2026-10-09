@@ -44,8 +44,9 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
-from xarray.coding.cftime_offsets import _MONTH_ABBREVIATIONS, _legacy_to_new_freq
+from xarray.coding.cftime_offsets import _MONTH_ABBREVIATIONS
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.common import _contains_datetime_like_objects
 from xarray.core.dtypes import _is_numpy_subdtype
@@ -101,7 +102,11 @@ def infer_freq(index):
         inferer = _CFTimeFrequencyInferer(index)
         return inferer.get_freq()
 
-    return _legacy_to_new_freq(pd.infer_freq(index))
+    if Version(pd.__version__) >= Version("3.1.0.dev0"):
+        with pd.option_context({"future.infer_freq_returns_offset": False}):
+            return pd.infer_freq(index)
+    else:
+        return pd.infer_freq(index)
 
 
 class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
@@ -137,7 +142,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
             return self._infer_daily_rule()
         # There is no possible intraday frequency with a non-unique delta
         # Different from pandas: we don't need to manage DST and business offsets in cftime
-        elif not len(self.deltas) == 1:
+        elif len(self.deltas) != 1:
             return None
 
         if _is_multiple(delta, _ONE_HOUR):

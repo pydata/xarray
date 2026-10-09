@@ -1,16 +1,52 @@
 from __future__ import annotations
 
+import warnings
+from collections.abc import Generator
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset, DataTree
-from xarray.tests import create_test_data, has_cftime, requires_dask
+from xarray.tests import create_test_data, has_zarr, requires_cftime, requires_dask
+
+if has_zarr:
+    import zarr
+
+    ZARR_FORMATS = [2, 3]
+else:
+    ZARR_FORMATS = []
 
 
-@pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
-def backend(request):
+@pytest.fixture(autouse=True)
+def handle_numpy_1_warnings():
+    """Handle NumPy 1.x DeprecationWarnings for out-of-bound integer conversions.
+
+    NumPy 1.x raises DeprecationWarning when converting out-of-bounds values
+    (e.g., 255 to int8), while NumPy 2.x raises OverflowError. This fixture
+    suppresses the warning in NumPy 1.x environments to allow tests to pass.
+    """
+    # Only apply for NumPy < 2.0
+    if np.__version__.startswith("1."):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                "NumPy will stop allowing conversion of out-of-bound Python integers",
+                DeprecationWarning,
+            )
+            yield
+    else:
+        yield
+
+
+@pytest.fixture(
+    params=[
+        pytest.param(False, id="numpy"),
+        pytest.param(True, id="dask", marks=requires_dask),
+    ]
+)
+def use_dask(request):
     return request.param
 
 
@@ -29,10 +65,9 @@ def compute_backend(request):
         yield request.param
 
 
-@pytest.fixture(params=[1])
-def ds(request, backend):
-    if request.param == 1:
-        ds = Dataset(
+def _create_test_ds(variant) -> Dataset:
+    if variant == 1:
+        return Dataset(
             dict(
                 z1=(["y", "x"], np.random.randn(2, 8)),
                 z2=(["time", "y"], np.random.randn(10, 2)),
@@ -44,8 +79,8 @@ def ds(request, backend):
                 y=range(2),
             ),
         )
-    elif request.param == 2:
-        ds = Dataset(
+    elif variant == 2:
+        return Dataset(
             dict(
                 z1=(["time", "y"], np.random.randn(10, 2)),
                 z2=(["time"], np.random.randn(10)),
@@ -58,51 +93,60 @@ def ds(request, backend):
                 y=range(2),
             ),
         )
-    elif request.param == 3:
-        ds = create_test_data()
-    else:
-        raise ValueError
-
-    if backend == "dask":
-        return ds.chunk()
-
-    return ds
+    elif variant == 3:
+        return create_test_data()
+    raise ValueError(f"unknown ds variant {variant!r}")
 
 
-@pytest.fixture(params=[1])
-def da(request, backend):
-    if request.param == 1:
+def _create_test_da(variant) -> DataArray:
+    if variant == 1:
         times = pd.date_range("2000-01-01", freq="1D", periods=21)
-        da = DataArray(
+        return DataArray(
             np.random.random((3, 21, 4)),
             dims=("a", "time", "x"),
             coords=dict(time=times),
         )
-
-    if request.param == 2:
-        da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
-
-    if request.param == "repeating_ints":
-        da = DataArray(
+    elif variant == 2:
+        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
+    elif variant == "repeating_ints":
+        return DataArray(
             np.tile(np.arange(12), 5).reshape(5, 4, 3),
             coords={"x": list("abc"), "y": list("defg")},
             dims=list("zyx"),
         )
+    raise ValueError(f"unknown da variant {variant!r}")
 
-    if backend == "dask":
-        return da.chunk()
-    elif backend == "numpy":
-        return da
-    else:
-        raise ValueError
+
+@pytest.fixture(params=[1])
+def ds(request, use_dask) -> Dataset:
+    """Test Dataset, run once with numpy and once with dask."""
+    ds = _create_test_ds(request.param)
+    return ds.chunk() if use_dask else ds
+
+
+@pytest.fixture(params=[1])
+def ds_numpy(request) -> Dataset:
+    """Test Dataset backed by numpy only."""
+    return _create_test_ds(request.param)
+
+
+@pytest.fixture(params=[1])
+def da(request, use_dask) -> DataArray:
+    """Test DataArray, run once with numpy and once with dask."""
+    da = _create_test_da(request.param)
+    return da.chunk() if use_dask else da
+
+
+@pytest.fixture(params=[1])
+def da_numpy(request) -> DataArray:
+    """Test DataArray backed by numpy only."""
+    return _create_test_da(request.param)
 
 
 @pytest.fixture(
     params=[
-        False,
-        pytest.param(
-            True, marks=pytest.mark.skipif(not has_cftime, reason="no cftime")
-        ),
+        pytest.param(False, id="datetime64"),
+        pytest.param(True, id="cftime", marks=requires_cftime),
     ]
 )
 def use_cftime(request):
@@ -115,7 +159,7 @@ def type(request):
 
 
 @pytest.fixture(params=[1])
-def d(request, backend, type) -> DataArray | Dataset:
+def d(request, use_dask, type) -> DataArray | Dataset:
     """
     For tests which can test either a DataArray or a Dataset.
     """
@@ -142,32 +186,9 @@ def d(request, backend, type) -> DataArray | Dataset:
     else:
         raise ValueError
 
-    if backend == "dask":
+    if use_dask:
         return result.chunk()
-    elif backend == "numpy":
-        return result
-    else:
-        raise ValueError
-
-
-@pytest.fixture
-def byte_attrs_dataset():
-    """For testing issue #9407"""
-    null_byte = b"\x00"
-    other_bytes = bytes(range(1, 256))
-    ds = Dataset({"x": 1}, coords={"x_coord": [1]})
-    ds["x"].attrs["null_byte"] = null_byte
-    ds["x"].attrs["other_bytes"] = other_bytes
-
-    expected = ds.copy()
-    expected["x"].attrs["null_byte"] = ""
-    expected["x"].attrs["other_bytes"] = other_bytes.decode(errors="replace")
-
-    return {
-        "input": ds,
-        "expected": expected,
-        "h5netcdf_error": r"Invalid value provided for attribute .*: .*\. Null characters .*",
-    }
+    return result
 
 
 @pytest.fixture(scope="module")
@@ -234,6 +255,12 @@ def simple_datatree(create_test_datatree):
     return create_test_datatree()
 
 
-@pytest.fixture(scope="module", params=["s", "ms", "us", "ns"])
+@pytest.fixture(params=["s", "ms", "us", "ns"])
 def time_unit(request):
     return request.param
+
+
+@pytest.fixture(params=ZARR_FORMATS)
+def default_zarr_format(request) -> Generator[None, None]:
+    with zarr.config.set(default_zarr_format=request.param):
+        yield

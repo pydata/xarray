@@ -1,38 +1,23 @@
 from __future__ import annotations
 
 import datetime
-import sys
 from collections.abc import Callable, Collection, Hashable, Iterator, Mapping, Sequence
-from types import EllipsisType
+from types import EllipsisType, TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
     Protocol,
+    Self,
     SupportsIndex,
+    TypeAlias,
     TypeVar,
     Union,
-    overload,
     runtime_checkable,
 )
 
 import numpy as np
 import pandas as pd
-
-try:
-    if sys.version_info >= (3, 11):
-        from typing import Self, TypeAlias
-    else:
-        from typing import TypeAlias
-
-        from typing_extensions import Self
-except ImportError:
-    if TYPE_CHECKING:
-        raise
-    else:
-        Self: Any = None
-
-
 from numpy._typing import _SupportsDType
 from numpy.typing import ArrayLike
 
@@ -46,10 +31,10 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index, Indexes
     from xarray.core.utils import Frozen
     from xarray.core.variable import IndexVariable, Variable
-    from xarray.groupers import Grouper, TimeResampler
+    from xarray.groupers import Grouper, Resampler
     from xarray.structure.alignment import Aligner
 
-    GroupInput: TypeAlias = (
+    type GroupInput = (
         str
         | DataArray
         | IndexVariable
@@ -117,9 +102,7 @@ try:
 except ImportError:
     CFTimeDatetime = np.datetime64
 
-DatetimeLike: TypeAlias = (
-    pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
-)
+type DatetimeLike = pd.Timestamp | datetime.datetime | np.datetime64 | CFTimeDatetime
 
 
 class Alignable(Protocol):
@@ -195,7 +178,7 @@ T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 # Temporary placeholder for indicating an array api compliant type.
 # hopefully in the future we can narrow this down more:
-T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)
+T_DuckArray = TypeVar("T_DuckArray", bound=Any, covariant=True)  # noqa: PLC0105
 
 # For typing pandas extension arrays.
 T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.ExtensionArray)
@@ -204,8 +187,11 @@ T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.Extension
 ScalarOrArray = Union["ArrayLike", np.generic]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
-DsCompatible = Union["Dataset", "DaCompatible"]
-DtCompatible = Union["DataTree", "DsCompatible"]
+# Datasets can also be combined with a mapping of variable names to values. The
+# key type is Any, as Mapping is invariant in its key type.
+DsCompatible = Union["Dataset", "DaCompatible", Mapping[Any, "DaCompatible"]]
+# but DataTrees can't
+DtCompatible = Union["DataTree", "Dataset", "DaCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]
@@ -214,11 +200,11 @@ Dims = Union[str, Collection[Hashable], EllipsisType, None]
 
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
-T_ChunkDim: TypeAlias = str | int | Literal["auto"] | None | tuple[int, ...]
-T_ChunkDimFreq: TypeAlias = Union["TimeResampler", T_ChunkDim]
-T_ChunksFreq: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
+type T_ChunkDim = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
+type T_ChunkDimFreq = Resampler | T_ChunkDim
+type T_ChunksFreq = T_ChunkDim | Mapping[Any, T_ChunkDimFreq]
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-T_Chunks: TypeAlias = T_ChunkDim | Mapping[Any, T_ChunkDim]
+type T_Chunks = T_ChunkDim | Mapping[Any, T_ChunkDim]
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
@@ -253,16 +239,16 @@ InterpolantOptions = Literal[
 InterpnOptions = Literal["linear", "nearest", "slinear", "cubic", "quintic", "pchip"]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions, InterpnOptions]
 
-DatetimeUnitOptions = Literal[
-    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
-]
+DatetimeUnitOptions = (
+    Literal["W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as"] | None
+)
 NPDatetimeUnitOptions = Literal["D", "h", "m", "s", "ms", "us", "ns"]
 PDDatetimeUnitOptions = Literal["s", "ms", "us", "ns"]
 
-QueryEngineOptions = Literal["python", "numexpr", None]
+QueryEngineOptions = Literal["python", "numexpr"] | None
 QueryParserOptions = Literal["pandas", "python"]
 
-ReindexMethodOptions = Literal["nearest", "pad", "ffill", "backfill", "bfill", None]
+ReindexMethodOptions = Literal["nearest", "pad", "ffill", "backfill", "bfill"] | None
 
 PadModeOptions = Literal[
     "constant",
@@ -281,7 +267,7 @@ T_VarPadConstantValues = T_PadConstantValues | Mapping[Any, T_PadConstantValues]
 T_DatasetPadConstantValues = (
     T_VarPadConstantValues | Mapping[Any, T_VarPadConstantValues]
 )
-PadReflectOptions = Literal["even", "odd", None]
+PadReflectOptions = Literal["even", "odd"] | None
 
 CFCalendar = Literal[
     "standard",
@@ -299,23 +285,14 @@ CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
 InclusiveOptions = Literal["both", "neither", "left", "right"]
 
-ScaleOptions = Literal["linear", "symlog", "log", "logit", None]
-HueStyleOptions = Literal["continuous", "discrete", None]
+ScaleOptions = Literal["linear", "symlog", "log", "logit"] | None
+HueStyleOptions = Literal["continuous", "discrete"] | None
 AspectOptions = Union[Literal["auto", "equal"], float, None]
-ExtendOptions = Literal["neither", "both", "min", "max", None]
+ExtendOptions = Literal["neither", "both", "min", "max"] | None
 
 
-_T_co = TypeVar("_T_co", covariant=True)
-
-
-class NestedSequence(Protocol[_T_co]):
-    def __len__(self, /) -> int: ...
-    @overload
-    def __getitem__(self, index: int, /) -> _T_co | NestedSequence[_T_co]: ...
-    @overload
-    def __getitem__(self, index: slice, /) -> NestedSequence[_T_co]: ...
-    def __iter__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
-    def __reversed__(self, /) -> Iterator[_T_co | NestedSequence[_T_co]]: ...
+type NestedSequence[T] = Sequence[T | NestedSequence[T]]
+type NestedDict[T] = dict[str, NestedDict[T] | T]
 
 
 AnyStr_co = TypeVar("AnyStr_co", str, bytes, covariant=True)
@@ -329,7 +306,7 @@ class BaseBuffer(Protocol):
         # for _get_filepath_or_buffer
         ...
 
-    def seek(self, __offset: int, __whence: int = ...) -> int:
+    def seek(self, offset: int, whence: int = ..., /) -> int:
         # with one argument: gzip.GzipFile, bz2.BZ2File
         # with two arguments: zip.ZipFile, read_sas
         ...
@@ -345,7 +322,7 @@ class BaseBuffer(Protocol):
 
 @runtime_checkable
 class ReadBuffer(BaseBuffer, Protocol[AnyStr_co]):
-    def read(self, __n: int = ...) -> AnyStr_co:
+    def read(self, n: int = ..., /) -> AnyStr_co:
         # for BytesIOWrapper, gzip.GzipFile, bz2.BZ2File
         ...
 
@@ -377,4 +354,29 @@ Bins = Union[
     int, Sequence[int], Sequence[float], Sequence[pd.Timestamp], np.ndarray, pd.Index
 ]
 
-ResampleCompatible: TypeAlias = str | datetime.timedelta | pd.Timedelta | pd.DateOffset
+# not a `type` statement, as it is also used in isinstance checks
+ResampleCompatible: TypeAlias = (  # noqa: UP040
+    str | datetime.timedelta | pd.Timedelta | pd.offsets.BaseOffset
+)
+
+
+class Closable(Protocol):
+    def close(self) -> None: ...
+
+
+class Lock(Protocol):
+    # The parameters are positional-only, as their names differ between lock
+    # types, e.g. multiprocessing.Lock.acquire(block, timeout).
+    def acquire(self, blocking: bool = ..., /) -> bool: ...
+    def release(self) -> None: ...
+    # threading locks return the result of acquire(), dask.distributed.Lock self
+    def __enter__(self) -> object: ...
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> None: ...
+    def __hash__(self) -> int:
+        return super().__hash__()

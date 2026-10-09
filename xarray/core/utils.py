@@ -61,17 +61,28 @@ from collections.abc import (
     MutableMapping,
     MutableSet,
     Sequence,
-    Set,
     ValuesView,
 )
-from enum import Enum
+from collections.abc import (
+    Set as AbstractSet,
+)
 from pathlib import Path
 from types import EllipsisType, ModuleType
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeGuard, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    TypeGuard,
+    TypeVar,
+    cast,
+    overload,
+    override,
+)
 
 import numpy as np
 import pandas as pd
 
+from xarray.namedarray._typing import Default, _default  # noqa: F401
 from xarray.namedarray.utils import (  # noqa: F401
     ReprObject,
     drop_missing_dims,
@@ -86,11 +97,25 @@ from xarray.namedarray.utils import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    from xarray.core.types import Dims, ErrorOptionsWithWarn
+    from xarray.core.types import Dims, ErrorOptionsWithWarn, NestedDict
 
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
+
+
+def is_allowed_extension_array_dtype(dtype: Any):
+    return pd.api.types.is_extension_array_dtype(dtype) and not isinstance(  # noqa: TID251
+        dtype, pd.StringDtype
+    )
+
+
+def is_allowed_extension_array(array: Any) -> bool:
+    return (
+        hasattr(array, "dtype")
+        and is_allowed_extension_array_dtype(array.dtype)
+        and not isinstance(array, pd.arrays.NumpyExtensionArray)  # type: ignore[attr-defined]
+    )
 
 
 def alias_message(old_name: str, new_name: str) -> str:
@@ -103,7 +128,7 @@ def alias_warning(old_name: str, new_name: str, stacklevel: int = 3) -> None:
     )
 
 
-def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
+def alias[T](obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     assert isinstance(old_name, str)
 
     @functools.wraps(obj)
@@ -137,7 +162,7 @@ def did_you_mean(
     >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
     'Did you mean one of (None,)?'
 
-    See also
+    See Also
     --------
     https://en.wikipedia.org/wiki/String_metric
     """
@@ -180,7 +205,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
 
 
 def maybe_coerce_to_str(index, original_coords):
-    """maybe coerce a pandas Index back to a nunpy array of type str
+    """maybe coerce a pandas Index back to a numpy array of type str
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
@@ -188,7 +213,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     try:
         result_type = dtypes.result_type(*original_coords)
-    except TypeError:
+    except (TypeError, ValueError):
         pass
     else:
         if result_type.kind in "SU":
@@ -210,30 +235,51 @@ def maybe_wrap_array(original, new_array):
         return new_array
 
 
-def equivalent(first: T, second: T) -> bool:
+def equivalent[T](first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray. If both objects are lists,
     equivalent is sequentially called on all the elements.
+
+    Returns False for any comparison that doesn't return a boolean,
+    making this function safer to use with objects that have non-standard
+    __eq__ implementations.
     """
     # TODO: refactor to avoid circular import
     from xarray.core import duck_array_ops
 
     if first is second:
         return True
+
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
-    return (first == second) or (pd.isnull(first) and pd.isnull(second))  # type: ignore[call-overload]
+
+    # Check for NaN equivalence early (before equality comparison)
+    # This handles both Python float NaN and NumPy scalar NaN (issue #10833)
+    if pd.isnull(first) and pd.isnull(second):  # type: ignore[call-overload]
+        return True
+
+    # For non-array/list types, use == but require boolean result
+    result = first == second
+    if not isinstance(result, bool):
+        # Accept numpy bool scalars as well
+        if isinstance(result, np.bool_):
+            return bool(result)
+        # Reject any other non-boolean type (Dataset, Series, custom objects, etc.)
+        return False
+
+    return result
 
 
-def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
+def list_equiv[T](first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
-    return all(equivalent(f, s) for f, s in zip(first, second, strict=True))
+    return all(itertools.starmap(equivalent, zip(first, second, strict=True)))
 
 
-def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
+def peek_at[T](iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
     """Returns the first value from iterable, as well as a new iterator with
     the same content as the original iterable
     """
@@ -242,7 +288,7 @@ def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
     return peek, itertools.chain([peek], gen)
 
 
-def update_safety_check(
+def update_safety_check[K, V](
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -270,7 +316,7 @@ def update_safety_check(
             )
 
 
-def remove_incompatible_items(
+def remove_incompatible_items[K, V](
     first_dict: MutableMapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -291,6 +337,25 @@ def remove_incompatible_items(
     for k in list(first_dict):
         if k not in second_dict or not compat(first_dict[k], second_dict[k]):
             del first_dict[k]
+
+
+def flat_items[T](
+    nested: Mapping[str, NestedDict[T] | T],
+    prefix: str | None = None,
+    separator: str = "/",
+) -> Iterable[tuple[str, T]]:
+    """Yields flat items from a nested dictionary of dicts.
+
+    Notes:
+    - Only dict subclasses are flattened.
+    - Duplicate items are not removed. These should be checked separately.
+    """
+    for key, value in nested.items():
+        key = prefix + separator + key if prefix is not None else key
+        if isinstance(value, dict):
+            yield from flat_items(value, key, separator)
+        else:
+            yield key, value
 
 
 def is_full_slice(value: Any) -> bool:
@@ -342,7 +407,7 @@ def to_0d_array(value: Any) -> np.ndarray:
         return to_0d_object_array(value)
 
 
-def dict_equiv(
+def dict_equiv[K, V](
     first: Mapping[K, V],
     second: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -369,7 +434,7 @@ def dict_equiv(
     return all(k in first for k in second)
 
 
-def compat_dict_intersection(
+def compat_dict_intersection[K, V](
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -397,7 +462,7 @@ def compat_dict_intersection(
     return new_dict
 
 
-def compat_dict_union(
+def compat_dict_union[K, V](
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -479,6 +544,7 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
             FutureWarning,
         )
 
+    @override
     def __getitem__(self, key: K) -> V:
         self._warn()
         return super().__getitem__(key)
@@ -664,20 +730,58 @@ def is_remote_uri(path: str) -> bool:
     This also matches for http[s]://, which were the only remote URLs
     supported in <=v0.16.2.
     """
-    return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
+    return bool(re.search(r"^[a-zA-Z][a-zA-Z0-9]*(\://|\:\:)", path))
+
+
+def strip_uri_params(uri: str) -> str:
+    """Strip query parameters and fragments from a URI.
+
+    This is useful for extracting the file extension from URLs that
+    contain query parameters (e.g., OPeNDAP constraint expressions).
+
+    Parameters
+    ----------
+    uri : str
+        The URI to strip
+
+    Returns
+    -------
+    str
+        The URI without query parameters (?) or fragments (#)
+
+    Examples
+    --------
+    >>> strip_uri_params("http://example.com/file.nc?var=temp&time=0")
+    'http://example.com/file.nc'
+    >>> strip_uri_params("http://example.com/file.nc#section")
+    'http://example.com/file.nc'
+    >>> strip_uri_params("/local/path/file.nc")
+    '/local/path/file.nc'
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    # Use urlsplit to properly parse the URI
+    # This handles both absolute URLs and relative paths
+    parsed = urlsplit(uri)
+    # Reconstruct without query and fragment using urlunsplit
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
 
 
 def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     # check byte header to determine file type
-    if isinstance(filename_or_obj, bytes):
-        magic_number = filename_or_obj[:count]
-    elif isinstance(filename_or_obj, io.IOBase):
-        if filename_or_obj.tell() != 0:
-            filename_or_obj.seek(0)
-        magic_number = filename_or_obj.read(count)
-        filename_or_obj.seek(0)
-    else:
+    if not isinstance(filename_or_obj, io.IOBase):
         raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
+    if filename_or_obj.tell() != 0:
+        filename_or_obj.seek(0)
+    # unbuffered files can return fewer bytes than requested, so read until
+    # `count` bytes or the end of the file
+    magic_number = b""
+    while len(magic_number) < count:
+        chunk = filename_or_obj.read(count - len(magic_number))
+        if not chunk:
+            break
+        magic_number += chunk
+    filename_or_obj.seek(0)
     return magic_number
 
 
@@ -685,7 +789,10 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
     if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
         path = os.fspath(pathlike)
         try:
-            with open(path, "rb") as f:
+            # Open unbuffered: a buffered reader fills its whole buffer, whose size
+            # follows the filesystem block size and can be several MB on parallel
+            # filesystems, effectively reading entire small files (GH7697).
+            with open(path, "rb", buffering=0) as f:
                 return read_magic_number_from_file(f, count)
         except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
@@ -695,10 +802,8 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
 def try_read_magic_number_from_file_or_path(filename_or_obj, count=8) -> bytes | None:
     magic_number = try_read_magic_number_from_path(filename_or_obj, count)
     if magic_number is None:
-        try:
+        with contextlib.suppress(TypeError):
             magic_number = read_magic_number_from_file(filename_or_obj, count)
-        except TypeError:
-            pass
     return magic_number
 
 
@@ -744,14 +849,14 @@ def iterable_of_hashable(v: Any) -> TypeGuard[Iterable[Hashable]]:
     return all(hashable(elm) for elm in it)
 
 
-def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
+def decode_numpy_dict_values[K, V](attrs: Mapping[K, V]) -> dict[K, V]:
     """Convert attribute values from numpy objects to native Python objects,
     for use in to_dict
     """
     attrs = dict(attrs)
     for k, v in attrs.items():
         if isinstance(v, np.ndarray):
-            attrs[k] = v.tolist()
+            attrs[k] = cast(V, v.tolist())
         elif isinstance(v, np.generic):
             attrs[k] = v.item()
     return attrs
@@ -806,7 +911,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
-    """Get an new dimension name based on new_dim, that is not used in dims.
+    """Get a new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 
     Example1:
@@ -888,7 +993,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_dims_as_tuple(
@@ -897,7 +1002,7 @@ def parse_dims_as_tuple(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -949,7 +1054,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> set[Hashable] | None | EllipsisType: ...
+) -> set[Hashable] | EllipsisType | None: ...
 
 
 def parse_dims_as_set(
@@ -958,7 +1063,7 @@ def parse_dims_as_set(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> set[Hashable] | None | EllipsisType:
+) -> set[Hashable] | EllipsisType | None:
     """Like parse_dims_as_tuple, but returning a set instead of a tuple."""
     # TODO: Consider removing parse_dims_as_tuple?
     if dim is None or dim is ...:
@@ -990,7 +1095,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None | EllipsisType: ...
+) -> tuple[Hashable, ...] | EllipsisType | None: ...
 
 
 def parse_ordered_dims(
@@ -999,7 +1104,7 @@ def parse_ordered_dims(
     *,
     check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None | EllipsisType:
+) -> tuple[Hashable, ...] | EllipsisType | None:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
@@ -1048,7 +1153,7 @@ def parse_ordered_dims(
         )
 
 
-def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
+def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> None:
     wrong_dims = (dim - all_dims) - {...}
     if wrong_dims:
         wrong_dims_str = ", ".join(f"'{d}'" for d in wrong_dims)
@@ -1057,10 +1162,7 @@ def _check_dims(dim: Set[Hashable], all_dims: Set[Hashable]) -> None:
         )
 
 
-_Accessor = TypeVar("_Accessor")
-
-
-class UncachedAccessor(Generic[_Accessor]):
+class UncachedAccessor[Accessor]:
     """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
@@ -1068,28 +1170,20 @@ class UncachedAccessor(Generic[_Accessor]):
     accessor.
     """
 
-    def __init__(self, accessor: type[_Accessor]) -> None:
+    def __init__(self, accessor: type[Accessor]) -> None:
         self._accessor = accessor
 
     @overload
-    def __get__(self, obj: None, cls) -> type[_Accessor]: ...
+    def __get__(self, obj: None, cls) -> type[Accessor]: ...
 
     @overload
-    def __get__(self, obj: object, cls) -> _Accessor: ...
+    def __get__(self, obj: object, cls) -> Accessor: ...
 
-    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
+    def __get__(self, obj: object | None, cls) -> type[Accessor] | Accessor:
         if obj is None:
             return self._accessor
 
         return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
-
-
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(Enum):
-    token = 0
-
-
-_default = Default.token
 
 
 def iterate_nested(nested_list):
@@ -1278,12 +1372,12 @@ def attempt_import(module: str) -> ModuleType:
         matplotlib="for plotting",
         hypothesis="for the `xarray.testing.strategies` submodule",
     )
-    package_name = module.split(".")[0]  # e.g. "zarr" from "zarr.storage"
+    package_name = module.split(".", maxsplit=1)[0]  # e.g. "zarr" from "zarr.storage"
     install_name = install_mapping.get(package_name, package_name)
     reason = package_purpose.get(package_name, "")
     try:
         return importlib.import_module(module)
-    except (ImportError, ModuleNotFoundError) as e:
+    except ImportError as e:
         raise ImportError(
             f"The {install_name} package is required {reason}"
             " but could not be imported."

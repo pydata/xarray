@@ -13,19 +13,19 @@ NA = utils.ReprObject("<NA>")
 
 @functools.total_ordering
 class AlwaysGreaterThan:
-    def __gt__(self, other: Any) -> Literal[True]:
+    def __gt__(self, other: object) -> Literal[True]:
         return True
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, type(self))
 
 
 @functools.total_ordering
 class AlwaysLessThan:
-    def __lt__(self, other: Any) -> Literal[True]:
+    def __lt__(self, other: object) -> Literal[True]:
         return True
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, type(self))
 
 
@@ -79,15 +79,12 @@ def maybe_promote(dtype: np.dtype[np.generic]) -> tuple[np.dtype[np.generic], An
         dtype_ = dtype
         fill_value = np.datetime64("NaT")
     else:
-        dtype_ = object
+        dtype_ = np.object_
         fill_value = np.nan
 
     dtype_out = np.dtype(dtype_)
     fill_value = dtype_out.type(fill_value)
     return dtype_out, fill_value
-
-
-NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
 
 
 def get_fill_value(dtype: np.dtype[np.generic]) -> Any:
@@ -165,7 +162,7 @@ def is_datetime_like(
 
 
 def result_type(
-    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike,
+    *arrays_and_dtypes: np.typing.ArrayLike | np.typing.DTypeLike | None,
 ) -> np.dtype[np.generic]:
     """Like np.result_type, but with type promotion rules matching pandas.
 

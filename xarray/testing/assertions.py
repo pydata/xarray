@@ -3,6 +3,7 @@
 import functools
 import warnings
 from collections.abc import Hashable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ from xarray.core.coordinates import Coordinates
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.datatree import DataTree
+from xarray.core.datatree_mapping import map_over_datasets
 from xarray.core.formatting import diff_datatree_repr
 from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
 from xarray.core.variable import IndexVariable, Variable
@@ -43,7 +45,7 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
     if any(arr.dtype.kind == "S" for arr in [arr1, arr2]) and decode_bytes:
         arr1 = _decode_string_data(arr1)
         arr2 = _decode_string_data(arr2)
-    exact_dtypes = ["M", "m", "O", "S", "U"]
+    exact_dtypes = ["M", "m", "O", "S", "U", "T"]
     if any(arr.dtype.kind in exact_dtypes for arr in [arr1, arr2]):
         return duck_array_ops.array_equiv(arr1, arr2)
     else:
@@ -84,15 +86,36 @@ def assert_isomorphic(a: DataTree, b: DataTree):
 
 
 def maybe_transpose_dims(a, b, check_dim_order: bool):
-    """Helper for assert_equal/allclose/identical"""
+    """Helper for assert_equal/allclose/identical
+
+    Returns (a, b) tuple with dimensions transposed to canonical order if needed.
+    """
+
     __tracebackhide__ = True
-    if not isinstance(a, Variable | DataArray | Dataset):
-        return b
-    if not check_dim_order and set(a.dims) == set(b.dims):
-        # Ensure transpose won't fail if a dimension is missing
-        # If this is the case, the difference will be caught by the caller
-        return b.transpose(*a.dims)
-    return b
+
+    if check_dim_order:
+        return a, b
+
+    def _maybe_transpose_dims(a, b):
+        if not isinstance(a, Variable | DataArray | Dataset):
+            return a, b
+
+        # Find common dimensions and transpose both to canonical order
+        common_dims = set(a.dims) & set(b.dims)
+        if common_dims:
+            # Use order from the intersection, with ellipsis for any unique dims
+            canonical_order = list(common_dims) + [...]
+            # For Datasets, we need to transpose both to the same order
+            # For Variable/DataArray, we could just transpose b, but for consistency
+            # and simplicity we transpose both
+            return a.transpose(*canonical_order), b.transpose(*canonical_order)
+        return a, b
+
+    if isinstance(a, DataTree):
+        # map_over_datasets supports tuple returns and unpacks them automatically
+        return map_over_datasets(_maybe_transpose_dims, a, b)
+
+    return _maybe_transpose_dims(a, b)
 
 
 @ensure_warnings
@@ -127,7 +150,7 @@ def assert_equal(a, b, check_dim_order: bool = True):
     assert type(a) is type(b) or (
         isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
-    b = maybe_transpose_dims(a, b, check_dim_order)
+    a, b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, Variable | DataArray):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
@@ -215,7 +238,7 @@ def assert_allclose(
     """
     __tracebackhide__ = True
     assert type(a) is type(b)
-    b = maybe_transpose_dims(a, b, check_dim_order)
+    a, b = maybe_transpose_dims(a, b, check_dim_order)
 
     equiv = functools.partial(
         _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
@@ -226,6 +249,11 @@ def assert_allclose(
         a = getattr(a, "variable", a)
         b = getattr(b, "variable", b)
         return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
+
+    def compat_node(a, b):
+        return a.ds._coord_names == b.ds._coord_names and utils.dict_equiv(
+            a.variables, b.variables, compat=compat_variable
+        )
 
     if isinstance(a, Variable):
         allclose = compat_variable(a, b)
@@ -240,6 +268,14 @@ def assert_allclose(
             a.variables, b.variables, compat=compat_variable
         )
         assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
+    elif isinstance(a, Coordinates):
+        allclose = utils.dict_equiv(a.variables, b.variables, compat=compat_variable)
+        assert allclose, formatting.diff_coords_repr(a, b, compat=equiv)
+    elif isinstance(a, DataTree):
+        allclose = utils.dict_equiv(
+            dict(a.subtree_with_keys), dict(b.subtree_with_keys), compat=compat_node
+        )
+        assert allclose, formatting.diff_datatree_repr(a, b, compat=equiv)
     else:
         raise TypeError(f"{type(a)} not supported by assertion comparison")
 
@@ -330,10 +366,24 @@ def _assert_indexes_invariants_checks(
         k: type(v) for k, v in indexes.items()
     }
 
-    index_vars = {
-        k for k, v in possible_coord_variables.items() if isinstance(v, IndexVariable)
-    }
-    assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+    if check_default:
+        index_vars = {
+            k
+            for k, v in possible_coord_variables.items()
+            if isinstance(v, IndexVariable)
+        }
+        assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+        assert all(
+            k in index_vars
+            for k, v in possible_coord_variables.items()
+            if v.dims == (k,)
+        ), {k: type(v) for k, v in possible_coord_variables.items()}
+
+    assert not any(
+        isinstance(v, IndexVariable)
+        for k, v in possible_coord_variables.items()
+        if k not in indexes.keys()
+    ), {k: type(v) for k, v in possible_coord_variables.items()}
 
     # check pandas index wrappers vs. coordinate data adapters
     for k, index in indexes.items():
@@ -373,11 +423,17 @@ def _assert_indexes_invariants_checks(
         )
 
 
-def _assert_variable_invariants(var: Variable, name: Hashable = None):
+def _assert_variable_invariants(
+    var: Variable | Any,
+    name: Hashable = None,
+) -> None:
     if name is None:
         name_or_empty: tuple = ()
     else:
         name_or_empty = (name,)
+
+    assert isinstance(var, Variable), {name: type(var)}
+
     assert isinstance(var._dims, tuple), name_or_empty + (var._dims,)
     assert len(var._dims) == len(var._data.shape), name_or_empty + (
         var._dims,
@@ -390,30 +446,28 @@ def _assert_variable_invariants(var: Variable, name: Hashable = None):
 
 
 def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
-    assert isinstance(da._variable, Variable), da._variable
     _assert_variable_invariants(da._variable)
 
     assert isinstance(da._coords, dict), da._coords
-    assert all(isinstance(v, Variable) for v in da._coords.values()), da._coords
-    assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
-        da.dims,
-        {k: v.dims for k, v in da._coords.items()},
-    )
-    assert all(
-        isinstance(v, IndexVariable) for (k, v) in da._coords.items() if v.dims == (k,)
-    ), {k: type(v) for k, v in da._coords.items()}
+
+    if check_default_indexes:
+        assert all(set(v.dims) <= set(da.dims) for v in da._coords.values()), (
+            da.dims,
+            {k: v.dims for k, v in da._coords.items()},
+        )
+
     for k, v in da._coords.items():
         _assert_variable_invariants(v, k)
 
-    if da._indexes is not None:
-        _assert_indexes_invariants_checks(
-            da._indexes, da._coords, da.dims, check_default=check_default_indexes
-        )
+    assert da._indexes is not None
+    _assert_indexes_invariants_checks(
+        da._indexes, da._coords, da.dims, check_default=check_default_indexes
+    )
 
 
 def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
     assert isinstance(ds._variables, dict), type(ds._variables)
-    assert all(isinstance(v, Variable) for v in ds._variables.values()), ds._variables
+
     for k, v in ds._variables.items():
         _assert_variable_invariants(v, k)
 
@@ -433,17 +487,10 @@ def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
         ds._dims[k] == v.sizes[k] for v in ds._variables.values() for k in v.sizes
     ), (ds._dims, {k: v.sizes for k, v in ds._variables.items()})
 
-    if check_default_indexes:
-        assert all(
-            isinstance(v, IndexVariable)
-            for (k, v) in ds._variables.items()
-            if v.dims == (k,)
-        ), {k: type(v) for k, v in ds._variables.items() if v.dims == (k,)}
-
-    if ds._indexes is not None:
-        _assert_indexes_invariants_checks(
-            ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
-        )
+    assert ds._indexes is not None
+    _assert_indexes_invariants_checks(
+        ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
+    )
 
     assert isinstance(ds._encoding, type(None) | dict)
     assert isinstance(ds._attrs, type(None) | dict)

@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 import collections
-import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, override
 
 from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
 
 if TYPE_CHECKING:
-    from xarray.core.types import T_DataArray
+    from xarray.core.dataarray import DataArray
 
 
 class InvalidTreeError(Exception):
@@ -30,10 +24,7 @@ class NodePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
 
     def __init__(self, *pathsegments):
-        if sys.version_info >= (3, 12):
-            super().__init__(*pathsegments)
-        else:
-            super().__new__(PurePosixPath, *pathsegments)
+        super().__init__(*pathsegments)
         if self.drive:
             raise ValueError("NodePaths cannot have drives")
 
@@ -43,17 +34,18 @@ class NodePath(PurePosixPath):
             )
         # TODO should we also forbid suffixes to avoid node names with dots in them?
 
+    def absolute(self) -> Self:
+        """Convert into an absolute path."""
+        return type(self)("/", *self.parts)
 
-Tree = TypeVar("Tree", bound="TreeNode")
 
-
-class TreeNode(Generic[Tree]):
+class TreeNode:
     """
     Base class representing a node of a tree, with methods for traversing and altering the tree.
 
     This class stores no data, it has only parents and children attributes, and various methods.
 
-    Stores child nodes in an dict, ensuring that equality checks between trees
+    Stores child nodes in a dict, ensuring that equality checks between trees
     and order of child nodes is preserved (since python 3.7).
 
     Nodes themselves are intrinsically unnamed (do not possess a ._name attribute), but if the node has a parent you can
@@ -74,10 +66,10 @@ class TreeNode(Generic[Tree]):
 
     """
 
-    _parent: Tree | None
-    _children: dict[str, Tree]
+    _parent: Self | None
+    _children: dict[str, Self]
 
-    def __init__(self, children: Mapping[str, Tree] | None = None):
+    def __init__(self, children: Mapping[str, Self] | None = None):
         """Create a parentless node."""
         self._parent = None
         self._children = {}
@@ -87,18 +79,18 @@ class TreeNode(Generic[Tree]):
             self.children = {name: child.copy() for name, child in children.items()}
 
     @property
-    def parent(self) -> Tree | None:
+    def parent(self) -> Self | None:
         """Parent of this node."""
         return self._parent
 
     @parent.setter
-    def parent(self: Tree, new_parent: Tree) -> None:
+    def parent(self, new_parent: Self) -> None:
         raise AttributeError(
             "Cannot set parent attribute directly, you must modify the children of the other node instead using dict-like syntax"
         )
 
     def _set_parent(
-        self, new_parent: Tree | None, child_name: str | None = None
+        self, new_parent: Self | None, child_name: str | None = None
     ) -> None:
         # TODO is it possible to refactor in a way that removes this private method?
 
@@ -114,7 +106,7 @@ class TreeNode(Generic[Tree]):
             self._detach(old_parent)
             self._attach(new_parent, child_name)
 
-    def _check_loop(self, new_parent: Tree | None) -> None:
+    def _check_loop(self, new_parent: Self | None) -> None:
         """Checks that assignment of this new parent will not create a cycle."""
         if new_parent is not None:
             if new_parent is self:
@@ -127,10 +119,10 @@ class TreeNode(Generic[Tree]):
                     "Cannot set parent, as intended parent is already a descendant of this node."
                 )
 
-    def _is_descendant_of(self, node: Tree) -> bool:
+    def _is_descendant_of(self, node: Self) -> bool:
         return any(n is self for n in node.parents)
 
-    def _detach(self, parent: Tree | None) -> None:
+    def _detach(self, parent: Self | None) -> None:
         if parent is not None:
             self._pre_detach(parent)
             parents_children = parent.children
@@ -142,7 +134,7 @@ class TreeNode(Generic[Tree]):
             self._parent = None
             self._post_detach(parent)
 
-    def _attach(self, parent: Tree | None, child_name: str | None = None) -> None:
+    def _attach(self, parent: Self | None, child_name: str | None = None) -> None:
         if parent is not None:
             if child_name is None:
                 raise ValueError(
@@ -165,16 +157,17 @@ class TreeNode(Generic[Tree]):
         self._set_parent(new_parent=None)
 
     @property
-    def children(self: Tree) -> Mapping[str, Tree]:
+    def children(self) -> Mapping[str, Self]:
         """Child nodes of this node, stored under a mapping via their names."""
         return Frozen(self._children)
 
     @children.setter
-    def children(self: Tree, children: Mapping[str, Tree]) -> None:
+    def children(self, children: Mapping[str, Self]) -> None:
         self._check_children(children)
         children = {**children}
 
-        old_children = self.children
+        # snapshot, since self.children is a live view that attaching mutates
+        old_children = dict(self.children)
         del self.children
         try:
             self._pre_attach_children(children)
@@ -198,8 +191,8 @@ class TreeNode(Generic[Tree]):
         self._post_detach_children(children)
 
     @staticmethod
-    def _check_children(children: Mapping[str, Tree]) -> None:
-        """Check children for correct types and for any duplicates."""
+    def _check_children(children: Mapping[str, TreeNode]) -> None:
+        """Check children for correct types, valid names and for any duplicates."""
         if not is_dict_like(children):
             raise TypeError(
                 "children must be a dict-like mapping from names to node objects"
@@ -207,6 +200,7 @@ class TreeNode(Generic[Tree]):
 
         seen = set()
         for name, child in children.items():
+            _validate_name(name)
             if not isinstance(child, TreeNode):
                 raise TypeError(
                     f"Cannot add object {name}. It is of type {type(child)}, "
@@ -224,19 +218,19 @@ class TreeNode(Generic[Tree]):
     def __repr__(self) -> str:
         return f"TreeNode(children={dict(self._children)})"
 
-    def _pre_detach_children(self: Tree, children: Mapping[str, Tree]) -> None:
+    def _pre_detach_children(self, children: Mapping[str, Self]) -> None:
         """Method call before detaching `children`."""
         pass
 
-    def _post_detach_children(self: Tree, children: Mapping[str, Tree]) -> None:
+    def _post_detach_children(self, children: Mapping[str, Self]) -> None:
         """Method call after detaching `children`."""
         pass
 
-    def _pre_attach_children(self: Tree, children: Mapping[str, Tree]) -> None:
+    def _pre_attach_children(self, children: Mapping[str, Self]) -> None:
         """Method call before attaching `children`."""
         pass
 
-    def _post_attach_children(self: Tree, children: Mapping[str, Tree]) -> None:
+    def _post_attach_children(self, children: Mapping[str, Self]) -> None:
         """Method call after attaching `children`."""
         pass
 
@@ -300,45 +294,45 @@ class TreeNode(Generic[Tree]):
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
         return self._copy_subtree(inherit=True, deep=True, memo=memo)
 
-    def _iter_parents(self: Tree) -> Iterator[Tree]:
+    def _iter_parents(self) -> Iterator[Self]:
         """Iterate up the tree, starting from the current node's parent."""
-        node: Tree | None = self.parent
+        node: Self | None = self.parent
         while node is not None:
             yield node
             node = node.parent
 
-    def iter_lineage(self: Tree) -> tuple[Tree, ...]:
+    def iter_lineage(self) -> tuple[Self, ...]:
         """Iterate up the tree, starting from the current node."""
         from warnings import warn
 
         warn(
             "`iter_lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         return (self, *self.parents)
 
     @property
-    def lineage(self: Tree) -> tuple[Tree, ...]:
+    def lineage(self) -> tuple[Self, ...]:
         """All parent nodes and their parent nodes, starting with the closest."""
         from warnings import warn
 
         warn(
             "`lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         return self.iter_lineage()
 
     @property
-    def parents(self: Tree) -> tuple[Tree, ...]:
+    def parents(self) -> tuple[Self, ...]:
         """All parent nodes and their parent nodes, starting with the closest."""
         return tuple(self._iter_parents())
 
     @property
-    def ancestors(self: Tree) -> tuple[Tree, ...]:
+    def ancestors(self) -> tuple[Self, ...]:
         """All parent nodes and their parent nodes, starting with the most distant."""
 
         from warnings import warn
@@ -346,13 +340,13 @@ class TreeNode(Generic[Tree]):
         warn(
             "`ancestors` has been deprecated, and in the future will raise an error."
             "Please use `parents`. Example: `tuple(reversed(node.parents))`",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         return (*reversed(self.parents), self)
 
     @property
-    def root(self: Tree) -> Tree:
+    def root(self) -> Self:
         """Root node of the tree"""
         node = self
         while node.parent is not None:
@@ -374,7 +368,7 @@ class TreeNode(Generic[Tree]):
         return self.children == {}
 
     @property
-    def leaves(self: Tree) -> tuple[Tree, ...]:
+    def leaves(self) -> tuple[Self, ...]:
         """
         All leaf nodes.
 
@@ -383,7 +377,7 @@ class TreeNode(Generic[Tree]):
         return tuple(node for node in self.subtree if node.is_leaf)
 
     @property
-    def siblings(self: Tree) -> dict[str, Tree]:
+    def siblings(self) -> dict[str, Self]:
         """
         Nodes with the same parent as this node.
         """
@@ -397,7 +391,7 @@ class TreeNode(Generic[Tree]):
             return {}
 
     @property
-    def subtree(self: Tree) -> Iterator[Tree]:
+    def subtree(self) -> Iterator[Self]:
         """
         Iterate over all nodes in this tree, including both self and all descendants.
 
@@ -417,7 +411,7 @@ class TreeNode(Generic[Tree]):
             queue.extend(node.children.values())
 
     @property
-    def subtree_with_keys(self: Tree) -> Iterator[tuple[str, Tree]]:
+    def subtree_with_keys(self) -> Iterator[tuple[str, Self]]:
         """
         Iterate over relative paths and node pairs for all nodes in this tree.
 
@@ -436,7 +430,7 @@ class TreeNode(Generic[Tree]):
             queue.extend((path / name, child) for name, child in node.children.items())
 
     @property
-    def descendants(self: Tree) -> tuple[Tree, ...]:
+    def descendants(self) -> tuple[Self, ...]:
         """
         Child nodes and all their child nodes.
 
@@ -447,11 +441,11 @@ class TreeNode(Generic[Tree]):
         DataTree.subtree
         """
         all_nodes = tuple(self.subtree)
-        this_node, *descendants = all_nodes
+        _this_node, *descendants = all_nodes
         return tuple(descendants)
 
     @property
-    def level(self: Tree) -> int:
+    def level(self) -> int:
         """
         Level of this node.
 
@@ -470,7 +464,7 @@ class TreeNode(Generic[Tree]):
         return len(self.parents)
 
     @property
-    def depth(self: Tree) -> int:
+    def depth(self) -> int:
         """
         Maximum level of this tree.
 
@@ -488,7 +482,7 @@ class TreeNode(Generic[Tree]):
         return max(node.level for node in self.root.subtree)
 
     @property
-    def width(self: Tree) -> int:
+    def width(self) -> int:
         """
         Number of nodes at this level in the tree.
 
@@ -505,23 +499,23 @@ class TreeNode(Generic[Tree]):
         """
         return len([node for node in self.root.subtree if node.level == self.level])
 
-    def _pre_detach(self: Tree, parent: Tree) -> None:
+    def _pre_detach(self, parent: Self) -> None:
         """Method call before detaching from `parent`."""
         pass
 
-    def _post_detach(self: Tree, parent: Tree) -> None:
+    def _post_detach(self, parent: Self) -> None:
         """Method call after detaching from `parent`."""
         pass
 
-    def _pre_attach(self: Tree, parent: Tree, name: str) -> None:
+    def _pre_attach(self, parent: Self, name: str) -> None:
         """Method call before attaching to `parent`."""
         pass
 
-    def _post_attach(self: Tree, parent: Tree, name: str) -> None:
+    def _post_attach(self, parent: Self, name: str) -> None:
         """Method call after attaching to `parent`."""
         pass
 
-    def get(self: Tree, key: str, default: Tree | None = None) -> Tree | None:
+    def get(self, key: str, default: Self | None = None) -> Self | None:
         """
         Return the child node with the specified key.
 
@@ -535,7 +529,7 @@ class TreeNode(Generic[Tree]):
 
     # TODO `._walk` method to be called by both `_get_item` and `_set_item`
 
-    def _get_item(self: Tree, path: str | NodePath) -> Tree | T_DataArray:
+    def _get_item(self, path: str | NodePath) -> Self | DataArray:
         """
         Returns the object lying at the given path.
 
@@ -546,7 +540,7 @@ class TreeNode(Generic[Tree]):
 
         if path.root:
             current_node = self.root
-            root, *parts = list(path.parts)
+            _root, *parts = list(path.parts)
         else:
             current_node = self
             parts = list(path.parts)
@@ -560,13 +554,13 @@ class TreeNode(Generic[Tree]):
             elif part in ("", "."):
                 pass
             else:
-                if current_node.get(part) is None:
+                child = current_node.get(part)
+                if child is None:
                     raise KeyError(f"Could not find node at {path}")
-                else:
-                    current_node = current_node.get(part)
+                current_node = child
         return current_node
 
-    def _set(self: Tree, key: str, val: Tree) -> None:
+    def _set(self, key: str, val: Any) -> None:
         """
         Set the child node with the specified key to value.
 
@@ -576,9 +570,9 @@ class TreeNode(Generic[Tree]):
         self.children = new_children
 
     def _set_item(
-        self: Tree,
+        self,
         path: str | NodePath,
-        item: Tree | T_DataArray,
+        item: Any,
         new_nodes_along_path: bool = False,
         allow_overwrite: bool = True,
     ) -> None:
@@ -614,7 +608,7 @@ class TreeNode(Generic[Tree]):
         if path.root:
             # absolute path
             current_node = self.root
-            root, *parts, name = path.parts
+            _root, *parts, name = path.parts
         else:
             # relative path
             current_node = self
@@ -631,16 +625,15 @@ class TreeNode(Generic[Tree]):
                         current_node = current_node.parent
                 elif part in ("", "."):
                     pass
+                elif part in current_node.children:
+                    current_node = current_node.children[part]
+                elif new_nodes_along_path:
+                    # Want child classes (i.e. DataTree) to populate tree with their own types
+                    new_node = type(self)()
+                    current_node._set(part, new_node)
+                    current_node = current_node.children[part]
                 else:
-                    if part in current_node.children:
-                        current_node = current_node.children[part]
-                    elif new_nodes_along_path:
-                        # Want child classes (i.e. DataTree) to populate tree with their own types
-                        new_node = type(self)()
-                        current_node._set(part, new_node)
-                        current_node = current_node.children[part]
-                    else:
-                        raise KeyError(f"Could not reach node at path {path}")
+                    raise KeyError(f"Could not reach node at path {path}")
 
         if name in current_node.children:
             # Deal with anything already existing at this location
@@ -651,7 +644,7 @@ class TreeNode(Generic[Tree]):
         else:
             current_node._set(name, item)
 
-    def __delitem__(self: Tree, key: str) -> None:
+    def __delitem__(self, key: str) -> None:
         """Remove a child node from this tree object."""
         if key in self.children:
             child = self._children[key]
@@ -660,12 +653,9 @@ class TreeNode(Generic[Tree]):
         else:
             raise KeyError(key)
 
-    def same_tree(self, other: Tree) -> bool:
+    def same_tree(self, other: Self) -> bool:
         """True if other node is in the same tree as this node."""
         return self.root is other.root
-
-
-AnyNamedNode = TypeVar("AnyNamedNode", bound="NamedNode")
 
 
 def _validate_name(name: str | None) -> None:
@@ -676,7 +666,7 @@ def _validate_name(name: str | None) -> None:
             raise ValueError("node names cannot contain forward slashes")
 
 
-class NamedNode(TreeNode, Generic[Tree]):
+class NamedNode(TreeNode):
     """
     A TreeNode which knows its own name.
 
@@ -684,10 +674,12 @@ class NamedNode(TreeNode, Generic[Tree]):
     """
 
     _name: str | None
-    _parent: Tree | None
-    _children: dict[str, Tree]
 
-    def __init__(self, name=None, children=None):
+    def __init__(
+        self,
+        name: str | None = None,
+        children: Mapping[str, Self] | None = None,
+    ):
         super().__init__(children=children)
         _validate_name(name)
         self._name = name
@@ -708,6 +700,7 @@ class NamedNode(TreeNode, Generic[Tree]):
         _validate_name(name)
         self._name = name
 
+    @override
     def __repr__(self, level=0):
         repr_value = "\t" * level + self.__str__() + "\n"
         for child in self.children:
@@ -718,11 +711,13 @@ class NamedNode(TreeNode, Generic[Tree]):
         name_repr = repr(self.name) if self.name is not None else ""
         return f"NamedNode({name_repr})"
 
+    @override
     def _post_attach(self, parent: Self, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
         _validate_name(name)  # is this check redundant?
         self._name = name
 
+    @override
     def _copy_node(
         self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
     ) -> Self:
@@ -737,12 +732,12 @@ class NamedNode(TreeNode, Generic[Tree]):
         if self.is_root:
             return "/"
         else:
-            root, *ancestors = tuple(reversed(self.parents))
+            _root, *ancestors = tuple(reversed(self.parents))
             # don't include name of root because (a) root might not have a name & (b) we want path relative to root.
             names = [*(node.name for node in ancestors), self.name]
-            return "/" + "/".join(names)
+            return "/" + "/".join(names)  # type: ignore[arg-type]
 
-    def relative_to(self: NamedNode, other: NamedNode) -> str:
+    def relative_to(self, other: Self) -> str:
         """
         Compute the relative path from this node to node `other`.
 
@@ -754,7 +749,7 @@ class NamedNode(TreeNode, Generic[Tree]):
             )
 
         this_path = NodePath(self.path)
-        if other.path in list(parent.path for parent in (self, *self.parents)):
+        if any(other.path == parent.path for parent in (self, *self.parents)):
             return str(this_path.relative_to(other.path))
         else:
             common_ancestor = self.find_common_ancestor(other)
@@ -763,7 +758,7 @@ class NamedNode(TreeNode, Generic[Tree]):
                 path_to_common_ancestor / this_path.relative_to(common_ancestor.path)
             )
 
-    def find_common_ancestor(self, other: NamedNode) -> NamedNode:
+    def find_common_ancestor(self, other: Self) -> Self:
         """
         Find the first common ancestor of two nodes in the same tree.
 
@@ -781,19 +776,19 @@ class NamedNode(TreeNode, Generic[Tree]):
             "Cannot find common ancestor because nodes do not lie within the same tree"
         )
 
-    def _path_to_ancestor(self, ancestor: NamedNode) -> NodePath:
+    def _path_to_ancestor(self, ancestor: Self) -> NodePath:
         """Return the relative path from this node to the given ancestor node"""
 
         if not self.same_tree(ancestor):
             raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because nodes do not lie within the same tree"
             )
-        if ancestor.path not in list(a.path for a in (self, *self.parents)):
+        if ancestor.path not in [a.path for a in (self, *self.parents)]:
             raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because given node is not an ancestor of this node"
             )
 
-        parents_paths = list(parent.path for parent in (self, *self.parents))
+        parents_paths = [parent.path for parent in (self, *self.parents)]
         generation_gap = list(parents_paths).index(ancestor.path)
         path_upwards = "../" * generation_gap if generation_gap > 0 else "."
         return NodePath(path_upwards)
@@ -803,7 +798,7 @@ class TreeIsomorphismError(ValueError):
     """Error raised if two tree objects do not share the same node structure."""
 
 
-def group_subtrees(
+def group_subtrees[AnyNamedNode: NamedNode](
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
     """Iterate over subtrees grouped by relative paths in breadth-first order.
@@ -833,7 +828,7 @@ def group_subtrees(
     TreeIsomorphismError
         If trees are not isomorphic, i.e., they have different structures.
 
-    See also
+    See Also
     --------
     DataTree.subtree
     DataTree.subtree_with_keys
@@ -869,7 +864,7 @@ def group_subtrees(
             queue.append((path / name, child_nodes))
 
 
-def zip_subtrees(
+def zip_subtrees[AnyNamedNode: NamedNode](
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[AnyNamedNode, ...]]:
     """Zip together subtrees aligned by relative path."""

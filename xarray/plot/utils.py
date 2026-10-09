@@ -38,8 +38,13 @@ except ImportError:
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.colors import Normalize
+    from matplotlib.collections import LineCollection
+    from matplotlib.colorizer import Colorizer
+    from matplotlib.colors import Colormap, Normalize
+    from matplotlib.lines import Line2D
     from matplotlib.ticker import FuncFormatter
+    from matplotlib.typing import ColorType, DrawStyleType, LineStyleType
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
     from numpy.typing import ArrayLike
 
     from xarray.core.dataarray import DataArray
@@ -100,27 +105,22 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 
     # copy colors to use for bad, under, and over values in case they have been
     # set to non-default values
-    try:
-        # matplotlib<3.2 only uses bad color for masked values
-        bad = cmap(np.ma.masked_invalid([np.nan]))[0]
-    except TypeError:
-        # cmap was a str or list rather than a color-map object, so there are
-        # no bad, under or over values to check or copy
-        pass
-    else:
-        under = cmap(-np.inf)
-        over = cmap(np.inf)
-
-        new_cmap.set_bad(bad)
+    if isinstance(cmap, mpl.colors.Colormap):
+        bad = cmap(np.nan)
 
         # Only update under and over if they were explicitly changed by the user
         # (i.e. are different from the lowest or highest values in cmap). Otherwise
         # leave unchanged so new_cmap uses its default values (its own lowest and
         # highest values).
-        if under != cmap(0):
-            new_cmap.set_under(under)
-        if over != cmap(cmap.N - 1):
-            new_cmap.set_over(over)
+        under = cmap(-np.inf)
+        if under == cmap(0):
+            under = None
+
+        over = cmap(np.inf)
+        if over == cmap(cmap.N - 1):
+            over = None
+
+        new_cmap = new_cmap.with_extremes(bad=bad, under=under, over=over)
 
     return new_cmap, cnorm
 
@@ -194,6 +194,15 @@ def _determine_cmap_params(
     else:
         mpl = attempt_import("matplotlib")
 
+    if plot_data.dtype.kind == "m":
+        unit, _ = np.datetime_data(plot_data.dtype)
+        zero = np.timedelta64(0, unit)
+    elif plot_data.dtype.kind == "M":
+        unit, _ = np.datetime_data(plot_data.dtype)
+        zero = np.datetime64(0, unit)
+    else:
+        zero = 0.0
+
     if isinstance(levels, Iterable):
         levels = sorted(levels)
 
@@ -202,7 +211,7 @@ def _determine_cmap_params(
     # Handle all-NaN input data gracefully
     if calc_data.size == 0:
         # Arbitrary default for when all values are NaN
-        calc_data = np.array(0.0)
+        calc_data = np.array(zero)
 
     # Setting center=False prevents a divergent cmap
     possibly_divergent = center is not False
@@ -210,7 +219,7 @@ def _determine_cmap_params(
     # Set center to 0 so math below makes sense but remember its state
     center_is_none = False
     if center is None:
-        center = 0
+        center = zero
         center_is_none = True
 
     # Setting both vmin and vmax prevents a divergent cmap
@@ -245,12 +254,10 @@ def _determine_cmap_params(
 
     if possibly_divergent:
         levels_are_divergent = (
-            isinstance(levels, Iterable) and levels[0] * levels[-1] < 0
+            isinstance(levels, Iterable) and levels[0] * levels[-1] < zero
         )
         # kwargs not specific about divergent or not: infer defaults from data
-        divergent = (
-            ((vmin < 0) and (vmax > 0)) or not center_is_none or levels_are_divergent
-        )
+        divergent = (vmin < zero < vmax) or not center_is_none or levels_are_divergent
     else:
         divergent = False
 
@@ -421,9 +428,10 @@ def _infer_xy_labels(
         _assert_valid_xy(darray, x, "x")
         _assert_valid_xy(darray, y, "y")
 
-        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2):
-            if isinstance(darray._indexes[x], PandasMultiIndex):
-                raise ValueError("x and y cannot be levels of the same MultiIndex")
+        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2) and isinstance(
+            darray._indexes[x], PandasMultiIndex
+        ):
+            raise ValueError("x and y cannot be levels of the same MultiIndex")
 
     return x, y
 
@@ -459,8 +467,6 @@ def get_axis(
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
-    from xarray.core.utils import attempt_import
-
     if TYPE_CHECKING:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
@@ -517,7 +523,7 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
 
 
 def _get_units_from_attrs(da: DataArray) -> str:
-    """Extracts and formats the unit/units from a attributes."""
+    """Extracts and formats the unit/units from their attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
     if isinstance(da.data, pint_array_type):
@@ -549,9 +555,12 @@ def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
 
     # Treat `name` differently if it's a latex sequence
     if name.startswith("$") and (name.count("$") % 2 == 0):
-        return "$\n$".join(
-            textwrap.wrap(name + extra + units, 60, break_long_words=False)
-        )
+        # Don't wrap LaTeX strings — textwrap can break them at positions
+        # that produce invalid LaTeX (e.g., splitting between adjacent
+        # $...$ blocks creates "$$" sequences). The rendered width of LaTeX
+        # is typically much shorter than the source string length, so
+        # wrapping based on character count is misleading anyway.
+        return name + extra + units
     else:
         return "\n".join(textwrap.wrap(name + extra + units, 30))
 
@@ -581,7 +590,7 @@ def _interval_to_double_bound_points(
     xarray: Iterable[pd.Interval], yarray: Iterable
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Helper function to deal with a xarray consisting of pd.Intervals. Each
+    Helper function to deal with an xarray consisting of pd.Intervals. Each
     interval is replaced with both boundaries. I.e. the length of xarray
     doubles. yarray is modified so it matches the new shape of xarray.
     """
@@ -798,16 +807,16 @@ def _update_axes(
     """
     if xincrease is None:
         pass
-    elif xincrease and ax.xaxis_inverted():
-        ax.invert_xaxis()
-    elif not xincrease and not ax.xaxis_inverted():
+    elif (xincrease and ax.xaxis_inverted()) or (
+        not xincrease and not ax.xaxis_inverted()
+    ):
         ax.invert_xaxis()
 
     if yincrease is None:
         pass
-    elif yincrease and ax.yaxis_inverted():
-        ax.invert_yaxis()
-    elif not yincrease and not ax.yaxis_inverted():
+    elif (yincrease and ax.yaxis_inverted()) or (
+        not yincrease and not ax.yaxis_inverted()
+    ):
         ax.invert_yaxis()
 
     # The default xscale, yscale needs to be None.
@@ -934,9 +943,6 @@ def _process_cmap_cbar_kwargs(
 
     cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
 
-    if "contour" in func.__name__ and levels is None:
-        levels = 7  # this is the matplotlib default
-
     # colors is mutually exclusive with cmap
     if cmap and colors:
         raise ValueError("Can't specify both cmap and colors.")
@@ -957,7 +963,7 @@ def _process_cmap_cbar_kwargs(
     cmap_kwargs = {
         "plot_data": data,
         "levels": levels,
-        "cmap": colors if colors else cmap,
+        "cmap": colors or cmap,
         "filled": func.__name__ != "contour",
     }
 
@@ -1050,8 +1056,6 @@ def legend_elements(
     labels : list of str
         The string labels for elements of the legend.
     """
-    import warnings
-
     import matplotlib as mpl
 
     mlines = mpl.lines
@@ -1076,9 +1080,10 @@ def legend_elements(
 
     elif prop == "sizes":
         if isinstance(self, mpl.collections.LineCollection):
-            arr = self.get_linewidths()
+            # linewidths of missing values are nan, see _line
+            arr = np.ma.masked_invalid(self.get_linewidths())
         else:
-            arr = self.get_sizes()
+            arr = np.ma.asarray(self.get_sizes())
         _color = kwargs.pop("color", "k")
 
         def _get_color_and_size(value):
@@ -1091,7 +1096,7 @@ def legend_elements(
         )
 
     # Get the unique values and their labels:
-    values = np.unique(arr)
+    values = np.unique(arr[~arr.mask])
     label_values = np.asarray(func(values))
     label_values_are_numeric = np.issubdtype(label_values.dtype, np.number)
 
@@ -1148,7 +1153,7 @@ def legend_elements(
         # Labels are not numerical so modifying label_values is not
         # possible, instead filter the array with nicely distributed
         # indexes:
-        if type(num) == int:  # noqa: E721
+        if type(num) is int:
             loc = mpl.ticker.LinearLocator(num)
         else:
             raise ValueError("`num` only supports integers for non-numeric labels.")
@@ -1253,8 +1258,8 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
             )
 
         if add_guide is None or add_guide is True:
-            add_colorbar = True if hue_style == "continuous" else False
-            add_legend = True if hue_style == "discrete" else False
+            add_colorbar = hue_style == "continuous"
+            add_legend = hue_style == "discrete"
         else:
             add_colorbar = False
             add_legend = False
@@ -1278,16 +1283,15 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     else:
         add_quiverkey = False
 
-    if (add_guide or add_guide is None) and funcname == "streamplot":
-        if hue:
-            add_colorbar = True
-            if not hue_style:
-                hue_style = "continuous"
-            elif hue_style != "continuous":
-                raise ValueError(
-                    "hue_style must be 'continuous' or None for .plot.quiver or "
-                    ".plot.streamplot"
-                )
+    if (add_guide or add_guide is None) and funcname == "streamplot" and hue:
+        add_colorbar = True
+        if not hue_style:
+            hue_style = "continuous"
+        elif hue_style != "continuous":
+            raise ValueError(
+                "hue_style must be 'continuous' or None for .plot.quiver or "
+                ".plot.streamplot"
+            )
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
         raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
@@ -1329,7 +1333,7 @@ def _parse_size(
 def _parse_size(
     data: DataArray | None,
     norm: tuple[float | None, float | None, bool] | Normalize | None,
-) -> None | pd.Series:
+) -> pd.Series | None:
     import matplotlib as mpl
 
     if data is None:
@@ -1343,7 +1347,7 @@ def _parse_size(
     else:
         levels = numbers = np.sort(np.unique(flatdata))
 
-    min_width, default_width, max_width = _MARKERSIZE_RANGE
+    min_width, _default_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
 
     if norm is None:
@@ -1594,7 +1598,7 @@ class _Normalize(Sequence):
         >>> _Normalize(a).ticks
         array([1, 3, 5])
         """
-        val: None | np.ndarray
+        val: np.ndarray | None
         if self.data_is_numeric:
             val = None
         else:
@@ -1653,13 +1657,13 @@ class _Normalize(Sequence):
         """
         import matplotlib.pyplot as plt
 
-        def _func(x: Any, pos: None | Any = None):
+        def _func(x: Any, pos: Any | None = None):
             return f"{self._lookup_arr([x])[0]}"
 
         return plt.FuncFormatter(_func)
 
     @property
-    def func(self) -> Callable[[Any, None | Any], Any]:
+    def func(self) -> Callable[[Any, Any | None], Any]:
         """
         Return a lambda function that maps self.values elements back to
         the original value as a numpy array. Useful with ax.legend_elements.
@@ -1678,7 +1682,7 @@ class _Normalize(Sequence):
         array([0.5, 3. ])
         """
 
-        def _func(x: Any, pos: None | Any = None):
+        def _func(x: Any, pos: Any | None = None):
             return self._lookup_arr(x)
 
         return _func
@@ -1687,8 +1691,8 @@ class _Normalize(Sequence):
 def _determine_guide(
     hueplt_norm: _Normalize,
     sizeplt_norm: _Normalize,
-    add_colorbar: None | bool = None,
-    add_legend: None | bool = None,
+    add_colorbar: bool | None = None,
+    add_legend: bool | None = None,
     plotfunc_name: str | None = None,
 ) -> tuple[bool, bool]:
     if plotfunc_name == "hist":
@@ -1735,16 +1739,19 @@ def _add_legend(
             # values correctly. Order might be different because
             # legend_elements uses np.unique instead of pd.unique,
             # FacetGrid.add_legend might have troubles with this:
-            hdl, lbl = [], []
+            hdl: list[Line2D] = []
+            lbl: list[str] = []
             for p in primitive:
                 hdl_, lbl_ = legend_elements(p, prop, num="auto", func=huesizeplt.func)
                 hdl += hdl_
                 lbl += lbl_
 
-            # Only save unique values:
-            u, ind = np.unique(lbl, return_index=True)
-            ind = np.argsort(ind)
-            lbl = u[ind].tolist()
+            # Only save unique values, don't sort values as it was already sort in
+            # legend_elements:
+            lbl_ = np.array(lbl)
+            _, ind = np.unique(lbl_, return_index=True)
+            ind = np.sort(ind)
+            lbl = lbl_[ind].tolist()
             hdl = np.array(hdl)[ind].tolist()
 
             # Add a subtitle:
@@ -1846,6 +1853,256 @@ def _guess_coords_to_plot(
         _assert_valid_xy(darray, dim, k)
 
     return coords_to_plot
+
+
+@overload
+def _line(
+    self,  # Axes,
+    x: float | ArrayLike,
+    y: float | ArrayLike,
+    z: None = ...,
+    s: float | ArrayLike | None = ...,
+    c: Sequence[ColorType] | ColorType | None = ...,
+    *,
+    linestyle: LineStyleType | None = ...,
+    cmap: str | Colormap | None = ...,
+    norm: str | Normalize | None = ...,
+    vmin: float | None = ...,
+    vmax: float | None = ...,
+    alpha: float | None = ...,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = ...,
+    plotnonfinite: bool = ...,
+    data=...,
+    **kwargs,
+) -> LineCollection: ...
+
+
+@overload
+def _line(
+    self,  # Axes3D,
+    x: float | ArrayLike,
+    y: float | ArrayLike,
+    z: float | ArrayLike = ...,
+    s: float | ArrayLike | None = ...,
+    c: Sequence[ColorType] | ColorType | None = ...,
+    *,
+    linestyle: LineStyleType | None = ...,
+    cmap: str | Colormap | None = ...,
+    norm: str | Normalize | None = ...,
+    vmin: float | None = ...,
+    vmax: float | None = ...,
+    alpha: float | None = ...,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = ...,
+    plotnonfinite: bool = ...,
+    data=...,
+    drawstyle: DrawStyleType = ...,
+    **kwargs,
+) -> Line3DCollection: ...
+
+
+def _line(
+    self,  # Axes | Axes3D
+    x: float | ArrayLike,
+    y: float | ArrayLike,
+    z: float | ArrayLike | None = None,
+    s: float | ArrayLike | None = None,
+    c: ArrayLike | Sequence[ColorType] | ColorType | None = None,
+    *,
+    linestyle: LineStyleType | None = None,
+    cmap: str | Colormap | None = None,
+    norm: str | Normalize | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    alpha: float | None = None,
+    edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = None,
+    colorizer: Colorizer | None = None,
+    plotnonfinite: bool = False,
+    data=None,
+    drawstyle: DrawStyleType = "default",
+    **kwargs,
+) -> LineCollection | Line3DCollection:
+    """
+    ax.scatter-like wrapper for LineCollection.
+
+    This function helps the handling of datetimes since Linecollection doesn't
+    support it directly, just like PatchCollection doesn't either.
+
+    The function attempts to be as similar to the scatter version as possible.
+    """
+    import matplotlib.collections as mcoll
+    import matplotlib.pyplot as plt
+    from matplotlib import _api, cbook
+
+    rcParams = plt.matplotlib.rcParams
+
+    def _parse_lines_color_args(
+        self, c, edgecolors, kwargs, xsize, get_next_color_func
+    ):
+        if edgecolors is None:
+            # Use "face" instead of rcParams['scatter.edgecolors']
+            edgecolors = "face"
+
+        c, colors, edgecolors = self._parse_scatter_color_args(
+            c,
+            edgecolors,
+            kwargs,
+            x_.size,
+            get_next_color_func=self._get_patches_for_fill.get_next_color,
+        )
+
+        return c, colors, edgecolors
+
+    linewidths = s  # Can be different in scatter, but same in line plots.
+
+    # add edgecolors and linewidths to kwargs so they
+    # can be processed by normalize_kwargs
+    if edgecolors is not None:
+        kwargs.update({"edgecolors": edgecolors})
+    if linewidths is not None:
+        kwargs.update({"linewidths": linewidths})
+
+    kwargs = cbook.normalize_kwargs(kwargs, mcoll.Collection)
+    # re direct linewidth and edgecolor so it can be
+    # further processed by the rest of the function
+    linewidths = kwargs.pop("linewidth", None)
+    edgecolors = kwargs.pop("edgecolor", None)
+
+    # Process **kwargs to handle aliases, conflicts with explicit kwargs:
+    x_: np.ndarray
+    y_: np.ndarray
+    x_, y_ = self._process_unit_info(
+        [("x", x), ("y", y)], kwargs
+    )  # type ignore[union-attr]
+
+    # Handle z inputs:
+    if z is not None:
+        from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+        LineCollection_ = Line3DCollection
+        add_collection_ = self.add_collection3d
+        auto_scale = self.auto_scale_xyz
+        auto_scale_args: tuple[Any, ...] = (x_, y_, z, self.has_data())
+    else:
+        LineCollection_ = plt.matplotlib.collections.LineCollection
+        add_collection_ = self.add_collection
+        auto_scale = self._request_autoscale_view
+        auto_scale_args = tuple()
+
+    if s is None:
+        s = np.array([rcParams["lines.linewidth"]])
+
+    s_: np.ndarray = np.ma.ravel(s)
+    if len(s_) not in (1, x_.size) or (
+        not np.issubdtype(s_.dtype, np.floating)
+        and not np.issubdtype(s_.dtype, np.integer)
+    ):
+        raise ValueError(
+            "s must be a scalar, or float array-like with the same size as x and y"
+        )
+
+    # get the original edgecolor the user passed before we normalize
+    orig_edgecolor = edgecolors
+    if edgecolors is None:
+        orig_edgecolor = kwargs.get("edgecolor", None)
+    c, colors, edgecolors = _parse_lines_color_args(
+        self,
+        c,
+        edgecolors,
+        kwargs,
+        x_.size,
+        get_next_color_func=self._get_patches_for_fill.get_next_color,
+    )
+
+    if plotnonfinite and colors is None:
+        c = np.ma.masked_invalid(c)
+        (
+            x_,
+            y_,
+            s_,
+            edgecolors,
+            linewidths,
+        ) = cbook._combine_masks(  # type: ignore[attr-defined] # non-public?
+            x_, y_, s_, edgecolors, linewidths
+        )
+    else:
+        (
+            x_,
+            y_,
+            s_,
+            c,
+            colors,
+            edgecolors,
+            linewidths,
+        ) = cbook._combine_masks(  # type: ignore[attr-defined] # non-public?
+            x_, y_, s_, c, colors, edgecolors, linewidths
+        )
+
+    # Unmask edgecolors if it was actually a single RGB or RGBA.
+    if (
+        x_.size in (3, 4)
+        and isinstance(edgecolors, np.ma.MaskedArray)
+        and not np.ma.is_masked(orig_edgecolor)
+    ):
+        edgecolors = edgecolors.data  # type: ignore[assignment,unused-ignore]
+
+    # load default linestyle from rcParams
+    if linestyle is None:
+        linestyle = rcParams["lines.linestyle"]
+
+    if drawstyle == "default":
+        # Draw linear lines:
+        xyz = list(v for v in (x_, y_, z) if v is not None)
+    else:
+        # Draw stepwise lines:
+        from matplotlib.cbook import STEP_LOOKUP_MAP
+
+        step_func = STEP_LOOKUP_MAP[drawstyle]
+        xyz = step_func(*tuple(v for v in (x_, y_, z) if v is not None))
+
+    # Broadcast arrays to correct format:
+    # https://stackoverflow.com/questions/42215777/matplotlib-line-color-in-3d
+    points = np.stack(np.broadcast_arrays(*xyz), axis=-1).reshape(-1, 1, len(xyz))
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+    collection = LineCollection_(
+        segments,
+        # matplotlib doesn't support masked linewidths, use nan explicitly instead
+        linewidths=np.ma.filled(s_, np.nan),
+        linestyles=linestyle,
+        facecolors=colors,
+        edgecolors=edgecolors,
+        alpha=alpha,
+        # offset_transform=kwargs.pop("transform", self.transData),
+    )
+    # collection.set_transform(plt.matplotlib.transforms.IdentityTransform())
+    collection.update(kwargs)
+
+    if colors is None:
+        if colorizer:
+            collection._set_colorizer_check_keywords(
+                colorizer, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax
+            )
+        else:
+            collection.set_cmap(cmap)
+            collection.set_norm(norm)
+        collection.set_array(c)
+        collection._scale_norm(norm, vmin, vmax)
+    else:
+        extra_kwargs = {"cmap": cmap, "norm": norm, "vmin": vmin, "vmax": vmax}
+        extra_keys = [k for k, v in extra_kwargs.items() if v is not None]
+        if any(extra_keys):
+            keys_str = ", ".join(f"'{k}'" for k in extra_keys)
+            _api.warn_external(
+                "No data for colormapping provided via 'c'. "
+                f"Parameters {keys_str} will be ignored"
+            )
+    collection._internal_update(kwargs)
+
+    add_collection_(collection)
+
+    auto_scale(*auto_scale_args)
+
+    return collection
 
 
 def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:

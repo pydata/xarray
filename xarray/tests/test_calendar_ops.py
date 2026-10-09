@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import CFTimeIndex, DataArray, infer_freq
+from xarray import CFTimeIndex, DataArray, Dataset, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
 from xarray.testing import assert_identical
@@ -61,6 +61,24 @@ def test_convert_calendar(source, target, use_cftime, freq):
         )
         expected_times = expected_times_pre_leap.append(expected_times_post_leap)
     np.testing.assert_array_equal(conv.time, expected_times)
+
+
+def test_convert_calendar_dataset():
+    # Check that variables without a time dimension are not modified
+    src = DataArray(
+        date_range("2004-01-01", "2004-12-31", freq="D", calendar="standard"),
+        dims=("time",),
+        name="time",
+    )
+    da_src = DataArray(
+        np.linspace(0, 1, src.size), dims=("time",), coords={"time": src}
+    ).expand_dims(lat=[0, 1])
+    ds_src = Dataset({"hastime": da_src, "notime": (("lat",), [0, 1])})
+
+    conv = convert_calendar(ds_src, "360_day", align_on="date")
+
+    assert conv.time.dt.calendar == "360_day"
+    assert_identical(ds_src.notime, conv.notime)
 
 
 @pytest.mark.parametrize(
@@ -141,7 +159,7 @@ def test_convert_calendar_360_days_random():
     # Ensure that added days are evenly distributed in the 5 fifths of each year
     conv = convert_calendar(da_360, "noleap", align_on="random", missing=np.nan)
     conv = conv.where(conv.isnull(), drop=True)
-    nandoys = conv.time.dt.dayofyear[:366]
+    nandoys = conv.time.dt.day_of_year[:366]
     assert all(nandoys < np.array([74, 147, 220, 293, 366]))
     assert all(nandoys > np.array([0, 73, 146, 219, 292]))
 
@@ -217,8 +235,22 @@ def test_convert_calendar_errors():
 
     # Datetime objects
     da = DataArray([0, 1, 2], dims=("x",), name="x")
-    with pytest.raises(ValueError, match="Coordinate x must contain datetime objects."):
+    with pytest.raises(
+        ValueError, match=r"Coordinate x must contain datetime objects."
+    ):
         convert_calendar(da, "standard", dim="x")
+
+
+def test_convert_calendar_dimension_name():
+    src = DataArray(
+        date_range("2004-01-01", "2004-01-31", freq="D", calendar="noleap"),
+        dims=("date",),
+        name="date",
+    )
+
+    out = convert_calendar(src, "proleptic_gregorian", dim="date")
+
+    np.testing.assert_array_equal(src, out)
 
 
 def test_convert_calendar_same_calendar():
@@ -284,7 +316,7 @@ def test_interp_calendar_errors():
     da2 = da1 + 1
 
     with pytest.raises(
-        ValueError, match="Both 'source.x' and 'target' must contain datetime objects."
+        ValueError, match=r"Both 'source.x' and 'target' must contain datetime objects."
     ):
         interp_calendar(da1, da2, dim="x")
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable, Mapping
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, cast, overload
 
 from xarray.core.dataset import Dataset
@@ -14,15 +14,14 @@ if TYPE_CHECKING:
 
 @overload
 def map_over_datasets(
-    func: Callable[
-        ...,
-        Dataset | None,
-    ],
+    func: Callable[..., Dataset | None],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree: ...
 
 
+# add an explicit overload for the most common case of two return values
+# (python typing does not have a way to match tuple lengths in general)
 @overload
 def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, Dataset | None]],
@@ -31,8 +30,6 @@ def map_over_datasets(
 ) -> tuple[DataTree, DataTree]: ...
 
 
-# add an expect overload for the most common case of two return values
-# (python typing does not have a way to match tuple lengths in general)
 @overload
 def map_over_datasets(
     func: Callable[..., tuple[Dataset | None, ...]],
@@ -42,7 +39,7 @@ def map_over_datasets(
 
 
 def map_over_datasets(
-    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+    func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
@@ -89,7 +86,7 @@ def map_over_datasets(
     Result of applying `func` to each node in the provided trees, packed back
     into DataTree objects via `DataTree.from_dict`.
 
-    See also
+    See Also
     --------
     DataTree.map_over_datasets
     group_subtrees
@@ -106,7 +103,7 @@ def map_over_datasets(
     # Walk all trees simultaneously, applying func to all nodes that lie in same position in different trees
     # We don't know which arguments are DataTrees so we zip all arguments together as iterables
     # Store tuples of results in a dict because we don't yet know how many trees we need to rebuild to return
-    out_data_objects: dict[str, Dataset | None | tuple[Dataset | None, ...]] = {}
+    out_data_objects: dict[str, Dataset | tuple[Dataset | None, ...] | None] = {}
 
     tree_args = [arg for arg in args if isinstance(arg, DataTree)]
     name = result_name(tree_args)
@@ -116,9 +113,8 @@ def map_over_datasets(
         for i, arg in enumerate(args):
             if not isinstance(arg, DataTree):
                 node_dataset_args.insert(i, arg)
-
-        func_with_error_context = _handle_errors_with_path_context(path)(func)
-        results = func_with_error_context(*node_dataset_args, **kwargs)
+        with add_path_context_to_errors(path):
+            results = func(*node_dataset_args, **kwargs)
         out_data_objects[path] = results
 
     num_return_values = _check_all_return_values(out_data_objects)
@@ -142,36 +138,19 @@ def map_over_datasets(
     )
 
 
-def _handle_errors_with_path_context(path: str):
-    """Wraps given function so that if it fails it also raises path to node on which it failed."""
-
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                # Add the context information to the error message
-                add_note(
-                    e, f"Raised whilst mapping function over node with path {path!r}"
-                )
-                raise
-
-        return wrapper
-
-    return decorator
-
-
-def add_note(err: BaseException, msg: str) -> None:
-    # TODO: remove once python 3.10 can be dropped
-    if sys.version_info < (3, 11):
-        err.__notes__ = getattr(err, "__notes__", []) + [msg]  # type: ignore[attr-defined]
-    else:
-        err.add_note(msg)
+@contextmanager
+def add_path_context_to_errors(path: str):
+    """Add path context to any errors."""
+    try:
+        yield
+    except Exception as e:
+        e.add_note(f"Raised whilst mapping function over node(s) with path {path!r}")
+        raise
 
 
 def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
     """Check types returned from single evaluation of func, and return number of return values received from func."""
-    if isinstance(obj, None | Dataset):
+    if isinstance(obj, Dataset | None):
         return None  # no need to pack results
 
     if not isinstance(obj, tuple) or not all(

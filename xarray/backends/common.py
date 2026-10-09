@@ -4,9 +4,18 @@ import logging
 import os
 import time
 import traceback
-from collections.abc import Hashable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from glob import glob
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Self,
+    Union,
+    overload,
+    override,
+)
 
 import numpy as np
 import pandas as pd
@@ -40,18 +49,20 @@ logger = logging.getLogger(__name__)
 
 NONE_VAR_NAME = "__values__"
 
-T = TypeVar("T")
+
+@overload
+def _normalize_path(path: os.PathLike) -> str: ...
 
 
 @overload
-def _normalize_path(path: str | os.PathLike) -> str: ...
+def _normalize_path(path: str) -> str: ...
 
 
 @overload
-def _normalize_path(path: T) -> T: ...
+def _normalize_path[T](path: T) -> T: ...
 
 
-def _normalize_path(path: str | os.PathLike | T) -> str | T:
+def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -76,7 +87,7 @@ def _normalize_path(path: str | os.PathLike | T) -> str | T:
     if isinstance(path, str) and not is_remote_uri(path):
         path = os.path.abspath(os.path.expanduser(path))
 
-    return path  # type:ignore [return-value]
+    return path  # type: ignore[return-value]
 
 
 @overload
@@ -188,13 +199,29 @@ def _find_absolute_paths(
     return _normalize_path_list(paths)
 
 
-def _open_remote_file(file, mode, storage_options=None):
+@dataclass
+class BytesIOProxy:
+    """Proxy object for a write that a memoryview."""
+
+    getvalue: Callable[[], memoryview] | None = None
+
+    def getbuffer(self) -> memoryview:
+        """Get the value of this write as bytes or memory."""
+        if self.getvalue is None:
+            raise ValueError("must set getvalue before fetching value")
+        return self.getvalue()
+
+
+def _open_remote_file(file, mode, storage_options=None, open_kwargs=None):
     import fsspec
 
     fs, _, paths = fsspec.get_fs_token_paths(
         file, mode=mode, storage_options=storage_options
     )
-    return fs.open(paths[0], mode=mode)
+
+    open_kwargs = open_kwargs or {}
+
+    return fs.open(paths[0], mode=mode, **open_kwargs)
 
 
 def _encode_variable_name(name):
@@ -227,6 +254,20 @@ def find_root_and_group(ds):
         ds = ds.parent
     group = "/" + "/".join(hierarchy)
     return ds, group
+
+
+def collect_ancestor_dimensions(group) -> dict[str, int]:
+    """Returns dimensions defined in parent groups.
+
+    If dimensions are defined in multiple ancestors, use the size of the closest
+    ancestor.
+    """
+    dims = {}
+    while (group := group.parent) is not None:
+        for k, v in group.dimensions.items():
+            if k not in dims:
+                dims[k] = len(v)
+    return dims
 
 
 def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> DataTree:
@@ -270,16 +311,31 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
 
-    def get_duck_array(self, dtype: np.typing.DTypeLike = None):
+    async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
+        raise NotImplementedError("Backend does not support asynchronous loading")
+
+    @override
+    def get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore[index]
+
+    async def async_get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
+        key = indexing.BasicIndexer((slice(None),) * self.ndim)
+        return await self.async_getitem(key)
 
 
 class AbstractDataStore:
     __slots__ = ()
 
+    def get_child_store(self, group: str) -> Self:  # pragma: no cover
+        """Get a store corresponding to the indicated child group."""
+        raise NotImplementedError()
+
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
+
+    def get_parent_dimensions(self):  # pragma: no cover
+        return {}
 
     def get_attrs(self):  # pragma: no cover
         raise NotImplementedError()
@@ -324,6 +380,11 @@ class AbstractDataStore:
         self.close()
 
 
+type T_PathFileOrDataStore = (
+    str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+)
+
+
 class ArrayWriter:
     __slots__ = ("lock", "regions", "sources", "targets")
 
@@ -338,11 +399,10 @@ class ArrayWriter:
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)
+        elif region:
+            target[region] = source
         else:
-            if region:
-                target[region] = source
-            else:
-                target[...] = source
+            target[...] = source
 
     def sync(self, compute=True, chunkmanager_store_kwargs=None):
         if self.sources:
@@ -390,11 +450,25 @@ class AbstractWritableDataStore(AbstractDataStore):
         attributes : dict-like
 
         """
-        variables = {k: self.encode_variable(v) for k, v in variables.items()}
-        attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
-        return variables, attributes
+        encoded_variables = {}
+        for k, v in variables.items():
+            try:
+                encoded_variables[k] = self.encode_variable(v)
+            except Exception as e:
+                e.add_note(f"Raised while encoding variable {k!r} with value {v!r}")
+                raise
 
-    def encode_variable(self, v):
+        encoded_attributes = {}
+        for k, v in attributes.items():
+            try:
+                encoded_attributes[k] = self.encode_attribute(v)
+            except Exception as e:
+                e.add_note(f"Raised while encoding attribute {k!r} with value {v!r}")
+                raise
+
+        return encoded_variables, encoded_attributes
+
+    def encode_variable(self, v, name=None):
         """encode one variable"""
         return v
 
@@ -402,7 +476,10 @@ class AbstractWritableDataStore(AbstractDataStore):
         """encode one attribute"""
         return a
 
-    def set_dimension(self, dim, length):  # pragma: no cover
+    def prepare_variable(self, name, variable, check_encoding, unlimited_dims):
+        raise NotImplementedError()
+
+    def set_dimension(self, dim, length, is_unlimited):  # pragma: no cover
         raise NotImplementedError()
 
     def set_attribute(self, k, v):  # pragma: no cover
@@ -515,13 +592,14 @@ class AbstractWritableDataStore(AbstractDataStore):
         if unlimited_dims is None:
             unlimited_dims = set()
 
+        parent_dims = self.get_parent_dimensions()
         existing_dims = self.get_dimensions()
 
         dims = {}
         for v in unlimited_dims:  # put unlimited_dims first
             dims[v] = None
         for v in variables.values():
-            dims.update(dict(zip(v.dims, v.shape, strict=True)))
+            dims |= v.sizes
 
         for dim, length in dims.items():
             if dim in existing_dims and length != existing_dims[dim]:
@@ -529,9 +607,13 @@ class AbstractWritableDataStore(AbstractDataStore):
                     "Unable to update size for existing dimension"
                     f"{dim!r} ({length} != {existing_dims[dim]})"
                 )
-            elif dim not in existing_dims:
+            elif dim not in existing_dims and length != parent_dims.get(dim):
                 is_unlimited = dim in unlimited_dims
                 self.set_dimension(dim, length, is_unlimited)
+
+    def sync(self):
+        """Write all buffered data to disk."""
+        raise NotImplementedError()
 
 
 def _infer_dtype(array, name=None):
@@ -544,11 +626,10 @@ def _infer_dtype(array, name=None):
 
     native_dtypes = set(np.vectorize(type, otypes=[object])(array.ravel()))
     if len(native_dtypes) > 1 and native_dtypes != {bytes, str}:
+        native_dtype_names = ", ".join(x.__name__ for x in native_dtypes)
         raise ValueError(
-            "unable to infer dtype on variable {!r}; object array "
-            "contains mixed native types: {}".format(
-                name, ", ".join(x.__name__ for x in native_dtypes)
-            )
+            f"unable to infer dtype on variable {name!r}; object array "
+            f"contains mixed native types: {native_dtype_names}"
         )
 
     element = array[(0,) * array.ndim]
@@ -569,7 +650,7 @@ def _infer_dtype(array, name=None):
     )
 
 
-def _copy_with_dtype(data, dtype: np.typing.DTypeLike):
+def _copy_with_dtype(data, dtype: np.typing.DTypeLike | None):
     """Create a copy of an array with the given dtype.
 
     We use this instead of np.array() to ensure that custom object dtypes end
@@ -632,6 +713,7 @@ def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
 class WritableCFDataStore(AbstractWritableDataStore):
     __slots__ = ()
 
+    @override
     def encode(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
@@ -639,22 +721,20 @@ class WritableCFDataStore(AbstractWritableDataStore):
         variables = {
             k: ensure_dtype_not_object(v, name=k) for k, v in variables.items()
         }
-        variables = {k: self.encode_variable(v) for k, v in variables.items()}
-        attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
-        return variables, attributes
+        return super().encode(variables, attributes)
 
 
 class BackendEntrypoint:
     """
     ``BackendEntrypoint`` is a class container and it is the main interface
-    for the backend plugins, see :ref:`RST backend_entrypoint`.
+    for the backend plugins, see :ref:`rst-backend-entrypoint`.
     It shall implement:
 
     - ``open_dataset`` method: it shall implement reading from file, variables
       decoding and it returns an instance of :py:class:`~xarray.Dataset`.
       It shall take in input at least ``filename_or_obj`` argument and
       ``drop_variables`` keyword argument.
-      For more details see :ref:`RST open_dataset`.
+      For more details see :ref:`rst-open-dataset`.
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
@@ -676,11 +756,15 @@ class BackendEntrypoint:
     url : str, default: ""
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
+    supports_groups : bool, default: False
+        Whether the backend supports opening groups (via open_datatree and
+        open_groups_as_dict) or not.
     """
 
     open_dataset_parameters: ClassVar[tuple | None] = None
     description: ClassVar[str] = ""
     url: ClassVar[str] = ""
+    supports_groups: ClassVar[bool] = False
 
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"
@@ -692,7 +776,7 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
@@ -704,7 +788,7 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -714,19 +798,21 @@ class BackendEntrypoint:
 
     def open_datatree(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
         """
         Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
+
+        If implemented, set the class variable supports_groups to True.
         """
 
         raise NotImplementedError()
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str | os.PathLike[Any] | ReadBuffer | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:
@@ -737,6 +823,8 @@ class BackendEntrypoint:
         This function exists to provide a universal way to open all groups in a file,
         before applying any additional consistency checks or requirements necessary
         to create a `DataTree` object (typically done using :py:meth:`~xarray.DataTree.from_dict`).
+
+        If implemented, set the class variable supports_groups to True.
         """
 
         raise NotImplementedError()
@@ -744,3 +832,37 @@ class BackendEntrypoint:
 
 # mapping of engine name to (module name, BackendEntrypoint Class)
 BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}
+
+
+def _is_likely_dap_url(url: str) -> bool:
+    """
+    Determines if a URL is likely an OPeNDAP (DAP) endpoint based on
+    known protocols, server software path patterns, and file extensions.
+
+    Parameters
+    ----------
+    url : str
+
+    Returns
+    -------
+        True if the URL matches common DAP patterns, False otherwise.
+    """
+    if not url:
+        return False
+
+    url_lower = url.lower()
+
+    # For remote URIs, check for DAP server software path patterns
+    if is_remote_uri(url_lower):
+        dap_path_patterns = (
+            "/dodsc/",  # THREDDS Data Server (TDS) DAP endpoint (case-insensitive)
+            "/dods/",  # GrADS Data Server (GDS) DAP endpoint
+            "/opendap/",  # Generic OPeNDAP/Hyrax server
+            "/erddap/",  # ERDDAP data server
+            "/dap2/",  # Explicit DAP2 version in path
+            "/dap4/",  # Explicit DAP4 version in path
+            "/dap/",
+        )
+        return any(pattern in url_lower for pattern in dap_path_patterns)
+
+    return False

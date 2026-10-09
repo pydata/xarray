@@ -57,10 +57,7 @@ def dtype(request):
 
 @requires_dask
 def test_dask() -> None:
-    import dask.array as da
-
-    arr = da.from_array(["a", "b", "c"], chunks=-1)
-    xarr = xr.DataArray(arr)
+    xarr = xr.DataArray(["a", "b", "c"]).chunk()
 
     result = xarr.str.len().compute()
     expected = xr.DataArray([1, 1, 1])
@@ -139,7 +136,7 @@ def test_contains(dtype) -> None:
     pat_re = re.compile("(/w+)")
     with pytest.raises(
         ValueError,
-        match="Must use regular expression matching for regular expression object.",
+        match=r"Must use regular expression matching for regular expression object.",
     ):
         values.str.contains(pat_re, regex=False)
 
@@ -384,6 +381,28 @@ def test_replace(dtype) -> None:
     assert_equal(result, expected)
 
 
+def test_replace_n_zero(dtype) -> None:
+    # ``n=0`` means "make no replacements", for regex and literal patterns alike
+    values = xr.DataArray(["fooBAD__barBAD"], dims=["x"]).astype(dtype)
+
+    result = values.str.replace("BAD[_]*", "", n=0)
+    assert result.dtype == values.dtype
+    assert_equal(result, values)
+
+    result = values.str.replace("BAD", "", n=0, regex=False)
+    assert result.dtype == values.dtype
+    assert_equal(result, values)
+
+    # ``n`` is broadcast, so a single zero must not spill over to its neighbours
+    n = xr.DataArray([0, 1, -1], dims=["y"])
+    result = values.str.replace("BAD[_]*", "", n=n)
+    expected = xr.DataArray(
+        [["fooBAD__barBAD", "foobarBAD", "foobar"]], dims=["x", "y"]
+    ).astype(dtype)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+
 def test_replace_callable() -> None:
     values = xr.DataArray(["fooBAD__barBAD"])
 
@@ -482,17 +501,17 @@ def test_replace_compiled_regex(dtype) -> None:
     pat3 = re.compile(dtype("BAD[_]*"))
 
     with pytest.raises(
-        ValueError, match="Flags cannot be set when pat is a compiled regex."
+        ValueError, match=r"Flags cannot be set when pat is a compiled regex."
     ):
         result = values.str.replace(pat3, "", flags=re.IGNORECASE)
 
     with pytest.raises(
-        ValueError, match="Case cannot be set when pat is a compiled regex."
+        ValueError, match=r"Case cannot be set when pat is a compiled regex."
     ):
         result = values.str.replace(pat3, "", case=False)
 
     with pytest.raises(
-        ValueError, match="Case cannot be set when pat is a compiled regex."
+        ValueError, match=r"Case cannot be set when pat is a compiled regex."
     ):
         result = values.str.replace(pat3, "", case=True)
 
@@ -555,22 +574,22 @@ def test_extract_extractall_findall_empty_raises(dtype) -> None:
 
     value = xr.DataArray([["a"]], dims=["X", "Y"]).astype(dtype)
 
-    with pytest.raises(ValueError, match="No capture groups found in pattern."):
+    with pytest.raises(ValueError, match=r"No capture groups found in pattern."):
         value.str.extract(pat=pat_str, dim="ZZ")
 
-    with pytest.raises(ValueError, match="No capture groups found in pattern."):
+    with pytest.raises(ValueError, match=r"No capture groups found in pattern."):
         value.str.extract(pat=pat_re, dim="ZZ")
 
-    with pytest.raises(ValueError, match="No capture groups found in pattern."):
+    with pytest.raises(ValueError, match=r"No capture groups found in pattern."):
         value.str.extractall(pat=pat_str, group_dim="XX", match_dim="YY")
 
-    with pytest.raises(ValueError, match="No capture groups found in pattern."):
+    with pytest.raises(ValueError, match=r"No capture groups found in pattern."):
         value.str.extractall(pat=pat_re, group_dim="XX", match_dim="YY")
 
-    with pytest.raises(ValueError, match="No capture groups found in pattern."):
+    with pytest.raises(ValueError, match=r"No capture groups found in pattern."):
         value.str.findall(pat=pat_str)
 
-    with pytest.raises(ValueError, match="No capture groups found in pattern."):
+    with pytest.raises(ValueError, match=r"No capture groups found in pattern."):
         value.str.findall(pat=pat_re)
 
 
@@ -582,13 +601,13 @@ def test_extract_multi_None_raises(dtype) -> None:
 
     with pytest.raises(
         ValueError,
-        match="Dimension must be specified if more than one capture group is given.",
+        match=r"Dimension must be specified if more than one capture group is given.",
     ):
         value.str.extract(pat=pat_str, dim=None)
 
     with pytest.raises(
         ValueError,
-        match="Dimension must be specified if more than one capture group is given.",
+        match=r"Dimension must be specified if more than one capture group is given.",
     ):
         value.str.extract(pat=pat_re, dim=None)
 
@@ -600,32 +619,32 @@ def test_extract_extractall_findall_case_re_raises(dtype) -> None:
     value = xr.DataArray([["a"]], dims=["X", "Y"]).astype(dtype)
 
     with pytest.raises(
-        ValueError, match="Case cannot be set when pat is a compiled regex."
+        ValueError, match=r"Case cannot be set when pat is a compiled regex."
     ):
         value.str.extract(pat=pat_re, case=True, dim="ZZ")
 
     with pytest.raises(
-        ValueError, match="Case cannot be set when pat is a compiled regex."
+        ValueError, match=r"Case cannot be set when pat is a compiled regex."
     ):
         value.str.extract(pat=pat_re, case=False, dim="ZZ")
 
     with pytest.raises(
-        ValueError, match="Case cannot be set when pat is a compiled regex."
+        ValueError, match=r"Case cannot be set when pat is a compiled regex."
     ):
         value.str.extractall(pat=pat_re, case=True, group_dim="XX", match_dim="YY")
 
     with pytest.raises(
-        ValueError, match="Case cannot be set when pat is a compiled regex."
+        ValueError, match=r"Case cannot be set when pat is a compiled regex."
     ):
         value.str.extractall(pat=pat_re, case=False, group_dim="XX", match_dim="YY")
 
     with pytest.raises(
-        ValueError, match="Case cannot be set when pat is a compiled regex."
+        ValueError, match=r"Case cannot be set when pat is a compiled regex."
     ):
         value.str.findall(pat=pat_re, case=True)
 
     with pytest.raises(
-        ValueError, match="Case cannot be set when pat is a compiled regex."
+        ValueError, match=r"Case cannot be set when pat is a compiled regex."
     ):
         value.str.findall(pat=pat_re, case=False)
 
@@ -636,39 +655,39 @@ def test_extract_extractall_name_collision_raises(dtype) -> None:
 
     value = xr.DataArray([["a"]], dims=["X", "Y"]).astype(dtype)
 
-    with pytest.raises(KeyError, match="Dimension 'X' already present in DataArray."):
+    with pytest.raises(KeyError, match=r"Dimension 'X' already present in DataArray."):
         value.str.extract(pat=pat_str, dim="X")
 
-    with pytest.raises(KeyError, match="Dimension 'X' already present in DataArray."):
+    with pytest.raises(KeyError, match=r"Dimension 'X' already present in DataArray."):
         value.str.extract(pat=pat_re, dim="X")
 
     with pytest.raises(
-        KeyError, match="Group dimension 'X' already present in DataArray."
+        KeyError, match=r"Group dimension 'X' already present in DataArray."
     ):
         value.str.extractall(pat=pat_str, group_dim="X", match_dim="ZZ")
 
     with pytest.raises(
-        KeyError, match="Group dimension 'X' already present in DataArray."
+        KeyError, match=r"Group dimension 'X' already present in DataArray."
     ):
         value.str.extractall(pat=pat_re, group_dim="X", match_dim="YY")
 
     with pytest.raises(
-        KeyError, match="Match dimension 'Y' already present in DataArray."
+        KeyError, match=r"Match dimension 'Y' already present in DataArray."
     ):
         value.str.extractall(pat=pat_str, group_dim="XX", match_dim="Y")
 
     with pytest.raises(
-        KeyError, match="Match dimension 'Y' already present in DataArray."
+        KeyError, match=r"Match dimension 'Y' already present in DataArray."
     ):
         value.str.extractall(pat=pat_re, group_dim="XX", match_dim="Y")
 
     with pytest.raises(
-        KeyError, match="Group dimension 'ZZ' is the same as match dimension 'ZZ'."
+        KeyError, match=r"Group dimension 'ZZ' is the same as match dimension 'ZZ'."
     ):
         value.str.extractall(pat=pat_str, group_dim="ZZ", match_dim="ZZ")
 
     with pytest.raises(
-        KeyError, match="Group dimension 'ZZ' is the same as match dimension 'ZZ'."
+        KeyError, match=r"Group dimension 'ZZ' is the same as match dimension 'ZZ'."
     ):
         value.str.extractall(pat=pat_re, group_dim="ZZ", match_dim="ZZ")
 
@@ -906,7 +925,7 @@ def test_extractall_single_single_nocase(dtype) -> None:
     pat_re: str | bytes = (
         pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -981,7 +1000,7 @@ def test_extractall_single_multi_nocase(dtype) -> None:
     pat_re: str | bytes = (
         pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -1063,7 +1082,7 @@ def test_extractall_multi_single_nocase(dtype) -> None:
     pat_re: str | bytes = (
         pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1145,7 +1164,7 @@ def test_extractall_multi_multi_nocase(dtype) -> None:
     pat_re: str | bytes = (
         pat_str if dtype == np.str_ else bytes(pat_str, encoding="UTF-8")
     )
-    pat_compiled = re.compile(pat_re, flags=re.I)
+    pat_compiled = re.compile(pat_re, flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -1245,7 +1264,7 @@ def test_findall_single_single_case(dtype) -> None:
 
 def test_findall_single_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1313,7 +1332,7 @@ def test_findall_single_multi_case(dtype) -> None:
 
 def test_findall_single_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_\d*"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -1387,7 +1406,7 @@ def test_findall_multi_single_case(dtype) -> None:
 
 def test_findall_multi_single_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [["a_Xy_0", "ab_xY_10", "abc_Xy_01"], ["abcd_Xy_", "", "abcdef_Xy_101"]],
@@ -1463,7 +1482,7 @@ def test_findall_multi_multi_case(dtype) -> None:
 
 def test_findall_multi_multi_nocase(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
-    pat_re = re.compile(dtype(pat_str), flags=re.I)
+    pat_re = re.compile(dtype(pat_str), flags=re.IGNORECASE)
 
     value = xr.DataArray(
         [
@@ -3526,7 +3545,7 @@ def test_join_2d(dtype) -> None:
     assert_identical(res_space_y, targ_space_y)
 
     with pytest.raises(
-        ValueError, match="Dimension must be specified for multidimensional arrays."
+        ValueError, match=r"Dimension must be specified for multidimensional arrays."
     ):
         values.str.join()
 

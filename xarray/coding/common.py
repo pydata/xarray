@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Hashable, MutableMapping
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, override
 
 import numpy as np
 
@@ -53,33 +53,47 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     Values are computed upon indexing or coercion to a NumPy array.
     """
 
-    def __init__(self, array, func: Callable, dtype: np.typing.DTypeLike):
+    def __init__(self, array, func: Callable, dtype: np.typing.DTypeLike | None):
         assert not is_chunked_array(array)
         self.array = indexing.as_indexable(array)
         self.func = func
         self._dtype = dtype
 
+    @override
     @property
     def dtype(self) -> np.dtype:
         return np.dtype(self._dtype)
 
+    def transpose(self, order):
+        # For elementwise functions, we can compose transpose and function application
+        return type(self)(self.array.transpose(order), self.func, self.dtype)
+
+    @override
     def _oindex_get(self, key):
         return type(self)(self.array.oindex[key], self.func, self.dtype)
 
+    @override
     def _vindex_get(self, key):
         return type(self)(self.array.vindex[key], self.func, self.dtype)
 
+    @override
     def __getitem__(self, key):
         return type(self)(self.array[key], self.func, self.dtype)
 
+    @override
     def get_duck_array(self):
         return self.func(self.array.get_duck_array())
 
+    @override
+    async def async_get_duck_array(self):
+        return self.func(await self.array.async_get_duck_array())
+
+    @override
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.array!r}, func={self.func!r}, dtype={self.dtype!r})"
 
 
-def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike):
+def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike | None):
     """Lazily apply an element-wise function to an array.
     Parameters
     ----------
@@ -106,7 +120,7 @@ def safe_setitem(dest, key: Hashable, value, name: T_Name = None):
     if key in dest:
         var_str = f" on variable {name!r}" if name else ""
         raise ValueError(
-            f"failed to prevent overwriting existing key {key} in attrs{var_str}. "
+            f"Key '{key}' already exists in attrs{var_str}, and will not be overwritten. "
             "This is probably an encoding field used by xarray to describe "
             "how a variable is serialized. To proceed, remove this key from "
             "the variable's attributes manually."

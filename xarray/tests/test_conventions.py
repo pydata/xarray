@@ -23,11 +23,12 @@ from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 from xarray.tests import (
     assert_array_equal,
+    dask_array_type,
     requires_cftime,
     requires_dask,
     requires_netCDF4,
 )
-from xarray.tests.test_backends import CFEncodedBase
+from xarray.tests.backends.base import CFEncodedBase
 
 
 class TestBoolTypeArray:
@@ -36,6 +37,30 @@ class TestBoolTypeArray:
         bx = coding.variables.BoolTypeArray(x)
         assert bx.dtype == bool
         assert_array_equal(bx, np.array([True, False, True, True, False], dtype=bool))
+
+        x = np.array([[1, 0, 1], [0, 1, 0]], dtype="i1")
+        bx = coding.variables.BoolTypeArray(x)
+        assert_array_equal(bx.transpose((1, 0)), x.transpose((1, 0)))
+
+
+class TestEncodeCfVariableCoders:
+    def test_empty_coders_is_identity(self) -> None:
+        var = Variable(["x"], np.array([True, False, True]), {"units": "test"})
+        result = conventions.encode_cf_variable(var, coders=[])
+        assert result.dtype == bool
+        assert_array_equal(result.values, var.values)
+
+    def test_custom_coders_excludes_boolean_coder(self) -> None:
+        var = Variable(["x"], np.array([True, False, True]))
+        result = conventions.encode_cf_variable(var, coders=conventions.ZARR_CODERS)
+        assert result.dtype == bool
+        assert "dtype" not in result.attrs
+
+    def test_default_coders_encodes_bool_to_int8(self) -> None:
+        var = Variable(["x"], np.array([True, False, True]))
+        result = conventions.encode_cf_variable(var)
+        assert result.dtype == np.int8
+        assert result.attrs.get("dtype") == "bool"
 
 
 class TestNativeEndiannessArray:
@@ -47,6 +72,11 @@ class TestNativeEndiannessArray:
         assert a.dtype == expected[:].dtype
         assert_array_equal(a, expected)
 
+        y = np.arange(6, dtype=">i8").reshape((2, 3))
+        b = coding.variables.NativeEndiannessArray(y)
+        expected2 = np.arange(6, dtype="int64").reshape((2, 3))
+        assert_array_equal(b.transpose((1, 0)), expected2.transpose((1, 0)))
+
 
 def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     expected = Variable(["t"], [np.nan, np.nan, 2], {"units": "foobar"})
@@ -55,7 +85,7 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     )
     with pytest.warns(SerializationWarning, match="has multiple fill"):
         actual = conventions.decode_cf_variable("t", var)
-        assert_identical(actual, expected)
+    assert_identical(actual, expected)
 
     expected = Variable(["t"], np.arange(10), {"units": "foobar"})
 
@@ -131,8 +161,38 @@ class TestEncodeCFVariable:
     def test_missing_fillvalue(self) -> None:
         v = Variable(["x"], np.array([np.nan, 1, 2, 3]))
         v.encoding = {"dtype": "int16"}
-        with pytest.warns(Warning, match="floating point data as an integer"):
+        # Expect both the SerializationWarning and the RuntimeWarning from numpy
+        with pytest.warns(Warning) as record:
             conventions.encode_cf_variable(v)
+        # Check we got the expected warnings
+        warning_messages = [str(w.message) for w in record]
+        assert any(
+            "floating point data as an integer" in msg for msg in warning_messages
+        )
+        assert any(
+            "invalid value encountered in cast" in msg for msg in warning_messages
+        )
+
+    def test_missing_fillvalue_coordinate_variable(self) -> None:
+        # regression test for GH10305
+        # CF coordinate variables cannot have missing values, so they do not
+        # need a _FillValue and should not warn about one being absent
+        v = Variable(["x"], np.array([0.0, 1.0, 2.0]), encoding={"dtype": "int16"})
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            encoded = conventions.encode_cf_variable(v, name="x")
+        assert encoded.dtype == np.dtype("int16")
+
+    def test_missing_fillvalue_non_coordinate_variable(self) -> None:
+        # data variables and multidimensional (auxiliary) coordinates may hold
+        # missing values, so they still warn
+        v = Variable(["x"], np.array([0.0, 1.0, 2.0]), encoding={"dtype": "int16"})
+        with pytest.warns(SerializationWarning, match="floating point data"):
+            conventions.encode_cf_variable(v, name="data")
+
+        v2d = Variable(["y", "x"], np.zeros((2, 3)), encoding={"dtype": "int16"})
+        with pytest.warns(SerializationWarning, match="floating point data"):
+            conventions.encode_cf_variable(v2d, name="lat")
 
     def test_multidimensional_coordinates(self) -> None:
         # regression test for GH1763
@@ -262,7 +322,7 @@ class TestDecodeCF:
         expected = Dataset(
             {"foo": ("t", [0, 0, 0], {"units": "bar"})},
             {
-                "t": pd.date_range("2000-01-01", periods=3),
+                "t": pd.date_range("2000-01-01", periods=3, unit="ns"),
                 "y": ("t", [5.0, 10.0, np.nan]),
             },
         )
@@ -340,20 +400,20 @@ class TestDecodeCF:
         )
 
         original.temp.attrs["grid_mapping"] = "crs: x y"
-        vars, attrs, coords = conventions.decode_cf_variables(
+        _vars, _attrs, coords = conventions.decode_cf_variables(
             original.variables, {}, decode_coords="all"
         )
         assert coords == {"lat", "lon", "crs"}
 
         original.temp.attrs["grid_mapping"] = "crs: x y crs2: lat lon"
-        vars, attrs, coords = conventions.decode_cf_variables(
+        _vars, _attrs, coords = conventions.decode_cf_variables(
             original.variables, {}, decode_coords="all"
         )
         assert coords == {"lat", "lon", "crs", "crs2"}
 
         # stray colon
         original.temp.attrs["grid_mapping"] = "crs: x y crs2 : lat lon"
-        vars, attrs, coords = conventions.decode_cf_variables(
+        _vars, _attrs, coords = conventions.decode_cf_variables(
             original.variables, {}, decode_coords="all"
         )
         assert coords == {"lat", "lon", "crs", "crs2"}
@@ -364,17 +424,17 @@ class TestDecodeCF:
 
         del original.temp.attrs["grid_mapping"]
         original.temp.attrs["formula_terms"] = "A: lat D: lon E: crs2"
-        vars, attrs, coords = conventions.decode_cf_variables(
+        _vars, _attrs, coords = conventions.decode_cf_variables(
             original.variables, {}, decode_coords="all"
         )
         assert coords == {"lat", "lon", "crs2"}
 
         original.temp.attrs["formula_terms"] = "A: lat lon D: crs E: crs2"
         with pytest.warns(UserWarning, match="has malformed content"):
-            vars, attrs, coords = conventions.decode_cf_variables(
+            _vars, _attrs, coords = conventions.decode_cf_variables(
                 original.variables, {}, decode_coords="all"
             )
-            assert coords == {"lat", "lon", "crs", "crs2"}
+        assert coords == {"lat", "lon", "crs", "crs2"}
 
     def test_0d_int32_encoding(self) -> None:
         original = Variable((), np.int32(0), encoding={"dtype": "int64"})
@@ -387,7 +447,7 @@ class TestDecodeCF:
         expected = Variable(["t"], [np.nan, np.nan, 2], {})
         with pytest.warns(SerializationWarning, match="has multiple fill"):
             actual = conventions.decode_cf_variable("t", original)
-            assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_decode_cf_with_drop_variables(self) -> None:
         original = Dataset(
@@ -404,7 +464,7 @@ class TestDecodeCF:
         )
         expected = Dataset(
             {
-                "t": pd.date_range("2000-01-01", periods=3),
+                "t": pd.date_range("2000-01-01", periods=3, unit="ns"),
                 "foo": (
                     ("t", "x"),
                     [[0, 0, 0], [1, 1, 1], [2, 2, 2]],
@@ -470,8 +530,6 @@ class TestDecodeCF:
 
     @requires_dask
     def test_decode_cf_with_dask(self) -> None:
-        import dask.array as da
-
         original = Dataset(
             {
                 "t": ("t", [0, 1, 2], {"units": "days since 2000-01-01"}),
@@ -483,7 +541,7 @@ class TestDecodeCF:
         ).chunk()
         decoded = conventions.decode_cf(original)
         assert all(
-            isinstance(var.data, da.Array)
+            isinstance(var.data, dask_array_type)
             for name, var in decoded.variables.items()
             if name not in decoded.xindexes
         )
@@ -535,7 +593,9 @@ class TestDecodeCF:
         dsc = conventions.decode_cf(
             ds,
             decode_times=CFDatetimeCoder(time_unit=time_unit),
-            decode_timedelta=CFTimedeltaCoder(time_unit=time_unit),
+            decode_timedelta=CFTimedeltaCoder(
+                decode_via_units=True, time_unit=time_unit
+            ),
         )
         assert dsc.timedelta.dtype == np.dtype(f"m8[{time_unit}]")
         assert dsc.time.dtype == np.dtype(f"M8[{time_unit}]")
@@ -555,10 +615,10 @@ class TestDecodeCF:
 
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
-    def encode_variable(self, var):
+    def encode_variable(self, var, name=None):
         """encode one variable"""
         coder = coding.strings.EncodedStringCoder(allows_unicode=True)
-        var = coder.encode(var)
+        var = coder.encode(var, name=name)
         return var
 
 
@@ -595,6 +655,10 @@ class TestCFEncodedDataStore(CFEncodedBase):
 
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
+        pass
+
+    def test_encoding_unlimited_dims(self) -> None:
+        # CFEncodedInMemoryStore doesn't support unlimited_dims.
         pass
 
 
@@ -636,8 +700,11 @@ def test_scalar_units() -> None:
 
 
 def test_decode_cf_error_includes_variable_name():
-    ds = Dataset({"invalid": ([], 1e36, {"units": "days since 2000-01-01"})})
-    with pytest.raises(ValueError, match="Failed to decode variable 'invalid'"):
+    ds = Dataset({"my_invalid_var": ([], 1e36, {"units": "days since 2000-01-01"})})
+    with pytest.raises(
+        ValueError,
+        match=r"unable to decode(?s:.*)my_invalid_var",
+    ):
         decode_cf(ds)
 
 
@@ -654,15 +721,3 @@ def test_encode_cf_variable_with_vlen_dtype() -> None:
     encoded_v = conventions.encode_cf_variable(v)
     assert encoded_v.data.dtype.kind == "O"
     assert coding.strings.check_vlen_dtype(encoded_v.data.dtype) is str
-
-
-def test_decode_cf_variables_decode_timedelta_warning() -> None:
-    v = Variable(["time"], [1, 2], attrs={"units": "seconds"})
-    variables = {"a": v}
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("error", "decode_timedelta", FutureWarning)
-        conventions.decode_cf_variables(variables, {}, decode_timedelta=True)
-
-    with pytest.warns(FutureWarning, match="decode_timedelta"):
-        conventions.decode_cf_variables(variables, {})

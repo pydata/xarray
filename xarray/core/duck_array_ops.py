@@ -13,22 +13,32 @@ import warnings
 from collections.abc import Callable
 from functools import partial
 from importlib import import_module
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from numpy import (  # noqa: F401
+from numpy import (
     isclose,
     isnat,
     take,
-    unravel_index,
+    unravel_index,  # noqa: F401
 )
-from pandas.api.types import is_extension_array_dtype
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
+from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import dtypes, nputils
+from xarray.core.extension_array import (
+    PandasExtensionArray,
+    as_extension_array,
+)
 from xarray.core.options import OPTIONS
-from xarray.core.utils import is_duck_array, is_duck_dask_array, module_available
+from xarray.core.utils import (
+    is_allowed_extension_array_dtype,
+    is_duck_array,
+    is_duck_dask_array,
+    module_available,
+)
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 
@@ -47,8 +57,6 @@ dask_available = module_available("dask")
 
 
 def einsum(*args, **kwargs):
-    from xarray.core.options import OPTIONS
-
     if OPTIONS["use_opt_einsum"] and module_available("opt_einsum"):
         import opt_einsum
 
@@ -84,11 +92,20 @@ def _dask_or_eager_func(
 
     def f(*args, **kwargs):
         if dask_available and any(is_duck_dask_array(a) for a in args):
-            mod = (
-                import_module(dask_module)
-                if isinstance(dask_module, str)
-                else dask_module
-            )
+            chunkmanager = get_chunked_array_type(*args)
+            mod = chunkmanager.array_api
+            if not hasattr(mod, name):
+                from xarray.namedarray.daskmanager import DaskManager
+
+                if not isinstance(chunkmanager, DaskManager):
+                    raise NotImplementedError(
+                        f"{name!r} is not available on the active dask chunk manager"
+                    )
+                mod = (
+                    import_module(dask_module)
+                    if isinstance(dask_module, str)
+                    else dask_module
+                )
             wrapped = getattr(mod, name)
             for kwarg in numpy_only_kwargs:
                 kwargs.pop(kwarg, None)
@@ -119,6 +136,10 @@ masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module="dask.array.ma"
 )
 
+getmaskarray = _dask_or_eager_func(
+    "getmaskarray", eager_module=np.ma, dask_module="dask.array.ma"
+)
+
 
 def sliding_window_view(array, window_shape, axis=None, **kwargs):
     # TODO: some libraries (e.g. jax) don't have this, implement an alternative?
@@ -143,6 +164,21 @@ def round(array):
 around: Callable = round
 
 
+def isna(data: Any) -> bool:
+    """Checks if data is literally np.nan or pd.NA.
+
+    Parameters
+    ----------
+    data
+        Any python object
+
+    Returns
+    -------
+        Whether or not the data is np.nan or pd.NA
+    """
+    return data is pd.NA or data is np.nan  # noqa: PLW0177
+
+
 def isnull(data):
     data = asarray(data)
 
@@ -153,9 +189,15 @@ def isnull(data):
         # note: must check timedelta64 before integers, because currently
         # timedelta64 inherits from np.integer
         return isnat(data)
+    elif HAS_STRING_DTYPE and isinstance(scalar_type, np.dtypes.StringDType):
+        # na is settable, but it defaults to an empty string
+        na_object = getattr(scalar_type, "na_object", "")
+        if isna(na_object):
+            return xp.isnan(data)
+        else:
+            return data == na_object
     elif dtypes.isdtype(scalar_type, ("real floating", "complex floating"), xp=xp):
         # float types use NaN for null
-        xp = get_array_namespace(data)
         return xp.isnan(data)
     elif dtypes.isdtype(scalar_type, ("bool", "integral"), xp=xp) or (
         isinstance(scalar_type, np.dtype)
@@ -168,16 +210,15 @@ def isnull(data):
         # bool_ is for backwards compat with numpy<2, and cupy
         dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
         return full_like(data, dtype=dtype, fill_value=False)
+    # at this point, array should have dtype=object
+    elif isinstance(data, np.ndarray) or pd.api.types.is_extension_array_dtype(data):  # noqa: TID251
+        return pandas_isnull(data)
     else:
-        # at this point, array should have dtype=object
-        if isinstance(data, np.ndarray) or is_extension_array_dtype(data):
-            return pandas_isnull(data)
-        else:
-            # Not reachable yet, but intended for use with other duck array
-            # types. For full consistency with pandas, we should accept None as
-            # a null value as well as NaN, but it isn't clear how to do this
-            # with duck typing.
-            return data != data
+        # Not reachable yet, but intended for use with other duck array
+        # types. For full consistency with pandas, we should accept None as
+        # a null value as well as NaN, but it isn't clear how to do this
+        # with duck typing.
+        return data != data  # noqa: PLR0124
 
 
 def notnull(data):
@@ -232,14 +273,20 @@ def astype(data, dtype, *, xp=None, **kwargs):
     if xp is None:
         xp = get_array_namespace(data)
 
-    if xp == np:
-        # numpy currently doesn't have a astype:
+    if xp is np or not hasattr(xp, "astype"):
         return data.astype(dtype, **kwargs)
     return xp.astype(data, dtype, **kwargs)
 
 
 def asarray(data, xp=np, dtype=None):
-    converted = data if is_duck_array(data) else xp.asarray(data)
+    if is_duck_array(data):
+        converted = data
+    elif is_allowed_extension_array_dtype(dtype):
+        # data may or may not be an ExtensionArray, so we can't rely on
+        # np.asarray to call our NEP-18 handler; gotta hook it ourselves
+        converted = PandasExtensionArray(as_extension_array(data, dtype))
+    else:
+        converted = xp.asarray(data)
 
     if dtype is None or converted.dtype == dtype:
         return converted
@@ -251,20 +298,7 @@ def asarray(data, xp=np, dtype=None):
 
 
 def as_shared_dtype(scalars_or_arrays, xp=None):
-    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-    if any(is_extension_array_dtype(x) for x in scalars_or_arrays):
-        extension_array_types = [
-            x.dtype for x in scalars_or_arrays if is_extension_array_dtype(x)
-        ]
-        if len(extension_array_types) == len(scalars_or_arrays) and all(
-            isinstance(x, type(extension_array_types[0])) for x in extension_array_types
-        ):
-            return scalars_or_arrays
-        raise ValueError(
-            "Cannot cast arrays to shared type, found"
-            f" array types {[x.dtype for x in scalars_or_arrays]}"
-        )
-
+    """Cast arrays to a shared dtype using xarray's type promotion rules."""
     # Avoid calling array_type("cupy") repeatidely in the any check
     array_type_cupy = array_type("cupy")
     if any(isinstance(x, array_type_cupy) for x in scalars_or_arrays):
@@ -273,7 +307,12 @@ def as_shared_dtype(scalars_or_arrays, xp=None):
         xp = cp
     elif xp is None:
         xp = get_array_namespace(scalars_or_arrays)
-
+    scalars_or_arrays = [
+        PandasExtensionArray(s_or_a)
+        if isinstance(s_or_a, pd.api.extensions.ExtensionArray)
+        else s_or_a
+        for s_or_a in scalars_or_arrays
+    ]
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.
     # Note that result_type() safely gets the dtype from dask arrays without
@@ -384,7 +423,9 @@ def where(condition, x, y):
     else:
         condition = astype(condition, dtype=dtype, xp=xp)
 
-    return xp.where(condition, *as_shared_dtype([x, y], xp=xp))
+    promoted_x, promoted_y = as_shared_dtype([x, y], xp=xp)
+
+    return xp.where(condition, promoted_x, promoted_y)
 
 
 def where_method(data, cond, other=dtypes.NA):
@@ -497,6 +538,18 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
 
             nanname = "nan" + name
             func = getattr(nanops, nanname)
+        elif name in ["min", "max"] and dtypes.is_object(values.dtype):
+            # numpy's min/max of object arrays give order-dependent results
+            # when NaN is present, so compute ignoring nulls and then mask
+            # every slice that contains a null
+            from xarray.computation import nanops
+
+            nanfunc = getattr(nanops, "nan" + name)
+
+            def func(values, axis=None, **kwargs):
+                result = nanfunc(values, axis=axis, **kwargs)
+                return where_method(result, ~array_any(isnull(values), axis=axis))
+
         else:
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
@@ -658,9 +711,7 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
         The output data type.
 
     """
-    import datetime as dt
-
-    if isinstance(value, dt.timedelta):
+    if isinstance(value, datetime.timedelta):
         out = py_timedelta_to_float(value, datetime_unit)
     elif isinstance(value, np.timedelta64):
         out = np_timedelta64_to_float(value, datetime_unit)
@@ -734,8 +785,11 @@ def mean(array, axis=None, skipna=None, **kwargs):
     if dtypes.is_datetime_like(array.dtype):
         dmin = _datetime_nanreduce(array, min).astype("datetime64[Y]").astype(int)
         dmax = _datetime_nanreduce(array, max).astype("datetime64[Y]").astype(int)
+        # midpoint computed without overflowing if both are NaT (i.e. int64 min)
         offset = (
-            np.array((dmin + dmax) // 2).astype("datetime64[Y]").astype(array.dtype)
+            np.array(dmin + (dmax - dmin) // 2)
+            .astype("datetime64[Y]")
+            .astype(array.dtype)
         )
         # From version 2025.01.2 xarray uses np.datetime64[unit], where unit
         # is one of "s", "ms", "us", "ns".
@@ -771,6 +825,12 @@ def _nd_cum_func(cum_func, array, axis, **kwargs):
     for ax in axis:
         out = cum_func(out, axis=ax, **kwargs)
     return out
+
+
+def ndim(array) -> int:
+    # Required part of the duck array and the array-api, but we fall back in case
+    # https://docs.xarray.dev/en/latest/internals/duck-arrays-integration.html#duck-array-requirements
+    return array.ndim if hasattr(array, "ndim") else np.ndim(array)
 
 
 def cumprod(array, axis=None, **kwargs):
@@ -835,7 +895,7 @@ def _push(array, n: int | None = None, axis: int = -1):
             " Call `xr.set_options(use_bottleneck=True)` or `xr.set_options(use_numbagg=True)` to enable one."
         )
     if OPTIONS["use_numbagg"] and module_available("numbagg"):
-        import numbagg
+        import numbagg  # type: ignore[import-not-found, unused-ignore]
 
         return numbagg.ffill(array, limit=n, axis=axis)
 

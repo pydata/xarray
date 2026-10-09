@@ -4,7 +4,7 @@ import functools
 import inspect
 import warnings
 from collections.abc import Callable, Hashable, Iterable
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from xarray.plot import dataarray_plot
 from xarray.plot.facetgrid import _easy_facetgrid
@@ -37,119 +37,121 @@ if TYPE_CHECKING:
 
 def _dsplot(plotfunc):
     commondoc = """
-    Parameters
-    ----------
+Parameters
+----------
 
-    ds : Dataset
-    x : Hashable or None, optional
-        Variable name for x-axis.
-    y : Hashable or None, optional
-        Variable name for y-axis.
-    u : Hashable or None, optional
-        Variable name for the *u* velocity (in *x* direction).
-        quiver/streamplot plots only.
-    v : Hashable or None, optional
-        Variable name for the *v* velocity (in *y* direction).
-        quiver/streamplot plots only.
-    hue: Hashable or None, optional
-        Variable by which to color scatter points or arrows.
-    hue_style: {'continuous', 'discrete'} or None, optional
-        How to use the ``hue`` variable:
+ds : Dataset
+x : Hashable or None, optional
+    Variable name for x-axis.
+y : Hashable or None, optional
+    Variable name for y-axis.
+u : Hashable or None, optional
+    Variable name for the *u* velocity (in *x* direction).
+    quiver/streamplot plots only.
+v : Hashable or None, optional
+    Variable name for the *v* velocity (in *y* direction).
+    quiver/streamplot plots only.
+hue: Hashable or None, optional
+    Variable by which to color scatter points or arrows.
+hue_style: {'continuous', 'discrete'} or None, optional
+    How to use the ``hue`` variable:
 
-        - ``'continuous'`` -- continuous color scale
-          (default for numeric ``hue`` variables)
-        - ``'discrete'`` -- a color for each unique value, using the default color cycle
-          (default for non-numeric ``hue`` variables)
+    - ``'continuous'`` -- continuous color scale
+        (default for numeric ``hue`` variables)
+    - ``'discrete'`` -- a color for each unique value, using the default color cycle
+        (default for non-numeric ``hue`` variables)
 
-    row : Hashable or None, optional
-        If passed, make row faceted plots on this dimension name.
-    col : Hashable or None, optional
-        If passed, make column faceted plots on this dimension name.
-    col_wrap : int, optional
-        Use together with ``col`` to wrap faceted plots.
-    ax : matplotlib axes object or None, optional
-        If ``None``, use the current axes. Not applicable when using facets.
-    figsize : Iterable[float] or None, optional
-        A tuple (width, height) of the figure in inches.
-        Mutually exclusive with ``size`` and ``ax``.
-    size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
-    aspect : "auto", "equal", scalar or None, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
-        inches. Only used if a ``size`` is provided.
-    sharex : bool or None, optional
-        If True all subplots share the same x-axis.
-    sharey : bool or None, optional
-        If True all subplots share the same y-axis.
-    add_guide: bool or None, optional
-        Add a guide that depends on ``hue_style``:
+row : Hashable or None, optional
+    If passed, make row faceted plots on this dimension name.
+col : Hashable or None, optional
+    If passed, make column faceted plots on this dimension name.
+col_wrap : int, None or "auto", optional
+    "Wrap" the grid for the column variable after this number of columns,
+    adding rows if ``col_wrap`` is less than the number of facets.
+    If "auto" align the grid to the figsize or keep it as square as possible.
+ax : matplotlib axes object or None, optional
+    If ``None``, use the current axes. Not applicable when using facets.
+figsize : Iterable[float] or None, optional
+    A tuple (width, height) of the figure in inches.
+    Mutually exclusive with ``size`` and ``ax``.
+size : scalar, optional
+    If provided, create a new figure for the plot with the given size.
+    Height (in inches) of each plot. See also: ``aspect``.
+aspect : "auto", "equal", scalar or None, optional
+    Aspect ratio of plot, so that ``aspect * size`` gives the width in
+    inches. Only used if a ``size`` is provided.
+sharex : bool or None, optional
+    If True all subplots share the same x-axis.
+sharey : bool or None, optional
+    If True all subplots share the same y-axis.
+add_guide: bool or None, optional
+    Add a guide that depends on ``hue_style``:
 
-        - ``'continuous'`` -- build a colorbar
-        - ``'discrete'`` -- build a legend
+    - ``'continuous'`` -- build a colorbar
+    - ``'discrete'`` -- build a legend
 
-    subplot_kws : dict or None, optional
-        Dictionary of keyword arguments for Matplotlib subplots
-        (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
-        Only applies to FacetGrid plotting.
-    cbar_kwargs : dict, optional
-        Dictionary of keyword arguments to pass to the colorbar
-        (see :meth:`matplotlib:matplotlib.figure.Figure.colorbar`).
-    cbar_ax : matplotlib axes object, optional
-        Axes in which to draw the colorbar.
-    cmap : matplotlib colormap name or colormap, optional
-        The mapping from data values to color space. Either a
-        Matplotlib colormap name or object. If not provided, this will
-        be either ``'viridis'`` (if the function infers a sequential
-        dataset) or ``'RdBu_r'`` (if the function infers a diverging
-        dataset).
-        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
-        for more information.
+subplot_kws : dict or None, optional
+    Dictionary of keyword arguments for Matplotlib subplots
+    (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
+    Only applies to FacetGrid plotting.
+cbar_kwargs : dict, optional
+    Dictionary of keyword arguments to pass to the colorbar
+    (see :meth:`matplotlib:matplotlib.figure.Figure.colorbar`).
+cbar_ax : matplotlib axes object, optional
+    Axes in which to draw the colorbar.
+cmap : matplotlib colormap name or colormap, optional
+    The mapping from data values to color space. Either a
+    Matplotlib colormap name or object. If not provided, this will
+    be either ``'viridis'`` (if the function infers a sequential
+    dataset) or ``'RdBu_r'`` (if the function infers a diverging
+    dataset).
+    See :doc:`Choosing Colormaps in Matplotlib <matplotlib:users/explain/colors/colormaps>`
+    for more information.
 
-        If *seaborn* is installed, ``cmap`` may also be a
-        `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
-        Note: if ``cmap`` is a seaborn color palette,
-        ``levels`` must also be specified.
-    vmin : float or None, optional
-        Lower value to anchor the colormap, otherwise it is inferred from the
-        data and other keyword arguments. When a diverging dataset is inferred,
-        setting `vmin` or `vmax` will fix the other by symmetry around
-        ``center``. Setting both values prevents use of a diverging colormap.
-        If discrete levels are provided as an explicit list, both of these
-        values are ignored.
-    vmax : float or None, optional
-        Upper value to anchor the colormap, otherwise it is inferred from the
-        data and other keyword arguments. When a diverging dataset is inferred,
-        setting `vmin` or `vmax` will fix the other by symmetry around
-        ``center``. Setting both values prevents use of a diverging colormap.
-        If discrete levels are provided as an explicit list, both of these
-        values are ignored.
-    norm : matplotlib.colors.Normalize, optional
-        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
-        kwarg must be ``None``.
-    infer_intervals: bool | None
-        If True the intervals are inferred.
-    center : float, optional
-        The value at which to center the colormap. Passing this value implies
-        use of a diverging colormap. Setting it to ``False`` prevents use of a
-        diverging colormap.
-    robust : bool, optional
-        If ``True`` and ``vmin`` or ``vmax`` are absent, the colormap range is
-        computed with 2nd and 98th percentiles instead of the extreme values.
-    colors : str or array-like of color-like, optional
-        A single color or a list of colors. The ``levels`` argument
-        is required.
-    extend : {'neither', 'both', 'min', 'max'}, optional
-        How to draw arrows extending the colorbar beyond its limits. If not
-        provided, ``extend`` is inferred from ``vmin``, ``vmax`` and the data limits.
-    levels : int or array-like, optional
-        Split the colormap (``cmap``) into discrete color intervals. If an integer
-        is provided, "nice" levels are chosen based on the data range: this can
-        imply that the final number of levels is not exactly the expected one.
-        Setting ``vmin`` and/or ``vmax`` with ``levels=N`` is equivalent to
-        setting ``levels=np.linspace(vmin, vmax, N)``.
-    **kwargs : optional
-        Additional keyword arguments to wrapped Matplotlib function.
+    If *seaborn* is installed, ``cmap`` may also be a
+    `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
+    Note: if ``cmap`` is a seaborn color palette,
+    ``levels`` must also be specified.
+vmin : float or None, optional
+    Lower value to anchor the colormap, otherwise it is inferred from the
+    data and other keyword arguments. When a diverging dataset is inferred,
+    setting `vmin` or `vmax` will fix the other by symmetry around
+    ``center``. Setting both values prevents use of a diverging colormap.
+    If discrete levels are provided as an explicit list, both of these
+    values are ignored.
+vmax : float or None, optional
+    Upper value to anchor the colormap, otherwise it is inferred from the
+    data and other keyword arguments. When a diverging dataset is inferred,
+    setting `vmin` or `vmax` will fix the other by symmetry around
+    ``center``. Setting both values prevents use of a diverging colormap.
+    If discrete levels are provided as an explicit list, both of these
+    values are ignored.
+norm : matplotlib.colors.Normalize, optional
+    If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
+    kwarg must be ``None``.
+infer_intervals: bool | None
+    If True the intervals are inferred.
+center : float, optional
+    The value at which to center the colormap. Passing this value implies
+    use of a diverging colormap. Setting it to ``False`` prevents use of a
+    diverging colormap.
+robust : bool, optional
+    If ``True`` and ``vmin`` or ``vmax`` are absent, the colormap range is
+    computed with 2nd and 98th percentiles instead of the extreme values.
+colors : str or array-like of color-like, optional
+    A single color or a list of colors. The ``levels`` argument
+    is required.
+extend : {'neither', 'both', 'min', 'max'}, optional
+    How to draw arrows extending the colorbar beyond its limits. If not
+    provided, ``extend`` is inferred from ``vmin``, ``vmax`` and the data limits.
+levels : int or array-like, optional
+    Split the colormap (``cmap``) into discrete color intervals. If an integer
+    is provided, "nice" levels are chosen based on the data range: this can
+    imply that the final number of levels is not exactly the expected one.
+    Setting ``vmin`` and/or ``vmax`` with ``levels=N`` is equivalent to
+    setting ``levels=np.linspace(vmin, vmax, N)``.
+**kwargs : optional
+    Additional keyword arguments to wrapped Matplotlib function.
     """
 
     # Build on the original docstring
@@ -169,7 +171,7 @@ def _dsplot(plotfunc):
         hue_style: HueStyleOptions = None,
         row: Hashable | None = None,
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
@@ -212,7 +214,8 @@ def _dsplot(plotfunc):
             if len(args) > 5:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+                warnings.warn(msg, FutureWarning, stacklevel=2)
+            del msg
         del args
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
@@ -335,7 +338,7 @@ def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -372,7 +375,7 @@ def quiver(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -409,7 +412,7 @@ def quiver(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -486,7 +489,7 @@ def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -523,7 +526,7 @@ def streamplot(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -560,7 +563,7 @@ def streamplot(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -630,6 +633,8 @@ def streamplot(
     cmap_params = kwargs.pop("cmap_params")
 
     if hue:
+        if xdim is not None and ydim is not None:
+            ds[hue] = ds[hue].transpose(ydim, xdim)
         kwargs["color"] = ds[hue].values
 
         # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
@@ -750,6 +755,177 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
 @overload
 def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
+    *,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | Literal["auto"] | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> PathCollection: ...
+
+
+@overload
+def scatter(
+    ds: Dataset,
+    *,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | Literal["auto"] | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> FacetGrid[DataArray]: ...
+
+
+@overload
+def scatter(
+    ds: Dataset,
+    *,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> FacetGrid[DataArray]: ...
+
+
+@_update_doc_to_dataset(dataarray_plot.scatter)
+def scatter(
+    ds: Dataset,
+    *,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> PathCollection | FacetGrid[DataArray]:
+    """Scatter plot Dataset data variables against each other."""
+    locals_ = locals()
+    del locals_["ds"]
+    locals_.update(locals_.pop("kwargs", {}))
+    da = _temp_dataarray(ds, y, locals_)
+
+    return da.plot.scatter(*locals_.pop("args", ()), **locals_)
+
+
+@overload
+def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
+    ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -785,11 +961,11 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> PathCollection: ...
+) -> LineCollection: ...
 
 
 @overload
-def scatter(
+def lines(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -830,7 +1006,7 @@ def scatter(
 
 
 @overload
-def scatter(
+def lines(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -870,8 +1046,8 @@ def scatter(
 ) -> FacetGrid[DataArray]: ...
 
 
-@_update_doc_to_dataset(dataarray_plot.scatter)
-def scatter(
+@_update_doc_to_dataset(dataarray_plot.lines)
+def lines(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -908,11 +1084,17 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> PathCollection | FacetGrid[DataArray]:
-    """Scatter plot Dataset data variables against each other."""
+) -> LineCollection | FacetGrid[DataArray]:
+    """
+    Line plot Dataset data variables against each other.
+
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
+    efficient plotting of many lines in a similar fashion to
+    :py:func:`xarray.plot.scatter`.
+    """
     locals_ = locals()
     del locals_["ds"]
     locals_.update(locals_.pop("kwargs", {}))
     da = _temp_dataarray(ds, y, locals_)
 
-    return da.plot.scatter(*locals_.pop("args", ()), **locals_)
+    return da.plot.lines(*locals_.pop("args", ()), **locals_)

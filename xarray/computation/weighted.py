@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Generic, Literal, cast
+from typing import TYPE_CHECKING, Literal, cast, override
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -132,7 +132,7 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
 
 
-class Weighted(Generic[T_Xarray]):
+class Weighted[T_Xarray: (DataArray, Dataset)]:
     """An object that implements weighted operations.
 
     You should create a Weighted object by using the ``DataArray.weighted`` or
@@ -448,7 +448,6 @@ class Weighted(Generic[T_Xarray]):
 
         result = result.transpose("quantile", ...)
         result = result.assign_coords(quantile=q).squeeze()
-
         return result
 
     def _implementation(self, func, dim, **kwargs):
@@ -540,6 +539,7 @@ class Weighted(Generic[T_Xarray]):
 
 
 class DataArrayWeighted(Weighted["DataArray"]):
+    @override
     def _implementation(self, func, dim, **kwargs) -> DataArray:
         self._check_dim(dim)
 
@@ -549,9 +549,9 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 
 class DatasetWeighted(Weighted["Dataset"]):
+    @override
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
-
         return self.obj.map(func, dim=dim, **kwargs)
 
 

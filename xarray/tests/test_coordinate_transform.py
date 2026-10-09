@@ -5,9 +5,11 @@ import numpy as np
 import pytest
 
 import xarray as xr
+from xarray import AlignmentError
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexes import CoordinateTransformIndex
-from xarray.tests import assert_equal
+from xarray.core.indexing import OuterIndexer
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 
 class SimpleCoordinateTransform(CoordinateTransform):
@@ -24,12 +26,17 @@ class SimpleCoordinateTransform(CoordinateTransform):
 
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
         assert set(dim_positions) == set(self.dims)
-        return {dim: dim_positions[dim] * self.scale for dim in self.xy_dims}
+        return {
+            name: dim_positions[dim] * self.scale
+            for name, dim in zip(self.coord_names, self.xy_dims, strict=False)
+        }
 
     def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
         return {dim: coord_labels[dim] / self.scale for dim in self.xy_dims}
 
-    def equals(self, other: "CoordinateTransform") -> bool:
+    def equals(
+        self, other: CoordinateTransform, exclude: frozenset[Hashable] | None = None
+    ) -> bool:
         if not isinstance(other, SimpleCoordinateTransform):
             return False
         return self.scale == other.scale
@@ -118,6 +125,17 @@ def test_coordinate_transform_variable_repr_inline() -> None:
     )
 
 
+def test_coordinate_transform_variable_repr() -> None:
+    var = create_coords(scale=2.0, shape=(2, 2))["x"].variable
+
+    actual = repr(var)
+    expected = """
+<xarray.Variable (y: 2, x: 2)> Size: 32B
+[4 values with dtype=float64]
+    """.strip()
+    assert actual == expected
+
+
 def test_coordinate_transform_variable_basic_outer_indexing() -> None:
     var = create_coords(scale=2.0, shape=(4, 4))["x"].variable
 
@@ -126,11 +144,40 @@ def test_coordinate_transform_variable_basic_outer_indexing() -> None:
     assert var[0, -1] == 6.0
     np.testing.assert_array_equal(var[:, 0:2], [[0.0, 2.0]] * 4)
 
+    expected = var.values[[0], :][:, [0, -1]]
+    actual = var.isel(y=[0], x=[0, -1]).values
+    np.testing.assert_array_equal(actual, expected)
+
     with pytest.raises(IndexError, match="out of bounds index"):
         var[5]
 
     with pytest.raises(IndexError, match="out of bounds index"):
         var[-5]
+
+
+def test_coordinate_transform_variable_outer_indexer_integer() -> None:
+    # integer keys drop their axis, as with basic indexing
+    adapter = create_coords(scale=2.0, shape=(4, 4))["x"].variable._data
+
+    actual = adapter.oindex[OuterIndexer((1, np.array([0, 2])))]  # type: ignore[union-attr]
+    np.testing.assert_array_equal(actual, [0.0, 4.0])
+
+    actual = adapter.oindex[OuterIndexer((1, 2))]  # type: ignore[union-attr]
+    assert actual.shape == ()
+    assert actual == 4.0
+
+
+@requires_dask
+def test_coordinate_transform_chunked_integer_isel() -> None:
+    # dask reads chunks with outer indexers; GH rasterix#92
+    coords = create_coords(scale=2.0, shape=(4, 4))
+    da = xr.DataArray(np.ones((3, 4, 4)), dims=("t", "y", "x"), coords=coords)
+
+    expected = da.isel(x=1, y=2)
+    actual = da.chunk(t=1).isel(x=1, y=2).compute()
+
+    assert_identical(actual, expected)
+    assert actual.x.shape == ()
 
 
 def test_coordinate_transform_variable_vectorized_indexing() -> None:
@@ -168,6 +215,50 @@ def test_coordinate_transform_transpose() -> None:
     np.testing.assert_array_equal(actual, expected)
 
 
+def test_coordinate_transform_transpose_non_square() -> None:
+    coords = create_coords(scale=2.0, shape=(2, 3))
+
+    actual = coords["x"].transpose()
+
+    assert actual.dims == ("x", "y")
+    assert actual.shape == (3, 2)
+    expected = [[0.0, 0.0], [2.0, 2.0], [4.0, 4.0]]
+    np.testing.assert_array_equal(actual.values, expected)
+
+
+def test_coordinate_transform_align_transposed() -> None:
+    # regression test: two Dataset objects sharing the same (equal)
+    # CoordinateTransformIndex but with a differently-transposed dim order
+    # for their coordinate variables used to raise a spurious "conflicting
+    # indexes" AlignmentError, because indexes are grouped for comparison by
+    # (coordinate name, dims order) before Index.equals() is ever called.
+    ds1 = create_coords(scale=2.0, shape=(2, 3)).to_dataset()
+    ds1["data"] = (("y", "x"), np.arange(6).reshape(2, 3))
+    ds2 = ds1.transpose("x", "y")
+
+    for join in ("exact", "outer", "inner"):
+        actual1, actual2 = xr.align(ds1, ds2, join=join)
+        assert actual1.sizes == ds1.sizes
+        assert actual2.sizes == ds2.sizes
+        assert_identical(actual1, ds1, check_default_indexes=False)
+        assert_identical(actual2, ds2, check_default_indexes=False)
+
+    # a genuinely different grid (different scale) must still be rejected, even
+    # when it also differs from `ds1` by dims order (exercising the cross-group
+    # comparison the fix above adds to `update_dicts`).
+    ds3 = create_coords(scale=4.0, shape=(2, 3)).to_dataset().transpose("x", "y")
+    with pytest.raises(
+        AlignmentError, match=r"cannot align objects.*conflicting indexes"
+    ):
+        xr.align(ds1, ds3, join="exact")
+
+    # same scale, same dims order as `ds1`: still correctly rejected through the
+    # pre-existing (same-group) "not equal" path.
+    ds4 = create_coords(scale=4.0, shape=(2, 3)).to_dataset()
+    with pytest.raises(AlignmentError, match=r"cannot align objects"):
+        xr.align(ds1, ds4, join="exact")
+
+
 def test_coordinate_transform_equals() -> None:
     ds1 = create_coords(scale=2.0, shape=(2, 2)).to_dataset()
     ds2 = create_coords(scale=2.0, shape=(2, 2)).to_dataset()
@@ -201,18 +292,24 @@ def test_coordinate_transform_sel() -> None:
     # doesn't work with coordinate transform index coordinate variables)
     assert actual.equals(expected)
 
-    with pytest.raises(ValueError, match=".*only supports selection.*nearest"):
+    with pytest.raises(ValueError, match=r".*only supports selection.*nearest"):
         ds.sel(x=xr.Variable("z", [0.5, 5.5]), y=xr.Variable("z", [0.0, 0.5]))
 
-    with pytest.raises(ValueError, match="missing labels for coordinate.*y"):
+    with pytest.raises(ValueError, match=r"missing labels for coordinate.*y"):
         ds.sel(x=[0.5, 5.5], method="nearest")
 
-    with pytest.raises(TypeError, match=".*only supports advanced.*indexing"):
+    with pytest.raises(TypeError, match=r".*only supports advanced.*indexing"):
         ds.sel(x=[0.5, 5.5], y=[0.0, 0.5], method="nearest")
 
-    with pytest.raises(ValueError, match=".*only supports advanced.*indexing"):
+    with pytest.raises(ValueError, match=r".*only supports advanced.*indexing"):
         ds.sel(
             x=xr.Variable("z", [0.5, 5.5]),
             y=xr.Variable("z", [0.0, 0.5, 1.5]),
             method="nearest",
         )
+
+
+def test_coordinate_transform_rename() -> None:
+    ds = xr.Dataset(coords=create_coords(scale=2.0, shape=(2, 2)))
+    roundtripped = ds.rename(x="u", y="v").rename(u="x", v="y")
+    assert_identical(ds, roundtripped, check_default_indexes=False)

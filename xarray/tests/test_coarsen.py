@@ -11,7 +11,6 @@ from xarray.tests import (
     assert_allclose,
     assert_equal,
     assert_identical,
-    has_dask,
     raise_if_dask_computes,
     requires_cftime,
 )
@@ -25,10 +24,29 @@ def test_coarsen_absent_dims_error(ds: Dataset) -> None:
         ds.coarsen(foo=2)
 
 
-@pytest.mark.parametrize("dask", [True, False])
+@pytest.mark.parametrize("skipna", [True, False, None])
+def test_coarsen_skipna(skipna):
+    # create data with NaNs in every other element
+    data = np.arange(10, dtype=float)
+    data[::2] = np.nan
+    ds = Dataset({"x": ("x", data)})
+    # window length of 2, so each window will contain one NaN and one non-NaN value
+    actual = ds.coarsen(x=2).mean(skipna=skipna)
+    if skipna is None or skipna is True:
+        # if we are skipping NaNs, mean in each window should just be the non-NaN value
+        expected_data = data[1::2]
+        expected = Dataset({"x": ("x", expected_data)})
+        assert_equal(actual, expected)
+    else:
+        # if we are not skipping NaNs, mean in each window should be NaN
+        expected_data = np.full_like(data[::2], np.nan)
+        expected = Dataset({"x": ("x", expected_data)})
+        assert_equal(actual, expected)
+
+
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
-def test_coarsen_dataset(ds, dask, boundary, side):
-    if dask and has_dask:
+def test_coarsen_dataset(ds, use_dask, boundary, side):
+    if use_dask:
         ds = ds.chunk({"x": 4})
 
     actual = ds.coarsen(time=2, x=3, boundary=boundary, side=side).max()
@@ -41,9 +59,8 @@ def test_coarsen_dataset(ds, dask, boundary, side):
     )
 
 
-@pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_coords(ds, dask):
-    if dask and has_dask:
+def test_coarsen_coords(ds, use_dask):
+    if use_dask:
         ds = ds.chunk({"x": 4})
 
     # check if coord_func works
@@ -100,7 +117,7 @@ def test_coarsen_keep_attrs(funcname, argument) -> None:
         attrs=global_attrs,
     )
 
-    # attrs are now kept per default
+    # attrs are kept by default
     func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == global_attrs
@@ -199,7 +216,7 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
         name="name",
     )
 
-    # attrs are now kept per default
+    # attrs are kept by default
     func = getattr(da.coarsen(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == attrs_da
@@ -241,13 +258,19 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     assert result.name == "name"
 
 
-@pytest.mark.parametrize("da", (1, 2), indirect=True)
-@pytest.mark.parametrize("window", (1, 2, 3, 4))
+# da=2 contains NaNs, so window=1 would lead to all-NaN slices
+@pytest.mark.parametrize(
+    "da, window",
+    [
+        (da, window)
+        for da in (1, 2)
+        for window in (1, 2, 3, 4)
+        if (da, window) != (2, 1)
+    ],
+    indirect=["da"],
+)
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
 def test_coarsen_da_reduce(da, window, name) -> None:
-    if da.isnull().sum() > 1 and window == 1:
-        pytest.skip("These parameters lead to all-NaN slices")
-
     # Use boundary="trim" to accommodate all window sizes used in tests
     coarsen_obj = da.coarsen(time=window, boundary="trim")
 
@@ -258,8 +281,7 @@ def test_coarsen_da_reduce(da, window, name) -> None:
 
 
 class TestCoarsenConstruct:
-    @pytest.mark.parametrize("dask", [True, False])
-    def test_coarsen_construct(self, dask: bool) -> None:
+    def test_coarsen_construct(self, use_dask: bool) -> None:
         ds = Dataset(
             {
                 "vart": ("time", np.arange(48), {"a": "b"}),
@@ -271,7 +293,7 @@ class TestCoarsenConstruct:
             attrs={"foo": "bar"},
         )
 
-        if dask and has_dask:
+        if use_dask:
             ds = ds.chunk({"x": 4, "time": 10})
 
         expected = xr.Dataset(attrs={"foo": "bar"})
@@ -345,5 +367,5 @@ class TestCoarsenConstruct:
         assert list(da.coords) == list(result.coords)
 
         ds = da.to_dataset(name="T")
-        result = ds.coarsen(time=12).construct(time=("year", "month"))
-        assert list(da.coords) == list(result.coords)
+        ds_result = ds.coarsen(time=12).construct(time=("year", "month"))
+        assert list(da.coords) == list(ds_result.coords)

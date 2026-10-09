@@ -20,12 +20,13 @@ dependencies:
   - iris
   - lxml # Optional dep of pydap
   - matplotlib-base
+  - mypy==1.18.1
   - nc-time-axis
   - netcdf4
   - numba
-  - numbagg
+  - numbagg!=0.9.5
   - numexpr
-  - numpy>=2
+  - numpy>=2.2
   - opt_einsum
   - packaging
   - pandas
@@ -36,8 +37,8 @@ dependencies:
   - pre-commit
   - pyarrow # pandas raises a deprecation warning without this, breaking doctests
   - pydap
-  - pydap-server
   - pytest
+  - pytest-asyncio
   - pytest-cov
   - pytest-env
   - pytest-mypy-plugins
@@ -55,6 +56,7 @@ dependencies:
   - types-python-dateutil
   - types-pytz
   - types-PyYAML
+  - types-requests
   - types-setuptools
   - types-openpyxl
   - typing_extensions

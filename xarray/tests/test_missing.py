@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import itertools
+from typing import Any
+from unittest import mock
 
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core import indexing
 from xarray.core.missing import (
     NumpyInterpolator,
     ScipyInterpolator,
@@ -14,12 +17,12 @@ from xarray.core.missing import (
     _get_nan_block_lengths,
     get_clean_interp_index,
 )
-from xarray.namedarray.pycompat import array_type
 from xarray.tests import (
     _CFTIME_CALENDARS,
     assert_allclose,
     assert_array_equal,
     assert_equal,
+    dask_array_type,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
@@ -28,8 +31,6 @@ from xarray.tests import (
     requires_numbagg_or_bottleneck,
     requires_scipy,
 )
-
-dask_array_type = array_type("dask")
 
 
 @pytest.fixture
@@ -202,7 +203,7 @@ def test_interpolate_unsorted_index_raises():
     vals = np.array([1, 2, 3], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x", coords={"x": [2, 1, 3]})
     with pytest.raises(ValueError, match=r"Index 'x' must be monotonically increasing"):
-        expected.interpolate_na(dim="x", method="index")
+        expected.interpolate_na(dim="x", method="index")  # type: ignore[arg-type]
 
 
 def test_interpolate_no_dim_raises():
@@ -214,14 +215,14 @@ def test_interpolate_no_dim_raises():
 def test_interpolate_invalid_interpolator_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
     with pytest.raises(ValueError, match=r"not a valid"):
-        da.interpolate_na(dim="x", method="foo")
+        da.interpolate_na(dim="x", method="foo")  # type: ignore[arg-type]
 
 
 def test_interpolate_duplicate_values_raises():
     data = np.random.randn(2, 3)
     da = xr.DataArray(data, coords=[("x", ["a", "a"]), ("y", [0, 1, 2])])
     with pytest.raises(ValueError, match=r"Index 'x' has duplicate values"):
-        da.interpolate_na(dim="x", method="foo")
+        da.interpolate_na(dim="x", method="foo")  # type: ignore[arg-type]
 
 
 def test_interpolate_multiindex_raises():
@@ -329,15 +330,15 @@ def test_interpolate_limits():
 @requires_scipy
 def test_interpolate_methods():
     for method in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         da = xr.DataArray(
             np.array([0, 1, 2, np.nan, np.nan, np.nan, 6, 7, 8], dtype=np.float64),
             dims="x",
         )
-        actual = da.interpolate_na("x", method=method, **kwargs)
+        actual = da.interpolate_na("x", method=method, **kwargs)  # type: ignore[arg-type]
         assert actual.isnull().sum() == 0
 
-        actual = da.interpolate_na("x", method=method, limit=2, **kwargs)
+        actual = da.interpolate_na("x", method=method, limit=2, **kwargs)  # type: ignore[arg-type]
         assert actual.isnull().sum() == 1
 
 
@@ -677,10 +678,6 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 
 @requires_bottleneck
-@pytest.mark.parametrize(
-    "use_cftime",
-    [False, pytest.param(True, marks=requires_cftime)],
-)
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3h", np.timedelta64(3, "h"), pd.to_timedelta("3h")]
@@ -772,3 +769,29 @@ def test_interpolators_complex_out_of_bounds():
         f = interpolator(xi, yi, method=method)
         actual = f(x)
         assert_array_equal(actual, expected)
+
+
+@requires_scipy
+def test_indexing_localize():
+    # regression test for GH10287
+    ds = xr.Dataset(
+        {
+            "sigma_a": xr.DataArray(
+                data=np.ones((16, 8, 36811)),
+                dims=["p", "t", "w"],
+                coords={"w": np.linspace(0, 30000, 36811)},
+            )
+        }
+    )
+
+    original_func = indexing.NumpyIndexingAdapter.__getitem__
+
+    def wrapper(self, indexer):
+        return original_func(self, indexer)
+
+    with mock.patch.object(
+        indexing.NumpyIndexingAdapter, "__getitem__", side_effect=wrapper, autospec=True
+    ) as mock_func:
+        ds["sigma_a"].interp(w=15000.5)
+    actual_indexer = mock_func.mock_calls[0].args[1]._key
+    assert actual_indexer == (slice(None), slice(None), slice(18404, 18408))

@@ -7,7 +7,7 @@ from collections import ChainMap
 from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, TypeVar, get_args
+from typing import TYPE_CHECKING, Any, TypeVar, get_args, override
 
 import numpy as np
 import pandas as pd
@@ -123,6 +123,7 @@ class NumpyInterpolator(BaseInterpolator):
         else:
             raise ValueError(f"{fill_value} is not a valid fill_value")
 
+    @override
     def __call__(self, x):
         return self.f(
             x,
@@ -364,11 +365,10 @@ def interp_na(
             # Convert to float
             max_gap = timedelta_to_numeric(max_gap)
 
-        if not use_coordinate:
-            if not isinstance(max_gap, Number | np.number):
-                raise TypeError(
-                    f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
-                )
+        if not use_coordinate and not isinstance(max_gap, Number | np.number):
+            raise TypeError(
+                f"Expected integer or floating point max_gap since use_coordinate=False. Received {max_type}."
+            )
 
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
@@ -499,7 +499,7 @@ def _get_interpolator(
     # take higher dimensional data but scipy.interp1d can.
     if (
         method == "linear"
-        and not kwargs.get("fill_value") == "extrapolate"
+        and kwargs.get("fill_value") != "extrapolate"
         and not vectorizeable_only
     ):
         kwargs.update(method=method)
@@ -577,7 +577,7 @@ def _get_valid_fill_mask(arr, dim, limit):
     ) <= limit
 
 
-def _localize(obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
+def _localize[T](obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
     """Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """
@@ -589,7 +589,7 @@ def _localize(obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
         minval = np.nanmin(new_x_loaded)
         maxval = np.nanmax(new_x_loaded)
         index = x.to_index()
-        imin, imax = index.get_indexer([minval, maxval], method="nearest")
+        imin, imax = index.get_indexer(pd.Index([minval, maxval]), method="nearest")
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
     return obj.isel(indexes), indexes_coords  # type: ignore[attr-defined]
@@ -802,7 +802,7 @@ def _interpnd(
 
     # Convert everything to Variables, since that makes applying
     # `_localize` and `_floatize_x` much easier
-    x = [
+    x: list[Variable] = [
         Variable([f"dim_{nconst + dim}"], _x, fastpath=True)
         for dim, _x in enumerate(coords[:n_x])
     ]

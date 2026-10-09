@@ -46,7 +46,7 @@ from collections.abc import Callable, Hashable, Mapping
 from functools import reduce
 from operator import or_ as set_union
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
 
 import numpy as np
@@ -112,7 +112,7 @@ def _apply_str_ufunc(
     *,
     func: Callable,
     obj: Any,
-    dtype: DTypeLike = None,
+    dtype: DTypeLike | None = None,
     output_core_dims: list | tuple = ((),),
     output_sizes: Mapping[Any, int] | None = None,
     func_args: tuple = (),
@@ -141,55 +141,55 @@ def _apply_str_ufunc(
     )
 
 
-class StringAccessor(Generic[T_DataArray]):
+class StringAccessor[T_DataArray: DataArray]:
     r"""Vectorized string functions for string-like arrays.
 
     Similar to pandas, fields can be accessed through the `.str` attribute
     for applicable DataArrays.
 
-        >>> da = xr.DataArray(["some", "text", "in", "an", "array"])
-        >>> da.str.len()
-        <xarray.DataArray (dim_0: 5)> Size: 40B
-        array([4, 4, 2, 2, 5])
-        Dimensions without coordinates: dim_0
+    >>> da = xr.DataArray(["some", "text", "in", "an", "array"])
+    >>> da.str.len()
+    <xarray.DataArray (dim_0: 5)> Size: 40B
+    array([4, 4, 2, 2, 5])
+    Dimensions without coordinates: dim_0
 
     It also implements ``+``, ``*``, and ``%``, which operate as elementwise
     versions of the corresponding ``str`` methods. These will automatically
     broadcast for array-like inputs.
 
-        >>> da1 = xr.DataArray(["first", "second", "third"], dims=["X"])
-        >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
-        >>> da1.str + da2
-        <xarray.DataArray (X: 3, Y: 3)> Size: 252B
-        array([['first1', 'first2', 'first3'],
-               ['second1', 'second2', 'second3'],
-               ['third1', 'third2', 'third3']], dtype='<U7')
-        Dimensions without coordinates: X, Y
+    >>> da1 = xr.DataArray(["first", "second", "third"], dims=["X"])
+    >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
+    >>> da1.str + da2
+    <xarray.DataArray (X: 3, Y: 3)> Size: 252B
+    array([['first1', 'first2', 'first3'],
+           ['second1', 'second2', 'second3'],
+           ['third1', 'third2', 'third3']], dtype='<U7')
+    Dimensions without coordinates: X, Y
 
-        >>> da1 = xr.DataArray(["a", "b", "c", "d"], dims=["X"])
-        >>> reps = xr.DataArray([3, 4], dims=["Y"])
-        >>> da1.str * reps
-        <xarray.DataArray (X: 4, Y: 2)> Size: 128B
-        array([['aaa', 'aaaa'],
-               ['bbb', 'bbbb'],
-               ['ccc', 'cccc'],
-               ['ddd', 'dddd']], dtype='<U4')
-        Dimensions without coordinates: X, Y
+    >>> da1 = xr.DataArray(["a", "b", "c", "d"], dims=["X"])
+    >>> reps = xr.DataArray([3, 4], dims=["Y"])
+    >>> da1.str * reps
+    <xarray.DataArray (X: 4, Y: 2)> Size: 128B
+    array([['aaa', 'aaaa'],
+           ['bbb', 'bbbb'],
+           ['ccc', 'cccc'],
+           ['ddd', 'dddd']], dtype='<U4')
+    Dimensions without coordinates: X, Y
 
-        >>> da1 = xr.DataArray(["%s_%s", "%s-%s", "%s|%s"], dims=["X"])
-        >>> da2 = xr.DataArray([1, 2], dims=["Y"])
-        >>> da3 = xr.DataArray([0.1, 0.2], dims=["Z"])
-        >>> da1.str % (da2, da3)
-        <xarray.DataArray (X: 3, Y: 2, Z: 2)> Size: 240B
-        array([[['1_0.1', '1_0.2'],
-                ['2_0.1', '2_0.2']],
-        <BLANKLINE>
-               [['1-0.1', '1-0.2'],
-                ['2-0.1', '2-0.2']],
-        <BLANKLINE>
-               [['1|0.1', '1|0.2'],
-                ['2|0.1', '2|0.2']]], dtype='<U5')
-        Dimensions without coordinates: X, Y, Z
+    >>> da1 = xr.DataArray(["%s_%s", "%s-%s", "%s|%s"], dims=["X"])
+    >>> da2 = xr.DataArray([1, 2], dims=["Y"])
+    >>> da3 = xr.DataArray([0.1, 0.2], dims=["Z"])
+    >>> da1.str % (da2, da3)
+    <xarray.DataArray (X: 3, Y: 2, Z: 2)> Size: 240B
+    array([[['1_0.1', '1_0.2'],
+            ['2_0.1', '2_0.2']],
+    <BLANKLINE>
+           [['1-0.1', '1-0.2'],
+            ['2-0.1', '2-0.2']],
+    <BLANKLINE>
+           [['1|0.1', '1|0.2'],
+            ['2|0.1', '2|0.2']]], dtype='<U5')
+    Dimensions without coordinates: X, Y, Z
 
     .. note::
         When using ``%`` formatting with a dict, the values are always used as a
@@ -224,7 +224,7 @@ class StringAccessor(Generic[T_DataArray]):
         self,
         *,
         func: Callable,
-        dtype: DTypeLike = None,
+        dtype: DTypeLike | None = None,
         output_core_dims: list | tuple = ((),),
         output_sizes: Mapping[Any, int] | None = None,
         func_args: tuple = (),
@@ -349,7 +349,7 @@ class StringAccessor(Generic[T_DataArray]):
             islice = slice(-1, None) if iind == -1 else slice(iind, iind + 1)
             item = x[islice]
 
-            return item if item else default
+            return item or default
 
         return self._apply(func=f, func_args=(i,))
 
@@ -662,10 +662,11 @@ class StringAccessor(Generic[T_DataArray]):
         """
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
-        func = lambda x, *args, **kwargs: self._obj.dtype.type.format(
-            x, *args, **kwargs
+        return self._apply(
+            func=self._obj.dtype.type.format,
+            func_args=args,
+            func_kwargs={"kwargs": kwargs},
         )
-        return self._apply(func=func, func_args=args, func_kwargs={"kwargs": kwargs})
 
     def capitalize(self) -> T_DataArray:
         """
@@ -1676,7 +1677,7 @@ class StringAccessor(Generic[T_DataArray]):
         Parameters
         ----------
         table : dict-like from and to str or bytes or int
-            A a mapping of Unicode ordinals to Unicode ordinals, strings, int
+            A mapping of Unicode ordinals to Unicode ordinals, strings, int
             or None. Unmapped characters are left untouched. Characters mapped
             to None are deleted. :meth:`str.maketrans` is a helper function for
             making translation tables.
@@ -1943,8 +1944,10 @@ class StringAccessor(Generic[T_DataArray]):
 
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
-            func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=i_n if i_n >= 0 else 0
+            # ``re.sub`` interprets ``count=0`` as "replace every occurrence",
+            # so ``n=0`` has to be special-cased to mean "replace nothing".
+            func = lambda x, ipat, irepl, i_n: (
+                x if i_n == 0 else ipat.sub(repl=irepl, string=x, count=max(i_n, 0))
             )
         else:
             pat = self._stringify(pat)
