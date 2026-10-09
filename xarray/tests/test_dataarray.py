@@ -7385,27 +7385,28 @@ class TestReduce3D(TestReduce):
         suffix = "".join(str(d) for d in reduced)
         params = request.node.callspec.params
         indices = params[f"{op}indices_{suffix}"]
-        if skipna is False and ar.dtype.kind != "O":
-            # NaN is the minimum/maximum, like in np.argmin/np.argmax, but
-            # comparisons with NaN objects are always False
+        if skipna is False and ar.dtype.kind == "O" and ar.isnull().any():
+            pytest.skip("NaN in object arrays has no defined order with skipna=False")
+        if skipna is False:
+            # NaN is the minimum/maximum, like in np.argmin/np.argmax
             nanindices = params[f"nanindices_{suffix}"]
             indices = {
                 key: xr.where(nanindices[key] == None, value, nanindices[key])
                 for key, value in indices.items()
             }
-        elif any(np.isnan(value).any() for value in indices.values()):
-            pytest.skip("all-NaN slices are filled with fill_value")
 
         result = getattr(ar, f"idx{op}")(dim=dim, skipna=skipna)
 
         assert isinstance(result, dict)
         assert result.keys() == indices.keys()
         for key, value in indices.items():
+            # all-NaN slices have no index and are filled with NaN (fill_value)
+            allnan = np.isnan(np.asarray(value, dtype=float))
+            labels = ar.coords[key].values[np.where(allnan, 0, value).astype(int)]
+            if allnan.any():
+                labels = np.where(allnan, np.nan, labels)
             expected = xr.DataArray(
-                ar.coords[key].values[np.asarray(value).astype(int)],
-                dims=remaining,
-                name=key,
-                attrs=self.coord_attrs,
+                labels, dims=remaining, name=key, attrs=self.coord_attrs
             )
             assert_identical(result[key].drop_vars(remaining), expected)
 
