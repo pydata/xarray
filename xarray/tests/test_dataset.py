@@ -7094,6 +7094,41 @@ class TestDataset:
         expected.coords["numbers"] = ("dim3", ds["numbers"].values)
         assert_equal(expected, actual)
 
+    def test_dataset_diff_large_n(self) -> None:
+        # GH11702: used to raise RecursionError for n close to the recursion limit
+        values = np.arange(3000.0) ** 2
+        ds = Dataset({"a": ("x", values)}, coords={"x": np.arange(3000)})
+        actual = ds.diff("x", n=1200)
+        expected = Dataset(
+            {"a": ("x", np.diff(values, n=1200))}, coords={"x": np.arange(1200, 3000)}
+        )
+        assert_equal(expected, actual)
+
+    @pytest.mark.parametrize(
+        ("label", "coords"), [("upper", [2, 3, 4, 5]), ("lower", [0, 1, 2, 3])]
+    )
+    def test_dataset_diff_n2_label(self, label, coords) -> None:
+        values = np.arange(6.0) ** 3
+        ds = Dataset(
+            {"a": ("x", values), "c": ("x", list("abcdef"))}, coords={"x": range(6)}
+        )
+        ds = ds.set_coords("c")
+        actual = ds.diff("x", n=2, label=label)
+        expected = Dataset(
+            {"a": ("x", np.diff(values, n=2))},
+            coords={"x": coords, "c": ("x", [list("abcdef")[i] for i in coords])},
+        )
+        assert_equal(expected, actual)
+
+    def test_dataset_diff_n_larger_than_size(self) -> None:
+        ds = Dataset({"a": ("x", [1.0, 4.0, 9.0])}, coords={"x": [0, 1, 2]})
+        actual = ds.diff("x", n=5)
+        expected = Dataset(
+            {"a": ("x", np.diff([1.0, 4.0, 9.0], n=5))},
+            coords={"x": np.array([], dtype=int)},
+        )
+        assert_equal(expected, actual)
+
     def test_dataset_diff_exception_n_neg(self) -> None:
         ds = create_test_data(seed=1)
         with pytest.raises(ValueError, match=r"must be non-negative"):

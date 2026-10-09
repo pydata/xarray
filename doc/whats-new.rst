@@ -52,6 +52,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` no longer raise a
+  ``RecursionError`` for an order ``n`` close to the recursion limit, and are
+  faster for ``n > 1``. They also label the result correctly for ``n > 1`` with
+  ``label="lower"``, which used the upper labels for all but the first difference
+  (:issue:`11702`, :pull:`XXXXX`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
   removed while still open (:pull:`11703`).
