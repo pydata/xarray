@@ -315,8 +315,8 @@ def test_cftimeindex_field_accessors(index, field, expected):
         "minute",
         "second",
         "microsecond",
-        "dayofyear",
-        "dayofweek",
+        "day_of_year",
+        "day_of_week",
         "days_in_month",
     ],
 )
@@ -329,16 +329,18 @@ def test_empty_cftimeindex_field_accessors(field):
 
 
 @requires_cftime
-def test_cftimeindex_dayofyear_accessor(index):
-    result = index.dayofyear
+@pytest.mark.parametrize("field", ["day_of_year", "dayofyear"])
+def test_cftimeindex_dayofyear_accessor(index, field):
+    result = getattr(index, field)
     expected = np.array([date.dayofyr for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
     assert result.dtype == expected.dtype
 
 
 @requires_cftime
-def test_cftimeindex_dayofweek_accessor(index):
-    result = index.dayofweek
+@pytest.mark.parametrize("field", ["day_of_week", "dayofweek"])
+def test_cftimeindex_dayofweek_accessor(index, field):
+    result = getattr(index, field)
     expected = np.array([date.dayofwk for date in index], dtype=np.int64)
     assert_array_equal(result, expected)
     assert result.dtype == expected.dtype
@@ -1386,7 +1388,7 @@ def test_round(rounding_index, date_type):
 def test_asi8(date_type):
     index = xr.CFTimeIndex([date_type(1970, 1, 1), date_type(1970, 1, 2)])
     result = index.asi8
-    expected = 1000000 * 86400 * np.array([0, 1])
+    expected = 1000000 * 86400 * np.array([0, 1], dtype=np.int64)
     np.testing.assert_array_equal(result, expected)
 
 

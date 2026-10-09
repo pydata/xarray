@@ -39,6 +39,19 @@ def test_range_index_arange(args, kwargs) -> None:
     assert_equal(actual, expected, check_default_indexes=False)
 
 
+@pytest.mark.parametrize(
+    ("start", "stop", "step"),
+    [(0.0, 3.0, -1.0), (3.0, 0.0, 1.0)],
+)
+def test_range_index_arange_empty(start, stop, step) -> None:
+    index = RangeIndex.arange(start, stop, step, dim="x")
+    coords = xr.Coordinates.from_xindex(index)
+
+    assert index.size == np.arange(start, stop, step).size == 0
+    assert coords.sizes == {"x": 0}
+    assert xr.DataArray([], dims="x", coords=coords).sizes == {"x": 0}
+
+
 def test_range_index_arange_error() -> None:
     with pytest.raises(TypeError, match=r".*requires stop to be specified"):
         RangeIndex.arange(dim="x")
@@ -64,6 +77,19 @@ def test_range_index_arange_properties() -> None:
     assert index.step == 0.1
 
 
+def test_range_index_arange_step_not_dividing_interval() -> None:
+    # GH11325: when ``step`` does not evenly divide ``stop - start`` the
+    # requested step must still be honored and the materialized values must
+    # match ``numpy.arange`` (previously the step was silently re-derived from
+    # ``(stop - start) / size``, e.g. 0.25 instead of the requested 0.3).
+    index = RangeIndex.arange(0.0, 1.0, 0.3, dim="x")
+    assert index.step == 0.3
+    assert index.size == 4
+    actual = xr.Coordinates.from_xindex(index)
+    expected = xr.Coordinates({"x": np.arange(0.0, 1.0, 0.3)})
+    assert_equal(actual, expected, check_default_indexes=False)
+
+
 def test_range_index_linspace() -> None:
     index = RangeIndex.linspace(0.0, 1.0, num=10, endpoint=False, dim="x")
     actual = xr.Coordinates.from_xindex(index)
@@ -80,6 +106,16 @@ def test_range_index_linspace() -> None:
     assert index.start == 0.0
     assert index.stop == 1.1
     assert index.step == 0.1
+
+    index = RangeIndex.linspace(0.0, 1.0, num=1, dim="x")
+    actual = xr.Coordinates.from_xindex(index)
+    expected = xr.Coordinates({"x": np.linspace(0.0, 1.0, num=1)})
+    assert_equal(actual, expected, check_default_indexes=False)
+
+
+def test_range_index_linspace_negative_num() -> None:
+    with pytest.raises(ValueError, match="must be non-negative"):
+        RangeIndex.linspace(0.0, 1.0, num=-1, dim="x")
 
 
 def test_range_index_dtype() -> None:
@@ -141,7 +177,8 @@ def test_range_index_isel() -> None:
     ds2 = create_dataset_arange(0.0, 3.0, 0.1)
     actual = ds2.isel(x=slice(4, None, 3))
     expected = create_dataset_arange(0.4, 3.0, 0.3)
-    assert_identical(actual, expected, check_default_indexes=False, check_indexes=True)
+    assert actual.xindexes["x"].equals(expected.xindexes["x"])
+    np.testing.assert_allclose(actual["x"].values, np.arange(0.0, 3.0, 0.1)[4::3])
 
     # scalar
     actual = ds.isel(x=0)
@@ -372,11 +409,8 @@ def test_range_index_equals_exact() -> None:
     # Create an index directly
     index1 = RangeIndex.arange(0.0, 0.3, 0.1, dim="x")
 
-    # Create the same index by slicing - this accumulates floating point error
-    index_large = RangeIndex.arange(0.0, 1.0, 0.1, dim="x")
-    ds_large = xr.Dataset(coords=xr.Coordinates.from_xindex(index_large))
-    ds_sliced = ds_large.isel(x=slice(3))
-    index2 = ds_sliced.xindexes["x"]
+    # Create an index whose start differs by a tiny floating point amount
+    index2 = RangeIndex.arange(1e-12, 0.3 + 1e-12, 0.1, dim="x")
 
     # Default (exact=False) should be equal due to np.isclose tolerance
     assert index1.equals(index2)

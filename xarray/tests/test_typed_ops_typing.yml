@@ -1,0 +1,311 @@
+# Typing tests for the arithmetic operators in xarray/core/_typed_ops.py.
+# Each section combines a class with itself and the lower classes in the
+# hierarchy Variable < DataArray < Dataset < DataTree.
+
+# Variable
+
+- case: test_mypy_variable_binary_ops
+  main: |
+    import numpy as np
+    from xarray import Variable
+
+    v = Variable("x", [1.0])
+
+    reveal_type(v + v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v + 1)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(1 + v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v * 2.5)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v**2)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v + np.array([1.0]))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+
+- case: test_mypy_variable_comparison_ops
+  main: |
+    from xarray import Variable
+
+    v = Variable("x", [1.0])
+
+    reveal_type(v == v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v != 1)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v < 1)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+
+- case: test_mypy_variable_unary_ops
+  main: |
+    from xarray import Variable
+
+    v = Variable("x", [1.0])
+
+    reveal_type(-v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(+v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(abs(v))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(~v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v.round(2))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v.conj())  # N: Revealed type is "xarray.core.variable.Variable[str]"
+
+- case: test_mypy_variable_ops_preserve_subclass
+  main: |
+    from xarray import Variable
+
+    class MyVariable(Variable):
+        __slots__ = ()
+
+    v = Variable("x", [1.0])
+    my = MyVariable("x", [1.0])
+
+    reveal_type(my + 1)  # N: Revealed type is "main.MyVariable"
+    reveal_type(my + v)  # N: Revealed type is "main.MyVariable"
+    reveal_type(-my)  # N: Revealed type is "main.MyVariable"
+
+# DataArray
+
+- case: test_mypy_dataarray_binary_ops
+  main: |
+    import numpy as np
+    from xarray import DataArray, Variable
+
+    v = Variable("x", [1.0])
+    da = DataArray([1.0], dims="x")
+
+    reveal_type(da + da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da + v)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(v + da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da + 1)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(2.0 * da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da + np.array([1.0]))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+
+- case: test_mypy_dataarray_comparison_ops
+  main: |
+    from xarray import DataArray, Variable
+
+    v = Variable("x", [1.0])
+    da = DataArray([1.0], dims="x")
+
+    reveal_type(da == 1)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da != da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da == v)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(v == da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(v < da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+
+- case: test_mypy_dataarray_unary_ops
+  main: |
+    from xarray import DataArray
+
+    da = DataArray([1.0], dims="x")
+
+    reveal_type(-da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(abs(da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(~da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da.round(2))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da.argsort())  # N: Revealed type is "xarray.core.dataarray.DataArray"
+
+- case: test_mypy_dataarray_ops_preserve_subclass
+  main: |
+    from xarray import DataArray, Variable
+
+    class MyDataArray(DataArray):
+        __slots__ = ()
+
+    v = Variable("x", [1.0])
+    da = DataArray([1.0], dims="x")
+    my = MyDataArray([1.0], dims="x")
+
+    reveal_type(my + 1)  # N: Revealed type is "main.MyDataArray"
+    reveal_type(my + da)  # N: Revealed type is "main.MyDataArray"
+    reveal_type(my + v)  # N: Revealed type is "main.MyDataArray"
+    reveal_type(v + my)  # N: Revealed type is "main.MyDataArray"
+    reveal_type(my.argsort())  # N: Revealed type is "main.MyDataArray"
+
+- case: test_mypy_dataarray_groupby_binary_ops
+  main: |
+    from xarray import DataArray
+
+    da = DataArray([1.0], dims="x", coords={"x": [0]})
+
+    reveal_type(da.groupby("x") + da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da + da.groupby("x"))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da.groupby("x") == da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+
+# Dataset
+
+- case: test_mypy_dataset_binary_ops
+  main: |
+    from xarray import DataArray, Dataset, Variable
+
+    v = Variable("x", [1.0])
+    da = DataArray([1.0], dims="x")
+    ds = Dataset({"a": da})
+
+    reveal_type(ds + ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds + da)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(da + ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds + v)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(v + ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds + 1)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(1 + ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+- case: test_mypy_dataset_comparison_ops
+  main: |
+    from xarray import DataArray, Dataset
+
+    da = DataArray([1.0], dims="x")
+    ds = Dataset({"a": da})
+
+    reveal_type(ds == da)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds != ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds >= 1)  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+- case: test_mypy_dataset_unary_ops
+  main: |
+    from xarray import Dataset
+
+    ds = Dataset({"a": ("x", [1.0])})
+
+    reveal_type(-ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(~ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds.round())  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+- case: test_mypy_dataset_groupby_binary_ops
+  main: |
+    from xarray import DataArray, Dataset
+
+    da = DataArray([1.0], dims="x", coords={"x": [0]})
+    ds = Dataset({"a": da})
+
+    # the result of a DataArrayGroupBy operation has the type of the other operand
+    reveal_type(da.groupby("x") + ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds.groupby("x") + da)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds.groupby("x") - ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds + ds.groupby("x"))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(da + ds.groupby("x"))  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+- case: test_mypy_dataset_dict_operands
+  main: |
+    from xarray import DataArray, Dataset
+
+    da = DataArray([1.0], dims="x")
+    ds = Dataset({"a": da, "b": da})
+    mixed: dict[str, float | DataArray] = {"a": 1.0, "b": da}
+
+    # the values of a dict are combined with the variables of the same name
+    reveal_type(ds + {"a": 1})  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type({"a": 1} + ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds * {"a": 1.0, "b": da})  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(mixed * ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds == {"a": 1})  # N: Revealed type is "xarray.core.dataset.Dataset"
+    # Not tested, as the type of the left operand wins:
+    # - {"a": 1} == ds is typed as bool, as dict.__eq__ accepts any object
+    # - {"a": 1.0, "b": da} * ds is an error, as mypy infers dict[str, object]
+    #   without the context of ds.__mul__, hence the annotation of `mixed`
+
+# DataTree
+
+- case: test_mypy_datatree_binary_ops
+  main: |
+    from xarray import DataArray, Dataset, DataTree, Variable
+
+    v = Variable("x", [1.0])
+    da = DataArray([1.0], dims="x")
+    ds = Dataset({"a": da})
+    dt = DataTree(ds)
+
+    reveal_type(dt + dt)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(dt + ds)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(ds + dt)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(dt + da)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(da + dt)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(dt + v)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(v + dt)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(1 + dt)  # N: Revealed type is "xarray.core.datatree.DataTree"
+
+- case: test_mypy_datatree_comparison_and_unary_ops
+  main: |
+    from xarray import Dataset, DataTree
+
+    ds = Dataset({"a": ("x", [1.0])})
+    dt = DataTree(ds)
+
+    reveal_type(dt == ds)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(dt < 1)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(-dt)  # N: Revealed type is "xarray.core.datatree.DataTree"
+    reveal_type(+dt)  # N: Revealed type is "xarray.core.datatree.DataTree"
+
+# Other operand types
+
+- case: test_mypy_builtin_operands
+  main: |
+    from xarray import DataArray, Dataset, Variable
+
+    v = Variable("x", [1.0])
+    da = DataArray([1.0], dims="x")
+    ds = Dataset({"a": da})
+
+    reveal_type(da + True)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(True + da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da & True)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(True & da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da | False)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(False | da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da * 1j)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(1j * da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(v * 1j)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(1j * v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v**2)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(2**v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(da + [1.0])  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type([1.0] + da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da + (1, 2))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type((1, 2) + da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da * [[1, 2]])  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(ds + [1.0])  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type([1.0] + ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(ds - 2)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(2 - ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(da < 1)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(1 < da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    # Not tested, as the type of the left operand wins:
+    # - 1 == da is typed as bool, as int.__eq__ accepts any object
+    # - [[1, 2]] * da is typed as a list, as list.__mul__ accepts anything with
+    #   an __index__ method
+
+- case: test_mypy_numpy_operands
+  main: |
+    import numpy as np
+    import numpy.typing as npt
+    from xarray import DataArray, Dataset, Variable
+
+    v = Variable("x", [1.0])
+    da = DataArray([1.0], dims="x")
+    ds = Dataset({"a": da})
+    arr: npt.NDArray[np.float64] = np.array([1.0])
+
+    reveal_type(da + np.float64(1))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(np.float64(1) + da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(v * np.int32(1))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(np.int32(1) * v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(da & np.bool_(True))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(np.bool_(True) & da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(ds * np.float32(2))  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(np.float32(2) * ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+    reveal_type(da + np.array(1.0))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da + arr)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    # Not tested: arr + da and np.array(1.0) + da are typed as ndarray, as numpy's
+    # own __add__ accepts DataArray
+
+- case: test_mypy_invalid_operands
+  # The type: ignores fail the test if mypy doesn't report the error anymore.
+  # The errors themselves list all overloads, which change with numpy's typing.
+  mypy_config: |
+    warn_unused_ignores = true
+  main: |
+    from xarray import DataArray, Dataset, DataTree, Variable
+
+    v = Variable("x", [1.0])
+    da = DataArray([1.0], dims="x")
+    ds = Dataset({"a": da})
+
+    da + None  # type: ignore[operator]
+    None + da  # type: ignore[operator]
+    da + {}  # type: ignore[operator]
+    v + object()  # type: ignore[operator]
+    ds + {1}  # type: ignore[operator]
+    da + {"a": 1}  # type: ignore[operator]
+    DataTree(ds) + {"a": 1}  # type: ignore[operator]

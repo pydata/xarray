@@ -47,11 +47,10 @@ import warnings
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar, get_args
+from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar, get_args, override
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.coding.times import (
@@ -214,6 +213,7 @@ class Tick(BaseCFTimeOffset):
             return Microsecond(self.n * 1000)
         raise ValueError("Could not convert to integer offset at any resolution")
 
+    @override
     def __mul__(self, other: int | float) -> Tick:
         if not isinstance(other, int | float):
             return NotImplemented
@@ -378,10 +378,12 @@ def _validate_month(month: int | None, default_month: int) -> int:
 class MonthBegin(BaseCFTimeOffset):
     _freq = "MS"
 
+    @override
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, 1)
         return _shift_month(other, n, "start")
 
+    @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
@@ -391,10 +393,12 @@ class MonthBegin(BaseCFTimeOffset):
 class MonthEnd(BaseCFTimeOffset):
     _freq = "ME"
 
+    @override
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, other.daysinmonth)
         return _shift_month(other, n, "end")
 
+    @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
@@ -427,6 +431,7 @@ class QuarterOffset(BaseCFTimeOffset):
         BaseCFTimeOffset.__init__(self, n)
         self.month = _validate_month(month, self._default_month)
 
+    @override
     def __apply__(self, other):
         # months_since: find the calendar quarter containing other.month,
         # e.g. if other.month == 8, the calendar quarter is [Jul, Aug, Sep].
@@ -440,12 +445,14 @@ class QuarterOffset(BaseCFTimeOffset):
         months = qtrs * 3 - months_since
         return _shift_month(other, months, self._day_option)
 
+    @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
         mod_month = (date.month - self.month) % 3
         return mod_month == 0 and date.day == self._get_offset_day(date)
 
+    @override
     def __sub__(self, other: Self) -> Self:
         if TYPE_CHECKING:
             import cftime
@@ -458,14 +465,17 @@ class QuarterOffset(BaseCFTimeOffset):
             return type(self)(self.n - other.n, month=self.month)
         return NotImplemented
 
+    @override
     def __mul__(self, other):
         if isinstance(other, float):
             return NotImplemented
         return type(self)(n=other * self.n, month=self.month)
 
+    @override
     def rule_code(self) -> str:
         return f"{self._freq}-{_MONTH_ABBREVIATIONS[self.month]}"
 
+    @override
     def __str__(self):
         return f"<{type(self).__name__}: n={self.n}, month={self.month}>"
 
@@ -480,6 +490,7 @@ class QuarterBegin(QuarterOffset):
     _freq = "QS"
     _day_option = "start"
 
+    @override
     def rollforward(self, date):
         """Roll date forward to nearest start of quarter"""
         if self.onOffset(date):
@@ -487,6 +498,7 @@ class QuarterBegin(QuarterOffset):
         else:
             return date + QuarterBegin(month=self.month)
 
+    @override
     def rollback(self, date):
         """Roll date backward to nearest start of quarter"""
         if self.onOffset(date):
@@ -505,6 +517,7 @@ class QuarterEnd(QuarterOffset):
     _freq = "QE"
     _day_option = "end"
 
+    @override
     def rollforward(self, date):
         """Roll date forward to nearest end of quarter"""
         if self.onOffset(date):
@@ -512,6 +525,7 @@ class QuarterEnd(QuarterOffset):
         else:
             return date + QuarterEnd(month=self.month)
 
+    @override
     def rollback(self, date):
         """Roll date backward to nearest end of quarter"""
         if self.onOffset(date):
@@ -528,12 +542,14 @@ class YearOffset(BaseCFTimeOffset):
         BaseCFTimeOffset.__init__(self, n)
         self.month = _validate_month(month, self._default_month)
 
+    @override
     def __apply__(self, other):
         reference_day = _get_day_of_month(other, self._day_option)
         years = _adjust_n_years(other, self.n, self.month, reference_day)
         months = years * 12 + (self.month - other.month)
         return _shift_month(other, months, self._day_option)
 
+    @override
     def __sub__(self, other):
         if TYPE_CHECKING:
             import cftime
@@ -547,14 +563,17 @@ class YearOffset(BaseCFTimeOffset):
         else:
             return NotImplemented
 
+    @override
     def __mul__(self, other):
         if isinstance(other, float):
             return NotImplemented
         return type(self)(n=other * self.n, month=self.month)
 
+    @override
     def rule_code(self) -> str:
         return f"{self._freq}-{_MONTH_ABBREVIATIONS[self.month]}"
 
+    @override
     def __str__(self) -> str:
         return f"<{type(self).__name__}: n={self.n}, month={self.month}>"
 
@@ -564,11 +583,13 @@ class YearBegin(YearOffset):
     _day_option = "start"
     _default_month = 1
 
+    @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
         return date.day == 1 and date.month == self.month
 
+    @override
     def rollforward(self, date):
         """Roll date forward to nearest start of year"""
         if self.onOffset(date):
@@ -576,6 +597,7 @@ class YearBegin(YearOffset):
         else:
             return date + YearBegin(month=self.month)
 
+    @override
     def rollback(self, date):
         """Roll date backward to nearest start of year"""
         if self.onOffset(date):
@@ -589,11 +611,13 @@ class YearEnd(YearOffset):
     _day_option = "end"
     _default_month = 12
 
+    @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
         return date.day == date.daysinmonth and date.month == self.month
 
+    @override
     def rollforward(self, date):
         """Roll date forward to nearest end of year"""
         if self.onOffset(date):
@@ -601,6 +625,7 @@ class YearEnd(YearOffset):
         else:
             return date + YearEnd(month=self.month)
 
+    @override
     def rollback(self, date):
         """Roll date backward to nearest end of year"""
         if self.onOffset(date):
@@ -614,12 +639,14 @@ class Day(BaseCFTimeOffset):
 
     _freq = "D"
 
+    @override
     def __apply__(self, other):
         if isinstance(other, Day):
             return Day(self.n + other.n)
         else:
             return other + timedelta(days=self.n)
 
+    @override
     def onOffset(self, date) -> bool:
         return True
 
@@ -627,9 +654,11 @@ class Day(BaseCFTimeOffset):
 class Hour(Tick):
     _freq = "h"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(hours=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -637,9 +666,11 @@ class Hour(Tick):
 class Minute(Tick):
     _freq = "min"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(minutes=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -647,9 +678,11 @@ class Minute(Tick):
 class Second(Tick):
     _freq = "s"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(seconds=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -657,9 +690,11 @@ class Second(Tick):
 class Millisecond(Tick):
     _freq = "ms"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(milliseconds=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -667,9 +702,11 @@ class Millisecond(Tick):
 class Microsecond(Tick):
     _freq = "us"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(microseconds=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -772,7 +809,7 @@ def _emit_freq_deprecation_warning(deprecated_freq):
 
 
 def to_offset(
-    freq: BaseCFTimeOffset | str | timedelta | pd.Timedelta | pd.DateOffset,
+    freq: BaseCFTimeOffset | str | timedelta | pd.Timedelta | pd.offsets.BaseOffset,
     warn: bool = True,
 ) -> BaseCFTimeOffset:
     """Convert a frequency string to the appropriate subclass of
@@ -781,8 +818,8 @@ def to_offset(
         return freq
     if isinstance(freq, timedelta | pd.Timedelta):
         return delta_to_tick(freq)
-    if isinstance(freq, pd.DateOffset):
-        freq = _legacy_to_new_freq(freq.freqstr)
+    if isinstance(freq, pd.offsets.BaseOffset):
+        freq = freq.freqstr
 
     match = re.match(_PATTERN, freq)
     if match is None:
@@ -1430,8 +1467,7 @@ def date_range(
                 start=start,
                 end=end,
                 periods=periods,
-                # TODO remove translation once requiring pandas >= 2.2
-                freq=_new_to_legacy_freq(freq),
+                freq=freq,
                 tz=tz,
                 normalize=normalize,
                 name=name,
@@ -1458,96 +1494,6 @@ def date_range(
         inclusive=inclusive,
         calendar=calendar,
     )
-
-
-def _new_to_legacy_freq(freq):
-    # xarray will now always return "ME" and "QE" for MonthEnd and QuarterEnd
-    # frequencies, but older versions of pandas do not support these as
-    # frequency strings.  Until xarray's minimum pandas version is 2.2 or above,
-    # we add logic to continue using the deprecated "M" and "Q" frequency
-    # strings in these circumstances.
-
-    # NOTE: other conversions ("h" -> "H", ..., "ns" -> "N") not required
-
-    # TODO: remove once requiring pandas >= 2.2
-    if not freq or Version(pd.__version__) >= Version("2.2"):
-        return freq
-
-    try:
-        freq_as_offset = to_offset(freq)
-    except ValueError:
-        # freq may be valid in pandas but not in xarray
-        return freq
-
-    if isinstance(freq_as_offset, MonthEnd) and "ME" in freq:
-        freq = freq.replace("ME", "M")
-    elif isinstance(freq_as_offset, QuarterEnd) and "QE" in freq:
-        freq = freq.replace("QE", "Q")
-    elif isinstance(freq_as_offset, YearBegin) and "YS" in freq:
-        freq = freq.replace("YS", "AS")
-    elif isinstance(freq_as_offset, YearEnd):
-        # testing for "Y" is required as this was valid in xarray 2023.11 - 2024.01
-        if "Y-" in freq:
-            # Check for and replace "Y-" instead of just "Y" to prevent
-            # corrupting anchored offsets that contain "Y" in the month
-            # abbreviation, e.g. "Y-MAY" -> "A-MAY".
-            freq = freq.replace("Y-", "A-")
-        elif "YE-" in freq:
-            freq = freq.replace("YE-", "A-")
-        elif "A-" not in freq and freq.endswith("Y"):
-            freq = freq.replace("Y", "A")
-        elif freq.endswith("YE"):
-            freq = freq.replace("YE", "A")
-
-    return freq
-
-
-def _legacy_to_new_freq(freq: T_FreqStr) -> T_FreqStr:
-    # to avoid internal deprecation warnings when freq is determined using pandas < 2.2
-
-    # TODO: remove once requiring pandas >= 2.2
-
-    if not freq or Version(pd.__version__) >= Version("2.2"):
-        return freq
-
-    try:
-        freq_as_offset = to_offset(freq, warn=False)
-    except ValueError:
-        # freq may be valid in pandas but not in xarray
-        return freq
-
-    if isinstance(freq_as_offset, MonthEnd) and "ME" not in freq:
-        freq = freq.replace("M", "ME")
-    elif isinstance(freq_as_offset, QuarterEnd) and "QE" not in freq:
-        freq = freq.replace("Q", "QE")
-    elif isinstance(freq_as_offset, YearBegin) and "YS" not in freq:
-        freq = freq.replace("AS", "YS")
-    elif isinstance(freq_as_offset, YearEnd):
-        if "A-" in freq:
-            # Check for and replace "A-" instead of just "A" to prevent
-            # corrupting anchored offsets that contain "Y" in the month
-            # abbreviation, e.g. "A-MAY" -> "YE-MAY".
-            freq = freq.replace("A-", "YE-")
-        elif "Y-" in freq:
-            freq = freq.replace("Y-", "YE-")
-        elif freq.endswith("A"):
-            # the "A-MAY" case is already handled above
-            freq = freq.replace("A", "YE")
-        elif "YE" not in freq and freq.endswith("Y"):
-            # the "Y-MAY" case is already handled above
-            freq = freq.replace("Y", "YE")
-    elif isinstance(freq_as_offset, Hour):
-        freq = freq.replace("H", "h")
-    elif isinstance(freq_as_offset, Minute):
-        freq = freq.replace("T", "min")
-    elif isinstance(freq_as_offset, Second):
-        freq = freq.replace("S", "s")
-    elif isinstance(freq_as_offset, Millisecond):
-        freq = freq.replace("L", "ms")
-    elif isinstance(freq_as_offset, Microsecond):
-        freq = freq.replace("U", "us")
-
-    return freq
 
 
 def date_range_like(source, calendar, use_cftime=None):
@@ -1593,9 +1539,6 @@ def date_range_like(source, calendar, use_cftime=None):
             "`date_range_like` was unable to generate a range as the source frequency was not inferable."
         )
 
-    # TODO remove once requiring pandas >= 2.2
-    freq = _legacy_to_new_freq(freq)
-
     use_cftime = _should_cftime_be_used(source, calendar, use_cftime)
 
     source_start = source.values.min()
@@ -1623,10 +1566,18 @@ def date_range_like(source, calendar, use_cftime=None):
     end = convert_time_or_go_back(source_end, date_type)
 
     # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
-    if source_end.day == source_end.daysinmonth and isinstance(
+    if isinstance(source_end, pd.Timestamp):
+        source_end_days_in_month = source_end.days_in_month
+    else:
+        source_end_days_in_month = source_end.daysinmonth
+    if isinstance(end, pd.Timestamp):
+        end_days_in_month = end.days_in_month
+    else:
+        end_days_in_month = end.daysinmonth
+    if source_end.day == source_end_days_in_month and isinstance(
         freq_as_offset, YearEnd | QuarterEnd | MonthEnd | Day
     ):
-        end = end.replace(day=end.daysinmonth)
+        end = end.replace(day=end_days_in_month)
 
     return date_range(
         start=start.isoformat(),

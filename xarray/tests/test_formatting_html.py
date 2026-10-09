@@ -10,6 +10,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting_html as fh
 from xarray.core.coordinates import Coordinates
+from xarray.tests import requires_dask
 
 
 def drop_fallback_text_repr(html: str) -> str:
@@ -79,7 +80,6 @@ def dataarray() -> xr.DataArray:
 
 @pytest.fixture
 def dask_dataarray(dataarray: xr.DataArray) -> xr.DataArray:
-    pytest.importorskip("dask")
     return dataarray.chunk()
 
 
@@ -95,7 +95,7 @@ def multiindex() -> xr.Dataset:
 @pytest.fixture
 def dataset() -> xr.Dataset:
     times = pd.date_range("2000-01-01", "2001-12-31", name="time")
-    annual_cycle = np.sin(2 * np.pi * (times.dayofyear.values / 365.25 - 0.28))
+    annual_cycle = np.sin(2 * np.pi * (times.day_of_year.values / 365.25 - 0.28))
 
     base = 10 + 15 * annual_cycle.reshape(-1, 1)
     tmin_values = base + 3 * np.random.randn(annual_cycle.size, 3)
@@ -121,6 +121,7 @@ def test_short_data_repr_html_non_str_keys(dataset: xr.Dataset) -> None:
     fh.dataset_repr(ds)
 
 
+@requires_dask
 def test_short_data_repr_html_dask(dask_dataarray: xr.DataArray) -> None:
     assert hasattr(dask_dataarray.data, "_repr_html_")
     data_repr = fh.short_data_repr_html(dask_dataarray)

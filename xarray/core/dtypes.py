@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 from pandas.api.extensions import ExtensionDtype
@@ -10,6 +10,7 @@ from pandas.api.extensions import ExtensionDtype
 from xarray.compat import array_api_compat, npcompat
 from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import utils
+from xarray.core.types import PDDatetimeUnitOptions
 
 if TYPE_CHECKING:
     from typing import Any
@@ -52,10 +53,10 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
     (np.bytes_, np.str_),  # numpy promotes to unicode
 )
 
-T_dtype = TypeVar("T_dtype", np.dtype, ExtensionDtype)
 
-
-def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
+def maybe_promote[T_dtype: (np.dtype, ExtensionDtype)](
+    dtype: T_dtype,
+) -> tuple[T_dtype, Any]:
     """Simpler equivalent of pandas.core.common._maybe_promote
 
     Parameters
@@ -88,7 +89,11 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
         # Check np.timedelta64 before np.integer
-        fill_value = np.timedelta64("NaT")
+        unit, _ = np.datetime_data(dtype)
+        # np.datetime_data returns a generic str for the unit so we need to
+        # cast it to a valid time unit for mypy purposes.
+        unit = cast(PDDatetimeUnitOptions, unit)
+        fill_value = np.timedelta64("NaT", unit)
         dtype_ = dtype
     elif isdtype(dtype, "integral"):
         dtype_ = np.float32 if dtype.itemsize <= 2 else np.float64
@@ -97,8 +102,12 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
         dtype_ = dtype
         fill_value = np.nan + np.nan * 1j
     elif np.issubdtype(dtype, np.datetime64):
+        unit, _ = np.datetime_data(dtype)
+        # np.datetime_data returns a generic str for the unit so we need to
+        # cast it to a valid time unit for mypy purposes.
+        unit = cast(PDDatetimeUnitOptions, unit)
         dtype_ = dtype
-        fill_value = np.datetime64("NaT")
+        fill_value = np.datetime64("NaT", unit)
     else:
         dtype_ = object
         fill_value = np.nan
@@ -106,9 +115,6 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
     dtype_out = np.dtype(dtype_)
     fill_value = dtype_out.type(fill_value)
     return dtype_out, fill_value
-
-
-NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
 
 
 def get_fill_value(dtype):
