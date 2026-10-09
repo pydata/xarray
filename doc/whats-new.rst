@@ -37,6 +37,11 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The results of :py:meth:`DataArray.idxmin`, :py:meth:`DataArray.idxmax`,
+  :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` now keep the
+  attributes of the coordinate whose labels they return, e.g. its units,
+  instead of the attributes of the data (:pull:`10680`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Support for Python 3.11 has been dropped. The minimum required Python version
   is now 3.12, in line with xarray's
   :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).

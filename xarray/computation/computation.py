@@ -997,8 +997,11 @@ def _calc_idxminmax(
         allna = array.isnull().all(dim)
         array = array.where(~allna, 0)
 
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=True)
+
     # This will run argmin or argmax.
-    index = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
+    index = func(array, dim=dim, axis=None, keep_attrs=False, skipna=skipna)
     # Force dictionary format in case of single dim so that we can iterate over it in for loop below
     if single_dim:
         index = {dim: index}
@@ -1023,8 +1026,8 @@ def _calc_idxminmax(
             # We attempt to preserve dtype where we can.
             if is_chunked_array(allna.data) or allna.any():
                 _res = _res.where(~allna, fill_value)
-        # Copy attributes from argmin/argmax, if any
-        _res.attrs = _da_idx.attrs
+        # the result are labels of the coordinate, so keep its attributes
+        _res.attrs = dict(coord.attrs) if keep_attrs else {}
         res[_dim] = _res
 
     if single_dim:
