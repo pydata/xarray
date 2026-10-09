@@ -6,35 +6,40 @@ on:
       - main
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   benchmark:
     name: Linux
     runs-on: ubuntu-latest
     env:
       ASV_DIR: "./asv_bench"
-      CONDA_ENV_FILE: ci/requirements/environment.yml
+      CONDA_ENV_FILE: ci/requirements/environment-benchmark.yml
 
     steps:
       # We need the full repo to avoid this issue
       # https://github.com/actions/checkout/issues/23
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@v2
+        uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
         with:
           micromamba-version: "1.5.10-0"
           environment-file: ${{env.CONDA_ENV_FILE}}
-          environment-name: xarray-tests
+          environment-name: xarray-benchmark
           cache-environment: true
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
+          # add "build" because of https://github.com/airspeed-velocity/asv/issues/1385
           create-args: >-
             asv
+            python-build
 
       - name: "Get Previous tag"
         id: previoustag
-        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        uses: WyriHaximus/github-action-get-previous-tag@83f26fea93bc7efcbca2eb5591f5eaaf66b8f206 # v2.1.0
         # with:
         #   fallback: 1.0.0 # Optional fallback tag to use when no tag can be found
 
@@ -47,18 +52,21 @@ jobs:
           OMP_NUM_THREADS: 1
           ASV_FACTOR: 1.5
           ASV_SKIP_SLOW: 1
+          GITHUB_TAG: ${{ steps.previoustag.outputs.tag }}
         run: |
           set -x
+          # Fail if asv itself fails, not just when the log matches the grep below
+          set -o pipefail
           # ID this runner
           asv machine --yes
-          echo "Baseline: ${{ steps.previoustag.outputs.tag }} "
+          echo "Baseline: $GITHUB_TAG"
           echo "Contender: ${{ github.sha }}"
           # Use mamba for env creation
           # export CONDA_EXE=$(which mamba)
           export CONDA_EXE=$(which conda)
           # Run benchmarks for current commit against base
           ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
-          asv continuous $ASV_OPTIONS ${{ steps.previoustag.outputs.tag }}  ${{ github.sha }} \
+          asv continuous $ASV_OPTIONS "$GITHUB_TAG"  ${{ github.sha }} \
               | sed "/Traceback \|failed$\|PERFORMANCE DECREASED/ s/^/::error::/" \
               | tee benchmarks.log
           # Report and export results for subsequent steps
@@ -73,7 +81,7 @@ jobs:
           cp benchmarks/README_CI.md benchmarks.log .asv/results/
         working-directory: ${{ env.ASV_DIR }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: asv-benchmark-results-${{ runner.os }}

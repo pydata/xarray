@@ -66,23 +66,23 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
-from enum import Enum
 from pathlib import Path
 from types import EllipsisType, ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Generic,
     Literal,
     TypeGuard,
     TypeVar,
     cast,
     overload,
+    override,
 )
 
 import numpy as np
 import pandas as pd
 
+from xarray.namedarray._typing import Default, _default  # noqa: F401
 from xarray.namedarray.utils import (  # noqa: F401
     ReprObject,
     drop_missing_dims,
@@ -128,7 +128,7 @@ def alias_warning(old_name: str, new_name: str, stacklevel: int = 3) -> None:
     )
 
 
-def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
+def alias[T](obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     assert isinstance(old_name, str)
 
     @functools.wraps(obj)
@@ -162,7 +162,7 @@ def did_you_mean(
     >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
     'Did you mean one of (None,)?'
 
-    See also
+    See Also
     --------
     https://en.wikipedia.org/wiki/String_metric
     """
@@ -205,7 +205,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
 
 
 def maybe_coerce_to_str(index, original_coords):
-    """maybe coerce a pandas Index back to a nunpy array of type str
+    """maybe coerce a pandas Index back to a numpy array of type str
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
@@ -213,7 +213,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     try:
         result_type = dtypes.result_type(*original_coords)
-    except TypeError:
+    except (TypeError, ValueError):
         pass
     else:
         if result_type.kind in "SU":
@@ -235,7 +235,7 @@ def maybe_wrap_array(original, new_array):
         return new_array
 
 
-def equivalent(first: T, second: T) -> bool:
+def equivalent[T](first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray. If both objects are lists,
     equivalent is sequentially called on all the elements.
@@ -273,13 +273,13 @@ def equivalent(first: T, second: T) -> bool:
     return result
 
 
-def list_equiv(first: Sequence[T], second: Sequence[T]) -> bool:
+def list_equiv[T](first: Sequence[T], second: Sequence[T]) -> bool:
     if len(first) != len(second):
         return False
     return all(itertools.starmap(equivalent, zip(first, second, strict=True)))
 
 
-def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
+def peek_at[T](iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
     """Returns the first value from iterable, as well as a new iterator with
     the same content as the original iterable
     """
@@ -288,7 +288,7 @@ def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
     return peek, itertools.chain([peek], gen)
 
 
-def update_safety_check(
+def update_safety_check[K, V](
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -316,7 +316,7 @@ def update_safety_check(
             )
 
 
-def remove_incompatible_items(
+def remove_incompatible_items[K, V](
     first_dict: MutableMapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -339,7 +339,7 @@ def remove_incompatible_items(
             del first_dict[k]
 
 
-def flat_items(
+def flat_items[T](
     nested: Mapping[str, NestedDict[T] | T],
     prefix: str | None = None,
     separator: str = "/",
@@ -407,7 +407,7 @@ def to_0d_array(value: Any) -> np.ndarray:
         return to_0d_object_array(value)
 
 
-def dict_equiv(
+def dict_equiv[K, V](
     first: Mapping[K, V],
     second: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -434,7 +434,7 @@ def dict_equiv(
     return all(k in first for k in second)
 
 
-def compat_dict_intersection(
+def compat_dict_intersection[K, V](
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -462,7 +462,7 @@ def compat_dict_intersection(
     return new_dict
 
 
-def compat_dict_union(
+def compat_dict_union[K, V](
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -544,6 +544,7 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
             FutureWarning,
         )
 
+    @override
     def __getitem__(self, key: K) -> V:
         self._warn()
         return super().__getitem__(key)
@@ -772,7 +773,14 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
         raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
     if filename_or_obj.tell() != 0:
         filename_or_obj.seek(0)
-    magic_number = filename_or_obj.read(count)
+    # unbuffered files can return fewer bytes than requested, so read until
+    # `count` bytes or the end of the file
+    magic_number = b""
+    while len(magic_number) < count:
+        chunk = filename_or_obj.read(count - len(magic_number))
+        if not chunk:
+            break
+        magic_number += chunk
     filename_or_obj.seek(0)
     return magic_number
 
@@ -781,7 +789,10 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
     if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
         path = os.fspath(pathlike)
         try:
-            with open(path, "rb") as f:
+            # Open unbuffered: a buffered reader fills its whole buffer, whose size
+            # follows the filesystem block size and can be several MB on parallel
+            # filesystems, effectively reading entire small files (GH7697).
+            with open(path, "rb", buffering=0) as f:
                 return read_magic_number_from_file(f, count)
         except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
@@ -838,7 +849,7 @@ def iterable_of_hashable(v: Any) -> TypeGuard[Iterable[Hashable]]:
     return all(hashable(elm) for elm in it)
 
 
-def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
+def decode_numpy_dict_values[K, V](attrs: Mapping[K, V]) -> dict[K, V]:
     """Convert attribute values from numpy objects to native Python objects,
     for use in to_dict
     """
@@ -900,7 +911,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
-    """Get an new dimension name based on new_dim, that is not used in dims.
+    """Get a new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 
     Example1:
@@ -1151,10 +1162,7 @@ def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> 
         )
 
 
-_Accessor = TypeVar("_Accessor")
-
-
-class UncachedAccessor(Generic[_Accessor]):
+class UncachedAccessor[Accessor]:
     """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
@@ -1162,28 +1170,20 @@ class UncachedAccessor(Generic[_Accessor]):
     accessor.
     """
 
-    def __init__(self, accessor: type[_Accessor]) -> None:
+    def __init__(self, accessor: type[Accessor]) -> None:
         self._accessor = accessor
 
     @overload
-    def __get__(self, obj: None, cls) -> type[_Accessor]: ...
+    def __get__(self, obj: None, cls) -> type[Accessor]: ...
 
     @overload
-    def __get__(self, obj: object, cls) -> _Accessor: ...
+    def __get__(self, obj: object, cls) -> Accessor: ...
 
-    def __get__(self, obj: object | None, cls) -> type[_Accessor] | _Accessor:
+    def __get__(self, obj: object | None, cls) -> type[Accessor] | Accessor:
         if obj is None:
             return self._accessor
 
         return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
-
-
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(Enum):
-    token = 0
-
-
-_default = Default.token
 
 
 def iterate_nested(nested_list):

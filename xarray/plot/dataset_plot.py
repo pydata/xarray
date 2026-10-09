@@ -4,7 +4,7 @@ import functools
 import inspect
 import warnings
 from collections.abc import Callable, Hashable, Iterable
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from xarray.plot import dataarray_plot
 from xarray.plot.facetgrid import _easy_facetgrid
@@ -65,8 +65,10 @@ row : Hashable or None, optional
     If passed, make row faceted plots on this dimension name.
 col : Hashable or None, optional
     If passed, make column faceted plots on this dimension name.
-col_wrap : int, optional
-    Use together with ``col`` to wrap faceted plots.
+col_wrap : int, None or "auto", optional
+    "Wrap" the grid for the column variable after this number of columns,
+    adding rows if ``col_wrap`` is less than the number of facets.
+    If "auto" align the grid to the figsize or keep it as square as possible.
 ax : matplotlib axes object or None, optional
     If ``None``, use the current axes. Not applicable when using facets.
 figsize : Iterable[float] or None, optional
@@ -169,7 +171,7 @@ levels : int or array-like, optional
         hue_style: HueStyleOptions = None,
         row: Hashable | None = None,
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
@@ -212,7 +214,8 @@ levels : int or array-like, optional
             if len(args) > 5:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+                warnings.warn(msg, FutureWarning, stacklevel=2)
+            del msg
         del args
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
@@ -335,7 +338,7 @@ def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -372,7 +375,7 @@ def quiver(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -409,7 +412,7 @@ def quiver(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -486,7 +489,7 @@ def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -523,7 +526,7 @@ def streamplot(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -560,7 +563,7 @@ def streamplot(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     sharex: bool = True,
     sharey: bool = True,
     aspect: AspectOptions = None,
@@ -752,6 +755,177 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
 @overload
 def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
+    *,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | Literal["auto"] | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> PathCollection: ...
+
+
+@overload
+def scatter(
+    ds: Dataset,
+    *,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | Literal["auto"] | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> FacetGrid[DataArray]: ...
+
+
+@overload
+def scatter(
+    ds: Dataset,
+    *,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> FacetGrid[DataArray]: ...
+
+
+@_update_doc_to_dataset(dataarray_plot.scatter)
+def scatter(
+    ds: Dataset,
+    *,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
+) -> PathCollection | FacetGrid[DataArray]:
+    """Scatter plot Dataset data variables against each other."""
+    locals_ = locals()
+    del locals_["ds"]
+    locals_.update(locals_.pop("kwargs", {}))
+    da = _temp_dataarray(ds, y, locals_)
+
+    return da.plot.scatter(*locals_.pop("args", ()), **locals_)
+
+
+@overload
+def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
+    ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
@@ -787,11 +961,11 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> PathCollection: ...
+) -> LineCollection: ...
 
 
 @overload
-def scatter(
+def lines(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -832,7 +1006,7 @@ def scatter(
 
 
 @overload
-def scatter(
+def lines(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -872,8 +1046,8 @@ def scatter(
 ) -> FacetGrid[DataArray]: ...
 
 
-@_update_doc_to_dataset(dataarray_plot.scatter)
-def scatter(
+@_update_doc_to_dataset(dataarray_plot.lines)
+def lines(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -910,11 +1084,17 @@ def scatter(
     extend: ExtendOptions = None,
     levels: ArrayLike | None = None,
     **kwargs: Any,
-) -> PathCollection | FacetGrid[DataArray]:
-    """Scatter plot Dataset data variables against each other."""
+) -> LineCollection | FacetGrid[DataArray]:
+    """
+    Line plot Dataset data variables against each other.
+
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
+    efficient plotting of many lines in a similar fashion to
+    :py:func:`xarray.plot.scatter`.
+    """
     locals_ = locals()
     del locals_["ds"]
     locals_.update(locals_.pop("kwargs", {}))
     da = _temp_dataarray(ds, y, locals_)
 
-    return da.plot.scatter(*locals_.pop("args", ()), **locals_)
+    return da.plot.lines(*locals_.pop("args", ()), **locals_)

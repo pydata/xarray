@@ -4,7 +4,7 @@ import itertools
 import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 import numpy as np
 
@@ -37,7 +37,16 @@ CF_RELATED_DATA_NEEDS_PARSING = (
     "cell_measures",
     "formula_terms",
 )
-
+ZARR_CODERS = (
+    CFDatetimeCoder(),
+    CFTimedeltaCoder(),
+    variables.CFScaleOffsetCoder(),
+    variables.CFMaskCoder(),
+    variables.NativeEnumCoder(),
+    variables.NonStringCoder(),
+    variables.DefaultFillvalueCoder(),
+)
+DEFAULT_CODERS = ZARR_CODERS + (variables.BooleanCoder(),)
 
 if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
@@ -66,7 +75,7 @@ def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
 
 
 def encode_cf_variable(
-    var: Variable, needs_copy: bool = True, name: T_Name = None
+    var: Variable, needs_copy: bool = True, name: T_Name = None, coders=None
 ) -> Variable:
     """
     Converts a Variable into a Variable which follows some
@@ -81,6 +90,8 @@ def encode_cf_variable(
     ----------
     var : Variable
         A variable holding un-encoded data.
+    coders : list of VariableCoder, optional
+        List of coders to apply. If None, uses the default CF coder chain.
 
     Returns
     -------
@@ -89,16 +100,10 @@ def encode_cf_variable(
     """
     ensure_not_multiindex(var, name=name)
 
-    for coder in [
-        CFDatetimeCoder(),
-        CFTimedeltaCoder(),
-        variables.CFScaleOffsetCoder(),
-        variables.CFMaskCoder(),
-        variables.NativeEnumCoder(),
-        variables.NonStringCoder(),
-        variables.DefaultFillvalueCoder(),
-        variables.BooleanCoder(),
-    ]:
+    if coders is None:
+        coders = DEFAULT_CODERS
+
+    for coder in coders:
         var = coder.encode(var, name=name)
 
     for attr_name in CF_RELATED_DATA:
@@ -173,12 +178,13 @@ def decode_cf_variable(
 
     original_dtype = var.dtype
 
-    decode_timedelta_was_none = decode_timedelta is None
     if decode_timedelta is None:
         if isinstance(decode_times, CFDatetimeCoder):
             decode_timedelta = CFTimedeltaCoder(time_unit=decode_times.time_unit)
+        elif decode_times:
+            decode_timedelta = CFTimedeltaCoder()
         else:
-            decode_timedelta = bool(decode_times)
+            decode_timedelta = False
 
     if concat_characters:
         if stack_char_dim:
@@ -208,9 +214,6 @@ def decode_cf_variable(
             decode_timedelta = CFTimedeltaCoder(
                 decode_via_units=decode_timedelta, decode_via_dtype=decode_timedelta
             )
-        decode_timedelta._emit_decode_timedelta_future_warning = (
-            decode_timedelta_was_none
-        )
         var = decode_timedelta.decode(var, name=name)
     if decode_times:
         # remove checks after end of deprecation cycle
@@ -223,7 +226,7 @@ def decode_cf_variable(
                     "Example usage:\n"
                     "    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)\n"
                     "    ds = xr.open_dataset(decode_times=time_coder)\n",
-                    DeprecationWarning,
+                    FutureWarning,
                 )
             decode_times = CFDatetimeCoder(use_cftime=use_cftime)
         elif use_cftime is not None:
@@ -338,11 +341,9 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                 bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
-T = TypeVar("T")
-U = TypeVar("U")
-
-
-def _item_or_default(obj: Mapping[Any, T | U] | T, key: Hashable, default: T) -> T | U:
+def _item_or_default[T, U](
+    obj: Mapping[Any, T | U] | T, key: Hashable, default: T
+) -> T | U:
     """
     Return item by key if obj is mapping and key is present, else return default value.
     """
@@ -422,7 +423,8 @@ def decode_cf_variables(
                 decode_timedelta=_item_or_default(decode_timedelta, k, None),
             )
         except Exception as e:
-            raise type(e)(f"Failed to decode variable {k!r}: {e}") from e
+            e.add_note(f"Raised while decoding variable {k!r} with value {v!r}")
+            raise
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:

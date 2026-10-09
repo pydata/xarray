@@ -21,6 +21,7 @@ from xarray.plot.utils import (
     _guess_coords_to_plot,
     _infer_interval_breaks,
     _infer_xy_labels,
+    _line,
     _Normalize,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
@@ -36,7 +37,7 @@ from xarray.structure.concat import concat
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.collections import PathCollection, QuadMesh
+    from matplotlib.collections import LineCollection, PathCollection, QuadMesh
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.container import BarContainer
     from matplotlib.contour import QuadContourSet
@@ -186,24 +187,38 @@ def _prepare_plot1d_data(
     """
     # If there are more than 1 dimension in the array than stack all the
     # dimensions so the plotter can plot anything:
-    if darray.ndim > 1:
+    if darray.ndim >= 2:
         # When stacking dims the lines will continue connecting. For floats
         # this can be solved by adding a nan element in between the flattening
         # points:
-        dims_T = []
-        if np.issubdtype(darray.dtype, np.floating):
-            for v in ["z", "x"]:
-                dim = coords_to_plot.get(v, None)
-                if (dim is not None) and (dim in darray.dims):
-                    darray_nan = np.nan * darray.isel({dim: -1})
+        dims_T: list[Hashable] = []
+        if plotfunc_name == "lines" and np.issubdtype(darray.dtype, np.floating):
+            i = 0
+            for v in ("z", "x"):
+                coord = coords_to_plot.get(v, None)
+                if coord is not None:
+                    if coord in darray.dims:
+                        # Dimension coordinate:
+                        d = coord
+                    else:
+                        # Coordinate with multiple dimensions:
+                        c = darray[coord]
+                        dims_filt = dict.fromkeys(c.dims)
+                        for k in dims_filt.keys() & set(dims_T):
+                            dims_filt.pop(k)
+
+                        d = tuple(dims_filt.keys())[i]
+
+                    darray_nan = np.nan * darray.isel({d: -1})
                     darray = concat(
                         [darray, darray_nan],
-                        dim=dim,
+                        dim=d,
                         coords="minimal",
                         compat="override",
                         join="exact",
                     )
-                    dims_T.append(coords_to_plot[v])
+                    dims_T.append(d)
+                    # i += 1
 
         # Lines should never connect to the same coordinate when stacked,
         # transpose to avoid this as much as possible:
@@ -228,7 +243,7 @@ def plot(
     *,
     row: Hashable | None = None,
     col: Hashable | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     ax: Axes | None = None,
     hue: Hashable | None = None,
     subplot_kws: dict[str, Any] | None = None,
@@ -255,8 +270,10 @@ def plot(
         If passed, make row faceted plots on this dimension name.
     col : Hashable or None, optional
         If passed, make column faceted plots on this dimension name.
-    col_wrap : int or None, optional
-        Use together with ``col`` to wrap faceted plots.
+    col_wrap : int, None or "auto", optional
+        "Wrap" the grid for the column variable after this number of columns,
+        adding rows if ``col_wrap`` is less than the number of facets.
+        If "auto" align the grid to the figsize or keep it as square as possible.
     ax : matplotlib axes object, optional
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size``, ``figsize`` and facets.
@@ -478,6 +495,10 @@ def line(
     primitive : list of Line3D or FacetGrid
         When either col or row is given, returns a FacetGrid, otherwise
         a list of matplotlib Line3D objects.
+
+    See also
+    --------
+    Use :py:func:`xarray.plot.lines` for efficient plotting of many lines.
     """
     # Handle facetgrids first
     if row or col:
@@ -641,7 +662,7 @@ def step(
 
 def hist(
     darray: DataArray,
-    *args: Any,
+    *,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
     aspect: AspectOptions = None,
@@ -695,8 +716,6 @@ def hist(
         Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
     """
-    assert len(args) == 0
-
     if darray.ndim == 0 or darray.size == 0:
         # TypeError to be consistent with pandas
         raise TypeError("No numeric data to plot.")
@@ -742,8 +761,10 @@ row : Hashable, optional
     If passed, make row faceted plots on this dimension name.
 col : Hashable, optional
     If passed, make column faceted plots on this dimension name.
-col_wrap : int, optional
-    Use together with ``col`` to wrap faceted plots
+col_wrap : int, None or "auto", optional
+    "Wrap" the grid for the column variable after this number of columns,
+    adding rows if ``col_wrap`` is less than the number of facets.
+    If "auto" align the grid to the figsize or keep it as square as possible.
 ax : matplotlib axes object, optional
     If None, uses the current axis. Not applicable when using facets.
 figsize : Iterable[float] or None, optional
@@ -851,7 +872,7 @@ artist :
         linewidth: Hashable | None = None,
         row: Hashable | None = None,
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
@@ -927,7 +948,8 @@ artist :
             if len(args) > 4:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+                warnings.warn(msg, FutureWarning, stacklevel=2)
+            del msg
         del args
 
         if hue_style is not None:
@@ -939,7 +961,7 @@ artist :
                     "Convert numbers to string for a discrete hue "
                     "and use add_legend or add_colorbar to control which guide to display."
                 ),
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
 
@@ -1000,7 +1022,7 @@ artist :
                 ckw = {vv: cmap_params[vv] for vv in ("vmin", "vmax", "norm", "cmap")}
                 cmap_params_subset.update(**ckw)
 
-        with plt.rc_context(_styles):
+        with plt.rc_context(_styles):  # type: ignore[arg-type, unused-ignore]
             if z is not None:
                 import mpl_toolkits
 
@@ -1044,7 +1066,7 @@ artist :
             )
 
         if add_legend_:
-            if plotfunc.__name__ in ["scatter", "line"]:
+            if plotfunc.__name__ in ["scatter", "lines"]:
                 _add_legend(
                     (
                         hueplt_norm
@@ -1115,7 +1137,7 @@ def _add_labels(
 
 
 @overload
-def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
+def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
     *args: Any,
     x: Hashable | None = None,
@@ -1132,6 +1154,177 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
     col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs,
+) -> LineCollection: ...
+
+
+@overload
+def lines(
+    darray: T_DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs,
+) -> FacetGrid[DataArray]: ...
+
+
+@overload
+def lines(
+    darray: T_DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs,
+) -> FacetGrid[DataArray]: ...
+
+
+@_plot1d
+def lines(
+    xplt: DataArray | None,
+    yplt: DataArray | None,
+    ax: Axes,
+    add_labels: bool | Iterable[bool] = True,
+    **kwargs,
+) -> LineCollection:
+    """
+    Line plot of DataArray values.
+
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
+    efficient plotting of many lines in a similar fashion to
+    :py:func:`xarray.plot.scatter`.
+    """
+    if "u" in kwargs or "v" in kwargs:
+        raise ValueError("u, v are not allowed in lines plots.")
+
+    zplt: DataArray | None = kwargs.pop("zplt", None)
+    hueplt: DataArray | None = kwargs.pop("hueplt", None)
+    sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
+
+    if hueplt is not None:
+        kwargs.update(c=hueplt.to_numpy().ravel())
+
+    if sizeplt is not None:
+        kwargs.update(s=sizeplt.to_numpy().ravel())
+
+    plts_or_none = (xplt, yplt, zplt)
+    _add_labels(add_labels, plts_or_none, ("", "", ""), ax)
+
+    xplt_np = None if xplt is None else xplt.to_numpy().ravel()
+    yplt_np = None if yplt is None else yplt.to_numpy().ravel()
+    zplt_np = None if zplt is None else zplt.to_numpy().ravel()
+    plts_np = tuple(p for p in (xplt_np, yplt_np, zplt_np) if p is not None)
+
+    if len(plts_np) == 3:
+        import mpl_toolkits
+
+        assert isinstance(ax, mpl_toolkits.mplot3d.axes3d.Axes3D)
+        return _line(ax, *plts_np, **kwargs)
+
+    if len(plts_np) == 2:
+        return _line(ax, *plts_np, **kwargs)
+
+    raise ValueError("At least two variables required for a lines plot.")
+
+
+@overload
+def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
+    darray: DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_legend: bool | None = None,
@@ -1172,7 +1365,7 @@ def scatter(
     ax: Axes | None = None,
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_legend: bool | None = None,
@@ -1213,7 +1406,7 @@ def scatter(
     ax: Axes | None = None,
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_legend: bool | None = None,
@@ -1309,8 +1502,10 @@ row : Hashable or None, optional
     If passed, make row faceted plots on this dimension name.
 col : Hashable or None, optional
     If passed, make column faceted plots on this dimension name.
-col_wrap : int, optional
-    Use together with ``col`` to wrap faceted plots.
+col_wrap : int, None or "auto", optional
+    "Wrap" the grid for the column variable after this number of columns,
+    adding rows if ``col_wrap`` is less than the number of facets.
+    If "auto" align the grid to the figsize or keep it as square as possible.
 xincrease : None, True, or False, optional
     Should the values on the *x* axis be increasing from left to right?
     If ``None``, use the default for the Matplotlib function.
@@ -1421,7 +1616,7 @@ artist :
         ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_colorbar: bool | None = None,
@@ -1460,7 +1655,8 @@ artist :
             if len(args) > 2:
                 raise ValueError(msg)
             else:
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+                warnings.warn(msg, FutureWarning, stacklevel=2)
+            del msg
         del args
 
         # Decide on a default for the colorbar before facetgrids
@@ -1675,7 +1871,7 @@ def imshow(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -1715,7 +1911,7 @@ def imshow(
     ax: Axes | None = None,
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -1755,7 +1951,7 @@ def imshow(
     ax: Axes | None = None,
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -1892,7 +2088,7 @@ def contour(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -1932,7 +2128,7 @@ def contour(
     ax: Axes | None = None,
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -1972,7 +2168,7 @@ def contour(
     ax: Axes | None = None,
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -2025,7 +2221,7 @@ def contourf(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -2065,7 +2261,7 @@ def contourf(
     ax: Axes | None = None,
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -2105,7 +2301,7 @@ def contourf(
     ax: Axes | None = None,
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -2158,7 +2354,7 @@ def pcolormesh(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ax: Axes | None = None,
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -2198,7 +2394,7 @@ def pcolormesh(
     ax: Axes | None = None,
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -2238,7 +2434,7 @@ def pcolormesh(
     ax: Axes | None = None,
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -2342,7 +2538,7 @@ def surface(
     ax: Axes | None = None,
     row: None = None,  # no wrap -> primitive
     col: None = None,  # no wrap -> primitive
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -2382,7 +2578,7 @@ def surface(
     ax: Axes | None = None,
     row: Hashable | None = None,
     col: Hashable,  # wrap -> FacetGrid
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,
@@ -2422,7 +2618,7 @@ def surface(
     ax: Axes | None = None,
     row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
-    col_wrap: int | None = None,
+    col_wrap: int | Literal["auto"] | None = None,
     xincrease: bool | None = True,
     yincrease: bool | None = True,
     add_colorbar: bool | None = None,

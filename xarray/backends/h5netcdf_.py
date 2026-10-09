@@ -4,7 +4,7 @@ import functools
 import io
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, override
 
 import numpy as np
 from packaging.version import Version
@@ -59,6 +59,7 @@ if TYPE_CHECKING:
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
+    @override
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
         return ds.variables[self.variable_name]
@@ -149,11 +150,13 @@ class H5NetCDFStore(WritableCFDataStore):
         self.format = format or "NETCDF4"
         # todo: utilizing find_root_and_group seems a bit clunky
         #  making filename available on h5netcdf.Group seems better
-        self._filename = find_root_and_group(self.ds)[0].filename
+        with manager.acquire_context():
+            self._filename = find_root_and_group(self.ds)[0].filename
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
 
+    @override
     def get_child_store(self, group: str) -> Self:
         if self.format == "NETCDF4_CLASSIC":
             raise ValueError("Cannot create sub-groups in `NETCDF4_CLASSIC` format.")
@@ -183,13 +186,29 @@ class H5NetCDFStore(WritableCFDataStore):
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
     ):
         import h5netcdf
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
+
+            open_kwargs = open_kwargs or {}
+
+            # Use blockcache with size 4MB by default
+            if "cache_type" not in open_kwargs:
+                open_kwargs["cache_type"] = "blockcache"
+            if (
+                open_kwargs["cache_type"] == "blockcache"
+                and "block_size" not in open_kwargs
+            ):
+                open_kwargs["block_size"] = 4 * 1024 * 1024
+
             filename = _open_remote_file(
-                filename, mode=mode_, storage_options=storage_options
+                filename,
+                mode=mode_,
+                storage_options=storage_options,
+                open_kwargs=open_kwargs,
             )
 
         if isinstance(filename, BytesIOProxy):
@@ -260,23 +279,44 @@ class H5NetCDFStore(WritableCFDataStore):
         return self._acquire()
 
     def open_store_variable(self, name, var):
-        import h5netcdf
-        import h5py
+        import h5netcdf.core
 
         dimensions = var.dimensions
         data = indexing.LazilyIndexedArray(H5NetCDFArrayWrapper(name, self))
         attrs = _read_attributes(var)
 
-        # netCDF4 specific encoding
-        encoding = {
-            "chunksizes": var.chunks,
-            "fletcher32": var.fletcher32,
-            "shuffle": var.shuffle,
-        }
+        h5py = var._root._h5py
+
+        encoding = {}
+        if (datatype := var.datatype) and isinstance(datatype, h5netcdf.core.EnumType):
+            encoding["dtype"] = np.dtype(
+                data.dtype,
+                metadata={
+                    "enum": datatype.enum_dict,
+                    "enum_name": datatype.name,
+                },
+            )
+        else:
+            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
+            if vlen_dtype is str:
+                encoding["dtype"] = str
+            else:
+                # xarray doesn't support writing arbitrary vlen dtypes yet, so
+                # they fall back to the variable's dtype here.
+                encoding["dtype"] = var.dtype
+
         if var.chunks:
+            encoding["contiguous"] = False
+            encoding["chunksizes"] = var.chunks
             encoding["preferred_chunks"] = dict(
                 zip(var.dimensions, var.chunks, strict=True)
             )
+        else:
+            encoding["contiguous"] = True
+            encoding["chunksizes"] = None
+
+        encoding.update(var.filters())
+
         # Convert h5py-style compression options to NetCDF4-Python
         # style, if possible
         if var.compression == "gzip":
@@ -290,43 +330,27 @@ class H5NetCDFStore(WritableCFDataStore):
         encoding["source"] = self._filename
         encoding["original_shape"] = data.shape
 
-        vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-        if vlen_dtype is str:
-            encoding["dtype"] = str
-        elif vlen_dtype is not None:  # pragma: no cover
-            # xarray doesn't support writing arbitrary vlen dtypes yet.
-            pass
-        # just check if datatype is available and create dtype
-        # this check can be removed if h5netcdf >= 1.4.0 for any environment
-        elif (datatype := getattr(var, "datatype", None)) and isinstance(
-            datatype, h5netcdf.core.EnumType
-        ):
-            encoding["dtype"] = np.dtype(
-                data.dtype,
-                metadata={
-                    "enum": datatype.enum_dict,
-                    "enum_name": datatype.name,
-                },
-            )
-        else:
-            encoding["dtype"] = var.dtype
-
         return Variable(dimensions, data, attrs, encoding)
 
+    @override
     def get_variables(self):
         return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 
+    @override
     def get_attrs(self):
         return FrozenDict(_read_attributes(self.ds))
 
+    @override
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
+    @override
     def get_parent_dimensions(self):
         return FrozenDict(collect_ancestor_dimensions(self.ds))
 
+    @override
     def get_encoding(self):
         return {
             "unlimited_dims": {
@@ -334,6 +358,7 @@ class H5NetCDFStore(WritableCFDataStore):
             }
         }
 
+    @override
     def set_dimension(self, name, length, is_unlimited=False):
         _ensure_no_forward_slash_in_name(name)
         if is_unlimited:
@@ -342,17 +367,20 @@ class H5NetCDFStore(WritableCFDataStore):
         else:
             self.ds.dimensions[name] = length
 
+    @override
     def set_attribute(self, key, value):
         if self.format == "NETCDF4_CLASSIC":
             value = encode_nc3_attr_value(value)
         self.ds.attrs[key] = value
 
+    @override
     def encode_variable(self, variable, name=None):
         if self.format == "NETCDF4_CLASSIC":
             return encode_nc3_variable(variable, name=name)
         else:
             return _encode_nc4_variable(variable, name=name)
 
+    @override
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
     ):
@@ -432,9 +460,11 @@ class H5NetCDFStore(WritableCFDataStore):
 
         return target, variable.data
 
+    @override
     def sync(self):
         self.ds.sync()
 
+    @override
     def close(self, **kwargs):
         self._manager.close(**kwargs)
 
@@ -493,6 +523,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
     supports_groups = True
 
+    @override
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         from xarray.core.utils import is_remote_uri
 
@@ -511,6 +542,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         return False
 
+    @override
     def open_dataset(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -531,6 +563,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         driver=None,
         driver_kwds=None,
         storage_options: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
     ) -> Dataset:
         # Keep this message for some versions
         # remove and set phony_dims="access" above
@@ -548,20 +581,22 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             driver=driver,
             driver_kwds=driver_kwds,
             storage_options=storage_options,
+            open_kwargs=open_kwargs,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
 
-        ds = store_entrypoint.open_dataset(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
+        with store._manager.acquire_context():
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
 
         # only warn if phony_dims exist in file
         # remove together with the above check
@@ -571,6 +606,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         return ds
 
+    @override
     def open_datatree(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -614,6 +650,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
+    @override
     def open_groups_as_dict(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -633,6 +670,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
         driver=None,
         driver_kwds=None,
+        storage_options: dict[str, Any] | None = None,
+        open_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> dict[str, Dataset]:
         from xarray.backends.common import _iter_nc_groups
@@ -654,6 +693,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             decode_vlen_strings=decode_vlen_strings,
             driver=driver,
             driver_kwds=driver_kwds,
+            storage_options=storage_options,
+            open_kwargs=open_kwargs,
         )
 
         # Check for a group and make it a parent if it exists
@@ -664,26 +705,27 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
         groups_dict = {}
-        for path_group in _iter_nc_groups(store.ds, parent=parent):
-            group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
-            store_entrypoint = StoreBackendEntrypoint()
-            with close_on_error(group_store):
-                group_ds = store_entrypoint.open_dataset(
-                    group_store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
-                )
+        with manager.acquire_context():
+            for path_group in _iter_nc_groups(store.ds, parent=parent):
+                group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
+                store_entrypoint = StoreBackendEntrypoint()
+                with close_on_error(group_store):
+                    group_ds = store_entrypoint.open_dataset(
+                        group_store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
 
-            if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
-            else:
-                group_name = str(NodePath(path_group))
-            groups_dict[group_name] = group_ds
+                if group:
+                    group_name = str(NodePath(path_group).relative_to(parent))
+                else:
+                    group_name = str(NodePath(path_group))
+                groups_dict[group_name] = group_ds
 
         # only warn if phony_dims exist in file
         # remove together with the above check

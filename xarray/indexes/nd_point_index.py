@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Hashable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, cast, override
 
 import numpy as np
 
@@ -75,13 +75,21 @@ class ScipyKDTreeAdapter(TreeAdapter):
     _kdtree: KDTree
 
     def __init__(self, points: np.ndarray, options: Mapping[str, Any]):
-        from scipy.spatial import KDTree
+        try:
+            from scipy.spatial import KDTree
+        except ImportError as err:
+            raise ImportError(
+                "`NDPointIndex` requires `scipy` when used with `ScipyKDTreeAdapter`. "
+                "Please ensure that `scipy` is installed and importable."
+            ) from err
 
         self._kdtree = KDTree(points, **options)
 
+    @override
     def query(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return self._kdtree.query(points)  # type: ignore[return-value,unused-ignore]
 
+    @override
     def equals(self, other: Self) -> bool:
         return np.array_equal(self._kdtree.data, other._kdtree.data)
 
@@ -95,10 +103,7 @@ def get_points(coords: Iterable[Variable | Any]) -> np.ndarray:
     return np.stack([np.ravel(d) for d in data]).T
 
 
-T_TreeAdapter = TypeVar("T_TreeAdapter", bound=TreeAdapter)
-
-
-class NDPointIndex(Index, Generic[T_TreeAdapter]):
+class NDPointIndex[T_TreeAdapter: TreeAdapter](Index):
     """Xarray index for irregular, n-dimensional data.
 
     This index may be associated with a set of coordinate variables representing
@@ -135,7 +140,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
     Data variables:
         *empty*
 
-    Creation of a NDPointIndex from the "xx" and "yy" coordinate variables:
+    Creation of an NDPointIndex from the "xx" and "yy" coordinate variables:
 
     >>> ds = ds.set_xindex(("xx", "yy"), xr.indexes.NDPointIndex)
     >>> ds
@@ -238,12 +243,13 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
         assert isinstance(tree_obj, TreeAdapter)
         self._tree_obj = tree_obj
 
-        assert len(coord_names) == len(dims) == len(shape)
+        assert len(dims) == len(shape)
         self._coord_names = coord_names
         self._dims = dims
         self._shape = shape
 
     @classmethod
+    @override
     def from_variables(
         cls,
         variables: Mapping[Any, Variable],
@@ -258,17 +264,11 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
 
         var0 = next(iter(variables.values()))
 
-        if len(variables) != len(var0.dims):
-            raise ValueError(
-                f"the number of variables {len(variables)} doesn't match "
-                f"the number of dimensions {len(var0.dims)}"
-            )
-
         opts = dict(options)
 
         tree_adapter_cls: type[T_TreeAdapter] = opts.pop("tree_adapter_cls", None)
         if tree_adapter_cls is None:
-            tree_adapter_cls = ScipyKDTreeAdapter
+            tree_adapter_cls = cast(type[T_TreeAdapter], ScipyKDTreeAdapter)
 
         points = get_points(variables.values())
 
@@ -279,6 +279,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
             shape=var0.shape,
         )
 
+    @override
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> dict[Any, Variable]:
@@ -292,6 +293,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
         else:
             return {}
 
+    @override
     def equals(
         self, other: Index, *, exclude: frozenset[Hashable] | None = None
     ) -> bool:
@@ -324,6 +326,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
 
         return dim_indexers
 
+    @override
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
@@ -373,6 +376,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
 
         return IndexSelResult(dim_indexers=dim_indexers)
 
+    @override
     def rename(
         self,
         name_dict: Mapping[Any, Hashable],
@@ -393,6 +397,7 @@ class NDPointIndex(Index, Generic[T_TreeAdapter]):
             shape=self._shape,
         )
 
+    @override
     def _repr_inline_(self, max_width: int) -> str:
         tree_obj_type = self._tree_obj.__class__.__name__
         return f"{self.__class__.__name__} ({tree_obj_type})"

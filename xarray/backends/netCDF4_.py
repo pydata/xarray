@@ -4,10 +4,10 @@ import functools
 import operator
 import os
 from collections.abc import Iterable
-from contextlib import suppress
+from contextlib import AbstractContextManager, nullcontext, suppress
 from dataclasses import dataclass
 from io import IOBase
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, override
 
 import numpy as np
 
@@ -35,6 +35,7 @@ from xarray.backends.locks import (
     combine_locks,
     ensure_lock,
     get_write_lock,
+    is_reentrant_lock,
 )
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from xarray.backends.store import StoreBackendEntrypoint
@@ -104,6 +105,7 @@ class BaseNetCDF4Array(BackendArray):
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     __slots__ = ()
 
+    @override
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
         variable = ds.variables[self.variable_name]
@@ -268,6 +270,10 @@ def _extract_nc4_variable_encoding(
     safe_to_drop = {"source", "original_shape"}
     valid_encodings = {
         "zlib",
+        "szip",
+        "bzip2",
+        "blosc",
+        "zstd",
         "complevel",
         "fletcher32",
         "contiguous",
@@ -313,6 +319,27 @@ def _extract_nc4_variable_encoding(
     for k in safe_to_drop:
         if k in encoding:
             del encoding[k]
+
+    # Translate the boolean netCDF4-Python style compression flags (as produced
+    # by h5netcdf's ``variable.filters()``) into a single h5py-style
+    # ``compression`` string. At most one of these is ever true for a given
+    # variable; if several were set we keep the last one.
+    compression = None
+    if encoding.pop("zlib", False):
+        compression = "zlib"
+    if encoding.pop("szip", False):
+        compression = "szip"
+    if encoding.pop("bzip2", False):
+        compression = "bzip2"
+    if encoding.pop("blosc", False):
+        compression = "blosc"
+    if encoding.pop("zstd", False):
+        compression = "zstd"
+
+    # If both styles are used together, the explicit h5py-style ``compression``
+    # takes precedence over the translated netCDF4-Python style flag.
+    if compression is not None and encoding.get("compression") is None:
+        encoding["compression"] = compression
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
@@ -421,17 +448,20 @@ class NetCDF4DataStore(WritableCFDataStore):
                         "argument is provided"
                     )
                 root = manager
-            manager = DummyFileManager(root)
+            manager = DummyFileManager(root, lock=NETCDF4_PYTHON_LOCK)
 
         self._manager = manager
         self._group = group
         self._mode = mode
-        self.format = self.ds.data_model
-        self._filename = self.ds.filepath()
-        self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
+        # data_model and filepath() are netCDF-C calls too
+        with self._metadata_lock(), manager.acquire_context():
+            self.format = self.ds.data_model
+            self._filename = self.ds.filepath()
+        self.is_remote = is_remote_uri(self._filename)
         self.autoclose = autoclose
 
+    @override
     def get_child_store(self, group: str) -> Self:
         if self._group is not None:
             group = os.path.join(self._group, group)
@@ -510,19 +540,58 @@ class NetCDF4DataStore(WritableCFDataStore):
                 "<xarray-in-memory-write>", mode=mode, memory=memory, **kwargs
             )
             close = _CloseWithCopy(filename, nc4_dataset)
-            manager = DummyFileManager(nc4_dataset, close=close)
+            manager = DummyFileManager(nc4_dataset, close=close, lock=lock)
 
         elif isinstance(filename, bytes | memoryview):
             assert mode == "r"
             kwargs["memory"] = filename
             manager = PickleableFileManager(
-                netCDF4.Dataset, "<xarray-in-memory-read>", mode=mode, kwargs=kwargs
+                netCDF4.Dataset,
+                "<xarray-in-memory-read>",
+                mode=mode,
+                kwargs=kwargs,
+                lock=lock,
             )
         else:
             manager = CachingFileManager(
-                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
+                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs, lock=lock
             )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+
+    def _metadata_lock(self) -> AbstractContextManager[Any]:
+        """Lock to hold while reading or writing metadata of the file.
+
+        netCDF-C is not thread-safe, so metadata must not be accessed
+        concurrently with other netCDF-C calls (GH9779). This is not a separate
+        lock: it is ``self.lock`` itself. The only question is whether it can be
+        held around a whole block of metadata access, instead of only around
+        each individual netCDF-C call.
+
+        While the lock is held, metadata access acquires it again, because the
+        file manager and the array wrappers (e.g. through ``self.ds``) use the
+        same lock. With a reentrant lock, like the default locks, that is fine.
+        With a lock that is not reentrant, the second acquire would deadlock.
+        So in that case the lock is not held around the block, and it only
+        protects the individual calls, as before GH9779 was fixed. That is what
+        the ``nullcontext()`` is for.
+
+        Locks that end up there:
+
+        - a custom lock passed by the user, e.g. a plain ``threading.Lock``
+        - ``to_netcdf`` with the distributed or multiprocessing scheduler: their
+          per-file write locks come from other libraries and are not reentrant,
+          so the ``CombinedLock`` of those and the global netCDF-C and HDF5 locks
+          is not reentrant as a whole either
+
+        These cases are not protected against GH9779, but behave as they did
+        before. Only the default locks, i.e. the case from GH9779, get the full
+        protection. ``lock=False`` gives a ``DummyLock``, which does not lock
+        anything either way.
+        """
+        if is_reentrant_lock(self.lock):
+            return self.lock
+        # not reentrant: holding it here would deadlock, see above
+        return nullcontext()
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
@@ -576,20 +645,25 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         return Variable(dimensions, data, attributes, encoding)
 
+    @override
     def get_variables(self):
         return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 
+    @override
     def get_attrs(self):
         return FrozenDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
 
+    @override
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
+    @override
     def get_parent_dimensions(self):
         return FrozenDict(collect_ancestor_dimensions(self.ds))
 
+    @override
     def get_encoding(self):
         return {
             "unlimited_dims": {
@@ -597,11 +671,13 @@ class NetCDF4DataStore(WritableCFDataStore):
             }
         }
 
+    @override
     def set_dimension(self, name, length, is_unlimited=False):
         _ensure_no_forward_slash_in_name(name)
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, size=dim_length)
 
+    @override
     def set_attribute(self, key, value):
         if self.format != "NETCDF4":
             value = encode_nc3_attr_value(value)
@@ -611,6 +687,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         else:
             self.ds.setncattr(key, value)
 
+    @override
     def encode_variable(self, variable, name=None):
         variable = _force_native_endianness(variable)
         if self.format == "NETCDF4":
@@ -619,6 +696,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             variable = encode_nc3_variable(variable, name=name)
         return variable
 
+    @override
     def prepare_variable(
         self, name, variable: Variable, check_encoding=False, unlimited_dims=None
     ):
@@ -666,9 +744,31 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         return target, variable.data
 
-    def sync(self):
-        self.ds.sync()
+    # Encoding happens before these without holding the lock, as it may compute
+    # dask arrays whose tasks need the same lock.
+    @override
+    def set_attributes(self, attributes):
+        with self._metadata_lock():
+            super().set_attributes(attributes)
 
+    @override
+    def set_dimensions(self, variables, unlimited_dims=None):
+        with self._metadata_lock():
+            super().set_dimensions(variables, unlimited_dims=unlimited_dims)
+
+    @override
+    def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
+        with self._metadata_lock():
+            super().set_variables(
+                variables, check_encoding_set, writer, unlimited_dims=unlimited_dims
+            )
+
+    @override
+    def sync(self):
+        with self._metadata_lock():
+            self.ds.sync()
+
+    @override
     def close(self, **kwargs):
         self._manager.close(**kwargs)
 
@@ -701,6 +801,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.NetCDF4BackendEntrypoint.html"
     supports_groups = True
 
+    @override
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         # Helper to check if magic number is netCDF or HDF5
         def _is_netcdf_magic(magic: bytes) -> bool:
@@ -715,10 +816,19 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             _, ext = os.path.splitext(path)
             return ext in {".nc", ".nc4", ".cdf"}
 
-        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
-            # For remote URIs, check extension (accounting for query params/fragments)
-            # Remote netcdf-c can handle both regular URLs and DAP URLs
-            return _has_netcdf_ext(filename_or_obj, is_remote=True)
+        if isinstance(filename_or_obj, str):
+            if is_remote_uri(filename_or_obj):
+                # For remote URIs, check extension (accounting for query params/fragments)
+                # Remote netcdf-c can handle both regular URLs and DAP URLs
+                if _has_netcdf_ext(filename_or_obj, is_remote=True):
+                    return True
+                elif "zarr" in filename_or_obj.lower():
+                    return False
+                # return true for non-zarr URLs so we don't have a breaking change for people relying on this
+                # netcdf backend guessing true for all remote sources.
+                # TODO: emit a warning here about deprecation of this behavior
+                # https://github.com/pydata/xarray/pull/10931
+                return True
 
         if isinstance(filename_or_obj, str | os.PathLike):
             # For local paths, check magic number first, then extension
@@ -733,6 +843,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         return False
 
+    @override
     def open_dataset(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -769,7 +880,13 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         )
 
         store_entrypoint = StoreBackendEntrypoint()
-        with close_on_error(store):
+        # Hold the lock for the whole call, as reading variables and attributes
+        # while decoding goes through netCDF-C.
+        with (
+            close_on_error(store),
+            store._metadata_lock(),
+            store._manager.acquire_context(),
+        ):
             ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
@@ -782,6 +899,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
+    @override
     def open_datatree(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -825,6 +943,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
+    @override
     def open_groups_as_dict(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -870,25 +989,28 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
         groups_dict = {}
-        for path_group in _iter_nc_groups(store.ds, parent=parent):
-            group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
-            store_entrypoint = StoreBackendEntrypoint()
-            with close_on_error(group_store):
-                group_ds = store_entrypoint.open_dataset(
-                    group_store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
-                )
-            if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
-            else:
-                group_name = str(NodePath(path_group))
-            groups_dict[group_name] = group_ds
+        # like in open_dataset, walking the groups and reading them goes
+        # through netCDF-C
+        with store._metadata_lock(), manager.acquire_context():
+            for path_group in _iter_nc_groups(store.ds, parent=parent):
+                group_store = NetCDF4DataStore(manager, group=path_group, **kwargs)
+                store_entrypoint = StoreBackendEntrypoint()
+                with close_on_error(group_store):
+                    group_ds = store_entrypoint.open_dataset(
+                        group_store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
+                if group:
+                    group_name = str(NodePath(path_group).relative_to(parent))
+                else:
+                    group_name = str(NodePath(path_group))
+                groups_dict[group_name] = group_ds
 
         return groups_dict
 

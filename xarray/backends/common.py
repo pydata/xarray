@@ -12,9 +12,9 @@ from typing import (
     Any,
     ClassVar,
     Self,
-    TypeVar,
     Union,
     overload,
+    override,
 )
 
 import numpy as np
@@ -49,8 +49,6 @@ logger = logging.getLogger(__name__)
 
 NONE_VAR_NAME = "__values__"
 
-T = TypeVar("T")
-
 
 @overload
 def _normalize_path(path: os.PathLike) -> str: ...
@@ -61,10 +59,10 @@ def _normalize_path(path: str) -> str: ...
 
 
 @overload
-def _normalize_path(path: T) -> T: ...
+def _normalize_path[T](path: T) -> T: ...
 
 
-def _normalize_path(path: os.PathLike | str | T) -> str | T:
+def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
     """
     Normalize pathlikes to string.
 
@@ -214,13 +212,16 @@ class BytesIOProxy:
         return self.getvalue()
 
 
-def _open_remote_file(file, mode, storage_options=None):
+def _open_remote_file(file, mode, storage_options=None, open_kwargs=None):
     import fsspec
 
     fs, _, paths = fsspec.get_fs_token_paths(
         file, mode=mode, storage_options=storage_options
     )
-    return fs.open(paths[0], mode=mode)
+
+    open_kwargs = open_kwargs or {}
+
+    return fs.open(paths[0], mode=mode, **open_kwargs)
 
 
 def _encode_variable_name(name):
@@ -313,6 +314,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
     async def async_getitem(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
         raise NotImplementedError("Backend does not support asynchronous loading")
 
+    @override
     def get_duck_array(self, dtype: np.typing.DTypeLike | None = None):
         key = indexing.BasicIndexer((slice(None),) * self.ndim)
         return self[key]  # type: ignore[index]
@@ -378,7 +380,7 @@ class AbstractDataStore:
         self.close()
 
 
-T_PathFileOrDataStore = (
+type T_PathFileOrDataStore = (
     str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
 )
 
@@ -711,6 +713,7 @@ def ensure_dtype_not_object(var: Variable, name: T_Name = None) -> Variable:
 class WritableCFDataStore(AbstractWritableDataStore):
     __slots__ = ()
 
+    @override
     def encode(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
@@ -724,14 +727,14 @@ class WritableCFDataStore(AbstractWritableDataStore):
 class BackendEntrypoint:
     """
     ``BackendEntrypoint`` is a class container and it is the main interface
-    for the backend plugins, see :ref:`RST backend_entrypoint`.
+    for the backend plugins, see :ref:`rst-backend-entrypoint`.
     It shall implement:
 
     - ``open_dataset`` method: it shall implement reading from file, variables
       decoding and it returns an instance of :py:class:`~xarray.Dataset`.
       It shall take in input at least ``filename_or_obj`` argument and
       ``drop_variables`` keyword argument.
-      For more details see :ref:`RST open_dataset`.
+      For more details see :ref:`rst-open-dataset`.
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
@@ -773,12 +776,7 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
@@ -790,12 +788,7 @@ class BackendEntrypoint:
 
     def guess_can_open(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
     ) -> bool:
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
@@ -805,12 +798,7 @@ class BackendEntrypoint:
 
     def open_datatree(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
@@ -824,12 +812,7 @@ class BackendEntrypoint:
 
     def open_groups_as_dict(
         self,
-        filename_or_obj: str
-        | os.PathLike[Any]
-        | ReadBuffer
-        | bytes
-        | memoryview
-        | AbstractDataStore,
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:
@@ -849,3 +832,37 @@ class BackendEntrypoint:
 
 # mapping of engine name to (module name, BackendEntrypoint Class)
 BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}
+
+
+def _is_likely_dap_url(url: str) -> bool:
+    """
+    Determines if a URL is likely an OPeNDAP (DAP) endpoint based on
+    known protocols, server software path patterns, and file extensions.
+
+    Parameters
+    ----------
+    url : str
+
+    Returns
+    -------
+        True if the URL matches common DAP patterns, False otherwise.
+    """
+    if not url:
+        return False
+
+    url_lower = url.lower()
+
+    # For remote URIs, check for DAP server software path patterns
+    if is_remote_uri(url_lower):
+        dap_path_patterns = (
+            "/dodsc/",  # THREDDS Data Server (TDS) DAP endpoint (case-insensitive)
+            "/dods/",  # GrADS Data Server (GDS) DAP endpoint
+            "/opendap/",  # Generic OPeNDAP/Hyrax server
+            "/erddap/",  # ERDDAP data server
+            "/dap2/",  # Explicit DAP2 version in path
+            "/dap4/",  # Explicit DAP4 version in path
+            "/dap/",
+        )
+        return any(pattern in url_lower for pattern in dap_path_patterns)
+
+    return False

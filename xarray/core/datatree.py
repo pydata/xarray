@@ -22,10 +22,10 @@ from typing import (
     Literal,
     NoReturn,
     ParamSpec,
-    TypeAlias,
     TypeVar,
     Union,
     overload,
+    override,
 )
 
 from xarray.core import utils
@@ -283,6 +283,7 @@ class DatasetView(Dataset):
         obj._encoding = encoding
         return obj
 
+    @override
     def __setitem__(self, key, val) -> None:
         raise AttributeError(
             "Mutation of the DatasetView is not allowed, please use `.__setitem__` on the wrapping DataTree node, "
@@ -290,6 +291,7 @@ class DatasetView(Dataset):
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
+    @override
     def update(self, other) -> NoReturn:
         raise AttributeError(
             "Mutation of the DatasetView is not allowed, please use `.update` on the wrapping DataTree node, "
@@ -297,9 +299,11 @@ class DatasetView(Dataset):
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
+    @override
     def set_close(self, close: Callable[[], None] | None) -> None:
         raise AttributeError("cannot modify a DatasetView()")
 
+    @override
     def close(self) -> None:
         raise AttributeError(
             "cannot close a DatasetView(). Close the associated DataTree node instead"
@@ -317,12 +321,14 @@ class DatasetView(Dataset):
     @overload
     def __getitem__(self, key: Any) -> Dataset: ...
 
+    @override
     def __getitem__(self, key) -> DataArray | Dataset:
         # TODO call the `_get_item` method of DataTree to allow path-like access to contents of other nodes
         # For now just call Dataset.__getitem__
         return Dataset.__getitem__(self, key)
 
     @classmethod
+    @override
     def _construct_direct(  # type: ignore[override]
         cls,
         variables: dict[Any, Variable],
@@ -351,6 +357,7 @@ class DatasetView(Dataset):
         obj._encoding = encoding
         return obj
 
+    @override
     def _replace(  # type: ignore[override]
         self,
         variables: dict[Hashable, Variable] | None = None,
@@ -380,6 +387,7 @@ class DatasetView(Dataset):
             inplace=inplace,
         )
 
+    @override
     def map(  # type: ignore[override]
         self,
         func: Callable,
@@ -445,7 +453,7 @@ class DatasetView(Dataset):
         return Dataset(variables, attrs=attrs)
 
 
-FromDictDataValue: TypeAlias = "CoercibleValue | Dataset | DataTree | None"
+type FromDictDataValue = CoercibleValue | Dataset | DataTree | None
 
 
 @dataclass
@@ -560,6 +568,7 @@ class DataTree(
         self._attrs = dataset._attrs
         self._close = dataset._close
 
+    @override
     def _pre_attach(self: DataTree, parent: DataTree, name: str) -> None:
         super()._pre_attach(parent, name)
         if name in parent.dataset.variables:
@@ -589,6 +598,28 @@ class DataTree(
         )
 
     @property
+    def _coord_variables_all(self) -> ChainMap[Hashable, Variable]:
+        return ChainMap(
+            self._node_coord_variables,
+            *(p._node_coord_variables for p in self.parents),
+        )
+
+    def _resolve_inherit(
+        self, inherit: bool | Literal["all_coords", "indexes"]
+    ) -> tuple[Mapping[Hashable, Variable], dict[Hashable, Index]]:
+        """Resolve the inherit parameter to (coord_vars, indexes)."""
+        if inherit is False:
+            return self._node_coord_variables, dict(self._node_indexes)
+        if inherit is True or inherit == "indexes":
+            return self._coord_variables, dict(self._indexes)
+        if inherit == "all_coords":
+            return self._coord_variables_all, dict(self._indexes)
+        raise ValueError(
+            f"Invalid value for inherit: {inherit!r}. "
+            "Expected True, False, 'indexes', or 'all'."
+        )
+
+    @property
     def _dims(self) -> ChainMap[Hashable, int]:
         return ChainMap(self._node_dims, *(p._node_dims for p in self.parents))
 
@@ -596,8 +627,12 @@ class DataTree(
     def _indexes(self) -> ChainMap[Hashable, Index]:
         return ChainMap(self._node_indexes, *(p._node_indexes for p in self.parents))
 
-    def _to_dataset_view(self, rebuild_dims: bool, inherit: bool) -> DatasetView:
-        coord_vars = self._coord_variables if inherit else self._node_coord_variables
+    def _to_dataset_view(
+        self,
+        rebuild_dims: bool,
+        inherit: bool | Literal["all_coords", "indexes"] = True,
+    ) -> DatasetView:
+        coord_vars, indexes = self._resolve_inherit(inherit)
         variables = dict(self._data_variables)
         variables |= coord_vars
         if rebuild_dims:
@@ -636,10 +671,10 @@ class DataTree(
             dims = dict(self._node_dims)
         return DatasetView._constructor(
             variables=variables,
-            coord_names=set(self._coord_variables),
+            coord_names=set(coord_vars),
             dims=dims,
             attrs=self._attrs,
-            indexes=dict(self._indexes if inherit else self._node_indexes),
+            indexes=indexes,
             encoding=self._encoding,
             close=None,
         )
@@ -669,30 +704,39 @@ class DataTree(
     # xarray-contrib/datatree
     ds = dataset
 
-    def to_dataset(self, inherit: bool = True) -> Dataset:
+    def to_dataset(
+        self, inherit: bool | Literal["all_coords", "indexes"] = True
+    ) -> Dataset:
         """
         Return the data in this node as a new xarray.Dataset object.
 
         Parameters
         ----------
-        inherit : bool, optional
-            If False, only include coordinates and indexes defined at the level
-            of this DataTree node, excluding any inherited coordinates and indexes.
+        inherit : bool or {"all_coords", "indexes"}, default True
+            Controls which coordinates are inherited from parent nodes.
+
+            - True or "indexes": inherit only indexed coordinates (default).
+            - "all_coords": inherit all coordinates, including non-index coordinates.
+            - False: only include coordinates defined at this node.
 
         See Also
         --------
         DataTree.dataset
         """
-        coord_vars = self._coord_variables if inherit else self._node_coord_variables
+        coord_vars, indexes = self._resolve_inherit(inherit)
         variables = dict(self._data_variables)
         variables |= coord_vars
-        dims = calculate_dimensions(variables) if inherit else dict(self._node_dims)
+        dims = (
+            dict(self._node_dims)
+            if inherit is False
+            else calculate_dimensions(variables)
+        )
         return Dataset._construct_direct(
             variables,
             set(coord_vars),
             dims,
             None if self._attrs is None else dict(self._attrs),
-            dict(self._indexes if inherit else self._node_indexes),
+            indexes,
             None if self._encoding is None else dict(self._encoding),
             None,
         )
@@ -776,12 +820,14 @@ class DataTree(
         """
         return self.dims
 
+    @override
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for attribute-style access"""
         yield from self._item_sources
         yield self.attrs
 
+    @override
     @property
     def _item_sources(self) -> Iterable[Mapping[Any, Any]]:
         """Places to look-up items for key-completion"""
@@ -794,6 +840,7 @@ class DataTree(
         # immediate child nodes
         yield self.children
 
+    @override
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
         See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
@@ -845,9 +892,11 @@ class DataTree(
             "invoking the `to_array()` method."
         )
 
+    @override
     def __repr__(self) -> str:  # type: ignore[override]
         return datatree_repr(self)
 
+    @override
     def __str__(self) -> str:
         return datatree_repr(self)
 
@@ -909,6 +958,7 @@ class DataTree(
 
         self.children = children
 
+    @override
     def _copy_node(
         self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
     ) -> Self:
@@ -920,6 +970,7 @@ class DataTree(
         new_node._set_node_data(data)
         return new_node
 
+    @override
     def get(  # type: ignore[override]
         self: DataTree, key: str, default: DataTree | DataArray | None = None
     ) -> DataTree | DataArray | None:
@@ -978,6 +1029,7 @@ class DataTree(
         else:
             raise ValueError(f"Invalid format for key: {key}")
 
+    @override
     def _set(self, key: str, val: DataTree | CoercibleValue) -> None:
         """
         Set the child node or variable with the specified key to value.
@@ -1022,6 +1074,7 @@ class DataTree(
         else:
             raise ValueError("Invalid format for key")
 
+    @override
     def __delitem__(self, key: str) -> None:
         """Remove a variable or child node from this datatree node."""
         if key in self.children:
@@ -1237,7 +1290,7 @@ class DataTree(
         -------
         DataTree
 
-        See also
+        See Also
         --------
         Dataset
 
@@ -1428,7 +1481,7 @@ class DataTree(
         -------
         dict[str, Dataset]
 
-        See also
+        See Also
         --------
         DataTree.subtree_with_keys
         """
@@ -1695,8 +1748,9 @@ class DataTree(
         """
         non_empty_cond: Callable[[DataTree], bool]
         if drop_size_zero_vars:
-            non_empty_cond = lambda node: len(node.data_vars) > 0 and any(
-                var.size > 0 for var in node.data_vars.values()
+            non_empty_cond = lambda node: (
+                len(node.data_vars) > 0
+                and any(var.size > 0 for var in node.data_vars.values())
             )
         else:
             non_empty_cond = lambda node: len(node.data_vars) > 0
@@ -1775,7 +1829,7 @@ class DataTree(
 
     def map_over_datasets(
         self,
-        func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+        func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
@@ -1805,7 +1859,7 @@ class DataTree(
         subtrees : DataTree, tuple of DataTrees
             One or more subtrees containing results from applying ``func`` to the data at each node.
 
-        See also
+        See Also
         --------
         map_over_datasets
         """
@@ -1902,10 +1956,12 @@ class DataTree(
         """Return all groups in the tree, given as a tuple of path-like strings."""
         return tuple(node.path for node in self.subtree)
 
+    @override
     def _unary_op(self, f, *args, **kwargs) -> DataTree:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
         return self.map_over_datasets(functools.partial(f, **kwargs), *args)
 
+    @override
     def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
         from xarray.core.groupby import GroupBy
 
@@ -1934,6 +1990,7 @@ class DataTree(
 
     # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
     # related to https://github.com/python/mypy/issues/9319?
+    @override
     def __eq__(self, other: DtCompatible) -> Self:  # type: ignore[override]
         return super().__eq__(other)
 
@@ -1998,7 +2055,7 @@ class DataTree(
         write_inherited_coords: bool = False,
         compute: bool = True,
         **kwargs,
-    ) -> None | memoryview | Delayed:
+    ) -> memoryview | Delayed | None:
         """
         Write datatree contents to a netCDF file.
 
@@ -2052,8 +2109,8 @@ class DataTree(
             * ``dask.delayed.Delayed`` if compute is False
             * ``None`` otherwise
 
-        Note
-        ----
+        Notes
+        -----
             Due to file format specifications the on-disk root group name
             is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
@@ -2121,10 +2178,20 @@ class DataTree(
         store : zarr.storage.StoreLike
             Store or path to directory in file system
         mode : {{"w", "w-", "a", "r+", None}, default: "w-"
-            Persistence mode: “w” means create (overwrite if exists); “w-” means create (fail if exists);
-            “a” means override existing variables (create if does not exist); “r+” means modify existing
-            array values only (raise an error if any metadata or shapes would change). The default mode
-            is “w-”.
+            Persistence mode:
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
+            The default mode is “w-”.
+
+            .. note::
+                When modifying an existing Zarr array that is lazily opened, the "w"
+                behavior can be surprising since the underlying file that is being
+                lazily read from might get deleted before the data is computed.
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
@@ -2147,8 +2214,8 @@ class DataTree(
         kwargs :
             Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
 
-        Note
-        ----
+        Notes
+        -----
             Due to file format specifications the on-disk root group name
             is always ``"/"`` overriding any given ``DataTree`` root node name.
         """
@@ -2172,6 +2239,7 @@ class DataTree(
             all_dims.update(node._node_dims)
         return all_dims
 
+    @override
     def reduce(
         self,
         func: Callable,
@@ -2187,14 +2255,21 @@ class DataTree(
         result = {}
         for path, node in self.subtree_with_keys:
             reduce_dims = [d for d in node._node_dims if d in dims]
-            node_result = node.dataset.reduce(
-                func,
-                reduce_dims,
-                keep_attrs=keep_attrs,
-                keepdims=keepdims,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
+
+            # Prefer Dataset.func(...) over Dataset.reduce(func, ...),
+            # because Dataset.func(...) may do further func-specific processing:
+            f = getattr(node.dataset, func.__name__, None)
+            if f:
+                node_result = f(reduce_dims, keep_attrs=keep_attrs, **kwargs)
+            else:
+                node_result = node.dataset.reduce(
+                    func,
+                    reduce_dims,
+                    keep_attrs=keep_attrs,
+                    keepdims=keepdims,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
             result[path] = node_result
         return type(self).from_dict(result, name=self.name)
 
@@ -2252,7 +2327,7 @@ class DataTree(
         indexers : dict, optional
             A dict with keys matching dimensions and values given
             by integers, slice objects or arrays.
-            indexer can be a integer, slice, array-like or DataArray.
+            indexer can be an integer, slice, array-like or DataArray.
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.

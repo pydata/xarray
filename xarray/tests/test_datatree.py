@@ -122,6 +122,15 @@ class TestNames:
         mary = DataTree(children={"Sue": sue})
         assert mary.children["Sue"].name == "Sue"
 
+    def test_child_names_cannot_contain_slashes(self) -> None:
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            DataTree(children={"folder/data": DataTree()})
+
+        tree = DataTree(children={"a": DataTree()})
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            tree.children = {"folder/data": DataTree()}
+        assert list(tree.children) == ["a"]
+
     def test_dataset_containing_slashes(self) -> None:
         xda: xr.DataArray = xr.DataArray(
             [[1, 2]],
@@ -242,6 +251,28 @@ class TestToDataset:
         sub_and_base = xr.Dataset(coords={"a": [1], "c": [3]})  # no "b"
         assert_identical(tree.to_dataset(inherit=True), base)
         assert_identical(subtree.to_dataset(inherit=True), sub_and_base)
+
+    def test_to_dataset_inherit_all(self) -> None:
+        base = xr.Dataset(coords={"a": [1], "b": 2})
+        sub = xr.Dataset(coords={"c": [3]})
+        tree = DataTree.from_dict({"/": base, "/sub": sub})
+        subtree = typing.cast(DataTree, tree["sub"])
+
+        expected = xr.Dataset(coords={"a": [1], "b": 2, "c": [3]})
+        assert_identical(subtree.to_dataset(inherit="all_coords"), expected)
+        assert_identical(tree.to_dataset(inherit="all_coords"), base)
+
+        mid = xr.Dataset(coords={"c": 3.0})
+        leaf = xr.Dataset(coords={"d": [4]})
+        deep = DataTree.from_dict({"/": base, "/mid": mid, "/mid/leaf": leaf})
+        leaf_node = typing.cast(DataTree, deep["/mid/leaf"])
+        result = leaf_node.to_dataset(inherit="all_coords")
+        assert set(result.coords) == {"a", "b", "c", "d"}
+
+    def test_to_dataset_inherit_invalid(self) -> None:
+        tree = DataTree()
+        with pytest.raises(ValueError, match="Invalid value for inherit"):
+            tree.to_dataset(inherit="invalid")  # type: ignore[arg-type]
 
 
 class TestVariablesChildrenNameCollisions:
@@ -644,8 +675,8 @@ class TestCoords:
             """\
         Coordinates:
           * x        (x) int64 16B -1 -2
-          * y        (y) int64 24B 0 1 2
             a        (x) int64 16B 4 5
+          * y        (y) int64 24B 0 1 2
             b        int64 8B -10"""
         )
         actual = repr(coords)
@@ -1309,7 +1340,7 @@ class TestRepr:
         tree_dict = {}
         for f in range(number_of_files):
             for g in range(number_of_groups):
-                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": f * g})
+                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": np.int64(f * g)})
 
         tree = DataTree.from_dict(tree_dict)
         with xr.set_options(display_max_children=3):
@@ -1422,8 +1453,8 @@ class TestRepr:
         stations = xr.DataArray(
             data=np.array(list("abcdef"), dtype="<U1"), dims="station"
         )
-        lon = [-100, -80, -60]
-        lat = [10, 20, 30]
+        lon = np.array([-100, -80, -60], dtype=np.int64)
+        lat = np.array([10, 20, 30], dtype=np.int64)
         # Set up fake data
         wind_speed = xr.DataArray(np.ones((2, 6)) * 2, dims=("time", "station"))
         pressure = xr.DataArray(np.ones((2, 6)) * 3, dims=("time", "station"))
@@ -2423,6 +2454,46 @@ class TestOps:
         expected["/foo/bar"].data = np.array([8, 10, 12])
         assert_identical(actual, expected)
 
+    def test_binary_op_compat_setting(self) -> None:
+        # Setting up a clash of non-index coordinate 'foo':
+        a = DataTree(
+            xr.Dataset(
+                data_vars={"var": (["x"], [0, 0, 0])},
+                coords={
+                    "x": [1, 2, 3],
+                    "foo": (["x"], [1.0, 2.0, np.nan]),
+                },
+            )
+        )
+        b = DataTree(
+            xr.Dataset(
+                data_vars={"var": (["x"], [0, 0, 0])},
+                coords={
+                    "x": [1, 2, 3],
+                    "foo": (["x"], [np.nan, 2.0, 3.0]),
+                },
+            )
+        )
+
+        with xr.set_options(arithmetic_compat="minimal"):
+            expected = DataTree(a.dataset.drop_vars("foo"))
+            assert_equal(a + b, expected)
+
+        with xr.set_options(arithmetic_compat="override"):
+            assert_equal(a + b, a)
+            assert_equal(b + a, b)
+
+        with xr.set_options(arithmetic_compat="no_conflicts"):
+            expected = DataTree(a.dataset.assign_coords(foo=(["x"], [1.0, 2.0, 3.0])))
+            assert_equal(a + b, expected)
+            assert_equal(b + a, expected)
+
+        with xr.set_options(arithmetic_compat="equals"):
+            with pytest.raises(xr.MergeError):
+                a + b
+            with pytest.raises(xr.MergeError):
+                b + a
+
     def test_binary_op_commutativity_with_dataset(self) -> None:
         # regression test for #9365
 
@@ -2658,13 +2729,21 @@ class TestDask:
         )
         original_chunksizes = tree.chunksizes
         original_hlg_depths = {
-            node.path: len(node.dataset.__dask_graph__().layers)
+            node.path: (
+                len(graph.layers)
+                if hasattr((graph := node.dataset.__dask_graph__()), "layers")
+                else None
+            )
             for node in tree.subtree
         }
 
         actual = tree.persist()
         actual_hlg_depths = {
-            node.path: len(node.dataset.__dask_graph__().layers)
+            node.path: (
+                len(graph.layers)
+                if hasattr((graph := node.dataset.__dask_graph__()), "layers")
+                else None
+            )
             for node in actual.subtree
         }
 
@@ -2674,12 +2753,14 @@ class TestDask:
         assert tree.chunksizes == original_chunksizes, (
             "original chunksizes were modified"
         )
-        assert all(d == 1 for d in actual_hlg_depths.values()), (
-            "unexpected dask graph depth"
-        )
-        assert all(d == 2 for d in original_hlg_depths.values()), (
-            "original dask graph was modified"
-        )
+        if all(d is not None for d in actual_hlg_depths.values()):
+            assert all(d == 1 for d in actual_hlg_depths.values()), (
+                "unexpected dask graph depth"
+            )
+        if all(d is not None for d in original_hlg_depths.values()):
+            assert all(d == 2 for d in original_hlg_depths.values()), (
+                "original dask graph was modified"
+            )
 
     def test_chunk(self):
         ds1 = xr.Dataset({"a": ("x", np.arange(10))})

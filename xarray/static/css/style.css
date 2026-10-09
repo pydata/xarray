@@ -1,37 +1,67 @@
 /* CSS stylesheet for displaying xarray objects in notebooks */
 
 :root {
+  /* VS Code: tint the rows with a bit of the text color, which works for light
+     and dark themes. Invalid, and so ignored below, outside of VS Code. */
+  --xr-vscode-row-even: color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 3%,
+    var(--vscode-editor-background)
+  );
+  --xr-vscode-row-odd: color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 7%,
+    var(--vscode-editor-background)
+  );
   --xr-font-color0: var(
-    --jp-content-font-color0,
-    var(--pst-color-text-base rgba(0, 0, 0, 1))
+    --vscode-editor-foreground,
+    var(--jp-content-font-color0, var(--pst-color-text-base, rgba(0, 0, 0, 1)))
   );
   --xr-font-color2: var(
-    --jp-content-font-color2,
-    var(--pst-color-text-base, rgba(0, 0, 0, 0.54))
+    --vscode-descriptionForeground,
+    var(
+      --jp-content-font-color2,
+      var(--pst-color-text-base, rgba(0, 0, 0, 0.54))
+    )
   );
   --xr-font-color3: var(
-    --jp-content-font-color3,
-    var(--pst-color-text-base, rgba(0, 0, 0, 0.38))
+    --vscode-disabledForeground,
+    var(
+      --jp-content-font-color3,
+      var(--pst-color-text-base, rgba(0, 0, 0, 0.38))
+    )
   );
   --xr-border-color: var(
-    --jp-border-color2,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 10))
+    --vscode-panel-border,
+    var(
+      --jp-border-color2,
+      hsl(from var(--pst-color-on-background, white) h s calc(l - 10))
+    )
   );
   --xr-disabled-color: var(
-    --jp-layout-color3,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 40))
+    --vscode-disabledForeground,
+    var(
+      --jp-layout-color3,
+      hsl(from var(--pst-color-on-background, white) h s calc(l - 40))
+    )
   );
   --xr-background-color: var(
-    --jp-layout-color0,
-    var(--pst-color-on-background, white)
+    --vscode-editor-background,
+    var(--jp-layout-color0, var(--pst-color-on-background, white))
   );
   --xr-background-color-row-even: var(
-    --jp-layout-color1,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
+    --xr-vscode-row-even,
+    var(
+      --jp-layout-color1,
+      hsl(from var(--pst-color-on-background, white) h s calc(l - 5))
+    )
   );
   --xr-background-color-row-odd: var(
-    --jp-layout-color2,
-    hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
+    --xr-vscode-row-odd,
+    var(
+      --jp-layout-color2,
+      hsl(from var(--pst-color-on-background, white) h s calc(l - 15))
+    )
   );
 }
 
@@ -40,36 +70,57 @@ html[data-theme="dark"],
 body[data-theme="dark"],
 body.vscode-dark {
   --xr-font-color0: var(
-    --jp-content-font-color0,
-    var(--pst-color-text-base, rgba(255, 255, 255, 1))
+    --vscode-editor-foreground,
+    var(
+      --jp-content-font-color0,
+      var(--pst-color-text-base, rgba(255, 255, 255, 1))
+    )
   );
   --xr-font-color2: var(
-    --jp-content-font-color2,
-    var(--pst-color-text-base, rgba(255, 255, 255, 0.54))
+    --vscode-descriptionForeground,
+    var(
+      --jp-content-font-color2,
+      var(--pst-color-text-base, rgba(255, 255, 255, 0.54))
+    )
   );
   --xr-font-color3: var(
-    --jp-content-font-color3,
-    var(--pst-color-text-base, rgba(255, 255, 255, 0.38))
+    --vscode-disabledForeground,
+    var(
+      --jp-content-font-color3,
+      var(--pst-color-text-base, rgba(255, 255, 255, 0.38))
+    )
   );
   --xr-border-color: var(
-    --jp-border-color2,
-    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 10))
+    --vscode-panel-border,
+    var(
+      --jp-border-color2,
+      hsl(from var(--pst-color-on-background, #111111) h s calc(l + 10))
+    )
   );
   --xr-disabled-color: var(
-    --jp-layout-color3,
-    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 40))
+    --vscode-disabledForeground,
+    var(
+      --jp-layout-color3,
+      hsl(from var(--pst-color-on-background, #111111) h s calc(l + 40))
+    )
   );
   --xr-background-color: var(
-    --jp-layout-color0,
-    var(--pst-color-on-background, #111111)
+    --vscode-editor-background,
+    var(--jp-layout-color0, var(--pst-color-on-background, #111111))
   );
   --xr-background-color-row-even: var(
-    --jp-layout-color1,
-    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 5))
+    --xr-vscode-row-even,
+    var(
+      --jp-layout-color1,
+      hsl(from var(--pst-color-on-background, #111111) h s calc(l + 5))
+    )
   );
   --xr-background-color-row-odd: var(
-    --jp-layout-color2,
-    hsl(from var(--pst-color-on-background, #111111) h s calc(l + 15))
+    --xr-vscode-row-odd,
+    var(
+      --jp-layout-color2,
+      hsl(from var(--pst-color-on-background, #111111) h s calc(l + 15))
+    )
   );
 }
 
@@ -78,6 +129,7 @@ body.vscode-dark {
   min-width: 300px;
   max-width: 700px;
   line-height: 1.6;
+  padding-bottom: 4px;
 }
 
 .xr-text-repr-fallback {
@@ -88,8 +140,11 @@ body.vscode-dark {
 .xr-header {
   padding-top: 6px;
   padding-bottom: 6px;
-  margin-bottom: 4px;
+}
+
+.xr-header {
   border-bottom: solid 1px var(--xr-border-color);
+  margin-bottom: 4px;
 }
 
 .xr-header > div,
@@ -100,20 +155,15 @@ body.vscode-dark {
 }
 
 .xr-obj-type,
-.xr-obj-name,
-.xr-group-name {
+.xr-obj-name {
   margin-left: 2px;
   margin-right: 10px;
 }
 
-.xr-group-name::before {
-  content: "📁";
-  padding-right: 0.3em;
-}
-
-.xr-group-name,
-.xr-obj-type {
+.xr-obj-type,
+.xr-group-box-contents > label {
   color: var(--xr-font-color2);
+  display: block;
 }
 
 .xr-sections {
@@ -128,28 +178,39 @@ body.vscode-dark {
   display: contents;
 }
 
-.xr-section-item input {
-  display: inline-block;
+.xr-section-item > input,
+.xr-group-box-contents > input,
+.xr-array-wrap > input {
+  display: block;
   opacity: 0;
   height: 0;
   margin: 0;
 }
 
-.xr-section-item input + label {
+.xr-section-item > input + label,
+.xr-var-item > input + label {
   color: var(--xr-disabled-color);
-  border: 2px solid transparent !important;
 }
 
-.xr-section-item input:enabled + label {
+.xr-section-item > input:enabled + label,
+.xr-var-item > input:enabled + label,
+.xr-array-wrap > input:enabled + label,
+.xr-group-box-contents > input:enabled + label {
   cursor: pointer;
   color: var(--xr-font-color2);
 }
 
-.xr-section-item input:focus + label {
-  border: 2px solid var(--xr-font-color0) !important;
+.xr-section-item > input:focus-visible + label,
+.xr-var-item > input:focus-visible + label,
+.xr-array-wrap > input:focus-visible + label,
+.xr-group-box-contents > input:focus-visible + label {
+  outline: auto;
 }
 
-.xr-section-item input:enabled + label:hover {
+.xr-section-item > input:enabled + label:hover,
+.xr-var-item > input:enabled + label:hover,
+.xr-array-wrap > input:enabled + label:hover,
+.xr-group-box-contents > input:enabled + label:hover {
   color: var(--xr-font-color0);
 }
 
@@ -157,11 +218,25 @@ body.vscode-dark {
   grid-column: 1;
   color: var(--xr-font-color2);
   font-weight: 500;
+  white-space: nowrap;
+}
+
+.xr-section-summary > em {
+  font-weight: normal;
+}
+
+.xr-span-grid {
+  grid-column-end: -1;
 }
 
 .xr-section-summary > span {
   display: inline-block;
-  padding-left: 0.5em;
+  padding-left: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label > span {
+  display: inline-block;
+  padding-left: 0.6em;
 }
 
 .xr-section-summary-in:disabled + label {
@@ -189,7 +264,8 @@ body.vscode-dark {
 }
 
 .xr-section-summary,
-.xr-section-inline-details {
+.xr-section-inline-details,
+.xr-group-box-contents > label {
   padding-top: 4px;
 }
 
@@ -197,21 +273,44 @@ body.vscode-dark {
   grid-column: 2 / -1;
 }
 
+/* leave the icon columns for the toggles of all attributes and data */
+.xr-section-inline-details.xr-has-toggle-all {
+  grid-column: 2 / 5;
+}
+
+.xr-all-attrs-in + label,
+.xr-all-data-in + label {
+  padding: 4px 1px 0;
+}
+
+.xr-section-summary-in:not(:checked) ~ input + label {
+  visibility: hidden;
+}
+
 .xr-section-details {
-  display: none;
   grid-column: 1 / -1;
   margin-top: 4px;
   margin-bottom: 5px;
+}
+
+.xr-section-summary-in ~ .xr-section-details {
+  display: none;
 }
 
 .xr-section-summary-in:checked ~ .xr-section-details {
   display: contents;
 }
 
+.xr-children {
+  display: inline-grid;
+  grid-template-columns: 100%;
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
 .xr-group-box {
   display: inline-grid;
-  grid-template-columns: 0px 20px auto;
-  width: 100%;
+  grid-template-columns: 0px 30px auto;
 }
 
 .xr-group-box-vline {
@@ -225,13 +324,43 @@ body.vscode-dark {
   grid-column-start: 2;
   grid-row-start: 1;
   height: 1em;
-  width: 20px;
+  width: 26px;
   border-bottom: 0.2em solid;
   border-color: var(--xr-border-color);
 }
 
 .xr-group-box-contents {
   grid-column-start: 3;
+  padding-bottom: 4px;
+}
+
+.xr-group-box-contents > label::before {
+  content: "📂";
+  padding-right: 0.3em;
+}
+
+.xr-group-box-contents > input:checked + label::before {
+  content: "📁";
+}
+
+.xr-group-box-contents > input:checked + label {
+  padding-bottom: 0px;
+}
+
+.xr-group-box-contents > input:checked ~ .xr-sections {
+  display: none;
+}
+
+.xr-group-box-contents > input + label > span {
+  display: none;
+}
+
+.xr-group-box-ellipsis {
+  font-size: 1.4em;
+  font-weight: 900;
+  color: var(--xr-font-color2);
+  letter-spacing: 0.15em;
+  cursor: default;
 }
 
 .xr-array-wrap {
@@ -298,6 +427,15 @@ body.vscode-dark {
 .xr-var-list,
 .xr-var-item {
   display: contents;
+}
+
+/* row color, also used by hovered attribute names in the expanded attributes */
+.xr-var-item {
+  --xr-row-color: var(--xr-background-color-row-even);
+}
+
+.xr-var-list > li:nth-child(odd) {
+  --xr-row-color: var(--xr-background-color-row-odd);
 }
 
 .xr-var-item > div,
@@ -368,8 +506,8 @@ body.vscode-dark {
 .xr-index-data {
   display: none;
   border-top: 2px dotted var(--xr-background-color);
-  padding-bottom: 20px !important;
-  padding-top: 10px !important;
+  padding-bottom: 6px !important;
+  padding-top: 4px !important;
 }
 
 .xr-var-attrs-in + label,
@@ -384,6 +522,37 @@ body.vscode-dark {
   display: block;
 }
 
+/* the toggles of a section invert the shown attributes and data of all items */
+.xr-all-attrs-in:checked
+  ~ .xr-section-details
+  .xr-var-attrs-in:enabled:not(:checked)
+  ~ .xr-var-attrs,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-var-data-in:not(:checked)
+  ~ .xr-var-data,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-index-data-in:not(:checked)
+  ~ .xr-index-data {
+  display: block;
+}
+
+.xr-all-attrs-in:checked
+  ~ .xr-section-details
+  .xr-var-attrs-in:checked
+  ~ .xr-var-attrs,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-var-data-in:checked
+  ~ .xr-var-data,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-index-data-in:checked
+  ~ .xr-index-data {
+  display: none;
+}
+
 .xr-var-data > table {
   float: right;
 }
@@ -392,6 +561,11 @@ body.vscode-dark {
 .xr-index-data > pre,
 .xr-var-data > table > tbody > tr {
   background-color: transparent !important;
+}
+
+.xr-var-data > pre,
+.xr-index-data > pre {
+  margin: 0 !important;
 }
 
 .xr-var-name span,
@@ -416,6 +590,18 @@ dl.xr-attrs {
   grid-template-columns: 125px auto;
 }
 
+/* indent the attributes and data of a variable below its name, keeping the
+   attribute values aligned with the dimensions */
+.xr-var-attrs > dl.xr-attrs {
+  padding-left: 40px !important;
+  grid-template-columns: 110px auto;
+}
+
+.xr-var-data,
+.xr-index-data {
+  padding-left: 40px !important;
+}
+
 .xr-attrs dt,
 .xr-attrs dd {
   padding: 0;
@@ -428,11 +614,12 @@ dl.xr-attrs {
 .xr-attrs dt {
   font-weight: normal;
   grid-column: 1;
+  color: var(--xr-font-color2);
 }
 
 .xr-attrs dt:hover span {
   display: inline-block;
-  background: var(--xr-background-color);
+  background: var(--xr-row-color, var(--xr-background-color));
   padding-right: 10px;
 }
 
@@ -456,8 +643,62 @@ dl.xr-attrs {
 
 .xr-var-attrs-in:checked + label > .xr-icon-file-text2,
 .xr-var-data-in:checked + label > .xr-icon-database,
-.xr-index-data-in:checked + label > .xr-icon-database {
+.xr-index-data-in:checked + label > .xr-icon-database,
+.xr-all-attrs-in:checked + label > .xr-icon-file-text2,
+.xr-all-data-in:checked + label > .xr-icon-database,
+.xr-all-attrs-in:checked
+  ~ .xr-section-details
+  .xr-var-attrs-in:enabled:not(:checked)
+  + label
+  > .xr-icon-file-text2,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-var-data-in:not(:checked)
+  + label
+  > .xr-icon-database,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-index-data-in:not(:checked)
+  + label
+  > .xr-icon-database {
   color: var(--xr-font-color0);
   filter: drop-shadow(1px 1px 5px var(--xr-font-color2));
   stroke-width: 0.8px;
+}
+
+/* partial state of the toggles of a section, if single items are inverted */
+.xr-section-item:has(.xr-var-attrs-in:enabled:checked)
+  > .xr-all-attrs-in:checked
+  + label
+  > .xr-icon-file-text2,
+.xr-section-item:has(.xr-var-data-in:checked)
+  > .xr-all-data-in:checked
+  + label
+  > .xr-icon-database,
+.xr-section-item:has(.xr-index-data-in:checked)
+  > .xr-all-data-in:checked
+  + label
+  > .xr-icon-database {
+  filter: none;
+  stroke-width: 0;
+}
+
+.xr-all-attrs-in:checked
+  ~ .xr-section-details
+  .xr-var-attrs-in:checked
+  + label
+  > .xr-icon-file-text2,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-var-data-in:checked
+  + label
+  > .xr-icon-database,
+.xr-all-data-in:checked
+  ~ .xr-section-details
+  .xr-index-data-in:checked
+  + label
+  > .xr-icon-database {
+  color: inherit;
+  filter: none;
+  stroke-width: 0;
 }

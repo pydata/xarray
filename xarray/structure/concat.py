@@ -114,7 +114,7 @@ def concat(
         unchanged. If dimension is provided as a Variable, DataArray or Index, its name
         is used as the dimension to concatenate along and the values are added
         as a coordinate.
-    data_vars : {"minimal", "different", "all", None} or list of Hashable, optional
+    data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
             appears are included.
@@ -126,11 +126,11 @@ def concat(
           * "all": All data variables will be concatenated.
           * None: Means ``"all"`` if ``dim`` is not present in any of the ``objs``,
             and ``"minimal"`` if ``dim`` is present in any of ``objs``.
-          * list of dims: The listed data variables will be concatenated, in
+          * list of str: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
 
-        If objects are DataArrays, data_vars must be "all".
-    coords : {"minimal", "different", "all"} or list of Hashable, optional
+        If objects are DataArrays, data_vars must be "all" or None.
+    coords : {"minimal", "different", "all"} or list of str, default: "different"
         These coordinate variables will be concatenated together:
           * "minimal": Only coordinates in which the dimension already appears
             are included.
@@ -141,9 +141,10 @@ def concat(
             loaded.
           * "all": All coordinate variables will be concatenated, except
             those corresponding to other dimensions.
-          * list of Hashable: The listed coordinate variables will be concatenated,
+          * list of str: The listed coordinate variables will be concatenated,
             in addition to the "minimal" coordinates.
-    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, \
+             default: "equals"
         String indicating how to compare non-concatenated variables of the same name for
         potential conflicts. This is passed down to merge.
 
@@ -164,7 +165,7 @@ def concat(
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
         refer to its values.
-    join : {"outer", "inner", "left", "right", "exact"}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, default: "outer"
         String indicating how to combine differing indexes
         (excluding dim) in objects
 
@@ -201,7 +202,7 @@ def concat(
     -------
     concatenated : type of objs
 
-    See also
+    See Also
     --------
     merge
 
@@ -239,8 +240,8 @@ def concat(
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * y        (y) int64 24B 10 20 30
         x        (new_dim) <U1 8B 'a' 'b'
+      * y        (y) int64 24B 10 20 30
     Dimensions without coordinates: new_dim
 
     >>> xr.concat(
@@ -253,8 +254,8 @@ def concat(
            [3, 4, 5]])
     Coordinates:
       * new_dim  (new_dim) int64 16B -90 -100
-      * y        (y) int64 24B 10 20 30
         x        (new_dim) <U1 8B 'a' 'b'
+      * y        (y) int64 24B 10 20 30
 
     # Concatenate a scalar variable along a new dimension of the same name with and without creating a new index
 
@@ -745,10 +746,11 @@ def _dataset_concat(
                         yield PandasIndex(data, dim_name, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
+    # use np.cumulative_sum(concat_dim_lengths, include_initial=True) when we support numpy>=2
     file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
-    concat_index = np.arange(file_start_indexes[-1])
-    concat_index_size = concat_index.size
+    concat_index_size = file_start_indexes[-1]
     variable_index_mask = np.ones(concat_index_size, dtype=bool)
+    variable_reindexer = None
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
@@ -776,7 +778,6 @@ def _dataset_concat(
                     end = file_start_indexes[i + 1]
                     variable_index_mask[slice(start, end)] = False
 
-            variable_index = concat_index[variable_index_mask]
             vars = ensure_common_dims(variables, var_concat_dim_length)
 
             # Try to concatenate the indexes, concatenate the variables when no index
@@ -807,12 +808,22 @@ def _dataset_concat(
                     vars, dim_name, positions, combine_attrs=combine_attrs
                 )
                 # reindex if variable is not present in all datasets
-                if len(variable_index) < concat_index_size:
+                if not variable_index_mask.all():
+                    if variable_reindexer is None:
+                        # allocate only once
+                        variable_reindexer = np.empty(
+                            concat_index_size,
+                            # cannot use uint since we need -1 as a sentinel for reindexing
+                            dtype=np.min_scalar_type(-concat_index_size),
+                        )
+                    np.cumsum(variable_index_mask, out=variable_reindexer)
+                    # variable_index_mask is boolean, so the first element is 1.
+                    # offset by 1 to start at 0.
+                    variable_reindexer -= 1
+                    variable_reindexer[~variable_index_mask] = -1
                     combined_var = reindex_variables(
                         variables={name: combined_var},
-                        dim_pos_indexers={
-                            dim_name: pd.Index(variable_index).get_indexer(concat_index)
-                        },
+                        dim_pos_indexers={dim_name: variable_reindexer},
                         fill_value=fill_value,
                     )[name]
                 result_vars[name] = combined_var

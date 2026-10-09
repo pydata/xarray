@@ -15,28 +15,57 @@ concurrency:
 env:
   FORCE_COLOR: 3
 
+permissions: {}
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: |
       github.repository == 'pydata/xarray'
       && (github.event_name == 'push' || github.event_name == 'pull_request')
+      && !contains(github.event.pull_request.labels.*.name, 'skip-ci')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1
+          persist-credentials: false
+
+      - uses: xarray-contrib/ci-trigger@10cd2bfec3484946a4058a421ddf9cfad101e715 # v1.2.1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
-  test:
-    name: ${{ matrix.os }} py${{ matrix.python-version }} ${{ matrix.env }}
-    runs-on: ${{ matrix.os }}
+
+  cache-pixi-lock:
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      cache-key: ${{ steps.pixi-lock.outputs.cache-key }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: xarray-contrib/pixi-lock/create-and-cache@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
+        id: pixi-lock
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pixi-lock
+          path: pixi.lock
+
+  test:
+    name: "${{ matrix.os }} | ${{ matrix.pixi-env }}${{ matrix.pytest-addopts && format(' ({0})', matrix.pytest-addopts) || '' }}"
+    runs-on: ${{ matrix.os }}
+    needs: cache-pixi-lock
+    # The slowest jobs take ~20 minutes; a hung test should not burn the 6h default.
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash -l {0}
@@ -45,139 +74,138 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.11", "3.13"]
-        env: [""]
+        pixi-env: ["test-py312", "test-py314"]
+        pytest-addopts: [""]
         include:
           # Minimum python version:
-          - env: "bare-minimum"
-            python-version: "3.11"
+          - pixi-env: "test-py312-bare-minimum"
             os: ubuntu-latest
-          - env: "bare-min-and-scipy"
-            python-version: "3.11"
+          - pixi-env: "test-py312-bare-min-and-scipy"
             os: ubuntu-latest
-          - env: "min-all-deps"
-            python-version: "3.11"
+          - pixi-env: "test-py312-min-versions"
             os: ubuntu-latest
           # Latest python version:
-          - env: "all-but-numba"
-            python-version: "3.13"
+          - pixi-env: "test-py314-no-numba"
             os: ubuntu-latest
-          - env: "all-but-dask"
-            python-version: "3.12"
+          - pixi-env: "test-py314-no-dask"
             os: ubuntu-latest
-          - env: "flaky"
-            python-version: "3.13"
+          - pixi-env: "test-py314"
+            pytest-addopts: "flaky"
             os: ubuntu-latest
           # The mypy tests must be executed using only 1 process in order to guarantee
           # predictable mypy output messages for comparison to expectations.
-          - env: "mypy"
-            python-version: "3.11"
+          - pixi-env: "test-py312-with-typing"
+            pytest-addopts: "mypy"
             numprocesses: 1
             os: ubuntu-latest
-          - env: "mypy"
-            python-version: "3.13"
+          - pixi-env: "test-py314-with-typing"
             numprocesses: 1
             os: ubuntu-latest
+
+    environment:
+      name: codecov
+      deployment: false
+
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
+          persist-credentials: false
+
+      - name: Restore cached pixi lockfile
+        uses: xarray-contrib/pixi-lock/restore@1fab4c17af8243f6ca1321bc941cf2325f46c05d # v0.1.1
+        with:
+          cache-key: ${{ needs.cache-pixi-lock.outputs.cache-key }}
+
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: ${{ needs.cache-pixi-lock.outputs.pixi-version }}
+          cache: true
+          environments: ${{ matrix.pixi-env }}
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+
       - name: Set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=$(pixi run -e ${{ matrix.pixi-env }} -- python --version | cut -d' ' -f2 | cut -d. -f1,2)" >> $GITHUB_ENV
 
-          if [[ ${{ matrix.os }} == windows* ]] ;
+          if [[ "${{ matrix.pytest-addopts }}" != "" ]] ;
           then
-            if [[ ${{ matrix.python-version }} != "3.14" ]]; then
-              echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
-            else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-windows-3.14.yml" >> $GITHUB_ENV
-            fi
-          elif [[ "${{ matrix.env }}" != "" ]] ;
-          then
-            if [[ "${{ matrix.env }}" == "flaky" ]] ;
+            if [[ "${{ matrix.pytest-addopts }}" == "flaky" ]] ;
             then
-              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests -W default" >> $GITHUB_ENV
-            elif [[ "${{ matrix.env }}" == "mypy" ]] ;
+              # The thread timeout method also kills tests stuck in C code or deadlocked
+              # threads, which the default signal method cannot interrupt.
+              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests --timeout-method=thread -W default" >> $GITHUB_ENV
+            elif [[ "${{ matrix.pytest-addopts }}" == "mypy" ]] ;
             then
-              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
-            else
-              echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
             fi
-            if [[ "${{ matrix.env }}" == "min-all-deps" ]] ;
+            if [[ "${{ matrix.pixi-env }}" == "min-all-deps" ]] ;
             then
               # Don't raise on warnings
               echo "PYTEST_ADDOPTS=-W default" >> $GITHUB_ENV
             fi
-          else
-            if [[ ${{ matrix.python-version }} != "3.14" ]]; then
-              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-            else
-              echo "CONDA_ENV_FILE=ci/requirements/environment-3.14.yml" >> $GITHUB_ENV
-            fi
           fi
-
-          echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
-
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: ${{ env.CONDA_ENV_FILE }}
-          environment-name: xarray-tests
-          cache-environment: true
-          cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-          create-args: >-
-            python=${{matrix.python-version}}
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
       - name: Install error reporter
-        if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.python-version }} == '3.12'
+        if: |
+          matrix.os == 'ubuntu-latest' && matrix.pixi-env == 'test'
         run: |
-          python -m pip install pytest-github-actions-annotate-failures
-
-      - name: Install xarray
-        run: |
-          python -m pip install --no-deps -e .
+          pixi add --pypi pytest-github-actions-annotate-failures
 
       - name: Version info
         run: |
-          python xarray/util/print_versions.py
+          pixi run -e ${{ matrix.pixi-env }} -- python xarray/util/print_versions.py
 
       - name: Import xarray
         run: |
-          python -c "import xarray"
+          pixi run -e ${{ matrix.pixi-env }} -- python -c "import xarray"
 
+      # caches are immutable, so use a unique key per job and restore the latest cache
+      # https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
       - name: Restore cached hypothesis directory
-        uses: actions/cache@v4
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .hypothesis/
-          key: cache-hypothesis
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ strategy.job-index }}
+          restore-keys: |
+            cache-hypothesis-${{ runner.os }}-
+            cache-hypothesis-
           enableCrossOsArchive: true
-          save-always: true
 
       - name: Run tests
-        run: python -m pytest -n ${{ matrix.numprocesses || 4 }}
-          --timeout 180
-          --cov=xarray
-          --cov-report=xml
-          --junitxml=pytest.xml
+        id: tests
+        run: |
+          pixi run -e ${{ matrix.pixi-env }} -- python -m pytest -n ${{ matrix.numprocesses || 4 }} \
+            --timeout 180 \
+            --cov=xarray \
+            --cov-report=xml \
+            --junitxml=pytest.xml
+
+      # explicitly save the cache so it gets updated, also do this even if the tests fail
+      - name: Save cached hypothesis directory
+        if: always() && steps.tests.outcome != 'skipped'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .hypothesis/
+          key: cache-hypothesis-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ strategy.job-index }}
+          enableCrossOsArchive: true
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Test results for ${{ runner.os }}-${{ matrix.python-version }} ${{ matrix.env }}
+          name: Test results for OS ${{ runner.os }} pixi-env ${{ matrix.pixi-env }} pytest-addopts ${{ matrix.pytest-addopts }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v5.5.1
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: unittests
           env_vars: RUNNER_OS,PYTHON_VERSION
           name: codecov-umbrella
@@ -185,11 +213,11 @@ jobs:
 
   event_file:
     name: "Event File"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: github.repository == 'pydata/xarray'
     steps:
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Event File
           path: ${{ github.event_path }}

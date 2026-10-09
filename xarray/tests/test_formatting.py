@@ -10,7 +10,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 from xarray.core.indexes import Index
-from xarray.tests import requires_cftime, requires_dask, requires_netCDF4
+from xarray.tests import has_pandas_3, requires_cftime, requires_dask, requires_netCDF4
 
 
 class CustomIndex(Index):
@@ -297,6 +297,7 @@ class TestFormatting:
         )
 
         byteorder = "<" if sys.byteorder == "little" else ">"
+        str_dtype = "str" if has_pandas_3 else "object"
         expected = dedent(
             f"""\
         Left and right DataArray objects are not identical
@@ -315,6 +316,10 @@ class TestFormatting:
           * y        (y) int64 24B 1 2 3
         Coordinates only on the right object:
             label    (x) int64 16B 1 2
+        Indexes only on the left object:  ['y']
+        Differing indexes:
+        L   x                    Index(['a', 'b'], dtype='{str_dtype}', name='x')
+        R   x                    Index(['a', 'c'], dtype='{str_dtype}', name='x')
         Differing attributes:
         L   units: m
         R   units: kg
@@ -497,6 +502,7 @@ class TestFormatting:
         )
 
         byteorder = "<" if sys.byteorder == "little" else ">"
+        str_dtype = "str" if has_pandas_3 else "object"
         expected = dedent(
             f"""\
         Left and right Dataset objects are not identical
@@ -519,6 +525,10 @@ class TestFormatting:
         R   var1     (x) int64 16B 1 2
         Data variables only on the left object:
             var2     (x) int64 16B 3 4
+        Indexes only on the left object:  ['y']
+        Differing indexes:
+        L   x                    Index(['a', 'b'], dtype='{str_dtype}', name='x')
+        R   x                    Index(['a', 'c'], dtype='{str_dtype}', name='x')
         Differing attributes:
         L   title: mytitle
         R   title: newtitle
@@ -722,8 +732,10 @@ class TestFormatting:
         assert actual == expected
 
     def test_diff_datatree_repr_equals(self) -> None:
-        ds1 = xr.Dataset(data_vars={"data": ("y", [5, 2])})
-        ds2 = xr.Dataset(data_vars={"data": (("x", "y"), [[5, 2]])})
+        ds1 = xr.Dataset(data_vars={"data": ("y", np.array([5, 2], dtype=np.int64))})
+        ds2 = xr.Dataset(
+            data_vars={"data": (("x", "y"), np.array([[5, 2]], dtype=np.int64))}
+        )
         dt1 = xr.DataTree.from_dict({"node": ds1})
         dt2 = xr.DataTree.from_dict({"node": ds2})
 
@@ -1064,7 +1076,7 @@ def test_array_repr_dtypes():
     # Unsigned integer could be used as easy replacements
     # for tests where the data-type does not matter,
     # but the repr does, including the size
-    # (size of a int == size of an uint)
+    # (size of an int == size of a uint)
 
     # Signed integer dtypes
 
@@ -1215,24 +1227,26 @@ def test_repr_pandas_multi_index() -> None:
     coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
     ds = xr.Dataset(coords=coords)
 
+    obj_nbytes = 4 * np.dtype(object).itemsize
+
     actual = repr(ds.x)
-    expected = """
-<xarray.DataArray 'x' (x: 4)> Size: 32B
+    expected = f"""
+<xarray.DataArray 'x' (x: 4)> Size: {obj_nbytes}B
 [4 values with dtype=object]
 Coordinates:
-  * x        (x) object 32B MultiIndex
-  * foo      (x) object 32B 'a' 'a' 'b' 'b'
+  * x        (x) object {obj_nbytes}B MultiIndex
+  * foo      (x) object {obj_nbytes}B 'a' 'a' 'b' 'b'
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected
 
     actual = repr(ds.foo)
-    expected = """
-<xarray.DataArray 'foo' (x: 4)> Size: 32B
+    expected = f"""
+<xarray.DataArray 'foo' (x: 4)> Size: {obj_nbytes}B
 [4 values with dtype=object]
 Coordinates:
-  * x        (x) object 32B MultiIndex
-  * foo      (x) object 32B 'a' 'a' 'b' 'b'
+  * x        (x) object {obj_nbytes}B MultiIndex
+  * foo      (x) object {obj_nbytes}B 'a' 'a' 'b' 'b'
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected

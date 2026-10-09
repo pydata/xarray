@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import collections
-import sys
 from collections.abc import Iterator, Mapping
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, override
 
 from xarray.core.types import Self
 from xarray.core.utils import Frozen, is_dict_like
@@ -25,10 +24,7 @@ class NodePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
 
     def __init__(self, *pathsegments):
-        if sys.version_info >= (3, 12):
-            super().__init__(*pathsegments)
-        else:
-            super().__new__(PurePosixPath, *pathsegments)
+        super().__init__(*pathsegments)
         if self.drive:
             raise ValueError("NodePaths cannot have drives")
 
@@ -49,7 +45,7 @@ class TreeNode:
 
     This class stores no data, it has only parents and children attributes, and various methods.
 
-    Stores child nodes in an dict, ensuring that equality checks between trees
+    Stores child nodes in a dict, ensuring that equality checks between trees
     and order of child nodes is preserved (since python 3.7).
 
     Nodes themselves are intrinsically unnamed (do not possess a ._name attribute), but if the node has a parent you can
@@ -170,7 +166,8 @@ class TreeNode:
         self._check_children(children)
         children = {**children}
 
-        old_children = self.children
+        # snapshot, since self.children is a live view that attaching mutates
+        old_children = dict(self.children)
         del self.children
         try:
             self._pre_attach_children(children)
@@ -195,7 +192,7 @@ class TreeNode:
 
     @staticmethod
     def _check_children(children: Mapping[str, TreeNode]) -> None:
-        """Check children for correct types and for any duplicates."""
+        """Check children for correct types, valid names and for any duplicates."""
         if not is_dict_like(children):
             raise TypeError(
                 "children must be a dict-like mapping from names to node objects"
@@ -203,6 +200,7 @@ class TreeNode:
 
         seen = set()
         for name, child in children.items():
+            _validate_name(name)
             if not isinstance(child, TreeNode):
                 raise TypeError(
                     f"Cannot add object {name}. It is of type {type(child)}, "
@@ -310,7 +308,7 @@ class TreeNode:
         warn(
             "`iter_lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         return (self, *self.parents)
@@ -323,7 +321,7 @@ class TreeNode:
         warn(
             "`lineage` has been deprecated, and in the future will raise an error."
             "Please use `parents` from now on.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         return self.iter_lineage()
@@ -342,7 +340,7 @@ class TreeNode:
         warn(
             "`ancestors` has been deprecated, and in the future will raise an error."
             "Please use `parents`. Example: `tuple(reversed(node.parents))`",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         return (*reversed(self.parents), self)
@@ -660,9 +658,6 @@ class TreeNode:
         return self.root is other.root
 
 
-AnyNamedNode = TypeVar("AnyNamedNode", bound="NamedNode")
-
-
 def _validate_name(name: str | None) -> None:
     if name is not None:
         if not isinstance(name, str):
@@ -705,6 +700,7 @@ class NamedNode(TreeNode):
         _validate_name(name)
         self._name = name
 
+    @override
     def __repr__(self, level=0):
         repr_value = "\t" * level + self.__str__() + "\n"
         for child in self.children:
@@ -715,11 +711,13 @@ class NamedNode(TreeNode):
         name_repr = repr(self.name) if self.name is not None else ""
         return f"NamedNode({name_repr})"
 
+    @override
     def _post_attach(self, parent: Self, name: str) -> None:
         """Ensures child has name attribute corresponding to key under which it has been stored."""
         _validate_name(name)  # is this check redundant?
         self._name = name
 
+    @override
     def _copy_node(
         self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
     ) -> Self:
@@ -800,7 +798,7 @@ class TreeIsomorphismError(ValueError):
     """Error raised if two tree objects do not share the same node structure."""
 
 
-def group_subtrees(
+def group_subtrees[AnyNamedNode: NamedNode](
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[str, tuple[AnyNamedNode, ...]]]:
     """Iterate over subtrees grouped by relative paths in breadth-first order.
@@ -830,7 +828,7 @@ def group_subtrees(
     TreeIsomorphismError
         If trees are not isomorphic, i.e., they have different structures.
 
-    See also
+    See Also
     --------
     DataTree.subtree
     DataTree.subtree_with_keys
@@ -866,7 +864,7 @@ def group_subtrees(
             queue.append((path / name, child_nodes))
 
 
-def zip_subtrees(
+def zip_subtrees[AnyNamedNode: NamedNode](
     *trees: AnyNamedNode,
 ) -> Iterator[tuple[AnyNamedNode, ...]]:
     """Zip together subtrees aligned by relative path."""

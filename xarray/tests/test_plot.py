@@ -31,6 +31,7 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     assert_no_warnings,
+    dask_array_type,
     requires_cartopy,
     requires_cftime,
     requires_dask,
@@ -218,6 +219,17 @@ class TestPlot(PlotTestCase):
         long_latex_name = r"$Ra_s = \mathrm{mean}(\epsilon_k) / \mu M^2_\infty$"
         da.attrs = dict(long_name=long_latex_name)
         assert label_from_attrs(da) == long_latex_name
+
+        # Regression test for GH#11452: LaTeX labels with units should not be
+        # broken by textwrap, which can produce invalid "$$" sequences when
+        # the wrap point falls between two adjacent $...$ blocks.
+        da.attrs = dict(
+            long_name=r"$\frac{\mathrm{x}}{\mathrm{A}}$",
+            units=r"$\mathrm{m~hello~very~long}$",
+        )
+        result = label_from_attrs(da)
+        assert "\n" not in result
+        assert "$$" not in result
 
     def test1d(self) -> None:
         self.darray[:, 0, 0].plot()  # type: ignore[call-arg]
@@ -482,21 +494,20 @@ class TestPlot(PlotTestCase):
     def test_contourf_cmap_set_with_bad_under_over(self) -> None:
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
-        # make a copy here because we want a local cmap that we will modify.
-        cmap_expected = copy(mpl.colormaps["viridis"])
+        # make a copy using with_extremes because we want a local cmap:
+        cmap_expected = mpl.colormaps["viridis"].with_extremes(
+            bad="w", under="r", over="g"
+        )
 
-        cmap_expected.set_bad("w")
         # check we actually changed the set_bad color
         assert np.all(
             cmap_expected(np.ma.masked_invalid([np.nan]))[0]
             != mpl.colormaps["viridis"](np.ma.masked_invalid([np.nan]))[0]
         )
 
-        cmap_expected.set_under("r")
         # check we actually changed the set_under color
         assert cmap_expected(-np.inf) != mpl.colormaps["viridis"](-np.inf)
 
-        cmap_expected.set_over("g")
         # check we actually changed the set_over color
         assert cmap_expected(np.inf) != mpl.colormaps["viridis"](-np.inf)
 
@@ -529,7 +540,7 @@ class TestPlot(PlotTestCase):
             [-0.5, 0.5, 5.0, 9.5, 10.5], _infer_interval_breaks([0, 1, 9, 10])
         )
         assert_array_equal(
-            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),  # type: ignore[operator]
+            pd.date_range("20000101", periods=4) - np.timedelta64(12, "h"),
             _infer_interval_breaks(pd.date_range("20000101", periods=3)),
         )
 
@@ -562,11 +573,11 @@ class TestPlot(PlotTestCase):
         # Check for 2d arrays
         x = np.logspace(-4, 3, 8)
         y = np.linspace(-5, 5, 11)
-        x, y = np.meshgrid(x, y)
+        x2d, _ = np.meshgrid(x, y)
         expected_interval_breaks = np.vstack([10 ** np.linspace(-4.5, 3.5, 9)] * 12)
-        x = _infer_interval_breaks(x, axis=1, scale="log")
-        x = _infer_interval_breaks(x, axis=0, scale="log")
-        np.testing.assert_allclose(x, expected_interval_breaks)
+        x2d = _infer_interval_breaks(x2d, axis=1, scale="log")
+        x2d = _infer_interval_breaks(x2d, axis=0, scale="log")
+        np.testing.assert_allclose(x2d, expected_interval_breaks)
 
     def test__infer_interval_breaks_logscale_invalid_coords(self) -> None:
         """
@@ -834,6 +845,14 @@ class TestPlot1D(PlotTestCase):
         darray.plot.line(x="period")
         title = plt.gca().get_title()
         assert "d = [10.009]" == title
+
+    def test_warns_for_few_positional_args(self) -> None:
+        with pytest.warns(FutureWarning, match="Using positional arguments"):
+            self.darray.plot.scatter("period")
+
+    def test_raises_for_too_many_positional_args(self) -> None:
+        with pytest.raises(ValueError, match="Using positional arguments"):
+            self.darray.plot.scatter("period", "foo", "bar", "blue", {})
 
 
 class TestPlotStep(PlotTestCase):
@@ -1164,9 +1183,9 @@ class TestDetermineCmapParams:
 @requires_matplotlib
 class TestDiscreteColorMap:
     @pytest.fixture(autouse=True)
-    def setUp(self):
-        x = np.arange(start=0, stop=10, step=2)
-        y = np.arange(start=9, stop=-7, step=-3)
+    def setUp(self) -> Generator[None, None, None]:
+        x = np.arange(0, 10, 2)
+        y = np.arange(9, -7, -3)
         xy = np.dstack(np.meshgrid(x, y))
         distance = np.linalg.norm(xy, axis=2)
         self.darray = DataArray(distance, list(zip(("y", "x"), (y, x), strict=True)))
@@ -1326,8 +1345,6 @@ class Common2dMixin:
 
     def test_3d_raises_valueerror(self) -> None:
         a = DataArray(easy_array((2, 3, 4)))
-        if self.plotfunc.__name__ == "imshow":
-            pytest.skip()
         with pytest.raises(ValueError, match=r"DataArray must be 2d"):
             self.plotfunc(a)
 
@@ -1602,12 +1619,8 @@ class Common2dMixin:
         self.plotmethod(add_colorbar=False)
         assert "testvar" not in text_in_fig()
         # check that error is raised
-        pytest.raises(
-            ValueError,
-            self.plotmethod,
-            add_colorbar=False,
-            cbar_kwargs={"label": "label"},
-        )
+        with pytest.raises(ValueError):
+            self.plotmethod(add_colorbar=False, cbar_kwargs={"label": "label"})
 
     def test_verbose_facetgrid(self) -> None:
         a = easy_array((10, 15, 3))
@@ -1664,6 +1677,34 @@ class Common2dMixin:
         assert_array_equal(g.axs.shape, [3, 2])
         for ax in g.axs.flat:
             assert ax.has_data()
+
+    @pytest.mark.parametrize(
+        ["n", "figsize", "aspect", "expected_shape"],
+        [
+            pytest.param(1, None, 1, [1, 1], id="1"),
+            pytest.param(3, None, 1, [1, 3], id="3"),  # <4 should not be wrapped
+            pytest.param(6, None, 1, [2, 3], id="6"),
+            pytest.param(8, None, 1, [3, 3], id="8"),
+            pytest.param(8, [10, 5], 1, [2, 4], id="8-figaspect=2"),
+            pytest.param(8, [5, 10], 1, [4, 2], id="8-figaspect=0.5"),
+            pytest.param(8, None, 4, [4, 2], id="8-aspect=4"),
+            pytest.param(8, None, 0.25, [2, 4], id="8-aspect=0.25"),
+        ],
+    )
+    def test_facetgrid_col_wrap_auto(
+        self,
+        n: int,
+        figsize: tuple[int, int] | None,
+        aspect: int,
+        expected_shape: tuple[int, int],
+    ) -> None:
+        a = easy_array((10, 15, n))
+        d = DataArray(a, dims=["y", "x", "z"])
+        g = self.plotfunc(
+            d, x="x", y="y", col="z", col_wrap="auto", figsize=figsize, aspect=aspect
+        )
+
+        assert_array_equal(g.axs.shape, expected_shape)
 
     @pytest.mark.filterwarnings("ignore:This figure includes")
     def test_facetgrid_map_only_appends_mappables(self) -> None:
@@ -1730,6 +1771,19 @@ class Common2dMixin:
 
         with pytest.raises(ValueError):
             self.darray.plot(norm=norm, vmax=2)  # type: ignore[call-arg]
+
+    def test_plot_warns_for_2_positional_args(self) -> None:
+        da = xr.DataArray(
+            np.random.randn(2, 6, 6),
+            dims=("time", "x", "y"),
+            coords={"x": np.arange(6), "y": np.arange(6)},
+        )
+        with pytest.warns(FutureWarning, match="Using positional arguments"):
+            self.plotfunc(da, "x", "y", col="time")
+
+    def test_plot_raises_too_many_for_positional_args(self) -> None:
+        with pytest.raises(ValueError, match="Using positional arguments"):
+            self.plotmethod("x", "y", (12, 4))
 
 
 @pytest.mark.slow
@@ -1816,10 +1870,12 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+        cmap = artist.cmap
+        assert isinstance(cmap, mpl.colors.ListedColormap)
+        assert cast(list[str], cmap.colors)[:5] == ["k", "r", "w", "b"]
 
         # the last color is now under "over"
-        assert self._color_as_tuple(artist.cmap.get_over()) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
 
     def test_colors_np_levels(self) -> None:
         # https://github.com/pydata/xarray/issues/3284
@@ -1828,7 +1884,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
 
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+        assert cast(list[str], cmap.colors)[:5] == ["k", "r", "w", "b"]
 
         # the last color is now under "over"
         assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
@@ -1949,6 +2005,10 @@ class TestPcolormeshLogscale(PlotTestCase):
 @pytest.mark.slow
 class TestImshow(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.imshow)
+
+    @pytest.mark.skip(reason="imshow accepts 3d arrays as RGB(A) images")
+    def test_3d_raises_valueerror(self) -> None:
+        pass
 
     @pytest.mark.xfail(
         reason=(
@@ -2148,32 +2208,32 @@ class TestSurface(Common2dMixin, PlotTestCase):
         assert "y2d" == ax.get_ylabel()
         assert f"{self.darray.long_name} [{self.darray.units}]" == ax.get_zlabel()
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_xyincrease_false_changes_axes(self) -> None:
-        # Does not make sense for surface plots
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_xyincrease_true_changes_axes(self) -> None:
-        # Does not make sense for surface plots
-        pytest.skip("does not make sense for surface plots")
+        pass
 
     def test_can_pass_in_axis(self) -> None:
         self.pass_in_axis(self.plotmethod, subplot_kw={"projection": "3d"})
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_default_cmap(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_diverging_color_limits(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_colorbar_kwargs(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_cmap_and_color_both(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
     def test_seaborn_palette_as_cmap(self) -> None:
         # seaborn does not work with mpl_toolkits.mplot3d
@@ -2891,6 +2951,10 @@ class TestDatasetScatterPlots(PlotTestCase):
                 x=x, y=y, hue=hue, add_legend=add_legend, add_colorbar=add_colorbar
             )
 
+    def test_does_not_allow_positional_args(self) -> None:
+        with pytest.raises(TypeError, match="takes 1 positional argument"):
+            self.ds.plot.scatter("A", "B")
+
     def test_datetime_hue(self) -> None:
         ds2 = self.ds.copy()
 
@@ -2898,7 +2962,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2["hue"] = pd.date_range("2000-1-1", periods=4)
         ds2.plot.scatter(x="A", y="B", hue="hue")
 
-        ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D")
+        ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D", unit="ns")  # type: ignore[call-arg,unused-ignore]
         ds2.plot.scatter(x="A", y="B", hue="hue")
 
     def test_facetgrid_hue_style(self) -> None:
@@ -2968,6 +3032,57 @@ class TestDatasetScatterPlots(PlotTestCase):
             "$\\mathdefault{2}$",
         )
         assert actual == expected
+
+    def test_legend_labels_facegrid2(self) -> None:
+        ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+        g = ds.plot.scatter(
+            x="A", y="B", hue="y", markersize="x", row="x", col="w", add_colorbar=False
+        )
+
+        legend = g.figlegend
+        assert legend is not None
+        actual_text = [t.get_text() for t in legend.texts]
+        expected_text = [
+            "y [yunits]",
+            "$\\mathdefault{0.0}$",
+            "$\\mathdefault{0.1}$",
+            "$\\mathdefault{0.2}$",
+            "$\\mathdefault{0.3}$",
+            "$\\mathdefault{0.4}$",
+            "$\\mathdefault{0.5}$",
+            "$\\mathdefault{0.6}$",
+            "$\\mathdefault{0.7}$",
+            "$\\mathdefault{0.8}$",
+            "$\\mathdefault{0.9}$",
+            "$\\mathdefault{1.0}$",
+            "x [xunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+        ]
+        assert actual_text == expected_text
+
+        actual_size = [v.get_markersize() for v in legend.get_lines()]
+        expected_size = [
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            4.242640687119285,
+            6.708203932499369,
+            8.48528137423857,
+        ]
+        np.testing.assert_allclose(expected_size, actual_size)
 
     def test_add_legend_by_default(self) -> None:
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")
@@ -3338,8 +3453,9 @@ def test_maybe_gca() -> None:
 
 
 @requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["scatter", "lines"])
 @pytest.mark.parametrize(
-    "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
+    "x, y, z, hue, _size, row, col, add_legend, add_colorbar",
     [
         ("A", "B", None, None, None, None, None, None, None),
         ("B", "A", None, "w", None, None, None, True, None),
@@ -3348,30 +3464,33 @@ def test_maybe_gca() -> None:
         ("B", "A", "z", "w", None, None, None, True, None),
         ("A", "B", "z", "y", "x", None, None, True, True),
         ("A", "B", "z", "y", "x", "w", None, True, True),
+        ("A", "B", "z", "y", "x", "w", "x", True, True),
     ],
 )
-def test_datarray_scatter(
-    x, y, z, hue, markersize, row, col, add_legend, add_colorbar
+def test_plot1d_functions(
+    x: Hashable,
+    y: Hashable,
+    z: Hashable,
+    hue: Hashable,
+    _size: Hashable,
+    row: Hashable,
+    col: Hashable,
+    add_legend: bool | None,
+    add_colorbar: bool | None,
+    plotfunc: str,
 ) -> None:
-    """Test datarray scatter. Merge with TestPlot1D eventually."""
-    ds = xr.tutorial.scatter_example_dataset()
-
-    extra_coords = [v for v in [x, hue, markersize] if v is not None]
-
-    # Base coords:
-    coords = dict(ds.coords)
-
-    # Add extra coords to the DataArray:
-    coords.update({v: ds[v] for v in extra_coords})
-
-    darray = xr.DataArray(ds[y], coords=coords)
+    """Test plot1d function. Merge with TestPlot1D eventually."""
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
 
     with figure_context():
-        darray.plot.scatter(
+        getattr(ds.plot, plotfunc)(
             x=x,
+            y=y,
             z=z,
             hue=hue,
-            markersize=markersize,
+            _size=_size,
+            row=row,
+            col=col,
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
@@ -3390,9 +3509,7 @@ def test_dataarray_not_loading_inplace(plotfunc: str) -> None:
     with figure_context():
         getattr(ds.A.plot, plotfunc)(x="x")
 
-    from dask.array import Array
-
-    assert isinstance(ds.A.data, Array)
+    assert isinstance(ds.A.data, dask_array_type)
 
 
 @requires_matplotlib
@@ -3438,16 +3555,16 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 
 @requires_matplotlib
 def test_facetgrid_axes_raises_deprecation_warning() -> None:
-    with pytest.warns(
-        DeprecationWarning,
-        match=(
-            "self.axes is deprecated since 2022.11 in order to align with "
-            "matplotlibs plt.subplots, use self.axs instead."
-        ),
-    ):
-        with figure_context():
-            ds = xr.tutorial.scatter_example_dataset()
-            g = ds.plot.scatter(x="A", y="B", col="x")
+    with figure_context():
+        ds = xr.tutorial.scatter_example_dataset()
+        g = ds.plot.scatter(x="A", y="B", col="x")
+        with pytest.warns(
+            FutureWarning,
+            match=(
+                "self.axes is deprecated since 2022.11 in order to align with "
+                "matplotlibs plt.subplots, use self.axs instead."
+            ),
+        ):
             _ = g.axes
 
 
@@ -3500,6 +3617,107 @@ def test_plot1d_filtered_nulls() -> None:
 
 
 @requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_color(plotfunc: str, x="z", color="b") -> None:
+    from matplotlib.colors import to_rgba_array
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        _, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, color=color)
+        coll = ax.collections[0]
+
+        # Make sure color is respected:
+        expected_color = np.asarray(to_rgba_array(color))
+        actual_color = np.asarray(coll.get_edgecolor())
+        np.testing.assert_allclose(expected_color, actual_color)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_linestyle(plotfunc: str, x="z", linestyle="dashed") -> None:
+    # TODO: Is there a public function that converts linestyle to dash pattern?
+    from matplotlib.lines import (  # type: ignore[attr-defined]
+        _get_dash_pattern,
+        _scale_dashes,
+    )
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        _, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, linestyle=linestyle)
+        coll = ax.collections[0]
+
+        # Make sure linestyle is respected:
+        w = np.atleast_1d(coll.get_linewidth())[0]
+        expected_linestyle = [_scale_dashes(*_get_dash_pattern(linestyle), w)]
+        actual_linestyle = coll.get_linestyle()
+        assert expected_linestyle == actual_linestyle
+
+
+@requires_matplotlib
+def test_plot1d_lines_facetgrid_legend() -> None:
+    # asserts that order is correct, only unique values, no nans/masked values.
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    with figure_context():
+        g = ds.plot.lines(
+            x="A", y="B", hue="y", linewidth="x", row="x", col="w", add_colorbar=False
+        )
+
+        legend = g.figlegend
+        assert legend is not None
+        actual_text = [t.get_text() for t in legend.texts]
+        expected_text = [
+            "y [yunits]",
+            "$\\mathdefault{0.0}$",
+            "$\\mathdefault{0.1}$",
+            "$\\mathdefault{0.2}$",
+            "$\\mathdefault{0.3}$",
+            "$\\mathdefault{0.4}$",
+            "$\\mathdefault{0.5}$",
+            "$\\mathdefault{0.6}$",
+            "$\\mathdefault{0.7}$",
+            "$\\mathdefault{0.8}$",
+            "$\\mathdefault{0.9}$",
+            "$\\mathdefault{1.0}$",
+            "x [xunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+        ]
+        assert expected_text == actual_text
+
+        actual_size = [v.get_linewidth() for v in legend.get_lines()]
+        expected_size = [
+            1.5,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            1.5,
+            1.224744871391589,
+            1.9364916731037085,
+            2.449489742783178,
+        ]
+        np.testing.assert_allclose(expected_size, actual_size)
+
+
+@requires_matplotlib
 def test_9155() -> None:
     # A test for types from issue #9155
 
@@ -3547,3 +3765,47 @@ def test_temp_dataarray() -> None:
     locals_ = dict(x="x", extend="var2")
     da = _temp_dataarray(ds, y_, locals_)
     assert da.shape == (3,)
+
+
+@requires_matplotlib
+def test_facetgrid_figsize_rcparams() -> None:
+    """Test that facetgrid_figsize='rcparams' uses matplotlib rcParams."""
+    import matplotlib as mpl
+
+    da = DataArray(
+        np.random.randn(10, 15, 3),
+        dims=["y", "x", "z"],
+        coords={"z": ["a", "b", "c"]},
+    )
+    custom_figsize = (12.0, 8.0)
+
+    with figure_context():
+        # Default behavior: computed from size and aspect
+        g = xplt.FacetGrid(da, col="z")
+        default_figsize = g.fig.get_size_inches()
+        # Default should be (ncol * size * aspect + cbar_space, nrow * size)
+        # = (3 * 3 * 1 + 1, 1 * 3) = (10, 3)
+        np.testing.assert_allclose(default_figsize, (10.0, 3.0))
+
+    with figure_context():
+        # rcparams mode: should use mpl.rcParams['figure.figsize']
+        with mpl.rc_context({"figure.figsize": custom_figsize}):
+            with xr.set_options(facetgrid_figsize="rcparams"):
+                g = xplt.FacetGrid(da, col="z")
+                actual_figsize = g.fig.get_size_inches()
+                np.testing.assert_allclose(actual_figsize, custom_figsize)
+
+    with figure_context():
+        # Tuple mode: fixed figsize via set_options
+        with xr.set_options(facetgrid_figsize=(14.0, 5.0)):
+            g = xplt.FacetGrid(da, col="z")
+            actual_figsize = g.fig.get_size_inches()
+            np.testing.assert_allclose(actual_figsize, (14.0, 5.0))
+
+    with figure_context():
+        # Explicit figsize should override the option
+        with xr.set_options(facetgrid_figsize="rcparams"):
+            explicit_size = (6.0, 4.0)
+            g = xplt.FacetGrid(da, col="z", figsize=explicit_size)
+            actual_figsize = g.fig.get_size_inches()
+            np.testing.assert_allclose(actual_figsize, explicit_size)

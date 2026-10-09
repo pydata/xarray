@@ -64,7 +64,7 @@ complete examples, please consult the relevant documentation.*
         distinguish :term:`Dimension coordinate` vs. :term:`Non-dimension
         coordinate` and :term:`Indexed coordinate` vs. :term:`Non-indexed
         coordinate`. A coordinate named ``x`` can be retrieved from
-        ``arr.coords[x]``. A ``DataArray`` can have more coordinates than
+        ``arr.coords["x"]``. A ``DataArray`` can have more coordinates than
         dimensions because a single dimension can be labeled by multiple
         coordinate arrays. However, only one coordinate array can be assigned
         as a particular dimension's dimension coordinate array.
@@ -283,4 +283,4 @@ complete examples, please consult the relevant documentation.*
         allows for grouping related data together.
         Analogous to a single
         `netCDF group <https://www.unidata.ucar.edu/software/netcdf/workshops/2011/groups-types/GroupsIntro.html>`_
-        or `Zarr group <https://zarr.readthedocs.io/en/stable/tutorial.html#groups>`_.
+        or `Zarr group <https://zarr.readthedocs.io/en/stable/user-guide/groups/#groups>`_.
