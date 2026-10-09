@@ -21,6 +21,10 @@ New Features
   type defaults to ``Hashable``, so a bare ``Variable`` annotation means
   ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The HTML representation can show or hide the attributes and data of all
+  variables of a section at once, and shows the expanded attributes and data
+  more compactly and indented below their variable (:pull:`11284`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Breaking Changes
@@ -48,6 +52,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix dark mode detection in VS Code by adding VS Code CSS variable support to the HTML representation CSS. (:pull:`11284`).
+  By `Maksymilian Wasilewski <https://github.com/maksmondeo>`_.
 - Fix ``TypeError`` on import when ``importlib.metadata.version`` returns ``None``
   for an installed package, e.g. with some editable installs or custom import hooks
   in QGIS. Such packages are now treated as not meeting a minimum version
