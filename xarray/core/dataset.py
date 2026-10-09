@@ -9416,6 +9416,8 @@ class Dataset(
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the minimum like in
+            :py:func:`numpy.argmin`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
@@ -9522,6 +9524,8 @@ class Dataset(
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the maximum like in
+            :py:func:`numpy.argmax`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
