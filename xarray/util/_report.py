@@ -86,32 +86,39 @@ def _in_rich_frontend() -> bool:
     return shell is not None and type(shell).__name__ == "ZMQInteractiveShell"
 
 
+# replace the copied content of a report with its markdown, so that copying the
+# notebook output gives something to paste into a GitHub issue
+_ON_COPY = (
+    "event.clipboardData.setData('text/plain', this.dataset.md); event.preventDefault()"
+)
+
+
 def show_report(
     title: str,
     text: str,
     markdown: str,
+    html: str,
     file: TextIO | None = None,
     as_markdown: bool = False,
-    html: str | None = None,
 ) -> None:
     """Print a report as plain text or markdown, or display it in notebooks.
 
-    In Jupyter notebooks the ``html``, or else the markdown, is displayed
-    formatted, unless a ``file`` is given or ``as_markdown`` is requested.
-    The printed markdown is wrapped in a ``<details>`` block, so it can be
-    pasted as is into a GitHub issue.
+    In Jupyter notebooks the ``html`` is displayed, unless a ``file`` is given or
+    ``as_markdown`` is requested. Copying the displayed report copies the
+    markdown instead. The markdown is wrapped in a ``<details>`` block, so it
+    can be pasted as is into a GitHub issue.
     """
-    if file is None and not as_markdown and _in_rich_frontend():
-        from IPython.display import HTML, Markdown, display
+    md = f"<details><summary>{title}</summary>\n\n{markdown}\n\n</details>"
+    plain = f"{title}\n{'-' * len(title)}\n{text}"
 
-        if html is not None:
-            display(HTML(f"<h4>{escape(title)}</h4>{html}"))
-        else:
-            display(Markdown(f"#### {title}\n\n{markdown}"))
+    if file is None and not as_markdown and _in_rich_frontend():
+        from IPython.display import display
+
+        out = (
+            f'<div data-md="{escape(md)}" oncopy="{_ON_COPY}">'
+            f"<h4>{escape(title)}</h4>{html}</div>"
+        )
+        display({"text/html": out, "text/plain": plain}, raw=True)
         return
 
-    if as_markdown:
-        out = f"<details><summary>{title}</summary>\n\n{markdown}\n\n</details>"
-    else:
-        out = f"{title}\n{'-' * len(title)}\n{text}"
-    print(out, file=sys.stdout if file is None else file)
+    print(md if as_markdown else plain, file=sys.stdout if file is None else file)

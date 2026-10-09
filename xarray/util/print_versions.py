@@ -172,9 +172,7 @@ def show_versions(file: TextIO | None = None, markdown: bool = False) -> None:
         )
         + f"<p>{escape(not_installed)}</p>"
     )
-    show_report(
-        "INSTALLED VERSIONS", text, md, file=file, as_markdown=markdown, html=html
-    )
+    show_report("INSTALLED VERSIONS", text, md, html, file=file, as_markdown=markdown)
 
 
 if __name__ == "__main__":

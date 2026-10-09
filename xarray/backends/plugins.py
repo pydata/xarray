@@ -6,6 +6,7 @@ import itertools
 import os
 import warnings
 from collections.abc import Callable
+from html import escape
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any, TextIO
 
@@ -171,6 +172,7 @@ def show_backends(file: TextIO | None = None, markdown: bool = False) -> None:
 
     text_lines = []
     md_lines = []
+    html_items = []
     for name, backend in engines.items():
         package, version = sources.get(name, ("unknown", None))
         summary = f"from {package}"
@@ -190,16 +192,27 @@ def show_backends(file: TextIO | None = None, markdown: bool = False) -> None:
         md_lines.append(f"- **{name}**: `{cls_name}` {summary}")
 
         extra = []
+        html_extra = []
         if backend.description:
-            extra.append(" ".join(backend.description.split()))
+            description = " ".join(backend.description.split())
+            extra.append(description)
+            html_extra.append(escape(description))
         if backend.url:
             extra.append(backend.url)
+            url = escape(backend.url)
+            html_extra.append(f'<a href="{url}" target="_blank">{url}</a>')
         text_lines.extend(f"    {line}" for line in extra)
         md_lines.extend(f"  - {line}" for line in extra)
+        html_items.append(
+            f"<li><strong>{escape(name)}</strong>: <code>{escape(cls_name)}</code> "
+            f"{escape(summary)}<ul>{''.join(f'<li>{x}</li>' for x in html_extra)}</ul></li>"
+        )
 
-    text = "\n".join(text_lines) or "No backends available."
-    md = "\n".join(md_lines) or "No backends available."
-    show_report("AVAILABLE BACKENDS", text, md, file=file, as_markdown=markdown)
+    empty = "No backends available."
+    text = "\n".join(text_lines) or empty
+    md = "\n".join(md_lines) or empty
+    html = f"<ul>{''.join(html_items)}</ul>" if html_items else f"<p>{empty}</p>"
+    show_report("AVAILABLE BACKENDS", text, md, html, file=file, as_markdown=markdown)
 
 
 def guess_engine(

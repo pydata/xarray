@@ -4,6 +4,7 @@ import importlib.metadata
 import io
 import sys
 import types
+from html import escape
 from unittest import mock
 
 import pytest
@@ -55,35 +56,40 @@ def test_markdown_table() -> None:
 
 
 def test_show_report(monkeypatch) -> None:
-    displayed: list[str] = []
+    displayed: list[dict[str, str]] = []
+
+    def display(bundle, raw=False):
+        assert raw
+        displayed.append(bundle)
+
     display_mod = types.ModuleType("IPython.display")
-    display_mod.Markdown = lambda text: text  # type: ignore[attr-defined]
-    display_mod.HTML = lambda text: f"html:{text}"  # type: ignore[attr-defined]
-    display_mod.display = displayed.append  # type: ignore[attr-defined]
+    display_mod.display = display  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "IPython.display", display_mod)
+
+    md = "<details><summary>TITLE</summary>\n\n*md*\n\n</details>"
 
     def show(**kwargs) -> str:
         f = io.StringIO()
-        _report.show_report("TITLE", "text", "*md*", file=f, **kwargs)
+        _report.show_report("TITLE", "text", "*md*", "<p>x</p>", file=f, **kwargs)
         return f.getvalue()
 
     assert show() == "TITLE\n-----\ntext\n"
-    assert show(as_markdown=True) == (
-        "<details><summary>TITLE</summary>\n\n*md*\n\n</details>\n"
-    )
+    assert show(as_markdown=True) == md + "\n"
 
-    # in notebooks the markdown is displayed, unless printing is requested
+    # in notebooks the html is displayed, unless printing is requested
     monkeypatch.setattr(_report, "_in_rich_frontend", lambda: True)
-    _report.show_report("TITLE", "text", "*md*")
-    assert displayed == ["#### TITLE\n\n*md*"]
-    _report.show_report("TITLE", "text", "*md*", html="<p>x</p>")
-    assert displayed[-1] == "html:<h4>TITLE</h4><p>x</p>"
-    del displayed[-1]
+    _report.show_report("TITLE", "text", "*md*", "<p>x</p>")
+    (bundle,) = displayed
+    assert bundle["text/plain"] == "TITLE\n-----\ntext"
+    # copying the output copies the markdown
+    assert bundle["text/html"].startswith(f'<div data-md="{escape(md)}" oncopy="')
+    assert bundle["text/html"].endswith("><h4>TITLE</h4><p>x</p></div>")
+
     assert show() == "TITLE\n-----\ntext\n"
     stdout = io.StringIO()
     monkeypatch.setattr(sys, "stdout", stdout)
-    _report.show_report("TITLE", "text", "*md*", as_markdown=True)
-    assert stdout.getvalue().startswith("<details>")
+    _report.show_report("TITLE", "text", "*md*", "<p>x</p>", as_markdown=True)
+    assert stdout.getvalue() == md + "\n"
     assert len(displayed) == 1
 
 
