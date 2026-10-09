@@ -148,6 +148,17 @@ class TestDataArrayRolling:
         assert_allclose(actual, da["time"])
 
     @requires_dask
+    @pytest.mark.parametrize("name", ("sum", "mean", "count"))
+    def test_rolling_dask_keeps_chunks(self, name) -> None:
+        # these reductions don't copy the windows, so dask doesn't need to split
+        # the chunks to limit the memory of the window views
+        da = DataArray(np.ones((40, 20)), dims=("x", "y")).chunk({"x": 10, "y": 10})
+        with set_options(use_bottleneck=False, use_numbagg=False):
+            actual = getattr(da.rolling(x=4), name)()
+        assert actual.chunksizes["y"] == da.chunksizes["y"]
+        assert len(actual.chunksizes["x"]) == len(da.chunksizes["x"])
+
+    @requires_dask
     @pytest.mark.parametrize("name", ("mean", "count"))
     @pytest.mark.parametrize("center", (True, False, None))
     @pytest.mark.parametrize("min_periods", (1, None))

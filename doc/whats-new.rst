@@ -147,6 +147,12 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- Speed up rolling reductions of dask arrays without bottleneck, e.g. ``sum``,
+  ``mean`` and ``count``, by about 7x with about 12x fewer tasks for a window of 20.
+  Counting the values in each window no longer splits the chunks of the other
+  dimensions by the window size, which is only needed for reductions that copy the
+  windows (:pull:`XXXXX`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up the ``repr`` of objects with many coordinates by about 2.5x, which
   got about twice as slow when the coordinates were ordered by dimension in
   v2025.10.0 (:pull:`10778`), and their HTML repr by about 15% (:pull:`11691`): the
