@@ -326,6 +326,13 @@ print(lisa["../Bart"])
 print(lisa["/Homer/Bart"])
 ```
 
+The `in` operator accepts the same paths, so you can check whether a node or variable exists before accessing it:
+
+```{code-cell}
+print("Homer/Bart" in abe)
+print("/Homer/Maggie" in lisa)
+```
+
 Relative paths between nodes also support the `"../"` syntax to mean the parent of the current node.
 We can use this with `__setitem__` to add a missing entry to our evolutionary tree, but add it relative to a more familiar node of interest:
 

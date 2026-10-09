@@ -873,8 +873,19 @@ class DataTree(
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
         'key' is either an array stored in the datatree or a child node, or neither.
+
+        String keys may be unix-like paths to a node or variable anywhere in the
+        tree, so ``key in tree`` is true exactly when ``tree[key]`` succeeds.
         """
-        return key in self.variables or key in self.children
+        if key in self.variables or key in self.children:
+            return True
+        if isinstance(key, str) and ("/" in key or key in ("", ".", "..")):
+            try:
+                self._get_item(key)
+            except KeyError:
+                return False
+            return True
+        return False
 
     def __bool__(self) -> bool:
         return bool(self._data_variables) or bool(self._children)

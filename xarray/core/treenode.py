@@ -546,6 +546,9 @@ class TreeNode:
             parts = list(path.parts)
 
         for part in parts:
+            if not isinstance(current_node, TreeNode):
+                # the path continues past a variable, which has no children
+                raise KeyError(f"Could not find node at {path}")
             if part == "..":
                 if current_node.parent is None:
                     raise KeyError(f"Could not find node at {path}")
