@@ -58,6 +58,7 @@ Miscellaneous
 
    decode_cf
    infer_freq
+   show_backends
    show_versions
    set_options
    get_options

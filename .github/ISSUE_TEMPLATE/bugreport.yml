@@ -92,12 +92,7 @@ body:
     attributes:
       label: Environment
       description: |
-        Paste the output of `xr.show_versions()` between the `<details>` tags, leaving an empty line following the opening tag.
-      value: |
-        <details>
-
-
-
-        </details>
+        Paste the output of `xr.show_versions()` (in notebooks `xr.show_versions(file=sys.stdout)`).
+        Older versions of xarray do not wrap the output in `<details>` tags, please add them yourself, leaving an empty line following the opening tag.
     validations:
       required: true

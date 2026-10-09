@@ -1,13 +1,15 @@
 """Utility functions for printing version information."""
 
 import contextlib
-import importlib
 import locale
 import os
 import platform
 import struct
 import subprocess
 import sys
+from typing import TextIO
+
+from xarray.util._report import markdown_table, package_version, show_report
 
 
 def get_sys_info():
@@ -77,8 +79,51 @@ def netcdf_and_hdf5_versions():
     return [("libhdf5", libhdf5_version), ("libnetcdf", libnetcdf_version)]
 
 
-def show_versions(file=sys.stdout):
-    """print the versions of xarray and its dependencies
+DEPENDENCIES = [
+    "xarray",
+    "pandas",
+    "numpy",
+    "scipy",
+    # xarray optionals
+    "netCDF4",
+    "pydap",
+    "h5netcdf",
+    "h5py",
+    "zarr",
+    "cftime",
+    "nc_time_axis",
+    "iris",
+    "bottleneck",
+    "dask",
+    "distributed",
+    "matplotlib",
+    "cartopy",
+    "seaborn",
+    "numbagg",
+    "fsspec",
+    "cupy",
+    "pint",
+    "sparse",
+    "flox",
+    "numpy_groupies",
+    # xarray setup/test
+    "setuptools",
+    "pip",
+    "conda",
+    "pytest",
+    "mypy",
+    # Misc.
+    "IPython",
+    "sphinx",
+]
+
+
+def show_versions(file: TextIO | None = None) -> None:
+    """Print the versions of xarray and its dependencies.
+
+    The output is markdown that can be pasted as is into a GitHub issue.
+    In Jupyter notebooks it is displayed as formatted tables instead; pass
+    ``file=sys.stdout`` to get the markdown to copy.
 
     Parameters
     ----------
@@ -90,72 +135,23 @@ def show_versions(file=sys.stdout):
     try:
         sys_info.extend(netcdf_and_hdf5_versions())
     except Exception as e:
-        print(f"Error collecting netcdf / hdf5 version: {e}")
+        sys_info.append(("libhdf5 / libnetcdf", f"error: {e}"))
 
-    deps = [
-        # (MODULE_NAME, f(mod) -> mod version)
-        ("xarray", lambda mod: mod.__version__),
-        ("pandas", lambda mod: mod.__version__),
-        ("numpy", lambda mod: mod.__version__),
-        ("scipy", lambda mod: mod.__version__),
-        # xarray optionals
-        ("netCDF4", lambda mod: mod.__version__),
-        ("pydap", lambda mod: mod.__version__),
-        ("h5netcdf", lambda mod: mod.__version__),
-        ("h5py", lambda mod: mod.__version__),
-        ("zarr", lambda mod: mod.__version__),
-        ("cftime", lambda mod: mod.__version__),
-        ("nc_time_axis", lambda mod: mod.__version__),
-        ("iris", lambda mod: mod.__version__),
-        ("bottleneck", lambda mod: mod.__version__),
-        ("dask", lambda mod: mod.__version__),
-        ("distributed", lambda mod: mod.__version__),
-        ("matplotlib", lambda mod: mod.__version__),
-        ("cartopy", lambda mod: mod.__version__),
-        ("seaborn", lambda mod: mod.__version__),
-        ("numbagg", lambda mod: mod.__version__),
-        ("fsspec", lambda mod: mod.__version__),
-        ("cupy", lambda mod: mod.__version__),
-        ("pint", lambda mod: mod.__version__),
-        ("sparse", lambda mod: mod.__version__),
-        ("flox", lambda mod: mod.__version__),
-        ("numpy_groupies", lambda mod: mod.__version__),
-        # xarray setup/test
-        ("setuptools", lambda mod: mod.__version__),
-        ("pip", lambda mod: mod.__version__),
-        ("conda", lambda mod: mod.__version__),
-        ("pytest", lambda mod: mod.__version__),
-        ("mypy", lambda mod: importlib.metadata.version(mod.__name__)),
-        # Misc.
-        ("IPython", lambda mod: mod.__version__),
-        ("sphinx", lambda mod: mod.__version__),
-    ]
+    versions = {name: package_version(name) for name in DEPENDENCIES}
+    installed = [(name, ver) for name, ver in versions.items() if ver is not None]
+    missing = [name for name, ver in versions.items() if ver is None]
 
-    deps_blob = []
-    for modname, ver_f in deps:
-        try:
-            if modname in sys.modules:
-                mod = sys.modules[modname]
-            else:
-                mod = importlib.import_module(modname)
-        except Exception:
-            deps_blob.append((modname, None))
-        else:
-            try:
-                ver = ver_f(mod)
-                deps_blob.append((modname, ver))
-            except Exception:
-                deps_blob.append((modname, "installed"))
-
-    print("\nINSTALLED VERSIONS", file=file)
-    print("------------------", file=file)
-
-    for k, stat in sys_info:
-        print(f"{k}: {stat}", file=file)
-
-    print("", file=file)
-    for k, stat in deps_blob:
-        print(f"{k}: {stat}", file=file)
+    body = "\n\n".join(
+        [
+            markdown_table(
+                ("system", "info"),
+                [(k, v) for k, v in sys_info if v not in (None, "")],
+            ),
+            markdown_table(("package", "version"), installed),
+            f"Not installed: {', '.join(missing) or 'none'}",
+        ]
+    )
+    show_report("INSTALLED VERSIONS", body, file=file)
 
 
 if __name__ == "__main__":

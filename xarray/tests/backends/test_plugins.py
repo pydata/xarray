@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import subprocess
 import sys
 from importlib.metadata import EntryPoint, EntryPoints
@@ -8,6 +9,7 @@ from unittest import mock
 
 import pytest
 
+import xarray as xr
 from xarray.backends import common, plugins
 from xarray.core.options import OPTIONS
 from xarray.tests import (
@@ -360,6 +362,55 @@ def test_refresh_engines() -> None:
 
     # reset to original
     refresh_engines()
+
+
+class DummyDescribedBackend(common.BackendEntrypoint):
+    description = "Open dummy files"
+    url = "https://example.com/dummy"
+    supports_groups = True
+
+    def open_dataset(self, filename_or_obj, *, decoder):  # type: ignore[override]
+        pass
+
+
+def test_show_backends() -> None:
+    from xarray.backends import list_engines, refresh_engines
+
+    dist = mock.MagicMock()
+    dist.name = "dummy-pkg"
+    dist.version = "1.2.3"
+    ep = mock.MagicMock()
+    ep.name = "dummy"
+    ep.dist = dist
+    ep.load.return_value = DummyDescribedBackend
+
+    f = io.StringIO()
+    with mock.patch(
+        "xarray.backends.plugins.entry_points", return_value=EntryPoints([ep])
+    ):
+        list_engines.cache_clear()
+        xr.show_backends(file=f)
+    refresh_engines()
+    out = f.getvalue()
+
+    assert out.startswith("<details><summary>AVAILABLE BACKENDS</summary>\n\n")
+    expected_dummy = (
+        "- **dummy**: `DummyDescribedBackend` from dummy-pkg 1.2.3 (supports groups)\n"
+        "  - Open dummy files\n"
+        "  - https://example.com/dummy\n"
+    )
+    assert expected_dummy in out
+    expected_store = (
+        "- **store**: `StoreBackendEntrypoint` from xarray\n"
+        "  - Open AbstractDataStore instances in Xarray\n"
+        "  - https://docs.xarray.dev/en/stable/generated/"
+        "xarray.backends.StoreBackendEntrypoint.html\n"
+    )
+    assert expected_store in out
+    # backends that are not installed are not listed
+    assert ("**scipy**" in out) == has_scipy
+    if has_scipy:
+        assert "`ScipyBackendEntrypoint` from xarray (using scipy " in out
 
 
 @requires_h5netcdf

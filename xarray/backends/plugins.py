@@ -7,11 +7,12 @@ import os
 import warnings
 from collections.abc import Callable
 from importlib.metadata import entry_points
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TextIO
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_remote_uri, module_available
+from xarray.util._report import package_version, show_report
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoint, EntryPoints
@@ -134,6 +135,63 @@ def list_engines() -> dict[str, BackendEntrypoint]:
 def refresh_engines() -> None:
     """Refreshes the backend engines based on installed packages."""
     list_engines.cache_clear()
+
+
+def _engine_sources() -> dict[str, tuple[str, str | None]]:
+    """Map each engine name to its providing package and version."""
+    sources: dict[str, tuple[str, str | None]] = dict.fromkeys(
+        BACKEND_ENTRYPOINTS, ("xarray", None)
+    )
+    for ep in entry_points(group="xarray.backends"):
+        if ep.dist is not None:
+            sources[ep.name] = (ep.dist.name, ep.dist.version)
+        else:
+            sources[ep.name] = (ep.module.partition(".")[0], None)
+    return sources
+
+
+def show_backends(file: TextIO | None = None) -> None:
+    """Print the available backends (engines) and information about them.
+
+    The backends are listed in the order in which they are tried when opening
+    a file without specifying the ``engine``.
+    Use :py:func:`xarray.backends.list_engines` to get the backend objects.
+
+    The output is markdown that can be pasted as is into a GitHub issue.
+    In Jupyter notebooks it is displayed formatted instead; pass
+    ``file=sys.stdout`` to get the markdown to copy.
+
+    Parameters
+    ----------
+    file : file-like, optional
+        print to the given file-like object. Defaults to sys.stdout.
+    """
+    engines = list_engines()
+    sources = _engine_sources()
+
+    lines = []
+    for name, backend in engines.items():
+        package, version = sources.get(name, ("unknown", None))
+        header = f"- **{name}**: `{type(backend).__name__}` from {package}"
+        if version is not None:
+            header += f" {version}"
+        details = []
+        if package == "xarray" and name in BACKEND_ENTRYPOINTS:
+            dependency = BACKEND_ENTRYPOINTS[name][0]
+            if dependency is not None:
+                details.append(f"using {dependency} {package_version(dependency)}")
+        if backend.supports_groups:
+            details.append("supports groups")
+        if details:
+            header += f" ({', '.join(details)})"
+        lines.append(header)
+        if backend.description:
+            lines.append(f"  - {' '.join(backend.description.split())}")
+        if backend.url:
+            lines.append(f"  - {backend.url}")
+
+    body = "\n".join(lines) or "No backends available."
+    show_report("AVAILABLE BACKENDS", body, file=file)
 
 
 def guess_engine(
