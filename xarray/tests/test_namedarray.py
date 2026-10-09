@@ -710,22 +710,15 @@ def test_fake_target_chunksize_cftime() -> None:
     assert dtype == np.float64
 
 
-def test_module_available_version_none() -> None:
+def test_module_available_version_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """module_available should return False gracefully when metadata.version returns None."""
-    import importlib.metadata as _metadata
-
-    original_version = _metadata.version
-
-    def mock_version(name: str) -> str | None:
-        if name == "packaging":
-            return None
-        return original_version(name)
-
-    _metadata.version = mock_version
+    monkeypatch.setattr("importlib.metadata.version", lambda name: None)
+    # module_available is cached, don't use or leave results with the patched version
+    module_available.cache_clear()
     try:
         assert module_available("packaging", minversion="1.0.0") is False
     finally:
-        _metadata.version = original_version
+        module_available.cache_clear()
 
 
 def test_module_available_valid() -> None:
