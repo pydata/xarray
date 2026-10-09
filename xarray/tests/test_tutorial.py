@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import os
 import pathlib
 import sys
@@ -89,10 +90,15 @@ class TestOffline:
         assert call["url"].endswith("/tiny.nc")
 
     @pytest.mark.parametrize("func", [tutorial.open_dataset, tutorial.open_datatree])
+    # the file has to be closed before it is removed, which fails on Windows
+    # otherwise and warns about deallocating an open file elsewhere
+    @pytest.mark.filterwarnings("error::pytest.PytestUnraisableExceptionWarning")
     def test_without_cache(self, func, fake_retrieve, tmp_path) -> None:
-        with func("tiny", cache=False, cache_dir=tmp_path) as obj:
-            assert obj["tiny"].size == 5
+        obj = func("tiny", cache=False, cache_dir=tmp_path)
         assert not (tmp_path / "tiny.nc").exists()
+        assert obj["tiny"].values.tolist() == [0, 1, 2, 3, 4]
+        del obj
+        gc.collect()
 
     def test_external_url(self, fake_retrieve, tmp_path, monkeypatch) -> None:
         url = "https://example.com/data/tiny_external.nc"
