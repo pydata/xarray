@@ -8,17 +8,17 @@ Making xarray as flexible as possible is the common theme of most of the goals o
 
 This interoperability comes via a set of flexible abstractions into which the user can plug in. The current full list is:
 
-- :ref:`Custom file backends <add_a_backend>` via the :py:class:`~xarray.backends.BackendEntrypoint` system,
+- :ref:`Custom file backends <add-a-backend>` via the :py:class:`~xarray.backends.BackendEntrypoint` system,
 - Numpy-like :ref:`"duck" array wrapping <internals.duckarrays>`, which supports the `Python Array API Standard <https://data-apis.org/array-api/latest/>`_,
 - :ref:`Chunked distributed array computation <internals.chunkedarrays>` via the :py:class:`~xarray.namedarray.parallelcompat.ChunkManagerEntrypoint` system,
-- Custom :py:class:`~xarray.Index` objects for :ref:`flexible label-based lookups <internals.custom indexes>`,
+- Custom :py:class:`~xarray.Index` objects for :ref:`flexible label-based lookups <internals.custom-indexes>`,
 - Extending xarray objects with domain-specific methods via :ref:`custom accessors <internals.accessors>`.
 
 .. warning::
 
     One obvious way in which xarray could be more flexible is that whilst subclassing xarray objects is possible, we
     currently don't support it in most transformations, instead recommending composition over inheritance. See the
-    :ref:`internal design page <internal design.subclassing>` for the rationale and look at the corresponding `GH issue <https://github.com/pydata/xarray/issues/3980>`_
+    :ref:`internal design page <internal-design.subclassing>` for the rationale and look at the corresponding `GH issue <https://github.com/pydata/xarray/issues/3980>`_
     if you're interested in improving support for subclassing!
 
 .. note::

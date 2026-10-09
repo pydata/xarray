@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import override
 
 from xarray import conventions
 from xarray.backends.common import (
@@ -13,17 +13,16 @@ from xarray.backends.common import (
 from xarray.core.coordinates import Coordinates
 from xarray.core.dataset import Dataset
 
-if TYPE_CHECKING:
-    pass
-
 
 class StoreBackendEntrypoint(BackendEntrypoint):
     description = "Open AbstractDataStore instances in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.StoreBackendEntrypoint.html"
 
+    @override
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         return isinstance(filename_or_obj, AbstractDataStore)
 
+    @override
     def open_dataset(
         self,
         filename_or_obj: T_PathFileOrDataStore,
