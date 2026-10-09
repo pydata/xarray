@@ -1730,12 +1730,6 @@ For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of [IO tools].
 For CSV files, one might also consider [xarray_extras].
 
-## Third party libraries
-
-More formats are supported by extension libraries:
-
-- [xarray-mongodb](https://xarray-mongodb.readthedocs.io/en/latest/): Store xarray objects on MongoDB
-
 [amazon s3]: https://aws.amazon.com/s3/
 [blog post]: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 [cf conventions]: https://cfconventions.org/
