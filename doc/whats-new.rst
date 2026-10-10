@@ -366,6 +366,12 @@ Bug Fixes
 - Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
   round trips (:issue:`11466`, :pull:`11474`).
   By `stanbot8 <https://github.com/stanbot8>`_.
+- Fixed :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and
+  :py:meth:`Variable.quantile` raising on an empty result. Numeric data now
+  gives ``NaN``, matching :py:meth:`~xarray.DataArray.mean`,
+  :py:meth:`~xarray.DataArray.median` and pandas, and datetime and timedelta
+  data gives ``NaT`` (:issue:`11549`).
+  By `Chirag Gupta <https://github.com/chiruu12>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs (:pull:`11449`).
