@@ -52,6 +52,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Allow :py:func:`open_datatree` and :py:func:`open_groups` to pass
+  ``use_zarr_fill_value_as_mask`` to the Zarr backend (:issue:`11361`).
+  By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
   removed while still open (:pull:`11703`).
