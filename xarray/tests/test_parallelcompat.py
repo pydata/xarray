@@ -56,6 +56,14 @@ class DummyChunkedArray(np.ndarray):
         return copied
 
 
+class OtherDummyChunkedArray(np.ndarray):
+    """A second, unrelated chunked array type handled by the same chunk manager."""
+
+    @property
+    def chunks(self) -> T_NormalizedChunks:
+        return tuple((size,) for size in self.shape)
+
+
 class DummyChunkManager(ChunkManagerEntrypoint):
     """Mock-up of ChunkManager class for DummyChunkedArray"""
 
@@ -63,7 +71,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
         self.array_cls = DummyChunkedArray
 
     def is_chunked_array(self, data: Any) -> bool:
-        return isinstance(data, DummyChunkedArray)
+        return isinstance(data, DummyChunkedArray | OtherDummyChunkedArray)
 
     def chunks(self, data: DummyChunkedArray) -> T_NormalizedChunks:
         return data.chunks
@@ -250,6 +258,15 @@ class TestGetChunkedArrayType:
 
         chunk_manager = get_chunked_array_type(dask_arr)
         assert isinstance(chunk_manager, DaskManager)
+
+    def test_detect_several_array_types_from_one_chunkmanager(
+        self, register_dummy_chunkmanager
+    ) -> None:
+        dummy_arr = DummyChunkedArray([1, 2, 3])
+        other_arr = OtherDummyChunkedArray([1, 2, 3])
+
+        chunk_manager = get_chunked_array_type(dummy_arr, other_arr)
+        assert isinstance(chunk_manager, DummyChunkManager)
 
     @requires_dask
     def test_raise_on_mixed_array_types(self, register_dummy_chunkmanager) -> None:
