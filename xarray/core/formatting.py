@@ -211,10 +211,32 @@ def format_items(x):
     if not isinstance(x, PandasExtensionArray) and np.issubdtype(
         x.dtype, np.timedelta64
     ):
-        x = astype(x, dtype="timedelta64[ns]")
-        day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
-        time_needed = x[~pd.isnull(x)] != day_part
-        day_needed = day_part != np.timedelta64(0, "ns")
+        # Split every value into a whole-day part and a remaining time part, to
+        # find out whether the day and/or the time component has to be shown.
+        # This is done in the array's own unit: casting to timedelta64[ns]
+        # overflows for values that are valid in a coarser unit, so a
+        # timedelta64[s] array holding e.g. 10**10 seconds could not be
+        # formatted at all.
+        unit, _ = np.datetime_data(x.dtype)
+        if unit in ("D", "h", "m", "s", "ms", "us", "ns"):
+            # Split every value into a whole-day part and the remaining
+            # sub-day part, in the unit of the array itself. Converting to
+            # timedelta64[ns] first overflows for values that are valid in a
+            # coarser unit, e.g. 10**10 seconds is a perfectly representable
+            # timedelta64[s] but not a timedelta64[ns].
+            nonnull = x[~pd.isnull(x)]
+            day_part = astype(nonnull, dtype="timedelta64[D]")
+            day_needed = day_part != np.timedelta64(0, "D")
+            time_needed = astype(day_part, dtype=f"timedelta64[{unit}]") != nonnull
+        else:
+            # Units coarser than a day, and units too fine for a day to be
+            # representable, need a common unit to be compared in.
+            x = astype(x, dtype="timedelta64[ns]")
+            day_part = (
+                x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
+            )
+            time_needed = x[~pd.isnull(x)] != day_part
+            day_needed = day_part != np.timedelta64(0, "ns")
         if array_all(np.logical_not(day_needed)):
             timedelta_format = "time"
         elif array_all(np.logical_not(time_needed)):
