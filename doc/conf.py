@@ -58,7 +58,6 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "jupyter_sphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",
     "sphinxext.opengraph",

@@ -89,7 +89,7 @@ doc/notebooks-examples-gallery.txt
 doc/videos-gallery.txt
 doc/*.zarr
 doc/*.nc
-doc/*.h5
+doc/**/*.h5
 doc/_contents/
 .virtual_documents/
 .jupyterlite.doit.db
