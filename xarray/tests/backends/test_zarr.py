@@ -2320,9 +2320,18 @@ class TestZarrRectilinearChunksRead:
             dimension_names=dimension_names,
         )
 
-    # expected_chunks is what xarray puts in encoding["chunks"]: an int per
-    # regular dim, a tuple of sizes per rectilinear dim (zarr-python itself
-    # differs between versions here). expected_dask_chunks is the expanded form.
+    @staticmethod
+    def maybe_warns_invalid_grid(arr):
+        """zarr-python 3.2.x writes mixed regular/rectilinear grids as invalid
+        'regular' grid metadata, which xarray reads with a warning."""
+        if arr.metadata.to_dict()["chunk_grid"]["name"] == "regular":
+            return pytest.warns(UserWarning, match=r"invalid chunk grid")
+        return contextlib.nullcontext()
+
+    # expected_chunks is what xarray puts in encoding["chunks"]: a tuple of
+    # sizes on every dim of a rectilinear grid, even dims that look regular, so
+    # that the grid is never mistaken for a regular one when writing.
+    # expected_dask_chunks is the expanded form.
     cases = pytest.mark.parametrize(
         "shape,chunks,dimension_names,dtype,expected_chunks,expected_dask_chunks",
         [
@@ -2340,7 +2349,7 @@ class TestZarrRectilinearChunksRead:
                 (2, (5, 10, 5)),
                 ("x", "y"),
                 "float64",
-                (2, (5, 10, 5)),
+                ((2, 2, 2), (5, 10, 5)),
                 ((2, 2, 2), (5, 10, 5)),
                 id="mixed-regular-and-rectilinear",
             ),
@@ -2369,9 +2378,10 @@ class TestZarrRectilinearChunksRead:
             )
             arr[:] = data
 
-            roundtrip = xr.open_zarr(
-                store_path, zarr_format=3, consolidated=False, chunks=None
-            )
+            with self.maybe_warns_invalid_grid(arr):
+                roundtrip = xr.open_zarr(
+                    store_path, zarr_format=3, consolidated=False, chunks=None
+                )
             assert roundtrip["var"].encoding["chunks"] == expected_chunks
             assert roundtrip["var"].encoding["preferred_chunks"] == dict(
                 zip(dimension_names, expected_chunks, strict=True)
@@ -2403,7 +2413,8 @@ class TestZarrRectilinearChunksRead:
             )
             arr[:] = data
 
-            roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+            with self.maybe_warns_invalid_grid(arr):
+                roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
             assert isinstance(roundtrip["var"].data, dask_array_type)
             assert roundtrip["var"].data.chunks == expected_dask_chunks
             np.testing.assert_array_equal(roundtrip["var"].values, data)
@@ -2416,14 +2427,15 @@ class TestZarrRectilinearChunksRead:
 
         store_path = tmp_path / "source.zarr"
         with zarr.config.set({"array.rectilinear_chunks": True}):
-            self.create_zarr_array(
+            arr = self.create_zarr_array(
                 store_path,
                 shape=(0, 20),
                 chunks=(2, (5, 10, 5)),
                 dimension_names=("x", "y"),
                 dtype="float32",
             )
-            roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+            with self.maybe_warns_invalid_grid(arr):
+                roundtrip = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
             assert roundtrip["var"].shape == (0, 20)
             assert roundtrip["var"].encoding["chunks"][1] == (5, 10, 5)
             assert roundtrip["var"].data.chunks == ((0,), (5, 10, 5))
@@ -2500,6 +2512,49 @@ class TestZarrRectilinearChunksRead:
                 )
 
             assert zarr.open_array(store_path / "var").shape == (60,)
+
+    @requires_dask
+    @pytest.mark.parametrize(
+        "chunks,shards",
+        [
+            pytest.param(((1, 1),), None, id="chunks"),
+            pytest.param(1, ((2, 2),), id="shards"),
+        ],
+    )
+    def test_append_to_regular_looking_rectilinear_grid(
+        self, tmp_path, chunks, shards
+    ) -> None:
+        """A rectilinear grid whose sizes happen to be uniform must still be
+        treated as rectilinear, else appending silently corrupts data.
+        https://github.com/pydata/xarray/issues/11674"""
+        import zarr
+
+        store_path = tmp_path / "source.zarr"
+        shape = (4,) if shards else (2,)
+        with zarr.config.set({"array.rectilinear_chunks": True}):
+            arr = self.create_zarr_array(
+                store_path,
+                shape=shape,
+                chunks=chunks,
+                shards=shards,
+                dimension_names=("x",),
+                dtype="float32",
+            )
+            try:
+                arr.shards if shards else arr.chunks  # noqa: B018
+            except NotImplementedError:
+                pass  # rectilinear, as intended
+            else:
+                pytest.skip("this zarr-python version stores the grid as regular")
+            arr[:] = np.arange(1, shape[0] + 1, dtype="float32")
+
+            ds = xr.open_zarr(store_path, zarr_format=3, consolidated=False)
+            with pytest.raises(TypeError, match=r"rectilinear"):
+                ds.to_zarr(
+                    store_path, append_dim="x", zarr_format=3, consolidated=False
+                )
+
+            assert zarr.open_array(store_path / "var").shape == shape
 
     def test_write_rectilinear_shards_blocked(self, tmp_path) -> None:
         """Rectilinear shards must be rejected on write, like rectilinear chunks."""

@@ -98,6 +98,9 @@ def _choose_default_mode(
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 ZarrFormat = Literal[2, 3]
+# One entry per dimension: an int for a regular grid, or the size of every
+# chunk along that dimension for a rectilinear grid.
+type ZarrChunkGridTuple = tuple[int | tuple[int, ...], ...]
 
 
 class FillValueCoder:
@@ -420,25 +423,71 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     return enc_chunks_tuple
 
 
-def _compact_chunk_sizes(
+def _rectilinear_chunk_sizes(
     chunk_sizes: tuple[tuple[int, ...], ...],
-) -> tuple[int | tuple[int, ...], ...]:
-    """Replace a dask-style listing of chunk sizes with a single int along any
-    dimension where it describes a regular grid, e.g. ((10, 10, 5),) -> (10,).
-
-    Gives a consistent representation across zarr-python versions.
+) -> tuple[tuple[int, ...], ...]:
+    """Per-dimension chunk sizes of a rectilinear grid, as tuples on every
+    dimension so the grid is never mistaken for a regular one on write.
     """
-    compacted: list[int | tuple[int, ...]] = []
-    for sizes in chunk_sizes:
-        sizes = tuple(sizes)
-        if not sizes:
-            # zero-length dimension: dask rejects an empty tuple here
-            compacted.append((0,))
-        elif len(set(sizes[:-1])) <= 1 and sizes[-1] <= sizes[0]:
-            compacted.append(sizes[0])
-        else:
-            compacted.append(sizes)
-    return tuple(compacted)
+    # zero-length dimension: zarr reports no sizes, but dask rejects an empty tuple
+    return tuple(tuple(sizes) or (0,) for sizes in chunk_sizes)
+
+
+def _get_zarr_chunks_and_shards(
+    zarr_array: ZarrArray,
+) -> tuple[ZarrChunkGridTuple, ZarrChunkGridTuple | None]:
+    """Read the chunk and shard grids of a zarr array from its metadata.
+
+    A regular grid gives an int per dimension. A rectilinear (variable-sized)
+    grid gives a tuple of sizes on every dimension, even dimensions whose sizes
+    happen to be uniform, so it is never mistaken for a regular grid on write.
+    """
+    metadata: dict[str, Any] = zarr_array.metadata.to_dict()
+    if metadata["zarr_format"] == 2:
+        return tuple(metadata["chunks"]), None
+
+    grid = metadata["chunk_grid"]
+    if grid["name"] == "rectilinear":
+        rectilinear = True
+    elif grid["name"] == "regular":
+        # Zarr-python 3.2.x incorrectly wrote some rectilinear grids as e.g.
+        # {"name": "regular", "configuration": {"chunk_shape": [2, [5, 10, 5]]}}.
+        # Like newer zarr-python, read these as the rectilinear grid they describe.
+        # See https://github.com/zarr-developers/zarr-python/issues/4374
+        rectilinear = any(
+            isinstance(x, list | tuple) for x in grid["configuration"]["chunk_shape"]
+        )
+        if rectilinear:
+            emit_user_level_warning(
+                f"The zarr array {zarr_array.name!r} has invalid chunk grid "
+                f"metadata {grid!r}: a 'regular' chunk grid cannot list chunk "
+                "sizes. This is not spec-compliant, and was likely written by "
+                "the buggy zarr-python versions 3.2.x. Since the intent is clear, "
+                "Xarray will read it as the rectilinear chunk grid it describes, "
+                "but other zarr readers may reject it. See "
+                "https://github.com/zarr-developers/zarr-python/issues/4374",
+                UserWarning,
+            )
+    else:
+        raise NotImplementedError(
+            f"xarray does not support zarr chunk grids of type {grid['name']!r}"
+        )
+
+    # The chunk grid describes the shards if the array is sharded. Chunks
+    # inside each shard are always regular.
+    sharding = next(
+        (c for c in metadata["codecs"] if c["name"] == "sharding_indexed"), None
+    )
+
+    outer: ZarrChunkGridTuple
+    if rectilinear:
+        outer = _rectilinear_chunk_sizes(zarr_array.write_chunk_sizes)
+    else:
+        outer = tuple(grid["configuration"]["chunk_shape"])
+
+    if sharding is None:
+        return outer, None
+    return tuple(sharding["configuration"]["chunk_shape"]), outer
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
@@ -942,17 +991,7 @@ class ZarrStore(AbstractWritableDataStore):
         array_wrapper = ZarrArrayWrapper(zarr_array)
         data = indexing.LazilyIndexedArray(array_wrapper)
 
-        try:
-            chunks = tuple(zarr_array.chunks)
-        except NotImplementedError:
-            # Rectilinear chunk grid (zarr-python >= 3.2): `.chunks` raises, so
-            # read the per-chunk sizes instead, e.g. ((10, 20, 30),).
-            chunks = zarr_array.read_chunk_sizes
-        # Normalise to an int per regular dim and a tuple per rectilinear dim,
-        # since what zarr-python returns above varies between versions.
-        chunks = _compact_chunk_sizes(
-            tuple(x if isinstance(x, tuple) else (x,) for x in chunks)
-        )
+        chunks, shards = _get_zarr_chunks_and_shards(zarr_array)
         preferred_chunks = dict(zip(dimensions, chunks, strict=True))
 
         encoding = {
@@ -961,13 +1000,6 @@ class ZarrStore(AbstractWritableDataStore):
         }
         if array_wrapper.dtype.kind == "T":
             encoding["dtype"] = array_wrapper.dtype
-
-        try:
-            shards = zarr_array.shards
-        except NotImplementedError:
-            # Rectilinear shard grid: `.shards` raises, so read the per-shard
-            # (i.e. outer/storage chunk) sizes instead, e.g. ((1, 2),).
-            shards = _compact_chunk_sizes(zarr_array.write_chunk_sizes)
 
         encoding.update(
             {
