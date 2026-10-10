@@ -26,6 +26,10 @@ New Features
   more compactly and indented below their variable (:pull:`11284`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
+- Dataset, DataArray, and DataTree text and HTML reprs can include an Accessors
+  section for accessors registered via ``register_*_accessor`` that define a
+  custom ``__repr__``.
+
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
