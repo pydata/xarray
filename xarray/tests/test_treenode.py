@@ -510,3 +510,13 @@ def test_nodepath():
     path = NodePath("/Mary")
     assert path.root == "/"
     assert path.stem == "Mary"
+
+
+@pytest.mark.parametrize(
+    "segments", [("//Mary",), ("//", "Mary"), ("Sue", "//Mary"), ("///Mary",)]
+)
+def test_nodepath_double_leading_slash(segments) -> None:
+    path = NodePath(*segments)
+    assert path.root == "/"
+    assert path == NodePath("/Mary")
+    assert NodePath("Sue") / "//Mary" == NodePath("/Mary")

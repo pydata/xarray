@@ -21,6 +21,11 @@ New Features
   type defaults to ``Hashable``, so a bare ``Variable`` annotation means
   ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The ``in`` operator on :py:class:`DataTree` now accepts the same unix-like
+  paths as indexing, so ``key in tree`` is ``True`` exactly when ``tree[key]``
+  succeeds, e.g. ``"group/subgroup" in tree`` or ``"/group/var" in tree``.
+  Previously only names in the current node were found (:issue:`9354`, :pull:`11701`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - The HTML representation can show or hide the attributes and data of all
   variables of a section at once, and shows the expanded attributes and data
   more compactly and indented below their variable (:pull:`11284`).
@@ -52,6 +57,14 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Indexing a :py:class:`DataTree` with a path that continues past a variable,
+  e.g. ``tree["group/var/x"]``, now raises ``KeyError`` instead of
+  ``AttributeError`` (:issue:`9354`, :pull:`11701`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
+- :py:class:`DataTree` paths starting with exactly two slashes, e.g.
+  ``tree["//a"]``, now refer to the root like ``"/a"`` and ``"///a"`` instead of
+  raising ``ValueError`` (:pull:`11701`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
   removed while still open (:pull:`11703`).

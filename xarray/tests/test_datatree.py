@@ -345,6 +345,13 @@ class TestGetItem:
         with pytest.raises(KeyError):
             results["pressure"]
 
+    def test_getitem_path_past_variable(self) -> None:
+        dt = DataTree.from_dict({"/results": xr.Dataset({"temp": ("x", [0, 50])})})
+        with pytest.raises(KeyError):
+            dt["results/temp/x"]
+        with pytest.raises(KeyError):
+            dt["results/temp/.."]
+
     @pytest.mark.xfail(reason="Should be deprecated in favour of .subset")
     def test_getitem_multiple_data_variables(self) -> None:
         data = xr.Dataset({"temp": [0, 50], "p": [5, 8, 7]})
@@ -358,6 +365,61 @@ class TestGetItem:
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree(name="results", dataset=data)
         assert_identical(results[{"temp": 1}], data[{"temp": 1}])  # type: ignore[index]
+
+
+class TestContains:
+    @pytest.fixture
+    def tree(self) -> DataTree:
+        return DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": [1, 2]}),
+                "/a/b": xr.Dataset({"v": ("x", [0, 1])}),
+                "/c": None,
+            }
+        )
+
+    @pytest.mark.parametrize(
+        "key",
+        ["a", "c", "x", "a/b", "/a/b", "./a", "a/", "a//b", "c/../a", "a/b/v", "a/x"],
+    )
+    def test_contains_path(self, tree: DataTree, key: str) -> None:
+        assert key in tree
+        tree[key]
+
+    @pytest.mark.parametrize("key", [".", "/", ""])
+    def test_contains_self(self, tree: DataTree, key: str) -> None:
+        assert key in tree
+        assert tree[key] is tree
+
+    @pytest.mark.parametrize(
+        "key", ["b", "v", "a/v", "zz/q", "..", "nope/..", "a/b/v/x", "a/b/v/.."]
+    )
+    def test_not_contains_path(self, tree: DataTree, key: str) -> None:
+        assert key not in tree
+        with pytest.raises(KeyError):
+            tree[key]
+
+    def test_contains_double_leading_slash(self, tree: DataTree) -> None:
+        # "//" is a separate root in POSIX, but means "/" in a tree like "///"
+        assert "//a" in tree
+        assert tree["//a"] is tree["/a"]
+        assert "//" in tree
+        assert tree["//"] is tree
+        assert "//zz" not in tree
+
+    def test_contains_relative_to_child(self, tree: DataTree) -> None:
+        b = tree["a/b"]
+        for key in ["v", "x", "..", "../..", "../b", "/a", "/c"]:
+            assert key in b
+        assert "../../.." not in b
+
+    def test_contains_non_string_keys(self) -> None:
+        tree = DataTree(xr.Dataset({0: ("x", [1]), ("a", "b"): ("x", [2])}))
+        assert 0 in tree
+        assert ("a", "b") in tree
+        assert 1 not in tree
+        with pytest.raises(TypeError):
+            ["x"] in tree  # noqa: B015
 
 
 class TestUpdate:
