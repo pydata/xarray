@@ -122,6 +122,7 @@ omit = [
   "*/xarray/compat/pdcompat.py",
   "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",
+  "*/xarray/util/generate_*.py",
 ]
 source = ["xarray"]
 

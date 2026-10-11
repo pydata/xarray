@@ -157,10 +157,38 @@ def test_format_dims_index() -> None:
 def test_summarize_attrs_with_unsafe_attr_name_and_value() -> None:
     attrs = {"<x>": 3, "y": "<pd.DataFrame>"}
     formatted = fh.summarize_attrs(attrs)
-    assert "<dt><span>&lt;x&gt; :</span></dt>" in formatted
-    assert "<dt><span>y :</span></dt>" in formatted
+    assert "<dt><span>&lt;x&gt;</span></dt>" in formatted
+    assert "<dt><span>y</span></dt>" in formatted
     assert "<dd>3</dd>" in formatted
     assert "<dd>&lt;pd.DataFrame&gt;</dd>" in formatted
+
+
+def test_repr_toggle_all() -> None:
+    ds = xr.Dataset(
+        {"a": ("x", [1, 2]), "b": ("x", [3, 4])},
+        coords={"x": ("x", [0, 1], {"units": "m"})},
+    )
+    with xr.set_options(display_default_indexes=True):
+        formatted = xarray_html_only_repr(ds)
+    by_name = {}
+    for section in formatted.split("<li class='xr-section-item'>")[1:]:
+        match = re.search(r"class='xr-section-summary'[^>]*>([^:<]*)", section)
+        assert match is not None
+        by_name[match.group(1)] = section
+
+    # coordinates have attributes, so both toggles are enabled
+    coords = by_name["Coordinates"]
+    assert "class='xr-all-attrs-in' type='checkbox'>" in coords
+    assert "class='xr-all-data-in' type='checkbox'>" in coords
+    # no data variable has attributes
+    assert (
+        "class='xr-all-attrs-in' type='checkbox' disabled>" in by_name["Data variables"]
+    )
+    # indexes have no attributes toggle
+    assert "xr-all-attrs-in" not in by_name["Indexes"]
+    assert "class='xr-all-data-in' type='checkbox'>" in by_name["Indexes"]
+    for name in ("Dimensions", "Attributes"):
+        assert "xr-all-" not in by_name.get(name, "")
 
 
 def test_repr_of_dataarray() -> None:
@@ -287,7 +315,7 @@ def test_repr_of_nonstr_dataset(dataset: xr.Dataset) -> None:
     ds.attrs[1] = "Test value"
     ds[2] = ds["tmin"]
     formatted = fh.dataset_repr(ds)
-    assert "<dt><span>1 :</span></dt><dd>Test value</dd>" in formatted
+    assert "<dt><span>1</span></dt><dd>Test value</dd>" in formatted
     assert "<div class='xr-var-name'><span>2</span>" in formatted
 
 
@@ -295,7 +323,7 @@ def test_repr_of_nonstr_dataarray(dataarray: xr.DataArray) -> None:
     da = dataarray.rename(dim_0=15)
     da.attrs[1] = "value"
     formatted = fh.array_repr(da)
-    assert "<dt><span>1 :</span></dt><dd>value</dd>" in formatted
+    assert "<dt><span>1</span></dt><dd>value</dd>" in formatted
     assert "<li><span>15</span>: 4</li>" in formatted
 
 
@@ -304,7 +332,7 @@ def test_nonstr_variable_repr_html() -> None:
     assert hasattr(v, "_repr_html_")
     with xr.set_options(display_style="html"):
         html = v._repr_html_().strip()
-    assert "<dt><span>22 :</span></dt><dd>bar</dd>" in html
+    assert "<dt><span>22</span></dt><dd>bar</dd>" in html
     assert "<li><span>10</span>: 3</li></ul>" in html
 
 
