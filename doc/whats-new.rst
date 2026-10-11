@@ -65,6 +65,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- The indices returned by ``argmin`` and ``argmax`` of :py:class:`~computation.rolling.DataArrayRolling`
+  and :py:class:`~computation.rolling.DatasetRolling` no longer count the padding of windows
+  that extend beyond the array, but start at the first value of the window within
+  the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
+  shifted by the number of missing values in front of the array (:issue:`11336`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
   removed while still open (:pull:`11703`).

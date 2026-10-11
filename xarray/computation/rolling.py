@@ -754,6 +754,51 @@ class DataArrayRolling(Rolling["DataArray"]):
         fillna,
         **kwargs,
     ):
+        result = self._array_reduce_impl(
+            array_agg_func,
+            bottleneck_move_func,
+            numbagg_move_func,
+            rolling_agg_func,
+            keep_attrs,
+            fillna,
+            **kwargs,
+        )
+        if array_agg_func in (duck_array_ops.argmin, duck_array_ops.argmax):
+            result = self._unpad_window_index(result)
+        return result
+
+    def _unpad_window_index(self, result: DataArray) -> DataArray:
+        """Make indices within the padded windows relative to the first value of
+        each window that lies inside the array (GH #11336).
+
+        Windows at the edges extend beyond the array and are padded on the left,
+        which would otherwise be counted. E.g. ``cumulative`` uses windows of the
+        size of the whole dimension.
+        """
+        # multiple rolling dimensions are not supported by argmin/argmax
+        (dim,) = self.dim
+        (window,) = self.window
+        (center,) = self.center
+        # consistent with the padding in Variable.rolling_window
+        left = window // 2 if center else window - 1
+        n_pad = np.maximum(left - np.arange(self.obj.sizes[dim]), 0)
+        if not n_pad.any():
+            return result
+        axis = result.get_axis_num(dim)
+        n_pad = n_pad.reshape((-1,) + (1,) * (result.ndim - axis - 1))
+        n_pad = duck_array_ops.astype(n_pad, result.dtype)
+        return result.copy(data=result.data - n_pad)
+
+    def _array_reduce_impl(
+        self,
+        array_agg_func,
+        bottleneck_move_func,
+        numbagg_move_func,
+        rolling_agg_func,
+        keep_attrs,
+        fillna,
+        **kwargs,
+    ):
         if "dim" in kwargs:
             warnings.warn(
                 f"Reductions are applied along the rolling dimension(s) "
