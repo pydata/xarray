@@ -155,6 +155,11 @@ Bug Fixes
   changes if a slice is all-``NaN`` and has to be filled with ``fill_value``
   (:issue:`7527`, :pull:`11544`).
   By `Shurong Cao <https://github.com/CAOShurong>`_.
+- :py:meth:`DataTree.load` now loads non-chunked variables whose name matches
+  a group path, which were previously skipped and stayed lazy, breaking a
+  subsequent write back to the same file
+  (:issue:`11672`, :pull:`11673`).
+  By `mokashang <https://github.com/mokashang>`_.
 - Fix issues with :py:meth:`DataArray.coarsen()` and :py:meth:`Dataset.coarsen()`
   breaking when applying a reduction method with the ``skipna`` kwarg specified.
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
