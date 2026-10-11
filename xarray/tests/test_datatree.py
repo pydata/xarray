@@ -399,6 +399,10 @@ class TestContains:
         with pytest.raises(KeyError):
             tree[key]
 
+    @pytest.mark.parametrize("key", ["//a", "//"])
+    def test_not_contains_invalid_path(self, tree: DataTree, key: str) -> None:
+        assert key not in tree
+
     def test_contains_relative_to_child(self, tree: DataTree) -> None:
         b = tree["a/b"]
         for key in ["v", "x", "..", "../..", "../b", "/a", "/c"]:
