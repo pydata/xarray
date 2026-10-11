@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numbers
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, Self, overload
 
 import numpy as np
 
@@ -19,6 +20,20 @@ from xarray.core._typed_ops import (
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.namedarray.utils import is_duck_array
+
+if TYPE_CHECKING:
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+    from xarray.core.variable import Variable
+
+# Operands besides xarray objects that `__array_ufunc__` handles, see
+# SupportsArithmetic._HANDLED_TYPES. Not `ArrayLike`, since that includes xarray
+# objects themselves (they implement `__array__`). Other duck arrays are allowed
+# at runtime, but not typed.
+type _UfuncOperand = complex | str | bytes | np.generic | np.ndarray[Any, Any]
+type _UnsupportedUfuncMethod = Literal[
+    "reduce", "reduceat", "accumulate", "outer", "at"
+]
 
 
 class SupportsArithmetic:
@@ -41,6 +56,20 @@ class SupportsArithmetic:
         str,
     )
 
+    # The subclasses add typed overloads of `__array_ufunc__`, so that NumPy's
+    # `__array_ufunc__` protocols (e.g. `_CanUfuncCall1`, `_CanUfuncCall2L` and
+    # `_CanUfuncCall2R` in numpy/_core/umath.pyi) infer the result type of e.g.
+    # `np.exp(da)` or `np.add(da, ds)`. Type checkers only infer the result from
+    # the first overload whose shape matches a protocol, therefore:
+    # - There is a single binary overload, that covers the xarray object as left
+    #   and right operand. It returns the type with the highest priority (Dataset >
+    #   DataArray > Variable), and lists the operands this type wins against.
+    #   Combinations with a higher priority type fail it, so that the type checker
+    #   uses the `__array_ufunc__` of the other operand.
+    # - The binary overload comes before the unary one.
+    # - There is no catch-all overload for `method: str`.
+    # The overloads are not compatible with this signature, as they only accept the
+    # methods and numbers of inputs that are supported at runtime.
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         from xarray.computation.apply_ufunc import apply_ufunc
 
@@ -105,6 +134,40 @@ class VariableArithmetic(
     # prioritize our operations over those of numpy.ndarray (priority=0)
     __array_priority__ = 50
 
+    if TYPE_CHECKING:
+        # override: only the methods and numbers of inputs that work at runtime
+        @overload  # type: ignore[override]
+        def __array_ufunc__(
+            self,
+            ufunc: np.ufunc,
+            method: Literal["__call__"],
+            lhs: Variable | _UfuncOperand,
+            rhs: Variable | _UfuncOperand,
+            /,
+            **kwargs: Any,
+        ) -> Self: ...
+        @overload
+        def __array_ufunc__(
+            self,
+            ufunc: np.ufunc,
+            method: Literal["__call__"],
+            x: Self,
+            /,
+            **kwargs: Any,
+        ) -> Self: ...
+        @overload
+        def __array_ufunc__(
+            self,
+            ufunc: np.ufunc,
+            method: _UnsupportedUfuncMethod,
+            /,
+            *inputs: Any,
+            **kwargs: Any,
+        ) -> NoReturn: ...
+        def __array_ufunc__(
+            self, ufunc: np.ufunc, method: str, /, *inputs: Any, **kwargs: Any
+        ) -> Any: ...
+
 
 class DatasetArithmetic(
     ImplementsDatasetReduce,
@@ -113,6 +176,40 @@ class DatasetArithmetic(
 ):
     __slots__ = ()
     __array_priority__ = 50
+
+    if TYPE_CHECKING:
+        # override: only the methods and numbers of inputs that work at runtime
+        @overload  # type: ignore[override]
+        def __array_ufunc__(
+            self,
+            ufunc: np.ufunc,
+            method: Literal["__call__"],
+            lhs: Dataset | DataArray | Variable | _UfuncOperand,
+            rhs: Dataset | DataArray | Variable | _UfuncOperand,
+            /,
+            **kwargs: Any,
+        ) -> Self: ...
+        @overload
+        def __array_ufunc__(
+            self,
+            ufunc: np.ufunc,
+            method: Literal["__call__"],
+            x: Self,
+            /,
+            **kwargs: Any,
+        ) -> Self: ...
+        @overload
+        def __array_ufunc__(
+            self,
+            ufunc: np.ufunc,
+            method: _UnsupportedUfuncMethod,
+            /,
+            *inputs: Any,
+            **kwargs: Any,
+        ) -> NoReturn: ...
+        def __array_ufunc__(
+            self, ufunc: np.ufunc, method: str, /, *inputs: Any, **kwargs: Any
+        ) -> Any: ...
 
 
 class DataArrayArithmetic(
@@ -124,6 +221,40 @@ class DataArrayArithmetic(
     __slots__ = ()
     # priority must be higher than Variable to properly work with binary ufuncs
     __array_priority__ = 60
+
+    if TYPE_CHECKING:
+        # override: only the methods and numbers of inputs that work at runtime
+        @overload  # type: ignore[override]
+        def __array_ufunc__(
+            self,
+            ufunc: np.ufunc,
+            method: Literal["__call__"],
+            lhs: DataArray | Variable | _UfuncOperand,
+            rhs: DataArray | Variable | _UfuncOperand,
+            /,
+            **kwargs: Any,
+        ) -> Self: ...
+        @overload
+        def __array_ufunc__(
+            self,
+            ufunc: np.ufunc,
+            method: Literal["__call__"],
+            x: Self,
+            /,
+            **kwargs: Any,
+        ) -> Self: ...
+        @overload
+        def __array_ufunc__(
+            self,
+            ufunc: np.ufunc,
+            method: _UnsupportedUfuncMethod,
+            /,
+            *inputs: Any,
+            **kwargs: Any,
+        ) -> NoReturn: ...
+        def __array_ufunc__(
+            self, ufunc: np.ufunc, method: str, /, *inputs: Any, **kwargs: Any
+        ) -> Any: ...
 
 
 class DataArrayGroupbyArithmetic(

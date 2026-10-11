@@ -229,7 +229,7 @@ linkcheck = { cmd = "make linkcheck", cwd = "doc", description = "Check URLs in 
 
 
 [feature.typing.dependencies]
-mypy = "==2.3.1"
+mypy = "==2.4.0"
 pyright = "*"
 hypothesis = "*"
 lxml = "*"
@@ -351,6 +351,45 @@ build-and-host-doc = [
   { task = "doc" },
   { task = "host-static-doc" },
 ]
+
+[feature.benchmark.dependencies]
+python = "3.13.*"
+asv = ">=0.6.6"
+py-rattler = "*"   # asv's "rattler" environment_type
+python-build = "*" # https://github.com/airspeed-velocity/asv/issues/1385
+
+[feature.benchmark.tasks]
+_asv-machine = { cmd = "asv machine --yes", cwd = "asv_bench" }
+
+[feature.benchmark.tasks.bench-compare]
+cmd = "asv continuous --split --show-stderr --factor 1.5 {{ base }} {{ contender }}"
+args = [
+  { arg = "base", default = "main" },
+  { arg = "contender", default = "HEAD" },
+]
+cwd = "asv_bench"
+env = { OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", OMP_NUM_THREADS = "1" }
+depends-on = ["_asv-machine"]
+description = "Compare the asv benchmarks of two commits, by default main and HEAD."
+
+[feature.benchmark.tasks.bench-quick]
+cmd = "asv run --quick --show-stderr HEAD^!"
+cwd = "asv_bench"
+depends-on = ["_asv-machine"]
+description = "Run each asv benchmark once on HEAD, to check that they work."
+
+[feature.benchmark.tasks.bench-history]
+cmd = "mkdir -p .asv && git tag --list 'v*' --contains {{ since }} > .asv/releases.txt && asv run --skip-existing-commits --show-stderr HASHFILE:.asv/releases.txt"
+args = [{ arg = "since", default = "v2024.06.0" }]
+cwd = "asv_bench"
+env = { OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", OMP_NUM_THREADS = "1" }
+depends-on = ["_asv-machine"]
+description = "Run the asv benchmarks for all releases since a tag (default v2024.06.0, the first with numpy 2 support), skipping existing results."
+
+[feature.benchmark.tasks.bench-publish]
+cmd = "asv publish && asv preview"
+cwd = "asv_bench"
+description = "Build the asv website with the performance history of the stored results and serve it locally."
 
 [feature.numpydoc-lint.dependencies]
 numpydoc = "*"
@@ -484,6 +523,7 @@ default = { features = [
 ] }
 policy = { features = ["policy"], no-default-feature = true }
 numpydoc-lint = { features = ["numpydoc-lint"] }
+benchmark = { features = ["benchmark"], no-default-feature = true }
 tools = { features = ["tools"], no-default-feature = true }
 build-package = { features = [
   "build-package",
