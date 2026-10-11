@@ -182,6 +182,9 @@ Documentation
 - Fix the backend array indexing examples to pass indexers as a single tuple
   to ``_raw_indexing_method`` (:issue:`7450`, :pull:`11583`).
   By `Seahzee <https://github.com/Seahzee>`_.
+- Convert several simple documentation pages from reStructuredText to MyST
+  markdown (:issue:`7924`, :pull:`11668`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed the ``kwargs`` entry in the :py:meth:`Dataset.curvefit` and
   :py:meth:`DataArray.curvefit` docstrings: both take a ``kwargs`` dict, not
   ``**kwargs`` (:issue:`6891`, :pull:`11536`).
