@@ -52,6 +52,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Appending to a Zarr store whose time variable is stored with a native
+  ``datetime64`` or ``timedelta64`` dtype now reuses the stored ``units`` and
+  ``calendar``, instead of writing the appended values with default units
+  (:issue:`10639`).
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
   removed while still open (:pull:`11703`).
