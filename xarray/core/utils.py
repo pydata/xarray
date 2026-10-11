@@ -66,7 +66,6 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
-from enum import Enum
 from pathlib import Path
 from types import EllipsisType, ModuleType
 from typing import (
@@ -83,6 +82,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from xarray.namedarray._typing import Default, _default  # noqa: F401
 from xarray.namedarray.utils import (  # noqa: F401
     ReprObject,
     drop_missing_dims,
@@ -773,7 +773,14 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
         raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
     if filename_or_obj.tell() != 0:
         filename_or_obj.seek(0)
-    magic_number = filename_or_obj.read(count)
+    # unbuffered files can return fewer bytes than requested, so read until
+    # `count` bytes or the end of the file
+    magic_number = b""
+    while len(magic_number) < count:
+        chunk = filename_or_obj.read(count - len(magic_number))
+        if not chunk:
+            break
+        magic_number += chunk
     filename_or_obj.seek(0)
     return magic_number
 
@@ -782,7 +789,10 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
     if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
         path = os.fspath(pathlike)
         try:
-            with open(path, "rb") as f:
+            # Open unbuffered: a buffered reader fills its whole buffer, whose size
+            # follows the filesystem block size and can be several MB on parallel
+            # filesystems, effectively reading entire small files (GH7697).
+            with open(path, "rb", buffering=0) as f:
                 return read_magic_number_from_file(f, count)
         except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
@@ -1174,14 +1184,6 @@ class UncachedAccessor[Accessor]:
             return self._accessor
 
         return self._accessor(obj)  # type: ignore[call-arg]  # assume it is a valid accessor!
-
-
-# Singleton type, as per https://github.com/python/typing/pull/240
-class Default(Enum):
-    token = 0
-
-
-_default = Default.token
 
 
 def iterate_nested(nested_list):

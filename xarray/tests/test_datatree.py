@@ -122,6 +122,15 @@ class TestNames:
         mary = DataTree(children={"Sue": sue})
         assert mary.children["Sue"].name == "Sue"
 
+    def test_child_names_cannot_contain_slashes(self) -> None:
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            DataTree(children={"folder/data": DataTree()})
+
+        tree = DataTree(children={"a": DataTree()})
+        with pytest.raises(ValueError, match="cannot contain forward slashes"):
+            tree.children = {"folder/data": DataTree()}
+        assert list(tree.children) == ["a"]
+
     def test_dataset_containing_slashes(self) -> None:
         xda: xr.DataArray = xr.DataArray(
             [[1, 2]],
@@ -1331,7 +1340,7 @@ class TestRepr:
         tree_dict = {}
         for f in range(number_of_files):
             for g in range(number_of_groups):
-                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": f * g})
+                tree_dict[f"file_{f}/group_{g}"] = Dataset({"g": np.int64(f * g)})
 
         tree = DataTree.from_dict(tree_dict)
         with xr.set_options(display_max_children=3):
@@ -1444,8 +1453,8 @@ class TestRepr:
         stations = xr.DataArray(
             data=np.array(list("abcdef"), dtype="<U1"), dims="station"
         )
-        lon = [-100, -80, -60]
-        lat = [10, 20, 30]
+        lon = np.array([-100, -80, -60], dtype=np.int64)
+        lat = np.array([10, 20, 30], dtype=np.int64)
         # Set up fake data
         wind_speed = xr.DataArray(np.ones((2, 6)) * 2, dims=("time", "station"))
         pressure = xr.DataArray(np.ones((2, 6)) * 3, dims=("time", "station"))

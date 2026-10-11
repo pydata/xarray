@@ -11,12 +11,12 @@
 
     v = Variable("x", [1.0])
 
-    reveal_type(v + v)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(v + 1)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(1 + v)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(v * 2.5)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(v**2)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(v + np.array([1.0]))  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(v + v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v + 1)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(1 + v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v * 2.5)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v**2)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v + np.array([1.0]))  # N: Revealed type is "xarray.core.variable.Variable[str]"
 
 - case: test_mypy_variable_comparison_ops
   main: |
@@ -24,9 +24,9 @@
 
     v = Variable("x", [1.0])
 
-    reveal_type(v == v)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(v != 1)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(v < 1)  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(v == v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v != 1)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v < 1)  # N: Revealed type is "xarray.core.variable.Variable[str]"
 
 - case: test_mypy_variable_unary_ops
   main: |
@@ -34,12 +34,12 @@
 
     v = Variable("x", [1.0])
 
-    reveal_type(-v)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(+v)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(abs(v))  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(~v)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(v.round(2))  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(v.conj())  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(-v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(+v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(abs(v))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(~v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v.round(2))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v.conj())  # N: Revealed type is "xarray.core.variable.Variable[str]"
 
 - case: test_mypy_variable_ops_preserve_subclass
   main: |
@@ -246,10 +246,10 @@
     reveal_type(False | da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type(da * 1j)  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type(1j * da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
-    reveal_type(v * 1j)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(1j * v)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(v**2)  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(2**v)  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(v * 1j)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(1j * v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(v**2)  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(2**v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
     reveal_type(da + [1.0])  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type([1.0] + da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type(da + (1, 2))  # N: Revealed type is "xarray.core.dataarray.DataArray"
@@ -279,8 +279,8 @@
 
     reveal_type(da + np.float64(1))  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type(np.float64(1) + da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
-    reveal_type(v * np.int32(1))  # N: Revealed type is "xarray.core.variable.Variable"
-    reveal_type(np.int32(1) * v)  # N: Revealed type is "xarray.core.variable.Variable"
+    reveal_type(v * np.int32(1))  # N: Revealed type is "xarray.core.variable.Variable[str]"
+    reveal_type(np.int32(1) * v)  # N: Revealed type is "xarray.core.variable.Variable[str]"
     reveal_type(da & np.bool_(True))  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type(np.bool_(True) & da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
     reveal_type(ds * np.float32(2))  # N: Revealed type is "xarray.core.dataset.Dataset"

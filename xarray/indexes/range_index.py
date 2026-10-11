@@ -348,6 +348,9 @@ class RangeIndex(CoordinateTransformIndex):
             x        RangeIndex (start=0, stop=1.25, step=0.25)
 
         """
+        if num < 0:
+            raise ValueError(f"Number of samples, {num}, must be non-negative.")
+
         if coord_name is None:
             coord_name = dim
 

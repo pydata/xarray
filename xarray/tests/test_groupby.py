@@ -995,6 +995,17 @@ def test_groupby_dataset_reduce_ellipsis(
     assert_allclose(expected, actual)
 
 
+@pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
+def test_groupby_dataset_by_data_variable_does_not_warn(use_flox: bool) -> None:
+    # GH9890
+    ds = Dataset({"a": ("x", [1, 1, 2, 2]), "b": ("x", [1.0, 2.0, 3.0, 4.0])})
+    expected = Dataset({"b": ("a", [1.5, 3.5])}, coords={"a": [1, 2]})
+    with xr.set_options(use_flox=use_flox), warnings.catch_warnings():
+        warnings.simplefilter("error")
+        actual = ds.groupby("a").mean()
+    assert_identical(actual, expected)
+
+
 def test_groupby_dataset_math() -> None:
     def reorder_dims(x):
         return x.transpose("dim1", "dim2", "dim3", "time")

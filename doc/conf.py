@@ -10,6 +10,11 @@ import packaging.version
 import sphinx_autosummary_accessors
 import yaml
 from sphinx.application import Sphinx
+from sphinx.ext.autodoc import (
+    AttributeDocumenter,
+    MethodDocumenter,
+    PropertyDocumenter,
+)
 from sphinx.util import logging
 
 import xarray
@@ -495,9 +500,68 @@ def check_intersphinx_inventories(app: Sphinx) -> None:
         sys.exit(1)
 
 
+def _qualified_name(obj) -> str | None:
+    module = getattr(obj, "__module__", None)
+    qualname = getattr(obj, "__qualname__", None)
+    if not module or not qualname or "<locals>" in qualname:
+        return None
+    return f"{module}.{qualname}"
+
+
+class _CanonicalMemberMixin:
+    """Add ``:canonical:`` to class members, like autodoc does for classes.
+
+    This adds hidden inventory aliases at the definition path (e.g.
+    ``xarray.core.dataarray.DataArray.sel``), which sphinx-codeautolink looks up.
+    """
+
+    def get_member_canonical(self) -> str | None:
+        raise NotImplementedError
+
+    def add_directive_header(self, sig: str) -> None:
+        super().add_directive_header(sig)
+        canonical = self.get_member_canonical()
+        if (
+            canonical
+            and canonical != self.fullname
+            # skip members inherited from other packages, e.g. pandas.Index
+            and canonical.split(".")[0] == self.fullname.split(".")[0]
+            # one alias per name: the same object can be documented on several classes
+            and canonical not in self.env.domains["py"].objects
+        ):
+            self.add_line(f"   :canonical: {canonical}", self.get_sourcename())
+
+
+class CanonicalMethodDocumenter(_CanonicalMemberMixin, MethodDocumenter):
+    def get_member_canonical(self) -> str | None:
+        return _qualified_name(self.object)
+
+
+class CanonicalPropertyDocumenter(_CanonicalMemberMixin, PropertyDocumenter):
+    def get_member_canonical(self) -> str | None:
+        return _qualified_name(self._get_property_getter())
+
+
+class CanonicalAttributeDocumenter(_CanonicalMemberMixin, AttributeDocumenter):
+    def get_member_canonical(self) -> str | None:
+        # attributes have no __qualname__: use the class that defines them
+        name = self.objpath[-1]
+        for cls in inspect.getmro(self.parent) if inspect.isclass(self.parent) else ():
+            if name in vars(cls) or name in getattr(cls, "__annotations__", {}):
+                cls_name = _qualified_name(cls)
+                return f"{cls_name}.{name}" if cls_name else None
+        return None
+
+
 def setup(app: Sphinx):
     app.connect("html-page-context", html_page_context)
     # run after sphinx.ext.intersphinx loaded the inventories (priority 500)
     app.connect("builder-inited", check_intersphinx_inventories, priority=900)
     app.connect("builder-inited", update_gallery)
     app.connect("builder-inited", update_videos)
+    for documenter in (
+        CanonicalMethodDocumenter,
+        CanonicalPropertyDocumenter,
+        CanonicalAttributeDocumenter,
+    ):
+        app.add_autodocumenter(documenter, override=True)
