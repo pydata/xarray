@@ -399,9 +399,13 @@ class TestContains:
         with pytest.raises(KeyError):
             tree[key]
 
-    @pytest.mark.parametrize("key", ["//a", "//"])
-    def test_not_contains_invalid_path(self, tree: DataTree, key: str) -> None:
-        assert key not in tree
+    def test_contains_double_leading_slash(self, tree: DataTree) -> None:
+        # "//" is a separate root in POSIX, but means "/" in a tree like "///"
+        assert "//a" in tree
+        assert tree["//a"] is tree["/a"]
+        assert "//" in tree
+        assert tree["//"] is tree
+        assert "//zz" not in tree
 
     def test_contains_relative_to_child(self, tree: DataTree) -> None:
         b = tree["a/b"]

@@ -61,6 +61,10 @@ Bug Fixes
   e.g. ``tree["group/var/x"]``, now raises ``KeyError`` instead of
   ``AttributeError`` (:issue:`9354`, :pull:`11701`).
   By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
+- :py:class:`DataTree` paths starting with exactly two slashes, e.g.
+  ``tree["//a"]``, now refer to the root like ``"/a"`` and ``"///a"`` instead of
+  raising ``ValueError`` (:pull:`11701`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
   removed while still open (:pull:`11703`).

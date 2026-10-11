@@ -24,6 +24,12 @@ class NodePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
 
     def __init__(self, *pathsegments):
+        # POSIX keeps exactly two leading slashes as a distinct root ("//a"),
+        # which has no meaning in a tree, so treat it like "/" as "///a" is
+        pathsegments = tuple(
+            "/" + s.lstrip("/") if isinstance(s, str) and s.startswith("//") else s
+            for s in pathsegments
+        )
         super().__init__(*pathsegments)
         if self.drive:
             raise ValueError("NodePaths cannot have drives")

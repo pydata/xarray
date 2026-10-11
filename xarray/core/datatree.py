@@ -882,8 +882,7 @@ class DataTree(
         if isinstance(key, str) and ("/" in key or key in ("", ".", "..")):
             try:
                 self._get_item(key)
-            except (KeyError, ValueError):
-                # ValueError: invalid paths such as "//a"
+            except KeyError:
                 return False
             return True
         return False
