@@ -21,6 +21,10 @@ New Features
   type defaults to ``Hashable``, so a bare ``Variable`` annotation means
   ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The HTML representation can show or hide the attributes and data of all
+  variables of a section at once, and shows the expanded attributes and data
+  more compactly and indented below their variable (:pull:`11284`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Breaking Changes
@@ -54,6 +58,20 @@ Bug Fixes
   the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
   shifted by the number of missing values in front of the array (:issue:`11336`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
+  with ``cache=False`` failing on Windows, because the downloaded file was
+  removed while still open (:pull:`11703`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix dark mode detection in VS Code by adding VS Code CSS variable support to the HTML representation CSS. (:pull:`11284`).
+  By `Maksymilian Wasilewski <https://github.com/maksmondeo>`_.
+- Fix ``TypeError`` on import when ``importlib.metadata.version`` returns ``None``
+  for an installed package, e.g. with some editable installs or custom import hooks
+  in QGIS. Such packages are now treated as not meeting a minimum version
+  (:issue:`11344`, :pull:`11379`).
+  By `Jay <https://github.com/jaythehardcoder>`_.
+- Fix reading JSON-native Zarr fill values from non-xarray Zarr writers
+  (:issue:`11332`, :pull:`11665`).
+  By `Om Satpute <https://github.com/omsatpute61-afk>`_.
 - Fix ``UnsortedIndexError`` when selecting a slice of tuples, e.g.
   ``da.stack(z=["x", "y"]).sel(z=slice((0, "b"), (1, "a")))``, from a dimension
   created by :py:meth:`Dataset.stack` or :py:meth:`DataArray.stack`. Their
@@ -192,6 +210,11 @@ Internal Changes
   ``ArrayLike`` overloads, static type checkers infer e.g. ``np.exp(da)`` as
   :py:class:`DataArray` and ``np.add(da, ds)`` as :py:class:`Dataset`
   instead of ``np.ndarray`` (:issue:`6524`, :issue:`8388`, :pull:`11667`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Remove the unused ``xarray/namedarray/dtypes.py``, a stale copy of
+  ``xarray/core/dtypes.py``, exclude the code generators in ``xarray/util``
+  from the test coverage and test ``xarray.tutorial`` without network access
+  (:pull:`11703`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
