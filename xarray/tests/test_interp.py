@@ -7,6 +7,7 @@ from typing import cast, get_args
 import numpy as np
 import pandas as pd
 import pytest
+from numpy.typing import ArrayLike
 
 import xarray as xr
 from xarray.coding.cftimeindex import _parse_array_of_cftime_strings
@@ -284,6 +285,28 @@ def test_interpolate_vectorize(use_dask: bool, method: InterpOptions) -> None:
     assert_allclose(actual, expected.transpose("z", "w", "y", transpose_coords=True))
 
 
+def _interpn_reference(
+    points: tuple[ArrayLike, ...],
+    values: ArrayLike,
+    xi: ArrayLike,
+    method: InterpnOptions,
+) -> np.ndarray:
+    """scipy.interpolate.interpn, but exact for spline methods.
+
+    For spline methods, interpn solves for the coefficients iteratively, which is
+    only accurate to ~1e-5 for quintic.
+    """
+    from scipy.sparse.linalg import spsolve
+
+    return scipy.interpolate.RegularGridInterpolator(
+        [np.asarray(x, dtype=np.float64) for x in points],
+        np.asarray(values, dtype=np.float64),
+        method=method,
+        bounds_error=False,
+        solver=spsolve if method in ("cubic", "quintic") else None,
+    )(np.asarray(xi, dtype=np.float64))
+
+
 @requires_scipy
 @pytest.mark.parametrize("method", get_args(InterpnOptions))
 @pytest.mark.parametrize(
@@ -305,12 +328,8 @@ def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> 
     # coordinate is unchanged
     # TODO: test this?
     actual = da.interp(x=xdestnp, y=ydestnp, z=zdestnp, method=method)
-    expected_data = scipy.interpolate.interpn(
-        points=(da.x, da.y, da.z),
-        values=da.load().data,
-        xi=grid_grid_points,
-        method=method,
-        bounds_error=False,
+    expected_data = _interpn_reference(
+        (da.x, da.y, da.z), da.load().data, grid_grid_points, method
     ).reshape((len(xdestnp), len(ydestnp), len(zdestnp)))
     expected = xr.DataArray(
         expected_data,
@@ -330,12 +349,8 @@ def test_interpolate_nd(case: int, method: InterpnOptions, nd_interp_coords) -> 
     zdest = nd_interp_coords["zdest"]
     grid_oned_points = nd_interp_coords["grid_oned_points"]
     actual = da.interp(x=xdest, y=ydest, z=zdest, method=method)
-    expected_data_1d: np.ndarray = scipy.interpolate.interpn(
-        points=(da.x, da.y, da.z),
-        values=da.data,
-        xi=grid_oned_points,
-        method=method,
-        bounds_error=False,
+    expected_data_1d: np.ndarray = _interpn_reference(
+        (da.x, da.y, da.z), da.data, grid_oned_points, method
     ).reshape([len(xdest), len(zdest)])
     expected = xr.DataArray(
         expected_data_1d,
@@ -483,6 +498,60 @@ def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
     }
     expected = xr.DataArray(expected_data, dims=["z"], coords=coords)
     assert_allclose(actual, expected)
+
+
+@requires_scipy
+@pytest.mark.parametrize("method", ["cubic", "quintic"])
+@pytest.mark.parametrize("fill_value", [np.nan, None, -5.0])
+def test_interpolate_nd_spline_exact(
+    method: InterpnOptions, fill_value: float | None, use_dask: bool
+) -> None:
+    # GH11342: scipy solves for the spline coefficients iteratively, which is slow
+    # and inexact, so compare against scipy with a direct solver instead
+    from scipy.sparse.linalg import spsolve
+
+    rng = np.random.default_rng(0)
+    x = np.sort(rng.uniform(0, 10, 12))
+    y = np.linspace(-1, 1, 9)
+    z = np.arange(8.0)
+    da = xr.DataArray(
+        rng.random((12, 9, 8, 3)),
+        dims=("x", "y", "z", "w"),
+        coords={"x": x, "y": y, "z": z},
+    )
+    if use_dask:
+        da = da.chunk(x=4, w=1)
+    xdest = xr.DataArray(rng.uniform(-1, 11, 20), dims="p")
+    ydest = xr.DataArray(rng.uniform(-1.2, 1.2, 20), dims="p")
+    zdest = xr.DataArray(rng.uniform(0, 7, 20), dims="p")
+    xdest[0] = np.nan
+
+    actual = da.interp(
+        x=xdest, y=ydest, z=zdest, method=method, kwargs={"fill_value": fill_value}
+    )
+    expected = scipy.interpolate.RegularGridInterpolator(
+        (x, y, z),
+        da.values,
+        method=method,
+        bounds_error=False,
+        fill_value=fill_value,
+        solver=spsolve,
+    )(np.stack([xdest, ydest, zdest], axis=-1))
+    np.testing.assert_allclose(actual.transpose("p", "w").values, expected, rtol=1e-9)
+
+    # orthogonal destinations
+    actual = da.interp(x=[2.5, 7.1], y=0.3, z=[1.2, 5.5, 6.9], method=method)
+    expected = scipy.interpolate.RegularGridInterpolator(
+        (x, y, z), da.values, method=method, bounds_error=False, solver=spsolve
+    )(np.stack(np.meshgrid([2.5, 7.1], 0.3, [1.2, 5.5, 6.9], indexing="ij"), axis=-1))
+    np.testing.assert_allclose(
+        actual.transpose("x", "z", "w").values, expected.squeeze(1), rtol=1e-9
+    )
+
+    with pytest.raises(ValueError, match="out of bounds"):
+        da.interp(
+            x=11, y=0, z=0, method=method, kwargs={"bounds_error": True}
+        ).compute()
 
 
 @requires_scipy
