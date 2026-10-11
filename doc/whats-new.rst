@@ -65,6 +65,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` no longer raise a
+  ``RecursionError`` for an order ``n`` close to the recursion limit, and are
+  faster for ``n > 1``. They also label the result correctly for ``n > 1`` with
+  ``label="lower"``, which used the upper labels for all but the first difference
+  (:issue:`11702`, :pull:`11704`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - The indices returned by ``argmin`` and ``argmax`` of :py:class:`~computation.rolling.DataArrayRolling`
   and :py:class:`~computation.rolling.DatasetRolling` no longer count the padding of windows
   that extend beyond the array, but start at the first value of the window within
