@@ -293,17 +293,21 @@ def _interpn_reference(
 ) -> np.ndarray:
     """scipy.interpolate.interpn, but exact for spline methods.
 
-    For spline methods, interpn solves for the coefficients iteratively, which is
-    only accurate to ~1e-5 for quintic.
+    For spline methods, interpn solves for the coefficients iteratively with a loose
+    default tolerance, which is only accurate to ~1e-5 for quintic. A direct solver
+    (spsolve) is exact but takes minutes on these grids, so tighten the tolerance
+    of the iterative solver instead.
     """
-    from scipy.sparse.linalg import spsolve
+    from scipy.sparse.linalg import gcrotmk
 
+    spline = method in ("cubic", "quintic")
     return scipy.interpolate.RegularGridInterpolator(
         [np.asarray(x, dtype=np.float64) for x in points],
         np.asarray(values, dtype=np.float64),
         method=method,
         bounds_error=False,
-        solver=spsolve if method in ("cubic", "quintic") else None,
+        solver=gcrotmk if spline else None,
+        solver_args={"rtol": 1e-12, "atol": 1e-14} if spline else None,
     )(np.asarray(xi, dtype=np.float64))
 
 
