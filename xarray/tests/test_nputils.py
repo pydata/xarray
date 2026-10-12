@@ -7,7 +7,6 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import xarray as xr
-
 from xarray.core.nputils import NumpyVIndexAdapter, _is_contiguous, nanquantile
 
 
@@ -70,9 +69,7 @@ def test_high_level_quantile_all_nan_slice_is_silent(dataset: bool) -> None:
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", RuntimeWarning)
-        result = obj.quantile(
-            0.5, dim="time", method="median_unbiased", skipna=True
-        )
+        result = obj.quantile(0.5, dim="time", method="median_unbiased", skipna=True)
 
     actual = result["measurements"].values if dataset else result.values
     assert_array_equal(actual, [np.nan, 2.0])
