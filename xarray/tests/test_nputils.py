@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
+import xarray as xr
+
 from xarray.core.nputils import NumpyVIndexAdapter, _is_contiguous, nanquantile
 
 
@@ -54,3 +56,23 @@ def test_nanquantile_other_runtime_warnings_not_suppressed(monkeypatch) -> None:
     monkeypatch.setattr(np, "nanquantile", warning_quantile)
     with pytest.warns(RuntimeWarning, match="unrelated quantile warning"):
         nanquantile(np.array([[1.0], [2.0]]), axis=0, q=0.5, method="median_unbiased")
+
+
+@pytest.mark.parametrize("dataset", [False, True], ids=["DataArray", "Dataset"])
+def test_high_level_quantile_all_nan_slice_is_silent(dataset: bool) -> None:
+    # Regression for gh-9870: exercise the public quantile API, not only the
+    # NumPy fallback helper. The non-default method bypasses numbagg.
+    values = xr.DataArray(
+        [[np.nan, 1.0], [np.nan, 3.0]],
+        dims=("time", "position"),
+    )
+    obj = values.to_dataset(name="measurements") if dataset else values
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        result = obj.quantile(
+            0.5, dim="time", method="median_unbiased", skipna=True
+        )
+
+    actual = result["measurements"].values if dataset else result.values
+    assert_array_equal(actual, [np.nan, 2.0])
