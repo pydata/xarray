@@ -2498,9 +2498,9 @@ class DataTree(
                 self[path].variables[var_name].data = data
 
         # load everything else sequentially
-        for node in self.subtree:
+        for path, node in self.subtree_with_keys:
             for k, v in node.variables.items():
-                if k not in lazy_data:
+                if k not in lazy_data[path]:
                     v.load()
 
         return self

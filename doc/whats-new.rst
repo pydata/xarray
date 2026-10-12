@@ -13,6 +13,27 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:class:`~xarray.Variable` is now generic in the types of its shape, dtype
+  and dimension names, like :py:class:`~xarray.NamedArray`: it is defined as
+  ``class Variable(NamedArray[ShapeType_co, DType_co, DimType_co])``, so static
+  type checkers can infer and check them, e.g.
+  ``Variable(("x", "y"), np.zeros((2, 3)))`` is a
+  ``Variable[tuple[int, ...], np.dtype[np.float64], str]``. The dtype is also
+  inferred from lists and scalars, e.g. ``Variable("x", [1, 2])`` has an integer
+  dtype, also in :py:func:`~xarray.namedarray.core.from_array`. Operations that can
+  change the dtype or shape return a ``Variable`` with the respective types, e.g.
+  comparisons have a boolean dtype. The dimension type defaults to
+  ``Hashable``, so a bare ``Variable`` annotation means
+  ``Variable[Any, Any, Hashable]`` and keeps its previous meaning
+  (:pull:`11677`, :pull:`11693`).
+- :py:meth:`DataArray.idxmin` and :py:meth:`DataArray.idxmax` accept a sequence
+  of dimensions or ``...``, and return a dict of the coordinate labels along each
+  dimension, like :py:meth:`DataArray.argmin`. Without ``dim``, arrays with more
+  than one dimension now use all dimensions instead of raising an error.
+  :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` raise an informative
+  error for multiple dimensions (:issue:`10112`, :pull:`10680`).
+  By `Giacomo Caria <https://github.com/gcaria>`_ and
+  `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:class:`~xarray.Variable` is now generic in the type of its dimension
   names, like :py:class:`~xarray.NamedArray`: it is defined as
   ``class Variable(NamedArray[Any, Any, DimType_co])``, so static type checkers
@@ -29,6 +50,11 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The results of :py:meth:`DataArray.idxmin`, :py:meth:`DataArray.idxmax`,
+  :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` now keep the
+  attributes of the coordinate whose labels they return, e.g. its units,
+  instead of the attributes of the data (:pull:`10680`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Support for Python 3.11 has been dropped. The minimum required Python version
   is now 3.12, in line with xarray's
   :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
@@ -57,6 +83,21 @@ Bug Fixes
   instead of silently replacing the plain coordinate during alignment and merging
   (:issue:`11607`).
   By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
+- Fix pickling of datasets opened from file-like objects with the scipy backend
+  after opening more than one such dataset (:issue:`11323`, :pull:`11413`).
+  By `C1-BA-B1-F3 <https://github.com/C1-BA-B1-F3>`_.
+- :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` no longer raise a
+  ``RecursionError`` for an order ``n`` close to the recursion limit, and are
+  faster for ``n > 1``. They also label the result correctly for ``n > 1`` with
+  ``label="lower"``, which used the upper labels for all but the first difference
+  (:issue:`11702`, :pull:`11704`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The indices returned by ``argmin`` and ``argmax`` of :py:class:`~computation.rolling.DataArrayRolling`
+  and :py:class:`~computation.rolling.DatasetRolling` no longer count the padding of windows
+  that extend beyond the array, but start at the first value of the window within
+  the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
+  shifted by the number of missing values in front of the array (:issue:`11336`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
   removed while still open (:pull:`11703`).
@@ -141,6 +182,11 @@ Bug Fixes
   changes if a slice is all-``NaN`` and has to be filled with ``fill_value``
   (:issue:`7527`, :pull:`11544`).
   By `Shurong Cao <https://github.com/CAOShurong>`_.
+- :py:meth:`DataTree.load` now loads non-chunked variables whose name matches
+  a group path, which were previously skipped and stayed lazy, breaking a
+  subsequent write back to the same file
+  (:issue:`11672`, :pull:`11673`).
+  By `mokashang <https://github.com/mokashang>`_.
 - Fix issues with :py:meth:`DataArray.coarsen()` and :py:meth:`Dataset.coarsen()`
   breaking when applying a reduction method with the ``skipna`` kwarg specified.
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
@@ -163,6 +209,9 @@ Documentation
 - Fix the backend array indexing examples to pass indexers as a single tuple
   to ``_raw_indexing_method`` (:issue:`7450`, :pull:`11583`).
   By `Seahzee <https://github.com/Seahzee>`_.
+- Convert several simple documentation pages from reStructuredText to MyST
+  markdown (:issue:`7924`, :pull:`11668`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed the ``kwargs`` entry in the :py:meth:`Dataset.curvefit` and
   :py:meth:`DataArray.curvefit` docstrings: both take a ``kwargs`` dict, not
   ``**kwargs`` (:issue:`6891`, :pull:`11536`).
@@ -371,6 +420,14 @@ Bug Fixes
 - Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
   round trips (:issue:`11466`, :pull:`11474`).
   By `stanbot8 <https://github.com/stanbot8>`_.
+- :py:func:`~xarray.open_dataset` now raises an error pointing at
+  :py:func:`~xarray.open_mfdataset` when it is given a list or tuple of paths,
+  instead of reporting that no IO backend matched the input (:issue:`6510`).
+  By `NoiceHex <https://github.com/NoiceHax>`_.
+- Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
+  which caused ``AsyncMock`` objects to leak through instead of real array data
+  (:pull:`11232`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs (:pull:`11449`).
