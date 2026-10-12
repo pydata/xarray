@@ -697,7 +697,13 @@ def _dataset_concat(
             if k in variables_to_merge
         }
         merged_vars, merged_indexes = merge_collected(
-            grouped, compat=compat, equals=equals
+            grouped,
+            compat=compat,
+            equals=equals,
+            check_indexed_coords=(
+                isinstance(compat, CombineKwargDefault) or compat != "override"
+            )
+            and join != "override",
         )
         result_vars.update(merged_vars)
         result_indexes.update(merged_indexes)

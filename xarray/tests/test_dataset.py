@@ -2802,68 +2802,91 @@ class TestDataset:
             "tag", ScalarIndex
         )
         unindexed = DataArray([3, 4], dims="x", coords={"tag": 20})
+        warning = r"index of coordinate 'tag' replaces a coordinate 'tag'"
 
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
-            xr.align(indexed, unindexed, join="exact")
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
-            xr.align(unindexed, indexed, join="exact")
+        with pytest.warns(FutureWarning, match=warning):
+            aligned = xr.align(indexed, unindexed, join="exact")
+        assert aligned[1].coords["tag"].item() == 10
+        with pytest.warns(FutureWarning, match=warning):
+            aligned = xr.align(unindexed, indexed, join="exact")
+        assert aligned[0].coords["tag"].item() == 10
 
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
-            xr.merge([indexed.rename("a"), unindexed.rename("b")])
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
-            xr.merge([unindexed.rename("b"), indexed.rename("a")])
+        with pytest.warns(FutureWarning, match=warning):
+            merged = xr.merge([indexed.rename("a"), unindexed.rename("b")])
+        assert merged.coords["tag"].item() == 10
+        with pytest.warns(FutureWarning, match=warning):
+            merged = xr.merge([unindexed.rename("b"), indexed.rename("a")])
+        assert merged.coords["tag"].item() == 10
+
+        # The new defaults use compat="override", but implicit defaults should
+        # still warn before that behavior becomes the default.
+        with xr.set_options(use_new_combine_kwarg_defaults=True):
+            with pytest.warns(FutureWarning, match=warning):
+                merged = xr.merge([indexed.rename("a"), unindexed.rename("b")])
+        assert merged.coords["tag"].item() == 10
 
         # compat="override" explicitly keeps the pre-existing merge behavior.
-        merged = xr.merge(
-            [indexed.rename("a"), unindexed.rename("b")], compat="override"
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            merged = xr.merge(
+                [indexed.rename("a"), unindexed.rename("b")], compat="override"
+            )
         assert merged.coords["tag"].item() == 10
-        merged = xr.merge(
-            [unindexed.rename("b"), indexed.rename("a")], compat="override"
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            merged = xr.merge(
+                [unindexed.rename("b"), indexed.rename("a")], compat="override"
+            )
         assert merged.coords["tag"].item() == 10
 
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
+        with pytest.warns(FutureWarning, match=warning):
             indexed + unindexed
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
+        with pytest.warns(FutureWarning, match=warning):
             unindexed + indexed
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
+        with pytest.warns(FutureWarning, match=warning):
             np.add(indexed, unindexed)
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
+        with pytest.warns(FutureWarning, match=warning):
             xr.apply_ufunc(np.add, indexed, unindexed)
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
+        with pytest.warns(FutureWarning, match=warning):
             xr.where(indexed > 0, indexed, unindexed)
-        with pytest.raises(
-            AlignmentError, match="conflicting values for coordinate 'tag'"
-        ):
+        with pytest.warns(FutureWarning, match=warning):
             xr.concat([indexed, unindexed], dim="x")
 
         equal = unindexed.assign_coords(tag=10)
-        aligned = xr.align(indexed, equal, join="exact")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            aligned = xr.align(indexed, equal, join="exact")
         assert aligned[0].coords["tag"].item() == aligned[1].coords["tag"].item() == 10
 
         # Explicit override retains its existing behavior and does not compare
         # coordinate values.
         overridden = xr.align(indexed, unindexed, join="override")
         assert overridden[1].coords["tag"].item() == 20
+
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_align_dropped_dimension_coordinate_conflict_warns(self, reverse) -> None:
+        indexed = DataArray([1, 2], dims="x", coords={"x": [0, 1]})
+        unindexed = DataArray([3, 4], dims="x", coords={"x": [5, 6]}).drop_indexes("x")
+        objects = [unindexed, indexed] if reverse else [indexed, unindexed]
+
+        with pytest.warns(
+            FutureWarning, match=r"index of coordinate 'x' replaces a coordinate 'x'"
+        ):
+            aligned = xr.align(*objects, join="exact")
+
+        assert_array_equal(aligned[0].x, [0, 1])
+        assert_array_equal(aligned[1].x, [0, 1])
+
+    @requires_dask
+    def test_align_does_not_load_lazy_unindexed_coords(self) -> None:
+        import dask.array
+
+        indexed = Dataset(coords={"tag": 10}).set_xindex("tag", ScalarIndex)
+        unindexed = Dataset(coords={"tag": ((), dask.array.from_array(np.array(20)))})
+
+        with warnings.catch_warnings(), raise_if_dask_computes():
+            warnings.simplefilter("error", FutureWarning)
+            xr.align(indexed, unindexed, join="exact")
 
         # A scalar coordinate left by selecting one point has different dims
         # from the indexed dimension coordinate and remains valid.
@@ -5323,8 +5346,11 @@ class TestDataset:
         # A plain coordinate cannot silently replace an indexed level
         # coordinate with the same name and dimensions.
         other = Dataset(coords={"level_1": ("x", range(4))})
-        with pytest.raises(AlignmentError, match="conflicting values for coordinate"):
-            data.merge(other)
+        with pytest.warns(
+            FutureWarning, match="index of coordinate 'level_1' replaces"
+        ):
+            actual = data.merge(other)
+        assert_identical(actual, data)
 
     def test_setitem_original_non_unique_index(self) -> None:
         # regression test for GH943

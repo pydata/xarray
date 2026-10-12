@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from contextlib import suppress
 from itertools import starmap
-from typing import TYPE_CHECKING, Any, Final, cast, get_args, overload
+from typing import TYPE_CHECKING, Any, Final, get_args, overload
 
 import numpy as np
 import pandas as pd
@@ -19,6 +19,10 @@ from xarray.core.indexes import (
     PandasMultiIndex,
     indexes_all_equal,
     safe_cast_to_index,
+)
+from xarray.core.indexing import (
+    CoordinateTransformIndexingAdapter,
+    PandasIndexingAdapter,
 )
 from xarray.core.types import JoinOptions, T_Alignable
 from xarray.core.utils import emit_user_level_warning, is_dict_like, is_full_slice
@@ -138,6 +142,49 @@ CoordNamesAndDims = tuple[tuple[Hashable, tuple[Hashable, ...]], ...]
 MatchingIndexKey = tuple[CoordNamesAndDims, type[Index]]
 IndexesToAlign = dict[MatchingIndexKey, Index]
 IndexVarsToAlign = dict[MatchingIndexKey, dict[Hashable, Variable]]
+
+
+def _is_loaded(var: Variable) -> bool:
+    # Index-backed data (e.g. a pd.RangeIndex or coordinate transform) is
+    # inexpensive to compare even though it is not marked as in memory.
+    return var._in_memory or isinstance(
+        var._data, PandasIndexingAdapter | CoordinateTransformIndexingAdapter
+    )
+
+
+def _warn_conflicting_unindexed_coordinate(
+    name: Hashable, var: Variable, index_var: Variable
+) -> None:
+    """Warn when an index variable replaces a conflicting unindexed coordinate."""
+    if (
+        var.dims != index_var.dims
+        or not (_is_loaded(var) and _is_loaded(index_var))
+        or var.equals(index_var)
+    ):
+        return
+
+    emit_user_level_warning(
+        f"the index of coordinate {name!r} replaces a coordinate {name!r} "
+        "without an index that has different values. In a future version "
+        "of xarray this will raise an error. Drop one of the coordinates, "
+        "give them equal values, or explicitly set the relevant join or "
+        "compat option to 'override' to keep the current behavior.",
+        FutureWarning,
+    )
+
+
+def _warn_conflicting_unindexed_coords(
+    obj: Alignable, index_vars: Mapping[Hashable, Variable]
+) -> None:
+    """Warn when aligned index variables replace conflicting unindexed coords."""
+    obj_coords = getattr(obj, "coords", obj)
+    coord_vars = obj_coords.variables
+    obj_xindexes = getattr(obj, "xindexes", {})
+
+    for name, index_var in index_vars.items():
+        var = coord_vars.get(name)
+        if var is not None and name not in obj_xindexes:
+            _warn_conflicting_unindexed_coordinate(name, var, index_var)
 
 
 class Aligner[T_Alignable: Alignable]:
@@ -607,6 +654,8 @@ class Aligner[T_Alignable: Alignable]:
                 # add the aligned index if it relates to unindexed dimensions in obj
                 dims = {d for var in aligned_idx_vars.values() for d in var.dims}
                 if dims <= set(obj.dims):
+                    if self.check_indexed_coords:
+                        _warn_conflicting_unindexed_coords(obj, aligned_idx_vars)
                     obj_idx = aligned_idx
 
             if obj_idx is not None:
@@ -672,8 +721,6 @@ class Aligner[T_Alignable: Alignable]:
         self.find_matching_unindexed_dims()
         self.align_indexes()
         self.assert_unindexed_dim_sizes_equal()
-        if self.check_indexed_coords and self.join != "override":
-            self.assert_no_conflicting_indexed_coords()
 
         if self.join == "override":
             self.override_indexes()
@@ -681,36 +728,6 @@ class Aligner[T_Alignable: Alignable]:
             self.results = self.objects
         else:
             self.reindex_all()
-
-    def assert_no_conflicting_indexed_coords(self) -> None:
-        """Check that unindexed coordinates don't conflict with an index."""
-        for obj, matching_indexes in zip(
-            self.objects, self.objects_matching_indexes, strict=True
-        ):
-            obj_coords = cast(Any, getattr(obj, "coords", obj))
-            for key in self.aligned_indexes:
-                if matching_indexes.get(key) is not None:
-                    continue
-
-                aligned_idx_vars = self.aligned_index_vars[key]
-                dims = {d for var in aligned_idx_vars.values() for d in var.dims}
-                if not dims <= set(obj.dims) or dims & self.exclude_dims:
-                    continue
-
-                for name, aligned_var in aligned_idx_vars.items():
-                    # Dimension coordinates follow the join's normal reindexing
-                    # rules; this check is for auxiliary metadata coordinates.
-                    if name not in obj_coords or name in obj.dims:
-                        continue
-
-                    obj_var = obj_coords[name].variable
-                    if obj_var.dims == aligned_var.dims and not obj_var.equals(
-                        aligned_var
-                    ):
-                        raise AlignmentError(
-                            f"conflicting values for coordinate {name!r} "
-                            "between indexed and unindexed objects"
-                        )
 
 
 @overload

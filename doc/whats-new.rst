@@ -74,15 +74,15 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Warn when an index replaces a same-named, same-dimension unindexed coordinate
+  with different values during alignment or merging. This will become an
+  :py:class:`AlignmentError` in a future version; use ``join="override"`` to
+  retain the current behavior (:issue:`11607`).
+  By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 
 
 Bug Fixes
 ~~~~~~~~~
-- Raise an :py:class:`AlignmentError` when an indexed auxiliary coordinate and
-  a plain auxiliary coordinate with the same name and dimensions have different values,
-  instead of silently replacing the plain coordinate during alignment and merging
-  (:issue:`11607`).
-  By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - Fix pickling of datasets opened from file-like objects with the scipy backend
   after opening more than one such dataset (:issue:`11323`, :pull:`11413`).
   By `C1-BA-B1-F3 <https://github.com/C1-BA-B1-F3>`_.
