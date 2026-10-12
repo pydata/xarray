@@ -239,7 +239,16 @@ def _create_method(name, npmodule=np) -> Callable:
             if isinstance(result, float):
                 result = np.float64(result)
         else:
-            result = getattr(npmodule, name)(values, axis=axis, **kwargs)
+            if name == "nanquantile":
+                # As with other skipna reductions, all-NaN slices should return
+                # NaN without emitting NumPy's expected runtime warning.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore", "All-NaN slice encountered", RuntimeWarning
+                    )
+                    result = getattr(npmodule, name)(values, axis=axis, **kwargs)
+            else:
+                result = getattr(npmodule, name)(values, axis=axis, **kwargs)
 
         return result
 
