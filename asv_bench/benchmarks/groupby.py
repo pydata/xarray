@@ -11,6 +11,10 @@ from . import _skip_slow, parameterized, requires_dask
 
 class GroupBy:
     def setup(self, *args, **kwargs):
+        if args[:2] == ("cumsum", 2):
+            # groupby scans don't support grouping by the 2D variables of ds2d
+            raise NotImplementedError
+
         self.n = 100
         self.ds1d = xr.Dataset(
             {
@@ -61,7 +65,7 @@ class GroupBy:
 class GroupByDask(GroupBy):
     def setup(self, *args, **kwargs):
         requires_dask()
-        super().setup(**kwargs)
+        super().setup(*args, **kwargs)
 
         self.ds1d = self.ds1d.sel(dim_0=slice(None, None, 2))
         self.ds1d["c"] = self.ds1d["c"].chunk({"dim_0": 50})
@@ -79,7 +83,7 @@ class GroupByPandasDataFrame(GroupBy):
         # Skip testing in CI as it won't ever change in a commit:
         _skip_slow()
 
-        super().setup(**kwargs)
+        super().setup(*args, **kwargs)
         self.ds1d = self.ds1d.to_dataframe()
         self.ds1d_mean = self.ds1d.groupby("b").mean()
 
@@ -98,7 +102,7 @@ class GroupByDaskDataFrame(GroupBy):
         _skip_slow()
 
         requires_dask()
-        super().setup(**kwargs)
+        super().setup(*args, **kwargs)
         self.ds1d = self.ds1d.chunk({"dim_0": 50}).to_dask_dataframe()
         self.ds1d_mean = self.ds1d.groupby("b").mean().compute()
 

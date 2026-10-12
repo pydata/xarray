@@ -103,7 +103,7 @@ OPTIONS: T_Options = {
     "keep_attrs": "default",
     "netcdf_engine_order": ("netcdf4", "h5netcdf", "scipy"),
     "warn_for_unclosed_files": False,
-    "use_bottleneck": True,
+    "use_bottleneck": False,
     "use_flox": True,
     "use_new_combine_kwarg_defaults": False,
     "use_numbagg": True,
@@ -321,7 +321,7 @@ class set_options:
         netCDF files with ``open_dataset()`` and ``to_netcdf()`` if ``engine``
         is not explicitly specified. May be any permutation or subset of
         ``['netcdf4', 'h5netcdf', 'scipy']``.
-    use_bottleneck : bool, default: True
+    use_bottleneck : bool, default: False
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.
     use_flox : bool, default: True

@@ -2,14 +2,25 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 from xarray.compat.dask_array_compat import reshape_blockwise
 from xarray.core import dtypes, nputils
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 
 
-def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
+def dask_rolling_wrapper(
+    moving_func, a, window, min_count=None, axis=-1, input_dtype=None
+):
     """Wrapper to apply bottleneck moving window funcs on dask arrays"""
-    dtype, _ = dtypes.maybe_promote(a.dtype)
+    if input_dtype is None:
+        input_dtype = a.dtype
+    if input_dtype.kind in "biufc":
+        dtype = moving_func(
+            np.empty((1,), dtype=input_dtype), window=1, min_count=1, axis=0
+        ).dtype
+    else:
+        dtype, _ = dtypes.maybe_promote(a.dtype)
     return a.data.map_overlap(
         moving_func,
         depth={axis: (window - 1, 0)},

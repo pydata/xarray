@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Union, cast
+from typing import TYPE_CHECKING, Union, cast, override
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,7 @@ from xarray.coding.common import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
-from xarray.compat.pdcompat import default_precision_timestamp, timestamp_as_unit
+from xarray.compat.pdcompat import default_precision_timestamp
 from xarray.core import indexing
 from xarray.core.common import contains_cftime_datetimes, is_np_datetime_like
 from xarray.core.duck_array_ops import array_all, asarray, ravel, reshape
@@ -419,7 +419,7 @@ def _check_date_for_units_since_refdate(
         return pd.Timestamp("NaT")
     # this will raise on overflow if ref_date + delta can't be represented in
     # the current ref_date resolution
-    return timestamp_as_unit(ref_date + delta, ref_date.unit)
+    return (ref_date + delta).as_unit(ref_date.unit)
 
 
 def _check_timedelta_range(value, data_unit, time_unit):
@@ -437,7 +437,7 @@ def _align_reference_date_and_unit(
     if np.timedelta64(1, ref_date.unit) > np.timedelta64(1, unit):
         # this will raise accordingly
         # if data can't be represented in the higher resolution
-        return timestamp_as_unit(ref_date, cast(PDDatetimeUnitOptions, unit))
+        return ref_date.as_unit(cast(PDDatetimeUnitOptions, unit))
     return ref_date
 
 
@@ -976,7 +976,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     dates = np.atleast_1d(dates)
 
     # Find all the None position
-    none_position = dates == None  # noqa: E711
+    none_position = dates == None
     filtered_dates = dates[~none_position]
 
     # Since netCDF files do not support storing float128 values, we ensure
@@ -1380,6 +1380,7 @@ class CFDatetimeCoder(VariableCoder):
         self.use_cftime = use_cftime
         self.time_unit = time_unit
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
             variable
@@ -1404,6 +1405,7 @@ class CFDatetimeCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
         if isinstance(units, str) and "since" in units:
@@ -1499,6 +1501,7 @@ class CFTimedeltaCoder(VariableCoder):
         self.decode_via_units = decode_via_units
         self.decode_via_dtype = decode_via_dtype
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
@@ -1521,6 +1524,7 @@ class CFTimedeltaCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
         has_timedelta_units = isinstance(units, str) and units in TIME_UNITS

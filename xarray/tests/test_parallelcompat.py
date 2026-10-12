@@ -8,7 +8,7 @@ import pytest
 
 from xarray import set_options
 from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
-from xarray.namedarray._typing import _Chunks
+from xarray.namedarray._typing import Chunks
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import (
     KNOWN_CHUNKMANAGERS,
@@ -81,7 +81,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
         return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)
 
     def from_array(
-        self, data: T_DuckArray | np.typing.ArrayLike, chunks: _Chunks, **kwargs
+        self, data: T_DuckArray | np.typing.ArrayLike, chunks: Chunks, **kwargs
     ) -> DummyChunkedArray:
         from dask import array as da
 
@@ -175,6 +175,7 @@ class TestGetChunkManager:
             guess_chunkmanager("foo")
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_get_dask_if_installed(self) -> None:
         chunkmanager = guess_chunkmanager(None)
         assert isinstance(chunkmanager, DaskManager)
@@ -192,6 +193,7 @@ class TestGetChunkManager:
             guess_chunkmanager("dask")
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_choose_dask_over_other_chunkmanagers(
         self, register_dummy_chunkmanager
     ) -> None:
@@ -240,6 +242,7 @@ class TestGetChunkedArrayType:
             get_chunked_array_type(dummy_arr)
 
     @requires_dask
+    @pytest.mark.skip_with_dask_array
     def test_detect_dask_if_installed(self) -> None:
         import dask.array as da
 

@@ -92,11 +92,20 @@ def _dask_or_eager_func(
 
     def f(*args, **kwargs):
         if dask_available and any(is_duck_dask_array(a) for a in args):
-            mod = (
-                import_module(dask_module)
-                if isinstance(dask_module, str)
-                else dask_module
-            )
+            chunkmanager = get_chunked_array_type(*args)
+            mod = chunkmanager.array_api
+            if not hasattr(mod, name):
+                from xarray.namedarray.daskmanager import DaskManager
+
+                if not isinstance(chunkmanager, DaskManager):
+                    raise NotImplementedError(
+                        f"{name!r} is not available on the active dask chunk manager"
+                    )
+                mod = (
+                    import_module(dask_module)
+                    if isinstance(dask_module, str)
+                    else dask_module
+                )
             wrapped = getattr(mod, name)
             for kwarg in numpy_only_kwargs:
                 kwargs.pop(kwarg, None)
@@ -529,6 +538,18 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
 
             nanname = "nan" + name
             func = getattr(nanops, nanname)
+        elif name in ["min", "max"] and dtypes.is_object(values.dtype):
+            # numpy's min/max of object arrays give order-dependent results
+            # when NaN is present, so compute ignoring nulls and then mask
+            # every slice that contains a null
+            from xarray.computation import nanops
+
+            nanfunc = getattr(nanops, "nan" + name)
+
+            def func(values, axis=None, **kwargs):
+                result = nanfunc(values, axis=axis, **kwargs)
+                return where_method(result, ~array_any(isnull(values), axis=axis))
+
         else:
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
@@ -764,8 +785,11 @@ def mean(array, axis=None, skipna=None, **kwargs):
     if dtypes.is_datetime_like(array.dtype):
         dmin = _datetime_nanreduce(array, min).astype("datetime64[Y]").astype(int)
         dmax = _datetime_nanreduce(array, max).astype("datetime64[Y]").astype(int)
+        # midpoint computed without overflowing if both are NaT (i.e. int64 min)
         offset = (
-            np.array((dmin + dmax) // 2).astype("datetime64[Y]").astype(array.dtype)
+            np.array(dmin + (dmax - dmin) // 2)
+            .astype("datetime64[Y]")
+            .astype(array.dtype)
         )
         # From version 2025.01.2 xarray uses np.datetime64[unit], where unit
         # is one of "s", "ms", "us", "ns".

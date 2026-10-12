@@ -28,7 +28,7 @@ upstream        https://github.com/pydata/xarray (push)
     Then run
 
     ```sh
-    pixi run release-contributors
+    pixi run -e release release-contributors
     ```
 
     and copy the output.
