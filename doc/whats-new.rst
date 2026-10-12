@@ -65,6 +65,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix pickling of datasets opened from file-like objects with the scipy backend
+  after opening more than one such dataset (:issue:`11323`, :pull:`11413`).
+  By `C1-BA-B1-F3 <https://github.com/C1-BA-B1-F3>`_.
 - :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` no longer raise a
   ``RecursionError`` for an order ``n`` close to the recursion limit, and are
   faster for ``n > 1``. They also label the result correctly for ``n > 1`` with
