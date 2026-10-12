@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
+import pytest
 from numpy.testing import assert_array_equal
 
-from xarray.core.nputils import NumpyVIndexAdapter, _is_contiguous
+from xarray.core.nputils import NumpyVIndexAdapter, _is_contiguous, nanquantile
 
 
 def test_is_contiguous() -> None:
@@ -30,3 +33,26 @@ def test_vindex() -> None:
     vindex[[0, 1], [0, 1], :] = vindex[[0, 1], [0, 1], :]
     vindex[[0, 1], :, [0, 1]] = vindex[[0, 1], :, [0, 1]]
     vindex[:, [0, 1], [0, 1]] = vindex[:, [0, 1], [0, 1]]
+
+
+def test_nanquantile_all_nan_slice_does_not_warn() -> None:
+    # median_unbiased skips the numbagg optimization and exercises NumPy.
+    values = np.array([[np.nan, 1.0], [np.nan, 3.0]])
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = nanquantile(values, axis=0, q=0.5, method="median_unbiased")
+
+    assert_array_equal(result, [np.nan, 2.0])
+    assert not any("All-NaN slice encountered" in str(w.message) for w in caught)
+
+
+def test_nanquantile_other_runtime_warnings_not_suppressed(monkeypatch) -> None:
+    def warning_quantile(*args, **kwargs):
+        warnings.warn("unrelated quantile warning", RuntimeWarning, stacklevel=2)
+        return np.array([1.5])
+
+    monkeypatch.setattr(np, "nanquantile", warning_quantile)
+    with pytest.warns(RuntimeWarning, match="unrelated quantile warning"):
+        nanquantile(
+            np.array([[1.0], [2.0]]), axis=0, q=0.5, method="median_unbiased"
+        )
