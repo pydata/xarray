@@ -170,6 +170,9 @@ def open_dataset(
     ds = _open_dataset(filepath, engine=engine, **kws)
     if not cache:
         ds = ds.load()
+        # close the file before removing it, which is not possible on Windows
+        # while it is open
+        ds.close()
         pathlib.Path(filepath).unlink()
 
     return ds
@@ -341,6 +344,9 @@ def open_datatree(
     ds = _open_datatree(filepath, engine=engine, **kws)
     if not cache:
         ds = ds.load()
+        # close the file before removing it, which is not possible on Windows
+        # while it is open
+        ds.close()
         pathlib.Path(filepath).unlink()
 
     return ds
