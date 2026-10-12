@@ -122,6 +122,7 @@ if TYPE_CHECKING:
         QueryParserOptions,
         ReindexMethodOptions,
         ResampleCompatible,
+        ScalarOrArray,
         Self,
         SideOptions,
         T_ChunkDimFreq,
@@ -476,6 +477,58 @@ class DataArray(
     )
 
     dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
+
+    if TYPE_CHECKING:
+        # Methods of DataWithCoords that return Self, which can change the shape,
+        # dtype or variable names of a DataArray.
+        def squeeze(  # type: ignore[override]
+            self,
+            dim: Hashable | Iterable[Hashable] | None = None,
+            drop: bool = False,
+            axis: int | Iterable[int] | None = None,
+        ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]: ...
+        def clip(
+            self,
+            min: ScalarOrArray | None = None,
+            max: ScalarOrArray | None = None,
+            *,
+            keep_attrs: bool | None = None,
+        ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]: ...
+        # the new coordinates are named by the keys of `coords` or by the keyword
+        # arguments, which are str
+        @overload  # type: ignore[override]
+        def assign_coords[NewVar: Hashable](
+            self, coords: Mapping[NewVar, Any]
+        ) -> DataArray[ShapeType_co, DType_co, DimType_co, VarType_co | NewVar]: ...
+        @overload
+        def assign_coords(
+            self, coords: None = None, **coords_kwargs: Any
+        ) -> DataArray[ShapeType_co, DType_co, DimType_co, VarType_co | str]: ...
+        def assign_coords(
+            self, coords: Mapping | None = None, **coords_kwargs: Any
+        ) -> DataArray[ShapeType_co, DType_co, DimType_co, Hashable]: ...
+        def where(  # type: ignore[override]
+            self, cond: Any, other: Any = dtypes.NA, drop: bool = False
+        ) -> DataArray[Shape, Any, DimType_co, VarType_co]: ...
+        def isnull(  # type: ignore[override]
+            self, keep_attrs: bool | None = None
+        ) -> DataArray[ShapeType_co, np.dtype[np.bool_], DimType_co, VarType_co]: ...
+        def notnull(  # type: ignore[override]
+            self, keep_attrs: bool | None = None
+        ) -> DataArray[ShapeType_co, np.dtype[np.bool_], DimType_co, VarType_co]: ...
+        def isin(  # type: ignore[override]
+            self, test_elements: Any
+        ) -> DataArray[ShapeType_co, np.dtype[np.bool_], DimType_co, VarType_co]: ...
+        def astype(
+            self,
+            dtype: Any,
+            *,
+            order: Any = None,
+            casting: Any = None,
+            subok: Any = None,
+            copy: Any = None,
+            keep_attrs: Any = True,
+        ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]: ...
 
     # As for Variable, the dtype is inferred from duck arrays and from Python scalars
     # and lists, which numpy converts to arrays of a known dtype, and the shape type
@@ -1157,7 +1210,11 @@ class DataArray(
         key = indexing.expanded_indexer(key, self.ndim)
         return dict(zip(self.dims, key, strict=True))
 
-    def _getitem_coord(self, key: Any) -> DataArray[Shape, Any, DimType_co, VarType_co]:
+    # Dimensions without a coordinate give a default one named like the dimension,
+    # so the name of the result can also be of the dimension type.
+    def _getitem_coord(
+        self, key: Any
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co | DimType_co]:
         from xarray.core.dataset_utils import _get_virtual_variable
 
         try:
@@ -1168,17 +1225,19 @@ class DataArray(
 
         return self._replace_maybe_drop_dims(var, name=key)
 
-    # a str selects a coordinate, other keys index the array
+    # a str selects a coordinate (see _getitem_coord), other keys index the array
     @overload
     def __getitem__(
         self, key: str
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co]: ...
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co | DimType_co]: ...
     @overload
     def __getitem__(
         self, key: Any
     ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]: ...
     @override
-    def __getitem__(self, key: Any) -> DataArray[Shape, Any, DimType_co, VarType_co]:
+    def __getitem__(
+        self, key: Any
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co | DimType_co]:
         if isinstance(key, str):
             return self._getitem_coord(key)
         else:
@@ -2176,6 +2235,20 @@ class DataArray(
         ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
+    @overload
+    def broadcast_like[DimType: Hashable, VarType: Hashable](
+        self,
+        other: DataArray[Any, Any, DimType, VarType],
+        *,
+        exclude: Iterable[Hashable] | None = None,
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+    @overload
+    def broadcast_like(
+        self,
+        other: Dataset,
+        *,
+        exclude: Iterable[Hashable] | None = None,
+    ) -> DataArray[Shape, Any, Hashable, Hashable]: ...
     def broadcast_like(
         self,
         other: T_DataArrayOrSet,
@@ -2867,19 +2940,23 @@ class DataArray(
     # Renaming dimensions or coordinates changes their types; a new name of the
     # array only adds its type to the variable names.
     @overload
-    def rename(
+    def rename[NewName: Hashable](
         self,
-        new_name_or_name_dict: Mapping[Any, Hashable] | None = None,
-        **names: Hashable,
-    ) -> DataArray[ShapeType_co, DType_co, Hashable, Hashable]: ...
+        new_name_or_name_dict: Mapping[Any, NewName] | None = None,
+        **names: NewName,
+    ) -> DataArray[
+        ShapeType_co, DType_co, DimType_co | NewName, VarType_co | NewName
+    ]: ...
     @overload
     def rename[NewName: Hashable](
         self, new_name_or_name_dict: NewName
     ) -> DataArray[ShapeType_co, DType_co, DimType_co, VarType_co | NewName]: ...
     @overload
-    def rename(
-        self, new_name_or_name_dict: Hashable, **names: Hashable
-    ) -> DataArray[ShapeType_co, DType_co, Hashable, Hashable]: ...
+    def rename[NewName: Hashable, NewNames: Hashable](
+        self, new_name_or_name_dict: NewName, **names: NewNames
+    ) -> DataArray[
+        ShapeType_co, DType_co, DimType_co | NewNames, VarType_co | NewName | NewNames
+    ]: ...
     def rename(
         self,
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
@@ -2924,11 +3001,11 @@ class DataArray(
         # only change name
         return self._replace(name=new_name_or_name_dict)
 
-    def swap_dims(
+    def swap_dims[NewDim: Hashable](
         self,
-        dims_dict: Mapping[Any, Hashable] | None = None,
-        **dims_kwargs,
-    ) -> DataArray[ShapeType_co, DType_co, Hashable, Hashable]:
+        dims_dict: Mapping[Any, NewDim] | None = None,
+        **dims_kwargs: NewDim,
+    ) -> DataArray[ShapeType_co, DType_co, DimType_co | NewDim, VarType_co]:
         """Returns a new DataArray with swapped dimensions.
 
         Parameters
@@ -2983,6 +3060,30 @@ class DataArray(
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
+    # The new dimensions (and their coordinates, for a mapping) are named by `dim`,
+    # or by the keyword arguments, which are str.
+    @overload
+    def expand_dims[NewDim: Hashable](
+        self,
+        dim: Sequence[NewDim] | Mapping[NewDim, Any],
+        axis: int | Sequence[int] | None = None,
+        create_index_for_new_dim: bool = True,
+    ) -> DataArray[Shape, DType_co, DimType_co | NewDim, VarType_co | NewDim]: ...
+    @overload
+    def expand_dims[NewDim: Hashable](
+        self,
+        dim: NewDim,
+        axis: int | Sequence[int] | None = None,
+        create_index_for_new_dim: bool = True,
+    ) -> DataArray[Shape, DType_co, DimType_co | NewDim, VarType_co | NewDim]: ...
+    @overload
+    def expand_dims(
+        self,
+        dim: None = None,
+        axis: int | Sequence[int] | None = None,
+        create_index_for_new_dim: bool = True,
+        **dim_kwargs: Any,
+    ) -> DataArray[Shape, DType_co, DimType_co | str, VarType_co | str]: ...
     def expand_dims(
         self,
         dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
@@ -3090,7 +3191,7 @@ class DataArray(
         indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
-    ) -> DataArray[ShapeType_co, DType_co, Hashable, Hashable]:
+    ) -> DataArray[ShapeType_co, DType_co, DimType_co, VarType_co | DimType_co]:
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
@@ -3152,7 +3253,7 @@ class DataArray(
         self,
         dims_or_levels: Hashable | Sequence[Hashable],
         drop: bool = False,
-    ) -> DataArray[ShapeType_co, DType_co, DimType_co, Hashable]:
+    ) -> Self:
         """Reset the specified index(es) or multi-index level(s).
 
         This legacy method is specific to pandas (multi-)indexes and
@@ -3241,6 +3342,27 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     @partial(deprecate_dims, old_name="dimensions")
+    # The new dimension is named by the key of `dim` or a keyword argument (a str);
+    # its levels are coordinates named like the stacked dimensions.
+    @overload
+    def stack[NewDim: Hashable](
+        self,
+        dim: Mapping[NewDim, Any],
+        create_index: bool | None = True,
+        index_cls: type[Index] = PandasMultiIndex,
+    ) -> DataArray[
+        Shape, DType_co, DimType_co | NewDim, VarType_co | DimType_co | NewDim
+    ]: ...
+    @overload
+    def stack(
+        self,
+        dim: None = None,
+        create_index: bool | None = True,
+        index_cls: type[Index] = PandasMultiIndex,
+        **dim_kwargs: Sequence[Hashable | EllipsisType],
+    ) -> DataArray[
+        Shape, DType_co, DimType_co | str, VarType_co | DimType_co | str
+    ]: ...
     def stack(
         self,
         dim: Mapping[Any, Sequence[Hashable]] | None = None,
@@ -3320,7 +3442,7 @@ class DataArray(
         *,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
-    ) -> DataArray[Shape, Any, Hashable, Hashable]:
+    ) -> DataArray[Shape, Any, DimType_co | VarType_co, VarType_co]:
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -4170,7 +4292,9 @@ class DataArray(
 
         return bfill(self, dim, limit=limit)
 
-    def combine_first(self, other: Self) -> DataArray[Shape, Any, Hashable, Hashable]:
+    def combine_first[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]:
         """Combine two DataArray objects, with union of coordinates.
 
         This operation follows the normal broadcasting and alignment rules of

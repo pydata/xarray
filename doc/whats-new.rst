@@ -26,6 +26,17 @@ New Features
   ``Hashable``, so a bare ``Variable`` annotation means
   ``Variable[Any, Any, Hashable]`` and keeps its previous meaning
   (:pull:`11677`, :pull:`11693`).
+- :py:class:`~xarray.DataArray` is now generic in the types of its shape, dtype
+  and dimension names, like :py:class:`~xarray.Variable`, and in the type of the
+  names of its variables, i.e. its name and the names of its coordinates:
+  ``DataArray[ShapeType, DType, DimType, VarType]``. The constructor infers them,
+  e.g. ``DataArray([1, 2], dims="x", name="a")`` is a
+  ``DataArray[tuple[int, ...], np.dtype[np.int64], str, str]``. Methods and
+  operations that can change them return a ``DataArray`` with the respective
+  types, e.g. ``da.isnull()`` has a boolean dtype and ``da.rename(x=0)`` adds
+  ``int`` to the names; also for subclasses, which are still kept at runtime.
+  The variable name type defaults to the dimension type, which defaults to
+  ``Hashable``, so a bare ``DataArray`` annotation keeps its previous meaning.
 - :py:meth:`DataArray.idxmin` and :py:meth:`DataArray.idxmax` accept a sequence
   of dimensions or ``...``, and return a dict of the coordinate labels along each
   dimension, like :py:meth:`DataArray.argmin`. Without ``dim``, arrays with more

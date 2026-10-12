@@ -1145,12 +1145,13 @@ class DataArrayCoordinates[T_DataArray: DataArray](Coordinates):
     def _names(self) -> set[Hashable]:
         return set(self._data._coords)
 
-    # a coordinate has the dimension and variable name types of its DataArray
+    # A coordinate has the dimension and variable name types of its DataArray;
+    # a dimension without a coordinate gives a default one named like it.
     @override
     def __getitem__[DimType: Hashable, VarType: Hashable](
         self: DataArrayCoordinates[DataArray[Any, Any, DimType, VarType]],
         key: Hashable,
-    ) -> DataArray[Shape, Any, DimType, VarType]:
+    ) -> DataArray[Shape, Any, DimType, VarType | DimType]:
         return self._data._getitem_coord(key)
 
     @override

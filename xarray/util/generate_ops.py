@@ -16,6 +16,7 @@ or, without pixi:
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator, Mapping, Sequence
 from typing import Any
 
@@ -95,8 +96,9 @@ template_binop = """
 template_binop_overload = """
 {%- for overload_type in overload_types %}
     @overload{{ overload_type_ignore if loop.first else "" }}
-{%- if overload_type in subclass_overload_types %}
-    def {{ method }}[T: {{ overload_type }}](self, other: T) -> T: ...
+{%- if overload_type in overload_signatures %}
+{%- set type_params_, other_, return_ = overload_signatures[overload_type] %}
+    def {{ method }}{{ type_params_ }}(self, other: {{ other_ }}) -> {{ return_ }}: ...
 {%- else %}
     def {{ method }}(self, other: {{ overload_type }}) -> {{ overload_type }}: ...
 {%- endif %}
@@ -104,7 +106,7 @@ template_binop_overload = """
     @overload
     def {{method}}(self, other: {{ other_type }}) -> {{ return_type }}: ...
 
-    def {{ method }}(self, other: {{ other_type }}) -> {{ return_type }} | {{ ' | '.join(overload_types) }}:{{ type_ignore }}
+    def {{ method }}(self, other: {{ other_type }}) -> {{ return_type }} | {{ ' | '.join(overload_returns) }}:{{ type_ignore }}
         return self._binary_op(other, {{ func }})"""
 template_reflexive = """
     def {{ method }}{{ type_params }}(self, other: {{ other_type }}) -> {{ return_type }}:
@@ -181,24 +183,41 @@ def binops(
 def binops_overload(
     other_type: str,
     overload_types: list[str],
-    subclass_overload_types: Sequence[str] = (),
+    overload_signatures: Mapping[str, tuple[str, str, str]] | None = None,
+    overload_signatures_cmp: Mapping[str, tuple[str, str, str]] | None = None,
     return_type: str = "Self",
     type_ignore_eq: str = "override",
     return_type_cmp: str | None = None,
 ) -> list[OpsType]:
     """Binary operations with an overload for each of ``overload_types``.
 
-    The overloads of ``subclass_overload_types`` return the type of ``other``, so
-    that subclasses are kept. Comparisons return ``return_type_cmp``, which
-    defaults to ``return_type``.
+    The overloads return the type of ``other``, unless ``overload_signatures``
+    gives their type parameters, the type of ``other`` and the return type.
+    Comparisons return ``return_type_cmp`` and use ``overload_signatures_cmp``,
+    which default to ``return_type`` and ``overload_signatures``.
     """
+    overload_signatures = overload_signatures or {}
+    overload_signatures_cmp = overload_signatures_cmp or overload_signatures
+
+    def returns(signatures: Mapping[str, tuple[str, str, str]]) -> list[str]:
+        # bare names: the type parameters of the overloads don't exist there
+        return [
+            re.sub(r"\[.*", "", signatures[t][2]) if t in signatures else t
+            for t in overload_types
+        ]
+
     extras = {
         "other_type": other_type,
         "return_type": return_type,
         "type_params": "",
-        "subclass_overload_types": subclass_overload_types,
+        "overload_signatures": overload_signatures,
+        "overload_returns": list(dict.fromkeys(returns(overload_signatures))),
     }
-    extras_cmp = extras | {"return_type": return_type_cmp or return_type}
+    extras_cmp = extras | {
+        "return_type": return_type_cmp or return_type,
+        "overload_signatures": overload_signatures_cmp,
+        "overload_returns": list(dict.fromkeys(returns(overload_signatures_cmp))),
+    }
     return [
         ([(None, None)], required_method_binary, extras),
         (
@@ -281,10 +300,36 @@ ops_info = {
     ),
     # Like for Variable, binary and unary operations return a DataArray with the
     # shape and dtype that they can change, also for subclasses.
+    # With another DataArray or a Variable, the dimensions (and coordinates) of
+    # both are in the result.
     "DataArrayOpsMixin": (
         binops_overload(
             other_type="DaCompatible",
-            overload_types=["Dataset", "DataTree"],
+            overload_types=["DataArray", "Variable", "Dataset", "DataTree"],
+            overload_signatures={
+                "DataArray": (
+                    "[DimType: Hashable, VarType: Hashable]",
+                    "DataArray[Any, Any, DimType, VarType]",
+                    "DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]",
+                ),
+                "Variable": (
+                    "[DimType: Hashable]",
+                    "Variable[Any, Any, DimType]",
+                    "DataArray[Shape, Any, DimType_co | DimType, VarType_co]",
+                ),
+            },
+            overload_signatures_cmp={
+                "DataArray": (
+                    "[DimType: Hashable, VarType: Hashable]",
+                    "DataArray[Any, Any, DimType, VarType]",
+                    "DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co | VarType]",
+                ),
+                "Variable": (
+                    "[DimType: Hashable]",
+                    "Variable[Any, Any, DimType]",
+                    "DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co]",
+                ),
+            },
             return_type="DataArray[Shape, Any, DimType_co, VarType_co]",
             return_type_cmp="DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]",
         )
@@ -303,12 +348,26 @@ ops_info = {
     ),
     # Binary and unary operations return a Variable, also for subclasses (e.g. an
     # IndexVariable), with the shape and dtype that they can change. Binary
-    # operations can change the shape by broadcasting.
+    # operations can change the shape by broadcasting. With a DataArray, they
+    # return a DataArray like DataArray's operations, with the dimensions of both.
     "VariableOpsMixin": (
         binops_overload(
             other_type="VarCompatible",
             overload_types=["DataArray", "Dataset", "DataTree"],
-            subclass_overload_types=["DataArray"],
+            overload_signatures={
+                "DataArray": (
+                    "[DimType: Hashable, VarType: Hashable]",
+                    "DataArray[Any, Any, DimType, VarType]",
+                    "DataArray[Shape, Any, DimType_co | DimType, VarType]",
+                )
+            },
+            overload_signatures_cmp={
+                "DataArray": (
+                    "[DimType: Hashable, VarType: Hashable]",
+                    "DataArray[Any, Any, DimType, VarType]",
+                    "DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType]",
+                )
+            },
             return_type="Variable[Shape, Any, DimType_co]",
             return_type_cmp="Variable[Shape, np.dtype[np.bool_], DimType_co]",
         )
@@ -340,7 +399,7 @@ MODULE_PREAMBLE = '''\
 from __future__ import annotations
 
 import operator
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from typing import TYPE_CHECKING, Any, Generic, Self, overload
 
 import numpy as np

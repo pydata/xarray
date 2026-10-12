@@ -248,9 +248,9 @@ def corr(
 
 
 def _cov_corr(
-    da_a: T_DataArray,
-    da_b: T_DataArray,
-    weights: T_DataArray | None = None,
+    da_a: DataArray,
+    da_b: DataArray,
+    weights: DataArray | None = None,
     dim: Dims = None,
     ddof: int = 0,
     method: Literal["cov", "corr"] | None = None,
@@ -302,7 +302,7 @@ def _cov_corr(
             da_a_std = da_a.std(dim=dim)
             da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return cast(T_DataArray, corr)
+        return corr
 
 
 def cross(

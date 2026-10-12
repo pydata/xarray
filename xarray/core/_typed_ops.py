@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from typing import TYPE_CHECKING, Any, Generic, Self, overload
 
 import numpy as np
@@ -513,6 +513,16 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
         raise NotImplementedError
 
     @overload
+    def __add__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __add__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
+
+    @overload
     def __add__(self, other: Dataset) -> Dataset: ...
 
     @overload
@@ -525,8 +535,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __add__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.add)
+
+    @overload
+    def __sub__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __sub__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __sub__(self, other: Dataset) -> Dataset: ...
@@ -541,8 +561,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __sub__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.sub)
+
+    @overload
+    def __mul__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __mul__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __mul__(self, other: Dataset) -> Dataset: ...
@@ -557,8 +587,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __mul__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.mul)
+
+    @overload
+    def __pow__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __pow__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __pow__(self, other: Dataset) -> Dataset: ...
@@ -573,8 +613,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __pow__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.pow)
+
+    @overload
+    def __truediv__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __truediv__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __truediv__(self, other: Dataset) -> Dataset: ...
@@ -589,8 +639,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __truediv__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.truediv)
+
+    @overload
+    def __floordiv__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __floordiv__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __floordiv__(self, other: Dataset) -> Dataset: ...
@@ -605,8 +665,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __floordiv__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.floordiv)
+
+    @overload
+    def __mod__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __mod__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __mod__(self, other: Dataset) -> Dataset: ...
@@ -621,8 +691,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __mod__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.mod)
+
+    @overload
+    def __and__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __and__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __and__(self, other: Dataset) -> Dataset: ...
@@ -637,8 +717,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __and__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.and_)
+
+    @overload
+    def __xor__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __xor__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __xor__(self, other: Dataset) -> Dataset: ...
@@ -653,8 +743,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __xor__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.xor)
+
+    @overload
+    def __or__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __or__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __or__(self, other: Dataset) -> Dataset: ...
@@ -669,8 +769,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __or__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.or_)
+
+    @overload
+    def __lshift__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __lshift__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __lshift__(self, other: Dataset) -> Dataset: ...
@@ -685,8 +795,18 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __lshift__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.lshift)
+
+    @overload
+    def __rshift__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+
+    @overload
+    def __rshift__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __rshift__(self, other: Dataset) -> Dataset: ...
@@ -701,8 +821,20 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
 
     def __rshift__(
         self, other: DaCompatible
-    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | Dataset | DataTree:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.rshift)
+
+    @overload
+    def __lt__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[
+        Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co | VarType
+    ]: ...
+
+    @overload
+    def __lt__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __lt__(self, other: Dataset) -> Dataset: ...
@@ -719,10 +851,23 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
         self, other: DaCompatible
     ) -> (
         DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]
+        | DataArray
         | Dataset
         | DataTree
     ):
         return self._binary_op(other, operator.lt)
+
+    @overload
+    def __le__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[
+        Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co | VarType
+    ]: ...
+
+    @overload
+    def __le__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __le__(self, other: Dataset) -> Dataset: ...
@@ -739,10 +884,23 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
         self, other: DaCompatible
     ) -> (
         DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]
+        | DataArray
         | Dataset
         | DataTree
     ):
         return self._binary_op(other, operator.le)
+
+    @overload
+    def __gt__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[
+        Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co | VarType
+    ]: ...
+
+    @overload
+    def __gt__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __gt__(self, other: Dataset) -> Dataset: ...
@@ -759,10 +917,23 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
         self, other: DaCompatible
     ) -> (
         DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]
+        | DataArray
         | Dataset
         | DataTree
     ):
         return self._binary_op(other, operator.gt)
+
+    @overload
+    def __ge__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[
+        Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co | VarType
+    ]: ...
+
+    @overload
+    def __ge__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co]: ...
 
     @overload
     def __ge__(self, other: Dataset) -> Dataset: ...
@@ -779,12 +950,25 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
         self, other: DaCompatible
     ) -> (
         DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]
+        | DataArray
         | Dataset
         | DataTree
     ):
         return self._binary_op(other, operator.ge)
 
     @overload  # type:ignore[override]
+    def __eq__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[
+        Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co | VarType
+    ]: ...
+
+    @overload
+    def __eq__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co]: ...
+
+    @overload
     def __eq__(self, other: Dataset) -> Dataset: ...
 
     @overload
@@ -799,12 +983,25 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
         self, other: DaCompatible
     ) -> (
         DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]
+        | DataArray
         | Dataset
         | DataTree
     ):
         return self._binary_op(other, nputils.array_eq)
 
     @overload  # type:ignore[override]
+    def __ne__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[
+        Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co | VarType
+    ]: ...
+
+    @overload
+    def __ne__[DimType: Hashable](
+        self, other: Variable[Any, Any, DimType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType_co]: ...
+
+    @overload
     def __ne__(self, other: Dataset) -> Dataset: ...
 
     @overload
@@ -819,6 +1016,7 @@ class DataArrayOpsMixin(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])
         self, other: DaCompatible
     ) -> (
         DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]
+        | DataArray
         | Dataset
         | DataTree
     ):
@@ -1013,7 +1211,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         raise NotImplementedError
 
     @overload
-    def __add__[T: DataArray](self, other: T) -> T: ...
+    def __add__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __add__(self, other: Dataset) -> Dataset: ...
@@ -1030,7 +1230,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.add)
 
     @overload
-    def __sub__[T: DataArray](self, other: T) -> T: ...
+    def __sub__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __sub__(self, other: Dataset) -> Dataset: ...
@@ -1047,7 +1249,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.sub)
 
     @overload
-    def __mul__[T: DataArray](self, other: T) -> T: ...
+    def __mul__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __mul__(self, other: Dataset) -> Dataset: ...
@@ -1064,7 +1268,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.mul)
 
     @overload
-    def __pow__[T: DataArray](self, other: T) -> T: ...
+    def __pow__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __pow__(self, other: Dataset) -> Dataset: ...
@@ -1081,7 +1287,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.pow)
 
     @overload
-    def __truediv__[T: DataArray](self, other: T) -> T: ...
+    def __truediv__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __truediv__(self, other: Dataset) -> Dataset: ...
@@ -1098,7 +1306,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.truediv)
 
     @overload
-    def __floordiv__[T: DataArray](self, other: T) -> T: ...
+    def __floordiv__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __floordiv__(self, other: Dataset) -> Dataset: ...
@@ -1117,7 +1327,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.floordiv)
 
     @overload
-    def __mod__[T: DataArray](self, other: T) -> T: ...
+    def __mod__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __mod__(self, other: Dataset) -> Dataset: ...
@@ -1134,7 +1346,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.mod)
 
     @overload
-    def __and__[T: DataArray](self, other: T) -> T: ...
+    def __and__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __and__(self, other: Dataset) -> Dataset: ...
@@ -1151,7 +1365,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.and_)
 
     @overload
-    def __xor__[T: DataArray](self, other: T) -> T: ...
+    def __xor__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __xor__(self, other: Dataset) -> Dataset: ...
@@ -1168,7 +1384,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.xor)
 
     @overload
-    def __or__[T: DataArray](self, other: T) -> T: ...
+    def __or__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __or__(self, other: Dataset) -> Dataset: ...
@@ -1185,7 +1403,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.or_)
 
     @overload
-    def __lshift__[T: DataArray](self, other: T) -> T: ...
+    def __lshift__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __lshift__(self, other: Dataset) -> Dataset: ...
@@ -1202,7 +1422,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.lshift)
 
     @overload
-    def __rshift__[T: DataArray](self, other: T) -> T: ...
+    def __rshift__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType]: ...
 
     @overload
     def __rshift__(self, other: Dataset) -> Dataset: ...
@@ -1219,7 +1441,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.rshift)
 
     @overload
-    def __lt__[T: DataArray](self, other: T) -> T: ...
+    def __lt__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType]: ...
 
     @overload
     def __lt__(self, other: Dataset) -> Dataset: ...
@@ -1240,7 +1464,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.lt)
 
     @overload
-    def __le__[T: DataArray](self, other: T) -> T: ...
+    def __le__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType]: ...
 
     @overload
     def __le__(self, other: Dataset) -> Dataset: ...
@@ -1261,7 +1487,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.le)
 
     @overload
-    def __gt__[T: DataArray](self, other: T) -> T: ...
+    def __gt__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType]: ...
 
     @overload
     def __gt__(self, other: Dataset) -> Dataset: ...
@@ -1282,7 +1510,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.gt)
 
     @overload
-    def __ge__[T: DataArray](self, other: T) -> T: ...
+    def __ge__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType]: ...
 
     @overload
     def __ge__(self, other: Dataset) -> Dataset: ...
@@ -1303,7 +1533,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, operator.ge)
 
     @overload  # type:ignore[override]
-    def __eq__[T: DataArray](self, other: T) -> T: ...
+    def __eq__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType]: ...
 
     @overload
     def __eq__(self, other: Dataset) -> Dataset: ...
@@ -1324,7 +1556,9 @@ class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP
         return self._binary_op(other, nputils.array_eq)
 
     @overload  # type:ignore[override]
-    def __ne__[T: DataArray](self, other: T) -> T: ...
+    def __ne__[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co | DimType, VarType]: ...
 
     @overload
     def __ne__(self, other: Dataset) -> Dataset: ...

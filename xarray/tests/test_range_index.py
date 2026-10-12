@@ -211,7 +211,7 @@ def test_range_index_empty_slice() -> None:
     # Test with linspace
     n = 30
     step = 1
-    da = xr.DataArray(np.zeros(n), dims=["x"])
+    da: xr.DataArray = xr.DataArray(np.zeros(n), dims=["x"])
     da = da.assign_coords(
         xr.Coordinates.from_xindex(RangeIndex.linspace(0, (n - 1) * step, n, dim="x"))
     )
@@ -227,7 +227,7 @@ def test_range_index_empty_slice() -> None:
 
     # Test with different step values
     index = RangeIndex.arange(0, 10, 2.5, dim="y")
-    da2 = xr.DataArray(np.zeros(4), dims=["y"])
+    da2: xr.DataArray = xr.DataArray(np.zeros(4), dims=["y"])
     da2 = da2.assign_coords(xr.Coordinates.from_xindex(index))
     empty = da2.isel(y=slice(0))
 
@@ -244,7 +244,7 @@ def test_range_index_empty_slice() -> None:
 
     # Test negative step
     index3 = RangeIndex.arange(10, 0, -1, dim="z")
-    da3 = xr.DataArray(np.zeros(10), dims=["z"])
+    da3: xr.DataArray = xr.DataArray(np.zeros(10), dims=["z"])
     da3 = da3.assign_coords(xr.Coordinates.from_xindex(index3))
     empty3 = da3.isel(z=slice(0))
 

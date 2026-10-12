@@ -2309,7 +2309,7 @@ class TestDataArray:
 
         # Attempt to use both dim and kwargs
         with pytest.raises(ValueError):
-            array.expand_dims({"d": 4}, e=4)
+            array.expand_dims({"d": 4}, e=4)  # type: ignore[call-overload]
 
     def test_expand_dims(self) -> None:
         array = DataArray(
@@ -8047,7 +8047,7 @@ class TestStackEllipsis:
     def test_error_on_ellipsis_without_list(self) -> None:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
-            da.stack(flat=...)  # type: ignore[arg-type]
+            da.stack(flat=...)  # type: ignore[call-overload]
 
 
 def test_nD_coord_dataarray() -> None:
