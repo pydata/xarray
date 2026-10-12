@@ -36,7 +36,8 @@ New Features
   types, e.g. ``da.isnull()`` has a boolean dtype and ``da.rename(x=0)`` adds
   ``int`` to the names; also for subclasses, which are still kept at runtime.
   The variable name type defaults to the dimension type, which defaults to
-  ``Hashable``, so a bare ``DataArray`` annotation keeps its previous meaning.
+  ``Hashable``, so a bare ``DataArray`` annotation keeps its previous meaning
+  (:pull:`11712`).
 - :py:meth:`DataArray.idxmin` and :py:meth:`DataArray.idxmax` accept a sequence
   of dimensions or ``...``, and return a dict of the coordinate labels along each
   dimension, like :py:meth:`DataArray.argmin`. Without ``dim``, arrays with more
