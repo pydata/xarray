@@ -178,7 +178,7 @@ def _warn_conflicting_unindexed_coords(
 ) -> None:
     """Warn when aligned index variables replace conflicting unindexed coords."""
     obj_coords = getattr(obj, "coords", obj)
-    coord_vars = obj_coords.variables
+    coord_vars = getattr(obj_coords, "variables", {})
     obj_xindexes = getattr(obj, "xindexes", {})
 
     for name, index_var in index_vars.items():

@@ -630,10 +630,7 @@ def merge_coords(
         collected,
         prioritized,
         compat=compat,
-        check_indexed_coords=(
-            isinstance(compat, CombineKwargDefault) or compat != "override"
-        )
-        and join != "override",
+        check_indexed_coords=compat != "override" and join != "override",
     )
     return variables, out_indexes
 
