@@ -6,16 +6,21 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Self, overload
+from typing import TYPE_CHECKING, Any, Generic, Self, overload
+
+import numpy as np
 
 from xarray.computation import ops
 from xarray.core import nputils
 from xarray.core.types import DaCompatible, DsCompatible, DtCompatible, VarCompatible
+from xarray.namedarray._typing import DimType_co, DType_co, ShapeType_co
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.core.variable import Variable
+    from xarray.namedarray._typing import Shape
 
 
 class DataTreeOpsMixin:
@@ -873,12 +878,12 @@ class DataArrayOpsMixin:
     conjugate.__doc__ = ops.conjugate.__doc__
 
 
-class VariableOpsMixin:
+class VariableOpsMixin(Generic[ShapeType_co, DType_co, DimType_co]):  # noqa: UP046
     __slots__ = ()
 
     def _binary_op(
         self, other: VarCompatible, f: Callable, reflexive: bool = False
-    ) -> Self:
+    ) -> Variable[Shape, Any, DimType_co]:
         raise NotImplementedError
 
     @overload
@@ -891,9 +896,11 @@ class VariableOpsMixin:
     def __add__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __add__(self, other: VarCompatible) -> Self: ...
+    def __add__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __add__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __add__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.add)
 
     @overload
@@ -906,9 +913,11 @@ class VariableOpsMixin:
     def __sub__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __sub__(self, other: VarCompatible) -> Self: ...
+    def __sub__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __sub__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __sub__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.sub)
 
     @overload
@@ -921,9 +930,11 @@ class VariableOpsMixin:
     def __mul__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __mul__(self, other: VarCompatible) -> Self: ...
+    def __mul__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __mul__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __mul__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.mul)
 
     @overload
@@ -936,9 +947,11 @@ class VariableOpsMixin:
     def __pow__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __pow__(self, other: VarCompatible) -> Self: ...
+    def __pow__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __pow__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __pow__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.pow)
 
     @overload
@@ -951,11 +964,11 @@ class VariableOpsMixin:
     def __truediv__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __truediv__(self, other: VarCompatible) -> Self: ...
+    def __truediv__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
     def __truediv__(
         self, other: VarCompatible
-    ) -> Self | DataArray | Dataset | DataTree:
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.truediv)
 
     @overload
@@ -968,11 +981,13 @@ class VariableOpsMixin:
     def __floordiv__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __floordiv__(self, other: VarCompatible) -> Self: ...
+    def __floordiv__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co]: ...
 
     def __floordiv__(
         self, other: VarCompatible
-    ) -> Self | DataArray | Dataset | DataTree:
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.floordiv)
 
     @overload
@@ -985,9 +1000,11 @@ class VariableOpsMixin:
     def __mod__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __mod__(self, other: VarCompatible) -> Self: ...
+    def __mod__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __mod__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __mod__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.mod)
 
     @overload
@@ -1000,9 +1017,11 @@ class VariableOpsMixin:
     def __and__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __and__(self, other: VarCompatible) -> Self: ...
+    def __and__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __and__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __and__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.and_)
 
     @overload
@@ -1015,9 +1034,11 @@ class VariableOpsMixin:
     def __xor__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __xor__(self, other: VarCompatible) -> Self: ...
+    def __xor__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __xor__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __xor__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.xor)
 
     @overload
@@ -1030,9 +1051,11 @@ class VariableOpsMixin:
     def __or__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __or__(self, other: VarCompatible) -> Self: ...
+    def __or__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __or__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __or__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.or_)
 
     @overload
@@ -1045,9 +1068,11 @@ class VariableOpsMixin:
     def __lshift__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __lshift__(self, other: VarCompatible) -> Self: ...
+    def __lshift__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __lshift__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __lshift__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.lshift)
 
     @overload
@@ -1060,9 +1085,11 @@ class VariableOpsMixin:
     def __rshift__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __rshift__(self, other: VarCompatible) -> Self: ...
+    def __rshift__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]: ...
 
-    def __rshift__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __rshift__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, Any, DimType_co] | DataArray | Dataset | DataTree:
         return self._binary_op(other, operator.rshift)
 
     @overload
@@ -1075,9 +1102,15 @@ class VariableOpsMixin:
     def __lt__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __lt__(self, other: VarCompatible) -> Self: ...
+    def __lt__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, np.dtype[np.bool_], DimType_co]: ...
 
-    def __lt__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __lt__(
+        self, other: VarCompatible
+    ) -> (
+        Variable[Shape, np.dtype[np.bool_], DimType_co] | DataArray | Dataset | DataTree
+    ):
         return self._binary_op(other, operator.lt)
 
     @overload
@@ -1090,9 +1123,15 @@ class VariableOpsMixin:
     def __le__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __le__(self, other: VarCompatible) -> Self: ...
+    def __le__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, np.dtype[np.bool_], DimType_co]: ...
 
-    def __le__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __le__(
+        self, other: VarCompatible
+    ) -> (
+        Variable[Shape, np.dtype[np.bool_], DimType_co] | DataArray | Dataset | DataTree
+    ):
         return self._binary_op(other, operator.le)
 
     @overload
@@ -1105,9 +1144,15 @@ class VariableOpsMixin:
     def __gt__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __gt__(self, other: VarCompatible) -> Self: ...
+    def __gt__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, np.dtype[np.bool_], DimType_co]: ...
 
-    def __gt__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __gt__(
+        self, other: VarCompatible
+    ) -> (
+        Variable[Shape, np.dtype[np.bool_], DimType_co] | DataArray | Dataset | DataTree
+    ):
         return self._binary_op(other, operator.gt)
 
     @overload
@@ -1120,9 +1165,15 @@ class VariableOpsMixin:
     def __ge__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __ge__(self, other: VarCompatible) -> Self: ...
+    def __ge__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, np.dtype[np.bool_], DimType_co]: ...
 
-    def __ge__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __ge__(
+        self, other: VarCompatible
+    ) -> (
+        Variable[Shape, np.dtype[np.bool_], DimType_co] | DataArray | Dataset | DataTree
+    ):
         return self._binary_op(other, operator.ge)
 
     @overload  # type:ignore[override]
@@ -1135,9 +1186,15 @@ class VariableOpsMixin:
     def __eq__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __eq__(self, other: VarCompatible) -> Self: ...
+    def __eq__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, np.dtype[np.bool_], DimType_co]: ...
 
-    def __eq__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __eq__(
+        self, other: VarCompatible
+    ) -> (
+        Variable[Shape, np.dtype[np.bool_], DimType_co] | DataArray | Dataset | DataTree
+    ):
         return self._binary_op(other, nputils.array_eq)
 
     @overload  # type:ignore[override]
@@ -1150,43 +1207,49 @@ class VariableOpsMixin:
     def __ne__(self, other: DataTree) -> DataTree: ...
 
     @overload
-    def __ne__(self, other: VarCompatible) -> Self: ...
+    def __ne__(
+        self, other: VarCompatible
+    ) -> Variable[Shape, np.dtype[np.bool_], DimType_co]: ...
 
-    def __ne__(self, other: VarCompatible) -> Self | DataArray | Dataset | DataTree:
+    def __ne__(
+        self, other: VarCompatible
+    ) -> (
+        Variable[Shape, np.dtype[np.bool_], DimType_co] | DataArray | Dataset | DataTree
+    ):
         return self._binary_op(other, nputils.array_ne)
 
     # When __eq__ is defined but __hash__ is not, then an object is unhashable,
     # and it should be declared as follows:
     __hash__: None  # type:ignore[assignment]
 
-    def __radd__(self, other: VarCompatible) -> Self:
+    def __radd__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.add, reflexive=True)
 
-    def __rsub__(self, other: VarCompatible) -> Self:
+    def __rsub__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.sub, reflexive=True)
 
-    def __rmul__(self, other: VarCompatible) -> Self:
+    def __rmul__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.mul, reflexive=True)
 
-    def __rpow__(self, other: VarCompatible) -> Self:
+    def __rpow__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.pow, reflexive=True)
 
-    def __rtruediv__(self, other: VarCompatible) -> Self:
+    def __rtruediv__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.truediv, reflexive=True)
 
-    def __rfloordiv__(self, other: VarCompatible) -> Self:
+    def __rfloordiv__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.floordiv, reflexive=True)
 
-    def __rmod__(self, other: VarCompatible) -> Self:
+    def __rmod__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.mod, reflexive=True)
 
-    def __rand__(self, other: VarCompatible) -> Self:
+    def __rand__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.and_, reflexive=True)
 
-    def __rxor__(self, other: VarCompatible) -> Self:
+    def __rxor__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.xor, reflexive=True)
 
-    def __ror__(self, other: VarCompatible) -> Self:
+    def __ror__(self, other: VarCompatible) -> Variable[Shape, Any, DimType_co]:
         return self._binary_op(other, operator.or_, reflexive=True)
 
     def _inplace_binary_op(self, other: VarCompatible, f: Callable) -> Self:
@@ -1228,31 +1291,41 @@ class VariableOpsMixin:
     def __irshift__(self, other: VarCompatible) -> Self:  # type:ignore[misc]
         return self._inplace_binary_op(other, operator.irshift)
 
-    def _unary_op(self, f: Callable, *args: Any, **kwargs: Any) -> Self:
+    def _unary_op(
+        self, f: Callable, *args: Any, **kwargs: Any
+    ) -> Variable[Any, Any, DimType_co]:
         raise NotImplementedError
 
-    def __neg__(self) -> Self:
+    def __neg__(self) -> Variable[ShapeType_co, DType_co, DimType_co]:
         return self._unary_op(operator.neg)
 
-    def __pos__(self) -> Self:
+    def __pos__(self) -> Variable[ShapeType_co, DType_co, DimType_co]:
         return self._unary_op(operator.pos)
 
-    def __abs__(self) -> Self:
+    def __abs__(self) -> Variable[ShapeType_co, Any, DimType_co]:
         return self._unary_op(operator.abs)
 
-    def __invert__(self) -> Self:
+    def __invert__(self) -> Variable[ShapeType_co, DType_co, DimType_co]:
         return self._unary_op(operator.invert)
 
-    def round(self, *args: Any, **kwargs: Any) -> Self:
+    def round(
+        self, *args: Any, **kwargs: Any
+    ) -> Variable[ShapeType_co, DType_co, DimType_co]:
         return self._unary_op(ops.round_, *args, **kwargs)
 
-    def argsort(self, *args: Any, **kwargs: Any) -> Self:
+    def argsort(
+        self, *args: Any, **kwargs: Any
+    ) -> Variable[ShapeType_co, np.dtype[np.intp], DimType_co]:
         return self._unary_op(ops.argsort, *args, **kwargs)
 
-    def conj(self, *args: Any, **kwargs: Any) -> Self:
+    def conj(
+        self, *args: Any, **kwargs: Any
+    ) -> Variable[ShapeType_co, DType_co, DimType_co]:
         return self._unary_op(ops.conj, *args, **kwargs)
 
-    def conjugate(self, *args: Any, **kwargs: Any) -> Self:
+    def conjugate(
+        self, *args: Any, **kwargs: Any
+    ) -> Variable[ShapeType_co, DType_co, DimType_co]:
         return self._unary_op(ops.conjugate, *args, **kwargs)
 
     __add__.__doc__ = operator.add.__doc__
