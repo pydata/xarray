@@ -476,6 +476,23 @@ class TestDataArrayRolling:
 
     @requires_bottleneck
     @requires_dask_ge_2024_11_0
+    @pytest.mark.parametrize("chunk_size", [1, 2])
+    def test_rolling_dask_chunk_smaller_than_window(self, chunk_size: int) -> None:
+        # GH:10115 — ``dask_rolling_wrapper`` called ``map_overlap`` directly,
+        # which errors with "Moving window must between 1 and Cmax" whenever a
+        # chunk along the rolling axis is smaller than the window. Reductions
+        # using the bottleneck path (e.g. ``mean``) must rechunk first.
+        # Bottleneck is disabled by default, so enable it explicitly to
+        # exercise ``dask_rolling_wrapper``.
+        values = np.arange(10.0)
+        chunked = DataArray(values, dims=["time"]).chunk({"time": chunk_size})
+        with set_options(use_bottleneck=True):
+            expected = DataArray(values, dims=["time"]).rolling(time=3).mean()
+            actual = chunked.rolling(time=3).mean().compute()
+        assert_allclose(actual, expected)
+
+    @requires_bottleneck
+    @requires_dask_ge_2024_11_0
     @pytest.mark.parametrize(
         "name, center, dtype",
         [

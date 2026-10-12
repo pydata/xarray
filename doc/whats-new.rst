@@ -78,6 +78,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:meth:`DataArray.rolling` reductions (``mean``, ``sum``, ``std``, ...)
+  raising ``ValueError`` on Dask-backed arrays whose chunks along the rolling
+  axis are smaller than the window, by rechunking along that axis before
+  delegating to ``map_overlap`` so the window fits (:issue:`10115`, regression
+  of :issue:`9862`).
+  By `Booyaka101 <https://github.com/Booyaka101>`_.
 - Fix pickling of datasets opened from file-like objects with the scipy backend
   after opening more than one such dataset (:issue:`11323`, :pull:`11413`).
   By `C1-BA-B1-F3 <https://github.com/C1-BA-B1-F3>`_.
@@ -618,6 +624,7 @@ Bug Fixes
   a ``zarr_format=3`` store with ``use_zarr_fill_value_as_mask=False``, so it is no
   longer silently lost on round-trip (:issue:`10269`).
   By `Davis Bennett <https://github.com/d-v-b>`_.
+
 - :py:meth:`~xarray.indexes.RangeIndex.arange` now preserves the requested
   ``step`` instead of silently re-deriving it from ``(stop - start) / size``, so
   its values match :py:func:`numpy.arange` when ``step`` does not evenly divide
