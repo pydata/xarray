@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from itertools import combinations, permutations, product
-from typing import cast, get_args
+from typing import Any, cast, get_args
 
 import numpy as np
 import pandas as pd
@@ -300,14 +300,18 @@ def _interpn_reference(
     """
     from scipy.sparse.linalg import gcrotmk
 
-    spline = method in ("cubic", "quintic")
+    # scipy-stubs types solver as returning an array and solver_args as a tuple,
+    # but scipy calls iterative solvers as ``x, info = solver(A, b, **solver_args)``
+    solver_kwargs: dict[str, Any] = {}
+    if method in ("cubic", "quintic"):
+        solver_kwargs["solver"] = gcrotmk
+        solver_kwargs["solver_args"] = {"rtol": 1e-12, "atol": 1e-14}
     return scipy.interpolate.RegularGridInterpolator(
         [np.asarray(x, dtype=np.float64) for x in points],
         np.asarray(values, dtype=np.float64),
         method=method,
         bounds_error=False,
-        solver=gcrotmk if spline else None,
-        solver_args={"rtol": 1e-12, "atol": 1e-14} if spline else None,
+        **solver_kwargs,
     )(np.asarray(xi, dtype=np.float64))
 
 
