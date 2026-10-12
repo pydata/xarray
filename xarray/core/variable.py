@@ -5,10 +5,19 @@ import itertools
 import math
 import numbers
 import warnings
-from collections.abc import Callable, Hashable, Mapping, Sequence
+from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from functools import partial
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast, override
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    NoReturn,
+    cast,
+    overload,
+    override,
+)
 
 import numpy as np
 import pandas as pd
@@ -21,6 +30,7 @@ from xarray.computation.arithmetic import VariableArithmetic
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, utils
 from xarray.core.common import AbstractArray
 from xarray.core.extension_array import PandasExtensionArray
+from xarray.core.indexes import is_full_ordered_product
 from xarray.core.indexing import (
     BasicIndexer,
     CoordinateTransformIndexingAdapter,
@@ -31,6 +41,7 @@ from xarray.core.indexing import (
 )
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.utils import (
+    Default,
     OrderedSet,
     _default,
     consolidate_dask_from_array_kwargs,
@@ -46,6 +57,7 @@ from xarray.core.utils import (
     is_duck_dask_array,
     maybe_coerce_to_str,
 )
+from xarray.namedarray._typing import DimType_co
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
@@ -75,7 +87,6 @@ UNSUPPORTED_EXTENSION_ARRAY_TYPES = (
 
 if TYPE_CHECKING:
     from xarray.core.types import (
-        Dims,
         ErrorOptionsWithWarn,
         PadModeOptions,
         PadReflectOptions,
@@ -85,6 +96,7 @@ if TYPE_CHECKING:
         T_DuckArray,
         T_VarPadConstantValues,
     )
+    from xarray.namedarray._typing import AttrsLike, DimsLike, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -95,9 +107,29 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
+@overload
+def as_variable[DimType: Hashable](
+    obj: Variable[DimType], name: Hashable = None, auto_convert: bool = True
+) -> Variable[DimType]: ...
+
+
+@overload
+def as_variable[DimType: Hashable](
+    obj: tuple[Iterable[DimType], Any]
+    | tuple[Iterable[DimType], Any, AttrsLike]
+    | tuple[Iterable[DimType], Any, AttrsLike, Mapping[Any, Any] | None],
+    name: Hashable = None,
+    auto_convert: bool = True,
+) -> Variable[DimType]: ...
+
+
+@overload
 def as_variable(
-    obj: T_DuckArray | Any, name=None, auto_convert: bool = True
-) -> Variable | IndexVariable:
+    obj: Any, name: Hashable = None, auto_convert: bool = True
+) -> Variable: ...
+
+
+def as_variable(obj: Any, name: Hashable = None, auto_convert: bool = True) -> Variable:
     """Convert an object into a Variable.
 
     Parameters
@@ -159,8 +191,10 @@ def as_variable(
             ) from error
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
+    elif isinstance(obj, pd.Series) and obj.index.name is not None:
+        obj = Variable((obj.index.name,), obj)
     elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
-        obj = Variable(obj.name, obj)
+        obj = Variable((obj.name,), obj)
     elif isinstance(obj, Coordinates):
         raise TypeError(
             f"Variable {name!r}: Using a Coordinates object to construct a variable is "
@@ -170,14 +204,14 @@ def as_variable(
     elif isinstance(obj, set | dict):
         raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
     elif name is not None:
-        data: T_DuckArray = as_compatible_data(obj)
+        data = as_compatible_data(obj)
         if data.ndim != 1:
             raise MissingDimensionsError(
                 f"cannot set variable {name!r} with {data.ndim!r}-dimensional data "
                 "without explicit dimension names. Pass a tuple of "
                 "(dims, data) instead."
             )
-        obj = Variable(name, data, fastpath=True)
+        obj = Variable((name,), data, fastpath=True)
     else:
         raise TypeError(
             f"Variable {name!r}: unable to convert object into a variable without an "
@@ -355,7 +389,15 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic):
+# PEP 695 type parameters are not used here, because their variance is inferred
+# and the setters would make Variable invariant. Hence the explicitly covariant
+# TypeVar with `Generic`.
+class Variable(
+    NamedArray[Any, Any, DimType_co],
+    AbstractArray[DimType_co],
+    VariableArithmetic,
+    Generic[DimType_co],  # noqa: UP046
+):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -380,12 +422,12 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
 
     def __init__(
         self,
-        dims,
+        dims: Iterable[DimType_co],
         data: T_DuckArray | np.typing.ArrayLike,
-        attrs=None,
-        encoding=None,
-        fastpath=False,
-    ):
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None:
         """
         Parameters
         ----------
@@ -414,25 +456,57 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         if encoding is not None:
             self.encoding = encoding
 
+    @overload
+    def _new(
+        self,
+        dims: Default = ...,
+        data: Default = ...,
+        attrs: AttrsLike | Default = ...,
+    ) -> Self: ...
+
+    @overload
+    def _new[DimType: Hashable](
+        self,
+        dims: Iterable[DimType] = ...,
+        data: Default = ...,
+        attrs: AttrsLike | Default = ...,
+    ) -> Variable[DimType]: ...
+
+    @overload
+    def _new(
+        self,
+        dims: Default = ...,
+        data: duckarray[Any, Any] = ...,
+        attrs: AttrsLike | Default = ...,
+    ) -> Self: ...
+
+    @overload
+    def _new[DimType: Hashable](
+        self,
+        dims: Iterable[DimType] = ...,
+        data: duckarray[Any, Any] = ...,
+        attrs: AttrsLike | Default = ...,
+    ) -> Variable[DimType]: ...
+
     @override
     def _new(
         self,
-        dims=_default,
-        data=_default,
-        attrs=_default,
-    ):
+        dims: Iterable[Hashable] | Default = _default,
+        data: Any = _default,
+        attrs: AttrsLike | Default = _default,
+    ) -> Variable[Any]:
         dims_ = copy.copy(self._dims) if dims is _default else dims
 
+        attrs_: AttrsLike
         if attrs is _default:
             attrs_ = None if self._attrs is None else self._attrs.copy()
         else:
             attrs_ = attrs
 
-        if data is _default:
-            return type(self)(dims_, copy.copy(self._data), attrs_)
-        else:
-            cls_ = type(self)
-            return cls_(dims_, data, attrs_)
+        data_: Any = copy.copy(self._data) if data is _default else data
+
+        cls_: type[Variable[Any]] = type(self)
+        return cls_(dims_, data_, attrs_)
 
     @property
     def _in_memory(self) -> bool:
@@ -571,7 +645,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
     def values(self, values):
         self.data = values
 
-    def to_base_variable(self) -> Variable:
+    def to_base_variable(self) -> Variable[DimType_co]:
         """Return this variable as a base xarray.Variable"""
         return Variable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
@@ -579,7 +653,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
 
     to_variable = utils.alias(to_base_variable, "to_variable")
 
-    def to_index_variable(self) -> IndexVariable:
+    def to_index_variable(self) -> IndexVariable[DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
@@ -720,7 +794,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
                             f"used for indexing: {k}"
                         )
                 if k.dtype.kind == "b":
-                    if self.shape[self.get_axis_num(dim)] != len(k):
+                    if self.shape[self._get_axis_num(dim)] != len(k):
                         raise IndexError(
                             f"Boolean array size {len(k):d} is used to index array "
                             f"with shape {self.shape}."
@@ -1106,7 +1180,10 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         return new.load(**kwargs)
 
     def _shuffle(
-        self, indices: list[list[int]], dim: Hashable, chunks: T_Chunks
+        self,
+        indices: list[list[int]],
+        dim: DimType_co,  # type: ignore[misc]
+        chunks: T_Chunks,
     ) -> Self:
         # TODO (dcherian): consider making this public API
         array = self._data
@@ -1116,7 +1193,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
                 data=chunkmanager.shuffle(
                     array,
                     indexer=indices,
-                    axis=self.get_axis_num(dim),
+                    axis=self._get_axis_num(dim),
                     chunks=chunks,
                 )
             )
@@ -1182,7 +1259,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         return self.isel(dict.fromkeys(dims, 0))
 
     def _shift_one_dim(self, dim, count, fill_value=dtypes.NA):
-        axis = self.get_axis_num(dim)
+        axis = self._get_axis_num(dim)
 
         if count > 0:
             keep = slice(None, -count)
@@ -1362,7 +1439,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         return type(self)(self.dims, array, attrs=attrs)
 
     def _roll_one_dim(self, dim, count):
-        axis = self.get_axis_num(dim)
+        axis = self._get_axis_num(dim)
 
         count %= self.shape[axis] or 1
         if count != 0:
@@ -1411,7 +1488,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
     @deprecate_dims
     def transpose(
         self,
-        *dim: Hashable | EllipsisType,
+        *dim: DimType_co | EllipsisType,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
         """Return a new Variable object with transposed dimensions.
@@ -1444,18 +1521,18 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         numpy.transpose
         """
         if len(dim) == 0:
-            dim = self.dims[::-1]
+            dims = self.dims[::-1]
         else:
-            dim = tuple(infix_dims(dim, self.dims, missing_dims))
+            dims = tuple(infix_dims(dim, self.dims, missing_dims))
 
-        if len(dim) < 2 or dim == self.dims:
+        if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
             # or dims are in same order
             return self.copy(deep=False)
 
-        axes = self.get_axis_num(dim)
+        axes = self.get_axis_num(dims)
         data = as_indexable(self._data).transpose(axes)
-        return self._replace(dims=dim, data=data)
+        return self._replace(dims=dims, data=data)
 
     @override
     @property
@@ -1519,7 +1596,9 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         )
         return expanded_var.transpose(*dim)
 
-    def _stack_once(self, dim: list[Hashable], new_dim: Hashable):
+    def _stack_once[NewDimType: Hashable](
+        self, dim: list[DimType_co], new_dim: NewDimType
+    ) -> Variable[DimType_co | NewDimType]:
         if not set(dim) <= set(self.dims):
             raise ValueError(f"invalid existing dimensions: {dim}")
 
@@ -1541,9 +1620,8 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + (new_dim,)
 
-        return type(self)(
-            new_dims, new_data, self._attrs, self._encoding, fastpath=True
-        )
+        cls_: type[Variable[DimType_co | NewDimType]] = type(self)
+        return cls_(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
 
     @partial(deprecate_dims, old_name="dimensions")
     def stack(self, dim=None, **dim_kwargs):
@@ -1618,13 +1696,17 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
     def _unstack_once(
         self,
         index: pd.MultiIndex,
-        dim: Hashable,
+        dim: DimType_co,  # type: ignore[misc]
         fill_value=dtypes.NA,
         sparse: bool = False,
+        full_product: bool | None = None,
     ) -> Variable:
         """
         Unstacks this variable given an index to unstack and the name of the
         dimension to which the index refers.
+
+        ``full_product`` is the result of ``is_full_ordered_product(index)``,
+        which is computed if not given.
         """
 
         reordered = self.transpose(..., dim)
@@ -1637,6 +1719,14 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         other_dims = [d for d in self.dims if d != dim]
         new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + tuple(new_dim_names)
+
+        if full_product is None:
+            full_product = is_full_ordered_product(index)
+        if not sparse and full_product:
+            # every combination of labels is present in order: a reshape is
+            # enough and avoids allocating and filling a new array
+            data = duck_array_ops.reshape(reordered.data, new_shape)
+            return self.to_base_variable()._replace(dims=new_dims, data=data)
 
         create_template: Callable
         if fill_value is dtypes.NA:
@@ -1750,12 +1840,12 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
     def reduce(  # type: ignore[override]
         self,
         func: Callable[..., Any],
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs,
-    ) -> Variable:
+    ) -> Variable[DimType_co]:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1856,7 +1946,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         """
         from xarray.structure.merge import merge_attrs
 
-        if not isinstance(dim, str):
+        if isinstance(dim, xr.DataArray | Variable):
             (dim,) = dim.dims
 
         # can't do this lazily: we need to loop through variables at least
@@ -1868,7 +1958,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         arrays = [v._data for v in variables]
 
         if dim in first_var_dims:
-            axis = first_var.get_axis_num(dim)
+            axis = first_var._get_axis_num(dim)
             dims = first_var_dims
             data = duck_array_ops.concatenate(arrays, axis=axis)
             if positions is not None:
@@ -2425,7 +2515,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
 
     @override
     @property
-    def imag(self) -> Variable:
+    def imag(self) -> Self:
         """
         The imaginary part of the variable.
 
@@ -2437,7 +2527,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
 
     @override
     @property
-    def real(self) -> Variable:
+    def real(self) -> Self:
         """
         The real part of the variable.
 
@@ -2510,7 +2600,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: Dims,
+        dim: DimsLike[DimType_co],
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
@@ -2579,7 +2669,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
 
     def argmin(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -2624,7 +2714,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
 
     def argmax(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -2668,28 +2758,20 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
     @override
-    def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Variable:
+    def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Self:
         """
         Use sparse-array as backend.
         """
-        from xarray.namedarray._typing import _default as _default_named
-
-        if sparse_format is _default:
-            sparse_format = _default_named
-
-        if fill_value is _default:
-            fill_value = _default_named
-
         out = super()._as_sparse(sparse_format, fill_value)
-        return cast("Variable", out)
+        return cast("Self", out)
 
     @override
-    def _to_dense(self) -> Variable:
+    def _to_dense(self) -> Self:
         """
         Change backend from sparse to np.array.
         """
         out = super()._to_dense()
-        return cast("Variable", out)
+        return cast("Self", out)
 
     @override
     def chunk(  # type: ignore[override]
@@ -2770,7 +2852,7 @@ class Variable(NamedArray[Any, Any, Hashable], AbstractArray, VariableArithmetic
         )
 
 
-class IndexVariable(Variable):
+class IndexVariable(Variable[DimType_co]):
     """Wrapper for accommodating a pandas.Index in an xarray.Variable.
 
     IndexVariable preserve loaded values in the form of a pandas.Index instead
@@ -2786,7 +2868,14 @@ class IndexVariable(Variable):
     # TODO: PandasIndexingAdapter doesn't match the array api:
     _data: PandasIndexingAdapter  # type: ignore[assignment]
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(
+        self,
+        dims: Iterable[DimType_co],
+        data: T_DuckArray | np.typing.ArrayLike,
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None:
         super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError(f"{type(self).__name__} objects must be 1-dimensional")
@@ -2883,7 +2972,7 @@ class IndexVariable(Variable):
         """
         from xarray.structure.merge import merge_attrs
 
-        if not isinstance(dim, str):
+        if isinstance(dim, xr.DataArray | Variable):
             (dim,) = dim.dims
 
         variables = list(variables)
@@ -2981,7 +3070,7 @@ class IndexVariable(Variable):
         return self._to_index().equals(other._to_index())
 
     @override
-    def to_index_variable(self) -> IndexVariable:
+    def to_index_variable(self) -> IndexVariable[DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return self.copy(deep=False)
 
@@ -3004,7 +3093,8 @@ class IndexVariable(Variable):
             ]
             index = index.set_names(valid_level_names)
         else:
-            index = index.set_names(self.name)
+            # a list, because pandas would interpret a tuple name as several names
+            index = index.set_names([self.name])
         return index
 
     @override
@@ -3037,7 +3127,7 @@ class IndexVariable(Variable):
         return type(self)(self.dims, index.get_level_values(level))
 
     @property
-    def name(self) -> Hashable:
+    def name(self) -> DimType_co:
         return self.dims[0]
 
     @name.setter

@@ -13,10 +13,35 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`DataArray.idxmin` and :py:meth:`DataArray.idxmax` accept a sequence
+  of dimensions or ``...``, and return a dict of the coordinate labels along each
+  dimension, like :py:meth:`DataArray.argmin`. Without ``dim``, arrays with more
+  than one dimension now use all dimensions instead of raising an error.
+  :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` raise an informative
+  error for multiple dimensions (:issue:`10112`, :pull:`10680`).
+  By `Giacomo Caria <https://github.com/gcaria>`_ and
+  `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:class:`~xarray.Variable` is now generic in the type of its dimension
+  names, like :py:class:`~xarray.NamedArray`: it is defined as
+  ``class Variable(NamedArray[Any, Any, DimType_co])``, so static type checkers
+  can infer and check the dimension names, e.g.
+  ``Variable(("x", "y"), data).dims`` is a ``tuple[str, ...]``. The dimension
+  type defaults to ``Hashable``, so a bare ``Variable`` annotation means
+  ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The HTML representation can show or hide the attributes and data of all
+  variables of a section at once, and shows the expanded attributes and data
+  more compactly and indented below their variable (:pull:`11284`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The results of :py:meth:`DataArray.idxmin`, :py:meth:`DataArray.idxmax`,
+  :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` now keep the
+  attributes of the coordinate whose labels they return, e.g. its units,
+  instead of the attributes of the data (:pull:`10680`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Support for Python 3.11 has been dropped. The minimum required Python version
   is now 3.12, in line with xarray's
   :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
@@ -40,6 +65,53 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` no longer raise a
+  ``RecursionError`` for an order ``n`` close to the recursion limit, and are
+  faster for ``n > 1``. They also label the result correctly for ``n > 1`` with
+  ``label="lower"``, which used the upper labels for all but the first difference
+  (:issue:`11702`, :pull:`11704`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The indices returned by ``argmin`` and ``argmax`` of :py:class:`~computation.rolling.DataArrayRolling`
+  and :py:class:`~computation.rolling.DatasetRolling` no longer count the padding of windows
+  that extend beyond the array, but start at the first value of the window within
+  the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
+  shifted by the number of missing values in front of the array (:issue:`11336`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
+  with ``cache=False`` failing on Windows, because the downloaded file was
+  removed while still open (:pull:`11703`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix dark mode detection in VS Code by adding VS Code CSS variable support to the HTML representation CSS. (:pull:`11284`).
+  By `Maksymilian Wasilewski <https://github.com/maksmondeo>`_.
+- Fix ``TypeError`` on import when ``importlib.metadata.version`` returns ``None``
+  for an installed package, e.g. with some editable installs or custom import hooks
+  in QGIS. Such packages are now treated as not meeting a minimum version
+  (:issue:`11344`, :pull:`11379`).
+  By `Jay <https://github.com/jaythehardcoder>`_.
+- Fix reading JSON-native Zarr fill values from non-xarray Zarr writers
+  (:issue:`11332`, :pull:`11665`).
+  By `Om Satpute <https://github.com/omsatpute61-afk>`_.
+- Fix ``UnsortedIndexError`` when selecting a slice of tuples, e.g.
+  ``da.stack(z=["x", "y"]).sel(z=slice((0, "b"), (1, "a")))``, from a dimension
+  created by :py:meth:`Dataset.stack` or :py:meth:`DataArray.stack`. Their
+  MultiIndex claimed not to be sorted at all (:pull:`11694`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix a bug where assigning a named ``pandas.Series`` as a coordinate
+  (e.g. ``da.assign_coords(new_coord=series)``) ignored the Series'
+  index name and used the keyword argument as the dimension instead,
+  causing a confusing ``CoordinateValidationError``
+  (:issue:`9284`, :pull:`11664`).
+  By `Anirban Mandal <https://github.com/CoderAnirban71>`_.
+- Fix :py:class:`~xarray.Variable` methods with dimension names that are not
+  strings: :py:meth:`Variable.concat` failed for any such dimension, and
+  ``shift``, ``roll``, boolean ``isel`` and ``IndexVariable.to_index`` failed
+  for tuple dimension names (:pull:`11677`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Don't warn that no index is created when reducing a :py:class:`Dataset`
+  grouped by a data variable without flox (:issue:`9890`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Raise a :py:class:`ValueError` when :py:meth:`~xarray.indexes.RangeIndex.linspace`
+  receives a negative ``num`` instead of creating an index with a negative size.
 - Fix computing a chunked coordinate backed by a :py:class:`~xarray.indexes.CoordinateTransformIndex`
   (e.g. :py:class:`~xarray.indexes.RangeIndex`) after selecting a single position: outer indexing with
   an integer now drops that axis, as with basic indexing
@@ -72,6 +144,13 @@ Bug Fixes
   turn into separate locks when datasets are sent to another process, e.g. to a
   dask distributed worker (:issue:`9779`, :issue:`11088`, :pull:`11629`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix occasional segfaults when reading netCDF4 files with variable-length
+  strings with :py:func:`open_mfdataset` and ``parallel=True`` on a dask
+  distributed cluster. Files whose manager was garbage collected while another
+  thread held the lock stayed open, and with several files open on the same
+  path, HDF5 can crash once one of them is closed. These files are now closed
+  as soon as the lock is free (:issue:`11088`, :pull:`11692`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`Dataset.copy` now preserves its resource-closing callback, so a
   copied file-backed dataset can release a file reopened after the original
   dataset is closed (:issue:`10106`, :pull:`11643`).
@@ -82,10 +161,26 @@ Bug Fixes
   changes if a slice is all-``NaN`` and has to be filled with ``fill_value``
   (:issue:`7527`, :pull:`11544`).
   By `Shurong Cao <https://github.com/CAOShurong>`_.
+- :py:meth:`DataTree.load` now loads non-chunked variables whose name matches
+  a group path, which were previously skipped and stayed lazy, breaking a
+  subsequent write back to the same file
+  (:issue:`11672`, :pull:`11673`).
+  By `mokashang <https://github.com/mokashang>`_.
+- Fix issues with :py:meth:`DataArray.coarsen()` and :py:meth:`Dataset.coarsen()`
+  breaking when applying a reduction method with the ``skipna`` kwarg specified.
+  This was due to a bug in the reduction method generation introduced in :pull:`11556`
+  (:pull:`11686`).
+  By `Andrew Scherer <https://github.com/andrew-s28>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
+- Add hidden intersphinx inventory entries for methods, properties and
+  attributes at the path where they are defined, e.g.
+  ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
+  ``sphinx-codeautolink`` link to them from code examples in other projects
+  (:pull:`11678`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Clarified the ``rename`` docstrings so they no longer describe the result as a
   "new" object, which could be read as implying it no longer shares memory with
   the original (:issue:`9432`, :pull:`11644`).
@@ -93,6 +188,9 @@ Documentation
 - Fix the backend array indexing examples to pass indexers as a single tuple
   to ``_raw_indexing_method`` (:issue:`7450`, :pull:`11583`).
   By `Seahzee <https://github.com/Seahzee>`_.
+- Convert several simple documentation pages from reStructuredText to MyST
+  markdown (:issue:`7924`, :pull:`11668`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed the ``kwargs`` entry in the :py:meth:`Dataset.curvefit` and
   :py:meth:`DataArray.curvefit` docstrings: both take a ``kwargs`` dict, not
   ``**kwargs`` (:issue:`6891`, :pull:`11536`).
@@ -100,6 +198,12 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- Speed up the ``repr`` of objects with many coordinates by about 2.5x, which
+  got about twice as slow when the coordinates were ordered by dimension in
+  v2025.10.0 (:pull:`10778`), and their HTML repr by about 15% (:pull:`11691`): the
+  coordinates are no longer converted to :py:class:`DataArray` objects to sort
+  them.
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` no longer sort
   coordinates that are already increasing, and reverse strictly decreasing
   ones instead of sorting them. This avoids copying the data before
@@ -110,6 +214,18 @@ Performance
   until the means are computed (:issue:`4804`, :pull:`11682`).
   Based on work by `Andrew Williams <https://github.com/AndrewILWilliams>`__ and
   `Willi Rath <https://github.com/willirath>`__ in :pull:`5390`.
+- :py:meth:`Dataset.unstack` and :py:meth:`DataArray.unstack` reshape the data
+  instead of copying it when the MultiIndex contains every combination of its
+  levels in order, e.g. after :py:meth:`Dataset.stack`. The unstacked data is
+  then a view of the original data. In that case, the expensive cleaning and
+  uniqueness checks of the MultiIndex are skipped as well (:issue:`11455`,
+  :pull:`11688`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Guessing the engine of a local file in :py:func:`open_dataset` and
+  :py:func:`open_mfdataset` now only reads its magic number, instead of a
+  whole buffer of the size of the filesystem block size. This speeds up opening
+  many files on parallel filesystems like Lustre or GPFS (:issue:`7697`,
+  :pull:`11687`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
@@ -126,6 +242,11 @@ Internal Changes
   ``ArrayLike`` overloads, static type checkers infer e.g. ``np.exp(da)`` as
   :py:class:`DataArray` and ``np.add(da, ds)`` as :py:class:`Dataset`
   instead of ``np.ndarray`` (:issue:`6524`, :issue:`8388`, :pull:`11667`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Remove the unused ``xarray/namedarray/dtypes.py``, a stale copy of
+  ``xarray/core/dtypes.py``, exclude the code generators in ``xarray/util``
+  from the test coverage and test ``xarray.tutorial`` without network access
+  (:pull:`11703`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
@@ -304,6 +425,10 @@ Bug Fixes
   for zarr writes. Existing zarr stores written with the old ``int8`` encoding
   are still read correctly. (:issue:`2937`, :pull:`11318`)
   By `Evan Lyall <https://github.com/elyall>`_.
+- Assigning :py:class:`DataTree` children under names containing ``/`` (e.g.
+  ``DataTree(children={"a/b": ...})``) now raises a ``ValueError`` instead of
+  recursing until ``RecursionError`` (:issue:`9490`, :pull:`11620`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - No longer emit a ``SerializationWarning`` about a missing ``_FillValue`` when
   encoding a CF coordinate variable (a 1D variable named after its dimension) to
   an integer dtype. CF forbids missing values in coordinate variables, so a

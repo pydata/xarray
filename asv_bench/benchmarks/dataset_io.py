@@ -620,17 +620,21 @@ class IOWriteNetCDFDaskDistributed:
 
 
 class IOReadSingleFile(IOSingleNetCDF):
-    def setup(self, *args, **kwargs):
+    def setup_cache(self):
+        # Write the files only once: asv re-runs `setup` before every timed call,
+        # and writing the files there makes the timed reads compete with the
+        # writeback of the files to disk, which made the timings very noisy.
         self.make_ds()
 
-        self.filepaths = {}
+        filepaths = {}
         for engine in _ENGINES:
-            self.filepaths[engine] = f"test_single_file_with_{engine}.nc"
-            self.ds.to_netcdf(self.filepaths[engine], engine=engine)
+            filepaths[engine] = f"test_single_file_with_{engine}.nc"
+            self.ds.to_netcdf(filepaths[engine], engine=engine)
+        return filepaths
 
     @parameterized(["engine", "chunks"], (_ENGINES, [None, {}]))
-    def time_read_dataset(self, engine, chunks):
-        xr.open_dataset(self.filepaths[engine], engine=engine, chunks=chunks)
+    def time_read_dataset(self, filepaths, engine, chunks):
+        xr.open_dataset(filepaths[engine], engine=engine, chunks=chunks)
 
 
 class IOReadCustomEngine:
