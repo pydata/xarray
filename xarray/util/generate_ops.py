@@ -279,12 +279,27 @@ ops_info = {
         + inplace(other_type="DsCompatible", type_ignore="misc")
         + unops()
     ),
+    # Like for Variable, binary and unary operations return a DataArray with the
+    # shape and dtype that they can change, also for subclasses.
     "DataArrayOpsMixin": (
         binops_overload(
-            other_type="DaCompatible", overload_types=["Dataset", "DataTree"]
+            other_type="DaCompatible",
+            overload_types=["Dataset", "DataTree"],
+            return_type="DataArray[Shape, Any, DimType_co, VarType_co]",
+            return_type_cmp="DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]",
         )
         + inplace(other_type="DaCompatible", type_ignore="misc")
-        + unops()
+        + unops(
+            return_type="DataArray[ShapeType_co, DType_co, DimType_co, VarType_co]",
+            required_return_type="DataArray[Any, Any, DimType_co, VarType_co]",
+            return_types={
+                # e.g. complex to float
+                "__abs__": "DataArray[ShapeType_co, Any, DimType_co, VarType_co]",
+                "argsort": (
+                    "DataArray[ShapeType_co, np.dtype[np.intp], DimType_co, VarType_co]"
+                ),
+            },
+        )
     ),
     # Binary and unary operations return a Variable, also for subclasses (e.g. an
     # IndexVariable), with the shape and dtype that they can change. Binary
@@ -333,7 +348,7 @@ import numpy as np
 from xarray.computation import ops
 from xarray.core import nputils
 from xarray.core.types import DaCompatible, DsCompatible, DtCompatible, VarCompatible
-from xarray.namedarray._typing import DimType_co, DType_co, ShapeType_co
+from xarray.namedarray._typing import DimType_co, DType_co, ShapeType_co, VarType_co
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -350,10 +365,14 @@ class {cls_name}{bases}:{comment}
 # Base classes, e.g. to make a mixin generic. Generic type parameters of classes
 # are covariant TypeVars, as PEP 695 would infer them as invariant.
 CLASS_BASES = {
+    "DataArrayOpsMixin": (
+        "(Generic[ShapeType_co, DType_co, DimType_co, VarType_co])",
+        "  # noqa: UP046",
+    ),
     "VariableOpsMixin": (
         "(Generic[ShapeType_co, DType_co, DimType_co])",
         "  # noqa: UP046",
-    )
+    ),
 }
 
 COPY_DOCSTRING = """\

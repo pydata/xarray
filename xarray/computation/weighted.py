@@ -209,11 +209,11 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
 
     @staticmethod
     def _reduce(
-        da: T_DataArray,
-        weights: T_DataArray,
+        da: DataArray,
+        weights: DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
 
         for internal use only
@@ -231,7 +231,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         # DataArray (if `weights` has additional dimensions)
         return dot(da, weights, dim=dim)
 
-    def _sum_of_weights(self, da: T_DataArray, dim: Dims = None) -> T_DataArray:
+    def _sum_of_weights(self, da: DataArray, dim: Dims = None) -> DataArray:
         """Calculate the sum of weights, accounting for missing values"""
 
         # we need to mask data values that are nan; else the weights are wrong
@@ -256,34 +256,32 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
 
     def _sum_of_squares(
         self,
-        da: T_DataArray,
+        da: DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
 
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
 
-        # TODO: unsure why mypy complains about these being DataArray return types
-        # rather than T_DataArray?
-        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
+        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)
 
     def _weighted_sum(
         self,
-        da: T_DataArray,
+        da: DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
 
-        return self._reduce(da, self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
+        return self._reduce(da, self.weights, dim=dim, skipna=skipna)
 
     def _weighted_mean(
         self,
-        da: T_DataArray,
+        da: DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``mean`` along some dimension(s)."""
 
         weighted_sum = self._weighted_sum(da, dim=dim, skipna=skipna)
@@ -294,10 +292,10 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
 
     def _weighted_var(
         self,
-        da: T_DataArray,
+        da: DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``var`` along some dimension(s)."""
 
         sum_of_squares = self._sum_of_squares(da, dim=dim, skipna=skipna)
@@ -308,21 +306,21 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
 
     def _weighted_std(
         self,
-        da: T_DataArray,
+        da: DataArray,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""
 
-        return cast("T_DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
+        return cast("DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
 
     def _weighted_quantile(
         self,
-        da: T_DataArray,
+        da: DataArray,
         q: ArrayLike,
         dim: Dims = None,
         skipna: bool | None = None,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
         def _get_h(n: float, q: np.ndarray, method: QUANTILE_METHODS) -> np.ndarray:

@@ -44,7 +44,7 @@ def cov(
     dim: Dims = None,
     ddof: int = 1,
     weights: T_DataArray | None = None,
-) -> T_DataArray:
+) -> DataArray:
     """
     Compute covariance between two DataArray objects along a shared dimension.
 
@@ -149,7 +149,7 @@ def corr(
     da_b: T_DataArray,
     dim: Dims = None,
     weights: T_DataArray | None = None,
-) -> T_DataArray:
+) -> DataArray:
     """
     Compute the Pearson correlation coefficient between
     two DataArray objects along a shared dimension.
@@ -254,7 +254,7 @@ def _cov_corr(
     dim: Dims = None,
     ddof: int = 0,
     method: Literal["cov", "corr"] | None = None,
-) -> T_DataArray:
+) -> DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
     sanitize the input arrays once and we don't repeat code.

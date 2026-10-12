@@ -284,7 +284,7 @@ class TestIndexers:
         test_indexer(mdata, {"one": "a"}, expected)
 
     def test_read_only_view(self) -> None:
-        arr = DataArray(
+        arr: DataArray = DataArray(
             np.random.rand(3, 3),
             coords={"x": np.arange(3), "y": np.arange(3)},
             dims=("x", "y"),

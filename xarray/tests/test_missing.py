@@ -539,7 +539,9 @@ def test_ffill_limit():
         [0, np.nan, np.nan, np.nan, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"
     )
     result = da.ffill("time")
-    expected = xr.DataArray([0, 0, 0, 0, 0, 3, 4, 5, 5, 6, 7], dims="time")
+    expected: xr.DataArray = xr.DataArray(
+        [0, 0, 0, 0, 0, 3, 4, 5, 5, 6, 7], dims="time"
+    )
     assert_array_equal(result, expected)
 
     result = da.ffill("time", limit=1)

@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
+    from xarray.namedarray._typing import Shape
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
@@ -1144,8 +1145,12 @@ class DataArrayCoordinates[T_DataArray: DataArray](Coordinates):
     def _names(self) -> set[Hashable]:
         return set(self._data._coords)
 
+    # a coordinate has the dimension and variable name types of its DataArray
     @override
-    def __getitem__(self, key: Hashable) -> T_DataArray:
+    def __getitem__[DimType: Hashable, VarType: Hashable](
+        self: DataArrayCoordinates[DataArray[Any, Any, DimType, VarType]],
+        key: Hashable,
+    ) -> DataArray[Shape, Any, DimType, VarType]:
         return self._data._getitem_coord(key)
 
     @override

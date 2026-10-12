@@ -901,8 +901,8 @@ def _dataarray_concat(
         elif name != arr.name:
             if compat == "identical":
                 raise ValueError("array names not identical")
-            else:
-                arr = arr.rename(name)
+            datasets.append(arr.rename(name)._to_temp_dataset())
+            continue
         datasets.append(arr._to_temp_dataset())
 
     ds = _dataset_concat(

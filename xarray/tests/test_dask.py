@@ -1333,7 +1333,7 @@ def test_map_blocks_dask_args():
         assert da1.shape == da2.shape
         return da1 + da2
 
-    da2 = da1 + 1
+    da2: DataArray = da1 + 1
     with raise_if_dask_computes():
         mapped = xr.map_blocks(sumda, da1, args=[da2])
     xr.testing.assert_equal(da1 + da2, mapped)

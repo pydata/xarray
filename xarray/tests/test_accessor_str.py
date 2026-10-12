@@ -328,9 +328,9 @@ def test_case_str() -> None:
 
 
 def test_replace(dtype) -> None:
-    values = xr.DataArray(["fooBAD__barBAD"], dims=["x"]).astype(dtype)
+    values: xr.DataArray = xr.DataArray(["fooBAD__barBAD"], dims=["x"]).astype(dtype)
     result = values.str.replace("BAD[_]*", "")
-    expected = xr.DataArray(["foobar"], dims=["x"]).astype(dtype)
+    expected: xr.DataArray = xr.DataArray(["foobar"], dims=["x"]).astype(dtype)
     assert result.dtype == expected.dtype
     assert_equal(result, expected)
 
@@ -464,12 +464,12 @@ def test_replace_unicode() -> None:
 
 
 def test_replace_compiled_regex(dtype) -> None:
-    values = xr.DataArray(["fooBAD__barBAD"], dims=["x"]).astype(dtype)
+    values: xr.DataArray = xr.DataArray(["fooBAD__barBAD"], dims=["x"]).astype(dtype)
 
     # test with compiled regex
     pat = re.compile(dtype("BAD[_]*"))
     result = values.str.replace(pat, "")
-    expected = xr.DataArray(["foobar"], dims=["x"]).astype(dtype)
+    expected: xr.DataArray = xr.DataArray(["foobar"], dims=["x"]).astype(dtype)
     assert result.dtype == expected.dtype
     assert_equal(result, expected)
 

@@ -42,6 +42,17 @@ if TYPE_CHECKING or sys.version_info >= (3, 13):
 else:
     DimType_co = TypeVar("DimType_co", bound=Hashable, covariant=True)
 
+# Type variable of DataArray for the names of its variables, i.e. its own name and
+# the names of its coordinates, which share one namespace. It defaults to the
+# dimension type, e.g. `DataArray[Any, Any, str]` means `DataArray[Any, Any, str, str]`.
+# TODO: remove the version check once Python 3.13 is the minimum.
+if TYPE_CHECKING or sys.version_info >= (3, 13):
+    VarType_co = TypeVar(
+        "VarType_co", bound=Hashable, covariant=True, default=DimType_co
+    )
+else:
+    VarType_co = TypeVar("VarType_co", bound=Hashable, covariant=True)
+
 dtype = np.dtype
 
 
