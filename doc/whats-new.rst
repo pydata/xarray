@@ -13,6 +13,19 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:class:`~xarray.Variable` is now generic in the types of its shape, dtype
+  and dimension names, like :py:class:`~xarray.NamedArray`: it is defined as
+  ``class Variable(NamedArray[ShapeType_co, DType_co, DimType_co])``, so static
+  type checkers can infer and check them, e.g.
+  ``Variable(("x", "y"), np.zeros((2, 3)))`` is a
+  ``Variable[tuple[int, ...], np.dtype[np.float64], str]``. The dtype is also
+  inferred from lists and scalars, e.g. ``Variable("x", [1, 2])`` has an integer
+  dtype, also in :py:func:`~xarray.namedarray.core.from_array`. Operations that can
+  change the dtype or shape return a ``Variable`` with the respective types, e.g.
+  comparisons have a boolean dtype. The dimension type defaults to
+  ``Hashable``, so a bare ``Variable`` annotation means
+  ``Variable[Any, Any, Hashable]`` and keeps its previous meaning
+  (:pull:`11677`, :pull:`11693`).
 - :py:meth:`DataArray.idxmin` and :py:meth:`DataArray.idxmax` accept a sequence
   of dimensions or ``...``, and return a dict of the coordinate labels along each
   dimension, like :py:meth:`DataArray.argmin`. Without ``dim``, arrays with more
