@@ -14,6 +14,7 @@ from collections.abc import (
 )
 from dataclasses import dataclass, field
 from html import escape
+from numbers import Number
 from os import PathLike
 from typing import (
     TYPE_CHECKING,
@@ -2681,7 +2682,7 @@ class DataTree(
             # dimension-order sizes are deprecated for Dataset.chunk, and are
             # additionally ambiguous for a tree whose groups need not share an
             # ordering of their dimensions
-            if chunks is None or isinstance(chunks, tuple | list):
+            if not isinstance(chunks, str | Number):
                 raise TypeError(
                     f"invalid type for chunks: {type(chunks)}. Only mappings and "
                     'single chunk specifications (e.g. 5 or "auto") to be applied '
