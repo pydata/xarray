@@ -53,6 +53,4 @@ def test_nanquantile_other_runtime_warnings_not_suppressed(monkeypatch) -> None:
 
     monkeypatch.setattr(np, "nanquantile", warning_quantile)
     with pytest.warns(RuntimeWarning, match="unrelated quantile warning"):
-        nanquantile(
-            np.array([[1.0], [2.0]]), axis=0, q=0.5, method="median_unbiased"
-        )
+        nanquantile(np.array([[1.0], [2.0]]), axis=0, q=0.5, method="median_unbiased")
