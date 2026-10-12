@@ -66,7 +66,9 @@ def test_nanquantile_other_runtime_warnings_not_suppressed(monkeypatch) -> None:
     ],
     ids=["scalar-quantile", "multiple-quantiles"],
 )
-def test_high_level_quantile_all_nan_slice_is_silent(dataset: bool, quantiles, expected) -> None:
+def test_high_level_quantile_all_nan_slice_is_silent(
+    dataset: bool, quantiles, expected
+) -> None:
     # Regression for gh-9870: exercise the public quantile API, not only the
     # NumPy fallback helper. The non-default method bypasses numbagg.
     values = xr.DataArray(
@@ -77,7 +79,9 @@ def test_high_level_quantile_all_nan_slice_is_silent(dataset: bool, quantiles, e
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", RuntimeWarning)
-        result = obj.quantile(quantiles, dim="time", method="median_unbiased", skipna=True)
+        result = obj.quantile(
+            quantiles, dim="time", method="median_unbiased", skipna=True
+        )
 
     actual = result["measurements"].values if dataset else result.values
     assert_array_equal(actual, expected)
