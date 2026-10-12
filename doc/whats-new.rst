@@ -199,8 +199,10 @@ Documentation
   ``**kwargs`` (:issue:`6891`, :pull:`11536`).
   By `Advit Arora <https://github.com/advitrocks9>`_.
 - Fix the rendering of the default of ``netcdf_engine_order`` in the
-  :py:func:`set_options` docstring, and document the defaults of all options
-  consistently (:issue:`10832`, :pull:`11156`).
+  :py:func:`set_options` docstring, document the defaults of all options
+  consistently, and add the missing ``display_default_indexes``,
+  ``display_expand_groups`` and ``enable_cftimeindex`` options
+  (:issue:`10832`, :pull:`11156`).
   By `dolliecoder <https://github.com/dolliecoder>`_ and
   `Michael Niklas <https://github.com/headtr1ck>`_.
 

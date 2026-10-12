@@ -252,6 +252,12 @@ class set_options:
         matplotlib built-in colormap. Can also be a Colormap object
         (e.g. ``mpl.colormaps["magma"]``).
 
+    display_default_indexes : {"default", True, False}, default: False
+        Whether to show default indexes, i.e. ``PandasIndex`` and
+        ``PandasMultiIndex``, in the indexes section of the repr of
+        ``DataArray``, ``Dataset`` and ``DataTree`` objects. ``"default"`` hides
+        them, like ``False``.
+
     display_expand_attrs : {"default", True, False}, default: "default"
         Whether to expand the attributes section for display of
         ``DataArray`` or ``Dataset`` objects.
@@ -292,6 +298,11 @@ class set_options:
         * ``False`` : always collapse data variables
         * ``"default"`` : expand unless over a pre-defined limit
 
+    display_expand_groups : {"default", True, False}, default: "default"
+        Has no effect since the HTML repr of ``DataTree`` was reworked in
+        v2026.01.0. Use ``display_max_children`` and
+        ``display_max_html_elements`` to limit the displayed groups instead.
+
     display_expand_indexes : {"default", True, False}, default: "default"
         Whether to expand the indexes section for display of
         ``DataArray`` or ``Dataset`` objects.
@@ -326,6 +337,10 @@ class set_options:
 
     display_width : int, default: 80
         Maximum display width for ``repr`` on xarray objects.
+
+    enable_cftimeindex : bool, default: True
+        Deprecated, has no effect since v0.11.0. Setting it emits a
+        ``FutureWarning``.
 
     facetgrid_figsize : {"computed", "rcparams"} or tuple of float, default: "computed"
         How :class:`~xarray.plot.FacetGrid` determines figure size when
