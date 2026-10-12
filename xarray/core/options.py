@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         "use_numbagg",
         "use_opt_einsum",
         "use_flox",
+        "facetgrid_figsize",
     ]
 
     class T_Options(TypedDict):
@@ -73,6 +74,7 @@ if TYPE_CHECKING:
         use_new_combine_kwarg_defaults: bool
         use_numbagg: bool
         use_opt_einsum: bool
+        facetgrid_figsize: Literal["computed", "rcparams"] | tuple[float, float]
 
 
 OPTIONS: T_Options = {
@@ -101,13 +103,15 @@ OPTIONS: T_Options = {
     "keep_attrs": "default",
     "netcdf_engine_order": ("netcdf4", "h5netcdf", "scipy"),
     "warn_for_unclosed_files": False,
-    "use_bottleneck": True,
+    "use_bottleneck": False,
     "use_flox": True,
     "use_new_combine_kwarg_defaults": False,
     "use_numbagg": True,
     "use_opt_einsum": True,
+    "facetgrid_figsize": "computed",
 }
 
+_FACETGRID_FIGSIZE_OPTIONS = frozenset(["computed", "rcparams"])
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 _DISPLAY_OPTIONS = frozenset(["text", "html"])
 _NETCDF_ENGINES = frozenset(["netcdf4", "h5netcdf", "scipy"])
@@ -144,6 +148,14 @@ _VALIDATORS = {
     "use_opt_einsum": lambda value: isinstance(value, bool),
     "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
+    "facetgrid_figsize": lambda value: (
+        value in _FACETGRID_FIGSIZE_OPTIONS
+        or (
+            isinstance(value, tuple)
+            and len(value) == 2
+            and all(isinstance(v, (int, float)) for v in value)
+        )
+    ),
 }
 
 
@@ -193,13 +205,13 @@ class set_options:
     ----------
     arithmetic_broadcast : bool, default: True
         Whether to perform automatic broadcasting in binary operations.
+
     arithmetic_compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"}, default: "minimal"
         How to compare non-index coordinates of the same name for potential
         conflicts when performing binary operations. (For the alignment of index
         coordinates in binary operations, see `arithmetic_join`.)
 
         Allowed values are:
-
 
         - ``"identical"``: all values, dimensions and attributes of the coordinates
           must be the same.
@@ -214,10 +226,10 @@ class set_options:
           operand.
         - ``"minimal"``: drop conflicting coordinates.
 
-    arithmetic_join : optional
+    arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
         DataArray/Dataset index alignment in binary operations.
 
-        Default is ``"inner"``. Allowed values are:
+        Allowed values are:
 
         - ``"outer"``: use the union of object indexes
         - ``"inner"``: use the intersection of object indexes
@@ -240,51 +252,51 @@ class set_options:
         matplotlib built-in colormap. Can also be a Colormap object
         (e.g. ``mpl.colormaps["magma"]``).
 
-    display_expand_attrs : optional
+    display_expand_attrs : {"default", True, False}, default: "default"
         Whether to expand the attributes section for display of
         ``DataArray`` or ``Dataset`` objects.
 
-        Default is ``"default"``. Allowed values are:
+        Allowed values are:
 
         * ``True`` : always expand attrs
         * ``False`` : always collapse attrs
         * ``"default"`` : expand unless over a pre-defined limit
 
-    display_expand_coords : optional
+    display_expand_coords : {"default", True, False}, default: "default"
         Whether to expand the coordinates section for display of
         ``DataArray`` or ``Dataset`` objects.
 
-        Default is ``"default"``. Allowed values are:
+        Allowed values are:
 
         * ``True`` : always expand coordinates
         * ``False`` : always collapse coordinates
         * ``"default"`` : expand unless over a pre-defined limit
 
-    display_expand_data : optional
+    display_expand_data : {"default", True, False}, default: "default"
         Whether to expand the data section for display of ``DataArray``
         objects.
 
-        Default is ``"default"``. Allowed values are:
+        Allowed values are:
 
         * ``True`` : always expand data
         * ``False`` : always collapse data
         * ``"default"`` : expand unless over a pre-defined limit
 
-    display_expand_data_vars : optional
+    display_expand_data_vars : {"default", True, False}, default: "default"
         Whether to expand the data variables section for display of
         ``Dataset`` objects.
 
-        Default is ``"default"``. Allowed values are:
+        Allowed values are:
 
         * ``True`` : always expand data variables
         * ``False`` : always collapse data variables
         * ``"default"`` : expand unless over a pre-defined limit
 
-    display_expand_indexes : optional
+    display_expand_indexes : {"default", True, False}, default: "default"
         Whether to expand the indexes section for display of
         ``DataArray`` or ``Dataset`` objects.
 
-        Default is ``"default"``. Allowed values are:
+        Allowed values are:
 
         * ``True`` : always expand indexes
         * ``False`` : always collapse indexes
@@ -309,39 +321,48 @@ class set_options:
         Total number of array elements which trigger summarization rather
         than full repr for variable data views (NumPy arrays).
 
-    display_style : optional
+    display_style : {"text", "html"}, default: "html"
         Display style to use in Jupyter for xarray objects.
-
-        Default is ``"html"``. Allowed values are ``"text"`` and ``"html"``.
 
     display_width : int, default: 80
         Maximum display width for ``repr`` on xarray objects.
+
+    facetgrid_figsize : {"computed", "rcparams"} or tuple of float, default: "computed"
+        How :class:`~xarray.plot.FacetGrid` determines figure size when
+        ``figsize`` is not explicitly passed:
+
+        * ``"computed"`` : figure size is derived from ``size`` and ``aspect``
+          parameters (current default behavior).
+        * ``"rcparams"`` : use ``matplotlib.rcParams['figure.figsize']`` as the
+          total figure size.
+        * ``(width, height)`` : use a fixed figure size (in inches).
 
     file_cache_maxsize : int, default: 128
         Maximum number of open files to hold in xarray's global
         least-recently-used cache. This should be smaller than your system's
         per-process file descriptor limit (e.g., ``ulimit -n`` on Linux).
 
-    keep_attrs : optional
+    keep_attrs : {"default", True, False}, default: "default"
         Whether to keep attributes on xarray Datasets/DataArrays after
         operations.
 
-        Default is ``"default"``. Allowed values are:
+        Allowed values are:
 
         * ``True`` : always keep attrs
         * ``False`` : always discard attrs
         * ``"default"`` : keep attrs only in unambiguous circumstances
 
-    netcdf_engine_order : optional
+    netcdf_engine_order : sequence of {"netcdf4", "h5netcdf", "scipy"}
         Preference order of backend engines to use when reading or writing
-        netCDF files with ``open_dataset()`` and ``to_netcdf()`` if
-        ``engine`` is not explicitly specified.
+        netCDF files with ``open_dataset()`` and ``to_netcdf()`` if ``engine``
+        is not explicitly specified. May be any permutation or subset of the
+        allowed values.
 
-        Default is ``['netcdf4', 'h5netcdf', 'scipy']``.
+        Default is ``("netcdf4", "h5netcdf", "scipy")``.
 
-    use_bottleneck : bool, default: True
+    use_bottleneck : bool, default: False
         Whether to use ``bottleneck`` to accelerate 1D reductions and
-        rolling reduction operations.
+        1D rolling reduction operations.
 
     use_flox : bool, default: True
         Whether to use ``numpy_groupies`` and ``flox`` to accelerate
@@ -350,7 +371,12 @@ class set_options:
     use_new_combine_kwarg_defaults : bool, default: False
         Whether to use new kwarg default values for combine functions:
         :py:func:`~xarray.concat`, :py:func:`~xarray.merge`,
-        :py:func:`~xarray.open_mfdataset`.
+        :py:func:`~xarray.open_mfdataset`. New values are:
+
+        * ``data_vars``: None
+        * ``coords``: "minimal"
+        * ``compat``: "override"
+        * ``join``: "exact"
 
     use_numbagg : bool, default: True
         Whether to use ``numbagg`` to accelerate reductions.
@@ -396,6 +422,11 @@ class set_options:
                     expected = f"Expected one of {_JOIN_OPTIONS!r}"
                 elif k == "display_style":
                     expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
+                elif k == "facetgrid_figsize":
+                    expected = (
+                        f"Expected one of {_FACETGRID_FIGSIZE_OPTIONS!r}"
+                        " or a (width, height) tuple of floats"
+                    )
                 elif k == "netcdf_engine_order":
                     expected = f"Expected a subset of {sorted(_NETCDF_ENGINES)}"
                 else:

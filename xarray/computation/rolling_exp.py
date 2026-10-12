@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Generic
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -10,6 +10,9 @@ from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core.options import _get_keep_attrs
 from xarray.core.types import T_DataWithCoords
 from xarray.core.utils import module_available
+
+if TYPE_CHECKING:
+    from xarray.core.common import DataWithCoords
 
 
 def _get_alpha(
@@ -46,7 +49,7 @@ def _get_alpha(
         raise ValueError("Must pass one of comass, span, halflife, or alpha")
 
 
-class RollingExp(Generic[T_DataWithCoords]):
+class RollingExp[T_DataWithCoords: DataWithCoords]:
     """
     Exponentially-weighted moving window object.
     Similar to EWM in pandas

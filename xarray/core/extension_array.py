@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, cast
+from typing import TYPE_CHECKING, cast, override
 
 import numpy as np
 import pandas as pd
@@ -111,14 +111,17 @@ def as_extension_array(
 
 @implements(np.result_type)
 def __extension_duck_array__result_type(
-    *arrays_and_dtypes: list[
-        np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype | ExtensionArray
-    ],
+    *arrays_and_dtypes: np.typing.ArrayLike
+    | np.typing.DTypeLike
+    | ExtensionDtype
+    | ExtensionArray,
 ) -> DtypeObj:
     extension_arrays_and_dtypes: list[ExtensionDtype | ExtensionArray] = [
         cast(ExtensionDtype | ExtensionArray, x)
         for x in arrays_and_dtypes
-        if is_allowed_extension_array(x) or is_allowed_extension_array_dtype(x)
+        if is_allowed_extension_array(x)
+        # strings are scalar values here; pandas would interpret them as dtype names
+        or (not isinstance(x, str | bytes) and is_allowed_extension_array_dtype(x))
     ]
     if not extension_arrays_and_dtypes:
         return NotImplemented
@@ -136,7 +139,7 @@ def __extension_duck_array__result_type(
     other_stuff = [
         x
         for x in arrays_and_dtypes
-        if not is_allowed_extension_array_dtype(x) and not is_scalar(x)
+        if not is_scalar(x) and not is_allowed_extension_array_dtype(x)
     ]
     # We implement one special case: when possible, preserve Categoricals (avoid promoting
     # to object) by merging the categories of all given Categoricals + scalars + NA.
@@ -235,7 +238,9 @@ def __extension_duck_array__reshape(
 
 
 @dataclass(frozen=True)
-class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
+class PandasExtensionArray[T_ExtensionArray: pd.api.extensions.ExtensionArray](
+    NDArrayMixin
+):
     """NEP-18 compliant wrapper for pandas extension arrays.
 
     Parameters
@@ -271,6 +276,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
 
+    @override
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         if (
             isinstance(key, tuple) and len(key) == 1
@@ -286,6 +292,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __setitem__(self, key, val):
         self.array[key] = val
 
+    @override
     def __len__(self):
         return len(self.array)
 
@@ -297,6 +304,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __ne__(self, other):
         return ~(self == other)
 
+    @override
     @property
     def ndim(self) -> int:
         return 1

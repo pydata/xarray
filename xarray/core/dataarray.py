@@ -2,19 +2,13 @@ from __future__ import annotations
 
 import copy
 import datetime
+import json
 import warnings
-from collections.abc import (
-    Callable,
-    Hashable,
-    Iterable,
-    Mapping,
-    MutableMapping,
-    Sequence,
-)
+from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
 from functools import partial
 from os import PathLike
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, TypeVar, overload, override
 
 import numpy as np
 import pandas as pd
@@ -35,7 +29,7 @@ from xarray.core.coordinates import (
     create_coords_with_default_indexes,
     validate_dataarray_coords,
 )
-from xarray.core.dataset import Dataset
+from xarray.core.dataset import Dataset, _sparse_coo_to_index
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.formatting import format_item
 from xarray.core.indexes import (
@@ -72,6 +66,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
 from xarray.structure import alignment
@@ -172,6 +167,21 @@ def _infer_coords_and_dims(
         if not hashable(d):
             raise TypeError(f"Dimension {d} is not hashable")
 
+    if coords is not None and not utils.is_dict_like(coords):
+        if any(
+            isinstance(coord, tuple)
+            and len(coord) >= 2
+            and hashable(coord[0])
+            and coord[0] != dim
+            for dim, coord in zip(dims_tuple, coords, strict=True)
+        ):
+            utils.emit_user_level_warning(
+                "Coordinate names in tuple-style coords are ignored when `dims` "
+                "are provided. Use a mapping for `coords` if you need named "
+                "coordinates.",
+                UserWarning,
+            )
+
     new_coords: Mapping[Hashable, Any]
 
     if isinstance(coords, Coordinates):
@@ -226,7 +236,7 @@ def _check_data_shape(
     return data
 
 
-class _LocIndexer(Generic[T_DataArray]):
+class _LocIndexer[T_DataArray: DataArray]:
     __slots__ = ("data_array",)
 
     def __init__(self, data_array: T_DataArray):
@@ -254,8 +264,23 @@ class _LocIndexer(Generic[T_DataArray]):
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
+class _NumpyEncoder(json.JSONEncoder):
+    """Encode numpy value in Arrow schema metadata"""
+
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
+
 class DataArray(
-    AbstractArray,
+    AbstractArray[Hashable],
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
@@ -327,7 +352,7 @@ class DataArray(
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
-        (see FAQ, :ref:`approach to metadata`)
+        (see FAQ, :ref:`approach-to-metadata`)
     indexes : :py:class:`~xarray.Indexes` or dict-like, optional
         For internal use only. For passing indexes objects to the
         new DataArray, use the ``coords`` argument instead with a
@@ -476,6 +501,102 @@ class DataArray(
 
         self._close = None
 
+    def __arrow_c_schema__(self):
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        values_column = self.name or "values"
+
+        fields = []
+        for name, coord in self._coords.items():
+            arrow_dtype = pa.from_numpy_dtype(coord.dtype)
+            fields.append(pa.field(str(name), arrow_dtype))
+
+        fields.append(
+            pa.field(str(values_column), pa.from_numpy_dtype(self._variable.dtype))
+        )
+
+        xarray_metadata = {
+            "name": self.name,
+            "dims": list(self._variable.dims),
+            "shape": list(self._variable.shape),
+            "attrs": self.attrs,
+            "coords": {
+                str(name): variable.to_dict(data=False)
+                for name, variable in self._coords.items()
+            },
+        }
+        schema_metadata = {
+            b"xarray:arrow_schema_version": b"v1",
+            b"xarray": json.dumps(xarray_metadata, cls=_NumpyEncoder).encode(),
+        }
+
+        schema = pa.schema(fields, metadata=schema_metadata)
+        return schema.__arrow_c_schema__()
+
+    def __arrow_c_stream__(self, requested_schema: Any = None) -> Any:
+        """Export the DataArray through the Arrow PyCapsule Interface.
+
+        https://arrow.apache.org/docs/dev/format/CDataInterface/PyCapsuleInterface.html
+        """
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        if is_chunked_array(self._variable._data):
+            raise ValueError(
+                "Chunked DataArray must be computed first, use: DataArray.compute()"
+            )
+
+        values = self._variable.values
+        dims = self._variable.dims
+        shape = self._variable.shape
+
+        values_column = self.name or "values"
+
+        if not values.flags.c_contiguous:
+            values = np.ascontiguousarray(values)
+
+        columns: dict[Hashable, pa.Array] = {}
+        for name, coord in self._coords.items():
+            # Broadcast each coordinate up to the full data shape so that 1D
+            # dimension coordinates and N-D (e.g. curvilinear) coordinates
+            # flatten consistently with the data values.
+
+            # Order axes based on Variable dims
+            dim_order = tuple(
+                coord.dims.index(dim) for dim in dims if dim in coord.dims
+            )
+
+            # Reorder coords values to variable dim order
+            ordered_coords = coord.values.transpose(dim_order)
+
+            # Expand coord dims
+            # coord dims (x, y) variable dims (x,y,z) -> (x, y, 1)
+            # NOTE: Insert a length-1 axis for each data dim missing for coordinates
+            # (slice(None) keeps an existing axis, np.newaxis adds one)
+            indexer = tuple(
+                slice(None) if dim in coord.dims else np.newaxis for dim in dims
+            )
+            expanded_coords = ordered_coords[indexer]
+
+            # Broadcast to full flattened shape (x, y, 1) -> (x, y, z)
+            columns[name] = pa.array(np.broadcast_to(expanded_coords, shape).ravel())
+
+        columns[values_column] = pa.array(np.ravel(values))
+
+        schema = pa.schema(self)
+
+        table = pa.table(columns, schema=schema)
+        return table.__arrow_c_stream__(requested_schema)
+
     @classmethod
     def _construct_direct(
         cls,
@@ -528,7 +649,7 @@ class DataArray(
             indexes = self._indexes
         elif set(self.dims) == set(variable.dims):
             # Shape has changed (e.g. from reduce(..., keepdims=True)
-            new_sizes = dict(zip(self.dims, variable.shape, strict=True))
+            new_sizes = dict(variable.sizes)
             coords = {
                 k: v
                 for k, v in self._coords.items()
@@ -537,9 +658,13 @@ class DataArray(
             indexes = filter_indexes_from_coords(self._indexes, set(coords))
         else:
             allowed_dims = set(variable.dims)
-            coords = {
-                k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
-            }
+            coords = {}
+            for k, v in self._coords.items():
+                if k in self._indexes:
+                    if self._indexes[k].should_add_coord_to_array(k, v, allowed_dims):
+                        coords[k] = v
+                elif set(v.dims) <= allowed_dims:
+                    coords[k] = v
             indexes = filter_indexes_from_coords(self._indexes, set(coords))
         return self._replace(variable, coords, name, indexes=indexes)
 
@@ -880,6 +1005,7 @@ class DataArray(
 
         return self._replace_maybe_drop_dims(var, name=key)
 
+    @override
     def __getitem__(self, key: Any) -> Self:
         if isinstance(key, str):
             return self._getitem_coord(key)
@@ -908,12 +1034,14 @@ class DataArray(
     def __delitem__(self, key: Any) -> None:
         del self.coords[key]
 
+    @override
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for attribute-style access"""
         yield from self._item_sources
         yield self.attrs
 
+    @override
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
@@ -1107,6 +1235,13 @@ class DataArray(
 
     def __dask_keys__(self):
         return self._to_temp_dataset().__dask_keys__()
+
+    def __dask_exprs__(self):
+        return self._to_temp_dataset().__dask_exprs__()
+
+    def __dask_rebuild_from_exprs__(self, exprs):
+        ds = self._to_temp_dataset().__dask_rebuild_from_exprs__(exprs)
+        return self._from_temp_dataset(ds)
 
     def __dask_layers__(self):
         return self._to_temp_dataset().__dask_layers__()
@@ -1734,7 +1869,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the first `n`
+        """Return a new DataArray whose data is given by the first `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also
@@ -1777,7 +1912,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the the last `n`
+        """Return a new DataArray whose data is given by the last `n`
         values along the specified dimension(s). Default `n` = 5
 
         See Also
@@ -2407,7 +2542,7 @@ class DataArray(
           * x        (x) float64 32B 0.0 0.75 1.25 1.75
           * y        (y) int64 24B 11 13 15
         """
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
@@ -2548,7 +2683,7 @@ class DataArray(
           * y        (y) int64 24B 70 80 90
         """
 
-        if self.dtype.kind not in "uifc":
+        if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
             )
@@ -2562,7 +2697,7 @@ class DataArray(
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new DataArray with renamed coordinates, dimensions or a new name.
+        """Returns a DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
         ----------
@@ -3560,13 +3695,13 @@ class DataArray(
         limit: int | None = None,
         use_coordinate: bool | str = True,
         max_gap: (
-            None
-            | int
+            int
             | float
             | str
             | pd.Timedelta
             | np.timedelta64
             | datetime.timedelta
+            | None
         ) = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3863,6 +3998,7 @@ class DataArray(
         """
         return ops.fillna(self, other, join="outer")
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -4023,6 +4159,12 @@ class DataArray(
         The Series is indexed by the Cartesian product of index coordinates
         (in the form of a :py:class:`pandas.MultiIndex`).
 
+        If the underlying data is a :py:class:`sparse.COO` array, the result
+        instead only contains that array's stored (non-fill-value) entries,
+        indexed by their coordinates - the full Cartesian product is never
+        materialized, which avoids a `.todense()` call that could raise
+        MemoryError for large, genuinely sparse data.
+
         Returns
         -------
         result : Series
@@ -4033,6 +4175,15 @@ class DataArray(
         DataArray.to_pandas
         DataArray.to_dataframe
         """
+        if isinstance(self.data, array_type("sparse")):
+            from sparse import COO
+
+            if isinstance(self.data, COO):
+                index = _sparse_coo_to_index(self.data, self.dims, self.get_index)
+                return pd.Series(self.data.data, index=index, name=self.name)
+            # TODO: other SparseArray subclasses, e.g. DOK, lack the
+            # .coords/.data attributes _sparse_coo_to_index relies on.
+
         index = self.coords.to_index()
         return pd.Series(self.values.reshape(-1), index=index, name=self.name)
 
@@ -4255,9 +4406,7 @@ class DataArray(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         *,
         encoding: Mapping | None = None,
@@ -4268,7 +4417,6 @@ class DataArray(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -4279,9 +4427,7 @@ class DataArray(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,
@@ -4292,7 +4438,6 @@ class DataArray(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -4301,9 +4446,7 @@ class DataArray(
     def to_zarr(
         self,
         store: ZarrStoreLike | None = None,
-        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: ZarrWriteModes | None = None,
-        synchronizer=None,
         group: str | None = None,
         encoding: Mapping | None = None,
         *,
@@ -4314,7 +4457,6 @@ class DataArray(
         safe_chunks: bool = True,
         align_chunks: bool = False,
         storage_options: dict[str, str] | None = None,
-        zarr_version: int | None = None,
         zarr_format: int | None = None,
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
@@ -4339,20 +4481,23 @@ class DataArray(
         ----------
         store : zarr.storage.StoreLike, optional
             Store or path to directory in local or remote file system.
-        chunk_store : MutableMapping, str or path-like, optional
-            Store or path to directory in local or remote file system only for Zarr
-            array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "a-", r+", None}, optional
-            Persistence mode: "w" means create (overwrite if exists);
-            "w-" means create (fail if exists);
-            "a" means override all existing variables including dimension coordinates (create if does not exist);
-            "a-" means only append those variables that have ``append_dim``.
-            "r+" means modify existing array *values* only (raise an error if
-            any metadata or shapes would change).
+            Persistence mode:
+
+            - "w" means create (remove old if exists and write new);
+            - "w-" means create (fail if exists);
+            - "a" means override all existing variables including dimension coordinates (create if does not exist);
+            - "a-" means only append those variables that have ``append_dim``.
+            - "r+" means modify existing array *values* only (raise an error if
+              any metadata or shapes would change).
+
             The default mode is "a" if ``append_dim`` is set. Otherwise, it is
             "r+" if ``region`` is set and ``w-`` otherwise.
-        synchronizer : object, optional
-            Zarr array synchronizer.
+
+            .. note::
+                When modifying an existing Zarr array that is lazily opened, the "w"
+                behavior can be surprising since the underlying file that is being
+                lazily read from might get deleted before the data is computed.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
         encoding : dict, optional
@@ -4370,8 +4515,6 @@ class DataArray(
             write consolidated metadata and attempt to read consolidated
             metadata for existing stores (falling back to non-consolidated).
 
-            When the experimental ``zarr_version=3``, ``consolidated`` must be
-            either be ``None`` or ``False``.
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overridden variables must remain the same size.
@@ -4427,11 +4570,6 @@ class DataArray(
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
-        zarr_version : int or None, optional
-
-            .. deprecated:: 2024.9.1
-            Use ``zarr_format`` instead.
-
         zarr_format : int or None, optional
             The desired zarr format to target (currently 2 or 3). The default
             of None will attempt to determine the zarr version from ``store`` when
@@ -4506,9 +4644,7 @@ class DataArray(
         return to_zarr(  # type: ignore[call-overload,misc]
             dataset,
             store=store,
-            chunk_store=chunk_store,
             mode=mode,
-            synchronizer=synchronizer,
             group=group,
             encoding=encoding,
             compute=compute,
@@ -4518,7 +4654,6 @@ class DataArray(
             safe_chunks=safe_chunks,
             align_chunks=align_chunks,
             storage_options=storage_options,
-            zarr_version=zarr_version,
             zarr_format=zarr_format,
             write_empty_chunks=write_empty_chunks,
             chunkmanager_store_kwargs=chunkmanager_store_kwargs,
@@ -4655,6 +4790,10 @@ class DataArray(
         Dataset.from_dataframe
         """
         temp_name = "__temporary_name"
+        if temp_name == series.index.name:
+            # See properties/test_pandas_roundtrip.py:
+            # @reproduce_failure('6.155.2', b'AEEAQQBBAQFBAEEBAJBfX3RlbXBvcmFyeV9uYW1l')
+            temp_name = "__temporary_name_fallback"
         df = pd.DataFrame({temp_name: series})
         ds = Dataset.from_dataframe(df, sparse=sparse)
         result = ds[temp_name]
@@ -4872,6 +5011,7 @@ class DataArray(
         # compatible with matmul
         return computation.dot(other, self)
 
+    @override
     def _unary_op(self, f: Callable, *args, **kwargs) -> Self:
         keep_attrs = kwargs.pop("keep_attrs", None)
         if keep_attrs is None:
@@ -4887,6 +5027,7 @@ class DataArray(
                 da.attrs = self.attrs
             return da
 
+    @override
     def _binary_op(
         self, other: DaCompatible, f: Callable, reflexive: bool = False
     ) -> Self:
@@ -4913,6 +5054,7 @@ class DataArray(
 
         return self._replace(variable, coords, name, indexes=indexes)
 
+    @override
     def _inplace_binary_op(self, other: DaCompatible, f: Callable) -> Self:
         from xarray.core.groupby import GroupBy
 
@@ -5177,7 +5319,7 @@ class DataArray(
         Notes
         -----
         This method automatically aligns coordinates by their values (not their order).
-        See :ref:`math automatic alignment` and :py:func:`xarray.dot` for more details.
+        See :ref:`math-automatic-alignment` and :py:func:`xarray.dot` for more details.
 
         Examples
         --------
@@ -5239,6 +5381,8 @@ class DataArray(
         https://numpy.org/doc/stable/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
         followed by the 2nd key, etc.
+        Sorting is stable: when all sort keys compare equal, the original order is
+        preserved.
 
         Parameters
         ----------
@@ -5892,7 +6036,7 @@ class DataArray(
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple or mapping of Hashable to tuple, default: 0
+        constant_values : scalar, tuple or mapping of Hashable to tuple, default: None
             Used in 'constant'.  The values to set the padded values for each
             axis.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -5901,7 +6045,7 @@ class DataArray(
             dimension.
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
-            Default is 0.
+            Default is ``None``, pads with ``np.nan``.
         end_values : scalar, tuple or mapping of Hashable to tuple, default: 0
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
@@ -5993,49 +6137,89 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    def idxmin(
+    @overload
+    def idxmin(  # type: ignore[overload-overlap]
         self,
-        dim: Hashable | None = None,
+        dim: str,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the minimum value along a dimension.
+    ) -> Self: ...
+
+    @overload
+    def idxmin(
+        self,
+        dim: Sequence[Hashable] | EllipsisType,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
+    @overload
+    def idxmin(
+        self,
+        dim: None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]: ...
+
+    def idxmin(
+        self,
+        dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the minimum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to minimum
         values along that dimension.
+
+        If a sequence of dimensions or ``...`` is passed to ``dim``, the
+        minimum is taken over all of them and a dict of `DataArray` objects,
+        one for each dimension, is returned instead, like
+        :py:meth:`~DataArray.argmin`. The result can be passed to
+        :py:meth:`~DataArray.sel`.
 
         In comparison to :py:meth:`~DataArray.argmin`, this returns the
         coordinate label while :py:meth:`~DataArray.argmin` returns the index.
 
         Parameters
         ----------
-        dim : str, optional
-            Dimension over which to apply `idxmin`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : Hashable, sequence of Hashable or ..., optional
+            Dimension(s) over which to apply `idxmin`. ``...`` means all
+            dimensions. If not given, the only dimension of a 1D array is used,
+            and all dimensions of an array with 2 or more dimensions.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the minimum like in
+            :py:func:`numpy.argmin`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
         keep_attrs : bool or None, optional
-            If True, the attributes (``attrs``) will be copied from the
-            original object to the new one. If False, the new object
-            will be returned without attributes.
+            If True, the attributes (``attrs``) of the coordinate are copied to
+            the result. If False, the result is returned without attributes.
 
         Returns
         -------
-        reduced : DataArray
+        reduced : DataArray or dict of DataArray
             New `DataArray` object with `idxmin` applied to its data and the
-            indicated dimension removed.
+            indicated dimension removed, or a dict of them mapping each
+            dimension to its coordinate labels if ``dim`` is a sequence or
+            ``...``.
 
         See Also
         --------
@@ -6080,6 +6264,10 @@ class DataArray(
         array([16.,  0.,  4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmin(dim=["y", "x"])
+        {'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(0), 'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.)}
         """
         return computation._calc_idxminmax(
             array=self,
@@ -6090,49 +6278,89 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    def idxmax(
+    @overload
+    def idxmax(  # type: ignore[overload-overlap]
         self,
-        dim: Hashable = None,
+        dim: str,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the maximum value along a dimension.
+    ) -> Self: ...
+
+    @overload
+    def idxmax(
+        self,
+        dim: Sequence[Hashable] | EllipsisType,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
+    @overload
+    def idxmax(
+        self,
+        dim: None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]: ...
+
+    def idxmax(
+        self,
+        dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the maximum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to maximum
         values along that dimension.
+
+        If a sequence of dimensions or ``...`` is passed to ``dim``, the
+        maximum is taken over all of them and a dict of `DataArray` objects,
+        one for each dimension, is returned instead, like
+        :py:meth:`~DataArray.argmax`. The result can be passed to
+        :py:meth:`~DataArray.sel`.
 
         In comparison to :py:meth:`~DataArray.argmax`, this returns the
         coordinate label while :py:meth:`~DataArray.argmax` returns the index.
 
         Parameters
         ----------
-        dim : Hashable, optional
-            Dimension over which to apply `idxmax`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : Hashable, sequence of Hashable or ..., optional
+            Dimension(s) over which to apply `idxmax`. ``...`` means all
+            dimensions. If not given, the only dimension of a 1D array is used,
+            and all dimensions of an array with 2 or more dimensions.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the maximum like in
+            :py:func:`numpy.argmax`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
         keep_attrs : bool or None, optional
-            If True, the attributes (``attrs``) will be copied from the
-            original object to the new one. If False, the new object
-            will be returned without attributes.
+            If True, the attributes (``attrs``) of the coordinate are copied to
+            the result. If False, the result is returned without attributes.
 
         Returns
         -------
-        reduced : DataArray
+        reduced : DataArray or dict of DataArray
             New `DataArray` object with `idxmax` applied to its data and the
-            indicated dimension removed.
+            indicated dimension removed, or a dict of them mapping each
+            dimension to its coordinate labels if ``dim`` is a sequence or
+            ``...``.
 
         See Also
         --------
@@ -6177,6 +6405,10 @@ class DataArray(
         array([0., 4., 4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmax(dim=["y", "x"])
+        {'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(-1), 'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.)}
         """
         return computation._calc_idxminmax(
             array=self,
@@ -6186,6 +6418,26 @@ class DataArray(
             fill_value=fill_value,
             keep_attrs=keep_attrs,
         )
+
+    @overload
+    def argmin(  # type: ignore[overload-overlap]
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmin(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
 
     def argmin(
         self,
@@ -6287,6 +6539,26 @@ class DataArray(
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
             return self._replace_maybe_drop_dims(result)
+
+    @overload
+    def argmax(  # type: ignore[overload-overlap]
+        self,
+        dim: str,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> Self: ...
+
+    @overload
+    def argmax(
+        self,
+        dim: Collection[Hashable] | EllipsisType | None = None,
+        *,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
 
     def argmax(
         self,
@@ -6526,7 +6798,7 @@ class DataArray(
             If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
             raise an exception. If 'ignore', the coefficients and covariances for the
             coordinates where the fitting failed will be NaN.
-        **kwargs : optional
+        kwargs : dict[str, Any], optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
@@ -6925,21 +7197,21 @@ class DataArray(
                1.826e+03], shape=(1827,))
         Coordinates:
           * time     (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
-        >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
+        >>> da.groupby("time.day_of_year") - da.groupby("time.day_of_year").mean("time")
         <xarray.DataArray (time: 1827)> Size: 15kB
         array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5], shape=(1827,))
         Coordinates:
-          * time       (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
-            dayofyear  (time) int64 15kB 1 2 3 4 5 6 7 8 ... 360 361 362 363 364 365 366
+          * time         (time) datetime64[us] 15kB 2000-01-01 2000-01-02 ... 2004-12-31
+            day_of_year  (time) int64 15kB 1 2 3 4 5 6 7 ... 360 361 362 363 364 365 366
 
         Use a ``Grouper`` object to be more explicit
 
-        >>> da.coords["dayofyear"] = da.time.dt.dayofyear
-        >>> da.groupby(dayofyear=xr.groupers.UniqueGrouper()).mean()
-        <xarray.DataArray (dayofyear: 366)> Size: 3kB
+        >>> da.coords["day_of_year"] = da.time.dt.day_of_year
+        >>> da.groupby(day_of_year=xr.groupers.UniqueGrouper()).mean()
+        <xarray.DataArray (day_of_year: 366)> Size: 3kB
         array([ 730.8,  731.8,  732.8, ..., 1093.8, 1094.8, 1095.5])
         Coordinates:
-          * dayofyear  (dayofyear) int64 3kB 1 2 3 4 5 6 7 ... 361 362 363 364 365 366
+          * day_of_year  (day_of_year) int64 3kB 1 2 3 4 5 6 ... 361 362 363 364 365 366
 
         >>> da = xr.DataArray(
         ...     data=np.arange(12).reshape((4, 3)),
@@ -7236,7 +7508,7 @@ class DataArray(
 
         Parameters
         ----------
-        dims : iterable of hashable
+        dim : iterable of hashable
             The name(s) of the dimensions to create the cumulative window along
         min_periods : int, default: 1
             Minimum number of observations in window required to have a value

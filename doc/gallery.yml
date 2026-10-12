@@ -41,5 +41,5 @@ external-examples:
     thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
   - title: Project Pythia Foundations Book
-    path: https://foundations.projectpythia.org/core/xarray.html
+    path: https://foundations.projectpythia.org/core/xarray
     thumbnail: https://raw.githubusercontent.com/ProjectPythia/projectpythia.github.io/main/portal/_static/images/logos/pythia_logo-blue-btext-twocolor.svg
