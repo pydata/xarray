@@ -78,6 +78,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Skip CF encoding when writing to an existing zarr v3 array with native
+  ``DateTime64`` dtype, which previously corrupted datetime values on roundtrip
+  (:issue:`11350`, :pull:`11419`).
+  By `C1-BA-B1-F3 <https://github.com/C1-BA-B1-F3>`_.
 - Fix pickling of datasets opened from file-like objects with the scipy backend
   after opening more than one such dataset (:issue:`11323`, :pull:`11413`).
   By `C1-BA-B1-F3 <https://github.com/C1-BA-B1-F3>`_.

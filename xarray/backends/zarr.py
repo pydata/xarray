@@ -1147,14 +1147,19 @@ class ZarrStore(AbstractWritableDataStore):
 
             # Skip CF encoding for zarr v3 native DateTime64 arrays (GH#11350).
             native_datetime_vars: set[str] = set()
-            if _zarr_v3() and self.zarr_group.metadata.zarr_format == 3:
-                from zarr.dtype import DateTime64
-
-                for vn in existing_variable_names:
-                    name = _encode_variable_name(vn)
-                    zarr_array = self.members[name]
-                    if isinstance(zarr_array.metadata.data_type, DateTime64):
-                        native_datetime_vars.add(vn)
+            if self.zarr_group.metadata.zarr_format == 3:
+                # zarr.dtype (and DateTime64) only exist since zarr 3.1;
+                # guard the import so the min-versions job (zarr 3.0) passes.
+                try:
+                    from zarr.dtype import DateTime64
+                except ImportError:
+                    pass
+                else:
+                    for vn in existing_variable_names:
+                        name = _encode_variable_name(vn)
+                        zarr_array = self.members[name]
+                        if isinstance(zarr_array.metadata.data_type, DateTime64):
+                            native_datetime_vars.add(vn)
 
             vars_to_encode = {
                 vn: v

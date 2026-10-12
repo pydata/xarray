@@ -3249,3 +3249,31 @@ class TestZarrRegionAuto:
                 region="auto",
             )
             assert_identical(ds, xr.open_zarr(store))
+
+
+@requires_zarr_v3_dtypes
+def test_zarr_datetime64_roundtrip_no_corruption() -> None:
+    """Regression test for https://github.com/pydata/xarray/issues/11350.
+
+    Writing a dataset back to a zarr store with native DateTime64 dtype
+    should not corrupt the datetime values.
+    """
+    import zarr.dtype
+
+    store = zarr.storage.MemoryStore()
+    g = zarr.create_group(store)
+    a = g.create_array(
+        "a",
+        shape=(2,),
+        dtype=zarr.dtype.DateTime64(unit="s", scale_factor=1),
+        dimension_names=["time"],
+    )
+    a[:] = np.array(["2025-01-01", "2025-01-02"], dtype="<M8[us]")
+
+    ds = xr.open_zarr(store, chunks=None, consolidated=False).compute()
+    expected = ds["a"].values.copy()
+
+    ds.to_zarr(store, mode="r+", consolidated=False)
+
+    ds_roundtripped = xr.open_zarr(store, chunks=None, consolidated=False).compute()
+    np.testing.assert_array_equal(ds_roundtripped["a"].values, expected)
