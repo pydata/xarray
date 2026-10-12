@@ -9,7 +9,9 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.coding import cftimeindex
 from xarray.coding.cftimeindex import CFTimeIndex
+from xarray.core import indexes
 from xarray.core.indexes import (
     Hashable,
     Index,
@@ -17,6 +19,7 @@ from xarray.core.indexes import (
     PandasIndex,
     PandasMultiIndex,
     _asarray_tuplesafe,
+    is_full_ordered_product,
     safe_cast_to_index,
 )
 from xarray.core.variable import IndexVariable, Variable
@@ -429,6 +432,20 @@ class TestPandasMultiIndex:
                 "z",
             )
 
+    @pytest.mark.parametrize("dim", ["", False, 0], ids=["empty_str", "false", "zero"])
+    def test_stack_falsy_level_names(self, dim: Hashable) -> None:
+        # falsy names are valid hashables and must not be replaced by a
+        # synthetic "<dim>_level_<i>" name, see GH9969
+        prod_vars = {
+            dim: xr.Variable((dim,), pd.Index(["b", "a"])),
+            "y": xr.Variable("y", pd.Index([1, 2])),
+        }
+
+        index_xr = PandasMultiIndex.stack(prod_vars, "z")
+
+        assert list(index_xr.index.names) == [dim, "y"]
+        assert set(index_xr.create_variables()) == {"z", dim, "y"}
+
     def test_stack_non_unique(self) -> None:
         prod_vars = {
             "x": xr.Variable("x", pd.Index(["b", "a"]), attrs={"foo": "bar"}),
@@ -506,7 +523,8 @@ class TestPandasMultiIndex:
             match=r"multi-index level names \('three',\) not found in indexes",
         ):
             index.sel({"x": {"three": 0}})
-        with pytest.raises(IndexError):
+        # pandas < 3.1 raises an IndexError, later versions a KeyError
+        with pytest.raises((IndexError, KeyError)):
             index.sel({"x": (slice(None), 1, "no_level")})
 
     def test_join(self):
@@ -724,6 +742,34 @@ def test_safe_cast_to_index_datetime_datetime():
     assert isinstance(actual, pd.Index)
 
 
+def test_safe_cast_to_index_does_not_import_missing_cftime(monkeypatch) -> None:
+    original_module_available = indexes.utils.module_available
+    original_attempt_import = cftimeindex.attempt_import
+
+    def mock_cftime_not_available(module: str, minversion: str | None = None) -> bool:
+        if module == "cftime":
+            return False
+        return original_module_available(module, minversion)
+
+    cftime_imports = 0
+
+    def cftime_import_counter(module: str):
+        nonlocal cftime_imports
+        if module == "cftime":
+            cftime_imports += 1
+        return original_attempt_import(module)
+
+    monkeypatch.setattr(indexes.utils, "module_available", mock_cftime_not_available)
+    monkeypatch.setattr(cftimeindex, "attempt_import", cftime_import_counter)
+
+    values = np.array(["a", "b", "c"], dtype=object)
+    for _ in range(3):
+        safe_cast_to_index(values)
+
+    # module_available returns False, so import should not be attempted
+    assert cftime_imports == 0
+
+
 @pytest.mark.parametrize("dtype", ["int32", "float32"])
 def test_restore_dtype_on_multiindexes(dtype: str) -> None:
     foo = xr.Dataset(coords={"bar": ("bar", np.array([0, 1], dtype=dtype))})
@@ -780,3 +826,40 @@ def test_set_xindex_factory_method_pattern() -> None:
     assert "time" in result.variables
     assert "valid_time" in result.variables
     assert_array_equal(result.valid_time.data, result.time.data + 1)
+
+
+@pytest.mark.parametrize(
+    ("index", "expected"),
+    [
+        pytest.param(
+            pd.MultiIndex.from_product([[0, 1, 2], ["a", "b"], [3, 4]]),
+            True,
+            id="product",
+        ),
+        pytest.param(
+            pd.MultiIndex(
+                levels=[[2, 1, 0], ["b", "a"]],
+                codes=[[0, 0, 1, 1, 2, 2], [0, 1, 0, 1, 0, 1]],
+            ),
+            True,
+            id="product-unsorted-levels",
+        ),
+        pytest.param(
+            pd.MultiIndex.from_product([[0, 1], ["a", "b"]])[::-1],
+            False,
+            id="reversed",
+        ),
+        pytest.param(
+            pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a")]),
+            False,
+            id="missing",
+        ),
+        pytest.param(
+            pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a"), (1, np.nan)]),
+            False,
+            id="nan-label",
+        ),
+    ],
+)
+def test_is_full_ordered_product(index: pd.MultiIndex, expected: bool) -> None:
+    assert is_full_ordered_product(index) is expected

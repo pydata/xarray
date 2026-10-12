@@ -95,11 +95,12 @@ indices_dict: dict[str, Index] = {
 }
 
 
-@pytest.fixture(
-    params=[
-        key for key, value in indices_dict.items() if not isinstance(value, MultiIndex)
-    ]
-)
+flat_index_keys = [
+    key for key, value in indices_dict.items() if not isinstance(value, MultiIndex)
+]
+
+
+@pytest.fixture(params=flat_index_keys)
 def index_flat(request):
     """
     index fixture, but excluding MultiIndex cases.
@@ -124,11 +125,15 @@ class TestDataFrameToXArray:
             }
         )
 
+    # empty index is excluded: the test doesn't make sense for it
+    @pytest.mark.parametrize(
+        "index_flat",
+        [key for key in flat_index_keys if len(indices_dict[key]) > 0],
+        indirect=True,
+    )
     def test_to_xarray_index_types(self, index_flat, df):
         index = index_flat
         # MultiIndex is tested in test_to_xarray_with_multiindex
-        if len(index) == 0:
-            pytest.skip("Test doesn't make sense for empty index")
 
         from xarray import Dataset
 

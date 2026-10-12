@@ -153,11 +153,21 @@ def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
     if a.dtype.kind == "O":
         return _nanvar_object(a, axis=axis, dtype=dtype, ddof=ddof)
 
-    return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"Degrees of freedom <= 0 for slice", category=RuntimeWarning
+        )
+
+        return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
-    return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"Degrees of freedom <= 0 for slice", category=RuntimeWarning
+        )
+
+        return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
