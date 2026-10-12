@@ -2797,6 +2797,68 @@ class TestDataset:
         with pytest.raises(AlignmentError, match="cannot align objects"):
             xr.align(ds1, ds3, join="exact")
 
+    @pytest.mark.parametrize("reverse", [False, True])
+    @pytest.mark.parametrize("kind", ["scalar_index", "dropped_index"])
+    def test_align_unindexed_coord_conflict(self, kind, reverse) -> None:
+        if kind == "scalar_index":
+            indexed = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
+            unindexed = Dataset(coords={"x": 1})
+        else:
+            indexed = Dataset(coords={"x": [0, 1]})
+            unindexed = Dataset(coords={"x": [2, 3]}).drop_indexes("x")
+        objects = [unindexed, indexed] if reverse else [indexed, unindexed]
+        match = r"index of coordinate 'x' replaces"
+
+        with pytest.warns(FutureWarning, match=match):
+            aligned = xr.align(*objects, join="exact")
+        for obj in aligned:
+            assert_array_equal(obj["x"], indexed["x"])
+
+        with pytest.warns(FutureWarning, match=match):
+            merged = xr.merge(objects)
+        assert_array_equal(merged["x"], indexed["x"])
+
+    def test_align_unindexed_coord_no_conflict(self) -> None:
+        indexed = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            xr.align(indexed, Dataset(coords={"x": 0}), join="exact")
+            xr.align(indexed, Dataset(coords={"x": 1}), join="override")
+            xr.merge([indexed, Dataset(coords={"x": 1})], join="override")
+
+            # the scalar left over from a selection has other dims than the index
+            ds = Dataset({"a": ("x", [1, 2])}, coords={"x": [0, 1]})
+            ds - ds.isel(x=0)
+
+            # an index spanning a dimension the object lacks is not assigned
+            xy = (
+                Dataset(coords={"x": [0, 1], "y": [0, 1]})
+                .drop_indexes(["x", "y"])
+                .set_xindex(["x", "y"], XYIndex)
+            )
+            unindexed = Dataset(coords={"x": [2, 3]}).drop_indexes("x")
+            assert_identical(
+                unindexed.reindex_like(xy), unindexed, check_default_indexes=False
+            )
+
+            # groupby only checks that the group aligns, it does not reassign it
+            group = DataArray([0, 1], dims="x", coords={"x": [2, 3]}, name="g")
+            DataArray([1, 2], dims="x", coords={"x": [0, 1]}).groupby(
+                group.drop_indexes("x")
+            ).sum()
+
+    @requires_dask
+    def test_align_unindexed_coord_lazy_not_loaded(self) -> None:
+        import dask.array
+
+        indexed = Dataset(coords={"x": 0}).set_xindex("x", ScalarIndex)
+        unindexed = Dataset(coords={"x": ((), dask.array.from_array(np.array(1)))})
+
+        with warnings.catch_warnings(), raise_if_dask_computes():
+            warnings.simplefilter("error", FutureWarning)
+            xr.align(indexed, unindexed, join="exact")
+
     def test_align_multi_dim_index_exclude_dims(self) -> None:
         ds1 = (
             Dataset(coords={"x": [1, 2], "y": [3, 4]})
@@ -5246,9 +5308,10 @@ class TestDataset:
         ):
             data.merge(other)
 
-        # `other` Dataset coordinates are ignored (bug or feature?)
         other = Dataset(coords={"level_1": ("x", range(4))})
-        assert_identical(data.merge(other), data)
+        with pytest.warns(FutureWarning, match=r"index of coordinate 'level_1'"):
+            actual = data.merge(other)
+        assert_identical(actual, data)
 
     def test_setitem_original_non_unique_index(self) -> None:
         # regression test for GH943
