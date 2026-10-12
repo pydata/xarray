@@ -8023,8 +8023,12 @@ class TestDataset:
 @pytest.mark.parametrize(
     "test_elements",
     ([1, 2], np.array([1, 2]), DataArray([1, 2]), {1, 2}, frozenset({1, 2})),
+    ids=["list", "numpy", "dataarray", "set", "frozenset"],
 )
-def test_isin(test_elements, use_dask: bool) -> None:
+def test_isin(
+    test_elements: list[int] | np.ndarray | DataArray | set[int] | frozenset[int],
+    use_dask: bool,
+) -> None:
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),

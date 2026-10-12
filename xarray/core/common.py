@@ -1380,11 +1380,9 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
-        test_elements : array_like
+        test_elements : array_like or set_like
             The values against which to test each value of `element`.
             This argument is flattened if an array or array_like.
-            Sets (and other set-like objects such as ``dict.keys()``) are
-            converted to a list first.
             See numpy notes for behavior with non-array-like parameters.
 
         Returns
