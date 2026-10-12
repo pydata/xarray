@@ -14,30 +14,32 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ASV_DIR: "./asv_bench"
-      CONDA_ENV_FILE: ci/requirements/environment.yml
+      CONDA_ENV_FILE: ci/requirements/environment-benchmark.yml
 
     steps:
       # We need the full repo to avoid this issue
       # https://github.com/actions/checkout/issues/23
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up conda environment
-        uses: mamba-org/setup-micromamba@d7c9bd84e824b79d2af72a2d4196c7f4300d3476 # v3.0.0
+        uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
         with:
           micromamba-version: "1.5.10-0"
           environment-file: ${{env.CONDA_ENV_FILE}}
-          environment-name: xarray-tests
+          environment-name: xarray-benchmark
           cache-environment: true
           cache-environment-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
+          # add "build" because of https://github.com/airspeed-velocity/asv/issues/1385
           create-args: >-
             asv
+            python-build
 
       - name: "Get Previous tag"
         id: previoustag
-        uses: WyriHaximus/github-action-get-previous-tag@61819f33034117e6c686e6a31dba995a85afc9de # v2.0.0
+        uses: WyriHaximus/github-action-get-previous-tag@83f26fea93bc7efcbca2eb5591f5eaaf66b8f206 # v2.1.0
         # with:
         #   fallback: 1.0.0 # Optional fallback tag to use when no tag can be found
 
@@ -53,6 +55,8 @@ jobs:
           GITHUB_TAG: ${{ steps.previoustag.outputs.tag }}
         run: |
           set -x
+          # Fail if asv itself fails, not just when the log matches the grep below
+          set -o pipefail
           # ID this runner
           asv machine --yes
           echo "Baseline: $GITHUB_TAG"
