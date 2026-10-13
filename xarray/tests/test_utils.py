@@ -24,17 +24,6 @@ from xarray.core.utils import (
 from xarray.tests import assert_array_equal, requires_dask
 
 
-class TestAlias:
-    def test(self):
-        def new_method():
-            pass
-
-        old_method = utils.alias(new_method, "old_method")
-        assert "deprecated" in old_method.__doc__  # type: ignore[operator]
-        with pytest.warns(Warning, match="deprecated"):
-            old_method()
-
-
 @pytest.mark.parametrize(
     ["a", "b", "expected"],
     [

@@ -3305,3 +3305,16 @@ def test_explicitly_indexed_array_preserved() -> None:
     var = Variable(["x"], arr)
     result = var.drop_encoding()
     assert isinstance(result._data, indexing.ExplicitlyIndexed)
+
+
+@pytest.mark.parametrize(
+    "obj, name",
+    [
+        (Variable("x", [1]), "to_variable"),
+        (Variable("x", [1]), "to_coord"),
+        (IndexVariable("x", [1]), "to_coord"),
+    ],
+)
+def test_removed_aliases(obj, name) -> None:
+    # deprecated since v0.9.0, use to_base_variable / to_index_variable
+    assert not hasattr(obj, name)

@@ -781,15 +781,11 @@ class Variable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
-    to_variable = utils.alias(to_base_variable, "to_variable")
-
     def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
-
-    to_coord = utils.alias(to_index_variable, "to_coord")
 
     def _to_index(self) -> pd.Index:
         return self.to_index_variable()._to_index()
@@ -3303,8 +3299,6 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
     def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return self.copy(deep=False)
-
-    to_coord = utils.alias(to_index_variable, "to_coord")
 
     @override
     def _to_index(self) -> pd.Index:
