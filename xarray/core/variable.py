@@ -2280,7 +2280,11 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", r"All-NaN (slice|axis) encountered", RuntimeWarning
+                )
+                return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
         # jax requires hashable
         axis = tuple(range(-1, -1 * len(dim) - 1, -1))
