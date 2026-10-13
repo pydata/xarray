@@ -11,10 +11,10 @@ from xarray import DataArray, Dataset
 from xarray.tests import (
     assert_allclose,
     assert_equal,
+    assert_identical,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
-    assert_identical,
 )
 
 
