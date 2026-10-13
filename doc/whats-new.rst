@@ -266,6 +266,10 @@ Internal Changes
   from the test coverage and test ``xarray.tutorial`` without network access
   (:pull:`11703`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Parameterize and skip the asv benchmarks with the decorators of
+  ``asv_runner.benchmarks.mark``, so slow benchmarks are no longer discovered
+  in CI instead of being skipped in their ``setup`` (:issue:`8353`, :pull:`11709`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
