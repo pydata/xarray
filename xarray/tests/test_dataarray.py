@@ -303,6 +303,11 @@ class TestDataArray:
         self.dv.encoding = expected2
         assert expected2 is not self.dv.encoding
 
+    def test_reset_encoding_deprecated(self) -> None:
+        obj = DataArray([1], dims="x")
+        with pytest.warns(FutureWarning, match="deprecated since 2023.10"):
+            obj.reset_encoding()
+
     def test_drop_encoding(self) -> None:
         array = self.mda
         encoding = {"scale_factor": 10}

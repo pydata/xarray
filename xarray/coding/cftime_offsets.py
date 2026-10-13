@@ -989,7 +989,7 @@ def cftime_range(
 ) -> CFTimeIndex:
     """Return a fixed frequency CFTimeIndex.
 
-    .. deprecated:: 2025.02.0
+    .. deprecated:: 2025.03.0
         Use :py:func:`~xarray.date_range` with ``use_cftime=True`` instead.
 
     Parameters

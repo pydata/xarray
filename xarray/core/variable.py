@@ -1149,7 +1149,8 @@ class Variable(
 
     def reset_encoding(self) -> Self:
         warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
+            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
+            FutureWarning,
             stacklevel=2,
         )
         return self.drop_encoding()

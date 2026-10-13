@@ -3395,6 +3395,21 @@ class TestDataset:
 
         assert_equal(actual, orig)
 
+    def test_reset_encoding_deprecated(self) -> None:
+        ds = Dataset({"a": ("x", [1])})
+        with pytest.warns(FutureWarning, match="deprecated since 2023.10"):
+            ds.reset_encoding()
+
+    @pytest.mark.parametrize("func", ["argmin", "argmax"])
+    def test_argminmax_without_dim_warns(self, func) -> None:
+        ds = Dataset({"a": ("x", [1, 3, 2])})
+        with pytest.warns(FutureWarning) as record:
+            getattr(ds, func)()
+        message = str(record[0].message)
+        assert f"Dataset.{func}() with no argument, since" in message
+        other = "argmax" if func == "argmin" else "argmin"
+        assert other not in message
+
     def test_rename(self) -> None:
         data = create_test_data()
         newnames = {

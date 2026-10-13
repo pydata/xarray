@@ -479,6 +479,11 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
             assert_identical(expected.to_base_variable(), actual.to_base_variable())
             assert expected.encoding == actual.encoding
 
+    def test_reset_encoding_deprecated(self) -> None:
+        obj = Variable("x", [1])
+        with pytest.warns(FutureWarning, match="deprecated since 2023.10"):
+            obj.reset_encoding()
+
     def test_drop_encoding(self) -> None:
         encoding1 = {"scale_factor": 1}
         # encoding set via cls constructor

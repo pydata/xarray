@@ -74,10 +74,21 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- ``reset_encoding`` on :py:class:`Dataset`, :py:class:`DataArray` and
+  :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
+  like other deprecations, and its message gives the correct version (2023.10)
+  in which it was deprecated (:issue:`11721`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 
 
 Bug Fixes
 ~~~~~~~~~
+- Small fixes to deprecation warnings (:issue:`11721`):
+  the ``FutureWarning`` from :py:meth:`Dataset.argmax` without ``dim`` no longer
+  refers to ``argmin``; ``DataTree.lineage`` warns once instead of twice; and
+  decoding CF variables no longer adds a global ``warnings`` filter left over
+  from the finalized ``decode_timedelta`` deprecation.
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - Suppress the expected ``All-NaN slice encountered`` warning when
   :py:meth:`DataArray.quantile` or :py:meth:`Dataset.quantile` uses
   NumPy's quantile fallback on all-missing slices (:issue:`9870`).

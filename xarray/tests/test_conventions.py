@@ -311,6 +311,13 @@ class TestEncodeCFVariable:
 
 @requires_cftime
 class TestDecodeCF:
+    def test_does_not_change_warnings_filters(self) -> None:
+        original = Dataset({"t": ("t", [0, 1], {"units": "days since 2000-01-01"})})
+        with warnings.catch_warnings():
+            before = list(warnings.filters)
+            conventions.decode_cf(original)
+            assert warnings.filters == before
+
     def test_dataset(self) -> None:
         original = Dataset(
             {
