@@ -35,7 +35,9 @@ def test_opendap_server_outages_are_skipped(status_code: int) -> None:
 
 @pytest.mark.parametrize("status_code", [401, 404, 500])
 def test_other_http_errors_remain_failures(status_code: int) -> None:
-    error = HTTPError("https://test.opendap.org/test", status_code, "error", Message(), None)
+    error = HTTPError(
+        "https://test.opendap.org/test", status_code, "error", Message(), None
+    )
     with patch("xarray.tests.backends.conftest.urlopen", side_effect=error):
         with pytest.raises(HTTPError) as raised:
             _require_opendap_endpoint("https://test.opendap.org/test")
