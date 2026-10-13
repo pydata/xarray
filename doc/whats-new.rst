@@ -78,7 +78,7 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-- ``DataArray.str`` methods ``center``, ``ljust``, ``rjust``, ``zfill``, ``pad``,
+- :py:meth:`DataArray.str` methods ``center``, ``ljust``, ``rjust``, ``zfill``, ``pad``,
   ``split``, ``rsplit``, ``partition``, ``rpartition`` and ``format`` no longer
   raise ``AttributeError`` on object-dtype arrays of strings, such as string
   columns from :py:meth:`pandas.DataFrame.to_xarray` (:pull:`11722`).
