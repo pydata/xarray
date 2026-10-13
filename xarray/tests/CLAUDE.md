@@ -10,6 +10,10 @@ xarray has many optional dependencies that may not be available in all testing e
 
 All available decorators are defined in `xarray/tests/__init__.py` (look for `requires_*` decorators).
 
+Use the dask helpers from `xarray.tests` instead of importing `dask.array`
+directly. In dask-array expression test mode those helpers point at the
+registered chunk manager, so tests can run against either implementation.
+
 ### DO NOT use conditional imports or skipif
 
 ❌ **WRONG - Do not do this:**

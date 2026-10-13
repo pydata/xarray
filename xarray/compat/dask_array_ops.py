@@ -2,13 +2,25 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 from xarray.compat.dask_array_compat import reshape_blockwise
 from xarray.core import dtypes, nputils
+from xarray.namedarray.parallelcompat import get_chunked_array_type
 
 
-def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
+def dask_rolling_wrapper(
+    moving_func, a, window, min_count=None, axis=-1, input_dtype=None
+):
     """Wrapper to apply bottleneck moving window funcs on dask arrays"""
-    dtype, _ = dtypes.maybe_promote(a.dtype)
+    if input_dtype is None:
+        input_dtype = a.dtype
+    if input_dtype.kind in "biufc":
+        dtype = moving_func(
+            np.empty((1,), dtype=input_dtype), window=1, min_count=1, axis=0
+        ).dtype
+    else:
+        dtype, _ = dtypes.maybe_promote(a.dtype)
     return a.data.map_overlap(
         moving_func,
         depth={axis: (window - 1, 0)},
@@ -20,7 +32,7 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
-    import dask.array as da
+    da = get_chunked_array_type(rhs).array_api
 
     # The trick here is that the core dimension is axis 0.
     # All other dimensions need to be reshaped down to one axis for `lstsq`
@@ -94,11 +106,13 @@ def push(array, n, axis, method="blelloch"):
     """
     Dask-aware bottleneck.push
     """
-    import dask.array as da
     import numpy as np
 
     from xarray.core.duck_array_ops import _push
     from xarray.core.nputils import nanlast
+
+    chunkmanager = get_chunked_array_type(array)
+    da = chunkmanager.array_api
 
     if n is not None and all(n <= size for size in array.chunks[axis]):
         return array.map_overlap(_push, depth={axis: (n, 0)}, n=n, axis=axis)
@@ -106,11 +120,11 @@ def push(array, n, axis, method="blelloch"):
     # TODO: Replace all this function
     #  once https://github.com/pydata/xarray/issues/9229 being implemented
 
-    pushed_array = da.reductions.cumreduction(
+    pushed_array = chunkmanager.scan(
         func=_dtype_push,
         binop=_fill_with_last_one,
         ident=np.nan,
-        x=array,
+        arr=array,
         axis=axis,
         dtype=array.dtype,
         method=method,

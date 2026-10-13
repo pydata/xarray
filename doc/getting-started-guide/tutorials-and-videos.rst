@@ -29,6 +29,6 @@ Books, Chapters and Articles
 .. _Xarray's Tutorials: https://xarray-contrib.github.io/xarray-tutorial/
 .. _Journal of Open Research Software paper: https://doi.org/10.5334/jors.148
 .. _UW eScience Institute's Geohackweek : https://geohackweek.github.io/nDarrays/
-.. _tutorial: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial.ipynb
-.. _with answers: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial-with-answers.ipynb
+.. _tutorial: https://github.com/Unidata/unidata-users-workshop/blob/2015/notebooks/xray-tutorial.ipynb
+.. _with answers: https://github.com/Unidata/unidata-users-workshop/blob/2015/notebooks/xray-tutorial-with-answers.ipynb
 .. _Nicolas Fauchereau's 2015 tutorial: https://nbviewer.iPython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb

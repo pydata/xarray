@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 from collections.abc import Hashable, Mapping
-from typing import Any, Generic
+from typing import Any
 
 import pandas as pd
 
@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
     from xarray.core.dataset import Dataset
 
 
-class _LocIndexer(Generic[T_Dataset]):
+class _LocIndexer[T_Dataset: Dataset]:
     __slots__ = ("dataset",)
 
     def __init__(self, dataset: T_Dataset):
@@ -67,8 +67,8 @@ def _get_virtual_variable(
         dim_sizes = {}
 
     if key in dim_sizes:
-        data = pd.Index(range(dim_sizes[key]), name=key)
-        variable = IndexVariable((key,), data)
+        data = pd.RangeIndex(dim_sizes[key], name=key)
+        variable = IndexVariable((key,), data, fastpath=True)
         return key, key, variable
 
     if not isinstance(key, str):

@@ -39,7 +39,7 @@ def map_over_datasets(
 
 
 def map_over_datasets(
-    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+    func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
@@ -86,7 +86,7 @@ def map_over_datasets(
     Result of applying `func` to each node in the provided trees, packed back
     into DataTree objects via `DataTree.from_dict`.
 
-    See also
+    See Also
     --------
     DataTree.map_over_datasets
     group_subtrees
