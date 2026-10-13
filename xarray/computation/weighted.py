@@ -195,22 +195,14 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
     def _check_dim(self, dim: Dims):
         """raise an error if any dimension is missing"""
 
-        dims = self._dims_to_list(dim)
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
+        dims = utils.parse_dims_as_set(dim, all_dims, check_exists=False)
+
         missing_dims = set(dims) - all_dims
         if missing_dims:
             raise ValueError(
                 f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
             )
-
-    def _dims_to_list(self, dim: Dims) -> list[Hashable]:
-        dims: list[Hashable]
-        if isinstance(dim, str) or not isinstance(dim, Iterable):
-            dims = [dim] if dim else []
-        else:
-            dims = list(dim)
-
-        return dims
 
     @staticmethod
     def _reduce(
@@ -558,10 +550,9 @@ class DatasetWeighted(Weighted["Dataset"]):
         """self.obj.map will drop orphaned coordinates & dims that are not in
         the weights DataArray. This restores them.
         """
-        if dim is None:
-            return ds
+        all_dims = set(self.obj.dims) | set(self.weights.dims)
+        reduced_dims = utils.parse_dims_as_set(dim, all_dims, check_exists=False)
 
-        reduced_dims = set(self._dims_to_list(dim))
         to_drop = [
             name
             for name, coord in self.obj.coords.items()
