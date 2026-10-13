@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from types import EllipsisType
 from typing import Any
 
 import numpy as np
@@ -825,16 +826,17 @@ def test_weighted_bad_dim(operation, as_dataset):
         ),
     ],
 )
+@pytest.mark.parametrize("dim", [None, ..., "x"])
 def test_dataset_weighted_keeps_unreduced_coords(
-    operation: str, coords: dict[str, Any]
+    operation: str, coords: dict[str, Any], dim: str | EllipsisType | None
 ) -> None:
     data = Dataset({"a": ("x", [1.0, 2.0])}, coords=coords)
     weights = DataArray([1.0, 2.0], dims="x")
 
-    result = getattr(data.weighted(weights), operation)(dim="x")
+    result = getattr(data.weighted(weights), operation)(dim=dim)
     unweighted_op = (
         "sum" if operation in ("sum_of_weights", "sum_of_squares") else operation
     )
-    expected = getattr(data, unweighted_op)(dim="x")
+    expected = getattr(data, unweighted_op)(dim=dim)
 
     assert_identical(result.coords.to_dataset(), expected.coords.to_dataset())

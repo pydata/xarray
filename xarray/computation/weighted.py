@@ -198,7 +198,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
         dims = utils.parse_dims_as_set(dim, all_dims, check_exists=False)
 
-        missing_dims = set(dims) - all_dims
+        missing_dims = dims - all_dims
         if missing_dims:
             raise ValueError(
                 f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
@@ -410,7 +410,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         if np.any((q < 0) | (q > 1)):
             raise ValueError("q values must be between 0 and 1")
 
-        if dim is None:
+        if dim is None or dim is ...:
             dim = da.dims
 
         if utils.is_scalar(dim):
