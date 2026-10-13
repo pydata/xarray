@@ -20,6 +20,8 @@ def _require_opendap_endpoint(url: str) -> None:
             pass
     except HTTPError as exc:
         if exc.code in {502, 503, 504}:
+            # HTTPError owns a response stream; skipping must close it.
+            exc.close()
             pytest.skip(f"OPeNDAP test server unavailable (HTTP {exc.code}): {url}")
         raise
     except URLError as exc:
