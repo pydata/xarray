@@ -53,7 +53,7 @@ Breaking Changes
 - The ``Variable.to_variable``, ``Variable.to_coord`` and
   ``IndexVariable.to_coord`` aliases, deprecated since v0.9.0, have been removed.
   Use :py:meth:`Variable.to_base_variable` and
-  :py:meth:`Variable.to_index_variable` instead (:issue:`11721`).
+  :py:meth:`Variable.to_index_variable` instead (:issue:`11721`, :pull:`11726`).
   By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - The results of :py:meth:`DataArray.idxmin`, :py:meth:`DataArray.idxmax`,
   :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` now keep the
