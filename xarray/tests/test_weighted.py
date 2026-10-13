@@ -840,3 +840,24 @@ def test_dataset_weighted_keeps_unreduced_coords(
     expected = getattr(data, unweighted_op)(dim=dim)
 
     assert_identical(result.coords.to_dataset(), expected.coords.to_dataset())
+
+
+@pytest.mark.parametrize(
+    "coords",
+    [
+        pytest.param({"t": [0, 1]}, id="index"),
+        pytest.param({"lbl": ("t", ["p", "q"])}, id="non-index"),
+        pytest.param({"c2": (("t", "s"), np.zeros((2, 3)))}, id="2d"),
+        pytest.param(
+            {"xt": (("x", "t"), np.zeros((2, 2))), "t": [5, 6]}, id="reduced-dim"
+        ),
+    ],
+)
+def test_dataset_weighted_none_ellipsis_equiv(coords: dict[str, Any]) -> None:
+    data = Dataset({"a": ("x", [1.0, 2.0])}, coords=coords)
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result_none = data.weighted(weights).quantile(0.5, dim=None)
+    result_ellipsis = data.weighted(weights).quantile(0.5, dim=...)
+
+    assert_identical(result_none, result_ellipsis)
