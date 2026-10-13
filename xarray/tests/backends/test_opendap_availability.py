@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from email.message import Message
 from socket import gaierror
 from ssl import SSLCertVerificationError
 from unittest.mock import patch
@@ -25,7 +26,7 @@ def test_available_opendap_endpoint_is_not_skipped() -> None:
 @pytest.mark.parametrize("status_code", [502, 503, 504])
 def test_opendap_server_outages_are_skipped(status_code: int) -> None:
     error = HTTPError(
-        "https://test.opendap.org/test", status_code, "outage", None, None
+        "https://test.opendap.org/test", status_code, "outage", Message(), None
     )
     with patch("xarray.tests.backends.conftest.urlopen", side_effect=error):
         with pytest.raises(pytest.skip.Exception, match=f"HTTP {status_code}"):
@@ -34,7 +35,7 @@ def test_opendap_server_outages_are_skipped(status_code: int) -> None:
 
 @pytest.mark.parametrize("status_code", [401, 404, 500])
 def test_other_http_errors_remain_failures(status_code: int) -> None:
-    error = HTTPError("https://test.opendap.org/test", status_code, "error", None, None)
+    error = HTTPError("https://test.opendap.org/test", status_code, "error", Message(), None)
     with patch("xarray.tests.backends.conftest.urlopen", side_effect=error):
         with pytest.raises(HTTPError) as raised:
             _require_opendap_endpoint("https://test.opendap.org/test")
