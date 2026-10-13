@@ -187,6 +187,9 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
+  the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
+  By `Charles Turner <https://github.com/charles-turner-1>`_.
 
 
 Documentation
@@ -518,9 +521,6 @@ Bug Fixes
   Previously these were turned into a 0-dimensional object array by numpy, so
   the result was ``False`` everywhere (:issue:`10022`).
   By `Chandan P <https://github.com/NoiceHax>`_.
-- Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
-  the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
-  By `Charles Turner <https://github.com/charles-turner-1>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
