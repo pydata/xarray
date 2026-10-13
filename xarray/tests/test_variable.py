@@ -1939,9 +1939,7 @@ class TestVariable(VariableSubclassobjects):
         np.testing.assert_allclose(actual.values, expected)
 
     def test_quantile_all_nan_slice_does_not_warn(self) -> None:
-        values = Variable(
-            ("time", "position"), [[np.nan, 1.0], [np.nan, 3.0]]
-        )
+        values = Variable(("time", "position"), [[np.nan, 1.0], [np.nan, 3.0]])
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)
             actual = values.quantile(

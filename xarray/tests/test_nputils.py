@@ -30,4 +30,3 @@ def test_vindex() -> None:
     vindex[[0, 1], [0, 1], :] = vindex[[0, 1], [0, 1], :]
     vindex[[0, 1], :, [0, 1]] = vindex[[0, 1], :, [0, 1]]
     vindex[:, [0, 1], [0, 1]] = vindex[:, [0, 1], [0, 1]]
-
