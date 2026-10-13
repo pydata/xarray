@@ -145,6 +145,7 @@ class TestPydapOnline(TestPydap):
 
 @requires_pydap
 @network
+@pytest.mark.usefixtures("opendap_hyrax_available")
 @pytest.mark.parametrize("protocol", ["dap2", "dap4"])
 def test_batchdap4_downloads(tmpdir, protocol) -> None:
     """Test that in dap4, all dimensions are downloaded at once"""
