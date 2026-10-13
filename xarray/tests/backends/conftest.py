@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from socket import gaierror
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
@@ -21,8 +22,13 @@ def _require_opendap_endpoint(url: str) -> None:
         if exc.code in {502, 503, 504}:
             pytest.skip(f"OPeNDAP test server unavailable (HTTP {exc.code}): {url}")
         raise
-    except (URLError, TimeoutError) as exc:
-        pytest.skip(f"OPeNDAP test server unreachable: {url}: {exc}")
+    except URLError as exc:
+        # An invalid certificate or another unexpected URL error must still fail.
+        if isinstance(exc.reason, (ConnectionError, TimeoutError, gaierror)):
+            pytest.skip(f"OPeNDAP test server unreachable: {url}: {exc}")
+        raise
+    except TimeoutError as exc:
+        pytest.skip(f"OPeNDAP test server timed out: {url}: {exc}")
 
 
 @pytest.fixture(scope="session")
