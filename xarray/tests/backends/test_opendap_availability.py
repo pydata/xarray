@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from socket import gaierror
+from ssl import SSLCertVerificationError
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 
@@ -33,8 +35,33 @@ def test_other_http_errors_remain_failures(status_code: int) -> None:
     assert raised.value.code == status_code
 
 
-@pytest.mark.parametrize("error", [URLError("connection refused"), TimeoutError("timeout")])
+@pytest.mark.parametrize(
+    "error",
+    [
+        URLError(ConnectionRefusedError("connection refused")),
+        URLError(gaierror(-2, "DNS unavailable")),
+    ],
+)
 def test_connection_failures_are_skipped(error: Exception) -> None:
     with patch("xarray.tests.backends.conftest.urlopen", side_effect=error):
         with pytest.raises(pytest.skip.Exception, match="unreachable"):
+            _require_opendap_endpoint("https://test.opendap.org/test")
+
+
+def test_direct_timeout_is_skipped() -> None:
+    with patch("xarray.tests.backends.conftest.urlopen", side_effect=TimeoutError("timeout")):
+        with pytest.raises(pytest.skip.Exception, match="timed out"):
+            _require_opendap_endpoint("https://test.opendap.org/test")
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        URLError(SSLCertVerificationError("invalid certificate")),
+        URLError("unexpected URL failure"),
+    ],
+)
+def test_unexpected_url_errors_remain_failures(error: URLError) -> None:
+    with patch("xarray.tests.backends.conftest.urlopen", side_effect=error):
+        with pytest.raises(URLError):
             _require_opendap_endpoint("https://test.opendap.org/test")
