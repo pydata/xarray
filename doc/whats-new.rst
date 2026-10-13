@@ -81,7 +81,7 @@ Bug Fixes
 - ``DataArray.str`` methods ``center``, ``ljust``, ``rjust``, ``zfill``, ``pad``,
   ``split``, ``rsplit``, ``partition``, ``rpartition`` and ``format`` no longer
   raise ``AttributeError`` on object-dtype arrays of strings, such as string
-  columns from :py:meth:`pandas.DataFrame.to_xarray`.
+  columns from :py:meth:`pandas.DataFrame.to_xarray` (:pull:`11722`).
   By `Novain Shibu <https://github.com/novain-shibu>`_.
 - Suppress the expected ``All-NaN slice encountered`` warning when
   :py:meth:`DataArray.quantile` or :py:meth:`Dataset.quantile` uses
