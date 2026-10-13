@@ -1938,6 +1938,15 @@ class TestVariable(VariableSubclassobjects):
         expected = _percentile_func(d, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
 
+    def test_quantile_all_nan_slice_does_not_warn(self) -> None:
+        values = Variable(("time", "position"), [[np.nan, 1.0], [np.nan, 3.0]])
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            actual = values.quantile(
+                0.5, dim="time", skipna=True, method="median_unbiased"
+            )
+        np.testing.assert_allclose(actual.values, [np.nan, 2.0])
+
     @requires_dask
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize("axis, dim", [[1, "y"], [[1], ["y"]]])
