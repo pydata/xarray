@@ -518,7 +518,6 @@ Bug Fixes
   Previously these were turned into a 0-dimensional object array by numpy, so
   the result was ``False`` everywhere (:issue:`10022`).
   By `Chandan P <https://github.com/NoiceHax>`_.
-- Fix DatasetWeighted dropping coordinates/dimensions which are not affected by 
 - Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
   the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
   By `Charles Turner <https://github.com/charles-turner-1>`_.
