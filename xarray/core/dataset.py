@@ -8075,11 +8075,11 @@ class Dataset(
         slice_start = {dim: slice(None, -1)}
         slice_end = {dim: slice(1, None)}
 
-        # prepare new coordinate
+        # the coordinates of the n-th differences are the upper or lower n labels
         if label == "upper":
-            slice_new = slice_end
+            slice_new = {dim: slice(n, None)}
         elif label == "lower":
-            slice_new = slice_start
+            slice_new = {dim: slice(None, -n)}
         else:
             raise ValueError("The 'label' argument has to be either 'upper' or 'lower'")
 
@@ -8091,18 +8091,17 @@ class Dataset(
                 variables[name] = index_vars[name]
             elif dim in var.dims:
                 if name in self.data_vars:
-                    variables[name] = var.isel(slice_end) - var.isel(slice_start)
+                    # loop instead of recursing over the whole dataset, which hits
+                    # the recursion limit for large n
+                    for _ in range(n):
+                        var = var.isel(slice_end) - var.isel(slice_start)
+                    variables[name] = var
                 else:
                     variables[name] = var.isel(slice_new)
             else:
                 variables[name] = var
 
-        difference = self._replace_with_new_dims(variables, indexes=indexes)
-
-        if n > 1:
-            return difference.diff(dim, n - 1)
-        else:
-            return difference
+        return self._replace_with_new_dims(variables, indexes=indexes)
 
     def shift(
         self,
@@ -9416,15 +9415,16 @@ class Dataset(
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the minimum like in
+            :py:func:`numpy.argmin`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
         keep_attrs : bool or None, optional
-            If True, the attributes (``attrs``) will be copied from the
-            original object to the new one. If False, the new object
-            will be returned without attributes.
+            If True, the attributes (``attrs``) of the coordinate are copied to
+            the result. If False, the result is returned without attributes.
 
         Returns
         -------
@@ -9476,6 +9476,14 @@ class Dataset(
             int      <U1 4B 'e'
             float    (y) <U1 12B 'e' 'a' 'c'
         """
+        if dim is ... or (isinstance(dim, Sequence) and not isinstance(dim, str)):
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.idxmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.idxmin() with a sequence or ... for dim"
+            )
+        if dim is None and any(var.ndim > 1 for var in self.data_vars.values()):
+            raise ValueError("Must supply 'dim' argument for multidimensional arrays")
         return self.map(
             methodcaller(
                 "idxmin",
@@ -9514,15 +9522,16 @@ class Dataset(
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the maximum like in
+            :py:func:`numpy.argmax`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
         keep_attrs : bool or None, optional
-            If True, the attributes (``attrs``) will be copied from the
-            original object to the new one. If False, the new object
-            will be returned without attributes.
+            If True, the attributes (``attrs``) of the coordinate are copied to
+            the result. If False, the result is returned without attributes.
 
         Returns
         -------
@@ -9574,6 +9583,14 @@ class Dataset(
             int      <U1 4B 'b'
             float    (y) <U1 12B 'a' 'c' 'c'
         """
+        if dim is ... or (isinstance(dim, Sequence) and not isinstance(dim, str)):
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.idxmax() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.idxmax() with a sequence or ... for dim"
+            )
+        if dim is None and any(var.ndim > 1 for var in self.data_vars.values()):
+            raise ValueError("Must supply 'dim' argument for multidimensional arrays")
         return self.map(
             methodcaller(
                 "idxmax",
