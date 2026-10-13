@@ -585,6 +585,7 @@ class TestH5NetCDFDatatreeIO(NetCDFIOBase):
 
 @network
 @requires_pydap
+@pytest.mark.usefixtures("opendap_dap4_available")
 class TestPyDAPDatatreeIO:
     """Test PyDAP backend for DataTree."""
 
