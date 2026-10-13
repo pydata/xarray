@@ -78,6 +78,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix the :py:meth:`Dataset.argmax` deprecation warning and invalid-dimension
+  error messages, which incorrectly referred to ``argmin`` (:issue:`11721`).
+  By `nightcityblade <https://github.com/nightcityblade>`_.
 - Suppress the expected ``All-NaN slice encountered`` warning when
   :py:meth:`DataArray.quantile` or :py:meth:`Dataset.quantile` uses
   NumPy's quantile fallback on all-missing slices (:issue:`9870`).

@@ -9772,9 +9772,9 @@ class Dataset(
         """
         if dim is None:
             warnings.warn(
-                "Once the behaviour of DataArray.argmin() and Variable.argmin() without "
+                "Once the behaviour of DataArray.argmax() and Variable.argmax() without "
                 "dim changes to return a dict of indices of each dimension, for "
-                "consistency it will be an error to call Dataset.argmin() with no argument,"
+                "consistency it will be an error to call Dataset.argmax() with no argument,"
                 "since we don't return a dict of Datasets.",
                 FutureWarning,
                 stacklevel=2,
@@ -9792,9 +9792,9 @@ class Dataset(
             )
         else:
             raise ValueError(
-                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "When dim is a sequence or ..., DataArray.argmax() returns a dict. "
                 "dicts cannot be contained in a Dataset, so cannot call "
-                "Dataset.argmin() with a sequence or ... for dim"
+                "Dataset.argmax() with a sequence or ... for dim"
             )
 
     def _eval_expression(self, expr: str) -> DataArray:
