@@ -33,15 +33,15 @@ if TYPE_CHECKING:
 
 
 @lru_cache
-def module_available(module: str, minversion: str | None = None) -> bool:
+def module_available(module: str | None, minversion: str | None = None) -> bool:
     """Checks whether a module is installed without importing it.
 
     Use this for a lightweight check and lazy imports.
 
     Parameters
     ----------
-    module : str
-        Name of the module.
+    module : str or None
+        Name of the module. If None, returns False.
     minversion : str, optional
         Minimum version of the module
 
@@ -50,6 +50,8 @@ def module_available(module: str, minversion: str | None = None) -> bool:
     available : bool
         Whether the module is installed.
     """
+    if module is None:
+        return False
     if importlib.util.find_spec(module) is None:
         return False
 
