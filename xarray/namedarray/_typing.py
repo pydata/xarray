@@ -35,7 +35,7 @@ _default = Default.token
 # their variance would be inferred as invariant, see the comment there.
 DType_co = TypeVar("DType_co", covariant=True, bound=np.dtype[Any])
 ShapeType_co = TypeVar("ShapeType_co", bound=Any, covariant=True)
-# The default (PEP 696) makes a bare `Variable` mean `Variable[Hashable]`.
+# The default (PEP 696) makes a bare `Variable` mean `Variable[Any, Any, Hashable]`.
 # TODO: remove the version check once Python 3.13 is the minimum.
 if TYPE_CHECKING or sys.version_info >= (3, 13):
     DimType_co = TypeVar("DimType_co", bound=Hashable, covariant=True, default=Hashable)
@@ -206,6 +206,11 @@ type duckarray[ShapeType, DType: np.dtype[Any]] = (  # noqa: PYI042
 
 # Corresponds to np.typing.NDArray:
 type DuckArray[ScalarType: np.generic] = arrayfunction[Any, np.dtype[ScalarType]]
+
+# Lists of Python scalars, which numpy converts to arrays of a known dtype, e.g.
+# list[float] to float64. Nested up to three levels: lists are invariant, so a
+# recursive alias would not match e.g. list[list[int]].
+type NestedList[T] = list[T] | list[list[T]] | list[list[list[T]]]
 
 
 @runtime_checkable
