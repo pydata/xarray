@@ -24,7 +24,9 @@ def test_available_opendap_endpoint_is_not_skipped() -> None:
 
 @pytest.mark.parametrize("status_code", [502, 503, 504])
 def test_opendap_server_outages_are_skipped(status_code: int) -> None:
-    error = HTTPError("https://test.opendap.org/test", status_code, "outage", None, None)
+    error = HTTPError(
+        "https://test.opendap.org/test", status_code, "outage", None, None
+    )
     with patch("xarray.tests.backends.conftest.urlopen", side_effect=error):
         with pytest.raises(pytest.skip.Exception, match=f"HTTP {status_code}"):
             _require_opendap_endpoint("https://test.opendap.org/test")
@@ -53,7 +55,9 @@ def test_connection_failures_are_skipped(error: Exception) -> None:
 
 
 def test_direct_timeout_is_skipped() -> None:
-    with patch("xarray.tests.backends.conftest.urlopen", side_effect=TimeoutError("timeout")):
+    with patch(
+        "xarray.tests.backends.conftest.urlopen", side_effect=TimeoutError("timeout")
+    ):
         with pytest.raises(pytest.skip.Exception, match="timed out"):
             _require_opendap_endpoint("https://test.opendap.org/test")
 
