@@ -1144,8 +1144,34 @@ class ZarrStore(AbstractWritableDataStore):
                 )
                 vars_with_encoding[vn] = variables[vn].copy(deep=False)
                 vars_with_encoding[vn].encoding = existing_vars[vn].encoding
-            vars_with_encoding, _ = self.encode(vars_with_encoding, {})
-            variables_encoded.update(vars_with_encoding)
+
+            # Skip CF encoding for zarr v3 native DateTime64 arrays (GH#11350).
+            native_datetime_vars: set[str] = set()
+            if self.zarr_group.metadata.zarr_format == 3:
+                # zarr.dtype (and DateTime64) only exist since zarr 3.1;
+                # guard the import so the min-versions job (zarr 3.0) passes.
+                try:
+                    from zarr.dtype import DateTime64
+                except ImportError:
+                    pass
+                else:
+                    for vn in existing_variable_names:
+                        name = _encode_variable_name(vn)
+                        zarr_array = self.members[name]
+                        if isinstance(zarr_array.metadata.data_type, DateTime64):
+                            native_datetime_vars.add(vn)
+
+            vars_to_encode = {
+                vn: v
+                for vn, v in vars_with_encoding.items()
+                if vn not in native_datetime_vars
+            }
+            if vars_to_encode:
+                encoded, _ = self.encode(vars_to_encode, {})
+                variables_encoded.update(encoded)
+
+            for vn in native_datetime_vars:
+                variables_encoded[vn] = vars_with_encoding[vn]
 
             for var_name in existing_variable_names:
                 variables_encoded[var_name] = _validate_and_transpose_existing_dims(
