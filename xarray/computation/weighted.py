@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Hashable, Iterable, Sequence
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Literal, cast, override
 
 import numpy as np
