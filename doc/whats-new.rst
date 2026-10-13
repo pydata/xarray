@@ -77,13 +77,13 @@ Deprecations
 - ``reset_encoding`` on :py:class:`Dataset`, :py:class:`DataArray` and
   :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
   like other deprecations, and its message gives the correct version (2023.10)
-  in which it was deprecated (:issue:`11721`).
+  in which it was deprecated (:issue:`11721`, :pull:`11725`).
   By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 
 
 Bug Fixes
 ~~~~~~~~~
-- Small fixes to deprecation warnings (:issue:`11721`):
+- Small fixes to deprecation warnings (:issue:`11721`, :pull:`11725`):
   the ``FutureWarning`` from :py:meth:`Dataset.argmax` without ``dim`` no longer
   refers to ``argmin``; ``DataTree.lineage`` warns once instead of twice; and
   decoding CF variables no longer adds a global ``warnings`` filter left over
