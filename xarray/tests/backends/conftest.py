@@ -31,15 +31,31 @@ def _require_opendap_endpoint(url: str) -> None:
         pytest.skip(f"OPeNDAP test server timed out: {url}: {exc}")
 
 
-@pytest.fixture(scope="session")
+def _hyrax_metadata_url(protocol: str) -> str:
+    """Return the actual metadata URL requested by the DAP2/DAP4 test."""
+    suffix = {"dap2": ".dds", "dap4": ".dmr"}[protocol]
+    return "http://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc" + suffix
+
+
+def _datatree_metadata_urls() -> tuple[str, ...]:
+    """Probe all three external data fixtures exercised by DataTree tests."""
+    base = "http://test.opendap.org/opendap/dap4/"
+    return tuple(
+        base + name + ".dmr"
+        for name in (
+            "unaligned_simple_datatree.nc.h5",
+            "all_aligned_child_nodes.nc.h5",
+            "SimpleGroup.nc4.h5",
+        )
+    )
+
+
+@pytest.fixture(scope="class")
 def opendap_dap4_available() -> None:
-    _require_opendap_endpoint(
-        "https://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5.dmr"
-    )
+    for url in _datatree_metadata_urls():
+        _require_opendap_endpoint(url)
 
 
-@pytest.fixture(scope="session")
-def opendap_hyrax_available() -> None:
-    _require_opendap_endpoint(
-        "https://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc.dmr"
-    )
+@pytest.fixture
+def opendap_hyrax_available(protocol: str) -> None:
+    _require_opendap_endpoint(_hyrax_metadata_url(protocol))
