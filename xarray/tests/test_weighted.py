@@ -8,9 +8,14 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset
-from xarray.tests import (assert_allclose, assert_equal,
-                          raise_if_dask_computes, requires_cftime,
-                          requires_dask)
+from xarray.tests import (
+    assert_allclose,
+    assert_equal,
+    raise_if_dask_computes,
+    requires_cftime,
+    requires_dask,
+    assert_identical,
+)
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
@@ -806,28 +811,30 @@ def test_weighted_bad_dim(operation, as_dataset):
         getattr(data.weighted(weights), operation)(**kwargs)
 
 
-def test_dataset_weighted_mean_preserves_orphaned_dims():
-    """
-    Can't test against `check_weighted_operations` - this is an edge case where
-    the dataset has a dimension not present in the weights dataarray or on any
-    of it's variables.
-    """
-    data = Dataset(
-        {
-            "a": (("x", "y"), np.random.randn(2, 2)),
-        },
-        coords={
-            "x": ("x", [0, 1]),
-            "y": ("y", [0, 1]),
-            "t": ("t", [0, 1]),
-        },
+@pytest.mark.parametrize(
+    "operation", ["sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std"]
+)
+@pytest.mark.parametrize(
+    "coords",
+    [
+        pytest.param({"t": [0, 1]}, id="index"),
+        pytest.param({"lbl": ("t", ["p", "q"])}, id="non-index"),
+        pytest.param({"c2": (("t", "s"), np.zeros((2, 3)))}, id="2d"),
+        pytest.param(
+            {"xt": (("x", "t"), np.zeros((2, 2))), "t": [5, 6]}, id="reduced-dim"
+        ),
+    ],
+)
+def test_dataset_weighted_keeps_unreduced_coords(
+    operation: str, coords: dict[str, Any]
+) -> None:
+    data = Dataset({"a": ("x", [1.0, 2.0])}, coords=coords)
+    weights = DataArray([1.0, 2.0], dims="x")
+
+    result = getattr(data.weighted(weights), operation)(dim="x")
+    unweighted_op = (
+        "sum" if operation in ("sum_of_weights", "sum_of_squares") else operation
     )
-    weights = DataArray(np.random.randn(2), dims="x")
+    expected = getattr(data, unweighted_op)(dim="x")
 
-    weighted_mean = data.weighted(weights).mean(dim="x")
-    mean = data.mean(dim="x")
-
-    # Don't promote dims *on the dataarray*
-    assert weighted_mean["a"].dims == mean["a"].dims
-    # Retain orphaned dims on the dataset
-    assert set(weighted_mean.dims) == set(mean.dims)
+    assert_identical(result.coords.to_dataset(), expected.coords.to_dataset())

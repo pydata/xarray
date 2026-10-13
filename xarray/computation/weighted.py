@@ -554,26 +554,26 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 
 class DatasetWeighted(Weighted["Dataset"]):
-    def _restore_dims(self, dim: Dims, ds: Dataset) -> Dataset:
+    def _restore_coords(self, dim: Dims, ds: Dataset) -> Dataset:
         """self.obj.map will drop orphaned coordinates & dims that are not in
         the weights DataArray. This restores them.
         """
         if dim is None:
             return ds
 
-        dims = self._dims_to_list(dim)
-
-        existing_dims = {dim for v in ds.variables.values() for dim in v.dims}
-        dims_to_restore = set(self.obj.dims) - set(dims) - existing_dims
-
-        coords = {d: self.obj.coords[d] for d in dims_to_restore}
-        return ds.assign_coords(coords)
+        reduced_dims = set(self._dims_to_list(dim))
+        to_drop = [
+            name
+            for name, coord in self.obj.coords.items()
+            if name in ds.coords or not reduced_dims.isdisjoint(coord.dims)
+        ]
+        return ds.assign_coords(self.obj.coords.drop_vars(to_drop))
 
     @override
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
         mapped_ds = self.obj.map(func, dim=dim, **kwargs)
-        return self._restore_dims(dim, mapped_ds)
+        return self._restore_coords(dim, mapped_ds)
 
 
 def _inject_docstring(cls, cls_name):
