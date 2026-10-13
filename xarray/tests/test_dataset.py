@@ -3397,7 +3397,12 @@ class TestDataset:
 
     def test_reset_encoding_deprecated(self) -> None:
         ds = create_test_data()
-        for obj in [ds, ds["var1"], ds["var1"].variable]:
+        objs: list[Dataset | DataArray | Variable] = [
+            ds,
+            ds["var1"],
+            ds["var1"].variable,
+        ]
+        for obj in objs:
             with pytest.warns(FutureWarning, match="deprecated since 2023.10"):
                 obj.reset_encoding()
 
