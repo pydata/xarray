@@ -8,13 +8,9 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray, Dataset
-from xarray.tests import (
-    assert_allclose,
-    assert_equal,
-    raise_if_dask_computes,
-    requires_cftime,
-    requires_dask,
-)
+from xarray.tests import (assert_allclose, assert_equal,
+                          raise_if_dask_computes, requires_cftime,
+                          requires_dask)
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
@@ -834,5 +830,4 @@ def test_dataset_weighted_mean_preserves_orphaned_dims():
     # Don't promote dims *on the dataarray*
     assert weighted_mean["a"].dims == mean["a"].dims
     # Retain orphaned dims on the dataset
-    assert set(weighted_mean.dims) == set(mean.dims)
     assert set(weighted_mean.dims) == set(mean.dims)
