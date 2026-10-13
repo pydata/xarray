@@ -10,7 +10,11 @@ from urllib.error import HTTPError, URLError
 
 import pytest
 
-from xarray.tests.backends.conftest import _require_opendap_endpoint
+from xarray.tests.backends.conftest import (
+    _datatree_metadata_urls,
+    _hyrax_metadata_url,
+    _require_opendap_endpoint,
+)
 
 
 def test_available_opendap_endpoint_is_not_skipped() -> None:
@@ -65,3 +69,18 @@ def test_unexpected_url_errors_remain_failures(error: URLError) -> None:
     with patch("xarray.tests.backends.conftest.urlopen", side_effect=error):
         with pytest.raises(URLError):
             _require_opendap_endpoint("https://test.opendap.org/test")
+
+
+@pytest.mark.parametrize("protocol, suffix", [("dap2", ".dds"), ("dap4", ".dmr")])
+def test_hyrax_probe_matches_pydap_protocol(protocol: str, suffix: str) -> None:
+    assert _hyrax_metadata_url(protocol) == (
+        "http://test.opendap.org/opendap/hyrax/data/nc/coads_climatology.nc" + suffix
+    )
+
+
+def test_datatree_probe_covers_all_external_test_files() -> None:
+    assert set(_datatree_metadata_urls()) == {
+        "http://test.opendap.org/opendap/dap4/unaligned_simple_datatree.nc.h5.dmr",
+        "http://test.opendap.org/opendap/dap4/all_aligned_child_nodes.nc.h5.dmr",
+        "http://test.opendap.org/opendap/dap4/SimpleGroup.nc4.h5.dmr",
+    }
