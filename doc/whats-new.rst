@@ -78,6 +78,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Suppress the expected ``All-NaN slice encountered`` warning when
+  :py:meth:`DataArray.quantile` or :py:meth:`Dataset.quantile` uses
+  NumPy's quantile fallback on all-missing slices (:issue:`9870`).
+  By `Senanur Çetin <https://github.com/senanurcetin>`_.
 - Fix pickling of datasets opened from file-like objects with the scipy backend
   after opening more than one such dataset (:issue:`11323`, :pull:`11413`).
   By `C1-BA-B1-F3 <https://github.com/C1-BA-B1-F3>`_.
