@@ -74,6 +74,11 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
+  :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
+  like the other deprecations, and gives the right version (2023.10).
+  :py:attr:`DataTree.lineage` warns once instead of twice (:issue:`11721`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Bug Fixes

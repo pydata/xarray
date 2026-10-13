@@ -3395,6 +3395,12 @@ class TestDataset:
 
         assert_equal(actual, orig)
 
+    def test_reset_encoding_deprecated(self) -> None:
+        ds = create_test_data()
+        for obj in [ds, ds["var1"], ds["var1"].variable]:
+            with pytest.warns(FutureWarning, match="deprecated since 2023.10"):
+                obj.reset_encoding()
+
     def test_rename(self) -> None:
         data = create_test_data()
         newnames = {
