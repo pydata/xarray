@@ -223,7 +223,7 @@ def test_ensure_warnings_not_elevated(func) -> None:
             warnings.warn("warning in test", stacklevel=2)
             return super().dims
 
-        def __array__(
+        def __array__(  # type: ignore[override]
             self,
             dtype: np.typing.DTypeLike | None = None,
             /,

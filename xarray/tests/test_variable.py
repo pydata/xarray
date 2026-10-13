@@ -132,7 +132,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
     def test_getitem_1d_fancy(self):
         v = self.cls(["x"], [0, 1, 2])
         # 1d-variable should be indexable by multi-dimensional Variable
-        ind = Variable(("a", "b"), [[0, 1], [0, 1]])
+        ind: Variable = Variable(("a", "b"), [[0, 1], [0, 1]])
         v_new = v[ind]
         assert v_new.dims == ("a", "b")
         expected = np.array(v._data)[([0, 1], [0, 1]), ...]
@@ -723,7 +723,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_array_equal(v_new, v_data[[0, 1]])
 
         # with mixed arguments
-        ind = Variable(["a"], [0, 1])
+        ind: Variable = Variable(["a"], [0, 1])
         v_new = v[dict(x=[0, 1], y=ind)]
         assert v_new.dims == ("x", "a")
         assert_array_equal(v_new, v_data[[0, 1]][:, [0, 1]])
@@ -884,7 +884,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         with pytest.raises(IndexError, match=r"Dimensions of indexers "):
             v[ind_x, ind_y]
 
-        ind = Variable(["a", "b"], [[True, False], [False, True]])
+        ind: Variable = Variable(["a", "b"], [[True, False], [False, True]])
         with pytest.raises(IndexError, match=r"2-dimensional boolean"):
             v[dict(x=ind)]
 
@@ -2036,7 +2036,7 @@ class TestVariable(VariableSubclassobjects):
         import bottleneck as bn
 
         # floats
-        v = Variable(["x", "y"], [[3, 4, np.nan, 1]])
+        v: Variable = Variable(["x", "y"], [[3, 4, np.nan, 1]])
         expect_0 = bn.nanrankdata(v.data, axis=0)
         expect_1 = bn.nanrankdata(v.data, axis=1)
         np.testing.assert_allclose(v.rank("x").values, expect_0)
@@ -2192,7 +2192,7 @@ class TestVariable(VariableSubclassobjects):
 
     def test_count(self):
         expected = Variable([], 3)
-        actual = Variable(["x"], [1, 2, 3, np.nan]).count()
+        actual: Variable = Variable(["x"], [1, 2, 3, np.nan]).count()
         assert_identical(expected, actual)
 
         v = Variable(["x"], np.array(["1", "2", "3", np.nan], dtype=object))
@@ -2281,10 +2281,10 @@ class TestVariable(VariableSubclassobjects):
         )
 
         # vindex with slice
-        v = Variable(["x", "y", "z"], np.ones((4, 3, 2)))
+        v: Variable = Variable(["x", "y", "z"], np.ones((4, 3, 2)))
         ind = Variable(["a"], [0, 1])
         v[dict(x=ind, z=ind)] = 0
-        expected = Variable(["x", "y", "z"], np.ones((4, 3, 2)))
+        expected: Variable = Variable(["x", "y", "z"], np.ones((4, 3, 2)))
         expected[0, :, 0] = 0
         expected[1, :, 1] = 0
         assert_identical(expected, v)

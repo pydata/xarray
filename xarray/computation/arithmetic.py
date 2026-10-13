@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import numbers
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, Self, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, NoReturn, Self, overload
 
 import numpy as np
 
@@ -19,12 +19,14 @@ from xarray.core._typed_ops import (
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.namedarray._typing import DimType_co, DType_co, ShapeType_co
 from xarray.namedarray.utils import is_duck_array
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
     from xarray.core.variable import Variable
+    from xarray.namedarray._typing import Shape
 
 # Operands besides xarray objects that `__array_ufunc__` handles, see
 # SupportsArithmetic._HANDLED_TYPES. Not `ArrayLike`, since that includes xarray
@@ -128,7 +130,8 @@ class VariableArithmetic(
     ImplementsArrayReduce,
     IncludeNumpySameMethods,
     SupportsArithmetic,
-    VariableOpsMixin,
+    VariableOpsMixin[ShapeType_co, DType_co, DimType_co],
+    Generic[ShapeType_co, DType_co, DimType_co],  # noqa: UP046
 ):
     __slots__ = ()
     # prioritize our operations over those of numpy.ndarray (priority=0)
@@ -136,6 +139,7 @@ class VariableArithmetic(
 
     if TYPE_CHECKING:
         # override: only the methods and numbers of inputs that work at runtime
+        # ufuncs can change the shape (broadcasting) and the dtype of the data
         @overload  # type: ignore[override]
         def __array_ufunc__(
             self,
@@ -145,7 +149,7 @@ class VariableArithmetic(
             rhs: Variable | _UfuncOperand,
             /,
             **kwargs: Any,
-        ) -> Self: ...
+        ) -> Variable[Shape, Any, DimType_co]: ...
         @overload
         def __array_ufunc__(
             self,
@@ -154,7 +158,7 @@ class VariableArithmetic(
             x: Self,
             /,
             **kwargs: Any,
-        ) -> Self: ...
+        ) -> Variable[Shape, Any, DimType_co]: ...
         @overload
         def __array_ufunc__(
             self,

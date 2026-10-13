@@ -13,6 +13,19 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:class:`~xarray.Variable` is now generic in the types of its shape, dtype
+  and dimension names, like :py:class:`~xarray.NamedArray`: it is defined as
+  ``class Variable(NamedArray[ShapeType_co, DType_co, DimType_co])``, so static
+  type checkers can infer and check them, e.g.
+  ``Variable(("x", "y"), np.zeros((2, 3)))`` is a
+  ``Variable[tuple[int, ...], np.dtype[np.float64], str]``. The dtype is also
+  inferred from lists and scalars, e.g. ``Variable("x", [1, 2])`` has an integer
+  dtype, also in :py:func:`~xarray.namedarray.core.from_array`. Operations that can
+  change the dtype or shape return a ``Variable`` with the respective types, e.g.
+  comparisons have a boolean dtype. The dimension type defaults to
+  ``Hashable``, so a bare ``Variable`` annotation means
+  ``Variable[Any, Any, Hashable]`` and keeps its previous meaning
+  (:pull:`11677`, :pull:`11693`).
 - :py:meth:`DataArray.idxmin` and :py:meth:`DataArray.idxmax` accept a sequence
   of dimensions or ``...``, and return a dict of the coordinate labels along each
   dimension, like :py:meth:`DataArray.argmin`. Without ``dim``, arrays with more
@@ -65,6 +78,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix pickling of datasets opened from file-like objects with the scipy backend
+  after opening more than one such dataset (:issue:`11323`, :pull:`11413`).
+  By `C1-BA-B1-F3 <https://github.com/C1-BA-B1-F3>`_.
 - :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` no longer raise a
   ``RecursionError`` for an order ``n`` close to the recursion limit, and are
   faster for ``n > 1``. They also label the result correctly for ``n > 1`` with
@@ -195,6 +211,13 @@ Documentation
   :py:meth:`DataArray.curvefit` docstrings: both take a ``kwargs`` dict, not
   ``**kwargs`` (:issue:`6891`, :pull:`11536`).
   By `Advit Arora <https://github.com/advitrocks9>`_.
+- Fix the rendering of the default of ``netcdf_engine_order`` in the
+  :py:func:`set_options` docstring, document the defaults of all options
+  consistently, and add the missing ``display_default_indexes``,
+  ``display_expand_groups`` and ``enable_cftimeindex`` options
+  (:issue:`10832`, :pull:`11156`).
+  By `dolliecoder <https://github.com/dolliecoder>`_ and
+  `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
 ~~~~~~~~~~~
@@ -403,6 +426,14 @@ Bug Fixes
 - Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
   round trips (:issue:`11466`, :pull:`11474`).
   By `stanbot8 <https://github.com/stanbot8>`_.
+- :py:func:`~xarray.open_dataset` now raises an error pointing at
+  :py:func:`~xarray.open_mfdataset` when it is given a list or tuple of paths,
+  instead of reporting that no IO backend matched the input (:issue:`6510`).
+  By `NoiceHex <https://github.com/NoiceHax>`_.
+- Fix async zarr tests using ``wraps`` with ``autospec=True`` on async methods,
+  which caused ``AsyncMock`` objects to leak through instead of real array data
+  (:pull:`11232`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed dask-backed bottleneck rolling reductions declaring a dtype that could
   differ from the dtype returned by the matching numpy-backed bottleneck path,
   notably ``object`` instead of ``float64`` for boolean inputs (:pull:`11449`).
@@ -482,6 +513,11 @@ Bug Fixes
   variables, the ``netCDF4`` engine silently returned a wrongly-sized array, and
   ``pydap`` raised ``ValueError`` (:issue:`9075`, :issue:`11625`, :pull:`11626`).
   By `Aniruddha Adak <https://github.com/aniruddhaadak80>`_.
+- :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` now
+  accept sets, frozensets and other set-like objects such as ``dict.keys()``.
+  Previously these were turned into a 0-dimensional object array by numpy, so
+  the result was ``False`` everywhere (:issue:`10022`).
+  By `Chandan P <https://github.com/NoiceHax>`_.
 
 .. _`pandas-dev/pandas#64793`: https://github.com/pandas-dev/pandas/pull/64793
 
