@@ -201,6 +201,10 @@ version that solves, and make sure the policy check still passes.
 
 After removing version guards, some tests may fail if they relied on version-specific behavior. Update the test logic to use only the new minimum version's behavior.
 
+Run the full test suite in an environment with the latest versions (e.g.
+`test-py314`) as well, not only in `test-py312-min-versions`: a workaround whose
+TODO names an old version may still be needed for newer versions.
+
 Run the touched tests not only in `test-py312-min-versions` but also in
 `test-py312-bare-minimum` and `test-py314-no-dask`, which catch removed
 decorators that also skipped tests for missing packages. Run mypy in the CI

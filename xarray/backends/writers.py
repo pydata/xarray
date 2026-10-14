@@ -747,6 +747,12 @@ def to_zarr(
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
 
+    # Load empty arrays, otherwise the zero-sized dask chunks become zero-sized
+    # zarr chunks, which zarr rejects (Issue #5741)
+    for v in dataset.variables.values():
+        if v.size == 0:
+            v.load()
+
     if encoding is None:
         encoding = {}
 
