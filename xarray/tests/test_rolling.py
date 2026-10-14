@@ -15,7 +15,6 @@ from xarray.tests import (
     dask_array_api,
     requires_bottleneck,
     requires_dask,
-    requires_dask_ge_2024_11_0,
     requires_numbagg,
 )
 
@@ -475,7 +474,6 @@ class TestDataArrayRolling:
         assert chunked_result.dtype == unchunked_result.dtype
 
     @requires_bottleneck
-    @requires_dask_ge_2024_11_0
     @pytest.mark.parametrize(
         "name, center, dtype",
         [
@@ -717,7 +715,6 @@ class TestDatasetRolling:
         ):
             ds.rolling(foo=2)
 
-    @requires_dask_ge_2024_11_0
     def test_rolling_construct_automatic_rechunk(self):
         da = dask_array_api
 

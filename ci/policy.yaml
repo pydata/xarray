@@ -10,7 +10,10 @@ policy:
     numpy: 18
   default: 12
   # overrides for the policy
-  overrides: {}
+  overrides:
+    # conda-forge has no netcdf4 1.7.0 (the series starts at 1.7.1), which the
+    # policy needs to consider 1.7 released
+    netcdf4: "1.7"
   # these packages are completely ignored
   exclude:
     - coveralls

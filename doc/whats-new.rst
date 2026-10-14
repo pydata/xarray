@@ -59,6 +59,31 @@ Breaking Changes
   is now 3.12, in line with xarray's
   :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The minimum versions of some dependencies were changed:
+
+  ===================== =========  =======
+   Package                    Old      New
+  ===================== =========  =======
+    boto3                  1.37     1.40
+    bottleneck              1.4      1.6
+    cartopy                0.24     0.25
+    dask                 2025.2   2025.9
+    distributed          2025.2   2025.9
+    h5py                   3.13     3.14
+    iris                   3.11     3.13
+    lxml                    5.3      6.0
+    netcdf4                 1.6      1.7
+    numba                  0.61     0.62
+    numpy                  1.26      2.2
+    packaging              24.2     25.0
+    pandas                  2.2      2.3
+    pint                   0.24     0.25
+    scipy                  1.15     1.16
+    sparse                 0.15     0.17
+    zarr                    3.0      3.1
+  ===================== =========  =======
+
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:class:`~xarray.NamedArray` is now generic in the type of its dimension
   names, so static type checkers can infer and check them. It takes three type
   parameters instead of two: annotations like
