@@ -72,7 +72,7 @@ Breaking Changes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - The ``enable_cftimeindex`` option, a no-op since v0.11.0, has been removed.
   Passing it to :py:func:`set_options` now raises a ``ValueError``
-  (:issue:`11721`).
+  (:issue:`11721`, :pull:`11729`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
