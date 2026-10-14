@@ -4,7 +4,7 @@ import pickle
 import re
 import sys
 import warnings
-from collections.abc import Hashable
+from collections.abc import Hashable, Mapping
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
@@ -43,6 +43,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
+from xarray.core.indexing import IndexSelResult
 from xarray.core.types import ArrayLike
 from xarray.core.utils import is_scalar
 from xarray.groupers import SeasonResampler, TimeResampler
@@ -91,6 +92,68 @@ pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
     pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
 ]
+
+
+class ScalarPreservingIndex(Index):
+    def __init__(
+        self,
+        axes: Mapping[Hashable, PandasIndex],
+        scalars: Mapping[Hashable, Variable] | None = None,
+    ) -> None:
+        self.axes = dict(axes)
+        self.scalars = dict(scalars or {})
+
+    @classmethod
+    def from_variables(
+        cls, variables: Mapping[Hashable, Variable], *, options: Mapping[str, Any]
+    ) -> ScalarPreservingIndex:
+        return cls(
+            {
+                name: PandasIndex.from_variables({name: var}, options={})
+                for name, var in variables.items()
+            }
+        )
+
+    def create_variables(
+        self, variables: Mapping[Hashable, Variable] | None = None
+    ) -> dict[Hashable, Variable]:
+        result = dict(self.scalars)
+        for name, axis in self.axes.items():
+            source = (
+                {name: variables[name]} if variables and name in variables else None
+            )
+            result.update(axis.create_variables(source))
+        return result
+
+    def isel(self, indexers: Mapping[Hashable, Any]) -> ScalarPreservingIndex:
+        axes = {}
+        scalars = dict(self.scalars)
+        for name, axis in self.axes.items():
+            if axis.dim in indexers:
+                reduced = axis.isel({axis.dim: indexers[axis.dim]})
+                if reduced is None:
+                    position = np.asarray(indexers[axis.dim]).item()
+                    scalars[name] = Variable((), axis.index[position])
+                else:
+                    axes[name] = reduced
+            else:
+                axes[name] = axis
+        return type(self)(axes, scalars)
+
+    def sel(self, labels: dict[Hashable, Any]) -> IndexSelResult:
+        indexers = {}
+        for name, label in labels.items():
+            indexers.update(self.axes[name].sel({name: label}).dim_indexers)
+        return IndexSelResult(indexers)
+
+
+def create_scalar_preserving_array() -> DataArray:
+    array = DataArray(
+        np.arange(6).reshape(2, 3),
+        dims=("y", "x"),
+        coords={"y": [0, 1], "x": [10, 20, 30]},
+    )
+    return array.drop_indexes(["y", "x"]).set_xindex(["y", "x"], ScalarPreservingIndex)
 
 
 def create_append_test_data(seed=None) -> tuple[Dataset, Dataset, Dataset]:
@@ -2026,6 +2089,36 @@ class TestDataset:
         expected = Dataset({"foo": 1}, {"x": 0})
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
+
+    @pytest.mark.parametrize("method", ["isel", "sel"])
+    @pytest.mark.parametrize("as_dataset", [False, True])
+    def test_drop_scalar_coordinate_rejects_partial_index_drop(
+        self, method: str, as_dataset: bool
+    ) -> None:
+        array = create_scalar_preserving_array()
+        obj = array.to_dataset(name="data") if as_dataset else array
+
+        with pytest.raises(ValueError, match="would corrupt the following index"):
+            getattr(obj, method)(x=0 if method == "isel" else 10, drop=True)
+
+    @pytest.mark.parametrize("as_dataset", [False, True])
+    @pytest.mark.parametrize("indexer", [0, DataArray(0)])
+    @pytest.mark.parametrize("extra_index", [False, True])
+    def test_drop_all_scalar_index_coordinates(
+        self, as_dataset: bool, indexer: int | DataArray, extra_index: bool
+    ) -> None:
+        array = create_scalar_preserving_array()
+        if extra_index:
+            array = array.expand_dims(z=[0, 1])
+        obj = array.to_dataset(name="data") if as_dataset else array
+
+        result = obj.isel(x=indexer, y=0, drop=True)
+        expected_coords = {"z"} if extra_index else set()
+        assert set(result.coords) == expected_coords
+        assert set(result.xindexes) == expected_coords
+        if extra_index:
+            assert_identical(result["z"], obj["z"])
+            assert isinstance(result.xindexes["z"], PandasIndex)
 
     def test_head(self) -> None:
         data = create_test_data()
