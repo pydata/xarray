@@ -7,7 +7,7 @@ from collections import ChainMap
 from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, TypeVar, get_args, override
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, get_args, override
 
 import numpy as np
 import pandas as pd
@@ -34,6 +34,8 @@ from xarray.core.variable import (
 from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -544,7 +546,55 @@ def _get_interpolator(
     return interp_class, kwargs
 
 
-def _get_interpolator_nd(method, **kwargs):
+_SPLINE_DEGREES = {"cubic": 3, "quintic": 5}
+
+
+def _interpn_spline(
+    points: Sequence[ArrayLike],
+    values: ArrayLike,
+    xi: ArrayLike,
+    *,
+    method: Literal["cubic", "quintic"],
+    bounds_error: bool = False,
+    fill_value: float | None = np.nan,
+) -> np.ndarray:
+    """Tensor-product spline interpolation on a grid, like scipy.interpolate.interpn.
+
+    For spline methods, scipy solves for the coefficients along all dimensions at
+    once with an iterative sparse solver, which is slow, needs a lot of memory and
+    is only accurate to ~1e-6 (GH11342). The coefficients of a tensor-product
+    spline can be solved for one dimension after the other instead, which is exact.
+    """
+    from scipy.interpolate import NdBSpline, make_interp_spline
+
+    k = _SPLINE_DEGREES[method]
+    grid = [np.asarray(x, dtype=np.float64) for x in points]
+    xi = np.asarray(xi, dtype=np.float64)
+
+    knots = []
+    coeffs = np.asarray(values)
+    for axis, x in enumerate(grid):
+        spline = make_interp_spline(x, coeffs, k=k, axis=axis)
+        knots.append(spline.t)
+        coeffs = np.moveaxis(spline.c, 0, axis)
+
+    nans = np.isnan(xi).any(axis=-1)
+    out_of_bounds = np.zeros(xi.shape[:-1], dtype=bool)
+    for i, x in enumerate(grid):
+        out_of_bounds |= (xi[..., i] < x[0]) | (xi[..., i] > x[-1])
+    if bounds_error and out_of_bounds.any():
+        raise ValueError("One of the requested xi is out of bounds")
+
+    result = NdBSpline(tuple(knots), coeffs, k)(xi)
+    if fill_value is not None:
+        result[out_of_bounds] = fill_value
+    result[nans] = np.nan
+    return result
+
+
+def _get_interpolator_nd(
+    method: InterpOptions, **kwargs: Any
+) -> tuple[InterpCallable, dict[str, Any]]:
     """helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
@@ -553,7 +603,11 @@ def _get_interpolator_nd(method, **kwargs):
     if method in valid_methods:
         kwargs.update(method=method)
         kwargs.setdefault("bounds_error", False)
-        interp_class = _import_interpolant("interpn", method)
+        if method in _SPLINE_DEGREES:
+            _import_interpolant("NdBSpline", method)
+            interp_class = _interpn_spline
+        else:
+            interp_class = _import_interpolant("interpn", method)
     else:
         raise ValueError(
             f"{method} is not a valid interpolator for interpolating "

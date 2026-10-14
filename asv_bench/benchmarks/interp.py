@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from asv_runner.benchmarks.mark import parameterize
@@ -17,6 +19,51 @@ randn_t = randn((nt,))
 new_x_short = np.linspace(0.3 * nx, 0.7 * nx, 100)
 new_x_long = np.linspace(0.3 * nx, 0.7 * nx, 500)
 new_y_long = np.linspace(0.1, 0.9, 500)
+
+
+class InterpolationSplineND:
+    # spline interpolation over multiple dimensions (GH11342)
+    def setup(self, *args: Any, **kwargs: Any) -> None:
+        nt, ny, nx = 50, 40, 50
+        self.da = xr.DataArray(
+            randn((nt, ny, nx)),
+            dims=("t", "y", "x"),
+            coords={
+                "t": np.arange(nt),
+                "y": np.linspace(0, 1, ny),
+                "x": np.linspace(0, 1, nx),
+            },
+        )
+        self.destinations = {
+            "point": {"t": 25.5, "y": 0.45, "x": 0.12},
+            "grid": {
+                "t": np.linspace(5, 45, 20),
+                "y": np.linspace(0.1, 0.9, 20),
+                "x": np.linspace(0.1, 0.9, 20),
+            },
+            "pointwise": {
+                dim: xr.DataArray(np.linspace(lo, hi, 100), dims="p")
+                for dim, lo, hi in [("t", 5, 45), ("y", 0.1, 0.9), ("x", 0.9, 0.1)]
+            },
+        }
+
+    @parameterized(
+        ["method", "destination"],
+        (["cubic", "quintic"], ["point", "grid", "pointwise"]),
+    )
+    def time_interpolation_spline_nd(self, method: str, destination: str) -> None:
+        self.da.interp(self.destinations[destination], method=method).compute()
+
+    @parameterized(["method"], (["cubic", "quintic"]))
+    def peakmem_interpolation_spline_nd(self, method: str) -> None:
+        self.da.interp(self.destinations["point"], method=method).compute()
+
+
+class InterpolationSplineNDDask(InterpolationSplineND):
+    def setup(self, *args: Any, **kwargs: Any) -> None:
+        requires_dask()
+        super().setup(**kwargs)
+        self.da = self.da.chunk({"t": 10})
 
 
 class Interpolation:

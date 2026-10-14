@@ -277,6 +277,14 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with ``method="cubic"``
+  or ``"quintic"`` over multiple dimensions are much faster and need much less
+  memory, e.g. 15x faster and 25x less memory for a single point in a
+  ``(288, 71, 73)`` array. The results are now exact instead of only accurate to
+  about ``1e-6``: the spline coefficients are solved for one dimension after
+  the other instead of with an iterative solver for all dimensions at once
+  (:issue:`11342`, :pull:`11708`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up the ``repr`` of objects with many coordinates by about 2.5x, which
   got about twice as slow when the coordinates were ordered by dimension in
   v2025.10.0 (:pull:`10778`), and their HTML repr by about 15% (:pull:`11691`): the
