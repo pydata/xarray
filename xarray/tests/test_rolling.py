@@ -474,6 +474,7 @@ class TestDataArrayRolling:
         assert chunked_result.dtype == unchunked_result.dtype
 
     @requires_bottleneck
+    @requires_dask
     @pytest.mark.parametrize(
         "name, center, dtype",
         [
@@ -715,6 +716,7 @@ class TestDatasetRolling:
         ):
             ds.rolling(foo=2)
 
+    @requires_dask
     def test_rolling_construct_automatic_rechunk(self):
         da = dask_array_api
 

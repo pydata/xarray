@@ -33,7 +33,6 @@ from xarray.backends.zarr import ZarrStore
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.cftime_offsets import date_range
 from xarray.coding.variables import SerializationWarning
-from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core.indexes import PandasIndex
 from xarray.tests import (
     assert_equal,
@@ -1515,7 +1514,7 @@ class TestInstrumentedZarrStore:
             self.check_requests(expected, patches)
 
 
-@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+@requires_zarr
 def test_roundtrip_stringdtype_zarr_v3() -> None:
     dtype = np.dtypes.StringDType()
     data = np.array(["a", "bb", "ccc"], dtype=dtype)
@@ -1541,7 +1540,7 @@ def test_roundtrip_stringdtype_zarr_v3() -> None:
     assert_identical(expected, actual)
 
 
-@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+@requires_zarr
 def test_stringdtype_with_na_object_uses_the_compatibility_path() -> None:
     dtype = np.dtypes.StringDType(na_object=np.nan)
     data = np.array(["a", "bb", "ccc"], dtype=dtype)

@@ -118,7 +118,6 @@ fallback_version = "9999"
 omit = [
   "*/xarray/tests/*",
   "*/xarray/compat/dask_array_compat.py",
-  "*/xarray/compat/npcompat.py",
   "*/xarray/compat/pdcompat.py",
   "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",

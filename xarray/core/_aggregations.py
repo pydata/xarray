@@ -5012,7 +5012,6 @@ class DatasetGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
             kwargs.setdefault("method", "blockwise")
@@ -6575,7 +6574,6 @@ class DatasetResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
             kwargs.setdefault("method", "blockwise")
@@ -8039,7 +8037,6 @@ class DataArrayGroupByAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
             kwargs.setdefault("method", "blockwise")
@@ -9484,7 +9481,6 @@ class DataArrayResampleAggregations:
         if (
             flox_available
             and OPTIONS["use_flox"]
-            and module_available("flox", minversion="0.9.2")
             and contains_only_chunked_or_numpy(self._obj)
         ):
             kwargs.setdefault("method", "blockwise")
