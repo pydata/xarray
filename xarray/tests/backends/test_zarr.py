@@ -1852,7 +1852,6 @@ class NoConsolidatedMetadataSupportStore(WrapperStore):
 class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        # TODO the zarr version would need to be >3.08 for the supports_consolidated_metadata property to have any effect
         yield NoConsolidatedMetadataSupportStore(
             zarr.storage.MemoryStore({}, read_only=False)
         )

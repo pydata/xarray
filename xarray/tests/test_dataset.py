@@ -13,15 +13,9 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
+from numpy import trapezoid
+from numpy.exceptions import RankWarning
 from pandas.core.indexes.datetimes import DatetimeIndex
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
-
-
 from pandas.errors import UndefinedVariableError
 
 import xarray as xr
@@ -75,15 +69,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import ScalarIndex, XYIndex
-
-# from numpy version 2.0 trapz is deprecated and renamed to trapezoid
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy import trapezoid  # type: ignore[attr-defined,unused-ignore]
-except ImportError:
-    from numpy import (  # type: ignore[arg-type,no-redef,attr-defined,unused-ignore]
-        trapz as trapezoid,
-    )
 
 sparse_array_type = array_type("sparse")
 
@@ -4842,8 +4827,7 @@ class TestDataset:
             data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4]}].values
         data5 = data4.astype(str)
         data5["var4"] = data4["var1"]
-        # convert to `np.str_('a')` once `numpy<2.0` has been dropped
-        err_msg = "could not convert string to float: .*'a'.*"
+        err_msg = r"could not convert string to float: np\.str_\('a'\)"
         with pytest.raises(ValueError, match=err_msg):
             data5[{"dim2": 1}] = "a"
 

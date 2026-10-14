@@ -13,12 +13,8 @@ from typing import Any, Final, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
+from numpy.exceptions import RankWarning
+from pandas.errors import UndefinedVariableError
 
 import xarray as xr
 import xarray.core.missing
@@ -66,13 +62,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import XYIndex
-
-try:
-    from pandas.errors import UndefinedVariableError
-except ImportError:
-    # TODO: remove once we stop supporting pandas<1.4.3
-    from pandas.core.computation.ops import UndefinedVariableError
-
 
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),

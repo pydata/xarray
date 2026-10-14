@@ -116,7 +116,16 @@ The source code has version guards too, which become dead code with the new
 minimums. Search for them, not only for `module_available(..., minversion=...)`:
 
 ```bash
-rg -n -i "minversion|__version__|NumpyVersion|oldest supported|remove (once|when)|delete when|requires (numpy|dask|pandas|zarr)|numpy ?[<>]=? ?[0-9]" xarray --glob '!xarray/tests/**'
+rg -n -i "minversion|__version__|mod_version|NumpyVersion|oldest supported|remove (once|when)|delete when|requires (numpy|dask|pandas|zarr)|numpy ?[<>]=? ?[0-9]" xarray --glob '!xarray/tests/**'
+```
+
+Also go through TODO and compat comments mentioning a dependency version, in
+the source and the tests (e.g. `# use np.cumulative_sum(...) when we support
+numpy>=2`, `# TODO: delete when min dask>=2023.12.1`, or `try: ... except
+ImportError:` fallbacks for old versions):
+
+```bash
+rg -n -i "(TODO|FIXME|NOTE|compat|workaround|legacy|once|when|until|older|drop)[^\n]{0,80}\b(numpy|pandas|scipy|dask|zarr|netcdf4|h5netcdf|flox|numbagg|bottleneck|sparse|pint|matplotlib|cftime|numba)\b[^\n]{0,40}([<>]=?|version|v?[0-9]+\.[0-9]+)" xarray --glob '!xarray/core/_aggregations.py'
 ```
 
 - Remove branches for versions older than the new minimum and keep the code for
