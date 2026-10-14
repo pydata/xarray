@@ -403,6 +403,52 @@ def test_replace_n_zero(dtype) -> None:
     assert_equal(result, expected)
 
 
+def test_replace_literal_case_insensitive(dtype) -> None:
+    values = xr.DataArray(["fooBAD.bad__barbAd"], dims=["x"]).astype(dtype)
+
+    result = values.str.replace("bad", "X", case=False, regex=False)
+    expected = xr.DataArray(["fooX.X__barX"], dims=["x"]).astype(dtype)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+    # the pattern is literal, and the replacement is not a regex template
+    result = values.str.replace("D.B", r"", n=1, case=False, regex=False)
+    expected = xr.DataArray([r"fooBAad__barbAd"], dims=["x"]).astype(dtype)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+    result = values.str.replace("bad", "X", n=2, case=False, regex=False)
+    expected = xr.DataArray(["fooX.X__barbAd"], dims=["x"]).astype(dtype)
+    assert_equal(result, expected)
+
+    result = values.str.replace("bad", "X", n=0, case=False, regex=False)
+    assert_equal(result, values)
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        pytest.param(np.array(["Foo", "xYz", "fOO.oo"], dtype=object), id="object"),
+        pytest.param(
+            np.array(["Foo", "xYz", "fOO.oo"], dtype=np.dtypes.StringDType()),
+            id="StringDType",
+            marks=pytest.mark.skipif(
+                not hasattr(np, "dtypes") or not hasattr(np.dtypes, "StringDType"),
+                reason="requires numpy>=2",
+            ),
+        ),
+    ],
+)
+def test_case_insensitive_literal_non_unicode_dtype(values) -> None:
+    da = xr.DataArray(values, dims=["x"])
+
+    result = da.str.contains("o.", case=False, regex=False)
+    assert_equal(result, xr.DataArray([False, False, True], dims=["x"]))
+
+    result = da.str.replace("o", "_", case=False, regex=False)
+    assert list(result.values) == ["F__", "xYz", "f__.__"]
+
+
 def test_replace_callable() -> None:
     values = xr.DataArray(["fooBAD__barBAD"])
 
