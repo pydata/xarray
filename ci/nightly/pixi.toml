@@ -1,7 +1,7 @@
 [workspace]
 preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults"]
-platforms = ["linux-64"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
 requires-pixi = ">=0.63.2,!=0.68.0"
 
 [feature.test.dependencies]
