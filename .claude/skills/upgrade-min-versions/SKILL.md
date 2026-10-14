@@ -77,12 +77,7 @@ All packages should now show `=`, and the command must exit with 0. Only a `>`
 (pin newer than the policy) fails the check; it is allowed for packages listed
 under `ignored_violations` in `ci/policy.yaml`.
 
-If the policy version looks too old, check whether conda-forge skipped the
-`x.y.0` release (e.g. netcdf4 1.7 starts at 1.7.1): the policy tool only counts
-`x.y.0` releases, until
-https://github.com/xarray-contrib/minimum-dependency-versions/pull/94 is released.
-Use `overrides` in `ci/policy.yaml` for such packages instead of
-`ignored_violations`, and remove existing overrides that are no longer needed.
+Remove `overrides` in `ci/policy.yaml` that are no longer needed.
 
 ### 6. Clean Up Obsolete Test Decorators
 
@@ -175,6 +170,8 @@ Breaking Changes
 Only edit this entry, older releases contain the same sentence.
 
 ### 9. Open the PR
+
+Always ask the user before opening the PR, and show them the description first.
 
 Follow `.github/PULL_REQUEST_TEMPLATE.md`: a short description (an intro line
 and a few one-line bullets, e.g. the notable bumps and any policy override),
