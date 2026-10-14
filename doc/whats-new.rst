@@ -59,7 +59,7 @@ Breaking Changes
   is now 3.12, in line with xarray's
   :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
-- The minimum versions of some dependencies were changed:
+- The minimum versions of some dependencies were changed (:pull:`11728`):
 
   ===================== =========  =======
    Package                    Old      New
