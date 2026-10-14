@@ -70,6 +70,10 @@ Breaking Changes
   except for those of ``NamedArray``, which are now ``ShapeType_co``,
   ``DType_co`` and ``DimType_co`` (:pull:`11223`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The ``enable_cftimeindex`` option, a no-op since v0.11.0, has been removed.
+  Passing it to :py:func:`set_options` now raises a ``ValueError``
+  (:issue:`11721`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Deprecations
