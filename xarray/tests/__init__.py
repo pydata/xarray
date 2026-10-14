@@ -102,7 +102,6 @@ def get_dask_chunkmanager():
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
-has_scipy_ge_1_13, requires_scipy_ge_1_13 = _importorskip("scipy", "1.13")
 with warnings.catch_warnings():
     warnings.filterwarnings(
         "ignore",
@@ -123,22 +122,6 @@ has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_dask, requires_dask = _importorskip("dask")
 has_dask_array, requires_dask_array = _importorskip("dask_array")
-has_dask_ge_2024_08_1, requires_dask_ge_2024_08_1 = _importorskip(
-    "dask", minversion="2024.08.1"
-)
-has_dask_ge_2024_11_0, requires_dask_ge_2024_11_0 = _importorskip("dask", "2024.11.0")
-has_dask_ge_2025_1_0, requires_dask_ge_2025_1_0 = _importorskip("dask", "2025.1.0")
-if has_dask_ge_2025_1_0:
-    has_dask_expr = True
-    requires_dask_expr = pytest.mark.skipif(not has_dask_expr, reason="should not skip")
-else:
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The current Dask DataFrame implementation is deprecated.",
-            category=FutureWarning,
-        )
-        has_dask_expr, requires_dask_expr = _importorskip("dask_expr")
 
 if has_dask:
     dask_chunkmanager = get_dask_chunkmanager()
@@ -158,11 +141,6 @@ with warnings.catch_warnings():
         "ignore", message="crc32c usage is deprecated", category=DeprecationWarning
     )
     has_zarr, requires_zarr = _importorskip("zarr")
-# Since min zarr is now >=3.0, these are aliases for has_zarr/requires_zarr.
-# Kept to avoid a large diff across test files.
-has_zarr_v3 = has_zarr
-requires_zarr_v3 = requires_zarr
-has_zarr_v3_dtypes, requires_zarr_v3_dtypes = _importorskip("zarr", "3.1.0")
 has_zarr_v3_async_oindex, requires_zarr_v3_async_oindex = _importorskip("zarr", "3.1.2")
 has_zarr_rectilinear_chunks, requires_zarr_rectilinear_chunks = _importorskip(
     "zarr", "3.2.0"
@@ -174,12 +152,8 @@ if has_zarr:
     # TODO: use version specifier
     # installing from git main is giving me a lower version than the
     # most recently released zarr
-    has_zarr_v3_dtypes = hasattr(zarr.core, "dtype")
     has_zarr_v3_async_oindex = hasattr(zarr.AsyncArray, "oindex")
 
-    requires_zarr_v3_dtypes = pytest.mark.skipif(
-        not has_zarr_v3_dtypes, reason="requires zarr>3.1.0"
-    )
     requires_zarr_v3_async_oindex = pytest.mark.skipif(
         not has_zarr_v3_async_oindex, reason="requires zarr>3.1.1"
     )
@@ -222,8 +196,6 @@ has_numbagg_or_bottleneck = has_numbagg or has_bottleneck
 requires_numbagg_or_bottleneck = pytest.mark.skipif(
     not has_numbagg_or_bottleneck, reason="requires numbagg or bottleneck"
 )
-has_numpy_2, requires_numpy_2 = _importorskip("numpy", "2.0.0")
-has_flox_0_9_12, requires_flox_0_9_12 = _importorskip("flox", "0.9.12")
 
 has_array_api_strict, requires_array_api_strict = _importorskip("array_api_strict")
 has_jax, requires_jax = _importorskip("jax")
@@ -259,14 +231,6 @@ def _importorskip_h5netcdf_ros3(has_h5netcdf: bool):
 
 
 has_h5netcdf_ros3, requires_h5netcdf_ros3 = _importorskip_h5netcdf_ros3(has_h5netcdf)
-has_netCDF4_1_6_2_or_above, requires_netCDF4_1_6_2_or_above = _importorskip(
-    "netCDF4", "1.6.2"
-)
-
-has_netCDF4_1_7_0_or_above, requires_netCDF4_1_7_0_or_above = _importorskip(
-    "netCDF4", "1.7.0"
-)
-
 # change some global options for tests
 set_options(warn_for_unclosed_files=True)
 

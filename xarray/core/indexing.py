@@ -14,9 +14,7 @@ from typing import TYPE_CHECKING, Any, cast, overload, override
 import numpy as np
 import pandas as pd
 from numpy.typing import DTypeLike
-from packaging.version import Version
 
-from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.nputils import NumpyVIndexAdapter
@@ -605,10 +603,7 @@ class ExplicitlyIndexed:
         self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         # Leave casting to an array up to the underlying array type.
-        if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
-        else:
-            return np.asarray(self.get_duck_array(), dtype=dtype)
+        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
 
     def get_duck_array(self):
         return self.array
@@ -690,11 +685,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     def __array__(
         self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
-        if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype, copy=copy)
-
-        else:
-            return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype)
+        return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype, copy=copy)
 
     def get_duck_array(self):
         return self.array.get_duck_array()
@@ -1987,7 +1978,7 @@ class PandasIndexingAdapter(IndexingAdapter):
                 self._dtype = get_valid_numpy_dtype(array)
         elif is_allowed_extension_array_dtype(dtype):
             self._dtype = cast(pd.api.extensions.ExtensionDtype, dtype)
-        elif HAS_STRING_DTYPE and isinstance(dtype, pd.StringDtype):
+        elif isinstance(dtype, pd.StringDtype):
             self._dtype = np.dtypes.StringDType(na_object=dtype.na_value)
         else:
             self._dtype = np.dtype(cast(DTypeLike, dtype))
@@ -2028,10 +2019,7 @@ class PandasIndexingAdapter(IndexingAdapter):
                 # this might not be public API
                 array = array.astype("object")
 
-        if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(array.values, dtype=dtype, copy=copy)
-        else:
-            return np.asarray(array.values, dtype=dtype)
+        return np.asarray(array.values, dtype=dtype, copy=copy)
 
     @override
     def get_duck_array(self) -> np.ndarray | PandasExtensionArray:

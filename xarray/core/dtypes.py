@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING, cast
 import numpy as np
 from pandas.api.extensions import ExtensionDtype
 
-from xarray.compat import array_api_compat, npcompat
-from xarray.compat.npcompat import HAS_STRING_DTYPE
+from xarray.compat import array_api_compat
 from xarray.core import utils
 from xarray.core.types import PDDatetimeUnitOptions
 
@@ -77,7 +76,7 @@ def maybe_promote[T_dtype: (np.dtype, ExtensionDtype)](
         raise TypeError(
             f"dtype {dtype} must be one of an extension array dtype or numpy dtype"
         )
-    elif HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
+    elif np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object
@@ -231,7 +230,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
         raise TypeError(f"kind must be a string or a tuple of strings: {kind!r}")
 
     if isinstance(dtype, np.dtype):
-        return npcompat.isdtype(dtype, kind)
+        return np.isdtype(dtype, kind)
     elif utils.is_allowed_extension_array_dtype(dtype):
         # we never want to match pandas extension array dtypes
         return False
