@@ -79,6 +79,12 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
+  :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
+  like the other deprecations, and gives the right version (2023.10).
+  :py:attr:`DataTree.lineage` warns once instead of twice (:issue:`11721`,
+  :pull:`11724`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Bug Fixes
@@ -91,6 +97,14 @@ Bug Fixes
   ``tree["//a"]``, now refer to the root like ``"/a"`` and ``"///a"`` instead of
   raising ``ValueError`` (:pull:`11701`).
   By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
+- ``get_chunked_array_type`` no longer raises ``TypeError`` when a ``Dataset`` holds
+  several chunked array types that one chunk manager recognizes. Arrays are now grouped
+  by the chunk manager that claims them rather than by their type, so the error is
+  raised only for a genuine mix of frameworks such as dask and cubed (:issue:`11539`).
+  By `Clay Dugo <https://github.com/claydugo>`_.
+- Fix the :py:meth:`Dataset.argmax` deprecation warning and invalid-dimension
+  error messages, which incorrectly referred to ``argmin`` (:issue:`11721`, :pull:`11723`).
+  By `nightcityblade <https://github.com/nightcityblade>`_.
 - Suppress the expected ``All-NaN slice encountered`` warning when
   :py:meth:`DataArray.quantile` or :py:meth:`Dataset.quantile` uses
   NumPy's quantile fallback on all-missing slices (:issue:`9870`).
@@ -1014,6 +1028,10 @@ Breaking Changes
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`Dataset.map` now merges attrs from the function result and the original
+  using the ``drop_conflicts`` strategy when ``keep_attrs=True``, preserving attrs
+  set by the function (:issue:`11019`, :pull:`11020`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to :py:func:`apply_ufunc` (:issue:`10982`, :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.

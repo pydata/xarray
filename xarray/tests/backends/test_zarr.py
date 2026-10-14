@@ -2954,12 +2954,16 @@ class TestZarrRegionAuto:
 
             self.save(store, da.isel(x=slice(10)).chunk(x=(10,)), region="auto")
 
-            self.save(
-                store,
-                da.isel(x=slice(5, 25)).chunk(x=(10, 10)),
-                safe_chunks=False,
-                region="auto",
-            )
+            # Both dask chunks write to the zarr chunk x=10..20, which is only
+            # safe if they are not written in parallel.
+            with dask.config.set(scheduler="synchronous"):
+                self.save(
+                    store,
+                    da.isel(x=slice(5, 25)).chunk(x=(10, 10)),
+                    safe_chunks=False,
+                    region="auto",
+                )
+            assert xr.open_zarr(store)["foo"].equals(da.where(da.x < 25))
 
             with pytest.raises(ValueError):
                 self.save(

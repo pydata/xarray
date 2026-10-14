@@ -379,8 +379,9 @@ class TestAncestry:
     def test_lineage(self) -> None:
         _, leaf_f = create_test_tree()
         expected = ["f", "e", "b", "a"]
-        with pytest.warns(FutureWarning):
+        with pytest.warns(FutureWarning) as record:
             assert [node.name for node in leaf_f.lineage] == expected
+        assert len(record) == 1
 
     def test_ancestors(self) -> None:
         _, leaf_f = create_test_tree()

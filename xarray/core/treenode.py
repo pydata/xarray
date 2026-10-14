@@ -330,7 +330,7 @@ class TreeNode:
             FutureWarning,
             stacklevel=2,
         )
-        return self.iter_lineage()
+        return (self, *self.parents)
 
     @property
     def parents(self) -> tuple[Self, ...]:

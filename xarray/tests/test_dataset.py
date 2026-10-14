@@ -3395,6 +3395,17 @@ class TestDataset:
 
         assert_equal(actual, orig)
 
+    def test_reset_encoding_deprecated(self) -> None:
+        ds = create_test_data()
+        objs: list[Dataset | DataArray | Variable] = [
+            ds,
+            ds["var1"],
+            ds["var1"].variable,
+        ]
+        for obj in objs:
+            with pytest.warns(FutureWarning, match="deprecated since 2023.10"):
+                obj.reset_encoding()
+
     def test_rename(self) -> None:
         data = create_test_data()
         newnames = {
@@ -6814,6 +6825,35 @@ class TestDataset:
         result = ds.map(mixed_func)
         expected = xr.Dataset({"foo": 42, "bar": ("y", [4, 5])})
         assert_identical(result, expected)
+
+    def test_map_preserves_function_attrs(self) -> None:
+        # Regression test for GH11019
+        # Attrs added by function should be preserved in result
+        ds = xr.Dataset({"test": ("x", [1, 2, 3], {"original": "value"})})
+
+        def add_attr(da):
+            return da.assign_attrs(new_attr="foobar")
+
+        # With keep_attrs=True: merge using drop_conflicts (no conflict here)
+        result = ds.map(add_attr, keep_attrs=True)
+        assert result["test"].attrs == {"original": "value", "new_attr": "foobar"}
+
+        # With keep_attrs=False: function's attrs preserved
+        result = ds.map(add_attr, keep_attrs=False)
+        assert result["test"].attrs == {"original": "value", "new_attr": "foobar"}
+
+        # When function modifies existing attr with keep_attrs=True, conflict is dropped
+        def modify_attr(da):
+            return da.assign_attrs(original="modified", extra="added")
+
+        result = ds.map(modify_attr, keep_attrs=True)
+        assert result["test"].attrs == {
+            "extra": "added"
+        }  # "original" dropped due to conflict
+
+        # When function modifies existing attr with keep_attrs=False, function wins
+        result = ds.map(modify_attr, keep_attrs=False)
+        assert result["test"].attrs == {"original": "modified", "extra": "added"}
 
     def test_apply_pending_deprecated_map(self) -> None:
         data = create_test_data()
