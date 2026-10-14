@@ -84,6 +84,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- ``get_chunked_array_type`` no longer raises ``TypeError`` when a ``Dataset`` holds
+  several chunked array types that one chunk manager recognizes. Arrays are now grouped
+  by the chunk manager that claims them rather than by their type, so the error is
+  raised only for a genuine mix of frameworks such as dask and cubed (:issue:`11539`).
+  By `Clay Dugo <https://github.com/claydugo>`_.
 - Fix the :py:meth:`Dataset.argmax` deprecation warning and invalid-dimension
   error messages, which incorrectly referred to ``argmin`` (:issue:`11721`, :pull:`11723`).
   By `nightcityblade <https://github.com/nightcityblade>`_.
