@@ -250,6 +250,11 @@ Performance
   ones instead of sorting them. This avoids copying the data before
   interpolating (:issue:`9758`, :pull:`11658`).
   By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+- :py:func:`cov` and :py:func:`corr` now compute the covariance in a single pass
+  over the data, so they no longer keep all chunks of dask arrays in memory
+  until the means are computed (:issue:`4804`, :pull:`11682`).
+  Based on work by `Andrew Williams <https://github.com/AndrewILWilliams>`__ and
+  `Willi Rath <https://github.com/willirath>`__ in :pull:`5390`.
 - :py:meth:`Dataset.unstack` and :py:meth:`DataArray.unstack` reshape the data
   instead of copying it when the MultiIndex contains every combination of its
   levels in order, e.g. after :py:meth:`Dataset.stack`. The unstacked data is
