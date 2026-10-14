@@ -156,27 +156,31 @@ Breaking Changes
 
 - The minimum versions of some dependencies were changed (:pull:`<PR number>`):
 
-  ===================== =========  =======
-   Package                    Old      New
-  ===================== =========  =======
-    boto3                  1.34     1.36
-    cartopy                0.23     0.24
-    dask                 2024.6   2025.1
-    distributed          2024.6   2025.1
-    h5netcdf                1.4      1.5
-    iris                    3.9     3.11
-    lxml                    5.1      5.3
-    matplotlib              3.8     3.10
-    numpy                   1.26      2.0
-    packaging              24.1     24.2
-    rasterio                1.3      1.4
-    scipy                   1.13     1.15
-    toolz                  0.12      1.0
-    zarr                   2.18      3.0
-  ===================== =========  =======
+  ===========  ======  ======
+  Package         Old     New
+  ===========  ======  ======
+  boto3          1.34    1.36
+  cartopy        0.23    0.24
+  dask         2024.6  2025.1
+  distributed  2024.6  2025.1
+  h5netcdf        1.4     1.5
+  iris            3.9    3.11
+  lxml            5.1     5.3
+  matplotlib      3.8    3.10
+  numpy          1.26     2.0
+  packaging      24.1    24.2
+  rasterio        1.3     1.4
+  scipy          1.13    1.15
+  toolz          0.12     1.0
+  zarr           2.18     3.0
+  ===========  ======  ======
 ```
 
 Only edit this entry, older releases contain the same sentence.
+
+Every value must lie within the `=` signs of its column, otherwise the docs
+build fails with "Malformed table". Size the columns to the longest value, e.g.
+`2025.9` for dask.
 
 ### 9. Open the PR
 
