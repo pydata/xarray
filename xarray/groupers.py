@@ -138,7 +138,7 @@ class EncodedGroups:
             unique_codes = unique_codes[unique_codes >= 0]
             unique_values = full_index[unique_codes]
             self.unique_coord = Variable(
-                dims=codes.name, data=unique_values, attrs=codes.attrs
+                dims=(codes.name,), data=unique_values, attrs=codes.attrs
             )
         else:
             self.unique_coord = unique_coord
@@ -589,7 +589,7 @@ class TimeResampler(Resampler):
         )
 
         unique_coord = Variable(
-            dims=group.name, data=first_items.index, attrs=group.attrs
+            dims=(group.name,), data=first_items.index, attrs=group.attrs
         )
         codes = group.copy(data=codes_.reshape(group.shape), deep=False)
 

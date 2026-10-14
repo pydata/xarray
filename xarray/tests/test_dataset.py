@@ -13,7 +13,6 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
 from pandas.core.indexes.datetimes import DatetimeIndex
 
 # remove once numpy 2.0 is the oldest supported version
@@ -297,7 +296,7 @@ class TestDataset:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 3{6 if Version(pd.__version__) >= Version("3.0.0dev0") else 2}B b c b a c a c a{var5}
+                var4     (dim1) category {data["var4"].nbytes}B b c b a c a c a{var5}
             Attributes:
                 foo:      bar"""
         )
@@ -3396,6 +3395,17 @@ class TestDataset:
 
         assert_equal(actual, orig)
 
+    def test_reset_encoding_deprecated(self) -> None:
+        ds = create_test_data()
+        objs: list[Dataset | DataArray | Variable] = [
+            ds,
+            ds["var1"],
+            ds["var1"].variable,
+        ]
+        for obj in objs:
+            with pytest.warns(FutureWarning, match="deprecated since 2023.10"):
+                obj.reset_encoding()
+
     def test_rename(self) -> None:
         data = create_test_data()
         newnames = {
@@ -4346,6 +4356,61 @@ class TestDataset:
         stacked = ds[["b"]].stack(z=["x", "y"])
         actual = stacked.isel(z=slice(None, None, -1)).unstack("z")
         assert actual.identical(ds[["b"]])
+
+    @pytest.mark.parametrize(
+        "stacked_dim_first",
+        [
+            pytest.param(True, id="stacked-first"),
+            pytest.param(False, id="stacked-last"),
+        ],
+    )
+    def test_unstack_full_product_is_view(self, stacked_dim_first: bool) -> None:
+        data = np.arange(24).reshape(6, 4)
+        index = pd.MultiIndex.from_product([[0, 1, 2], ["a", "b"]], names=["x", "y"])
+        coords = Coordinates.from_pandas_multiindex(index, "z")
+        if stacked_dim_first:
+            ds = Dataset({"v": (("z", "w"), data)}, coords=coords)
+        else:
+            ds = Dataset({"v": (("w", "z"), data.T)}, coords=coords)
+        expected = Dataset(
+            {"v": (("w", "x", "y"), data.T.reshape(4, 3, 2))},
+            coords={"x": [0, 1, 2], "y": ["a", "b"]},
+        )
+
+        actual = ds.unstack("z")
+        assert_identical(actual, expected)
+        assert np.shares_memory(actual["v"].values, ds["v"].values)
+
+    @pytest.mark.parametrize(
+        "index",
+        [
+            pytest.param(
+                pd.MultiIndex.from_product([[1, 0], ["b", "a"]], names=["x", "y"]),
+                id="unsorted-levels",
+            ),
+            pytest.param(
+                pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])[
+                    ::-1
+                ],
+                id="reversed",
+            ),
+            pytest.param(
+                pd.MultiIndex.from_tuples(
+                    [(0, "a"), (0, "b"), (1, "a")], names=["x", "y"]
+                ),
+                id="missing",
+            ),
+        ],
+    )
+    def test_unstack_not_full_product(self, index: pd.MultiIndex) -> None:
+        values = np.arange(len(index), dtype=float)
+        coords = Coordinates.from_pandas_multiindex(index, "z")
+        ds = Dataset({"v": ("z", values)}, coords=coords)
+        expected = pd.Series(values, index=index, name="v").to_xarray().to_dataset()
+
+        actual = ds.unstack("z")
+        assert_equal(actual, expected)
+        assert not np.shares_memory(actual["v"].values, ds["v"].values)
 
     def test_to_stacked_array_invalid_sample_dims(self) -> None:
         data = xr.Dataset(
@@ -5386,7 +5451,9 @@ class TestDataset:
 
         # test a case with a MultiIndex along a single dimension
         data_dict = dict(
-            x=[1, 2, 1, 2, 1], y=["a", "a", "b", "b", "b"], z=[5, 10, 15, 20, 25]
+            x=np.array([1, 2, 1, 2, 1], dtype=np.int64),
+            y=["a", "a", "b", "b", "b"],
+            z=np.array([5, 10, 15, 20, 25], dtype=np.int64),
         )
         data_dict_w_dims = {k: ("single_dim", v) for k, v in data_dict.items()}
 
@@ -5404,7 +5471,10 @@ class TestDataset:
             [list(range(6)), list("ab")], names=["A", "B"]
         )
         ds = DataArray(
-            range(12), [("MI", mindex_single)], dims="MI", name="test"
+            np.arange(12, dtype=np.int64),
+            [("MI", mindex_single)],
+            dims="MI",
+            name="test",
         )._to_dataset_whole()
         ds.coords["C"] = "a single value"
         ds.coords["D"] = ds.coords["A"] ** 2
@@ -6443,6 +6513,18 @@ class TestDataset:
         actual = ds.idxmax()
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("func", ["idxmin", "idxmax"])
+    @pytest.mark.parametrize("dim", [["x"], ("x", "y"), ...])
+    def test_idxminmax_multiple_dims_raises(self, func, dim) -> None:
+        ds = Dataset(
+            {"a": (("x", "y"), [[1, 2], [3, 0]])}, coords={"x": [0, 1], "y": [0, 1]}
+        )
+        with pytest.raises(ValueError, match="returns a dict"):
+            getattr(ds, func)(dim)
+        # without dim, multidimensional variables need a dim
+        with pytest.raises(ValueError, match="Must supply 'dim'"):
+            getattr(ds, func)()
+
         expected = Dataset({"x": b"a"})
         ds = Dataset({"x": ("y", np.array(["a", "b"], "S1"))})
         actual = ds.min()
@@ -7033,6 +7115,41 @@ class TestDataset:
         expected_dict["var3"] = ds["var3"]
         expected = Dataset(expected_dict, coords={"time": ds["time"].values})
         expected.coords["numbers"] = ("dim3", ds["numbers"].values)
+        assert_equal(expected, actual)
+
+    def test_dataset_diff_large_n(self) -> None:
+        # GH11702: used to raise RecursionError for n close to the recursion limit
+        values = np.arange(3000.0) ** 2
+        ds = Dataset({"a": ("x", values)}, coords={"x": np.arange(3000)})
+        actual = ds.diff("x", n=1200)
+        expected = Dataset(
+            {"a": ("x", np.diff(values, n=1200))}, coords={"x": np.arange(1200, 3000)}
+        )
+        assert_equal(expected, actual)
+
+    @pytest.mark.parametrize(
+        ("label", "coords"), [("upper", [2, 3, 4, 5]), ("lower", [0, 1, 2, 3])]
+    )
+    def test_dataset_diff_n2_label(self, label, coords) -> None:
+        values = np.arange(6.0) ** 3
+        ds = Dataset(
+            {"a": ("x", values), "c": ("x", list("abcdef"))}, coords={"x": range(6)}
+        )
+        ds = ds.set_coords("c")
+        actual = ds.diff("x", n=2, label=label)
+        expected = Dataset(
+            {"a": ("x", np.diff(values, n=2))},
+            coords={"x": coords, "c": ("x", [list("abcdef")[i] for i in coords])},
+        )
+        assert_equal(expected, actual)
+
+    def test_dataset_diff_n_larger_than_size(self) -> None:
+        ds = Dataset({"a": ("x", [1.0, 4.0, 9.0])}, coords={"x": [0, 1, 2]})
+        actual = ds.diff("x", n=5)
+        expected = Dataset(
+            {"a": ("x", np.diff([1.0, 4.0, 9.0], n=5))},
+            coords={"x": np.array([], dtype=int)},
+        )
         assert_equal(expected, actual)
 
     def test_dataset_diff_exception_n_neg(self) -> None:
@@ -7961,8 +8078,15 @@ class TestDataset:
 # pytest tests — new tests should go here, rather than in the class.
 
 
-@pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin(test_elements, use_dask: bool) -> None:
+@pytest.mark.parametrize(
+    "test_elements",
+    ([1, 2], np.array([1, 2]), DataArray([1, 2]), {1, 2}, frozenset({1, 2})),
+    ids=["list", "numpy", "dataarray", "set", "frozenset"],
+)
+def test_isin(
+    test_elements: list[int] | np.ndarray | DataArray | set[int] | frozenset[int],
+    use_dask: bool,
+) -> None:
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),

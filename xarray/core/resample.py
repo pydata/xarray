@@ -106,7 +106,8 @@ class Resample(GroupBy[T_Xarray]):
         dask.array.shuffle
         """
         (_grouper,) = self.groupers
-        return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
+        obj, _ = self._shuffle_obj(chunks)
+        return obj.drop_vars(RESAMPLE_DIM)
 
     @override
     def _first_or_last(

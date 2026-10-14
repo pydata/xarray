@@ -315,6 +315,29 @@ from xarray.groupers import UniqueGrouper
 da.groupby(["lat", "lon"]).sum()
 ```
 
+When grouping by multiple variables, combinations that are not present in the
+data may also be included. To group only by observed combinations, you can
+combine the variables into a `PandasMultiIndex`:
+
+```{code-cell}
+import numpy as np
+import xarray as xr
+from xarray.indexes import PandasMultiIndex
+
+xdata = xr.DataArray(
+    np.ones((4, 2)),
+    coords={
+        "y": [0, 1, 2, 3],
+        "y1": ("y", [1, 1, 2, 2]),
+        "y2": ("y", [1, 1, 2, 2]),
+    },
+    dims=["y", "x"],
+)
+
+xdata = xdata.set_xindex(["y1", "y2"], PandasMultiIndex)
+xdata.groupby("y").mean()
+```
+
 The above is sugar for using `UniqueGrouper` objects directly:
 
 ```{code-cell}

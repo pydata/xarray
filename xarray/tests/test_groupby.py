@@ -359,6 +359,31 @@ def test_dask_da_resample_median() -> None:
     assert_identical(expected, actual)
 
 
+@requires_dask
+@requires_flox
+@pytest.mark.parametrize("func", ["median", "mean"])
+def test_dask_groupby_blockwise_interleaved_groups(func: str) -> None:
+    # https://github.com/pydata/xarray/issues/11651
+    labels = np.array([3.0, 1.0, np.nan, 3.0, 1.0, 2.0, np.nan, 2.0, 1.0])
+    ds = xr.Dataset(
+        {
+            "a": ("x", np.arange(9.0)),
+            "b": (("y", "x"), np.arange(18.0).reshape(2, 9)),
+        },
+        coords={"labels": ("x", labels)},
+    )
+    expected = getattr(ds.groupby("labels"), func)()
+
+    chunked = ds.chunk(x=2).assign_coords(labels=ds.labels)
+    kwargs = {} if func == "median" else {"method": "blockwise"}
+    actual = getattr(chunked.groupby("labels"), func)(**kwargs)
+    assert_identical(expected, actual)
+
+    expected = getattr(ds.b.groupby("labels"), func)()
+    actual = getattr(chunked.b.groupby("labels"), func)(**kwargs)
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
 def test_da_groupby_quantile(use_flox: bool) -> None:
     array = xr.DataArray(
@@ -968,6 +993,17 @@ def test_groupby_dataset_reduce_ellipsis(
     with xr.set_options(use_flox=use_flox):
         actual = gb.mean(...)
     assert_allclose(expected, actual)
+
+
+@pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
+def test_groupby_dataset_by_data_variable_does_not_warn(use_flox: bool) -> None:
+    # GH9890
+    ds = Dataset({"a": ("x", [1, 1, 2, 2]), "b": ("x", [1.0, 2.0, 3.0, 4.0])})
+    expected = Dataset({"b": ("a", [1.5, 3.5])}, coords={"a": [1, 2]})
+    with xr.set_options(use_flox=use_flox), warnings.catch_warnings():
+        warnings.simplefilter("error")
+        actual = ds.groupby("a").mean()
+    assert_identical(actual, expected)
 
 
 def test_groupby_dataset_math() -> None:

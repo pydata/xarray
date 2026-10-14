@@ -802,7 +802,7 @@ def _interpnd(
 
     # Convert everything to Variables, since that makes applying
     # `_localize` and `_floatize_x` much easier
-    x = [
+    x: list[Variable] = [
         Variable([f"dim_{nconst + dim}"], _x, fastpath=True)
         for dim, _x in enumerate(coords[:n_x])
     ]

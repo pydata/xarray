@@ -187,8 +187,11 @@ T_ExtensionArray = TypeVar("T_ExtensionArray", bound=pd.api.extensions.Extension
 ScalarOrArray = Union["ArrayLike", np.generic]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 DaCompatible = Union["DataArray", "VarCompatible"]
-DsCompatible = Union["Dataset", "DaCompatible"]
-DtCompatible = Union["DataTree", "DsCompatible"]
+# Datasets can also be combined with a mapping of variable names to values. The
+# key type is Any, as Mapping is invariant in its key type.
+DsCompatible = Union["Dataset", "DaCompatible", Mapping[Any, "DaCompatible"]]
+# but DataTrees can't
+DtCompatible = Union["DataTree", "Dataset", "DaCompatible"]
 GroupByCompatible = Union["Dataset", "DataArray"]
 
 # Don't change to Hashable | Collection[Hashable]

@@ -3,10 +3,14 @@ import cftime
 import flox.xarray  # noqa: F401
 import numpy as np
 import pandas as pd
+from asv_runner.benchmarks.mark import parameterize, skip_benchmark, skip_for_params
 
 import xarray as xr
 
-from . import _skip_slow, parameterized, requires_dask
+from . import requires_dask, skip_slow
+
+# groupby scans don't support grouping by the 2D variables of ds2d
+_SKIP_CUMSUM_2D = [("cumsum", 2, True), ("cumsum", 2, False)]
 
 
 class GroupBy:
@@ -23,22 +27,22 @@ class GroupBy:
         self.ds1d_mean = self.ds1d.groupby("b").mean()
         self.ds2d_mean = self.ds2d.groupby("b").mean()
 
-    @parameterized(["ndim"], [(1, 2)])
+    @parameterize({"ndim": (1, 2)})
     def time_init(self, ndim):
         getattr(self, f"ds{ndim}d").groupby("b")
 
-    @parameterized(
-        ["method", "ndim", "use_flox"],
-        [("sum", "mean", "cumsum"), (1, 2), (True, False)],
+    @skip_for_params(_SKIP_CUMSUM_2D)
+    @parameterize(
+        {"method": ("sum", "mean", "cumsum"), "ndim": (1, 2), "use_flox": (True, False)}
     )
     def time_agg_small_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
         with xr.set_options(use_flox=use_flox):
             getattr(ds.groupby("a"), method)().compute()
 
-    @parameterized(
-        ["method", "ndim", "use_flox"],
-        [("sum", "mean", "cumsum"), (1, 2), (True, False)],
+    @skip_for_params(_SKIP_CUMSUM_2D)
+    @parameterize(
+        {"method": ("sum", "mean", "cumsum"), "ndim": (1, 2), "use_flox": (True, False)}
     )
     def time_agg_large_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
@@ -61,7 +65,7 @@ class GroupBy:
 class GroupByDask(GroupBy):
     def setup(self, *args, **kwargs):
         requires_dask()
-        super().setup(**kwargs)
+        super().setup(*args, **kwargs)
 
         self.ds1d = self.ds1d.sel(dim_0=slice(None, None, 2))
         self.ds1d["c"] = self.ds1d["c"].chunk({"dim_0": 50})
@@ -72,41 +76,35 @@ class GroupByDask(GroupBy):
 
 
 # TODO: These don't work now because we are calling `.compute` explicitly.
+# Skipped in CI as it won't ever change in a commit
+@skip_slow
 class GroupByPandasDataFrame(GroupBy):
     """Run groupby tests using pandas DataFrame."""
 
     def setup(self, *args, **kwargs):
-        # Skip testing in CI as it won't ever change in a commit:
-        _skip_slow()
-
-        super().setup(**kwargs)
+        super().setup(*args, **kwargs)
         self.ds1d = self.ds1d.to_dataframe()
         self.ds1d_mean = self.ds1d.groupby("b").mean()
 
-    def time_binary_op_2d(self):
-        raise NotImplementedError
-
-    def peakmem_binary_op_2d(self):
-        raise NotImplementedError
+    # binary ops with the 2D dataset don't apply to a DataFrame
+    time_binary_op_2d = skip_benchmark(GroupBy.time_binary_op_2d)
+    peakmem_binary_op_2d = skip_benchmark(GroupBy.peakmem_binary_op_2d)
 
 
+# Skipped in CI as it won't ever change in a commit
+@skip_slow
 class GroupByDaskDataFrame(GroupBy):
     """Run groupby tests using dask DataFrame."""
 
     def setup(self, *args, **kwargs):
-        # Skip testing in CI as it won't ever change in a commit:
-        _skip_slow()
-
         requires_dask()
-        super().setup(**kwargs)
+        super().setup(*args, **kwargs)
         self.ds1d = self.ds1d.chunk({"dim_0": 50}).to_dask_dataframe()
         self.ds1d_mean = self.ds1d.groupby("b").mean().compute()
 
-    def time_binary_op_2d(self):
-        raise NotImplementedError
-
-    def peakmem_binary_op_2d(self):
-        raise NotImplementedError
+    # binary ops with the 2D dataset don't apply to a DataFrame
+    time_binary_op_2d = skip_benchmark(GroupBy.time_binary_op_2d)
+    peakmem_binary_op_2d = skip_benchmark(GroupBy.peakmem_binary_op_2d)
 
 
 class Resample:
@@ -121,20 +119,20 @@ class Resample:
         self.ds1d_mean = self.ds1d.resample(time="48h").mean()
         self.ds2d_mean = self.ds2d.resample(time="48h").mean()
 
-    @parameterized(["ndim"], [(1, 2)])
+    @parameterize({"ndim": (1, 2)})
     def time_init(self, ndim):
         getattr(self, f"ds{ndim}d").resample(time="D")
 
-    @parameterized(
-        ["method", "ndim", "use_flox"], [("sum", "mean"), (1, 2), (True, False)]
+    @parameterize(
+        {"method": ("sum", "mean"), "ndim": (1, 2), "use_flox": (True, False)}
     )
     def time_agg_small_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
         with xr.set_options(use_flox=use_flox):
             getattr(ds.resample(time="3ME"), method)().compute()
 
-    @parameterized(
-        ["method", "ndim", "use_flox"], [("sum", "mean"), (1, 2), (True, False)]
+    @parameterize(
+        {"method": ("sum", "mean"), "ndim": (1, 2), "use_flox": (True, False)}
     )
     def time_agg_large_num_groups(self, method, ndim, use_flox):
         ds = getattr(self, f"ds{ndim}d")
@@ -167,7 +165,7 @@ class ResampleCFTime(Resample):
         self.ds2d_mean = self.ds2d.resample(time="48h").mean()
 
 
-@parameterized(["use_cftime", "use_flox"], [[True, False], [True, False]])
+@parameterize({"use_cftime": [True, False], "use_flox": [True, False]})
 class GroupByLongTime:
     def setup(self, use_cftime, use_flox):
         arr = np.random.randn(10, 10, 365 * 30)
