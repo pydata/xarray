@@ -74,6 +74,12 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
+  :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
+  like the other deprecations, and gives the right version (2023.10).
+  :py:attr:`DataTree.lineage` warns once instead of twice (:issue:`11721`,
+  :pull:`11724`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Bug Fixes
@@ -83,6 +89,9 @@ Bug Fixes
   raise ``AttributeError`` on object-dtype arrays of strings, such as string
   columns from :py:meth:`pandas.DataFrame.to_xarray` (:pull:`11722`).
   By `Novain Shibu <https://github.com/novain-shibu>`_.
+- Fix the :py:meth:`Dataset.argmax` deprecation warning and invalid-dimension
+  error messages, which incorrectly referred to ``argmin`` (:issue:`11721`, :pull:`11723`).
+  By `nightcityblade <https://github.com/nightcityblade>`_.
 - Suppress the expected ``All-NaN slice encountered`` warning when
   :py:meth:`DataArray.quantile` or :py:meth:`Dataset.quantile` uses
   NumPy's quantile fallback on all-missing slices (:issue:`9870`).
