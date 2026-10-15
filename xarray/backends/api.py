@@ -481,10 +481,21 @@ def open_dataset(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of ``decode_times``; if
-        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
-        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
-        matching ``time_unit``.
+        If None (default), the behavior follows ``decode_times``:
+
+        - if ``decode_times`` is True, only variables whose attributes contain
+          both a timedelta ``units`` attribute (e.g. ``units="hours"``) *and* a
+          ``dtype`` attribute holding an ``np.timedelta64`` dtype (as written
+          by xarray itself) are decoded into timedelta objects. Variables
+          encoded with a ``units`` attribute only (e.g. ``units="hours"`` on
+          integer data) are not decoded: pass ``decode_timedelta=True`` or a
+          :py:class:`coders.CFTimedeltaCoder` instance to decode them;
+        - if ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance,
+          the same rule applies, taking the form of a
+          :py:class:`coders.CFTimedeltaCoder` instance with a matching
+          ``time_unit``;
+        - if ``decode_times`` is False, timedeltas are not decoded and stay
+          encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -737,10 +748,21 @@ def open_dataarray(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of ``decode_times``; if
-        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
-        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
-        matching ``time_unit``.
+        If None (default), the behavior follows ``decode_times``:
+
+        - if ``decode_times`` is True, only variables whose attributes contain
+          both a timedelta ``units`` attribute (e.g. ``units="hours"``) *and* a
+          ``dtype`` attribute holding an ``np.timedelta64`` dtype (as written
+          by xarray itself) are decoded into timedelta objects. Variables
+          encoded with a ``units`` attribute only (e.g. ``units="hours"`` on
+          integer data) are not decoded: pass ``decode_timedelta=True`` or a
+          :py:class:`coders.CFTimedeltaCoder` instance to decode them;
+        - if ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance,
+          the same rule applies, taking the form of a
+          :py:class:`coders.CFTimedeltaCoder` instance with a matching
+          ``time_unit``;
+        - if ``decode_times`` is False, timedeltas are not decoded and stay
+          encoded as numbers.
         This keyword may not be supported by all the backends.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
@@ -973,10 +995,21 @@ def open_datatree(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of ``decode_times``; if
-        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
-        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
-        matching ``time_unit``.
+        If None (default), the behavior follows ``decode_times``:
+
+        - if ``decode_times`` is True, only variables whose attributes contain
+          both a timedelta ``units`` attribute (e.g. ``units="hours"``) *and* a
+          ``dtype`` attribute holding an ``np.timedelta64`` dtype (as written
+          by xarray itself) are decoded into timedelta objects. Variables
+          encoded with a ``units`` attribute only (e.g. ``units="hours"`` on
+          integer data) are not decoded: pass ``decode_timedelta=True`` or a
+          :py:class:`coders.CFTimedeltaCoder` instance to decode them;
+        - if ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance,
+          the same rule applies, taking the form of a
+          :py:class:`coders.CFTimedeltaCoder` instance with a matching
+          ``time_unit``;
+        - if ``decode_times`` is False, timedeltas are not decoded and stay
+          encoded as numbers.
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -1227,10 +1260,21 @@ def open_groups(
         If True, decode variables and coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of ``decode_times``; if
-        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
-        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
-        matching ``time_unit``.
+        If None (default), the behavior follows ``decode_times``:
+
+        - if ``decode_times`` is True, only variables whose attributes contain
+          both a timedelta ``units`` attribute (e.g. ``units="hours"``) *and* a
+          ``dtype`` attribute holding an ``np.timedelta64`` dtype (as written
+          by xarray itself) are decoded into timedelta objects. Variables
+          encoded with a ``units`` attribute only (e.g. ``units="hours"`` on
+          integer data) are not decoded: pass ``decode_timedelta=True`` or a
+          :py:class:`coders.CFTimedeltaCoder` instance to decode them;
+        - if ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance,
+          the same rule applies, taking the form of a
+          :py:class:`coders.CFTimedeltaCoder` instance with a matching
+          ``time_unit``;
+        - if ``decode_times`` is False, timedeltas are not decoded and stay
+          encoded as numbers.
         This keyword may not be supported by all the backends.
     use_cftime: bool or dict-like, optional
         Only relevant if encoded dates come from a standard calendar

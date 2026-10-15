@@ -1484,8 +1484,7 @@ class CFTimedeltaCoder(VariableCoder):
         attribute, so this parameter is ignored.
     decode_via_units : bool
         Whether to decode timedeltas based on the presence of a timedelta-like
-        units attribute, e.g. "seconds". Defaults to True, but in the future
-        will default to False.
+        units attribute, e.g. "seconds". Defaults to False.
     decode_via_dtype : bool
         Whether to decode timedeltas based on the presence of an np.timedelta64
         dtype attribute, e.g. "timedelta64[s]". Defaults to True.
