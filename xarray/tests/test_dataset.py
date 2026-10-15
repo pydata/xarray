@@ -4827,7 +4827,7 @@ class TestDataset:
             data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4]}].values
         data5 = data4.astype(str)
         data5["var4"] = data4["var1"]
-        err_msg = r"could not convert string to float: np\.str_\('a'\)"
+        err_msg = r"could not convert string to float: (np\.str_\()?'a'\)?"
         with pytest.raises(ValueError, match=err_msg):
             data5[{"dim2": 1}] = "a"
 
