@@ -243,6 +243,9 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix indexing with a 0-dimensional non-NumPy array, e.g. a CuPy array, which
+  raised ``ValueError`` instead of dropping the indexed dimension (:issue:`8820`).
+  By `Trinh Quoc Anh <https://github.com/tqa236>`_.
 
 
 Documentation

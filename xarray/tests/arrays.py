@@ -61,6 +61,12 @@ class DuckArrayWrapper(utils.NDArrayMixin):
     def __getitem__(self, key):
         return type(self)(self.array[key])
 
+    def astype(self, dtype, copy: bool = True):
+        return type(self)(self.array.astype(dtype, copy=copy))
+
+    def reshape(self, *shape):
+        return type(self)(self.array.reshape(*shape))
+
     def to_numpy(self) -> np.ndarray:
         """Allow explicit conversions to numpy in `to_numpy`, but disallow np.asarray etc."""
         return self.array

@@ -65,7 +65,6 @@ from xarray.namedarray.pycompat import (
     array_type,
     async_to_duck_array,
     integer_types,
-    is_0d_dask_array,
     is_chunked_array,
     to_duck_array,
 )
@@ -948,11 +947,11 @@ class Variable(
                         )
 
     def _broadcast_indexes_outer(self, key):
-        # drop dim if k is integer or if k is a 0d dask array
+        # drop dim if k is integer or if k is a 0d duck array (e.g. dask, cupy)
         dims = tuple(
             k.dims[0] if isinstance(k, Variable) else dim
             for k, dim in zip(key, self.dims, strict=True)
-            if (not isinstance(k, integer_types) and not is_0d_dask_array(k))
+            if not (isinstance(k, integer_types) or (is_duck_array(k) and k.ndim == 0))
         )
 
         new_key = []
