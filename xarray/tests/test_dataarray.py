@@ -13,12 +13,8 @@ from typing import Any, Final, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
+from numpy.exceptions import RankWarning
+from pandas.errors import UndefinedVariableError
 
 import xarray as xr
 import xarray.core.missing
@@ -51,13 +47,11 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_api,
     dask_array_type,
-    has_dask_ge_2025_1_0,
     has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
     requires_dask,
-    requires_dask_expr,
     requires_iris,
     requires_numexpr,
     requires_pint,
@@ -68,13 +62,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import XYIndex
-
-try:
-    from pandas.errors import UndefinedVariableError
-except ImportError:
-    # TODO: remove once we stop supporting pandas<1.4.3
-    from pandas.core.computation.ops import UndefinedVariableError
-
 
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
@@ -3904,9 +3891,7 @@ class TestDataArray:
             f"v data: expected {v_dtype}, got {df['v'].dtype}"
         )
 
-    @requires_dask_expr
     @requires_dask
-    @pytest.mark.xfail(not has_dask_ge_2025_1_0, reason="dask-expr is broken")
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")

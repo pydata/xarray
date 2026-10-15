@@ -13,15 +13,9 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
+from numpy import trapezoid
+from numpy.exceptions import RankWarning
 from pandas.core.indexes.datetimes import DatetimeIndex
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
-
-
 from pandas.errors import UndefinedVariableError
 
 import xarray as xr
@@ -75,15 +69,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import ScalarIndex, XYIndex
-
-# from numpy version 2.0 trapz is deprecated and renamed to trapezoid
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy import trapezoid  # type: ignore[attr-defined,unused-ignore]
-except ImportError:
-    from numpy import (  # type: ignore[arg-type,no-redef,attr-defined,unused-ignore]
-        trapz as trapezoid,
-    )
 
 sparse_array_type = array_type("sparse")
 
@@ -4842,8 +4827,7 @@ class TestDataset:
             data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4]}].values
         data5 = data4.astype(str)
         data5["var4"] = data4["var1"]
-        # convert to `np.str_('a')` once `numpy<2.0` has been dropped
-        err_msg = "could not convert string to float: .*'a'.*"
+        err_msg = r"could not convert string to float: (np\.str_\()?'a'\)?"
         with pytest.raises(ValueError, match=err_msg):
             data5[{"dim2": 1}] = "a"
 
@@ -6825,6 +6809,35 @@ class TestDataset:
         result = ds.map(mixed_func)
         expected = xr.Dataset({"foo": 42, "bar": ("y", [4, 5])})
         assert_identical(result, expected)
+
+    def test_map_preserves_function_attrs(self) -> None:
+        # Regression test for GH11019
+        # Attrs added by function should be preserved in result
+        ds = xr.Dataset({"test": ("x", [1, 2, 3], {"original": "value"})})
+
+        def add_attr(da):
+            return da.assign_attrs(new_attr="foobar")
+
+        # With keep_attrs=True: merge using drop_conflicts (no conflict here)
+        result = ds.map(add_attr, keep_attrs=True)
+        assert result["test"].attrs == {"original": "value", "new_attr": "foobar"}
+
+        # With keep_attrs=False: function's attrs preserved
+        result = ds.map(add_attr, keep_attrs=False)
+        assert result["test"].attrs == {"original": "value", "new_attr": "foobar"}
+
+        # When function modifies existing attr with keep_attrs=True, conflict is dropped
+        def modify_attr(da):
+            return da.assign_attrs(original="modified", extra="added")
+
+        result = ds.map(modify_attr, keep_attrs=True)
+        assert result["test"].attrs == {
+            "extra": "added"
+        }  # "original" dropped due to conflict
+
+        # When function modifies existing attr with keep_attrs=False, function wins
+        result = ds.map(modify_attr, keep_attrs=False)
+        assert result["test"].attrs == {"original": "modified", "extra": "added"}
 
     def test_apply_pending_deprecated_map(self) -> None:
         data = create_test_data()

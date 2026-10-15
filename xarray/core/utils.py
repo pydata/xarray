@@ -38,7 +38,6 @@ from __future__ import annotations
 
 import contextlib
 import difflib
-import functools
 import importlib
 import inspect
 import io
@@ -116,28 +115,6 @@ def is_allowed_extension_array(array: Any) -> bool:
         and is_allowed_extension_array_dtype(array.dtype)
         and not isinstance(array, pd.arrays.NumpyExtensionArray)  # type: ignore[attr-defined]
     )
-
-
-def alias_message(old_name: str, new_name: str) -> str:
-    return f"{old_name} has been deprecated. Use {new_name} instead."
-
-
-def alias_warning(old_name: str, new_name: str, stacklevel: int = 3) -> None:
-    warnings.warn(
-        alias_message(old_name, new_name), FutureWarning, stacklevel=stacklevel
-    )
-
-
-def alias[T](obj: Callable[..., T], old_name: str) -> Callable[..., T]:
-    assert isinstance(old_name, str)
-
-    @functools.wraps(obj)
-    def wrapper(*args, **kwargs):
-        alias_warning(old_name, obj.__name__)
-        return obj(*args, **kwargs)
-
-    wrapper.__doc__ = alias_message(old_name, obj.__name__)
-    return wrapper
 
 
 def did_you_mean(

@@ -46,7 +46,6 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_type,
     has_dask_array_expr,
-    has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -1999,16 +1998,10 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        if has_dask_ge_2024_11_0:
-            # Dask rechunks
-            np.testing.assert_allclose(
-                v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
-            )
-
-        else:
-            # this checks for ValueError in dask.array.apply_gufunc
-            with pytest.raises(ValueError, match=r"consists of multiple chunks"):
-                v.quantile(0.5, dim="x")
+        # Dask rechunks
+        np.testing.assert_allclose(
+            v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
+        )
 
     @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
