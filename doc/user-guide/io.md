@@ -90,7 +90,7 @@ You can learn more about using and developing backends in the
         installed-eng["""<b>One of these formats?</b>
             - <a href='https://github.com/ecmwf/cfgrib'>GRIB</a>
             - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation'>TileDB</a>
-            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
+            - <a href='https://vylor.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
             - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE</a>
             """]
 
@@ -358,7 +358,7 @@ ds = xr.Dataset(
     },
 )
 
-ds.to_netcdf(nc_filename)
+ds.to_netcdf(nc_filename, unlimited_dims=["y"])
 ```
 
 By default, the file is saved as netCDF4 (assuming netCDF4-Python is
@@ -509,6 +509,19 @@ ds_disk["y"].encoding
 ```{code-cell}
 ds_disk.encoding
 ```
+
+One key piece of information you can find in the encoding is whether a
+dimension is unlimited. Unlimited dimensions can grow in size, and are
+commonly used for a dimension like `time` that is appended to over
+time:
+
+```{code-cell}
+ds_disk.encoding["unlimited_dims"]
+```
+
+This information can also be set explicitly when writing a file with
+{py:meth}`Dataset.to_netcdf` using the `unlimited_dims` keyword
+argument.
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.
@@ -666,6 +679,13 @@ argument takes a dictionary with variable names as keys and variable specific
 encodings as values. These encodings are saved as attributes on the netCDF
 variables on disk, which allows xarray to faithfully read encoded data back into
 memory.
+
+```{warning}
+Encoding options can also be provided as attributes on individual variables.
+This alternative path is generally not recommended because the options are
+passed to the backend as-is, without CF compliance checks and adjustments.
+But it can be useful in some cases when full control over the backend is needed.
+```
 
 It is important to note that using encodings is entirely optional: if you do not
 supply any of these encoding options, xarray will write data to disk using a
@@ -1231,6 +1251,35 @@ ds.to_zarr(
 The number of chunks on Tair matches our dask chunks, while there is now only a single
 chunk in the directory stores of each coordinate.
 
+(io.zarr.rectilinear-chunks)=
+
+### Variable-sized (rectilinear) chunks
+
+Zarr v3 supports _rectilinear_ chunk grids, where chunk sizes vary along one
+or more dimensions. This is useful when natural data boundaries (yearly
+chunks of a daily time series, per-tile spatial extents) don't align to a
+regular grid. Reading such arrays requires `zarr-python >= 3.2`, with the
+experimental feature enabled:
+
+```python
+import zarr
+
+with zarr.config.set({"array.rectilinear_chunks": True}):
+    roundtrip = xr.open_zarr("rectilinear.zarr", zarr_format=3)
+    roundtrip.chunks["x"]  # e.g. (10, 20, 30)
+```
+
+```{note}
+xarray can currently only *read* rectilinear-chunked Zarr V3 arrays, not
+write them. Rectilinear arrays must be created with `zarr-python` directly
+(or another tool, such as Icechunk) before being opened with `xr.open_zarr`.
+This also means a Dataset opened from a rectilinear-chunked store cannot be
+written back with {py:meth}`Dataset.to_zarr`, including writing to a
+`region` of the store -- both raise a `TypeError` naming the affected
+variable. Write support is tracked in
+[GH11279](https://github.com/pydata/xarray/pull/11279).
+```
+
 ### Groups
 
 Nested groups in zarr stores can be represented by loading the store as a
@@ -1681,12 +1730,6 @@ For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of [IO tools].
 For CSV files, one might also consider [xarray_extras].
 
-## Third party libraries
-
-More formats are supported by extension libraries:
-
-- [xarray-mongodb](https://xarray-mongodb.readthedocs.io/en/latest/): Store xarray objects on MongoDB
-
 [amazon s3]: https://aws.amazon.com/s3/
 [blog post]: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 [cf conventions]: https://cfconventions.org/
@@ -1707,7 +1750,7 @@ More formats are supported by extension libraries:
 [obstore]: https://developmentseed.org/obstore/latest/
 [pyproj]: https://github.com/pyproj4/pyproj
 [rasterio]: https://rasterio.readthedocs.io/en/latest/
-[rioxarray]: https://corteva.github.io/rioxarray/stable/
+[rioxarray]: https://vylor.github.io/rioxarray/stable/
 [test files]: https://github.com/rasterio/rasterio/blob/master/tests/data/RGB.byte.tif
 [xarray_extras]: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 [zarr]: https://zarr.readthedocs.io/

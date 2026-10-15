@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 import numpy as np
 
@@ -341,11 +340,9 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                 bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
-T = TypeVar("T")
-U = TypeVar("U")
-
-
-def _item_or_default(obj: Mapping[Any, T | U] | T, key: Hashable, default: T) -> T | U:
+def _item_or_default[T, U](
+    obj: Mapping[Any, T | U] | T, key: Hashable, default: T
+) -> T | U:
     """
     Return item by key if obj is mapping and key is present, else return default value.
     """
@@ -371,10 +368,6 @@ def decode_cf_variables(
 
     See: decode_cf_variable
     """
-    # Only emit one instance of the decode_timedelta default change
-    # FutureWarning. This can be removed once this change is made.
-    warnings.filterwarnings("once", "decode_timedelta", FutureWarning)
-
     dimensions_used_by = defaultdict(list)
     for v in variables.values():
         for d in v.dims:

@@ -429,7 +429,11 @@ def to_netcdf(
         auto_complex=auto_complex,
     )
     if group is not None:
-        store = store.get_child_store(group)
+        try:
+            store = store.get_child_store(group)
+        except Exception:
+            store.close()
+            raise
 
     writer = ArrayWriter()
 
@@ -743,9 +747,8 @@ def to_zarr(
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
 
-    # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
-    # TODO: delete when min dask>=2023.12.1
-    # https://github.com/dask/dask/pull/10506
+    # Load empty arrays, otherwise the zero-sized dask chunks become zero-sized
+    # zarr chunks, which zarr rejects (Issue #5741)
     for v in dataset.variables.values():
         if v.size == 0:
             v.load()
@@ -801,7 +804,7 @@ def _datatree_to_netcdf(
     compute: bool = True,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> None | memoryview | Delayed:
+) -> memoryview | Delayed | None:
     """Implementation of `DataTree.to_netcdf`."""
 
     if format not in [None, *get_args(T_DataTreeNetcdfTypes)]:

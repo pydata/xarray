@@ -62,3 +62,28 @@ def test_encoding_failure_note():
         ),
     ):
         ds.to_netcdf(f, engine="scipy")
+
+
+class TestCommon:
+    def test_robust_getitem(self) -> None:
+        class UnreliableArrayFailure(Exception):
+            pass
+
+        class UnreliableArray:
+            def __init__(self, array, failures=1):
+                self.array = array
+                self.failures = failures
+
+            def __getitem__(self, key):
+                if self.failures > 0:
+                    self.failures -= 1
+                    raise UnreliableArrayFailure
+                return self.array[key]
+
+        array = UnreliableArray([0])
+        with pytest.raises(UnreliableArrayFailure):
+            array[0]
+        assert array[0] == 0
+
+        actual = robust_getitem(array, 0, catch=UnreliableArrayFailure, initial_delay=0)
+        assert actual == 0

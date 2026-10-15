@@ -537,6 +537,7 @@ class TestLazyArray:
         x = indexing.NumpyIndexingAdapter(original)
         lazy = indexing.LazilyIndexedArray(x)
 
+        indexer: indexing.ExplicitIndexer
         if indexer_class is indexing.BasicIndexer:
             indexer = indexer_class(key)
             lazy[indexer] = value
@@ -886,6 +887,52 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support) -> None:
         assert isinstance(combined_ind, indexing.VectorizedIndexer)
         array = indexing_adapter.vindex[combined_ind]
         np.testing.assert_array_equal(expected, array)
+
+
+@pytest.mark.parametrize("shape", [(10, 5), (10, 5, 8)])
+@pytest.mark.parametrize("empty_axis", ["first", "last"])
+@pytest.mark.parametrize(
+    "indexing_support",
+    [
+        indexing.IndexingSupport.BASIC,
+        indexing.IndexingSupport.OUTER,
+        indexing.IndexingSupport.OUTER_1VECTOR,
+        indexing.IndexingSupport.VECTORIZED,
+    ],
+)
+def test_decompose_indexer_empty_ndarray(shape, empty_axis, indexing_support) -> None:
+    # An empty indexer array must be decomposable for backends that do not
+    # support full vectorized indexing. The empty array is turned into an empty
+    # slice, which keeps the dimension, so the in-memory indexer needs a
+    # matching entry for it.
+    # See https://github.com/pydata/xarray/issues/11625
+    # and https://github.com/pydata/xarray/issues/9075
+    data = np.random.randn(*shape)
+    key = [np.arange(s)[::-1] for s in shape]
+    key[0 if empty_axis == "first" else -1] = np.array([], dtype=np.int64)
+    indexer = indexing.OuterIndexer(tuple(key))
+
+    expected = indexing.NumpyIndexingAdapter(data).oindex[indexer]
+    backend_ind, np_ind = indexing.decompose_indexer(indexer, shape, indexing_support)
+    indexing_adapter = indexing.NumpyIndexingAdapter(data)
+
+    if isinstance(backend_ind, indexing.VectorizedIndexer):
+        array = indexing_adapter.vindex[backend_ind]
+    elif isinstance(backend_ind, indexing.OuterIndexer):
+        array = indexing_adapter.oindex[backend_ind]
+    else:
+        array = indexing_adapter[backend_ind]
+
+    if len(np_ind.tuple) > 0:
+        array_indexing_adapter = indexing.NumpyIndexingAdapter(array)
+        if isinstance(np_ind, indexing.VectorizedIndexer):
+            array = array_indexing_adapter.vindex[np_ind]
+        elif isinstance(np_ind, indexing.OuterIndexer):
+            array = array_indexing_adapter.oindex[np_ind]
+        else:
+            array = array_indexing_adapter[np_ind]
+
+    assert_array_equal(expected, array)
 
 
 def test_implicit_indexing_adapter() -> None:

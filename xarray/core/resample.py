@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, override
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -49,6 +49,7 @@ class Resample(GroupBy[T_Xarray]):
 
         super().__init__(*args, **kwargs)
 
+    @override
     def _flox_reduce(
         self,
         dim: Dims,
@@ -62,6 +63,7 @@ class Resample(GroupBy[T_Xarray]):
         )
         return result
 
+    @override
     def shuffle_to_chunks(self, chunks: T_Chunks = None):
         """
         Sort or "shuffle" the underlying object.
@@ -104,8 +106,10 @@ class Resample(GroupBy[T_Xarray]):
         dask.array.shuffle
         """
         (_grouper,) = self.groupers
-        return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
+        obj, _ = self._shuffle_obj(chunks)
+        return obj.drop_vars(RESAMPLE_DIM)
 
+    @override
     def _first_or_last(
         self, op: Literal["first", "last"], skipna: bool | None, keep_attrs: bool | None
     ) -> T_Xarray:
@@ -257,6 +261,7 @@ class DataArrayResample(
     specified dimension
     """
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -300,6 +305,7 @@ class DataArrayResample(
             **kwargs,
         )
 
+    @override
     def map(
         self,
         func: Callable[..., Any],
@@ -363,6 +369,7 @@ class DataArrayResample(
 
         return combined
 
+    @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
         Backward compatible implementation of ``map``
@@ -395,6 +402,7 @@ class DatasetResample(
 ):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
+    @override
     def map(
         self,
         func: Callable[..., Any],
@@ -446,6 +454,7 @@ class DatasetResample(
 
         return combined
 
+    @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
         Backward compatible implementation of ``map``
@@ -462,6 +471,7 @@ class DatasetResample(
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],

@@ -16,7 +16,7 @@ from xarray.coding.cftime_offsets import (
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.resample_cftime import CFTimeGrouper
 from xarray.core.types import PDDatetimeUnitOptions
-from xarray.tests import has_pandas_3_1
+from xarray.tests import requires_pandas_3_1
 
 cftime = pytest.importorskip("cftime")
 
@@ -71,7 +71,13 @@ def has_non_tick_resample_freq(freqs):
     return not has_tick_resample_freq(freqs)
 
 
-FREQS_WITH_TICK_RESAMPLE_FREQ = list(filter(has_tick_resample_freq, FREQS))
+FREQS_WITH_TICK_RESAMPLE_FREQ = [
+    # Resampling to Day is only valid for pandas >= 3.1
+    pytest.param(freqs, marks=requires_pandas_3_1)
+    if isinstance(to_offset(freqs[1]), Day)
+    else freqs
+    for freqs in filter(has_tick_resample_freq, FREQS)
+]
 FREQS_WITH_NON_TICK_RESAMPLE_FREQ = list(filter(has_non_tick_resample_freq, FREQS))
 
 
@@ -139,9 +145,6 @@ def da(index) -> xr.DataArray:
 @pytest.mark.parametrize("offset", [None, "5s"], ids=lambda x: f"{x}")
 def test_resample_with_tick_resample_freq(freqs, closed, label, offset) -> None:
     initial_freq, resample_freq = freqs
-    resample_freq_as_offset = to_offset(resample_freq)
-    if isinstance(resample_freq_as_offset, Day) and not has_pandas_3_1:
-        pytest.skip("Only valid for pandas >= 3.1")
     start = "2000-01-01T12:07:01"
     origin = "start"
 

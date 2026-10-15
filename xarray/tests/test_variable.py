@@ -5,7 +5,7 @@ from abc import ABC
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from textwrap import dedent
-from typing import Any, Generic
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -46,7 +46,6 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_type,
     has_dask_array_expr,
-    has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -132,7 +131,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
     def test_getitem_1d_fancy(self):
         v = self.cls(["x"], [0, 1, 2])
         # 1d-variable should be indexable by multi-dimensional Variable
-        ind = Variable(("a", "b"), [[0, 1], [0, 1]])
+        ind: Variable = Variable(("a", "b"), [[0, 1], [0, 1]])
         v_new = v[ind]
         assert v_new.dims == ("a", "b")
         expected = np.array(v._data)[([0, 1], [0, 1]), ...]
@@ -723,7 +722,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_array_equal(v_new, v_data[[0, 1]])
 
         # with mixed arguments
-        ind = Variable(["a"], [0, 1])
+        ind: Variable = Variable(["a"], [0, 1])
         v_new = v[dict(x=[0, 1], y=ind)]
         assert v_new.dims == ("x", "a")
         assert_array_equal(v_new, v_data[[0, 1]][:, [0, 1]])
@@ -884,7 +883,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         with pytest.raises(IndexError, match=r"Dimensions of indexers "):
             v[ind_x, ind_y]
 
-        ind = Variable(["a", "b"], [[True, False], [False, True]])
+        ind: Variable = Variable(["a", "b"], [[True, False], [False, True]])
         with pytest.raises(IndexError, match=r"2-dimensional boolean"):
             v[dict(x=ind)]
 
@@ -1599,8 +1598,8 @@ class TestVariable(VariableSubclassobjects):
 
         # test missing dimension, raise warning
         with pytest.warns(UserWarning):
-            v.transpose(..., "not_a_dim", missing_dims="warn")
-            assert_identical(expected_ell, actual)
+            actual = v.transpose(..., "not_a_dim", missing_dims="warn")
+        assert_identical(expected_ell, actual)
 
     def test_transpose_0d(self):
         for value in [
@@ -1921,7 +1920,12 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim",
-        zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]], strict=True),
+        [
+            pytest.param(None, None, id="none"),
+            pytest.param(0, "x", id="x"),
+            pytest.param([0], ["x"], id="list-x"),
+            pytest.param([0, 1], ["x", "y"], id="list-x-y"),
+        ],
     )
     def test_quantile(self, q, axis, dim, skipna):
         d = self.d.copy()
@@ -1932,6 +1936,15 @@ class TestVariable(VariableSubclassobjects):
         _percentile_func = np.nanpercentile if skipna in (True, None) else np.percentile
         expected = _percentile_func(d, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
+
+    def test_quantile_all_nan_slice_does_not_warn(self) -> None:
+        values = Variable(("time", "position"), [[np.nan, 1.0], [np.nan, 3.0]])
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            actual = values.quantile(
+                0.5, dim="time", skipna=True, method="median_unbiased"
+            )
+        np.testing.assert_allclose(actual.values, [np.nan, 2.0])
 
     @requires_dask
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
@@ -1944,9 +1957,6 @@ class TestVariable(VariableSubclassobjects):
         np.testing.assert_allclose(actual.values, expected)
 
     @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(True, marks=requires_dask), False]
-    )
     def test_quantile_method(self, method, use_dask) -> None:
         v = Variable(["x", "y"], self.d)
         if use_dask:
@@ -1988,16 +1998,10 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        if has_dask_ge_2024_11_0:
-            # Dask rechunks
-            np.testing.assert_allclose(
-                v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
-            )
-
-        else:
-            # this checks for ValueError in dask.array.apply_gufunc
-            with pytest.raises(ValueError, match=r"consists of multiple chunks"):
-                v.quantile(0.5, dim="x")
+        # Dask rechunks
+        np.testing.assert_allclose(
+            v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
+        )
 
     @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
@@ -2034,7 +2038,7 @@ class TestVariable(VariableSubclassobjects):
         import bottleneck as bn
 
         # floats
-        v = Variable(["x", "y"], [[3, 4, np.nan, 1]])
+        v: Variable = Variable(["x", "y"], [[3, 4, np.nan, 1]])
         expect_0 = bn.nanrankdata(v.data, axis=0)
         expect_1 = bn.nanrankdata(v.data, axis=1)
         np.testing.assert_allclose(v.rank("x").values, expect_0)
@@ -2190,7 +2194,7 @@ class TestVariable(VariableSubclassobjects):
 
     def test_count(self):
         expected = Variable([], 3)
-        actual = Variable(["x"], [1, 2, 3, np.nan]).count()
+        actual: Variable = Variable(["x"], [1, 2, 3, np.nan]).count()
         assert_identical(expected, actual)
 
         v = Variable(["x"], np.array(["1", "2", "3", np.nan], dtype=object))
@@ -2279,10 +2283,10 @@ class TestVariable(VariableSubclassobjects):
         )
 
         # vindex with slice
-        v = Variable(["x", "y", "z"], np.ones((4, 3, 2)))
+        v: Variable = Variable(["x", "y", "z"], np.ones((4, 3, 2)))
         ind = Variable(["a"], [0, 1])
         v[dict(x=ind, z=ind)] = 0
-        expected = Variable(["x", "y", "z"], np.ones((4, 3, 2)))
+        expected: Variable = Variable(["x", "y", "z"], np.ones((4, 3, 2)))
         expected[0, :, 0] = 0
         expected[1, :, 1] = 0
         assert_identical(expected, v)
@@ -2505,10 +2509,11 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
+    @pytest.mark.skipif(
+        not has_dask_array_expr,
+        reason="only meaningful with an alternate dask chunk manager",
+    )
     def test_legacy_dask_array_rejected_by_dask_array_manager(self):
-        if not has_dask_array_expr:
-            pytest.skip("only meaningful with an alternate dask chunk manager")
-
         import dask.array as da
 
         x = Variable("x", da.arange(6, chunks=3))
@@ -2738,7 +2743,7 @@ class TestIndexVariable(VariableSubclassobjects):
         assert a.dims == ("x",)
 
 
-class TestAsCompatibleData(Generic[T_DuckArray]):
+class TestAsCompatibleData[T_DuckArray: Any]:
     def test_unchanged_types(self):
         types = (np.asarray, PandasIndexingAdapter, LazilyIndexedArray)
         for t in types:
@@ -2834,7 +2839,7 @@ class TestAsCompatibleData(Generic[T_DuckArray]):
             warnings.simplefilter("ignore")
             actual2: T_DuckArray = as_compatible_data(series)
 
-        np.testing.assert_array_equal(actual2, np.asarray(series.values))
+        np.testing.assert_array_equal(actual2, series.to_numpy(dtype="datetime64[s]"))
         assert actual2.dtype == np.dtype("datetime64[s]")
 
     def test_full_like(self) -> None:
@@ -3122,33 +3127,6 @@ class TestNumpyCoercion:
         assert_identical(v.as_numpy(), Var("x", arr))
         np.testing.assert_equal(v.to_numpy(), arr)
 
-    @requires_sparse
-    def test_from_sparse(self, Var):
-        if Var is IndexVariable:
-            pytest.skip("Can't have 2D IndexVariables")
-
-        import sparse
-
-        arr = np.diagflat([1, 2, 3])
-        coords = np.array([[0, 1, 2], [0, 1, 2]])
-        sparr = sparse.COO(coords=coords, data=[1, 2, 3], shape=(3, 3))
-        v = Variable(["x", "y"], sparr)
-
-        assert_identical(v.as_numpy(), Variable(["x", "y"], arr))
-        np.testing.assert_equal(v.to_numpy(), arr)
-
-    @requires_cupy
-    def test_from_cupy(self, Var):
-        if Var is IndexVariable:
-            pytest.skip("cupy in default indexes is not supported at the moment")
-        import cupy as cp
-
-        arr = np.array([1, 2, 3])
-        v = Var("x", cp.array(arr))
-
-        assert_identical(v.as_numpy(), Var("x", arr))
-        np.testing.assert_equal(v.to_numpy(), arr)
-
     @requires_dask
     @requires_pint
     @pytest.mark.skip_with_dask_array
@@ -3167,6 +3145,33 @@ class TestNumpyCoercion:
         result = v.as_numpy()
         assert_identical(result, Var("x", arr))
         np.testing.assert_equal(v.to_numpy(), arr)
+
+
+# Not part of TestNumpyCoercion, as these only apply to Variable, not IndexVariable
+@requires_sparse
+def test_numpy_coercion_from_sparse() -> None:
+    # Can't have 2D IndexVariables
+    import sparse
+
+    arr = np.diagflat([1, 2, 3])
+    coords = np.array([[0, 1, 2], [0, 1, 2]])
+    sparr = sparse.COO(coords=coords, data=[1, 2, 3], shape=(3, 3))
+    v = Variable(["x", "y"], sparr)
+
+    assert_identical(v.as_numpy(), Variable(["x", "y"], arr))
+    np.testing.assert_equal(v.to_numpy(), arr)
+
+
+@requires_cupy
+def test_numpy_coercion_from_cupy() -> None:
+    # cupy in default indexes is not supported at the moment
+    import cupy as cp
+
+    arr = np.array([1, 2, 3])
+    v = Variable("x", cp.array(arr))
+
+    assert_identical(v.as_numpy(), Variable("x", arr))
+    np.testing.assert_equal(v.to_numpy(), arr)
 
 
 @pytest.mark.parametrize(

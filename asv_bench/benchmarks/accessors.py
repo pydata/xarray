@@ -1,13 +1,12 @@
 import numpy as np
+from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
-
-from . import parameterized
 
 NTIME = 365 * 30
 
 
-@parameterized(["calendar"], [("standard", "noleap")])
+@parameterize({"calendar": ("standard", "noleap")})
 class DateTimeAccessor:
     def setup(self, calendar):
         np.random.randn(NTIME)
