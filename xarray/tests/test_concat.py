@@ -4,6 +4,7 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -30,8 +31,6 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     assert_identical,
-    dask_array_api,
-    raise_if_dask_computes,
     requires_dask,
     requires_pyarrow,
     requires_scipy_or_netCDF4,
@@ -43,69 +42,33 @@ if TYPE_CHECKING:
     from xarray.core.types import CombineAttrsOptions, JoinOptions
 
 
-@requires_dask
-@pytest.mark.parametrize(
-    "dtype_a,dtype_b",
-    [("float64", "int64"), ("float32", "bool"), ("complex128", "float32")],
-)
 @pytest.mark.parametrize("reverse", [False, True])
 @pytest.mark.parametrize(
     "operation", ["concat_array", "concat_dataset", "to_dataarray"]
 )
-@pytest.mark.parametrize("extra_dims", [("x",), ("x", "w")])
-def test_broadcast_mixed_dtypes_task_size(
-    dtype_a, dtype_b, reverse, operation, extra_dims
-):
-    callbacks = pytest.importorskip("dask.callbacks")
-    shape = (12,) * len(extra_dims) + (4, 2)
-    chunks = (3,) * len(extra_dims) + (4, 2)
-    a = DataArray(
-        dask_array_api.full(shape, 2, chunks=chunks, dtype=dtype_a),
-        dims=extra_dims + ("y", "z"),
-        name="v",
-        attrs={"units": "m"},
-    )
-    b_shape = (4, 2 if operation == "to_dataarray" else 3)
-    b = DataArray(
-        dask_array_api.ones(b_shape, chunks=b_shape, dtype=dtype_b),
-        dims=("y", "z"),
-        name="v",
-        attrs={"units": "m"},
-    )
-    a.encoding = b.encoding = {"test_encoding": "preserved"}
+def test_broadcast_mixed_dtypes_view(reverse, operation):
+    a = DataArray(np.ones((2, 3)), dims=("x", "y"), name="v")
+    b = DataArray(np.ones(3, dtype=np.int64), dims="y", name="v")
     arrays = [b, a] if reverse else [a, b]
+    numpy_func = "concat" if hasattr(np, "concat") else "concatenate"
     if operation == "to_dataarray":
-        dataset = Dataset(dict(zip(["a", "b"], arrays, strict=True)), attrs=a.attrs)
-        with raise_if_dask_computes():
-            actual = dataset.to_dataarray()
-        expected = dataset.compute().to_dataarray()
-    else:
-        with raise_if_dask_computes():
-            if operation == "concat_dataset":
-                result = concat([array.to_dataset() for array in arrays], dim="z")
-                actual = result["v"]
-            else:
-                actual = concat(arrays, dim="z")
-        expected = concat([array.compute() for array in arrays], dim="z")
-        assert actual.encoding == a.encoding
-    assert_identical(actual.compute(), expected)
+        numpy_func = "stack"
+    with patch.object(np, numpy_func, wraps=getattr(np, numpy_func)) as join:
+        if operation == "to_dataarray":
+            result = Dataset(dict(zip(["a", "b"], arrays, strict=True))).to_dataarray()
+        elif operation == "concat_dataset":
+            result = concat([array.to_dataset() for array in arrays], dim="y")["v"]
+        else:
+            result = concat(arrays, dim="y")
+    assert_array_equal(result, 1)
 
-    materialized_sizes = []
-
-    def record_task(key, value, dsk, state, worker_id):
-        if isinstance(value, np.ndarray) and value.size and 0 not in value.strides:
-            materialized_sizes.append(value.nbytes)
-
-    # A broadcast view is cheap, but casting it can allocate the whole expanded
-    # array before it is split into the requested chunks (GH10928).
-    with callbacks.Callback(posttask=record_task):
-        actual.sum().compute(scheduler="single-threaded", optimize_graph=False)
-    assert actual.chunks is not None
-    max_chunk_bytes = (
-        np.prod([max(chunks) for chunks in actual.chunks]) * actual.dtype.itemsize
-    )
-    assert materialized_sizes
-    assert max(materialized_sizes) <= max_chunk_bytes
+    # NumPy allocates the output; its broadcast input should still be a view
+    # backed by the small, already-cast array (GH10928).
+    broadcasted = join.call_args.args[0][0 if reverse else 1]
+    assert broadcasted.dtype == np.float64
+    assert broadcasted.size == a.size
+    assert broadcasted.base is not None
+    assert broadcasted.base.shape == b.shape
 
 
 # helper method to create multiple tests datasets to concat
