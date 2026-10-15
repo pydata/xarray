@@ -26,8 +26,6 @@ from xarray.tests import (
     requires_h5netcdf,
     requires_h5netcdf_or_netCDF4,
     requires_netCDF4,
-    requires_netCDF4_1_6_2_or_above,
-    requires_netCDF4_1_7_0_or_above,
 )
 from xarray.tests.backends.base import (
     ON_WINDOWS,
@@ -219,7 +217,6 @@ class TestNetCDF4Data(NetCDF4Base):
             ),
         ],
     )
-    @requires_netCDF4_1_6_2_or_above
     @pytest.mark.xfail(ON_WINDOWS, reason="new compression not yet implemented")
     def test_compression_encoding(self, compression: str | None) -> None:
         data = create_test_data(dim_sizes=(20, 80, 10))
@@ -277,7 +274,6 @@ class TestNetCDF4Data(NetCDF4Base):
     def test_refresh_from_disk(self) -> None:
         super().test_refresh_from_disk()
 
-    @requires_netCDF4_1_7_0_or_above
     def test_roundtrip_complex(self):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         skwargs = dict(auto_complex=True)

@@ -781,15 +781,11 @@ class Variable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
-    to_variable = utils.alias(to_base_variable, "to_variable")
-
     def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
-
-    to_coord = utils.alias(to_index_variable, "to_coord")
 
     def _to_index(self) -> pd.Index:
         return self.to_index_variable()._to_index()
@@ -1148,9 +1144,9 @@ class Variable(
             raise ValueError("encoding must be castable to a dictionary") from err
 
     def reset_encoding(self) -> Self:
-        warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
-            stacklevel=2,
+        emit_user_level_warning(
+            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
+            FutureWarning,
         )
         return self.drop_encoding()
 
@@ -2280,7 +2276,11 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", r"All-NaN (slice|axis) encountered", RuntimeWarning
+                )
+                return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
         # jax requires hashable
         axis = tuple(range(-1, -1 * len(dim) - 1, -1))
@@ -3299,8 +3299,6 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
     def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return self.copy(deep=False)
-
-    to_coord = utils.alias(to_index_variable, "to_coord")
 
     @override
     def _to_index(self) -> pd.Index:

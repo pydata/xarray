@@ -752,8 +752,7 @@ def _dataset_concat(
                         yield PandasIndex(data, dim_name, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
-    # use np.cumulative_sum(concat_dim_lengths, include_initial=True) when we support numpy>=2
-    file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
+    file_start_indexes = np.cumulative_sum(concat_dim_lengths, include_initial=True)
     concat_index_size = file_start_indexes[-1]
     variable_index_mask = np.ones(concat_index_size, dtype=bool)
     variable_reindexer = None

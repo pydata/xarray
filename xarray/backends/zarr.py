@@ -1931,7 +1931,7 @@ def _get_open_params(
     # TODO: replace AssertionError after https://github.com/zarr-developers/zarr-python/issues/2821 is resolved
     missing_exc = AssertionError
 
-    # zarr 3.0.8 and earlier did not support this property - it was effectively assumed true
+    # store can also be a path or a mapping, which don't have this property
     if not getattr(store, "supports_consolidated_metadata", True):
         consolidated = consolidate_on_close = False
 
