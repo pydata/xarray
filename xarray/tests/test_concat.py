@@ -71,14 +71,15 @@ def test_concat_broadcast_mixed_dtypes_task_size(
     )
     a.encoding = b.encoding = {"test_encoding": "preserved"}
     arrays = [b, a] if reverse else [a, b]
-    if as_dataset:
-        arrays = [array.to_dataset() for array in arrays]
     with raise_if_dask_computes():
-        result = concat(arrays, dim="z")
-    actual = result["v"] if as_dataset else result
+        if as_dataset:
+            result = concat([array.to_dataset() for array in arrays], dim="z")
+            actual = result["v"]
+        else:
+            actual = concat(arrays, dim="z")
     expected = concat([array.compute() for array in arrays], dim="z")
     assert actual.encoding == a.encoding
-    assert_identical(result.compute(), expected)
+    assert_identical(actual.compute(), expected)
 
     materialized_sizes = []
 
@@ -90,6 +91,7 @@ def test_concat_broadcast_mixed_dtypes_task_size(
     # array before it is split into the requested chunks (GH10928).
     with callbacks.Callback(posttask=record_task):
         actual.sum().compute(scheduler="single-threaded", optimize_graph=False)
+    assert actual.chunks is not None
     max_chunk_bytes = (
         np.prod([max(chunks) for chunks in actual.chunks]) * actual.dtype.itemsize
     )
