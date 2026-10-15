@@ -195,7 +195,6 @@ _DATETIMEINDEX_COMPONENTS = [
     "date",
     "time",
     "dayofyear",
-    "weekofyear",
     "dayofweek",
     "quarter",
 ]
