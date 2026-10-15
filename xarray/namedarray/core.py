@@ -939,13 +939,7 @@ class NamedArray(
             from_array_kwargs = {}
 
         if chunks is None:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            chunks = {}
+            raise TypeError("chunks=None is not supported. Use chunks={} instead.")
 
         if isinstance(chunks, float | str | int | tuple | list):
             # TODO we shouldn't assume here that other chunkmanagers can handle these types

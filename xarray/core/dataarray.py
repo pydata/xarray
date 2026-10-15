@@ -1599,13 +1599,7 @@ class DataArray(
         """
         chunk_mapping: T_ChunksFreq
         if chunks is None:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            chunk_mapping = {}
+            raise TypeError("chunks=None is not supported. Use chunks={} instead.")
 
         if isinstance(chunks, float | str | int):
             # ignoring type; unclear why it won't accept a Literal into the value.

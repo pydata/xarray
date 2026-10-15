@@ -1087,6 +1087,10 @@ class TestVariable(VariableSubclassobjects):
         v.values = d2
         assert source_ndarray(v.values) is d2
 
+    def test_chunk_none_raises(self):
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            Variable(["x"], np.arange(3)).chunk(None)
+
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0  # type: ignore[attr-defined]

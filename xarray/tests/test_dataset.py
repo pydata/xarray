@@ -1242,6 +1242,11 @@ class TestDataset:
         with pytest.raises(ValueError):
             ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
 
+    def test_chunk_none_raises(self) -> None:
+        data = create_test_data()
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            data.chunk(None)
+
     @requires_dask
     def test_chunk(self) -> None:
         data = create_test_data()
