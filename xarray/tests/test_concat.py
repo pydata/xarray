@@ -30,6 +30,8 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    dask_array_api,
+    raise_if_dask_computes,
     requires_dask,
     requires_pyarrow,
     requires_scipy_or_netCDF4,
@@ -39,6 +41,60 @@ from xarray.tests.test_dataset import create_test_data
 
 if TYPE_CHECKING:
     from xarray.core.types import CombineAttrsOptions, JoinOptions
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "dtype_a,dtype_b",
+    [("float64", "int64"), ("float32", "bool"), ("complex128", "float32")],
+)
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("as_dataset", [False, True])
+@pytest.mark.parametrize("extra_dims", [("x",), ("x", "w")])
+def test_concat_broadcast_mixed_dtypes_task_size(
+    dtype_a, dtype_b, reverse, as_dataset, extra_dims
+):
+    callbacks = pytest.importorskip("dask.callbacks")
+    shape = (12,) * len(extra_dims) + (4, 2)
+    chunks = (3,) * len(extra_dims) + (4, 2)
+    a = DataArray(
+        dask_array_api.full(shape, 2, chunks=chunks, dtype=dtype_a),
+        dims=extra_dims + ("y", "z"),
+        name="v",
+        attrs={"units": "m"},
+    )
+    b = DataArray(
+        dask_array_api.ones((4, 3), chunks=(4, 3), dtype=dtype_b),
+        dims=("y", "z"),
+        name="v",
+        attrs={"units": "m"},
+    )
+    a.encoding = b.encoding = {"test_encoding": "preserved"}
+    arrays = [b, a] if reverse else [a, b]
+    if as_dataset:
+        arrays = [array.to_dataset() for array in arrays]
+    with raise_if_dask_computes():
+        result = concat(arrays, dim="z")
+    actual = result["v"] if as_dataset else result
+    expected = concat([array.compute() for array in arrays], dim="z")
+    assert actual.encoding == a.encoding
+    assert_identical(result.compute(), expected)
+
+    materialized_sizes = []
+
+    def record_task(key, value, dsk, state, worker_id):
+        if isinstance(value, np.ndarray) and value.size and 0 not in value.strides:
+            materialized_sizes.append(value.nbytes)
+
+    # A broadcast view is cheap, but casting it can allocate the whole expanded
+    # array before it is split into the requested chunks (GH10928).
+    with callbacks.Callback(posttask=record_task):
+        actual.sum().compute(scheduler="single-threaded", optimize_graph=False)
+    max_chunk_bytes = (
+        np.prod([max(chunks) for chunks in actual.chunks]) * actual.dtype.itemsize
+    )
+    assert materialized_sizes
+    assert max(materialized_sizes) <= max_chunk_bytes
 
 
 # helper method to create multiple tests datasets to concat

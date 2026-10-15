@@ -114,6 +114,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:func:`concat` now promotes input dtypes before broadcasting missing
+  dimensions, avoiding large intermediate allocations when concatenating
+  Dask arrays with different dtypes (:issue:`10928`).
 - Indexing a :py:class:`DataTree` with a path that continues past a variable,
   e.g. ``tree["group/var/x"]``, now raises ``KeyError`` instead of
   ``AttributeError`` (:issue:`9354`, :pull:`11701`).

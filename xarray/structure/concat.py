@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, Union, overload
 import numpy as np
 import pandas as pd
 
-from xarray.core import dtypes, utils
+from xarray.core import dtypes, duck_array_ops, utils
 from xarray.core.coordinates import Coordinates
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
@@ -723,6 +723,16 @@ def _dataset_concat(
         common_dims = tuple(utils.OrderedSet(d for v in vars for d in v.dims))
         if dim_name not in common_dims:
             common_dims = (dim_name,) + common_dims
+        if any(var.dims != common_dims for var in vars):
+            # Cast before broadcasting: casting an expanded view can allocate
+            # the full array, even when the result will be split into chunks.
+            arrays = [var._data for var in vars]
+            arrays = duck_array_ops.as_shared_dtype(
+                arrays, xp=duck_array_ops.get_array_namespace(*arrays)
+            )
+            vars = [
+                var._replace(data=data) for var, data in zip(vars, arrays, strict=True)
+            ]
         for var, dim_len in zip(vars, concat_dim_lengths, strict=True):
             if var.dims != common_dims:
                 common_shape = tuple(dims_sizes.get(d, dim_len) for d in common_dims)
