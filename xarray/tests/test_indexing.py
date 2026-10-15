@@ -1001,7 +1001,7 @@ def test_outer_to_vectorized_indexer_0d_duck_array() -> None:
     # GH8820: a 0d non-numpy duck array should be treated like an integer
     original = np.arange(24).reshape(4, 6)
     outer_index = indexing.OuterIndexer(
-        (DuckArrayWrapper(np.array(2)), np.array([0, 2]))
+        (DuckArrayWrapper(np.array(2)), np.array([0, 2]))  # type: ignore[arg-type]
     )
     actual = indexing._outer_to_vectorized_indexer(outer_index, original.shape)
     assert isinstance(actual.tuple[0], DuckArrayWrapper)

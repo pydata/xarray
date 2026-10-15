@@ -1077,7 +1077,7 @@ def _outer_to_vectorized_indexer(
     key = indexer.tuple
 
     def is_scalar_key(k) -> bool:
-        return isinstance(k, integer_types) or (is_duck_array(k) and k.ndim == 0)
+        return isinstance(k, integer_types) or (is_duck_array(k) and k.shape == ())
 
     n_dim = len([k for k in key if not is_scalar_key(k)])
     i_dim = 0
