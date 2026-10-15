@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -79,7 +81,9 @@ def test_where() -> None:
         ),
     ],
 )
-def test_isel_0d_cupy_indexer(indexers, expected_dims, expected) -> None:
+def test_isel_0d_cupy_indexer(
+    indexers: dict[str, Any], expected_dims: tuple[str, ...], expected: list[int]
+) -> None:
     # GH8820
     da = xr.DataArray(cp.arange(24).reshape(4, 6), dims=["x", "y"])
     actual = da.isel(indexers)

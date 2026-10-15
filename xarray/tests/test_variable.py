@@ -1342,7 +1342,7 @@ class TestVariable(VariableSubclassobjects):
         _, ind, _ = v._broadcast_indexes((vind, 3))
         assert type(ind) is indexing.VectorizedIndexer
 
-    def test_broadcast_indexes_0d_duck_array(self):
+    def test_broadcast_indexes_0d_duck_array(self) -> None:
         # GH8820: a 0d non-numpy duck array indexer should drop its dimension
         v = Variable(["x", "y"], np.arange(24).reshape(4, 6))
         key = DuckArrayWrapper(np.array(2))

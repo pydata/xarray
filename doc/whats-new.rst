@@ -255,6 +255,10 @@ Bug Fixes
 - Fix indexing with a 0-dimensional non-NumPy array, e.g. a CuPy array, which
   raised ``ValueError`` instead of dropping the indexed dimension (:issue:`8820`).
   By `Trinh Quoc Anh <https://github.com/tqa236>`_.
+- Fix indexing with a 0-dimensional dask array combined with an outer indexer, e.g.
+  ``da.isel(x=dask.array.from_array(np.array(2)), y=[0, 2])``, which raised
+  ``ValueError`` (:issue:`8820`).
+  By `Trinh Quoc Anh <https://github.com/tqa236>`_.
 - :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` now return the
   dtype they report for dask arrays. Float32 data could be computed as float64
   depending on the method and the coordinate dtypes, which also made a later

@@ -1076,17 +1076,21 @@ def _outer_to_vectorized_indexer(
     """
     key = indexer.tuple
 
-    def is_scalar_key(k) -> bool:
-        return isinstance(k, integer_types) or (is_duck_array(k) and k.shape == ())
-
-    n_dim = len([k for k in key if not is_scalar_key(k)])
+    # 0d duck arrays (e.g. dask, cupy) are treated like integers
+    n_dim = len(
+        [
+            k
+            for k in key
+            if not isinstance(k, integer_types) and getattr(k, "ndim", None) != 0
+        ]
+    )
     i_dim = 0
     new_key = []
     for k, size in zip(key, shape, strict=True):
         if isinstance(k, integer_types):
             new_key.append(np.array(k).reshape((1,) * n_dim))
-        elif is_scalar_key(k):
-            # 0d duck array (e.g. cupy): reshape without converting to numpy
+        elif getattr(k, "ndim", None) == 0:
+            # 0d duck array: reshape without converting to numpy
             new_key.append(k.reshape((1,) * n_dim))
         else:  # np.ndarray or slice
             if isinstance(k, slice):
