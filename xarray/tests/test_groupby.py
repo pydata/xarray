@@ -159,7 +159,7 @@ def test_multi_index_propagation() -> None:
     locations = ["A", "B"]
     data = [[0.5, 0.7], [0.6, 0.5], [0.4, 0.6], [0.4, 0.9]]
 
-    da = xr.DataArray(
+    da: DataArray = xr.DataArray(
         data, dims=["time", "location"], coords={"time": times, "location": locations}
     )
     da = da.stack(multiindex=["time", "location"])
@@ -384,12 +384,12 @@ def test_dask_groupby_blockwise_interleaved_groups(func: str) -> None:
 
 @pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
 def test_da_groupby_quantile(use_flox: bool) -> None:
-    array = xr.DataArray(
+    array: DataArray = xr.DataArray(
         data=[1, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
     )
 
     # Scalar quantile
-    expected = xr.DataArray(
+    expected: DataArray = xr.DataArray(
         data=[2, 5], coords={"x": [1, 2], "quantile": 0.5}, dims="x"
     )
 
@@ -1583,7 +1583,7 @@ class TestDataArrayGroupBy:
         array = self.da
         grouped = array.groupby("x")
 
-        expected = array + array.coords["x"]
+        expected: DataArray = array + array.coords["x"]
         actual = grouped + array.coords["x"]
         assert_identical(expected, actual)
 
@@ -1591,12 +1591,12 @@ class TestDataArrayGroupBy:
         assert_identical(expected, actual)
 
         ds = array.coords["x"].to_dataset(name="X")
-        expected = array + ds
-        actual = grouped + ds
-        assert_identical(expected, actual)
+        expected_ds = array + ds
+        actual_ds = grouped + ds
+        assert_identical(expected_ds, actual_ds)
 
-        actual = ds + grouped
-        assert_identical(expected, actual)
+        actual_ds = ds + grouped
+        assert_identical(expected_ds, actual_ds)
 
     def test_groupby_math(self) -> None:
         array = self.da
@@ -1617,9 +1617,9 @@ class TestDataArrayGroupBy:
         array = DataArray(
             range(4), {"b": ("x", [0, 0, 1, 1]), "x": [0, 1, 2, 3]}, dims="x"
         )
-        other = DataArray([10], coords={"b": [0]}, dims="b")
+        other: DataArray = DataArray([10], coords={"b": [0]}, dims="b")
         actual = array.groupby("b") + other
-        expected = DataArray([10, 11, np.nan, np.nan], array.coords)
+        expected: DataArray = DataArray([10, 11, np.nan, np.nan], array.coords)
         assert_identical(expected, actual)
 
         # regression test for #7797
@@ -1894,7 +1894,7 @@ class TestDataArrayGroupBy:
     def test_groupby_fillna(self) -> None:
         a = DataArray([np.nan, 1, np.nan, 3], coords={"x": range(4)}, dims="x")
         fill_value = DataArray([0, 1], dims="y")
-        actual = a.fillna(fill_value)
+        actual: DataArray = a.fillna(fill_value)
         expected = DataArray(
             [[0, 1], [1, 1], [0, 1], [3, 3]], coords={"x": range(4)}, dims=("x", "y")
         )
@@ -2049,7 +2049,7 @@ class TestDataArrayResample:
         assert_identical(array, actual)
 
         actual = array.resample(time="1D").first()
-        expected = DataArray([0, 4, 8], [("time", times[::4])])
+        expected: DataArray = DataArray([0, 4, 8], [("time", times[::4])])
         assert_identical(expected, actual)
 
         # verify that labels don't use the first value
@@ -2098,7 +2098,9 @@ class TestDataArrayResample:
         data = np.tile(np.arange(5), (6, 3, 1))
         xx, yy = np.meshgrid(xs * 5, ys * 2.5)
         tt = np.arange(len(times), dtype=int)
-        array = DataArray(data, {"time": times, "x": xs, "y": ys}, ("x", "y", "time"))
+        array: DataArray = DataArray(
+            data, {"time": times, "x": xs, "y": ys}, ("x", "y", "time")
+        )
         xcoord = DataArray(xx.T, {"x": xs, "y": ys}, ("x", "y"))
         ycoord = DataArray(yy.T, {"x": xs, "y": ys}, ("x", "y"))
         tcoord = DataArray(tt, {"time": times}, ("time",))

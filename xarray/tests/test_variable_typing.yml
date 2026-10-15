@@ -141,13 +141,15 @@
 - case: test_mypy_variable_init_dtype
   main: |
     import numpy as np
-    from xarray import Variable
+    from xarray import DataArray, Variable
 
     ints: np.ndarray[tuple[int], np.dtype[np.int8]] = np.zeros(2, dtype=np.int8)
 
     # the dtype is inferred from duck arrays, the shape is unknown
     reveal_type(Variable("x", np.zeros(2)))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
     reveal_type(Variable("x", ints))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._8Bit]], str]"
+    # and from DataArrays
+    reveal_type(Variable("x", DataArray(np.zeros(2), dims="x")))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
 
 - case: test_mypy_variable_init_python_data
   main: |
@@ -227,11 +229,10 @@
     from typing import Any
     import numpy as np
     import pandas as pd
-    from xarray import DataArray, Variable
+    from xarray import Variable
 
     # data whose dtype is not visible to type checkers
     reveal_type(Variable("x", pd.Index([1.0])))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
-    reveal_type(Variable("x", DataArray([1.0], dims="x")))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[Any], str]"
     # a list of Any matches several overloads, so mypy makes the whole result Any
     xs: list[Any] = [1.0]
     reveal_type(Variable("x", xs))  # N: Revealed type is "xarray.core.variable.Variable[Any, Any, Any]"

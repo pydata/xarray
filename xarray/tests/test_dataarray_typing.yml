@@ -4,7 +4,7 @@
 
     da = DataArray().pipe(lambda data: data)
 
-    reveal_type(da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da)  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, typing.Hashable, typing.Hashable]"
 
 - case: test_mypy_pipe_lambda_posarg_return_type
   main: |
@@ -31,7 +31,7 @@
   out: |
     main:4: error: No overload variant of "pipe" of "DataWithCoords" matches argument type "Callable[[Any, Any], Any]"  [call-overload]
     main:4: note: Possible overload variants:
-    main:4: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:4: note:     def [P, T] pipe(self, func: Callable[[DataArray[tuple[int, ...], Any, Hashable, Hashable], **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:4: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_lambda_extra_arg
@@ -43,7 +43,7 @@
   out: |
     main:4: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[Any], Any]", "str"  [call-overload]
     main:4: note: Possible overload variants:
-    main:4: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:4: note:     def [P, T] pipe(self, func: Callable[[DataArray[tuple[int, ...], Any, Hashable, Hashable], **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:4: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_missing_posarg
@@ -56,9 +56,9 @@
     # Call to pipe missing argument for function parameter `arg`
     da = DataArray().pipe(f)
   out: |
-    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument type "Callable[[DataArray, int], DataArray]"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument type "Callable[[DataArray[Any, Any, Hashable, Hashable], int], DataArray[Any, Any, Hashable, Hashable]]"  [call-overload]
     main:7: note: Possible overload variants:
-    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray[tuple[int, ...], Any, Hashable, Hashable], **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_extra_posarg
@@ -71,9 +71,9 @@
     # Call to pipe missing keyword for kwonly parameter `kwonly`
     da = DataArray().pipe(f, 42, "oops!")
   out: |
-    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[DataArray, int], DataArray]", "int", "str"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[DataArray[Any, Any, Hashable, Hashable], int], DataArray[Any, Any, Hashable, Hashable]]", "int", "str"  [call-overload]
     main:7: note: Possible overload variants:
-    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray[tuple[int, ...], Any, Hashable, Hashable], **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_missing_kwarg
@@ -86,9 +86,9 @@
     # Call to pipe missing argument for kwonly parameter `kwonly`
     da = DataArray().pipe(f, 42)
   out: |
-    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(da: DataArray, arg: int, *, kwonly: int) -> DataArray", "int"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(da: DataArray[Any, Any, Hashable, Hashable], arg: int, *, kwonly: int) -> DataArray[Any, Any, Hashable, Hashable]", "int"  [call-overload]
     main:7: note: Possible overload variants:
-    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray[tuple[int, ...], Any, Hashable, Hashable], **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_missing_keyword
@@ -101,9 +101,9 @@
     # Call to pipe missing keyword for kwonly parameter `kwonly`
     da = DataArray().pipe(f, 42, 99)
   out: |
-    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(da: DataArray, arg: int, *, kwonly: int) -> DataArray", "int", "int"  [call-overload]
+    main:7: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "def f(da: DataArray[Any, Any, Hashable, Hashable], arg: int, *, kwonly: int) -> DataArray[Any, Any, Hashable, Hashable]", "int", "int"  [call-overload]
     main:7: note: Possible overload variants:
-    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:7: note:     def [P, T] pipe(self, func: Callable[[DataArray[tuple[int, ...], Any, Hashable, Hashable], **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:7: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_function_unexpected_keyword
@@ -130,7 +130,7 @@
         return da
 
     da = DataArray().pipe((f, "da"), 42)
-    reveal_type(da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da)  # N: Revealed type is "xarray.core.dataarray.DataArray[Any, Any, typing.Hashable, typing.Hashable]"
 
 - case: test_mypy_pipe_tuple_return_type_other
   main: |
@@ -155,7 +155,7 @@
     # we are missing an argument for parameter `arg`, so we get no error here.
 
     da = DataArray().pipe((f, "da"))
-    reveal_type(da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da)  # N: Revealed type is "xarray.core.dataarray.DataArray[Any, Any, typing.Hashable, typing.Hashable]"
 
     # Rather than passing a tuple, passing a lambda that calls `f` with args in
     # the correct order allows for proper type analysis, indicating (perhaps
@@ -163,9 +163,9 @@
 
     da = DataArray().pipe(lambda data, arg: f(arg, data))
   out: |
-    main:17: error: No overload variant of "pipe" of "DataWithCoords" matches argument type "Callable[[Any, Any], DataArray]"  [call-overload]
+    main:17: error: No overload variant of "pipe" of "DataWithCoords" matches argument type "Callable[[Any, Any], DataArray[Any, Any, Hashable, Hashable]]"  [call-overload]
     main:17: note: Possible overload variants:
-    main:17: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:17: note:     def [P, T] pipe(self, func: Callable[[DataArray[tuple[int, ...], Any, Hashable, Hashable], **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:17: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
 
 - case: test_mypy_pipe_tuple_extra_arg
@@ -180,7 +180,7 @@
     # we are providing too many args for `f`, so we get no error here.
 
     da = DataArray().pipe((f, "da"), 42, "foo")
-    reveal_type(da)  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(da)  # N: Revealed type is "xarray.core.dataarray.DataArray[Any, Any, typing.Hashable, typing.Hashable]"
 
     # Rather than passing a tuple, passing a lambda that calls `f` with args in
     # the correct order allows for proper type analysis, indicating (perhaps
@@ -188,7 +188,106 @@
 
     da = DataArray().pipe(lambda data, arg: f(arg, data), 42, "foo")
   out: |
-    main:17: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[Any, Any], DataArray]", "int", "str"  [call-overload]
+    main:17: error: No overload variant of "pipe" of "DataWithCoords" matches argument types "Callable[[Any, Any], DataArray[Any, Any, Hashable, Hashable]]", "int", "str"  [call-overload]
     main:17: note: Possible overload variants:
-    main:17: note:     def [P, T] pipe(self, func: Callable[[DataArray, **P], T], *args: P.args, **kwargs: P.kwargs) -> T
+    main:17: note:     def [P, T] pipe(self, func: Callable[[DataArray[tuple[int, ...], Any, Hashable, Hashable], **P], T], *args: P.args, **kwargs: P.kwargs) -> T
     main:17: note:     def [T] pipe(self, func: tuple[Callable[..., T], str], *args: Any, **kwargs: Any) -> T
+
+- case: test_mypy_dataarray_type_parameters
+  main: |
+    from typing import Any
+    from xarray import DataArray
+
+    def f(a: DataArray, b: DataArray[Any, Any, str]) -> None:
+        # the dimension and variable name types default to Hashable, and the
+        # variable name type to the dimension type
+        reveal_type(a)  # N: Revealed type is "xarray.core.dataarray.DataArray[Any, Any, typing.Hashable, typing.Hashable]"
+        reveal_type(b)  # N: Revealed type is "xarray.core.dataarray.DataArray[Any, Any, str, str]"
+        reveal_type(b.dims)  # N: Revealed type is "tuple[str, ...]"
+        reveal_type(b.name)  # N: Revealed type is "str | None"
+
+- case: test_mypy_dataarray_init
+  main: |
+    import numpy as np
+    from xarray import DataArray
+
+    # the dtype is inferred from the data, the dimension type from dims and the
+    # variable name type from the name and the keys of coords
+    reveal_type(DataArray(np.zeros(2)))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], typing.Hashable, typing.Hashable]"
+    reveal_type(DataArray([1, 2], dims="x"))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], str, str]"
+    reveal_type(DataArray([1.0, 2.0], dims=["x"], name="a"))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    reveal_type(DataArray([1, 2], dims="x", coords={"x": [0, 1]}))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], str, str]"
+    reveal_type(DataArray([1, 2], dims=[0], name=1))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], int, int]"
+    # names of different types
+    reveal_type(DataArray([1, 2], dims="x", coords={"x": [0, 1]}, name=1))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], str, object]"
+    # another DataArray keeps its types
+    da = DataArray([1, 2], dims="x", name="a")
+    reveal_type(DataArray(da))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], str, str]"
+
+- case: test_mypy_dataarray_properties
+  main: |
+    from xarray import DataArray
+
+    da = DataArray([1.0, 2.0], dims="x", coords={"x": [0, 1]}, name="a")
+    reveal_type(da.dims)  # N: Revealed type is "tuple[str, ...]"
+    reveal_type(da.name)  # N: Revealed type is "str | None"
+    reveal_type(da.dtype)  # N: Revealed type is "numpy.dtype[numpy.float64]"
+    reveal_type(da.variable)  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], numpy.dtype[numpy.float64], str]"
+    # a coordinate has the dimension and variable name types of its DataArray
+    reveal_type(da.coords["x"])  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(da["x"])  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+
+- case: test_mypy_dataarray_shape_and_dtype
+  main: |
+    from xarray import DataArray
+
+    da = DataArray([1.0, 2.0], dims="x", name="a")
+    # the dtype is kept where it cannot change
+    reveal_type(da.isel(x=0))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    reveal_type(da.transpose("x"))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    reveal_type(da.copy())  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    # and changed or unknown otherwise
+    reveal_type(da.astype(int))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(da.isnull())  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.bool[bool]], str, str]"
+    reveal_type(da.where(da > 0))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(da.mean())  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(da.any())  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.bool[bool]], str, str]"
+    reveal_type(da.argmin("x"))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], str, str]"
+
+- case: test_mypy_dataarray_names
+  main: |
+    from xarray import DataArray
+
+    da = DataArray([[1.0, 2.0]], dims=("x", "y"), name="a")
+    # the types of new names are added
+    reveal_type(da.rename(1))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str | int]"
+    reveal_type(da.rename(x="z"))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    reveal_type(da.rename({"x": 0}))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str | int, str | int]"
+    reveal_type(da.swap_dims(x="b"))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    reveal_type(da.expand_dims("z"))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    reveal_type(da.expand_dims({0: 2}))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str | int, str | int]"
+    reveal_type(da.expand_dims(z=2))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    reveal_type(da.stack(z=["x", "y"]))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    reveal_type(da.assign_coords(b=("x", [0])))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str]"
+    reveal_type(da.assign_coords({0: ("x", [0])}))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], numpy.dtype[numpy.float64], str, str | int]"
+    # str names stay str, so the result can be assigned to the same variable
+    da = da.assign_coords(x=[0]).rename("b")
+
+- case: test_mypy_dataarray_dims_arguments
+  main: |
+    from xarray import DataArray
+
+    da = DataArray([1.0, 2.0], dims=[0])
+    da.transpose(0)
+    da.transpose("x")
+  out: |
+    main:5: error: Argument 1 to "transpose" of "DataArray" has incompatible type "str"; expected "int | EllipsisType"  [arg-type]
+
+- case: test_mypy_dataarray_coordinate_of_dimension
+  main: |
+    from xarray import DataArray
+
+    # a dimension without a coordinate gives a default one named like it
+    da = DataArray([1, 2], dims="x", name=1)
+    reveal_type(da["x"])  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, int | str]"
+    reveal_type(da.coords["x"])  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, int | str]"

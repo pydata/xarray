@@ -8,7 +8,19 @@ from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, S
 from functools import partial
 from os import PathLike
 from types import EllipsisType
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, TypeVar, overload, override
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    Never,
+    NoReturn,
+    Protocol,
+    TypeVar,
+    cast,
+    overload,
+    override,
+)
 
 import numpy as np
 import pandas as pd
@@ -46,7 +58,6 @@ from xarray.core.types import (
     DaCompatible,
     NetcdfWriteModes,
     T_Chunks,
-    T_DataArray,
     T_DataArrayOrSet,
     ZarrWriteModes,
 )
@@ -66,6 +77,7 @@ from xarray.core.variable import (
     as_compatible_data,
     as_variable,
 )
+from xarray.namedarray._typing import DimType_co, DType_co, ShapeType_co, VarType_co
 from xarray.namedarray.pycompat import array_type, is_chunked_array
 from xarray.plot.accessor import DataArrayPlotAccessor
 from xarray.plot.utils import _get_units_from_attrs
@@ -80,6 +92,8 @@ from xarray.structure.merge import PANDAS_TYPES, MergeError
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
+    from collections.abc import Set as AbstractSet
+
     from dask.dataframe import DataFrame as DaskDataFrame
     from dask.delayed import Delayed
     from iris.cube import Cube as iris_Cube
@@ -108,6 +122,7 @@ if TYPE_CHECKING:
         QueryParserOptions,
         ReindexMethodOptions,
         ResampleCompatible,
+        ScalarOrArray,
         Self,
         SideOptions,
         T_ChunkDimFreq,
@@ -116,9 +131,23 @@ if TYPE_CHECKING:
         ZarrStoreLike,
     )
     from xarray.groupers import Grouper, Resampler
+    from xarray.namedarray._typing import DimsLike, NestedList, Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
     T_XarrayOther = TypeVar("T_XarrayOther", bound="DataArray" | Dataset)
+
+    class _SupportsKeys[K](Protocol):
+        def keys(self) -> AbstractSet[K]: ...
+
+    # The coordinates of a new DataArray. Only the keys of mappings matter for the
+    # type: together with the name of the DataArray, they are the names of its
+    # variables. Unlike Mapping, `keys` is covariant, so that they can be of a
+    # different type than the name, e.g. str keys and an int name give `object`.
+    type _CoordsLike[VarType: Hashable] = (
+        Sequence[Sequence | pd.Index | DataArray | Variable | np.ndarray]
+        | _SupportsKeys[VarType]
+        | None
+    )
 
 
 def _infer_coords_and_dims(
@@ -236,13 +265,18 @@ def _check_data_shape(
     return data
 
 
-class _LocIndexer[T_DataArray: DataArray]:
+class _LocIndexer[
+    ShapeType,
+    DType: np.dtype[Any],
+    DimType: Hashable,
+    VarType: Hashable,
+]:
     __slots__ = ("data_array",)
 
-    def __init__(self, data_array: T_DataArray):
+    def __init__(self, data_array: DataArray[ShapeType, DType, DimType, VarType]):
         self.data_array = data_array
 
-    def __getitem__(self, key) -> T_DataArray:
+    def __getitem__(self, key) -> DataArray[Shape, DType, DimType, VarType]:
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
@@ -279,11 +313,16 @@ class _NumpyEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+# DataArray is generic in the shape type, the dtype and the dimension type of its
+# data, like Variable, and in the type of the names of its variables, i.e. of its
+# name and its coordinates. Like for Variable, the type parameters are explicitly
+# covariant TypeVars, as PEP 695 would infer them as invariant.
 class DataArray(
-    AbstractArray[Hashable],
+    AbstractArray[DimType_co],
     DataWithCoords,
-    DataArrayArithmetic,
-    DataArrayAggregations,
+    DataArrayArithmetic[ShapeType_co, DType_co, DimType_co, VarType_co],
+    DataArrayAggregations[ShapeType_co, DType_co, DimType_co, VarType_co],
+    Generic[ShapeType_co, DType_co, DimType_co, VarType_co],  # noqa: UP046
 ):
     """N-dimensional array with labeled coordinates and dimensions.
 
@@ -422,8 +461,10 @@ class DataArray(
     _coords: dict[Any, Variable]
     _close: Callable[[], None] | None
     _indexes: dict[Hashable, Index]
-    _name: Hashable | None
-    _variable: Variable
+    # The internal constructors don't track the type parameters, so the storage is
+    # loosely typed; the public properties are typed.
+    _name: Any
+    _variable: Variable[Any, Any, Any]
 
     __slots__ = (
         "__weakref__",
@@ -437,14 +478,189 @@ class DataArray(
 
     dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
 
+    if TYPE_CHECKING:
+        # Methods of DataWithCoords that return Self, which can change the shape,
+        # dtype or variable names of a DataArray.
+        def squeeze(  # type: ignore[override]
+            self,
+            dim: Hashable | Iterable[Hashable] | None = None,
+            drop: bool = False,
+            axis: int | Iterable[int] | None = None,
+        ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]: ...
+        def clip(
+            self,
+            min: ScalarOrArray | None = None,
+            max: ScalarOrArray | None = None,
+            *,
+            keep_attrs: bool | None = None,
+        ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]: ...
+        # the new coordinates are named by the keys of `coords` or by the keyword
+        # arguments, which are str
+        @overload  # type: ignore[override]
+        def assign_coords[NewVar: Hashable](
+            self, coords: Mapping[NewVar, Any]
+        ) -> DataArray[ShapeType_co, DType_co, DimType_co, VarType_co | NewVar]: ...
+        @overload
+        def assign_coords(
+            self, coords: None = None, **coords_kwargs: Any
+        ) -> DataArray[ShapeType_co, DType_co, DimType_co, VarType_co | str]: ...
+        def assign_coords(
+            self, coords: Mapping | None = None, **coords_kwargs: Any
+        ) -> DataArray[ShapeType_co, DType_co, DimType_co, Hashable]: ...
+        def where(  # type: ignore[override]
+            self, cond: Any, other: Any = dtypes.NA, drop: bool = False
+        ) -> DataArray[Shape, Any, DimType_co, VarType_co]: ...
+        def isnull(  # type: ignore[override]
+            self, keep_attrs: bool | None = None
+        ) -> DataArray[ShapeType_co, np.dtype[np.bool_], DimType_co, VarType_co]: ...
+        def notnull(  # type: ignore[override]
+            self, keep_attrs: bool | None = None
+        ) -> DataArray[ShapeType_co, np.dtype[np.bool_], DimType_co, VarType_co]: ...
+        def isin(  # type: ignore[override]
+            self, test_elements: Any
+        ) -> DataArray[ShapeType_co, np.dtype[np.bool_], DimType_co, VarType_co]: ...
+        def astype(
+            self,
+            dtype: Any,
+            *,
+            order: Any = None,
+            casting: Any = None,
+            subok: Any = None,
+            copy: Any = None,
+            keep_attrs: Any = True,
+        ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]: ...
+
+    # As for Variable, the dtype is inferred from duck arrays and from Python scalars
+    # and lists, which numpy converts to arrays of a known dtype, and the shape type
+    # is Shape. The dimension type is inferred from `dims` and the type of the names
+    # of the variables from `name` and the keys of `coords`, e.g. `dims="x"` gives
+    # `str`. Without them, they are those of a DataArray passed as `data`, or the
+    # defaults (Hashable). Like for Variable, the overloads for lists are tried in
+    # order, so e.g. a list literal of ints is not taken for a list of floats.
+    @overload
+    def __init__(
+        self: DataArray[Shape, DType_co, DimType_co, VarType_co],
+        data: DataArray[Any, DType_co, DimType_co, VarType_co],
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: DataArray[Shape, DType_co, DimType_co, VarType_co],
+        data: Variable[Any, DType_co, DimType_co],
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: DataArray[Shape, DType_co, DimType_co, VarType_co],
+        data: duckarray[Any, DType_co],
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: DataArray[Shape, np.dtype[np.float64], DimType_co, VarType_co],
+        data: list[Never],
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co],
+        data: bool | NestedList[bool],
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: DataArray[Shape, np.dtype[np.int_], DimType_co, VarType_co],
+        data: int | NestedList[int],
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: DataArray[Shape, np.dtype[np.float64], DimType_co, VarType_co],
+        data: float | NestedList[float],
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: DataArray[Shape, np.dtype[np.complex128], DimType_co, VarType_co],
+        data: complex | NestedList[complex],
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: DataArray[Shape, np.dtype[np.str_], DimType_co, VarType_co],
+        data: str | NestedList[str],
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: DataArray[Shape, Any, DimType_co, VarType_co],
+        data: Any = dtypes.NA,
+        coords: _CoordsLike[VarType_co] = None,
+        dims: Iterable[DimType_co] | None = None,
+        name: VarType_co | None = None,
+        attrs: Mapping | None = None,
+        indexes: Mapping[Hashable, Index] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
     def __init__(
         self,
         data: Any = dtypes.NA,
-        coords: (
-            Sequence[Sequence | pd.Index | DataArray | Variable | np.ndarray]
-            | Mapping
-            | None
-        ) = None,
+        coords: Any = None,  # see the overloads
         dims: str | Iterable[Hashable] | None = None,
         name: Hashable | None = None,
         attrs: Mapping | None = None,
@@ -816,21 +1032,21 @@ class DataArray(
         return result
 
     @property
-    def name(self) -> Hashable | None:
+    def name(self) -> VarType_co | None:
         """The name of this array."""
         return self._name
 
     @name.setter
-    def name(self, value: Hashable | None) -> None:
+    def name(self, value: VarType_co | None) -> None:
         self._name = value
 
     @property
-    def variable(self) -> Variable:
+    def variable(self) -> Variable[ShapeType_co, DType_co, DimType_co]:
         """Low level interface to the Variable object for this DataArray."""
         return self._variable
 
     @property
-    def dtype(self) -> np.dtype:
+    def dtype(self) -> DType_co:
         """
         Data-type of the array’s elements.
 
@@ -967,7 +1183,7 @@ class DataArray(
         return self.variable.to_index()
 
     @property
-    def dims(self) -> tuple[Hashable, ...]:
+    def dims(self) -> tuple[DimType_co, ...]:
         """Tuple of dimension names associated with this array.
 
         Note that the type of this property is inconsistent with
@@ -994,7 +1210,11 @@ class DataArray(
         key = indexing.expanded_indexer(key, self.ndim)
         return dict(zip(self.dims, key, strict=True))
 
-    def _getitem_coord(self, key: Any) -> Self:
+    # Dimensions without a coordinate give a default one named like the dimension,
+    # so the name of the result can also be of the dimension type.
+    def _getitem_coord(
+        self, key: Any
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co | DimType_co]:
         from xarray.core.dataset_utils import _get_virtual_variable
 
         try:
@@ -1005,8 +1225,19 @@ class DataArray(
 
         return self._replace_maybe_drop_dims(var, name=key)
 
+    # a str selects a coordinate (see _getitem_coord), other keys index the array
+    @overload
+    def __getitem__(
+        self, key: str
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co | DimType_co]: ...
+    @overload
+    def __getitem__(
+        self, key: Any
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]: ...
     @override
-    def __getitem__(self, key: Any) -> Self:
+    def __getitem__(
+        self, key: Any
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co | DimType_co]:
         if isinstance(key, str):
             return self._getitem_coord(key)
         else:
@@ -1054,7 +1285,7 @@ class DataArray(
         return key in self.data
 
     @property
-    def loc(self) -> _LocIndexer:
+    def loc(self) -> _LocIndexer[ShapeType_co, DType_co, DimType_co, VarType_co]:
         """Attribute for location based indexing like pandas."""
         return _LocIndexer(self)
 
@@ -1112,7 +1343,7 @@ class DataArray(
         return Indexes(self._indexes, {k: self._coords[k] for k in self._indexes})
 
     @property
-    def coords(self) -> DataArrayCoordinates:
+    def coords(self) -> DataArrayCoordinates[Self]:
         """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
         coordinate variables.
 
@@ -1642,7 +1873,7 @@ class DataArray(
         drop: bool = False,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Return a new DataArray whose data is given by selecting indexes
         along the specified dimension(s).
 
@@ -1740,7 +1971,7 @@ class DataArray(
         tolerance=None,
         drop: bool = False,
         **indexers_kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Return a new DataArray whose data is given by selecting index
         labels along the specified dimension(s).
 
@@ -1860,7 +2091,7 @@ class DataArray(
 
     def _shuffle(
         self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         ds = self._to_temp_dataset()._shuffle(dim=dim, indices=indices, chunks=chunks)
         return self._from_temp_dataset(ds)
 
@@ -1868,7 +2099,7 @@ class DataArray(
         self,
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Return a new DataArray whose data is given by the first `n`
         values along the specified dimension(s). Default `n` = 5
 
@@ -1911,7 +2142,7 @@ class DataArray(
         self,
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Return a new DataArray whose data is given by the last `n`
         values along the specified dimension(s). Default `n` = 5
 
@@ -1958,7 +2189,7 @@ class DataArray(
         self,
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Return a new DataArray whose data is given by each `n` value
         along the specified dimension(s).
 
@@ -2004,12 +2235,26 @@ class DataArray(
         ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
+    @overload
+    def broadcast_like[DimType: Hashable, VarType: Hashable](
+        self,
+        other: DataArray[Any, Any, DimType, VarType],
+        *,
+        exclude: Iterable[Hashable] | None = None,
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]: ...
+    @overload
+    def broadcast_like(
+        self,
+        other: Dataset,
+        *,
+        exclude: Iterable[Hashable] | None = None,
+    ) -> DataArray[Shape, Any, Hashable, Hashable]: ...
     def broadcast_like(
         self,
         other: T_DataArrayOrSet,
         *,
         exclude: Iterable[Hashable] | None = None,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, Hashable, Hashable]:
         """Broadcast this DataArray against another Dataset or DataArray.
 
         This is equivalent to xr.broadcast(other, self)[1]
@@ -2124,7 +2369,7 @@ class DataArray(
         tolerance: float | Iterable[float] | str | None = None,
         copy: bool = True,
         fill_value=dtypes.NA,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Conform this object onto the indexes of another object, for indexes which the
         objects share. Missing values are filled with ``fill_value``. The default fill
@@ -2311,7 +2556,7 @@ class DataArray(
         copy: bool = True,
         fill_value=dtypes.NA,
         **indexers_kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """Conform this object onto the indexes of another object, filling in
         missing values with ``fill_value``. The default fill value is NaN.
 
@@ -2401,7 +2646,7 @@ class DataArray(
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
         **coords_kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Interpolate a DataArray onto new coordinates.
 
@@ -2561,7 +2806,7 @@ class DataArray(
         method: InterpOptions = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """Interpolate this object onto the coordinates of another object,
         filling out of range values with NaN.
 
@@ -2692,11 +2937,31 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
+    # Renaming dimensions or coordinates changes their types; a new name of the
+    # array only adds its type to the variable names.
+    @overload
+    def rename[NewName: Hashable](
+        self,
+        new_name_or_name_dict: Mapping[Any, NewName] | None = None,
+        **names: NewName,
+    ) -> DataArray[
+        ShapeType_co, DType_co, DimType_co | NewName, VarType_co | NewName
+    ]: ...
+    @overload
+    def rename[NewName: Hashable](
+        self, new_name_or_name_dict: NewName
+    ) -> DataArray[ShapeType_co, DType_co, DimType_co, VarType_co | NewName]: ...
+    @overload
+    def rename[NewName: Hashable, NewNames: Hashable](
+        self, new_name_or_name_dict: NewName, **names: NewNames
+    ) -> DataArray[
+        ShapeType_co, DType_co, DimType_co | NewNames, VarType_co | NewName | NewNames
+    ]: ...
     def rename(
         self,
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
-    ) -> Self:
+    ) -> DataArray[ShapeType_co, DType_co, Hashable, Hashable]:
         """Returns a DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
@@ -2736,11 +3001,11 @@ class DataArray(
         # only change name
         return self._replace(name=new_name_or_name_dict)
 
-    def swap_dims(
+    def swap_dims[NewDim: Hashable](
         self,
-        dims_dict: Mapping[Any, Hashable] | None = None,
-        **dims_kwargs,
-    ) -> Self:
+        dims_dict: Mapping[Any, NewDim] | None = None,
+        **dims_kwargs: NewDim,
+    ) -> DataArray[ShapeType_co, DType_co, DimType_co | NewDim, VarType_co]:
         """Returns a new DataArray with swapped dimensions.
 
         Parameters
@@ -2795,13 +3060,37 @@ class DataArray(
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
+    # The new dimensions (and their coordinates, for a mapping) are named by `dim`,
+    # or by the keyword arguments, which are str.
+    @overload
+    def expand_dims[NewDim: Hashable](
+        self,
+        dim: Sequence[NewDim] | Mapping[NewDim, Any],
+        axis: int | Sequence[int] | None = None,
+        create_index_for_new_dim: bool = True,
+    ) -> DataArray[Shape, DType_co, DimType_co | NewDim, VarType_co | NewDim]: ...
+    @overload
+    def expand_dims[NewDim: Hashable](
+        self,
+        dim: NewDim,
+        axis: int | Sequence[int] | None = None,
+        create_index_for_new_dim: bool = True,
+    ) -> DataArray[Shape, DType_co, DimType_co | NewDim, VarType_co | NewDim]: ...
+    @overload
+    def expand_dims(
+        self,
+        dim: None = None,
+        axis: int | Sequence[int] | None = None,
+        create_index_for_new_dim: bool = True,
+        **dim_kwargs: Any,
+    ) -> DataArray[Shape, DType_co, DimType_co | str, VarType_co | str]: ...
     def expand_dims(
         self,
         dim: Hashable | Sequence[Hashable] | Mapping[Any, Any] | None = None,
         axis: int | Sequence[int] | None = None,
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, Hashable, Hashable]:
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape. The new object is a
         view into the underlying array, not a copy.
@@ -2902,7 +3191,7 @@ class DataArray(
         indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
-    ) -> Self:
+    ) -> DataArray[ShapeType_co, DType_co, DimType_co, VarType_co | DimType_co]:
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
@@ -3053,13 +3342,34 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     @partial(deprecate_dims, old_name="dimensions")
+    # The new dimension is named by the key of `dim` or a keyword argument (a str);
+    # its levels are coordinates named like the stacked dimensions.
+    @overload
+    def stack[NewDim: Hashable](
+        self,
+        dim: Mapping[NewDim, Any],
+        create_index: bool | None = True,
+        index_cls: type[Index] = PandasMultiIndex,
+    ) -> DataArray[
+        Shape, DType_co, DimType_co | NewDim, VarType_co | DimType_co | NewDim
+    ]: ...
+    @overload
+    def stack(
+        self,
+        dim: None = None,
+        create_index: bool | None = True,
+        index_cls: type[Index] = PandasMultiIndex,
+        **dim_kwargs: Sequence[Hashable | EllipsisType],
+    ) -> DataArray[
+        Shape, DType_co, DimType_co | str, VarType_co | DimType_co | str
+    ]: ...
     def stack(
         self,
         dim: Mapping[Any, Sequence[Hashable]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
         **dim_kwargs: Sequence[Hashable | EllipsisType],
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, Hashable, Hashable]:
         """
         Stack any number of existing dimensions into a single new dimension.
 
@@ -3132,7 +3442,7 @@ class DataArray(
         *,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co | VarType_co, VarType_co]:
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -3258,10 +3568,10 @@ class DataArray(
     @deprecate_dims
     def transpose(
         self,
-        *dim: Hashable,
+        *dim: DimType_co | EllipsisType,
         transpose_coords: bool = True,
         missing_dims: ErrorOptionsWithWarn = "raise",
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -3307,7 +3617,7 @@ class DataArray(
             return self._replace(variable)
 
     @property
-    def T(self) -> Self:
+    def T(self) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         return self.transpose()
 
     def drop_vars(
@@ -3418,7 +3728,7 @@ class DataArray(
         *,
         errors: ErrorOptions = "raise",
         **labels_kwargs,
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Backward compatible method based on `drop_vars` and `drop_sel`
 
         Using either `drop_vars` or `drop_sel` is encouraged
@@ -3437,7 +3747,7 @@ class DataArray(
         *,
         errors: ErrorOptions = "raise",
         **labels_kwargs,
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Drop index labels from this DataArray.
 
         Parameters
@@ -3501,7 +3811,7 @@ class DataArray(
 
     def drop_isel(
         self, indexers: Mapping[Any, Any] | None = None, **indexers_kwargs
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Drop index positions from this DataArray.
 
         Parameters
@@ -3556,7 +3866,7 @@ class DataArray(
         *,
         how: Literal["any", "all"] = "any",
         thresh: int | None = None,
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Returns a new array with dropped labels for missing values along
         the provided dimension.
 
@@ -3627,7 +3937,9 @@ class DataArray(
         ds = self._to_temp_dataset().dropna(dim, how=how, thresh=thresh)
         return self._from_temp_dataset(ds)
 
-    def fillna(self, value: Any) -> Self:
+    def fillna(
+        self, value: Any
+    ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]:
         """Fill missing values in this object.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -3705,7 +4017,7 @@ class DataArray(
         ) = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]:
         """Fill in NaNs by interpolating according to different methods.
 
         Parameters
@@ -3980,7 +4292,9 @@ class DataArray(
 
         return bfill(self, dim, limit=limit)
 
-    def combine_first(self, other: Self) -> Self:
+    def combine_first[DimType: Hashable, VarType: Hashable](
+        self, other: DataArray[Any, Any, DimType, VarType]
+    ) -> DataArray[Shape, Any, DimType_co | DimType, VarType_co | VarType]:
         """Combine two DataArray objects, with union of coordinates.
 
         This operation follows the normal broadcasting and alignment rules of
@@ -4002,13 +4316,13 @@ class DataArray(
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -4144,6 +4458,7 @@ class DataArray(
         unique_name = "__unique_name_identifier_z98xfz98xugfg73ho__"
         ds = self._to_dataset_whole(name=unique_name)
 
+        ordered_dims: dict[Hashable, int]
         if dim_order is None:
             ordered_dims = dict(zip(self.dims, self.shape, strict=True))
         else:
@@ -4701,7 +5016,9 @@ class DataArray(
         return d
 
     @classmethod
-    def from_dict(cls, d: Mapping[str, Any]) -> Self:
+    def from_dict(
+        cls, d: Mapping[str, Any]
+    ) -> DataArray[Shape, Any, Hashable, Hashable]:
         """Convert a dictionary into an xarray.DataArray
 
         Parameters
@@ -4807,7 +5124,7 @@ class DataArray(
         return to_iris(self)
 
     @classmethod
-    def from_iris(cls, cube: iris_Cube) -> Self:
+    def from_iris(cls, cube: iris_Cube) -> DataArray[Shape, Any, Hashable, Hashable]:
         """Convert an iris.cube.Cube into an xarray.DataArray"""
         from xarray.convert import from_iris
 
@@ -5012,7 +5329,9 @@ class DataArray(
         return computation.dot(other, self)
 
     @override
-    def _unary_op(self, f: Callable, *args, **kwargs) -> Self:
+    def _unary_op(
+        self, f: Callable, *args, **kwargs
+    ) -> DataArray[Any, Any, DimType_co, VarType_co]:
         keep_attrs = kwargs.pop("keep_attrs", None)
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
@@ -5030,7 +5349,7 @@ class DataArray(
     @override
     def _binary_op(
         self, other: DaCompatible, f: Callable, reflexive: bool = False
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         from xarray.core.datatree import DataTree
         from xarray.core.groupby import GroupBy
 
@@ -5122,7 +5441,7 @@ class DataArray(
         n: int = 1,
         *,
         label: Literal["upper", "lower"] = "upper",
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """Calculate the n-th order discrete difference along given axis.
 
         Parameters
@@ -5172,7 +5491,7 @@ class DataArray(
         shifts: Mapping[Any, int] | None = None,
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
-    ) -> Self:
+    ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]:
         """Shift this DataArray by an offset along one or more dimensions.
 
         Only the data is moved; coordinates stay in place. This is consistent
@@ -5267,7 +5586,7 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     @property
-    def real(self) -> Self:
+    def real(self) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]:
         """
         The real part of the array.
 
@@ -5278,7 +5597,7 @@ class DataArray(
         return self._replace(self.variable.real)
 
     @property
-    def imag(self) -> Self:
+    def imag(self) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]:
         """
         The imaginary part of the array.
 
@@ -5448,7 +5767,7 @@ class DataArray(
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
         interpolation: QuantileMethods | None = None,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co | str, VarType_co | str]:
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -5564,7 +5883,7 @@ class DataArray(
         *,
         pct: bool = False,
         keep_attrs: bool | None = None,
-    ) -> Self:
+    ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]:
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
@@ -5608,7 +5927,7 @@ class DataArray(
         coord: Hashable,
         edge_order: Literal[1, 2] = 1,
         datetime_unit: DatetimeUnitOptions = None,
-    ) -> Self:
+    ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]:
         """Differentiate the array with the second order accurate central
         differences.
 
@@ -5670,7 +5989,7 @@ class DataArray(
         self,
         coord: Hashable | Sequence[Hashable] = None,
         datetime_unit: DatetimeUnitOptions = None,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """Integrate along the given coordinate using the trapezoidal rule.
 
         .. note::
@@ -5724,7 +6043,7 @@ class DataArray(
         self,
         coord: Hashable | Sequence[Hashable] = None,
         datetime_unit: DatetimeUnitOptions = None,
-    ) -> Self:
+    ) -> DataArray[ShapeType_co, Any, DimType_co, VarType_co]:
         """Integrate cumulatively along the given coordinate using the trapezoidal rule.
 
         .. note::
@@ -5985,7 +6304,7 @@ class DataArray(
         reflect_type: PadReflectOptions = None,
         keep_attrs: bool | None = None,
         **pad_width_kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """Pad this array along one or more dimensions.
 
         .. warning::
@@ -6145,17 +6464,17 @@ class DataArray(
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self: ...
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]: ...
 
     @overload
     def idxmin(
         self,
-        dim: Sequence[Hashable] | EllipsisType,
+        dim: Sequence[DimType_co] | EllipsisType,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> dict[Hashable, Self]: ...
+    ) -> dict[Hashable, DataArray[Shape, Any, DimType_co, VarType_co]]: ...
 
     @overload
     def idxmin(
@@ -6165,7 +6484,10 @@ class DataArray(
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self | dict[Hashable, Self]: ...
+    ) -> (
+        DataArray[Shape, Any, DimType_co, VarType_co]
+        | dict[Hashable, DataArray[Shape, Any, DimType_co, VarType_co]]
+    ): ...
 
     def idxmin(
         self,
@@ -6174,7 +6496,10 @@ class DataArray(
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self | dict[Hashable, Self]:
+    ) -> (
+        DataArray[Shape, Any, DimType_co, VarType_co]
+        | dict[Hashable, DataArray[Shape, Any, DimType_co, VarType_co]]
+    ):
         """Return the coordinate label of the minimum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
@@ -6286,17 +6611,17 @@ class DataArray(
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self: ...
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]: ...
 
     @overload
     def idxmax(
         self,
-        dim: Sequence[Hashable] | EllipsisType,
+        dim: Sequence[DimType_co] | EllipsisType,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> dict[Hashable, Self]: ...
+    ) -> dict[Hashable, DataArray[Shape, Any, DimType_co, VarType_co]]: ...
 
     @overload
     def idxmax(
@@ -6306,7 +6631,10 @@ class DataArray(
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self | dict[Hashable, Self]: ...
+    ) -> (
+        DataArray[Shape, Any, DimType_co, VarType_co]
+        | dict[Hashable, DataArray[Shape, Any, DimType_co, VarType_co]]
+    ): ...
 
     def idxmax(
         self,
@@ -6315,7 +6643,10 @@ class DataArray(
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self | dict[Hashable, Self]:
+    ) -> (
+        DataArray[Shape, Any, DimType_co, VarType_co]
+        | dict[Hashable, DataArray[Shape, Any, DimType_co, VarType_co]]
+    ):
         """Return the coordinate label of the maximum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
@@ -6427,17 +6758,19 @@ class DataArray(
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-    ) -> Self: ...
+    ) -> DataArray[Shape, np.dtype[np.intp], DimType_co, VarType_co]: ...
 
     @overload
     def argmin(
         self,
-        dim: Collection[Hashable] | EllipsisType | None = None,
+        dim: Collection[DimType_co] | EllipsisType | None = None,
         *,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-    ) -> dict[Hashable, Self]: ...
+    ) -> dict[
+        Hashable, DataArray[Shape, np.dtype[np.intp], DimType_co, VarType_co]
+    ]: ...
 
     def argmin(
         self,
@@ -6446,7 +6779,10 @@ class DataArray(
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-    ) -> Self | dict[Hashable, Self]:
+    ) -> (
+        DataArray[Shape, np.dtype[np.intp], DimType_co, VarType_co]
+        | dict[Hashable, DataArray[Shape, np.dtype[np.intp], DimType_co, VarType_co]]
+    ):
         """Index or indices of the minimum of the DataArray over one or more dimensions.
 
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
@@ -6534,7 +6870,9 @@ class DataArray(
         array([ 1, -5,  1])
         Dimensions without coordinates: y
         """
-        result = self.variable.argmin(dim, axis, keep_attrs, skipna)
+        # `dim` is typed as Hashable, which a bare Variable takes
+        variable: Variable = self.variable
+        result = variable.argmin(dim, axis, keep_attrs, skipna)
         if isinstance(result, dict):
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
@@ -6548,17 +6886,19 @@ class DataArray(
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-    ) -> Self: ...
+    ) -> DataArray[Shape, np.dtype[np.intp], DimType_co, VarType_co]: ...
 
     @overload
     def argmax(
         self,
-        dim: Collection[Hashable] | EllipsisType | None = None,
+        dim: Collection[DimType_co] | EllipsisType | None = None,
         *,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-    ) -> dict[Hashable, Self]: ...
+    ) -> dict[
+        Hashable, DataArray[Shape, np.dtype[np.intp], DimType_co, VarType_co]
+    ]: ...
 
     def argmax(
         self,
@@ -6567,7 +6907,10 @@ class DataArray(
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-    ) -> Self | dict[Hashable, Self]:
+    ) -> (
+        DataArray[Shape, np.dtype[np.intp], DimType_co, VarType_co]
+        | dict[Hashable, DataArray[Shape, np.dtype[np.intp], DimType_co, VarType_co]]
+    ):
         """Index or indices of the maximum of the DataArray over one or more dimensions.
 
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
@@ -6655,7 +6998,9 @@ class DataArray(
         array([3, 5, 3])
         Dimensions without coordinates: y
         """
-        result = self.variable.argmax(dim, axis, keep_attrs, skipna)
+        # `dim` is typed as Hashable, which a bare Variable takes
+        variable: Variable = self.variable
+        result = variable.argmax(dim, axis, keep_attrs, skipna)
         if isinstance(result, dict):
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
@@ -6668,7 +7013,7 @@ class DataArray(
         engine: QueryEngineOptions = None,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **queries_kwargs: Any,
-    ) -> DataArray:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Return a new data array indexed along the specified
         dimension(s), where the indexers are given as strings containing
         Python expressions to be evaluated against the values in the array.
@@ -6738,7 +7083,7 @@ class DataArray(
             missing_dims=missing_dims,
             **queries_kwargs,
         )
-        return ds[self.name]
+        return cast("DataArray[Shape, DType_co, DimType_co, VarType_co]", ds[self.name])
 
     def curvefit(
         self,
@@ -6917,7 +7262,7 @@ class DataArray(
         dim: Hashable | Iterable[Hashable],
         *,
         keep: Literal["first", "last", False] = "first",
-    ) -> Self:
+    ) -> DataArray[Shape, DType_co, DimType_co, VarType_co]:
         """Returns a new DataArray with duplicate dimension values removed.
 
         Parameters
@@ -6999,7 +7344,7 @@ class DataArray(
         align_on: str | None = None,
         missing: Any | None = None,
         use_cftime: bool | None = None,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """Convert the DataArray to another calendar.
 
         Only converts the individual timestamps, does not modify any data except
@@ -7119,7 +7464,7 @@ class DataArray(
         self,
         target: pd.DatetimeIndex | CFTimeIndex | DataArray,
         dim: str = "time",
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """Interpolates the DataArray to another calendar based on decimal year measure.
 
         Each timestamp in `source` and `target` are first converted to their decimal
@@ -7553,6 +7898,8 @@ class DataArray(
         Dataset.cumulative
         computation.rolling.DataArrayRolling
         """
+        # keyed by the dimension type, but `dim` is typed as Hashable
+        sizes: Mapping[Any, int] = self.sizes
         from xarray.computation.rolling import DataArrayRolling
 
         # Could we abstract this "normalize and check 'dim'" logic? It's currently shared
@@ -7562,14 +7909,14 @@ class DataArray(
                 raise ValueError(
                     f"Dimension {dim} not found in data dimensions: {self.dims}"
                 )
-            dim = {dim: self.sizes[dim]}
+            dim = {dim: sizes[dim]}
         else:
             missing_dims = set(dim) - set(self.dims)
             if missing_dims:
                 raise ValueError(
                     f"Dimensions {missing_dims} not found in data dimensions: {self.dims}"
                 )
-            dim = {d: self.sizes[d] for d in dim}
+            dim = {d: sizes[d] for d in dim}
 
         return DataArrayRolling(self, dim, min_periods=min_periods, center=False)
 

@@ -1534,8 +1534,8 @@ def test_vectorize_dask_dtype() -> None:
     # GH4015
 
     # integer
-    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
-    expected = xr.DataArray([1, 2], dims=["x"])
+    data_array: xr.DataArray = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    expected: xr.DataArray = xr.DataArray([1, 2], dims=["x"])
     actual = apply_ufunc(
         pandas_median,
         data_array.chunk({"x": 1}),

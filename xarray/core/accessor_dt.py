@@ -482,12 +482,12 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         return self._date_field("day_of_week", np.int64)
 
     @property
-    def dayofweek(self) -> T_DataArray:
+    def dayofweek(self) -> DataArray:
         """The day of the week with Monday=0, Sunday=6"""
         return self._date_field("day_of_week", np.int64).rename("dayofweek")
 
     @property
-    def weekday(self) -> T_DataArray:
+    def weekday(self) -> DataArray:
         """The day of the week with Monday=0, Sunday=6"""
         return self._date_field("day_of_week", np.int64).rename("weekday")
 
@@ -497,7 +497,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         return self._date_field("day_of_year", np.int64)
 
     @property
-    def dayofyear(self) -> T_DataArray:
+    def dayofyear(self) -> DataArray:
         """The ordinal day of the year"""
         return self._date_field("day_of_year", np.int64).rename("dayofyear")
 
@@ -512,7 +512,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         return self._date_field("days_in_month", np.int64)
 
     @property
-    def daysinmonth(self) -> T_DataArray:
+    def daysinmonth(self) -> DataArray:
         """The number of days in the month"""
         return self._date_field("days_in_month", np.int64).rename("daysinmonth")
 

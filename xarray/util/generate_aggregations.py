@@ -8,6 +8,7 @@ Usage:
 """
 
 import textwrap
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Literal, NamedTuple
 
@@ -19,17 +20,27 @@ MODULE_PREAMBLE = '''\
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generic
+
+import numpy as np
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
 from xarray.core.types import Dims, Self
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
+from xarray.namedarray._typing import (
+    DimsLike,
+    DimType_co,
+    DType_co,
+    ShapeType_co,
+    VarType_co,
+)
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import DatasetCoordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.namedarray._typing import Shape
 
 flox_available = module_available("flox")
 '''
@@ -91,6 +102,25 @@ class {obj}{cls}Aggregations:
         coords: Mapping | None = None,
         **coords_kwargs: Any,
     ) -> Self:
+        raise NotImplementedError()"""
+
+# Like DataArray, generic in the types of its data and the names of its variables.
+# Reductions change the shape and can change the dtype of the data.
+DATAARRAY_AGGREGATIONS_PREAMBLE = """
+
+class {obj}{cls}Aggregations(Generic[ShapeType_co, DType_co, DimType_co, VarType_co]):  # noqa: UP046
+    __slots__ = ()
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: DimsLike[DimType_co] = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         raise NotImplementedError()"""
 
 NAMED_ARRAY_AGGREGATIONS_PREAMBLE = """
@@ -185,7 +215,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         self,
         dim: {dim_type} = None,{kw_only}{extra_kwargs}{keep_attrs}
         **kwargs: Any,
-    ) -> Self:
+    ) -> {return_type}:
         """
         Reduce this {obj}'s data by applying ``{method}`` {clarification}along some dimension(s).
 
@@ -374,6 +404,9 @@ class AggregationGenerator:
     has_keep_attrs: bool = True
     notes: str = ""
     dim_type: str = "Dims"
+    # the return type of the reductions, or of the ones in return_types by name
+    return_type: str = "Self"
+    return_types: Mapping[str, str] = field(default_factory=dict)
     preamble: str = field(init=False)
 
     def __post_init__(self):
@@ -400,6 +433,7 @@ class AggregationGenerator:
             ),
             kw_only="\n        *," if has_kw_only else "",
             dim_type=self.dim_type,
+            return_type=self.return_types.get(method.name, self.return_type),
         )
 
         if method.extra_kwargs:
@@ -713,7 +747,12 @@ DATAARRAY_GENERATOR = GenericAggregationGenerator(
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
-    definition_preamble=AGGREGATIONS_PREAMBLE,
+    definition_preamble=DATAARRAY_AGGREGATIONS_PREAMBLE,
+    dim_type="DimsLike[DimType_co]",
+    return_type="DataArray[Shape, Any, DimType_co, VarType_co]",
+    return_types=dict.fromkeys(
+        ("all", "any"), "DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]"
+    ),
 )
 DATAARRAY_GROUPBY_GENERATOR = GroupByAggregationGenerator(
     cls="GroupBy",

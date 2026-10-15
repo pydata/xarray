@@ -5,17 +5,27 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generic
+
+import numpy as np
 
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
 from xarray.core.types import Dims, Self
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
+from xarray.namedarray._typing import (
+    DimsLike,
+    DimType_co,
+    DType_co,
+    ShapeType_co,
+    VarType_co,
+)
 
 if TYPE_CHECKING:
     from xarray.core.coordinates import DatasetCoordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
+    from xarray.namedarray._typing import Shape
 
 flox_available = module_available("flox")
 
@@ -2587,28 +2597,28 @@ class DatasetAggregations:
         return out.assign_coords(self.coords)
 
 
-class DataArrayAggregations:
+class DataArrayAggregations(Generic[ShapeType_co, DType_co, DimType_co, VarType_co]):  # noqa: UP046
     __slots__ = ()
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -2671,11 +2681,11 @@ class DataArrayAggregations:
 
     def all(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -2738,11 +2748,11 @@ class DataArrayAggregations:
 
     def any(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, np.dtype[np.bool_], DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -2805,12 +2815,12 @@ class DataArrayAggregations:
 
     def max(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
@@ -2885,12 +2895,12 @@ class DataArrayAggregations:
 
     def min(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
@@ -2965,12 +2975,12 @@ class DataArrayAggregations:
 
     def mean(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -3049,13 +3059,13 @@ class DataArrayAggregations:
 
     def prod(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
@@ -3147,13 +3157,13 @@ class DataArrayAggregations:
 
     def sum(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -3245,13 +3255,13 @@ class DataArrayAggregations:
 
     def std(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
@@ -3340,13 +3350,13 @@ class DataArrayAggregations:
 
     def var(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
@@ -3435,12 +3445,12 @@ class DataArrayAggregations:
 
     def median(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
@@ -3519,12 +3529,12 @@ class DataArrayAggregations:
 
     def cumsum(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
@@ -3614,12 +3624,12 @@ class DataArrayAggregations:
 
     def cumprod(
         self,
-        dim: Dims = None,
+        dim: DimsLike[DimType_co] = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> DataArray[Shape, Any, DimType_co, VarType_co]:
         """
         Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from itertools import combinations, permutations, product
-from typing import cast, get_args
+from typing import Any, cast, get_args
 
 import numpy as np
 import pandas as pd
@@ -495,7 +495,7 @@ def test_nans(use_dask: bool) -> None:
 @requires_scipy
 def test_errors(use_dask: bool) -> None:
     # spline is unavailable
-    da = xr.DataArray([0, 1, np.nan, 2], dims="x", coords={"x": range(4)})
+    da: xr.DataArray = xr.DataArray([0, 1, np.nan, 2], dims="x", coords={"x": range(4)})
     if use_dask:
         da = da.chunk()
 
@@ -965,7 +965,7 @@ def test_interpolate_chunk_1d(
         for interp_dims in permutations(da.dims, interp_ndim):
             # choose the scalar interpolation dimensions
             for scalar_dims in combinations(interp_dims, nscalar):
-                dest = {}
+                dest: dict[Any, Any] = {}
                 for dim in interp_dims:
                     if dim in scalar_dims:
                         # take the middle point

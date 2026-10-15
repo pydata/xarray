@@ -44,7 +44,7 @@ def cov(
     dim: Dims = None,
     ddof: int = 1,
     weights: T_DataArray | None = None,
-) -> T_DataArray:
+) -> DataArray:
     """
     Compute covariance between two DataArray objects along a shared dimension.
 
@@ -149,7 +149,7 @@ def corr(
     da_b: T_DataArray,
     dim: Dims = None,
     weights: T_DataArray | None = None,
-) -> T_DataArray:
+) -> DataArray:
     """
     Compute the Pearson correlation coefficient between
     two DataArray objects along a shared dimension.
@@ -248,13 +248,13 @@ def corr(
 
 
 def _cov_corr(
-    da_a: T_DataArray,
-    da_b: T_DataArray,
-    weights: T_DataArray | None = None,
+    da_a: DataArray,
+    da_b: DataArray,
+    weights: DataArray | None = None,
     dim: Dims = None,
     ddof: int = 0,
     method: Literal["cov", "corr"] | None = None,
-) -> T_DataArray:
+) -> DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
     sanitize the input arrays once and we don't repeat code.
@@ -302,7 +302,7 @@ def _cov_corr(
             da_a_std = da_a.std(dim=dim)
             da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
-        return cast(T_DataArray, corr)
+        return corr
 
 
 def cross(

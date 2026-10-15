@@ -147,11 +147,11 @@ def _infer_line_data(
 
 
 def _prepare_plot1d_data(
-    darray: T_DataArray,
+    darray: DataArray,
     coords_to_plot: MutableMapping[str, Hashable],
     plotfunc_name: str | None = None,
     _is_facetgrid: bool = False,
-) -> dict[str, T_DataArray]:
+) -> dict[str, DataArray]:
     """
     Prepare data for usage with plt.scatter.
 
@@ -551,7 +551,7 @@ def line(
         assert hueplt is not None
         ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
 
-    if isinstance(xplt.dtype, np.dtype) and np.issubdtype(xplt.dtype, np.datetime64):  # type: ignore[redundant-expr]
+    if isinstance(xplt.dtype, np.dtype) and np.issubdtype(xplt.dtype, np.datetime64):
         _set_concise_date(ax, axis="x")
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)

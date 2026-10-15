@@ -264,7 +264,7 @@ class TestPlot(PlotTestCase):
             da.plot(y="f")  # type: ignore[call-arg]
 
     def test_multiindex_level_as_coord(self) -> None:
-        da = xr.DataArray(
+        da: DataArray = xr.DataArray(
             np.arange(5),
             dims="x",
             coords=dict(a=("x", np.arange(5)), b=("x", np.arange(5, 10))),
@@ -1337,7 +1337,7 @@ class Common2dMixin:
             self.plotfunc(self.darray[0, :])
 
     def test_bool(self) -> None:
-        xr.ones_like(self.darray, dtype=bool).plot()  # type: ignore[call-arg]
+        xr.ones_like(self.darray, dtype=bool).plot()
 
     def test_complex_raises_typeerror(self) -> None:
         with pytest.raises(TypeError, match=r"complex128"):

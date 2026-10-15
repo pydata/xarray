@@ -2378,7 +2378,7 @@ class StringAccessor[T_DataArray: DataArray]:
         func: Callable,
         dim: Hashable | None,
         sep: str | bytes | Any | None,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """
         Implements logic for `partition` and `rpartition`.
         """
@@ -2411,7 +2411,7 @@ class StringAccessor[T_DataArray: DataArray]:
         self,
         dim: Hashable | None,
         sep: str | bytes | Any = " ",
-    ) -> T_DataArray:
+    ) -> DataArray:
         """
         Split the strings in the DataArray at the first occurrence of separator `sep`.
 
@@ -2449,7 +2449,7 @@ class StringAccessor[T_DataArray: DataArray]:
         self,
         dim: Hashable | None,
         sep: str | bytes | Any = " ",
-    ) -> T_DataArray:
+    ) -> DataArray:
         """
         Split the strings in the DataArray at the last occurrence of separator `sep`.
 

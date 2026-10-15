@@ -1614,7 +1614,7 @@ class TestDataset:
         """Test for indexing by DataArray"""
         data = create_test_data()
         # indexing with DataArray with same-name coordinates.
-        indexing_da = DataArray(
+        indexing_da: DataArray = DataArray(
             np.arange(1, 4), dims=["dim1"], coords={"dim1": np.random.randn(3)}
         )
         actual = data.isel(dim1=indexing_da)
@@ -4895,7 +4895,7 @@ class TestDataset:
         # Regression test for GH:2068
         ds = create_test_data()
 
-        other = DataArray(
+        other: DataArray = DataArray(
             np.arange(10), dims="dim3", coords={"numbers": ("dim3", np.arange(10))}
         )
         expected = ds.copy()
@@ -5352,7 +5352,7 @@ class TestDataset:
         data = [[1, 1, 1], [1, 2, 3]]
         coords = {"c": 42, "variable": ["a", "b"]}
         dims = ("variable", "x")
-        expected = DataArray(data, coords, dims, attrs=ds.attrs)
+        expected: DataArray = DataArray(data, coords, dims, attrs=ds.attrs)
         actual = ds.to_dataarray()
         assert_identical(expected, actual)
 
@@ -7095,7 +7095,7 @@ class TestDataset:
     def test_dataset_diff_n1(self) -> None:
         ds = create_test_data(seed=1)
         actual = ds.diff("dim2")
-        expected_dict = {}
+        expected_dict: dict[Hashable, DataArray] = {}
         expected_dict["var1"] = DataArray(
             np.diff(ds["var1"].values, axis=1),
             {"dim2": ds["dim2"].values[1:]},
@@ -7114,7 +7114,7 @@ class TestDataset:
     def test_dataset_diff_n2(self) -> None:
         ds = create_test_data(seed=1)
         actual = ds.diff("dim2", n=2)
-        expected_dict = {}
+        expected_dict: dict[Hashable, DataArray] = {}
         expected_dict["var1"] = DataArray(
             np.diff(ds["var1"].values, axis=1, n=2),
             {"dim2": ds["dim2"].values[2:]},

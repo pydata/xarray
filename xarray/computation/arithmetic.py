@@ -19,7 +19,7 @@ from xarray.core._typed_ops import (
 )
 from xarray.core.common import ImplementsArrayReduce, ImplementsDatasetReduce
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.namedarray._typing import DimType_co, DType_co, ShapeType_co
+from xarray.namedarray._typing import DimType_co, DType_co, ShapeType_co, VarType_co
 from xarray.namedarray.utils import is_duck_array
 
 if TYPE_CHECKING:
@@ -220,7 +220,8 @@ class DataArrayArithmetic(
     ImplementsArrayReduce,
     IncludeNumpySameMethods,
     SupportsArithmetic,
-    DataArrayOpsMixin,
+    DataArrayOpsMixin[ShapeType_co, DType_co, DimType_co, VarType_co],
+    Generic[ShapeType_co, DType_co, DimType_co, VarType_co],  # noqa: UP046
 ):
     __slots__ = ()
     # priority must be higher than Variable to properly work with binary ufuncs
@@ -228,6 +229,7 @@ class DataArrayArithmetic(
 
     if TYPE_CHECKING:
         # override: only the methods and numbers of inputs that work at runtime
+        # ufuncs can change the shape (broadcasting) and the dtype of the data
         @overload  # type: ignore[override]
         def __array_ufunc__(
             self,
@@ -237,7 +239,7 @@ class DataArrayArithmetic(
             rhs: DataArray | Variable | _UfuncOperand,
             /,
             **kwargs: Any,
-        ) -> Self: ...
+        ) -> DataArray[Shape, Any, DimType_co, VarType_co]: ...
         @overload
         def __array_ufunc__(
             self,
@@ -246,7 +248,7 @@ class DataArrayArithmetic(
             x: Self,
             /,
             **kwargs: Any,
-        ) -> Self: ...
+        ) -> DataArray[Shape, Any, DimType_co, VarType_co]: ...
         @overload
         def __array_ufunc__(
             self,

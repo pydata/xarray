@@ -313,7 +313,7 @@ class TestDataArray:
         data = np.random.random((2, 3))
 
         # w/o coords, w/o dims
-        actual = DataArray(data)
+        actual: DataArray = DataArray(data)
         expected = Dataset({None: (["dim_0", "dim_1"], data)})[None]
         assert_identical(expected, actual)
 
@@ -442,7 +442,7 @@ class TestDataArray:
             DataArray(data, {"x": [0, 1, 2]})
 
         with pytest.raises(TypeError, match=r"is not hashable"):
-            DataArray(data, dims=["x", []])  # type: ignore[list-item]
+            DataArray(data, dims=["x", []])
 
         with pytest.raises(
             CoordinateValidationError, match=r"conflicting sizes for dim"
@@ -460,7 +460,7 @@ class TestDataArray:
 
     def test_constructor_from_self_described(self) -> None:
         data: list[list[float]] = [[-0.1, 21], [0, 2]]
-        expected = DataArray(
+        expected: DataArray = DataArray(
             data,
             coords={"x": ["a", "b"], "y": [-1, -2]},
             dims=["x", "y"],
@@ -812,7 +812,7 @@ class TestDataArray:
     def test_getitem_dataarray(self) -> None:
         # It should not conflict
         da = DataArray(np.arange(12).reshape((3, 4)), dims=["x", "y"])
-        ind = DataArray([[0, 1], [0, 1]], dims=["x", "z"])
+        ind: DataArray = DataArray([[0, 1], [0, 1]], dims=["x", "z"])
         actual = da[ind]
         assert_array_equal(actual, da.values[[[0, 1], [0, 1]], :])
 
@@ -1272,7 +1272,7 @@ class TestDataArray:
         # test multi-index created from coordinates, one with dtype=float32
         lvl1 = ["a", "a", "b", "b"]
         lvl2 = np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float32)
-        da = xr.DataArray(
+        da: DataArray = xr.DataArray(
             [1, 2, 3, 4], dims="x", coords={"lvl1": ("x", lvl1), "lvl2": ("x", lvl2)}
         )
         da = da.set_index(x=["lvl1", "lvl2"])
@@ -1536,7 +1536,7 @@ class TestDataArray:
 
     def test_selection_multiindex_remove_unused(self) -> None:
         # GH2619. For MultiIndex, we need to call remove_unused.
-        ds = xr.DataArray(
+        ds: DataArray = xr.DataArray(
             np.arange(40).reshape(8, 5),
             dims=["x", "y"],
             coords={"x": np.arange(8), "y": np.arange(5)},
@@ -1547,7 +1547,7 @@ class TestDataArray:
             ds_isel.sel(x=5)
 
         actual = ds_isel.unstack()
-        expected = ds.reset_index("xy").isel(xy=ds["x"] < 4)
+        expected: DataArray = ds.reset_index("xy").isel(xy=ds["x"] < 4)
         expected = expected.set_index(xy=["x", "y"]).unstack()
         assert_identical(expected, actual)
 
@@ -1684,7 +1684,7 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     def test_reset_coords(self) -> None:
-        data = DataArray(
+        data: DataArray = DataArray(
             np.zeros((3, 4)),
             {"bar": ("x", ["a", "b", "c"]), "baz": ("y", range(4)), "y": range(4)},
             dims=["x", "y"],
@@ -2202,10 +2202,10 @@ class TestDataArray:
         assert da._replace(variable=va).attrs == attrs2
 
     def test_init_value(self) -> None:
-        expected = DataArray(
+        expected: DataArray = DataArray(
             np.full((3, 4), 3), dims=["x", "y"], coords=[range(3), range(4)]
         )
-        actual = DataArray(3, dims=["x", "y"], coords=[range(3), range(4)])
+        actual: DataArray = DataArray(3, dims=["x", "y"], coords=[range(3), range(4)])
         assert_identical(expected, actual)
 
         expected = DataArray(
@@ -2296,7 +2296,7 @@ class TestDataArray:
 
         # Attempt to use both dim and kwargs
         with pytest.raises(ValueError):
-            array.expand_dims({"d": 4}, e=4)
+            array.expand_dims({"d": 4}, e=4)  # type: ignore[call-overload]
 
     def test_expand_dims(self) -> None:
         array = DataArray(
@@ -2419,7 +2419,7 @@ class TestDataArray:
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]  # type: ignore[arg-type,unused-ignore]  # pandas-stubs varies
         coords = {idx.name: ("x", idx) for idx in indexes}
         array = DataArray(self.mda.values, coords=coords, dims="x")
-        expected = self.mda.copy()
+        expected: DataArray = self.mda.copy()
         level_3 = ("x", [1, 2, 3, 4])
         array["level_3"] = level_3
         expected["level_3"] = level_3
@@ -2451,7 +2451,7 @@ class TestDataArray:
         coords = {idx.name: ("x", idx) for idx in indexes}
         expected = DataArray(self.mda.values, coords=coords, dims="x")
 
-        obj = self.mda.reset_index("x")
+        obj: DataArray = self.mda.reset_index("x")
         assert_identical(obj, expected, check_default_indexes=False)
         assert len(obj.xindexes) == 0
         obj = self.mda.reset_index(self.mindex.names)
@@ -2475,7 +2475,7 @@ class TestDataArray:
         obj = self.mda.reset_index("x", drop=True)
         assert_identical(obj, expected, check_default_indexes=False)
 
-        array = self.mda.copy()
+        array: DataArray = self.mda.copy()
         array = array.reset_index(["x"], drop=True)
         assert_identical(array, expected, check_default_indexes=False)
 
@@ -2771,7 +2771,7 @@ class TestDataArray:
     def test_index_math(self) -> None:
         orig = DataArray(range(3), dims="x", name="x")
         actual = orig + 1
-        expected = DataArray(1 + np.arange(3), dims="x", name="x")
+        expected: DataArray = DataArray(1 + np.arange(3), dims="x", name="x")
         assert_identical(expected, actual)
 
         # regression tests for #254
@@ -2998,8 +2998,8 @@ class TestDataArray:
         assert_identical(array.squeeze(), expected)
 
     def test_squeeze_drop(self) -> None:
-        array = DataArray([1], [("x", [0])])
-        expected = DataArray(1)
+        array: DataArray = DataArray([1], [("x", [0])])
+        expected: DataArray = DataArray(1)
         actual = array.squeeze(drop=True)
         assert_identical(expected, actual)
 
@@ -3545,7 +3545,7 @@ class TestDataArray:
         y = DataArray([1, 2], coords=[("a", [-2, -1])])
 
         x2, y2 = align(x, y, join="outer", indexes={"a": [10, -1, -2]})
-        expected_x2 = DataArray([2, 1, 3], coords=[("a", [10, -1, -2])])
+        expected_x2: DataArray = DataArray([2, 1, 3], coords=[("a", [10, -1, -2])])
         expected_y2 = DataArray([np.nan, 2, 1], coords=[("a", [10, -1, -2])])
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
@@ -4759,10 +4759,10 @@ class TestDataArray:
         assert_equal(ar.rank("dim_0"), expect_0)
         assert_equal(ar.rank("dim_1"), expect_1)
         # int
-        x = DataArray([3, 2, 1])
+        x: DataArray = DataArray([3, 2, 1])
         assert_equal(x.rank("dim_0"), x)
         # str
-        y = DataArray(["c", "b", "a"])
+        y: DataArray = DataArray(["c", "b", "a"])
         assert_equal(y.rank("dim_0"), x)
 
         x = DataArray([3.0, 1.0, np.nan, 2.0, 4.0], dims=("z",))
@@ -4840,7 +4840,7 @@ class TestDataArray:
     def test_pad_constant(self) -> None:
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
         actual = ar.pad(dim_0=(1, 3))
-        expected = DataArray(
+        expected: DataArray = DataArray(
             np.pad(
                 np.arange(3 * 4 * 5).reshape(3, 4, 5).astype(np.float32),
                 mode="constant",
@@ -5017,8 +5017,8 @@ class TestDataArray:
 
         # query single dim, single variable
         with raise_if_dask_computes():
-            actual = aa.query(x="a2 > 5", engine=engine, parser=parser)
-        expect = aa.isel(x=(a > 5))
+            actual: DataArray = aa.query(x="a2 > 5", engine=engine, parser=parser)
+        expect: DataArray = aa.isel(x=(a > 5))
         assert_identical(expect, actual)
 
         # query single dim, single variable, via dict
@@ -8039,7 +8039,7 @@ class TestStackEllipsis:
     def test_error_on_ellipsis_without_list(self) -> None:
         da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
         with pytest.raises(ValueError):
-            da.stack(flat=...)  # type: ignore[arg-type]
+            da.stack(flat=...)  # type: ignore[call-overload]
 
 
 def test_nD_coord_dataarray() -> None:
@@ -8060,7 +8060,7 @@ def test_nD_coord_dataarray() -> None:
     _, actual = xr.align(da, da2)
     assert_identical(da2, actual)
 
-    expected = da.drop_vars("x")
+    expected: DataArray = da.drop_vars("x")
     _, actual = xr.broadcast(da, da2)
     assert_identical(expected, actual)
 

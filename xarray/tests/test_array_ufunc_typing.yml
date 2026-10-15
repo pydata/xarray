@@ -60,7 +60,7 @@
     ds = xr.Dataset({"a": da})
 
     reveal_type(unary(v))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
-    reveal_type(unary(da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(unary(da))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
     reveal_type(unary(ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
 
 - case: test_mypy_array_ufunc_binary_same_type
@@ -75,7 +75,7 @@
     ds = xr.Dataset({"a": da})
 
     reveal_type(binary(v, v))  # N: Revealed type is "xarray.core.variable.Variable[tuple[int, ...], Any, str]"
-    reveal_type(binary(da, da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(da, da))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
     reveal_type(binary(ds, ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
 
 - case: test_mypy_array_ufunc_binary_scalars_and_arrays
@@ -88,13 +88,13 @@
     da = xr.DataArray([1.0], dims="x")
     arr: np.ndarray[tuple[int], np.dtype[np.float64]] = np.array([1.0])
 
-    reveal_type(binary(da, 1))  # N: Revealed type is "xarray.core.dataarray.DataArray"
-    reveal_type(binary(1, da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
-    reveal_type(binary(da, 2.5))  # N: Revealed type is "xarray.core.dataarray.DataArray"
-    reveal_type(binary(da, True))  # N: Revealed type is "xarray.core.dataarray.DataArray"
-    reveal_type(binary(da, np.float64(1)))  # N: Revealed type is "xarray.core.dataarray.DataArray"
-    reveal_type(binary(np.float64(1), da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
-    reveal_type(binary(da, arr))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(da, 1))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(binary(1, da))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(binary(da, 2.5))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(binary(da, True))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(binary(da, np.float64(1)))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(binary(np.float64(1), da))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(binary(da, arr))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
 
 - case: test_mypy_array_ufunc_binary_mixed_types
   files: *ufunc_protocols
@@ -106,8 +106,8 @@
     da = xr.DataArray([1.0], dims="x")
     ds = xr.Dataset({"a": da})
 
-    reveal_type(binary(v, da))  # N: Revealed type is "xarray.core.dataarray.DataArray"
-    reveal_type(binary(da, v))  # N: Revealed type is "xarray.core.dataarray.DataArray"
+    reveal_type(binary(v, da))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
+    reveal_type(binary(da, v))  # N: Revealed type is "xarray.core.dataarray.DataArray[tuple[int, ...], Any, str, str]"
     reveal_type(binary(v, ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
     reveal_type(binary(ds, v))  # N: Revealed type is "xarray.core.dataset.Dataset"
     reveal_type(binary(da, ds))  # N: Revealed type is "xarray.core.dataset.Dataset"
