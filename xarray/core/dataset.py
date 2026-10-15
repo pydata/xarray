@@ -108,6 +108,7 @@ from xarray.core.variable import (
     UNSUPPORTED_EXTENSION_ARRAY_TYPES,
     IndexVariable,
     Variable,
+    _as_shared_dtype,
     as_variable,
     broadcast_variables,
     calculate_dimensions,
@@ -7271,7 +7272,7 @@ class Dataset(
         from xarray.core.dataarray import DataArray
 
         data_vars = [self.variables[k] for k in self.data_vars]
-        broadcast_vars = broadcast_variables(*data_vars)
+        broadcast_vars = broadcast_variables(*_as_shared_dtype(data_vars))
         data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=0)
 
         dims = (dim,) + broadcast_vars[0].dims

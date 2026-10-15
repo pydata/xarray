@@ -49,10 +49,12 @@ if TYPE_CHECKING:
     [("float64", "int64"), ("float32", "bool"), ("complex128", "float32")],
 )
 @pytest.mark.parametrize("reverse", [False, True])
-@pytest.mark.parametrize("as_dataset", [False, True])
+@pytest.mark.parametrize(
+    "operation", ["concat_array", "concat_dataset", "to_dataarray"]
+)
 @pytest.mark.parametrize("extra_dims", [("x",), ("x", "w")])
-def test_concat_broadcast_mixed_dtypes_task_size(
-    dtype_a, dtype_b, reverse, as_dataset, extra_dims
+def test_broadcast_mixed_dtypes_task_size(
+    dtype_a, dtype_b, reverse, operation, extra_dims
 ):
     callbacks = pytest.importorskip("dask.callbacks")
     shape = (12,) * len(extra_dims) + (4, 2)
@@ -63,22 +65,29 @@ def test_concat_broadcast_mixed_dtypes_task_size(
         name="v",
         attrs={"units": "m"},
     )
+    b_shape = (4, 2 if operation == "to_dataarray" else 3)
     b = DataArray(
-        dask_array_api.ones((4, 3), chunks=(4, 3), dtype=dtype_b),
+        dask_array_api.ones(b_shape, chunks=b_shape, dtype=dtype_b),
         dims=("y", "z"),
         name="v",
         attrs={"units": "m"},
     )
     a.encoding = b.encoding = {"test_encoding": "preserved"}
     arrays = [b, a] if reverse else [a, b]
-    with raise_if_dask_computes():
-        if as_dataset:
-            result = concat([array.to_dataset() for array in arrays], dim="z")
-            actual = result["v"]
-        else:
-            actual = concat(arrays, dim="z")
-    expected = concat([array.compute() for array in arrays], dim="z")
-    assert actual.encoding == a.encoding
+    if operation == "to_dataarray":
+        dataset = Dataset(dict(zip(["a", "b"], arrays, strict=True)), attrs=a.attrs)
+        with raise_if_dask_computes():
+            actual = dataset.to_dataarray()
+        expected = dataset.compute().to_dataarray()
+    else:
+        with raise_if_dask_computes():
+            if operation == "concat_dataset":
+                result = concat([array.to_dataset() for array in arrays], dim="z")
+                actual = result["v"]
+            else:
+                actual = concat(arrays, dim="z")
+        expected = concat([array.compute() for array in arrays], dim="z")
+        assert actual.encoding == a.encoding
     assert_identical(actual.compute(), expected)
 
     materialized_sizes = []
