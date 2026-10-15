@@ -133,6 +133,13 @@ Bug Fixes
   raise ``AttributeError`` on object-dtype arrays of strings, such as string
   columns from :py:meth:`pandas.DataFrame.to_xarray` (:pull:`11722`).
   By `Novain Shibu <https://github.com/novain-shibu>`_.
+- The ``decode_timedelta=None`` docstrings of :py:func:`~xarray.open_dataset`,
+  :py:func:`~xarray.open_dataarray`, :py:func:`~xarray.open_datatree`,
+  :py:func:`~xarray.open_groups` and :py:func:`~xarray.open_zarr` now describe
+  the actual behavior for units-only CF timedelta variables, unchanged since
+  :pull:`11173`: they are decoded only when ``decode_times`` is truthy and the
+  variable attributes contain both a timedelta ``units`` attribute and an
+  ``np.timedelta64`` ``dtype`` attribute (:issue:`11507`, :pull:`11734`).
 - Indexing a :py:class:`DataTree` with a path that continues past a variable,
   e.g. ``tree["group/var/x"]``, now raises ``KeyError`` instead of
   ``AttributeError`` (:issue:`9354`, :pull:`11701`).
