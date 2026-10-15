@@ -20,7 +20,7 @@ python = "*"
 numpy = "*"
 pandas = "*"
 
-packaging = "25.0.*"
+packaging = "26.0.*"
 git = "*"            # needed for dynamic versioning
 
 [dependencies]
@@ -133,7 +133,7 @@ nc-time-axis = "1.4.*"
 netcdf4 = "1.7.*"
 numba = "0.62.*"
 numbagg = "0.9.*"
-packaging = "25.0.*"
+packaging = "26.0.*"
 pint = "0.25.*"
 pydap = "3.5.*"
 rasterio = "1.4.*"
