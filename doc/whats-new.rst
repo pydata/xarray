@@ -57,7 +57,7 @@ Breaking Changes
 ~~~~~~~~~~~~~~~~
 - Passing ``chunks=None`` to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`
   or :py:meth:`Variable.chunk`, deprecated since v0.17.0, now raises a
-  ``TypeError``. Use ``chunks={}`` instead (:issue:`11721`).
+  ``TypeError``. Use ``chunks={}`` instead (:issue:`11721`, :pull:`11743`).
   By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 - The ``Variable.to_variable``, ``Variable.to_coord`` and
   ``IndexVariable.to_coord`` aliases, deprecated since v0.9.0, have been removed.
