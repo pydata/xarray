@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, get_args
 
@@ -30,7 +29,6 @@ if TYPE_CHECKING:
         "display_expand_groups",
         "display_expand_indexes",
         "display_default_indexes",
-        "enable_cftimeindex",
         "file_cache_maxsize",
         "keep_attrs",
         "netcdf_engine_order",
@@ -64,7 +62,6 @@ if TYPE_CHECKING:
         display_expand_groups: Literal["default"] | bool
         display_expand_indexes: Literal["default"] | bool
         display_default_indexes: Literal["default"] | bool
-        enable_cftimeindex: bool
         file_cache_maxsize: int
         keep_attrs: Literal["default"] | bool
         netcdf_engine_order: Sequence[Literal["netcdf4", "h5netcdf", "scipy"]]
@@ -98,7 +95,6 @@ OPTIONS: T_Options = {
     "display_expand_groups": "default",
     "display_expand_indexes": "default",
     "display_default_indexes": False,
-    "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
     "netcdf_engine_order": ("netcdf4", "h5netcdf", "scipy"),
@@ -138,7 +134,6 @@ _VALIDATORS = {
     "display_expand_data": lambda choice: choice in [True, False, "default"],
     "display_expand_indexes": lambda choice: choice in [True, False, "default"],
     "display_default_indexes": lambda choice: choice in [True, False, "default"],
-    "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "netcdf_engine_order": lambda engines: set(engines) <= _NETCDF_ENGINES,
@@ -165,17 +160,7 @@ def _set_file_cache_maxsize(value) -> None:
     FILE_CACHE.maxsize = value
 
 
-def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
-    warnings.warn(
-        "The enable_cftimeindex option is now a no-op "
-        "and will be removed in a future version of xarray.",
-        FutureWarning,
-        stacklevel=2,
-    )
-
-
 _SETTERS = {
-    "enable_cftimeindex": _warn_on_setting_enable_cftimeindex,
     "file_cache_maxsize": _set_file_cache_maxsize,
 }
 
@@ -337,10 +322,6 @@ class set_options:
 
     display_width : int, default: 80
         Maximum display width for ``repr`` on xarray objects.
-
-    enable_cftimeindex : bool, default: True
-        Deprecated, has no effect since v0.11.0. Setting it emits a
-        ``FutureWarning``.
 
     facetgrid_figsize : {"computed", "rcparams"} or tuple of float, default: "computed"
         How :class:`~xarray.plot.FacetGrid` determines figure size when

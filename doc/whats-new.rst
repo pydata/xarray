@@ -55,6 +55,11 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The ``Variable.to_variable``, ``Variable.to_coord`` and
+  ``IndexVariable.to_coord`` aliases, deprecated since v0.9.0, have been removed.
+  Use :py:meth:`Variable.to_base_variable` and
+  :py:meth:`Variable.to_index_variable` instead (:issue:`11721`, :pull:`11726`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - The results of :py:meth:`DataArray.idxmin`, :py:meth:`DataArray.idxmax`,
   :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` now keep the
   attributes of the coordinate whose labels they return, e.g. its units,
@@ -100,6 +105,10 @@ Breaking Changes
   except for those of ``NamedArray``, which are now ``ShapeType_co``,
   ``DType_co`` and ``DimType_co`` (:pull:`11223`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The ``enable_cftimeindex`` option, a no-op since v0.11.0, has been removed.
+  Passing it to :py:func:`set_options` now raises a ``ValueError``
+  (:issue:`11721`, :pull:`11729`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Deprecations
@@ -246,6 +255,12 @@ Bug Fixes
 - Fix indexing with a 0-dimensional non-NumPy array, e.g. a CuPy array, which
   raised ``ValueError`` instead of dropping the indexed dimension (:issue:`8820`).
   By `Trinh Quoc Anh <https://github.com/tqa236>`_.
+- :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` now return the
+  dtype they report for dask arrays. Float32 data could be computed as float64
+  depending on the method and the coordinate dtypes, which also made a later
+  ``.astype(np.float32)`` a no-op. Interpolating float data now always keeps its
+  dtype, also without dask (:issue:`10325`, :pull:`11741`).
+  By `Vladimir Saraikin <https://github.com/vsaraikin>`_.
 
 
 Documentation
@@ -280,6 +295,12 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- Speed up rolling reductions of dask arrays without bottleneck, e.g. ``sum``,
+  ``mean`` and ``count``, by about 7x with about 12x fewer tasks for a window of 20.
+  Counting the values in each window no longer splits the chunks of the other
+  dimensions by the window size, which is only needed for reductions that copy the
+  windows (:pull:`11697`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up the ``repr`` of objects with many coordinates by about 2.5x, which
   got about twice as slow when the coordinates were ordered by dimension in
   v2025.10.0 (:pull:`10778`), and their HTML repr by about 15% (:pull:`11691`): the

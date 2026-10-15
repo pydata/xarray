@@ -636,7 +636,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         # We use False as the fill_value instead of np.nan, since boolean
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
-        # copy the strided array.
+        # copy the strided array, so dask doesn't need to rechunk it either.
         dim = list(rolling_dim.values())
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
@@ -644,7 +644,12 @@ class DataArrayRolling(Rolling["DataArray"]):
                 dict(zip(self.dim, self.window, strict=True)),
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
             )
-            .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
+            .construct(
+                rolling_dim,
+                fill_value=False,
+                keep_attrs=keep_attrs,
+                sliding_window_view_kwargs={"automatic_rechunk": False},
+            )
             .sum(dim=dim, skipna=False, keep_attrs=keep_attrs)
         )
         return counts
