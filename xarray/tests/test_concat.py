@@ -1811,3 +1811,13 @@ class TestConcatDataTree:
         actual = concat([dt1, dt2], dim="x")
         expected = DataTree.from_dict(coords={"/first/x": [1, 3], "/second/x": [2, 4]})
         assert actual.identical(expected)
+
+
+def test_concat_string_dtype_from_pd_index():
+    # Regression test for GH#11317: concat fails due to StringDtype introduced by pd.Index
+    da = DataArray([0], dims=["dim_a"], coords=dict(dim_a=["a"]))
+    db = DataArray([0])
+    db2 = concat([db], pd.Index(["b"], name="dim_a"))
+    result = concat([da, db2], dim="dim_a")
+    assert result.sizes["dim_a"] == 2
+    assert list(result.coords["dim_a"].values) == ["a", "b"]
