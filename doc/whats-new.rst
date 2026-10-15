@@ -57,7 +57,7 @@ Breaking Changes
 ~~~~~~~~~~~~~~~~
 - The ``DataArray.dt.weekofyear`` and ``DataArray.dt.week`` accessors,
   deprecated since v0.16.2, have been removed. Use
-  ``DataArray.dt.isocalendar().week`` instead (:issue:`11721`).
+  ``DataArray.dt.isocalendar().week`` instead (:issue:`11721`, :pull:`11742`).
   By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 - The ``Variable.to_variable``, ``Variable.to_coord`` and
   ``IndexVariable.to_coord`` aliases, deprecated since v0.9.0, have been removed.
