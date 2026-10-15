@@ -496,6 +496,7 @@ def open_dataset(
           ``time_unit``;
         - if ``decode_times`` is False, timedeltas are not decoded and stay
           encoded as numbers.
+
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -763,6 +764,7 @@ def open_dataarray(
           ``time_unit``;
         - if ``decode_times`` is False, timedeltas are not decoded and stay
           encoded as numbers.
+
         This keyword may not be supported by all the backends.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
@@ -1010,6 +1012,7 @@ def open_datatree(
           ``time_unit``;
         - if ``decode_times`` is False, timedeltas are not decoded and stay
           encoded as numbers.
+
         Pass a mapping, e.g. ``{"my_variable": False}``,
         to toggle this feature per-variable individually.
         This keyword may not be supported by all the backends.
@@ -1275,6 +1278,7 @@ def open_groups(
           ``time_unit``;
         - if ``decode_times`` is False, timedeltas are not decoded and stay
           encoded as numbers.
+
         This keyword may not be supported by all the backends.
     use_cftime: bool or dict-like, optional
         Only relevant if encoded dates come from a standard calendar
