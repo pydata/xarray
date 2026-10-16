@@ -19,7 +19,7 @@ from xarray.namedarray._typing import (
     _default,
 )
 from xarray.namedarray.core import NamedArray, from_array
-from xarray.namedarray.utils import fake_target_chunksize
+from xarray.namedarray.utils import fake_target_chunksize, module_available
 from xarray.tests import requires_array_api_strict, requires_cftime
 
 if TYPE_CHECKING:
@@ -708,3 +708,19 @@ def test_fake_target_chunksize_cftime() -> None:
     # sys.getsizeof of the object array is smaller on 32-bit platforms
     assert faked_chunksize == (73 if sys.maxsize > 2**32 else 146)
     assert dtype == np.float64
+
+
+def test_module_available_version_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """module_available should return False gracefully when metadata.version returns None."""
+    monkeypatch.setattr("importlib.metadata.version", lambda name: None)
+    # module_available is cached, don't use or leave results with the patched version
+    module_available.cache_clear()
+    try:
+        assert module_available("packaging", minversion="1.0.0") is False
+    finally:
+        module_available.cache_clear()
+
+
+def test_module_available_valid() -> None:
+    """module_available should return True for an installed module with version check."""
+    assert module_available("packaging", minversion="0.0.1") is True

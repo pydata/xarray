@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
+from collections.abc import Set as AbstractSet
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
@@ -180,17 +181,7 @@ class AbstractArray(Generic[DimType_co]):  # noqa: UP046
         self: Any, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
-            if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
-                copy = None
-            elif np.lib.NumpyVersion(np.__version__) <= "1.28.0":
-                copy = False
-            else:
-                # 2.0.0 dev versions, handle cases where copy may or may not exist
-                try:
-                    np.array([1]).__array__(copy=None)
-                    copy = None
-                except TypeError:
-                    copy = False
+            copy = None
         return np.array(self.values, dtype=dtype, copy=copy)
 
     def __repr__(self) -> str:
@@ -1379,7 +1370,7 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
-        test_elements : array_like
+        test_elements : array_like or set_like
             The values against which to test each value of `element`.
             This argument is flattened if an array or array_like.
             See numpy notes for behavior with non-array-like parameters.
@@ -1410,6 +1401,10 @@ class DataWithCoords(AttrAccessMixin):
             raise TypeError(
                 f"isin() argument must be convertible to an array: {test_elements}"
             )
+        elif isinstance(test_elements, AbstractSet):
+            # numpy converts a set to a 0d object array, which never compares
+            # equal to any element, so convert it to a sequence first
+            test_elements = list(test_elements)
         elif isinstance(test_elements, Variable | DataArray):
             # need to explicitly pull out data to support dask arrays as the
             # second argument
