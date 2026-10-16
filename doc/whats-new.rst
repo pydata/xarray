@@ -125,7 +125,9 @@ Bug Fixes
 ~~~~~~~~~
 - :py:func:`concat` and :py:meth:`Dataset.to_dataarray` now promote input dtypes
   before broadcasting missing dimensions, avoiding large intermediate
-  allocations when combining Dask arrays with different dtypes (:issue:`10928`).
+  allocations when combining Dask arrays with different dtypes (:issue:`10928`,
+  :pull:`11736`).
+  By `Ge Li <https://github.com/galleonli>`_.
 - :py:meth:`DataArray.str` methods ``center``, ``ljust``, ``rjust``, ``zfill``, ``pad``,
   ``split``, ``rsplit``, ``partition``, ``rpartition`` and ``format`` no longer
   raise ``AttributeError`` on object-dtype arrays of strings, such as string
