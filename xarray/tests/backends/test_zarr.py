@@ -3221,6 +3221,7 @@ class TestZarrRegionAuto:
             assert_identical(ds, xr.open_zarr(store))
 
 
+@requires_zarr
 @requires_dask
 @pytest.mark.parametrize(
     "shape, enc_chunks, enc_shards",
@@ -3254,7 +3255,7 @@ def test_zarr_shard_roundtrip(
     tmp_path: Path,
 ) -> None:
 
-    dimensions = {f"dim_{i}" for i in range(len(shape))}
+    dimensions = tuple(f"dim_{i}" for i in range(len(shape)))
     sizes = dict(zip(dimensions, shape, strict=True))
 
     data_values = np.arange(np.prod(shape)).reshape(shape)

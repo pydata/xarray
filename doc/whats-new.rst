@@ -270,9 +270,8 @@ Bug Fixes
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
 - Fix the ``preferred_chunks`` encoding of sharded Zarr variables read with
   :py:func:`open_zarr`: it now holds the shard (outer/storage chunk) sizes
-  instead of the inner chunk sizes, so the default dask chunking
-   is aligned with the storage layout instead of splitting the stored shards.
-  (:issue:`11460`, :pull:`11464`).
+  instead of the inner chunk sizes, so the default dask chunks align with the
+  stored shards rather than splitting them (:issue:`11460`, :pull:`11464`).
   By `Taus Møller <https://github.com/taus>`_.
 - Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
   the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
