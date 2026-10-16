@@ -123,6 +123,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.str` methods ``center``, ``ljust``, ``rjust``, ``zfill``, ``pad``,
+  ``split``, ``rsplit``, ``partition``, ``rpartition`` and ``format`` no longer
+  raise ``AttributeError`` on object-dtype arrays of strings, such as string
+  columns from :py:meth:`pandas.DataFrame.to_xarray` (:pull:`11722`).
+  By `Novain Shibu <https://github.com/novain-shibu>`_.
 - Indexing a :py:class:`DataTree` with a path that continues past a variable,
   e.g. ``tree["group/var/x"]``, now raises ``KeyError`` instead of
   ``AttributeError`` (:issue:`9354`, :pull:`11701`).
