@@ -3722,3 +3722,41 @@ def test_mod_broadcast_multi() -> None:
 
     assert res.dtype == expected.dtype
     assert_equal(res, expected)
+
+
+@pytest.mark.parametrize(
+    "method, kwargs",
+    [
+        ("center", {"width": 7}),
+        ("ljust", {"width": 6, "fillchar": "."}),
+        ("rjust", {"width": 6}),
+        ("zfill", {"width": 5}),
+        ("pad", {"width": 6, "side": "both", "fillchar": "*"}),
+        ("split", {"dim": "s", "sep": "-"}),
+        ("rsplit", {"dim": "s", "sep": "-", "maxsplit": 1}),
+        ("partition", {"dim": "s", "sep": "-"}),
+        ("rpartition", {"dim": "s", "sep": "-"}),
+    ],
+)
+def test_object_dtype(method: str, kwargs: dict) -> None:
+    # object arrays of str (e.g. from pandas or netCDF variable-length strings)
+    # give the same result as fixed-width str arrays
+    values = ["a-b c", "xy z", "", "ÄÖ-ü-"]
+    obj = xr.DataArray(np.array(values, dtype=np.object_), dims="X")
+    fixed = xr.DataArray(np.array(values, dtype=np.str_), dims="X")
+
+    result = getattr(obj.str, method)(**kwargs)
+    expected = getattr(fixed.str, method)(**kwargs)
+
+    assert result.dtype == np.object_
+    assert_equal(result, expected.astype(np.object_))
+
+
+def test_format_object_dtype() -> None:
+    values = xr.DataArray(np.array(["{}-{}", "{}!"], dtype=np.object_), dims="X")
+    expected = xr.DataArray(np.array(["a-b", "a!"], dtype=np.object_), dims="X")
+
+    result = values.str.format("a", "b")
+
+    assert result.dtype == np.object_
+    assert_equal(result, expected)
