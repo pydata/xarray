@@ -3393,6 +3393,19 @@ def _broadcast_compat_variables(*variables):
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
 
 
+def _as_shared_dtype(variables: Sequence[Variable]) -> tuple[Variable, ...]:
+    """Cast variables to a shared dtype, preserving their attrs and encoding."""
+    # Casting after broadcasting can materialize the full expanded array before
+    # it is split into chunks for concatenation or stacking.
+    arrays = [var._data for var in variables]
+    arrays = duck_array_ops.as_shared_dtype(
+        arrays, xp=duck_array_ops.get_array_namespace(*arrays)
+    )
+    return tuple(
+        var._replace(data=data) for var, data in zip(variables, arrays, strict=True)
+    )
+
+
 def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
     """Given any number of variables, return variables with matching dimensions
     and broadcast data.
