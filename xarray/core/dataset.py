@@ -494,9 +494,9 @@ class Dataset(
         self._encoding = dict(value)
 
     def reset_encoding(self) -> Self:
-        warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
-            stacklevel=2,
+        emit_user_level_warning(
+            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
+            FutureWarning,
         )
         return self.drop_encoding()
 
@@ -7047,8 +7047,10 @@ class Dataset(
             DataArray.
         keep_attrs : bool or None, optional
             If True, both the dataset's and variables' attributes (`attrs`) will be
-            copied from the original objects to the new ones. If False, the new dataset
-            and variables will be returned without copying the attributes.
+            combined from the original objects and the function results using the
+            ``drop_conflicts`` strategy: matching attrs are kept, conflicting attrs
+            are dropped. If False, the new dataset and variables will have only
+            the attributes set by the function.
         args : iterable, optional
             Positional arguments passed on to `func`.
         **kwargs : Any
@@ -7097,16 +7099,19 @@ class Dataset(
         coords = Coordinates._construct_direct(coords=coord_vars, indexes=indexes)
 
         if keep_attrs:
+            # Merge attrs from function result and original, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
             for k, v in variables.items():
-                v._copy_attrs_from(self.data_vars[k])
+                v.attrs = merge_attrs(
+                    [v.attrs, self.data_vars[k].attrs], "drop_conflicts"
+                )
             for k, v in coords.items():
                 if k in self.coords:
-                    v._copy_attrs_from(self.coords[k])
-        else:
-            for v in variables.values():
-                v.attrs = {}
-            for v in coords.values():
-                v.attrs = {}
+                    v.attrs = merge_attrs(
+                        [v.attrs, self.coords[k].attrs], "drop_conflicts"
+                    )
+        # When keep_attrs=False, leave attrs as the function returned them
 
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, coords=coords, attrs=attrs)
@@ -9772,9 +9777,9 @@ class Dataset(
         """
         if dim is None:
             warnings.warn(
-                "Once the behaviour of DataArray.argmin() and Variable.argmin() without "
+                "Once the behaviour of DataArray.argmax() and Variable.argmax() without "
                 "dim changes to return a dict of indices of each dimension, for "
-                "consistency it will be an error to call Dataset.argmin() with no argument,"
+                "consistency it will be an error to call Dataset.argmax() with no argument,"
                 "since we don't return a dict of Datasets.",
                 FutureWarning,
                 stacklevel=2,
@@ -9792,9 +9797,9 @@ class Dataset(
             )
         else:
             raise ValueError(
-                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "When dim is a sequence or ..., DataArray.argmax() returns a dict. "
                 "dicts cannot be contained in a Dataset, so cannot call "
-                "Dataset.argmin() with a sequence or ... for dim"
+                "Dataset.argmax() with a sequence or ... for dim"
             )
 
     def _eval_expression(self, expr: str) -> DataArray:

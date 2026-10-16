@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, Union, cast
@@ -369,10 +368,6 @@ def decode_cf_variables(
 
     See: decode_cf_variable
     """
-    # Only emit one instance of the decode_timedelta default change
-    # FutureWarning. This can be removed once this change is made.
-    warnings.filterwarnings("once", "decode_timedelta", FutureWarning)
-
     dimensions_used_by = defaultdict(list)
     for v in variables.values():
         for d in v.dims:

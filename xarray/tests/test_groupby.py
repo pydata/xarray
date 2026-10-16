@@ -46,9 +46,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
-    requires_dask_ge_2024_08_1,
     requires_flox,
-    requires_flox_0_9_12,
     requires_scipy,
 )
 
@@ -3260,7 +3258,7 @@ def test_multiple_groupers_lazy(use_flox: bool) -> None:
                 gb.count()
 
 
-@requires_flox_0_9_12
+@requires_flox
 @pytest.mark.parametrize(
     "reduction", ["max", "min", "nanmax", "nanmin", "sum", "nansum", "prod", "nanprod"]
 )
@@ -3290,7 +3288,7 @@ def test_groupby_preserve_dtype(reduction):
 
 
 @requires_dask
-@requires_flox_0_9_12
+@requires_flox
 @pytest.mark.parametrize("reduction", ["any", "all", "count"])
 @pytest.mark.xfail_with_dask_array(
     reason="flox resample currently mixes legacy dask arrays"
@@ -3502,7 +3500,7 @@ def test_groupby_multiple_bin_grouper_missing_groups() -> None:
     assert_identical(actual, expected)
 
 
-@requires_dask_ge_2024_08_1
+@requires_dask
 def test_shuffle_simple() -> None:
     array_api = dask_array_api
 
@@ -3519,7 +3517,7 @@ def test_shuffle_simple() -> None:
         da.chunk(x=2, eagerly_load_group=False).groupby("label").shuffle_to_chunks()
 
 
-@requires_dask_ge_2024_08_1
+@requires_dask
 @pytest.mark.parametrize(
     "chunks, expected_chunks",
     [

@@ -42,6 +42,11 @@ New Features
   type defaults to ``Hashable``, so a bare ``Variable`` annotation means
   ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The ``in`` operator on :py:class:`DataTree` now accepts the same unix-like
+  paths as indexing, so ``key in tree`` is ``True`` exactly when ``tree[key]``
+  succeeds, e.g. ``"group/subgroup" in tree`` or ``"/group/var" in tree``.
+  Previously only names in the current node were found (:issue:`9354`, :pull:`11701`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - The HTML representation can show or hide the attributes and data of all
   variables of a section at once, and shows the expanded attributes and data
   more compactly and indented below their variable (:pull:`11284`).
@@ -50,6 +55,11 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The ``Variable.to_variable``, ``Variable.to_coord`` and
+  ``IndexVariable.to_coord`` aliases, deprecated since v0.9.0, have been removed.
+  Use :py:meth:`Variable.to_base_variable` and
+  :py:meth:`Variable.to_index_variable` instead (:issue:`11721`, :pull:`11726`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - The results of :py:meth:`DataArray.idxmin`, :py:meth:`DataArray.idxmax`,
   :py:meth:`Dataset.idxmin` and :py:meth:`Dataset.idxmax` now keep the
   attributes of the coordinate whose labels they return, e.g. its units,
@@ -58,6 +68,31 @@ Breaking Changes
 - Support for Python 3.11 has been dropped. The minimum required Python version
   is now 3.12, in line with xarray's
   :ref:`minimum dependency policy <mindeps_policy>` (:pull:`11649`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The minimum versions of some dependencies were changed (:pull:`11728`):
+
+  ===========  ======  ======
+  Package         Old     New
+  ===========  ======  ======
+  boto3          1.37    1.40
+  bottleneck      1.4     1.6
+  cartopy        0.24    0.25
+  dask         2025.2  2025.9
+  distributed  2025.2  2025.9
+  h5py           3.13    3.14
+  iris           3.11    3.13
+  lxml            5.3     6.0
+  netcdf4         1.6     1.7
+  numba          0.61    0.62
+  numpy          1.26     2.2
+  packaging      24.2    25.0
+  pandas          2.2     2.3
+  pint           0.24    0.25
+  scipy          1.15    1.16
+  sparse         0.15    0.17
+  zarr            3.0     3.1
+  ===========  ======  ======
+
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:class:`~xarray.NamedArray` is now generic in the type of its dimension
   names, so static type checkers can infer and check them. It takes three type
@@ -70,14 +105,44 @@ Breaking Changes
   except for those of ``NamedArray``, which are now ``ShapeType_co``,
   ``DType_co`` and ``DimType_co`` (:pull:`11223`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- The ``enable_cftimeindex`` option, a no-op since v0.11.0, has been removed.
+  Passing it to :py:func:`set_options` now raises a ``ValueError``
+  (:issue:`11721`, :pull:`11729`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Deprecations
 ~~~~~~~~~~~~
+- ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
+  :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
+  like the other deprecations, and gives the right version (2023.10).
+  :py:attr:`DataTree.lineage` warns once instead of twice (:issue:`11721`,
+  :pull:`11724`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Bug Fixes
 ~~~~~~~~~
+- Indexing a :py:class:`DataTree` with a path that continues past a variable,
+  e.g. ``tree["group/var/x"]``, now raises ``KeyError`` instead of
+  ``AttributeError`` (:issue:`9354`, :pull:`11701`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
+- :py:class:`DataTree` paths starting with exactly two slashes, e.g.
+  ``tree["//a"]``, now refer to the root like ``"/a"`` and ``"///a"`` instead of
+  raising ``ValueError`` (:pull:`11701`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
+- ``get_chunked_array_type`` no longer raises ``TypeError`` when a ``Dataset`` holds
+  several chunked array types that one chunk manager recognizes. Arrays are now grouped
+  by the chunk manager that claims them rather than by their type, so the error is
+  raised only for a genuine mix of frameworks such as dask and cubed (:issue:`11539`).
+  By `Clay Dugo <https://github.com/claydugo>`_.
+- Fix the :py:meth:`Dataset.argmax` deprecation warning and invalid-dimension
+  error messages, which incorrectly referred to ``argmin`` (:issue:`11721`, :pull:`11723`).
+  By `nightcityblade <https://github.com/nightcityblade>`_.
+- Suppress the expected ``All-NaN slice encountered`` warning when
+  :py:meth:`DataArray.quantile` or :py:meth:`Dataset.quantile` uses
+  NumPy's quantile fallback on all-missing slices (:issue:`9870`).
+  By `Senanur Çetin <https://github.com/senanurcetin>`_.
 - Fix pickling of datasets opened from file-like objects with the scipy backend
   after opening more than one such dataset (:issue:`11323`, :pull:`11413`).
   By `C1-BA-B1-F3 <https://github.com/C1-BA-B1-F3>`_.
@@ -190,6 +255,12 @@ Bug Fixes
 - Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
   the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
   By `Charles Turner <https://github.com/charles-turner-1>`_.
+- :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` now return the
+  dtype they report for dask arrays. Float32 data could be computed as float64
+  depending on the method and the coordinate dtypes, which also made a later
+  ``.astype(np.float32)`` a no-op. Interpolating float data now always keeps its
+  dtype, also without dask (:issue:`10325`, :pull:`11741`).
+  By `Vladimir Saraikin <https://github.com/vsaraikin>`_.
 
 
 Documentation
@@ -224,6 +295,12 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- Speed up rolling reductions of dask arrays without bottleneck, e.g. ``sum``,
+  ``mean`` and ``count``, by about 7x with about 12x fewer tasks for a window of 20.
+  Counting the values in each window no longer splits the chunks of the other
+  dimensions by the window size, which is only needed for reductions that copy the
+  windows (:pull:`11697`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up the ``repr`` of objects with many coordinates by about 2.5x, which
   got about twice as slow when the coordinates were ordered by dimension in
   v2025.10.0 (:pull:`10778`), and their HTML repr by about 15% (:pull:`11691`): the
@@ -1000,6 +1077,10 @@ Breaking Changes
 Bug Fixes
 ~~~~~~~~~
 
+- :py:meth:`Dataset.map` now merges attrs from the function result and the original
+  using the ``drop_conflicts`` strategy when ``keep_attrs=True``, preserving attrs
+  set by the function (:issue:`11019`, :pull:`11020`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Ensure that ``keep_attrs='drop'`` and ``keep_attrs=False`` remove attrs from result, even when there is
   only one xarray object given to :py:func:`apply_ufunc` (:issue:`10982`, :pull:`10997`).
   By `Julia Signell <https://github.com/jsignell>`_.

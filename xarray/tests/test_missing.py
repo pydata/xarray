@@ -410,7 +410,17 @@ def test_interpolate_dask_raises_for_invalid_chunk_dim():
 
 @requires_dask
 @requires_scipy
-@pytest.mark.parametrize("dtype, method", [(int, "linear"), (int, "nearest")])
+@pytest.mark.parametrize(
+    "dtype, method",
+    [
+        (int, "linear"),
+        (int, "nearest"),
+        (np.float32, "linear"),
+        (np.float32, "nearest"),
+        (np.float32, "slinear"),
+        (np.complex64, "linear"),
+    ],
+)
 def test_interpolate_dask_expected_dtype(dtype, method):
     da = xr.DataArray(
         data=np.array([0, 1], dtype=dtype),

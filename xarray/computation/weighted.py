@@ -542,7 +542,16 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
         dataset = self.obj._to_temp_dataset()
         dataset = dataset.map(func, dim=dim, **kwargs)
-        return self.obj._from_temp_dataset(dataset)
+        result = self.obj._from_temp_dataset(dataset)
+
+        # Clear attrs when keep_attrs is explicitly False
+        # (weighted operations can propagate attrs from weights through internal computations)
+        if kwargs.get("keep_attrs") is False:
+            result.attrs = {}
+            for var in result.coords.values():
+                var.attrs = {}
+
+        return result
 
 
 class DatasetWeighted(Weighted["Dataset"]):
@@ -563,8 +572,19 @@ class DatasetWeighted(Weighted["Dataset"]):
     @override
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
-        mapped_ds = self.obj.map(func, dim=dim, **kwargs)
-        return self._restore_coords(dim, mapped_ds)
+        result = self.obj.map(func, dim=dim, **kwargs)
+        result = self._restore_coords(dim, result)
+
+        # Clear attrs when keep_attrs is explicitly False
+        # (weighted operations can propagate attrs from weights through internal computations)
+        if kwargs.get("keep_attrs") is False:
+            result.attrs = {}
+            for var in result.data_vars.values():
+                var.attrs = {}
+            for var in result.coords.values():
+                var.attrs = {}
+
+        return result
 
 
 def _inject_docstring(cls, cls_name):
