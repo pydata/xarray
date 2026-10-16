@@ -259,7 +259,10 @@ with `skipna=False`.
 
 ## Rolling window operations
 
-[Windowed Operations tutorial](https://tutorial.xarray.dev/fundamentals/03.3_windowed.html).
+```{seealso}
+The [Windowed Computations tutorial](https://tutorial.xarray.dev/fundamentals/03.3_windowed.html#rolling-or-moving-windows)
+for more examples of rolling window operations.
+```
 
 `DataArray` objects include a {py:meth}`~xarray.DataArray.rolling` method. This
 method supports rolling window aggregation:
@@ -483,7 +486,10 @@ Missing values can be replaced manually by `weights.fillna(0)`.
 
 ## Coarsen large arrays
 
-[Windowed Operations tutorial](https://tutorial.xarray.dev/fundamentals/03.3_windowed.html).
+```{seealso}
+The [Windowed Computations tutorial](https://tutorial.xarray.dev/fundamentals/03.3_windowed.html#coarsening)
+for more examples of coarsening.
+```
 
 {py:class}`DataArray` and {py:class}`Dataset` objects include a
 {py:meth}`~xarray.DataArray.coarsen` and {py:meth}`~xarray.Dataset.coarsen`
