@@ -123,6 +123,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.str` methods ``center``, ``ljust``, ``rjust``, ``zfill``, ``pad``,
+  ``split``, ``rsplit``, ``partition``, ``rpartition`` and ``format`` no longer
+  raise ``AttributeError`` on object-dtype arrays of strings, such as string
+  columns from :py:meth:`pandas.DataFrame.to_xarray` (:pull:`11722`).
+  By `Novain Shibu <https://github.com/novain-shibu>`_.
 - Indexing a :py:class:`DataTree` with a path that continues past a variable,
   e.g. ``tree["group/var/x"]``, now raises ``KeyError`` instead of
   ``AttributeError`` (:issue:`9354`, :pull:`11701`).
@@ -242,6 +247,17 @@ Bug Fixes
   changes if a slice is all-``NaN`` and has to be filled with ``fill_value``
   (:issue:`7527`, :pull:`11544`).
   By `Shurong Cao <https://github.com/CAOShurong>`_.
+- :py:meth:`DataTree.chunk` now accepts a single chunk specification such as
+  ``"auto"`` or an integer and applies it to every dimension in the tree, as
+  :py:meth:`Dataset.chunk` does, instead of raising ``TypeError``
+  (:issue:`11315`, :pull:`11569`).
+  By `fredrikblau <https://github.com/fredrikblau>`_.
+- Fix the ``netcdf4`` engine silently writing byte-swapped values for
+  non-native-endian numeric attribute arrays, such as attributes of netCDF-3
+  files read with the ``scipy`` engine (:pull:`11543`).
+- The ``scipy`` engine now returns numeric attribute arrays in native byte
+  order, like variable data, instead of the big-endian byte order of netCDF-3
+  files (:pull:`11543`).
 - :py:meth:`DataTree.load` now loads non-chunked variables whose name matches
   a group path, which were previously skipped and stayed lazy, breaking a
   subsequent write back to the same file
@@ -259,6 +275,9 @@ Bug Fixes
   ``da.isel(x=dask.array.from_array(np.array(2)), y=[0, 2])``, which raised
   ``ValueError`` (:issue:`8820`).
   By `Trinh Quoc Anh <https://github.com/tqa236>`_.
+- Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
+  the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
+  By `Charles Turner <https://github.com/charles-turner-1>`_.
 - :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` now return the
   dtype they report for dask arrays. Float32 data could be computed as float64
   depending on the method and the coordinate dtypes, which also made a later
@@ -282,6 +301,8 @@ Documentation
 - Fix the backend array indexing examples to pass indexers as a single tuple
   to ``_raw_indexing_method`` (:issue:`7450`, :pull:`11583`).
   By `Seahzee <https://github.com/Seahzee>`_.
+- Convert the terminology and contributing pages to MyST markdown, and drop the
+  ``jupyter-sphinx`` dependency of the docs (:issue:`7924`).
 - Convert several simple documentation pages from reStructuredText to MyST
   markdown (:issue:`7924`, :pull:`11668`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
