@@ -90,7 +90,7 @@ You can learn more about using and developing backends in the
         installed-eng["""<b>One of these formats?</b>
             - <a href='https://github.com/ecmwf/cfgrib'>GRIB</a>
             - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation'>TileDB</a>
-            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
+            - <a href='https://vylor.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
             - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE</a>
             """]
 
@@ -1762,7 +1762,7 @@ For CSV files, one might also consider [xarray_extras].
 [obstore]: https://developmentseed.org/obstore/latest/
 [pyproj]: https://github.com/pyproj4/pyproj
 [rasterio]: https://rasterio.readthedocs.io/en/latest/
-[rioxarray]: https://corteva.github.io/rioxarray/stable/
+[rioxarray]: https://vylor.github.io/rioxarray/stable/
 [test files]: https://github.com/rasterio/rasterio/blob/master/tests/data/RGB.byte.tif
 [xarray_extras]: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 [zarr]: https://zarr.readthedocs.io/

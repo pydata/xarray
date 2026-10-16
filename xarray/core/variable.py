@@ -781,15 +781,11 @@ class Variable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
-    to_variable = utils.alias(to_base_variable, "to_variable")
-
     def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
-
-    to_coord = utils.alias(to_index_variable, "to_coord")
 
     def _to_index(self) -> pd.Index:
         return self.to_index_variable()._to_index()
@@ -1148,9 +1144,9 @@ class Variable(
             raise ValueError("encoding must be castable to a dictionary") from err
 
     def reset_encoding(self) -> Self:
-        warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
-            stacklevel=2,
+        emit_user_level_warning(
+            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
+            FutureWarning,
         )
         return self.drop_encoding()
 
@@ -3304,8 +3300,6 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
         """Return this variable as an xarray.IndexVariable"""
         return self.copy(deep=False)
 
-    to_coord = utils.alias(to_index_variable, "to_coord")
-
     @override
     def _to_index(self) -> pd.Index:
         # n.b. creating a new pandas.Index from an old pandas.Index is
@@ -3397,6 +3391,19 @@ def _broadcast_compat_variables(*variables):
     """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
+
+
+def _as_shared_dtype(variables: Sequence[Variable]) -> tuple[Variable, ...]:
+    """Cast variables to a shared dtype, preserving their attrs and encoding."""
+    # Casting after broadcasting can materialize the full expanded array before
+    # it is split into chunks for concatenation or stacking.
+    arrays = [var._data for var in variables]
+    arrays = duck_array_ops.as_shared_dtype(
+        arrays, xp=duck_array_ops.get_array_namespace(*arrays)
+    )
+    return tuple(
+        var._replace(data=data) for var, data in zip(variables, arrays, strict=True)
+    )
 
 
 def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:

@@ -181,17 +181,7 @@ class AbstractArray(Generic[DimType_co]):  # noqa: UP046
         self: Any, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
-            if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
-                copy = None
-            elif np.lib.NumpyVersion(np.__version__) <= "1.28.0":
-                copy = False
-            else:
-                # 2.0.0 dev versions, handle cases where copy may or may not exist
-                try:
-                    np.array([1]).__array__(copy=None)
-                    copy = None
-                except TypeError:
-                    copy = False
+            copy = None
         return np.array(self.values, dtype=dtype, copy=copy)
 
     def __repr__(self) -> str:
