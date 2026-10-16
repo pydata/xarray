@@ -276,6 +276,11 @@ Bug Fixes
 - Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
   the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
   By `Charles Turner <https://github.com/charles-turner-1>`_.
+- :py:func:`open_dataset` and :py:func:`open_zarr` no longer ignore
+  ``use_zarr_fill_value_as_mask``. The option was not passed on to the Zarr
+  store, so the default for the Zarr format was always used, e.g. the Zarr
+  ``fill_value`` of a Zarr v3 array was never used as a mask (:issue:`10269`, :pull:`11748`).
+  By `Vladimir Saraikin <https://github.com/vsaraikin>`_.
 - :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` now return the
   dtype they report for dask arrays. Float32 data could be computed as float64
   depending on the method and the coordinate dtypes, which also made a later

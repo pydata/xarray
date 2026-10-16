@@ -1778,7 +1778,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 consolidated=consolidated,
                 consolidate_on_close=False,
                 storage_options=storage_options,
-                use_zarr_fill_value_as_mask=None,
+                use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
                 zarr_format=zarr_format,
                 cache_members=cache_members,
             )
