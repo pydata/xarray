@@ -126,7 +126,7 @@ Bug Fixes
 - Results of the string accessor methods ``strip``, ``pad``, ``center``,
   ``ljust``, ``rjust``, ``zfill`` and ``replace`` on dask arrays are no longer
   truncated to a single character, and ``repeat`` no longer fails on dask arrays
-  (:pull:`XXXXX`).
+  (:pull:`11746`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.str` methods ``center``, ``ljust``, ``rjust``, ``zfill``, ``pad``,
   ``split``, ``rsplit``, ``partition``, ``rpartition`` and ``format`` no longer
@@ -323,7 +323,7 @@ Performance
   ``rindex``, ``strip``, ``lstrip``, ``rstrip``, ``pad``, ``center``,
   ``ljust``, ``rjust``, ``zfill``, ``repeat``, the ``is*`` methods and
   ``contains`` and ``replace`` with ``regex=False``, which makes them 5-80
-  times faster for arrays with a string dtype (:pull:`XXXXX`).
+  times faster for arrays with a string dtype (:pull:`11746`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up rolling reductions of dask arrays without bottleneck, e.g. ``sum``,
   ``mean`` and ``count``, by about 7x with about 12x fewer tasks for a window of 20.
