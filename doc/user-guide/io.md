@@ -438,16 +438,17 @@ with xr.open_dataset(nc_filename) as ds:
     print(ds.keys())
 ```
 
-Because netCDF data is loaded lazily, an open dataset may keep the underlying
-file in use. **Close any dataset that still has the file open before overwriting
-that file with** {py:meth}`Dataset.to_netcdf`. This also applies to files opened
-with {py:func}`open_mfdataset`. On HDF5-based netCDF4 files, attempting to
-overwrite a file that is still open for reading can raise `PermissionError`.
+```{warning}
+Lazily loaded datasets keep reading from their source until they are closed.
+Don't overwrite a file or store while a dataset opened from it, e.g. with
+{py:func}`open_dataset` or {py:func}`open_mfdataset`, is still in use.
+Depending on the backend, this either raises an error (e.g. netCDF4, h5netcdf)
+or silently changes the values of the open dataset (e.g. Zarr, scipy).
 
-If you need to keep the original values after closing the file, first call
-{py:meth}`Dataset.load` to bring the data into memory, then
-{py:meth}`Dataset.close`. Alternatively, use a `with` block to close the
-dataset automatically before overwriting any of its source files.
+To overwrite a source, first read it into memory with {py:func}`load_dataset`,
+which also closes the file, or call {py:meth}`Dataset.load` followed by
+{py:meth}`Dataset.close`, or use a `with` block.
+```
 
 Although xarray provides reasonable support for incremental reads of files on
 disk, it does not support incremental writes, which can be a useful strategy
