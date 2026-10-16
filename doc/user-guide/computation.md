@@ -483,7 +483,6 @@ Missing values can be replaced manually by `weights.fillna(0)`.
 
 ## Coarsen large arrays
 
-For practical examples of coarsening, see the
 [Windowed Operations tutorial](https://tutorial.xarray.dev/fundamentals/03.3_windowed.html).
 
 {py:class}`DataArray` and {py:class}`Dataset` objects include a
