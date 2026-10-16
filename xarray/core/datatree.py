@@ -14,6 +14,7 @@ from collections.abc import (
 )
 from dataclasses import dataclass, field
 from html import escape
+from numbers import Number
 from os import PathLike
 from typing import (
     TYPE_CHECKING,
@@ -405,8 +406,10 @@ class DatasetView(Dataset):
             DataArray.
         keep_attrs : bool | None, optional
             If True, both the dataset's and variables' attributes (`attrs`) will be
-            copied from the original objects to the new ones. If False, the new dataset
-            and variables will be returned without copying the attributes.
+            combined from the original objects and the function results using the
+            ``drop_conflicts`` strategy: matching attrs are kept, conflicting attrs
+            are dropped. If False, the new dataset and variables will have only
+            the attributes set by the function.
         args : iterable, optional
             Positional arguments passed on to `func`.
         **kwargs : Any
@@ -446,8 +449,13 @@ class DatasetView(Dataset):
             for k, v in self.data_vars.items()
         }
         if keep_attrs:
+            # Merge attrs from function result and original, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
             for k, v in variables.items():
-                v._copy_attrs_from(self.data_vars[k])
+                v.attrs = merge_attrs(
+                    [v.attrs, self.data_vars[k].attrs], "drop_conflicts"
+                )
         attrs = self.attrs if keep_attrs else None
         # return type(self)(variables, attrs=attrs)
         return Dataset(variables, attrs=attrs)
@@ -873,8 +881,19 @@ class DataTree(
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
         'key' is either an array stored in the datatree or a child node, or neither.
+
+        String keys may be unix-like paths to a node or variable anywhere in the
+        tree, so ``key in tree`` is true exactly when ``tree[key]`` succeeds.
         """
-        return key in self.variables or key in self.children
+        if key in self.variables or key in self.children:
+            return True
+        if isinstance(key, str) and ("/" in key or key in ("", ".", "..")):
+            try:
+                self._get_item(key)
+            except KeyError:
+                return False
+            return True
+        return False
 
     def __bool__(self) -> bool:
         return bool(self._data_variables) or bool(self._children)
@@ -2498,9 +2517,9 @@ class DataTree(
                 self[path].variables[var_name].data = data
 
         # load everything else sequentially
-        for node in self.subtree:
+        for path, node in self.subtree_with_keys:
             for k, v in node.variables.items():
-                if k not in lazy_data:
+                if k not in lazy_data[path]:
                     v.load()
 
         return self
@@ -2635,9 +2654,10 @@ class DataTree(
 
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+        chunks : int, "auto" or mapping of hashable to int or a TimeResampler, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
             ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
+            A single value is applied to every dimension in the tree.
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2672,14 +2692,23 @@ class DataTree(
         xarray.unify_chunks
         dask.array.from_array
         """
-        # don't support deprecated ways of passing chunks
-        if not isinstance(chunks, Mapping):
-            raise TypeError(
-                f"invalid type for chunks: {type(chunks)}. Only mappings are supported."
-            )
-        combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
-
         all_dims = self._get_all_dims()
+
+        combined_chunks: Mapping[Any, T_ChunkDimFreq]
+        if not isinstance(chunks, Mapping):
+            # don't support deprecated ways of passing chunks: sequences of
+            # dimension-order sizes are deprecated for Dataset.chunk, and are
+            # additionally ambiguous for a tree whose groups need not share an
+            # ordering of their dimensions
+            if not isinstance(chunks, str | Number):
+                raise TypeError(
+                    f"invalid type for chunks: {type(chunks)}. Only mappings and "
+                    'single chunk specifications (e.g. 5 or "auto") to be applied '
+                    "to every dimension are supported."
+                )
+            combined_chunks = dict.fromkeys(all_dims, chunks)
+        else:
+            combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         bad_dims = combined_chunks.keys() - all_dims
         if bad_dims:

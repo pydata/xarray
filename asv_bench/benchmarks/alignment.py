@@ -1,8 +1,9 @@
 import numpy as np
+from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
 
-from . import parameterized, requires_dask
+from . import requires_dask
 
 ntime = 365 * 30
 nx = 50
@@ -26,15 +27,15 @@ class Align:
         self.idx = np.unique(rng.integers(low=0, high=ntime, size=ntime // 2))
         self.year_subset = self.year.isel(time=self.idx)
 
-    @parameterized(["join"], [("outer", "inner", "left", "right", "exact", "override")])
+    @parameterize({"join": ("outer", "inner", "left", "right", "exact", "override")})
     def time_already_aligned(self, join):
         xr.align(self.ds, self.year, join=join)
 
-    @parameterized(["join"], [("outer", "inner", "left", "right")])
+    @parameterize({"join": ("outer", "inner", "left", "right")})
     def time_not_aligned(self, join):
         xr.align(self.ds, self.year[-100:], join=join)
 
-    @parameterized(["join"], [("outer", "inner", "left", "right")])
+    @parameterize({"join": ("outer", "inner", "left", "right")})
     def time_not_aligned_random_integers(self, join):
         xr.align(self.ds, self.year_subset, join=join)
 
