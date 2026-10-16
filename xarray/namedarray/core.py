@@ -11,6 +11,7 @@ from typing import (
     Any,
     Generic,
     Literal,
+    Never,
     cast,
     overload,
     override,
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
         Default,
         DimsLike,
         IntOrUnknown,
+        NestedList,
         Shape,
         duckarray,
     )
@@ -183,6 +185,57 @@ def from_array[DimType_co: Hashable, ShapeType, DType: np.dtype[Any]](
     data: duckarray[ShapeType, DType],
     attrs: AttrsLike = ...,
 ) -> NamedArray[ShapeType, DType, DimType_co]: ...
+
+
+# Python scalars and lists, which numpy converts to arrays of a known dtype. They
+# are tried in order, so e.g. a list literal of ints is not taken for a list of
+# floats. An empty list becomes float64.
+@overload
+def from_array[DimType_co: Hashable](  # type: ignore[overload-overlap]
+    dims: Iterable[DimType_co],
+    data: list[Never],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.float64], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](  # type: ignore[overload-overlap]
+    dims: Iterable[DimType_co],
+    data: bool | NestedList[bool],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.bool_], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](
+    dims: Iterable[DimType_co],
+    data: int | NestedList[int],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.int_], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](
+    dims: Iterable[DimType_co],
+    data: float | NestedList[float],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.float64], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](
+    dims: Iterable[DimType_co],
+    data: complex | NestedList[complex],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.complex128], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](
+    dims: Iterable[DimType_co],
+    data: str | NestedList[str],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.str_], DimType_co]: ...
 
 
 @overload

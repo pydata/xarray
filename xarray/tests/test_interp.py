@@ -25,7 +25,6 @@ from xarray.tests import (
     requires_cftime,
     requires_dask,
     requires_scipy,
-    requires_scipy_ge_1_13,
 )
 from xarray.tests.test_dataset import create_test_data
 
@@ -178,11 +177,7 @@ def test_interpolate_1d_methods(method: InterpOptions) -> None:
     (
         (False, "linear"),
         (False, "akima"),
-        pytest.param(
-            False,
-            "makima",
-            marks=requires_scipy_ge_1_13,
-        ),
+        (False, "makima"),
         pytest.param(
             True,
             "linear",

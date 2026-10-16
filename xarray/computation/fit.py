@@ -14,12 +14,7 @@ from typing import (
 )
 
 import numpy as np
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
+from numpy.exceptions import RankWarning
 
 from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.computation.computation import _ensure_numeric, where
