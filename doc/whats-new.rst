@@ -258,6 +258,9 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
+  the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
+  By `Charles Turner <https://github.com/charles-turner-1>`_.
 - :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` now return the
   dtype they report for dask arrays. Float32 data could be computed as float64
   depending on the method and the coordinate dtypes, which also made a later
