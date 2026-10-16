@@ -171,7 +171,7 @@ Bug Fixes
 - ``DataArray.str.replace`` now respects ``case=False`` when ``regex=False``;
   the option was silently ignored. ``DataArray.str.contains`` with
   ``case=False, regex=False`` no longer raises ``AttributeError`` on object-dtype
-  or ``StringDType`` arrays.
+  or ``StringDType`` arrays (:pull:`11747`).
   By `Novain Shibu <https://github.com/novain-shibu>`_.
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
