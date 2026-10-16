@@ -1012,7 +1012,7 @@ class TestDataArray:
 
     def test_chunk_none_raises(self) -> None:
         with pytest.raises(TypeError, match=r"chunks=None is not supported"):
-            DataArray(np.ones((3, 4))).chunk(None)
+            DataArray(np.ones((3, 4))).chunk(None)  # type: ignore[arg-type]
 
     @requires_dask
     def test_chunk(self) -> None:
@@ -1029,12 +1029,12 @@ class TestDataArray:
         assert blocked.data.name != first_dask_name
 
         with pytest.warns(FutureWarning):
-            blocked = unblocked.chunk(chunks=(3, 3))
+            blocked = unblocked.chunk(chunks=(3, 3))  # type: ignore[arg-type]
         assert blocked.chunks == ((3,), (3, 1))
         assert blocked.data.name != first_dask_name
 
         with pytest.raises(ValueError), pytest.warns(FutureWarning):
-            blocked.chunk(chunks=(3, 3, 3))
+            blocked.chunk(chunks=(3, 3, 3))  # type: ignore[arg-type]
 
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined
