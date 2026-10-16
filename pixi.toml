@@ -20,8 +20,8 @@ python = "*"
 numpy = "*"
 pandas = "*"
 
-packaging = "24.2.*"
-git = "*"            # needed for dynamic versioning
+packaging = "*"
+git = "*"       # needed for dynamic versioning
 
 [dependencies]
 xarray = { path = "." }
@@ -101,20 +101,20 @@ jax = "*" # no way to get cpu-only jaxlib from conda if gpu is present
 [feature.minimal.dependencies]
 # minimal versions
 python = "3.12.*"
-numpy = "1.26.*"
-pandas = "2.2.*"
+numpy = "2.2.*"
+pandas = "2.3.*"
 
 [feature.minimum-scipy.dependencies]
-scipy = "1.15.*"
+scipy = "1.16.*"
 
 [feature.min-versions.dependencies]
 array-api-strict = "2.4.*" # dependency for testing the array api compat
-boto3 = "1.37.*"
-bottleneck = "1.4.*"
-cartopy = "0.24.*"
+boto3 = "1.40.*"
+bottleneck = "1.6.*"
+cartopy = "0.25.*"
 cftime = "1.6.*"
-dask-core = "2025.2.*"
-distributed = "2025.2.*"
+dask-core = "2025.9.*"
+distributed = "2025.9.*"
 flox = "0.10.*"
 # h5netcdf 1.8.0 introduced a few compatibility features with netcdf4
 # https://github.com/pydata/xarray/issues/10657#issuecomment-3711095986
@@ -122,25 +122,25 @@ h5netcdf = "1.8.*"
 # h5py and hdf5 tend to cause conflicts
 # for e.g. hdf5 1.12 conflicts with h5py=3.1
 # prioritize bumping other packages instead
-h5py = "3.13.*"
+h5py = "3.14.*"
 hdf5 = "1.14.*"
-iris = "3.11.*"
-lxml = "5.3.*"             # Optional dep of pydap
+iris = "3.13.*"
+lxml = "6.0.*"             # Optional dep of pydap
 matplotlib-base = "3.10.*"
 nc-time-axis = "1.4.*"
 # netcdf follows a 1.major.minor[.patch] convention
 # (see https://github.com/Unidata/netcdf4-python/issues/1090)
-netcdf4 = "1.6.*"
-numba = "0.61.*"
+netcdf4 = "1.7.*"
+numba = "0.62.*"
 numbagg = "0.9.*"
-packaging = "24.2.*"
-pint = "0.24.*"
+packaging = "25.0.*"
+pint = "0.25.*"
 pydap = "3.5.*"
 rasterio = "1.4.*"
 seaborn = "0.13.*"
-sparse = "0.15.*"
+sparse = "0.17.*"
 toolz = "1.0.*"
-zarr = "3.0.*"
+zarr = "3.1.*"
 pyarrow = "*"        # required by dask.dataframe
 # numcodecs warns on import when crc32c is used instead of google-crc32c
 google-crc32c = "*"
@@ -184,7 +184,7 @@ generate-ops-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success!
 ] }
 
 [feature.doc.dependencies]
-python = "3.12.*"
+python = "3.14.*"
 cartopy_offlinedata = "*"          # Natural Earth data, avoids downloads (and timeouts) while executing notebooks
 kerchunk = "*"
 ipykernel = "*"
@@ -194,6 +194,7 @@ ipython = "*"
 jupyter_client = "*"
 jupyter_sphinx = "*"
 ncdata = ">=0.4"                   # support for iris>=3.16. See https://github.com/SciTools/ncdata/issues/255
+packaging = ">=26.0"
 pydata-sphinx-theme = "*"
 pyproj = "*"
 rich = "*"                         # for Zarr tree()

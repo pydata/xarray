@@ -406,8 +406,10 @@ class DatasetView(Dataset):
             DataArray.
         keep_attrs : bool | None, optional
             If True, both the dataset's and variables' attributes (`attrs`) will be
-            copied from the original objects to the new ones. If False, the new dataset
-            and variables will be returned without copying the attributes.
+            combined from the original objects and the function results using the
+            ``drop_conflicts`` strategy: matching attrs are kept, conflicting attrs
+            are dropped. If False, the new dataset and variables will have only
+            the attributes set by the function.
         args : iterable, optional
             Positional arguments passed on to `func`.
         **kwargs : Any
@@ -447,8 +449,13 @@ class DatasetView(Dataset):
             for k, v in self.data_vars.items()
         }
         if keep_attrs:
+            # Merge attrs from function result and original, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
             for k, v in variables.items():
-                v._copy_attrs_from(self.data_vars[k])
+                v.attrs = merge_attrs(
+                    [v.attrs, self.data_vars[k].attrs], "drop_conflicts"
+                )
         attrs = self.attrs if keep_attrs else None
         # return type(self)(variables, attrs=attrs)
         return Dataset(variables, attrs=attrs)
@@ -874,8 +881,19 @@ class DataTree(
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
         'key' is either an array stored in the datatree or a child node, or neither.
+
+        String keys may be unix-like paths to a node or variable anywhere in the
+        tree, so ``key in tree`` is true exactly when ``tree[key]`` succeeds.
         """
-        return key in self.variables or key in self.children
+        if key in self.variables or key in self.children:
+            return True
+        if isinstance(key, str) and ("/" in key or key in ("", ".", "..")):
+            try:
+                self._get_item(key)
+            except KeyError:
+                return False
+            return True
+        return False
 
     def __bool__(self) -> bool:
         return bool(self._data_variables) or bool(self._children)
@@ -2499,9 +2517,9 @@ class DataTree(
                 self[path].variables[var_name].data = data
 
         # load everything else sequentially
-        for node in self.subtree:
+        for path, node in self.subtree_with_keys:
             for k, v in node.variables.items():
-                if k not in lazy_data:
+                if k not in lazy_data[path]:
                     v.load()
 
         return self

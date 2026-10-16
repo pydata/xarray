@@ -617,9 +617,7 @@ AGGREGATION_METHODS = (
         numeric_only=True,
     ),
     Method("var", long_name="variance", extra_kwargs=(skipna, ddof), numeric_only=True),
-    Method(
-        "median", extra_kwargs=(skipna,), numeric_only=True, min_flox_version="0.9.2"
-    ),
+    Method("median", extra_kwargs=(skipna,), numeric_only=True),
     # Scans:
     Method(
         "cumsum",

@@ -224,3 +224,12 @@
     x: NamedArray[Any, Any, tuple[str, int]] = NamedArray((("a", 1),), np.zeros(2))
 
     reveal_type(astype(x, np.dtype(np.int64)).dims)  # N: Revealed type is "tuple[tuple[str, int], ...]"
+
+- case: test_mypy_namedarray_from_array_python_data
+  main: |
+    from xarray.namedarray.core import from_array
+
+    reveal_type(from_array("x", [1, 2]))  # N: Revealed type is "xarray.namedarray.core.NamedArray[Any, numpy.dtype[numpy.signedinteger[numpy._typing._nbit_base._32Bit | numpy._typing._nbit_base._64Bit]], str]"
+    reveal_type(from_array("x", [1.0]))  # N: Revealed type is "xarray.namedarray.core.NamedArray[Any, numpy.dtype[numpy.float64], str]"
+    reveal_type(from_array("x", ["a"]))  # N: Revealed type is "xarray.namedarray.core.NamedArray[Any, numpy.dtype[numpy.str_], str]"
+    reveal_type(from_array("x", []))  # N: Revealed type is "xarray.namedarray.core.NamedArray[Any, numpy.dtype[numpy.float64], str]"
