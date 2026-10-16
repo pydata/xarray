@@ -1853,7 +1853,7 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def _shuffle(
-        self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks
+        self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks | None
     ) -> Self:
         ds = self._to_temp_dataset()._shuffle(dim=dim, indices=indices, chunks=chunks)
         return self._from_temp_dataset(ds)
