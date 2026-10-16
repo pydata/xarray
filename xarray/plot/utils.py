@@ -2127,3 +2127,26 @@ def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
     _axis = getattr(ax, f"{axis}axis")
     _axis.set_major_locator(locator)
     _axis.set_major_formatter(formatter)
+
+
+# Line2D properties that an axes' property cycle commonly varies per line.
+_CYCLE_PROPS = (
+    "color",
+    "linestyle",
+    "linewidth",
+    "marker",
+    "markersize",
+    "markeredgewidth",
+    "alpha",
+)
+
+
+def _group_hue_values(hue_values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Group hue values in order of first appearance.
+
+    Returns the group code of every position and the position of the first
+    occurrence of every group. Missing values (NaN, NaT, None) form one group.
+    """
+    codes, _ = pd.factorize(hue_values, use_na_sentinel=False)
+    first = np.unique(codes, return_index=True)[1]
+    return codes, first

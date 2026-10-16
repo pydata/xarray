@@ -16,6 +16,7 @@ from xarray.plot.utils import (
     _add_legend,
     _determine_guide,
     _get_nice_quiver_magnitude,
+    _group_hue_values,
     _guess_coords_to_plot,
     _infer_xy_labels,
     _Normalize,
@@ -776,11 +777,9 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             # multiple times in the legend (GH10998). Keep the first handle
             # drawn for each hue value, matching the non-faceted line legend.
             if isinstance(handles, list) and len(handles) == len(labels):
-                first_handle_by_hue: dict[Hashable, Any] = {}
-                for handle, hue_value in zip(handles, labels, strict=True):
-                    first_handle_by_hue.setdefault(hue_value, handle)
-                handles = list(first_handle_by_hue.values())
-                labels = list(first_handle_by_hue.keys())
+                _, hue_first = _group_hue_values(self._hue_var.to_numpy())
+                handles = [handles[i] for i in hue_first]
+                labels = [labels[i] for i in hue_first]
             self.figlegend = self.fig.legend(
                 handles=handles,
                 labels=labels,

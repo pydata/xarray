@@ -11,6 +11,7 @@ import pandas as pd
 from xarray.core.utils import attempt_import
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
+    _CYCLE_PROPS,
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_colorbar,
@@ -18,6 +19,7 @@ from xarray.plot.utils import (
     _assert_valid_xy,
     _determine_guide,
     _ensure_plottable,
+    _group_hue_values,
     _guess_coords_to_plot,
     _infer_interval_breaks,
     _infer_xy_labels,
@@ -538,27 +540,21 @@ def line(
 
     primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
-    # ax.plot draws each column of a 2D array with the next color from the
-    # axes' property cycle, so duplicate hue values get distinct colors.
-    # Recolor so lines sharing a hue value share a color: the k-th hue value
-    # (in order of first appearance) takes the k-th color the axes assigned,
-    # which leaves palettes unchanged whenever the hue values are already
-    # unique and inherits whatever property cycle the axes carries. Skipped
-    # when the caller pinned a color, since every line already shares it.
-    if (
-        hueplt is not None
-        and len(primitive) == hueplt.size
-        and "color" not in kwargs
-        and "c" not in kwargs
-    ):
+    # ax.plot draws each column of a 2D array with the next style from the
+    # axes' property cycle, so duplicate hue values get distinct styles.
+    # Restyle so lines sharing a hue value share a style: the k-th hue value
+    # (in order of first appearance) takes the style of the k-th line, which
+    # inherits whatever property cycle the axes carries.
+    if hueplt is not None:
         hue_values = hueplt.to_numpy()
-        unique_hues = list(dict.fromkeys(hue_values))
-        color_by_hue: dict[Hashable, Any] = {
-            hue_value: primitive[k].get_color()
-            for k, hue_value in enumerate(unique_hues)
-        }
-        for line2d, hue_value in zip(primitive, hue_values, strict=True):
-            line2d.set_color(color_by_hue[hue_value])
+        hue_codes, hue_first = _group_hue_values(hue_values)
+        if len(hue_first) < len(primitive):
+            styles = [
+                {prop: getattr(line2d, f"get_{prop}")() for prop in _CYCLE_PROPS}
+                for line2d in primitive
+            ]
+            for line2d, code in zip(primitive, hue_codes, strict=True):
+                line2d.set(**styles[code])
 
     if _labels:
         if xlabel is not None:
@@ -571,14 +567,10 @@ def line(
 
     if darray.ndim == 2 and add_legend:
         assert hueplt is not None
-        # One legend entry per hue value, keyed to the first line drawn with
-        # it, so duplicate hue values don't produce duplicate entries.
-        first_line_by_hue: dict[Hashable, Any] = {}
-        for line2d, hue_value in zip(primitive, hueplt.to_numpy(), strict=False):
-            first_line_by_hue.setdefault(hue_value, line2d)
+        # One legend entry per hue value, keyed to the first line drawn with it.
         ax.legend(
-            handles=list(first_line_by_hue.values()),
-            labels=list(first_line_by_hue.keys()),
+            handles=[primitive[i] for i in hue_first],
+            labels=list(hue_values[hue_first]),
             title=hue_label,
         )
 

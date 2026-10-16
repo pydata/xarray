@@ -36,7 +36,7 @@ Bug Fixes
   (:issue:`11651`, :pull:`11653`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.plot.line` now draws lines sharing a hue value with the
-  same color and deduplicates their legend entries, consistent with
+  same color (and other cycled styles) and deduplicates their legend entries, consistent with
   :py:meth:`DataArray.plot.scatter` (:issue:`10998`, :pull:`11164`).
   By `Harikrishna KP <https://github.com/Mr-Neutr0n>`_.
 - Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
