@@ -44,6 +44,7 @@ import re
 import textwrap
 from collections.abc import Callable, Hashable, Mapping
 from functools import reduce
+from operator import methodcaller
 from operator import or_ as set_union
 from re import Pattern
 from typing import TYPE_CHECKING, Any
@@ -53,6 +54,7 @@ import numpy as np
 
 from xarray.core import duck_array_ops
 from xarray.core.types import T_DataArray
+from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
@@ -117,6 +119,7 @@ def _apply_str_ufunc(
     output_sizes: Mapping[Any, int] | None = None,
     func_args: tuple = (),
     func_kwargs: Mapping = {},
+    vectorize: bool = True,
 ) -> Any:
     # TODO handling of na values ?
     if dtype is None:
@@ -132,7 +135,7 @@ def _apply_str_ufunc(
         func,
         obj,
         *func_args,
-        vectorize=True,
+        vectorize=vectorize,
         dask="parallelized",
         output_dtypes=[dtype],
         output_core_dims=output_core_dims,
@@ -235,12 +238,21 @@ class StringAccessor[T_DataArray: DataArray]:
         self,
         *,
         func: Callable,
+        np_func: Callable | None = None,
         dtype: DTypeLike | None = None,
         output_core_dims: list | tuple = ((),),
         output_sizes: Mapping[Any, int] | None = None,
         func_args: tuple = (),
         func_kwargs: Mapping = {},
     ) -> T_DataArray:
+        """
+        Apply ``func`` to each element, or the vectorized ``np_func`` (a function
+        of ``np.strings``) to the whole array if it supports the dtypes.
+        """
+        vectorize = True
+        if np_func is not None and self._supports_np_strings(func_args):
+            func = np_func
+            vectorize = False
         return _apply_str_ufunc(
             obj=self._obj,
             func=func,
@@ -249,6 +261,21 @@ class StringAccessor[T_DataArray: DataArray]:
             output_sizes=output_sizes,
             func_args=func_args,
             func_kwargs=func_kwargs,
+            vectorize=vectorize,
+        )
+
+    def _supports_np_strings(self, func_args: tuple) -> bool:
+        """
+        Whether the functions of ``np.strings`` support the array and arguments.
+
+        They support string dtypes, but not object arrays of strings. Empty
+        arrays use the elementwise path, as e.g. ``np.strings.center`` fails on
+        them.
+        """
+        return (
+            self._obj.dtype.kind in "UST"
+            and self._obj.size > 0
+            and not any(getattr(arg, "dtype", None) == np.object_ for arg in func_args)
         )
 
     def _re_compile(
@@ -299,7 +326,7 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         lengths array : array of int
         """
-        return self._apply(func=len, dtype=int)
+        return self._apply(func=len, np_func=np.strings.str_len, dtype=int)
 
     def __getitem__(
         self,
@@ -884,7 +911,9 @@ class StringAccessor[T_DataArray: DataArray]:
         array([ True, False])
         Dimensions without coordinates: x
         """
-        return self._apply(func=lambda x: x.isalnum(), dtype=bool)
+        return self._apply(
+            func=lambda x: x.isalnum(), np_func=np.strings.isalnum, dtype=bool
+        )
 
     def isalpha(self) -> T_DataArray:
         """
@@ -908,7 +937,9 @@ class StringAccessor[T_DataArray: DataArray]:
         array([ True, False, False])
         Dimensions without coordinates: x
         """
-        return self._apply(func=lambda x: x.isalpha(), dtype=bool)
+        return self._apply(
+            func=lambda x: x.isalpha(), np_func=np.strings.isalpha, dtype=bool
+        )
 
     def isdecimal(self) -> T_DataArray:
         """
@@ -932,7 +963,9 @@ class StringAccessor[T_DataArray: DataArray]:
         array([False,  True,  True])
         Dimensions without coordinates: x
         """
-        return self._apply(func=lambda x: x.isdecimal(), dtype=bool)
+        return self._apply(
+            func=lambda x: x.isdecimal(), np_func=np.strings.isdecimal, dtype=bool
+        )
 
     def isdigit(self) -> T_DataArray:
         """
@@ -956,7 +989,9 @@ class StringAccessor[T_DataArray: DataArray]:
         array([ True, False,  True, False, False])
         Dimensions without coordinates: x
         """
-        return self._apply(func=lambda x: x.isdigit(), dtype=bool)
+        return self._apply(
+            func=lambda x: x.isdigit(), np_func=np.strings.isdigit, dtype=bool
+        )
 
     def islower(self) -> T_DataArray:
         """
@@ -981,7 +1016,9 @@ class StringAccessor[T_DataArray: DataArray]:
         array([ True, False, False])
         Dimensions without coordinates: x
         """
-        return self._apply(func=lambda x: x.islower(), dtype=bool)
+        return self._apply(
+            func=lambda x: x.islower(), np_func=np.strings.islower, dtype=bool
+        )
 
     def isnumeric(self) -> T_DataArray:
         """
@@ -1005,7 +1042,9 @@ class StringAccessor[T_DataArray: DataArray]:
         array([ True, False, False, False, False])
         Dimensions without coordinates: x
         """
-        return self._apply(func=lambda x: x.isnumeric(), dtype=bool)
+        return self._apply(
+            func=lambda x: x.isnumeric(), np_func=np.strings.isnumeric, dtype=bool
+        )
 
     def isspace(self) -> T_DataArray:
         """
@@ -1029,7 +1068,9 @@ class StringAccessor[T_DataArray: DataArray]:
         array([False,  True,  True,  True])
         Dimensions without coordinates: x
         """
-        return self._apply(func=lambda x: x.isspace(), dtype=bool)
+        return self._apply(
+            func=lambda x: x.isspace(), np_func=np.strings.isspace, dtype=bool
+        )
 
     def istitle(self) -> T_DataArray:
         """
@@ -1061,7 +1102,9 @@ class StringAccessor[T_DataArray: DataArray]:
         array([ True, False, False])
         Dimensions without coordinates: title
         """
-        return self._apply(func=lambda x: x.istitle(), dtype=bool)
+        return self._apply(
+            func=lambda x: x.istitle(), np_func=np.strings.istitle, dtype=bool
+        )
 
     def isupper(self) -> T_DataArray:
         """
@@ -1085,7 +1128,9 @@ class StringAccessor[T_DataArray: DataArray]:
         array([ True, False, False])
         Dimensions without coordinates: x
         """
-        return self._apply(func=lambda x: x.isupper(), dtype=bool)
+        return self._apply(
+            func=lambda x: x.isupper(), np_func=np.strings.isupper, dtype=bool
+        )
 
     def count(
         self, pat: str | bytes | Pattern | Any, flags: int = 0, case: bool | None = None
@@ -1199,7 +1244,9 @@ class StringAccessor[T_DataArray: DataArray]:
         """
         pat = self._stringify(pat)
         func = lambda x, y: x.startswith(y)
-        return self._apply(func=func, func_args=(pat,), dtype=bool)
+        return self._apply(
+            func=func, np_func=np.strings.startswith, func_args=(pat,), dtype=bool
+        )
 
     def endswith(self, pat: str | bytes | Any) -> T_DataArray:
         """
@@ -1235,7 +1282,9 @@ class StringAccessor[T_DataArray: DataArray]:
         """
         pat = self._stringify(pat)
         func = lambda x, y: x.endswith(y)
-        return self._apply(func=func, func_args=(pat,), dtype=bool)
+        return self._apply(
+            func=func, np_func=np.strings.endswith, func_args=(pat,), dtype=bool
+        )
 
     def pad(
         self,
@@ -1341,6 +1390,7 @@ class StringAccessor[T_DataArray: DataArray]:
         self,
         *,
         func: Callable,
+        np_func: Callable,
         width: int | Any,
         fillchar: str | bytes | Any = " ",
     ) -> T_DataArray:
@@ -1348,13 +1398,18 @@ class StringAccessor[T_DataArray: DataArray]:
         Wrapper function to handle padding operations
         """
         fillchar = self._stringify(fillchar)
+        # check here, np.strings raises a different error
+        if isinstance(fillchar, str | bytes) and len(fillchar) != 1:
+            raise TypeError("fillchar must be a character, not str")
+        # np.strings requires integer widths
+        width = width.astype(int) if hasattr(width, "astype") else int(width)
 
         def overfunc(x, iwidth, ifillchar):
             if len(ifillchar) != 1:
                 raise TypeError("fillchar must be a character, not str")
-            return func(x, int(iwidth), ifillchar)
+            return func(x, iwidth, ifillchar)
 
-        return self._apply(func=overfunc, func_args=(width, fillchar))
+        return self._apply(func=overfunc, np_func=np_func, func_args=(width, fillchar))
 
     def center(
         self, width: int | Any, fillchar: str | bytes | Any = " "
@@ -1379,7 +1434,9 @@ class StringAccessor[T_DataArray: DataArray]:
         filled : same type as values
         """
         func = self._method("center")
-        return self._padder(func=func, width=width, fillchar=fillchar)
+        return self._padder(
+            func=func, np_func=np.strings.center, width=width, fillchar=fillchar
+        )
 
     def ljust(
         self,
@@ -1406,7 +1463,9 @@ class StringAccessor[T_DataArray: DataArray]:
         filled : same type as values
         """
         func = self._method("ljust")
-        return self._padder(func=func, width=width, fillchar=fillchar)
+        return self._padder(
+            func=func, np_func=np.strings.ljust, width=width, fillchar=fillchar
+        )
 
     def rjust(
         self,
@@ -1433,7 +1492,9 @@ class StringAccessor[T_DataArray: DataArray]:
         filled : same type as values
         """
         func = self._method("rjust")
-        return self._padder(func=func, width=width, fillchar=fillchar)
+        return self._padder(
+            func=func, np_func=np.strings.rjust, width=width, fillchar=fillchar
+        )
 
     def zfill(self, width: int | Any) -> T_DataArray:
         """
@@ -1507,6 +1568,7 @@ class StringAccessor[T_DataArray: DataArray]:
                 "Must use regular expression matching for regular expression object."
             )
 
+        np_func = None
         if regex:
             if not is_compiled_re:
                 pat = self._re_compile(pat=pat, flags=flags, case=case)
@@ -1520,6 +1582,7 @@ class StringAccessor[T_DataArray: DataArray]:
             pat = self._stringify(pat)
             if case or case is None:
                 func = lambda x, ipat: ipat in x
+                np_func = lambda x, ipat: np.strings.find(x, ipat) >= 0
             elif self._obj.dtype.char == "U":
                 uppered = self.casefold()
                 uppat = StringAccessor(pat).casefold()  # type: ignore[type-var]  # hack?
@@ -1529,7 +1592,7 @@ class StringAccessor[T_DataArray: DataArray]:
                 uppat = StringAccessor(pat).upper()  # type: ignore[type-var]  # hack?
                 return uppered.str.contains(uppat, regex=False)  # type: ignore[return-value]
 
-        return self._apply(func=func, func_args=(pat,), dtype=bool)
+        return self._apply(func=func, np_func=np_func, func_args=(pat,), dtype=bool)
 
     def match(
         self,
@@ -1593,19 +1656,36 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         stripped : same type as values
         """
-        if to_strip is not None:
-            to_strip = self._stringify(to_strip)
-
         if side == "both":
-            func = lambda x, y: x.strip(y)
+            method = "strip"
         elif side == "left":
-            func = lambda x, y: x.lstrip(y)
+            method = "lstrip"
         elif side == "right":
-            func = lambda x, y: x.rstrip(y)
+            method = "rstrip"
         else:  # pragma: no cover
             raise ValueError("Invalid side")
 
-        return self._apply(func=func, func_args=(to_strip,))
+        if to_strip is None:
+            # don't pass None as argument, dask turns it into an object array
+            func: Callable = methodcaller(method)
+            func_args: tuple = ()
+        else:
+            func = lambda x, y: getattr(x, method)(y)
+            func_args = (self._stringify(to_strip),)
+
+        result = self._apply(
+            func=func, np_func=getattr(np.strings, method), func_args=func_args
+        )
+        if (
+            result.dtype.kind in "US"
+            and result.size > 0
+            and not is_chunked_array(result.data)
+        ):
+            # np.strings keeps the width of the input dtype, shrink it to the
+            # longest string like the elementwise path
+            width = max(int(np.strings.str_len(result.data).max()), 1)
+            result = result.astype(f"{result.dtype.kind}{width}")
+        return result
 
     def lstrip(self, to_strip: str | bytes | Any = None) -> T_DataArray:
         """
@@ -1722,7 +1802,7 @@ class StringAccessor[T_DataArray: DataArray]:
             Array of repeated string objects.
         """
         func = lambda x, y: x * y
-        return self._apply(func=func, func_args=(repeats,))
+        return self._apply(func=func, np_func=np.strings.multiply, func_args=(repeats,))
 
     def find(
         self,
@@ -1758,6 +1838,9 @@ class StringAccessor[T_DataArray: DataArray]:
         found : array of int
         """
         sub = self._stringify(sub)
+        # don't pass None as argument, dask turns it into an object array
+        if end is None:
+            end = np.iinfo(np.int64).max
 
         if side == "left":
             method = "find"
@@ -1767,7 +1850,12 @@ class StringAccessor[T_DataArray: DataArray]:
             raise ValueError("Invalid side")
 
         func = lambda x, isub, istart, iend: getattr(x, method)(isub, istart, iend)
-        return self._apply(func=func, func_args=(sub, start, end), dtype=int)
+        return self._apply(
+            func=func,
+            np_func=getattr(np.strings, method),
+            func_args=(sub, start, end),
+            dtype=int,
+        )
 
     def rfind(
         self,
@@ -1841,6 +1929,9 @@ class StringAccessor[T_DataArray: DataArray]:
             substring is not found
         """
         sub = self._stringify(sub)
+        # don't pass None as argument, dask turns it into an object array
+        if end is None:
+            end = np.iinfo(np.int64).max
 
         if side == "left":
             method = "index"
@@ -1850,7 +1941,12 @@ class StringAccessor[T_DataArray: DataArray]:
             raise ValueError("Invalid side")
 
         func = lambda x, isub, istart, iend: getattr(x, method)(isub, istart, iend)
-        return self._apply(func=func, func_args=(sub, start, end), dtype=int)
+        return self._apply(
+            func=func,
+            np_func=getattr(np.strings, method),
+            func_args=(sub, start, end),
+            dtype=int,
+        )
 
     def rindex(
         self,
@@ -1953,6 +2049,7 @@ class StringAccessor[T_DataArray: DataArray]:
         if not regex and callable(repl):
             raise ValueError("Cannot use a callable replacement when regex=False")
 
+        np_func = None
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
             # ``re.sub`` interprets ``count=0`` as "replace every occurrence",
@@ -1963,7 +2060,8 @@ class StringAccessor[T_DataArray: DataArray]:
         else:
             pat = self._stringify(pat)
             func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
-        return self._apply(func=func, func_args=(pat, repl, n))
+            np_func = np.strings.replace
+        return self._apply(func=func, np_func=np_func, func_args=(pat, repl, n))
 
     def extract(
         self,
