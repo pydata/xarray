@@ -46,9 +46,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
-    requires_dask_ge_2024_08_1,
     requires_flox,
-    requires_flox_0_9_12,
     requires_scipy,
 )
 
@@ -993,6 +991,17 @@ def test_groupby_dataset_reduce_ellipsis(
     with xr.set_options(use_flox=use_flox):
         actual = gb.mean(...)
     assert_allclose(expected, actual)
+
+
+@pytest.mark.parametrize("use_flox", [pytest.param(True, marks=requires_flox), False])
+def test_groupby_dataset_by_data_variable_does_not_warn(use_flox: bool) -> None:
+    # GH9890
+    ds = Dataset({"a": ("x", [1, 1, 2, 2]), "b": ("x", [1.0, 2.0, 3.0, 4.0])})
+    expected = Dataset({"b": ("a", [1.5, 3.5])}, coords={"a": [1, 2]})
+    with xr.set_options(use_flox=use_flox), warnings.catch_warnings():
+        warnings.simplefilter("error")
+        actual = ds.groupby("a").mean()
+    assert_identical(actual, expected)
 
 
 def test_groupby_dataset_math() -> None:
@@ -3249,7 +3258,7 @@ def test_multiple_groupers_lazy(use_flox: bool) -> None:
                 gb.count()
 
 
-@requires_flox_0_9_12
+@requires_flox
 @pytest.mark.parametrize(
     "reduction", ["max", "min", "nanmax", "nanmin", "sum", "nansum", "prod", "nanprod"]
 )
@@ -3279,7 +3288,7 @@ def test_groupby_preserve_dtype(reduction):
 
 
 @requires_dask
-@requires_flox_0_9_12
+@requires_flox
 @pytest.mark.parametrize("reduction", ["any", "all", "count"])
 @pytest.mark.xfail_with_dask_array(
     reason="flox resample currently mixes legacy dask arrays"
@@ -3491,7 +3500,7 @@ def test_groupby_multiple_bin_grouper_missing_groups() -> None:
     assert_identical(actual, expected)
 
 
-@requires_dask_ge_2024_08_1
+@requires_dask
 def test_shuffle_simple() -> None:
     array_api = dask_array_api
 
@@ -3508,7 +3517,7 @@ def test_shuffle_simple() -> None:
         da.chunk(x=2, eagerly_load_group=False).groupby("label").shuffle_to_chunks()
 
 
-@requires_dask_ge_2024_08_1
+@requires_dask
 @pytest.mark.parametrize(
     "chunks, expected_chunks",
     [

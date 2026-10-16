@@ -113,6 +113,11 @@ def test_range_index_linspace() -> None:
     assert_equal(actual, expected, check_default_indexes=False)
 
 
+def test_range_index_linspace_negative_num() -> None:
+    with pytest.raises(ValueError, match="must be non-negative"):
+        RangeIndex.linspace(0.0, 1.0, num=-1, dim="x")
+
+
 def test_range_index_dtype() -> None:
     index = RangeIndex.arange(0.0, 1.0, 0.1, dim="x", dtype=np.float32)
     coords = xr.Coordinates.from_xindex(index)

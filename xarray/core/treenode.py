@@ -24,6 +24,12 @@ class NodePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
 
     def __init__(self, *pathsegments):
+        # POSIX keeps exactly two leading slashes as a distinct root ("//a"),
+        # which has no meaning in a tree, so treat it like "/" as "///a" is
+        pathsegments = tuple(
+            "/" + s.lstrip("/") if isinstance(s, str) and s.startswith("//") else s
+            for s in pathsegments
+        )
         super().__init__(*pathsegments)
         if self.drive:
             raise ValueError("NodePaths cannot have drives")
@@ -166,7 +172,8 @@ class TreeNode:
         self._check_children(children)
         children = {**children}
 
-        old_children = self.children
+        # snapshot, since self.children is a live view that attaching mutates
+        old_children = dict(self.children)
         del self.children
         try:
             self._pre_attach_children(children)
@@ -191,7 +198,7 @@ class TreeNode:
 
     @staticmethod
     def _check_children(children: Mapping[str, TreeNode]) -> None:
-        """Check children for correct types and for any duplicates."""
+        """Check children for correct types, valid names and for any duplicates."""
         if not is_dict_like(children):
             raise TypeError(
                 "children must be a dict-like mapping from names to node objects"
@@ -199,6 +206,7 @@ class TreeNode:
 
         seen = set()
         for name, child in children.items():
+            _validate_name(name)
             if not isinstance(child, TreeNode):
                 raise TypeError(
                     f"Cannot add object {name}. It is of type {type(child)}, "
@@ -322,7 +330,7 @@ class TreeNode:
             FutureWarning,
             stacklevel=2,
         )
-        return self.iter_lineage()
+        return (self, *self.parents)
 
     @property
     def parents(self) -> tuple[Self, ...]:
@@ -544,6 +552,9 @@ class TreeNode:
             parts = list(path.parts)
 
         for part in parts:
+            if not isinstance(current_node, TreeNode):
+                # the path continues past a variable, which has no children
+                raise KeyError(f"Could not find node at {path}")
             if part == "..":
                 if current_node.parent is None:
                     raise KeyError(f"Could not find node at {path}")

@@ -539,20 +539,21 @@ def test_infer_datetime_units(freq, units) -> None:
 
 
 @pytest.mark.parametrize(
-    ["dates", "expected"],
+    ["date_strings", "expected"],
     [
         (
-            pd.to_datetime(["1900-01-01", "1900-01-02", "NaT"], unit="ns"),
+            ["1900-01-01", "1900-01-02", "NaT"],
             "days since 1900-01-01 00:00:00",
         ),
         (
-            pd.to_datetime(["NaT", "1900-01-01"], unit="ns"),
+            ["NaT", "1900-01-01"],
             "days since 1900-01-01 00:00:00",
         ),
-        (pd.to_datetime(["NaT"], unit="ns"), "days since 1970-01-01 00:00:00"),
+        (["NaT"], "days since 1970-01-01 00:00:00"),
     ],
 )
-def test_infer_datetime_units_with_NaT(dates, expected) -> None:
+def test_infer_datetime_units_with_NaT(date_strings, expected) -> None:
+    dates = pd.to_datetime(date_strings, unit="ns")
     assert expected == infer_datetime_units(dates)
 
 
@@ -1869,7 +1870,7 @@ def test_decode_timedelta_via_units(
     timedeltas = pd.timedelta_range(0, freq="D", periods=3)
     attrs = {"units": "days"}
     var = Variable(["time"], timedeltas, encoding=attrs)
-    encoded = Variable(["time"], np.array([0, 1, 2]), attrs=attrs)
+    encoded = Variable(["time"], np.array([0, 1, 2], dtype=np.int64), attrs=attrs)
     decoded = conventions.decode_cf_variable(
         "foo", encoded, decode_times=decode_times, decode_timedelta=decode_timedelta
     )
@@ -2192,8 +2193,8 @@ def test_roundtrip_0size_timedelta(time_unit: PDDatetimeUnitOptions) -> None:
     # regression test for GitHub issue #10310
     encoding = {"units": "days", "dtype": np.dtype("int64")}
     data = np.array([], dtype=f"=m8[{time_unit}]")
-    decoded = Variable(["time"], data, encoding=encoding)
-    encoded = conventions.encode_cf_variable(decoded, name="foo")
+    original = Variable(["time"], data, encoding=encoding)
+    encoded = conventions.encode_cf_variable(original, name="foo")
     assert encoded.dtype == encoding["dtype"]
     assert encoded.attrs["units"] == encoding["units"]
     decoded = conventions.decode_cf_variable("foo", encoded, decode_timedelta=True)

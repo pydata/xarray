@@ -16,7 +16,7 @@ or, without pixi:
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from typing import Any
 
 import jinja2
@@ -118,13 +118,13 @@ template_inplace = """
         return self._inplace_binary_op(other, {{ func }})"""
 
 required_method_unary = """
-    def _unary_op(self, f: Callable, *args: Any, **kwargs: Any) -> Self:
+    def _unary_op(self, f: Callable, *args: Any, **kwargs: Any) -> {{ return_type }}:
         raise NotImplementedError"""
 template_unary = """
-    def {{ method }}(self) -> Self:
+    def {{ method }}(self) -> {{ return_type }}:
         return self._unary_op({{ func }})"""
 template_other_unary = """
-    def {{ method }}(self, *args: Any, **kwargs: Any) -> Self:
+    def {{ method }}(self, *args: Any, **kwargs: Any) -> {{ return_type }}:
         return self._unary_op({{ func }}, *args, **kwargs)"""
 unhashable = """
     # When __eq__ is defined but __hash__ is not, then an object is unhashable,
@@ -184,11 +184,13 @@ def binops_overload(
     subclass_overload_types: Sequence[str] = (),
     return_type: str = "Self",
     type_ignore_eq: str = "override",
+    return_type_cmp: str | None = None,
 ) -> list[OpsType]:
     """Binary operations with an overload for each of ``overload_types``.
 
     The overloads of ``subclass_overload_types`` return the type of ``other``, so
-    that subclasses are kept.
+    that subclasses are kept. Comparisons return ``return_type_cmp``, which
+    defaults to ``return_type``.
     """
     extras = {
         "other_type": other_type,
@@ -196,10 +198,11 @@ def binops_overload(
         "type_params": "",
         "subclass_overload_types": subclass_overload_types,
     }
+    extras_cmp = extras | {"return_type": return_type_cmp or return_type}
     return [
         ([(None, None)], required_method_binary, extras),
         (
-            BINOPS_NUM + BINOPS_CMP,
+            BINOPS_NUM,
             template_binop_overload,
             extras
             | {
@@ -209,9 +212,19 @@ def binops_overload(
             },
         ),
         (
+            BINOPS_CMP,
+            template_binop_overload,
+            extras_cmp
+            | {
+                "overload_types": overload_types,
+                "type_ignore": "",
+                "overload_type_ignore": "",
+            },
+        ),
+        (
             BINOPS_EQNE,
             template_binop_overload,
-            extras
+            extras_cmp
             | {
                 "overload_types": overload_types,
                 "type_ignore": "",
@@ -235,11 +248,26 @@ def inplace(other_type: str, type_ignore: str = "") -> list[OpsType]:
     ]
 
 
-def unops() -> list[OpsType]:
+def unops(
+    return_type: str = "Self",
+    required_return_type: str = "Self",
+    return_types: Mapping[str, str] | None = None,
+) -> list[OpsType]:
+    """Unary operations, which return ``return_type`` or the type from
+    ``return_types`` for their name. ``_unary_op`` returns ``required_return_type``.
+    """
+    return_types = return_types or {}
+
+    def per_op(ops: FuncType, template: str) -> list[OpsType]:
+        return [
+            ([op], template, {"return_type": return_types.get(op[0], return_type)})
+            for op in ops
+        ]
+
     return [
-        ([(None, None)], required_method_unary, {}),
-        (UNARY_OPS, template_unary, {}),
-        (OTHER_UNARY_METHODS, template_other_unary, {}),
+        ([(None, None)], required_method_unary, {"return_type": required_return_type}),
+        *per_op(UNARY_OPS, template_unary),
+        *per_op(OTHER_UNARY_METHODS, template_other_unary),
     ]
 
 
@@ -258,14 +286,27 @@ ops_info = {
         + inplace(other_type="DaCompatible", type_ignore="misc")
         + unops()
     ),
+    # Binary and unary operations return a Variable, also for subclasses (e.g. an
+    # IndexVariable), with the shape and dtype that they can change. Binary
+    # operations can change the shape by broadcasting.
     "VariableOpsMixin": (
         binops_overload(
             other_type="VarCompatible",
             overload_types=["DataArray", "Dataset", "DataTree"],
             subclass_overload_types=["DataArray"],
+            return_type="Variable[Shape, Any, DimType_co]",
+            return_type_cmp="Variable[Shape, np.dtype[np.bool_], DimType_co]",
         )
         + inplace(other_type="VarCompatible", type_ignore="misc")
-        + unops()
+        + unops(
+            return_type="Variable[ShapeType_co, DType_co, DimType_co]",
+            required_return_type="Variable[Any, Any, DimType_co]",
+            return_types={
+                # e.g. complex to float
+                "__abs__": "Variable[ShapeType_co, Any, DimType_co]",
+                "argsort": "Variable[ShapeType_co, np.dtype[np.intp], DimType_co]",
+            },
+        )
     ),
     "DatasetGroupByOpsMixin": binops(
         other_type="Dataset | DataArray", return_type="Dataset"
@@ -285,21 +326,35 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Self, overload
+from typing import TYPE_CHECKING, Any, Generic, Self, overload
+
+import numpy as np
 
 from xarray.computation import ops
 from xarray.core import nputils
 from xarray.core.types import DaCompatible, DsCompatible, DtCompatible, VarCompatible
+from xarray.namedarray._typing import DimType_co, DType_co, ShapeType_co
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
-    from xarray.core.datatree import DataTree'''
+    from xarray.core.datatree import DataTree
+    from xarray.core.variable import Variable
+    from xarray.namedarray._typing import Shape'''
 
 
 CLASS_PREAMBLE = """{newline}
-class {cls_name}:
+class {cls_name}{bases}:{comment}
     __slots__ = ()"""
+
+# Base classes, e.g. to make a mixin generic. Generic type parameters of classes
+# are covariant TypeVars, as PEP 695 would infer them as invariant.
+CLASS_BASES = {
+    "VariableOpsMixin": (
+        "(Generic[ShapeType_co, DType_co, DimType_co])",
+        "  # noqa: UP046",
+    )
+}
 
 COPY_DOCSTRING = """\
     {method}.__doc__ = {func}.__doc__"""
@@ -310,7 +365,10 @@ def render(ops_info: dict[str, list[OpsType]]) -> Iterator[str]:
     yield MODULE_PREAMBLE
 
     for cls_name, method_blocks in ops_info.items():
-        yield CLASS_PREAMBLE.format(cls_name=cls_name, newline="\n")
+        bases, comment = CLASS_BASES.get(cls_name, ("", ""))
+        yield CLASS_PREAMBLE.format(
+            cls_name=cls_name, bases=bases, comment=comment, newline="\n"
+        )
         yield from _render_classbody(method_blocks)
 
 
