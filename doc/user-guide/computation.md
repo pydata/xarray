@@ -259,7 +259,6 @@ with `skipna=False`.
 
 ## Rolling window operations
 
-For a hands-on introduction, see the
 [Windowed Operations tutorial](https://tutorial.xarray.dev/fundamentals/03.3_windowed.html).
 
 `DataArray` objects include a {py:meth}`~xarray.DataArray.rolling` method. This
