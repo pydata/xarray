@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from packaging.version import Version
 
-from xarray.core.utils import is_scalar
 from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
 
 integer_types = (int, np.integer)
@@ -90,10 +89,6 @@ def mod_version(mod: ModType) -> Version:
 
 def is_chunked_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
-
-
-def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
-    return is_duck_dask_array(x) and is_scalar(x)
 
 
 def to_numpy(
