@@ -123,6 +123,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Results of the string accessor methods ``strip``, ``pad``, ``center``,
+  ``ljust``, ``rjust``, ``zfill`` and ``replace`` on dask arrays are no longer
+  truncated to a single character, and ``repeat`` no longer fails on dask arrays
+  (:pull:`XXXXX`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - :py:meth:`DataArray.str` methods ``center``, ``ljust``, ``rjust``, ``zfill``, ``pad``,
   ``split``, ``rsplit``, ``partition``, ``rpartition`` and ``format`` no longer
   raise ``AttributeError`` on object-dtype arrays of strings, such as string
@@ -313,6 +318,13 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- The string accessor uses the vectorized functions of ``np.strings`` for
+  ``len``, ``startswith``, ``endswith``, ``find``, ``rfind``, ``index``,
+  ``rindex``, ``strip``, ``lstrip``, ``rstrip``, ``pad``, ``center``,
+  ``ljust``, ``rjust``, ``zfill``, ``repeat``, the ``is*`` methods and
+  ``contains`` and ``replace`` with ``regex=False``, which makes them 5-80
+  times faster for arrays with a string dtype (:pull:`XXXXX`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up rolling reductions of dask arrays without bottleneck, e.g. ``sum``,
   ``mean`` and ``count``, by about 7x with about 12x fewer tasks for a window of 20.
   Counting the values in each window no longer splits the chunks of the other
