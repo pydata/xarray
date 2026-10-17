@@ -3320,28 +3320,6 @@ class TestDataArray:
 
         np.testing.assert_allclose(actual.values, expected)
 
-    @pytest.mark.filterwarnings(
-        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-    )
-    @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    def test_quantile_interpolation_deprecated(self, method) -> None:
-        da = DataArray(self.va)
-        q = [0.25, 0.5, 0.75]
-
-        with pytest.warns(
-            FutureWarning,
-            match="`interpolation` argument to quantile was renamed to `method`",
-        ):
-            actual = da.quantile(q, interpolation=method)
-
-        expected = da.quantile(q, method=method)
-
-        np.testing.assert_allclose(actual.values, expected.values)
-
-        with warnings.catch_warnings(record=True):
-            with pytest.raises(TypeError, match="interpolation and method keywords"):
-                da.quantile(q, method=method, interpolation=method)
-
     def test_reduce_keep_attrs(self) -> None:
         # Test default behavior (keeps attrs for reduction operations)
         vm = self.va.mean()

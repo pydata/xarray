@@ -5447,7 +5447,6 @@ class DataArray(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> Self:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5554,7 +5553,6 @@ class DataArray(
             keep_attrs=keep_attrs,
             method=method,
             skipna=skipna,
-            interpolation=interpolation,
         )
         return self._from_temp_dataset(ds)
 

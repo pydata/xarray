@@ -2170,7 +2170,6 @@ class Variable(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> Variable[Shape, Any, DimType_co]:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -2242,18 +2241,6 @@ class Variable(
         """
 
         from xarray.computation.apply_ufunc import apply_ufunc
-
-        if interpolation is not None:
-            warnings.warn(
-                "The `interpolation` argument to quantile was renamed to `method`.",
-                FutureWarning,
-                stacklevel=2,
-            )
-
-            if method != "linear":
-                raise TypeError("Cannot pass interpolation and method keywords!")
-
-            method = interpolation
 
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
             _quantile_func = nputils.nanquantile
