@@ -8,7 +8,6 @@ import xarray as xr
 from xarray.tests import (
     _CFTIME_CALENDARS,
     _all_cftime_date_types,
-    assert_allclose,
     assert_array_equal,
     assert_chunks_equal,
     assert_equal,
@@ -117,8 +116,7 @@ class TestDatetimeAccessor:
             name="total_seconds",
             coords=[self.data.time],
         )
-        # This works with assert_identical when pandas is >=1.5.0.
-        assert_allclose(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "field, pandas_field",

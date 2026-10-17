@@ -69,8 +69,16 @@ def test_file_manager_autoclose(warn_for_unclosed_files) -> None:
     mock_file.close.assert_called_once_with()
 
 
+def _wait_for_close_threads() -> None:
+    for thread in threading.enumerate():
+        if thread.name == "xarray-close-file":
+            thread.join(timeout=5)
+            assert not thread.is_alive()
+
+
 def test_file_manager_autoclose_while_locked() -> None:
-    opener = mock.Mock()
+    mock_file = mock.Mock()
+    opener = mock.Mock(return_value=mock_file)
     lock = threading.Lock()
     cache: dict = {}
 
@@ -86,6 +94,41 @@ def test_file_manager_autoclose_while_locked() -> None:
 
     # can't clear the cache while locked, but also don't block in __del__
     assert cache
+    mock_file.close.assert_not_called()
+
+    # the file is closed once the lock is free (GH11088)
+    lock.release()
+    _wait_for_close_threads()
+    assert not cache
+    mock_file.close.assert_called_once_with()
+
+
+def test_file_manager_autoclose_while_locked_reused() -> None:
+    mock_file = mock.Mock()
+    opener = mock.Mock(return_value=mock_file)
+    lock = threading.Lock()
+    cache: dict = {}
+
+    manager = CachingFileManager(opener, "filename", lock=lock, cache=cache)
+    manager_id = manager._manager_id
+    manager.acquire()
+
+    lock.acquire()
+    with set_options(warn_for_unclosed_files=False):
+        del manager
+        gc.collect()
+
+    # a new manager for the same file, like an unpickled one, keeps it open
+    manager2 = CachingFileManager(
+        opener, "filename", lock=lock, cache=cache, manager_id=manager_id
+    )
+    lock.release()
+    _wait_for_close_threads()
+    assert cache
+    mock_file.close.assert_not_called()
+    assert manager2.acquire() is mock_file
+    opener.assert_called_once_with("filename")
+    manager2.close()
 
 
 def test_file_manager_repr() -> None:
