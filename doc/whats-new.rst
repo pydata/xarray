@@ -168,8 +168,8 @@ Bug Fixes
   the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
   shifted by the number of missing values in front of the array (:issue:`11336`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
-- ``DataArray.str.replace`` now respects ``case=False`` when ``regex=False``;
-  the option was silently ignored. ``DataArray.str.contains`` with
+- :py:meth:`DataArray.str.replace` now respects ``case=False`` when ``regex=False``;
+  the option was silently ignored. :py:meth:`DataArray.str.contains` with
   ``case=False, regex=False`` no longer raises ``AttributeError`` on object-dtype
   or ``StringDType`` arrays (:pull:`11747`).
   By `Novain Shibu <https://github.com/novain-shibu>`_.

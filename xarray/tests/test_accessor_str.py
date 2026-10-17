@@ -432,10 +432,6 @@ def test_replace_literal_case_insensitive(dtype) -> None:
         pytest.param(
             np.array(["Foo", "xYz", "fOO.oo"], dtype=np.dtypes.StringDType()),
             id="StringDType",
-            marks=pytest.mark.skipif(
-                not hasattr(np, "dtypes") or not hasattr(np.dtypes, "StringDType"),
-                reason="requires numpy>=2",
-            ),
         ),
     ],
 )
@@ -446,7 +442,11 @@ def test_case_insensitive_literal_non_unicode_dtype(values) -> None:
     assert_equal(result, xr.DataArray([False, False, True], dims=["x"]))
 
     result = da.str.replace("o", "_", case=False, regex=False)
-    assert list(result.values) == ["F__", "xYz", "f__.__"]
+    expected = xr.DataArray(
+        np.array(["F__", "xYz", "f__.__"], dtype=values.dtype), dims=["x"]
+    )
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
 
 
 def test_replace_callable() -> None:
