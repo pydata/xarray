@@ -202,11 +202,13 @@ Dims = Union[str, Collection[Hashable], EllipsisType, None]
 # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
 type T_ChunkDim = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
 type T_ChunkDimFreq = Resampler | T_ChunkDim
-# Top-level tuples and None are deprecated in Dataset.chunk and DataArray.chunk,
-# and rejected by DataTree.chunk, so they are left out here.
+# Top-level tuples are deprecated in Dataset.chunk and DataArray.chunk, None raises
+# there, and DataTree.chunk rejects both, so they are left out here.
 type T_ChunksFreq = str | int | Mapping[Any, T_ChunkDimFreq]
+# A top-level `None` is not allowed (use `T_Chunks | None` where it means "don't
+# chunk"), but `None` stays valid for single dimensions inside the mapping.
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-type T_Chunks = T_ChunkDim | Mapping[Any, T_ChunkDim]
+type T_Chunks = str | int | Literal["auto"] | tuple[int, ...] | Mapping[Any, T_ChunkDim]  # noqa: PYI051
 T_NormalizedChunks = tuple[tuple[int, ...], ...]
 
 DataVars = Mapping[Any, Any]
