@@ -395,7 +395,7 @@ def open_dataset(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
@@ -651,7 +651,7 @@ def open_dataarray(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -890,7 +890,7 @@ def open_datatree(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
@@ -1139,7 +1139,7 @@ def open_groups(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
@@ -1414,7 +1414,7 @@ def open_mfdataset(
     paths: (
         str | os.PathLike | ReadBuffer | NestedSequence[str | os.PathLike | ReadBuffer]
     ),
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     concat_dim: (
         str
         | DataArray
