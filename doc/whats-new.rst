@@ -113,6 +113,11 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Warn when an index replaces a same-named, same-dimension unindexed coordinate
+  with different values during alignment or merging. This will become an
+  :py:class:`AlignmentError` in a future version; use ``join="override"`` to
+  retain the current behavior (:issue:`11607`).
+  By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
   :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
   like the other deprecations, and gives the right version (2023.10).

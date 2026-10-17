@@ -28,7 +28,10 @@ from xarray.core.variable import (
     as_variable,
     calculate_dimensions,
 )
-from xarray.structure.alignment import deep_align
+from xarray.structure.alignment import (
+    _warn_conflicting_unindexed_coordinate,
+    deep_align,
+)
 from xarray.util.deprecation_helpers import (
     _COMPAT_DEFAULT,
     _JOIN_DEFAULT,
@@ -229,6 +232,7 @@ def merge_collected(
     compat: CompatOptions | CombineKwargDefault = "minimal",
     combine_attrs: CombineAttrsOptions = "override",
     equals: dict[Any, bool] | None = None,
+    check_indexed_coords: bool = True,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -289,6 +293,13 @@ def merge_collected(
                 if index is not None
             ]
             if indexed_elements:
+                if check_indexed_coords:
+                    index_var = indexed_elements[0][0]
+                    for other_var, other_index in elements_list:
+                        if other_index is None:
+                            _warn_conflicting_unindexed_coordinate(
+                                name, other_var, index_var
+                            )
                 # TODO(shoyer): consider adjusting this logic. Are we really
                 # OK throwing away variable without an index in favor of
                 # indexed variables, without even checking if values match?
@@ -463,7 +474,12 @@ def merge_coordinates_without_align(
     # TODO: indexes should probably be filtered in collected elements
     # before merging them
     merged_coords, merged_indexes = merge_collected(
-        filtered, prioritized, compat=compat, combine_attrs=combine_attrs
+        filtered,
+        prioritized,
+        compat=compat,
+        combine_attrs=combine_attrs,
+        check_indexed_coords=isinstance(compat, CombineKwargDefault)
+        or compat != "override",
     )
     merged_indexes = filter_indexes_from_coords(merged_indexes, set(merged_coords))
 
@@ -610,7 +626,12 @@ def merge_coords(
     )
     collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
-    variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
+    variables, out_indexes = merge_collected(
+        collected,
+        prioritized,
+        compat=compat,
+        check_indexed_coords=compat != "override" and join != "override",
+    )
     return variables, out_indexes
 
 
@@ -760,6 +781,8 @@ def merge_core(
         copy=False,
         indexes=indexes,
         fill_value=fill_value,
+        check_indexed_coords=isinstance(compat, CombineKwargDefault)
+        or compat != "override",
     )
 
     for pos, obj in skip_align_objs:
@@ -772,6 +795,10 @@ def merge_core(
         prioritized,
         compat=compat,
         combine_attrs=combine_attrs,
+        check_indexed_coords=(
+            isinstance(compat, CombineKwargDefault) or compat != "override"
+        )
+        and join != "override",
     )
 
     dims = calculate_dimensions(variables)
