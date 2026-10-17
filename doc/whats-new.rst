@@ -172,6 +172,11 @@ Bug Fixes
   the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
   shifted by the number of missing values in front of the array (:issue:`11336`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`DataArray.str.replace` now respects ``case=False`` when ``regex=False``;
+  the option was silently ignored. :py:meth:`DataArray.str.contains` with
+  ``case=False, regex=False`` no longer raises ``AttributeError`` on object-dtype
+  or ``StringDType`` arrays (:pull:`11747`).
+  By `Novain Shibu <https://github.com/novain-shibu>`_.
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
   removed while still open (:pull:`11703`).
