@@ -67,6 +67,8 @@ iris = "*"        # depends on dask
 
 [feature.accel.dependencies]
 flox = "*"
+# TODO: remove once https://github.com/xarray-contrib/flox/issues/520 is fixed
+numpy_groupies = "<0.14"
 bottleneck = "*"
 numexpr = "*"
 pyarrow = "*"
