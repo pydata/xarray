@@ -1355,7 +1355,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> T_Xarray:
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
@@ -1497,7 +1496,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
                 method=method,
                 keep_attrs=keep_attrs,
                 skipna=skipna,
-                interpolation=interpolation,
             )
 
     def where(self, cond, other=dtypes.NA) -> T_Xarray:

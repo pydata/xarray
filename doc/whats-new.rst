@@ -55,6 +55,10 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The ``interpolation`` argument of ``quantile`` on :py:class:`Dataset`,
+  :py:class:`DataArray`, :py:class:`Variable` and groupby objects, deprecated
+  since v2022.03.0, has been removed. Use ``method`` instead (:issue:`11721`, :pull:`11750`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - The ``Variable.to_variable``, ``Variable.to_coord`` and
   ``IndexVariable.to_coord`` aliases, deprecated since v0.9.0, have been removed.
   Use :py:meth:`Variable.to_base_variable` and
