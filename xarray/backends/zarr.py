@@ -1620,7 +1620,14 @@ def open_zarr(
         If True, decode variables and coordinates with time units in
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        If None (default), the behavior follows ``decode_times``: only
+        variables whose attributes contain both a timedelta ``units``
+        attribute (e.g. ``units="hours"``) *and* a ``dtype`` attribute holding
+        an ``np.timedelta64`` dtype are decoded into timedelta objects;
+        variables encoded with a ``units`` attribute only are not decoded.
+        Pass ``decode_timedelta=True`` or a
+        :py:class:`coders.CFTimedeltaCoder` instance to decode them. If
+        ``decode_times`` is False, timedeltas are not decoded.
     use_cftime : bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
