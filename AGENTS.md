@@ -32,6 +32,13 @@ uv run dmypy run  # Type checking with mypy
   2. Related third-party imports
   3. Local application/library specific imports
 
+## CI
+
+- The `test-py314 (flaky)` job runs tests that depend on external services
+  (e.g. test.opendap.org) and fails regularly for unrelated reasons. It does not
+  block merging, so don't skip or change these tests, ask for reruns, or explain
+  these failures in PRs.
+
 ## GitHub Interaction Guidelines
 
 - **NEVER impersonate the user on GitHub**, always sign off with something like
