@@ -10149,6 +10149,37 @@ class Dataset(
         -------
         Dataset
 
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("time", [10, 12, 14, 16])},
+        ...     coords={"time": [0, 1, 1, 2]},
+        ... )
+        >>> ds["time"].values.tolist()
+        [0, 1, 1, 2]
+        >>> ds["temperature"].values.tolist()
+        [10, 12, 14, 16]
+
+        By default, the first value for each coordinate label is kept:
+
+        >>> unique = ds.drop_duplicates("time")
+        >>> unique["time"].values.tolist()
+        [0, 1, 2]
+        >>> unique["temperature"].values.tolist()
+        [10, 12, 16]
+
+        Use ``keep="last"`` to retain the last value for a repeated label:
+
+        >>> ds.drop_duplicates("time", keep="last")["temperature"].values.tolist()
+        [10, 14, 16]
+
+        Use ``keep=False`` to discard every occurrence of duplicated labels:
+
+        >>> ds.drop_duplicates("time", keep=False)["time"].values.tolist()
+        [0, 2]
+        >>> ds.drop_duplicates("time", keep=False)["temperature"].values.tolist()
+        [10, 16]
+
         See Also
         --------
         DataArray.drop_duplicates
