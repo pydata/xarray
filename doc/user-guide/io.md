@@ -1352,7 +1352,10 @@ So you can set `fill_value` in `encoding` as usual.
 
 Note that at read-time, you can control whether `_FillValue` is masked using the
 `mask_and_scale` kwarg; and whether Zarr's `fill_value` is treated as synonymous
-with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`.
+with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`,
+{py:func}`xarray.open_dataset`, {py:func}`xarray.open_datatree` or {py:func}`xarray.open_groups`
+(where it applies to every group). By default (`None`), Zarr fill values are masked for format 2
+and are not masked for format 3.
 
 (io-kerchunk)=
 
