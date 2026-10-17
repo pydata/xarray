@@ -47,5 +47,8 @@ uv run dmypy run  # Type checking with mypy
   explicitly instructed
 - Never post "update" messages, progress reports, or explanatory comments on
   GitHub issues/PRs unless specifically instructed
+- Don't comment on an issue to ask to be assigned or to announce that you are
+  working on it or will open a PR. xarray does not assign issues: just open the
+  PR and reference the issue in its description.
 - When creating commits, always include a co-authorship trailer for the tool,
   e.g. `Co-authored-by: Claude <noreply@anthropic.com>`
