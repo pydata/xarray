@@ -127,9 +127,16 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-- Allow :py:func:`open_datatree` and :py:func:`open_groups` to pass
-  ``use_zarr_fill_value_as_mask`` to the Zarr backend (:issue:`11361`).
-  By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
+- :py:func:`concat` and :py:meth:`Dataset.to_dataarray` now promote input dtypes
+  before broadcasting missing dimensions, avoiding large intermediate
+  allocations when combining Dask arrays with different dtypes (:issue:`10928`,
+  :pull:`11736`).
+  By `Ge Li <https://github.com/galleonli>`_.
+- :py:meth:`DataArray.str` methods ``center``, ``ljust``, ``rjust``, ``zfill``, ``pad``,
+  ``split``, ``rsplit``, ``partition``, ``rpartition`` and ``format`` no longer
+  raise ``AttributeError`` on object-dtype arrays of strings, such as string
+  columns from :py:meth:`pandas.DataFrame.to_xarray` (:pull:`11722`).
+  By `Novain Shibu <https://github.com/novain-shibu>`_.
 - Indexing a :py:class:`DataTree` with a path that continues past a variable,
   e.g. ``tree["group/var/x"]``, now raises ``KeyError`` instead of
   ``AttributeError`` (:issue:`9354`, :pull:`11701`).
@@ -278,10 +285,13 @@ Bug Fixes
   the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
   By `Charles Turner <https://github.com/charles-turner-1>`_.
 - :py:func:`open_dataset` and :py:func:`open_zarr` no longer ignore
-  ``use_zarr_fill_value_as_mask``. The option was not passed on to the Zarr
-  store, so the default for the Zarr format was always used, e.g. the Zarr
-  ``fill_value`` of a Zarr v3 array was never used as a mask (:issue:`10269`, :pull:`11748`).
-  By `Vladimir Saraikin <https://github.com/vsaraikin>`_.
+  ``use_zarr_fill_value_as_mask``, and :py:func:`open_datatree` and
+  :py:func:`open_groups` now accept it. The option was not passed on to the
+  Zarr store, so the default for the Zarr format was always used, e.g. the Zarr
+  ``fill_value`` of a Zarr v3 array was never used as a mask (:issue:`10269`,
+  :issue:`11361`, :pull:`11748`, :pull:`11663`).
+  By `Vladimir Saraikin <https://github.com/vsaraikin>`_ and
+  `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` now return the
   dtype they report for dask arrays. Float32 data could be computed as float64
   depending on the method and the coordinate dtypes, which also made a later
