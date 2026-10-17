@@ -1010,6 +1010,10 @@ class TestDataArray:
         roundtripped = pickle.loads(pickle.dumps(data))
         assert_identical(data, roundtripped)
 
+    def test_chunk_none_raises(self) -> None:
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            DataArray(np.ones((3, 4))).chunk(None)  # type: ignore[arg-type]
+
     @requires_dask
     def test_chunk(self) -> None:
         unblocked = DataArray(np.ones((3, 4)))

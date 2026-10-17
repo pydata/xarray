@@ -64,7 +64,7 @@ class Resample(GroupBy[T_Xarray]):
         return result
 
     @override
-    def shuffle_to_chunks(self, chunks: T_Chunks = None):
+    def shuffle_to_chunks(self, chunks: T_Chunks | None = None):
         """
         Sort or "shuffle" the underlying object.
 
