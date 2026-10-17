@@ -708,6 +708,29 @@ def test_decode_cf_error_includes_variable_name():
         decode_cf(ds)
 
 
+def test_encode_fixed_width_string_preserves_longer_values() -> None:
+    # regression test for GH10968: a narrower same-kind encoding dtype must
+    # not truncate fixed-width strings, and the dtype encoding is still dropped
+    unicode_values = np.array(["NC100 (OSS)"], dtype="<U11")
+    unicode_var = Variable(["x"], unicode_values, encoding={"dtype": np.dtype("<U5")})
+    encoded = conventions.encode_cf_variable(unicode_var)
+    assert_identical(encoded, Variable(["x"], unicode_values))
+
+    bytes_values = np.array([b"base_case"], dtype="S9")
+    bytes_var = Variable(["x"], bytes_values, encoding={"dtype": np.dtype("S6")})
+    encoded_bytes = conventions.encode_cf_variable(bytes_var)
+    assert_identical(encoded_bytes, Variable(["x"], bytes_values))
+
+    # a change of string kind still follows the existing cast path
+    kind_change = Variable(
+        ["x"], np.array(["ab"], dtype="<U2"), encoding={"dtype": np.dtype("S2")}
+    )
+    encoded_kind = conventions.encode_cf_variable(kind_change)
+    assert encoded_kind.dtype == np.dtype("S2")
+    assert_array_equal(encoded_kind.values, np.array([b"ab"]))
+    assert "dtype" not in encoded_kind.encoding
+
+
 def test_encode_cf_variable_with_vlen_dtype() -> None:
     v = Variable(
         ["x"], np.array(["a", "b"], dtype=coding.strings.create_vlen_dtype(str))
