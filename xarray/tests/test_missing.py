@@ -410,7 +410,17 @@ def test_interpolate_dask_raises_for_invalid_chunk_dim():
 
 @requires_dask
 @requires_scipy
-@pytest.mark.parametrize("dtype, method", [(int, "linear"), (int, "nearest")])
+@pytest.mark.parametrize(
+    "dtype, method",
+    [
+        (int, "linear"),
+        (int, "nearest"),
+        (np.float32, "linear"),
+        (np.float32, "nearest"),
+        (np.float32, "slinear"),
+        (np.complex64, "linear"),
+    ],
+)
 def test_interpolate_dask_expected_dtype(dtype, method):
     da = xr.DataArray(
         data=np.array([0, 1], dtype=dtype),
@@ -678,10 +688,6 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 
 @requires_bottleneck
-@pytest.mark.parametrize(
-    "use_cftime",
-    [False, pytest.param(True, marks=requires_cftime)],
-)
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3h", np.timedelta64(3, "h"), pd.to_timedelta("3h")]

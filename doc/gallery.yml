@@ -29,7 +29,7 @@ notebooks-examples:
 
 external-examples:
   - title: Managing raster data with rioxarray
-    path: https://corteva.github.io/rioxarray/stable/examples/examples.html
+    path: https://vylor.github.io/rioxarray/stable/examples/examples.html
     thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
   - title: Xarray and dask on the cloud with Pangeo

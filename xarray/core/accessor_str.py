@@ -46,7 +46,7 @@ from collections.abc import Callable, Hashable, Mapping
 from functools import reduce
 from operator import or_ as set_union
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
 
 import numpy as np
@@ -141,7 +141,7 @@ def _apply_str_ufunc(
     )
 
 
-class StringAccessor(Generic[T_DataArray]):
+class StringAccessor[T_DataArray: DataArray]:
     r"""Vectorized string functions for string-like arrays.
 
     Similar to pandas, fields can be accessed through the `.str` attribute
@@ -219,6 +219,17 @@ class StringAccessor(Generic[T_DataArray]):
             return invar.astype(self._obj.dtype.kind)
         else:
             return self._obj.dtype.type(invar)
+
+    def _method(self, name: str) -> Callable:
+        """
+        Get the str/bytes method ``name`` to apply to each element.
+
+        Object arrays have no string type to take the method from,
+        so look it up on each element instead.
+        """
+        if self._obj.dtype == np.object_:
+            return lambda x, *args, **kwargs: getattr(x, name)(*args, **kwargs)
+        return getattr(self._obj.dtype.type, name)
 
     def _apply(
         self,
@@ -663,7 +674,7 @@ class StringAccessor(Generic[T_DataArray]):
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
         return self._apply(
-            func=self._obj.dtype.type.format,
+            func=self._method("format"),
             func_args=args,
             func_kwargs={"kwargs": kwargs},
         )
@@ -1367,7 +1378,7 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         filled : same type as values
         """
-        func = self._obj.dtype.type.center
+        func = self._method("center")
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def ljust(
@@ -1394,7 +1405,7 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         filled : same type as values
         """
-        func = self._obj.dtype.type.ljust
+        func = self._method("ljust")
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def rjust(
@@ -1421,7 +1432,7 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         filled : same type as values
         """
-        func = self._obj.dtype.type.rjust
+        func = self._method("rjust")
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def zfill(self, width: int | Any) -> T_DataArray:
@@ -1944,8 +1955,10 @@ class StringAccessor(Generic[T_DataArray]):
 
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
-            func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=max(i_n, 0)
+            # ``re.sub`` interprets ``count=0`` as "replace every occurrence",
+            # so ``n=0`` has to be special-cased to mean "replace nothing".
+            func = lambda x, ipat, irepl, i_n: (
+                x if i_n == 0 else ipat.sub(repl=irepl, string=x, count=max(i_n, 0))
             )
         else:
             pat = self._stringify(pat)
@@ -2441,7 +2454,7 @@ class StringAccessor(Generic[T_DataArray]):
         str.partition
         pandas.Series.str.partition
         """
-        return self._partitioner(func=self._obj.dtype.type.partition, dim=dim, sep=sep)
+        return self._partitioner(func=self._method("partition"), dim=dim, sep=sep)
 
     def rpartition(
         self,
@@ -2479,7 +2492,7 @@ class StringAccessor(Generic[T_DataArray]):
         str.rpartition
         pandas.Series.str.rpartition
         """
-        return self._partitioner(func=self._obj.dtype.type.rpartition, dim=dim, sep=sep)
+        return self._partitioner(func=self._method("rpartition"), dim=dim, sep=sep)
 
     def _splitter(
         self,
@@ -2642,7 +2655,7 @@ class StringAccessor(Generic[T_DataArray]):
         pandas.Series.str.split
         """
         return self._splitter(
-            func=self._obj.dtype.type.split,
+            func=self._method("split"),
             pre=True,
             dim=dim,
             sep=sep,
@@ -2760,7 +2773,7 @@ class StringAccessor(Generic[T_DataArray]):
         pandas.Series.str.rsplit
         """
         return self._splitter(
-            func=self._obj.dtype.type.rsplit,
+            func=self._method("rsplit"),
             pre=False,
             dim=dim,
             sep=sep,

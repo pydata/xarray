@@ -5,7 +5,7 @@ import itertools
 import math
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, override
 
 import numpy as np
 
@@ -89,7 +89,7 @@ min_count : int, default: None
     and skipna=True, the result will be a float array."""
 
 
-class Rolling(Generic[T_Xarray]):
+class Rolling[T_Xarray: (DataArray, Dataset)]:
     """A object that implements the moving window pattern.
 
     See Also
@@ -625,6 +625,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         counts = self._counts(keep_attrs=False)
         return result.where(counts >= self.min_periods)
 
+    @override
     def _counts(self, keep_attrs: bool | None) -> DataArray:
         """Number of non-nan entries in each rolling window."""
 
@@ -635,7 +636,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         # We use False as the fill_value instead of np.nan, since boolean
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
-        # copy the strided array.
+        # copy the strided array, so dask doesn't need to rechunk it either.
         dim = list(rolling_dim.values())
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
@@ -643,7 +644,12 @@ class DataArrayRolling(Rolling["DataArray"]):
                 dict(zip(self.dim, self.window, strict=True)),
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
             )
-            .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
+            .construct(
+                rolling_dim,
+                fill_value=False,
+                keep_attrs=keep_attrs,
+                sliding_window_view_kwargs={"automatic_rechunk": False},
+            )
             .sum(dim=dim, skipna=False, keep_attrs=keep_attrs)
         )
         return counts
@@ -744,6 +750,51 @@ class DataArrayRolling(Rolling["DataArray"]):
         )
 
     def _array_reduce(
+        self,
+        array_agg_func,
+        bottleneck_move_func,
+        numbagg_move_func,
+        rolling_agg_func,
+        keep_attrs,
+        fillna,
+        **kwargs,
+    ):
+        result = self._array_reduce_impl(
+            array_agg_func,
+            bottleneck_move_func,
+            numbagg_move_func,
+            rolling_agg_func,
+            keep_attrs,
+            fillna,
+            **kwargs,
+        )
+        if array_agg_func in (duck_array_ops.argmin, duck_array_ops.argmax):
+            result = self._unpad_window_index(result)
+        return result
+
+    def _unpad_window_index(self, result: DataArray) -> DataArray:
+        """Make indices within the padded windows relative to the first value of
+        each window that lies inside the array (GH #11336).
+
+        Windows at the edges extend beyond the array and are padded on the left,
+        which would otherwise be counted. E.g. ``cumulative`` uses windows of the
+        size of the whole dimension.
+        """
+        # multiple rolling dimensions are not supported by argmin/argmax
+        (dim,) = self.dim
+        (window,) = self.window
+        (center,) = self.center
+        # consistent with the padding in Variable.rolling_window
+        left = window // 2 if center else window - 1
+        n_pad = np.maximum(left - np.arange(self.obj.sizes[dim]), 0)
+        if not n_pad.any():
+            return result
+        axis = result.get_axis_num(dim)
+        n_pad = n_pad.reshape((-1,) + (1,) * (result.ndim - axis - 1))
+        n_pad = duck_array_ops.astype(n_pad, result.dtype)
+        return result.copy(data=result.data - n_pad)
+
+    def _array_reduce_impl(
         self,
         array_agg_func,
         bottleneck_move_func,
@@ -948,6 +999,7 @@ class DatasetRolling(Rolling["Dataset"]):
             **kwargs,
         )
 
+    @override
     def _counts(self, keep_attrs: bool | None) -> Dataset:
         return self._dataset_implementation(
             DataArrayRolling._counts, keep_attrs=keep_attrs
@@ -1071,7 +1123,7 @@ class DatasetRolling(Rolling["Dataset"]):
         return Dataset(dataset, coords=coords, attrs=attrs)
 
 
-class Coarsen(Generic[T_Xarray]):
+class Coarsen[T_Xarray: (DataArray, Dataset)]:
     """A object that implements the coarsen.
 
     See Also
@@ -1171,6 +1223,7 @@ class Coarsen(Generic[T_Xarray]):
             kwargs["skipna"] = None
 
         func = getattr(duck_array_ops, name)
+        numeric_only = getattr(func, "numeric_only", False)
 
         available_min_count = getattr(func, "available_min_count", False)
         skip_na_docs = _SKIPNA_DOCSTRING if include_skipna else ""
@@ -1179,7 +1232,8 @@ class Coarsen(Generic[T_Xarray]):
         def method(self, keep_attrs: bool | None = None, **kwargs) -> T_Xarray:
             return self._reduce_method(
                 func,
-                **kwargs,
+                include_skipna=include_skipna,
+                numeric_only=numeric_only,
             )(self, keep_attrs=keep_attrs, **kwargs)
 
         method.__name__ = name
@@ -1320,7 +1374,6 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
     ) -> Callable[..., DataArray]:
         """
         Return a wrapped function for injecting reduction methods.
-        see ops.inject_reduce_methods
         """
         kwargs: dict[str, Any] = {}
         if include_skipna:
@@ -1407,7 +1460,6 @@ class DatasetCoarsen(Coarsen["Dataset"]):
     ) -> Callable[..., Dataset]:
         """
         Return a wrapped function for injecting reduction methods.
-        see ops.inject_reduce_methods
         """
         kwargs: dict[str, Any] = {}
         if include_skipna:

@@ -3,10 +3,21 @@ from __future__ import annotations
 import datetime
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping
+from collections.abc import Set as AbstractSet
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Concatenate,
+    Generic,
+    ParamSpec,
+    TypeVar,
+    Union,
+    overload,
+    override,
+)
 
 import numpy as np
 import pandas as pd
@@ -20,6 +31,7 @@ from xarray.core.utils import (
     either_dict_or_kwargs,
     is_scalar,
 )
+from xarray.namedarray._typing import DimType_co
 from xarray.namedarray.core import _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type, guess_chunkmanager
 from xarray.namedarray.pycompat import is_chunked_array
@@ -146,7 +158,9 @@ class ImplementsDatasetReduce:
     ).strip()
 
 
-class AbstractArray:
+# PEP 695 type parameters are not used here, because Variable needs the
+# explicitly covariant DimType_co.
+class AbstractArray(Generic[DimType_co]):  # noqa: UP046
     """Shared base class for DataArray and Variable."""
 
     __slots__ = ()
@@ -167,17 +181,7 @@ class AbstractArray:
         self: Any, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         if not copy:
-            if np.lib.NumpyVersion(np.__version__) >= "2.0.0":
-                copy = None
-            elif np.lib.NumpyVersion(np.__version__) <= "1.28.0":
-                copy = False
-            else:
-                # 2.0.0 dev versions, handle cases where copy may or may not exist
-                try:
-                    np.array([1]).__array__(copy=None)
-                    copy = None
-                except TypeError:
-                    copy = False
+            copy = None
         return np.array(self.values, dtype=dtype, copy=copy)
 
     def __repr__(self) -> str:
@@ -218,12 +222,14 @@ class AbstractArray:
     def get_axis_num(self, dim: str) -> int: ...  # type: ignore [overload-overlap]
 
     @overload
-    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]: ...
+    def get_axis_num(self, dim: Iterable[DimType_co]) -> tuple[int, ...]: ...
 
     @overload
-    def get_axis_num(self, dim: Hashable) -> int: ...
+    def get_axis_num(self, dim: DimType_co) -> int: ...  # type: ignore[misc]
 
-    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
+    def get_axis_num(
+        self, dim: str | DimType_co | Iterable[DimType_co]
+    ) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -251,7 +257,7 @@ class AbstractArray:
             ) from err
 
     @property
-    def sizes(self: Any) -> Mapping[Hashable, int]:
+    def sizes(self: Any) -> Mapping[DimType_co, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -376,6 +382,7 @@ class TreeAttrAccessMixin(AttrAccessMixin):
 
     __slots__ = ()
 
+    @override
     def __init_subclass__(cls, **kwargs):
         """This method overrides the check from ``AttrAccessMixin`` that ensures
         ``__dict__`` is absent in a class, with ``__slots__`` used instead.
@@ -1363,7 +1370,7 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
-        test_elements : array_like
+        test_elements : array_like or set_like
             The values against which to test each value of `element`.
             This argument is flattened if an array or array_like.
             See numpy notes for behavior with non-array-like parameters.
@@ -1394,6 +1401,10 @@ class DataWithCoords(AttrAccessMixin):
             raise TypeError(
                 f"isin() argument must be convertible to an array: {test_elements}"
             )
+        elif isinstance(test_elements, AbstractSet):
+            # numpy converts a set to a 0d object array, which never compares
+            # equal to any element, so convert it to a sequence first
+            test_elements = list(test_elements)
         elif isinstance(test_elements, Variable | DataArray):
             # need to explicitly pull out data to support dask arrays as the
             # second argument
@@ -1499,7 +1510,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray: ...
@@ -1511,7 +1522,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset: ...
@@ -1523,7 +1534,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable: ...
@@ -1547,7 +1558,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable: ...
@@ -1558,7 +1569,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -1744,7 +1755,7 @@ def _full_like_variable(
     other: Variable,
     fill_value: Any,
     dtype: DTypeLike | None = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
@@ -1788,7 +1799,7 @@ def zeros_like(
     other: DataArray,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray: ...
@@ -1799,7 +1810,7 @@ def zeros_like(
     other: Dataset,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset: ...
@@ -1810,7 +1821,7 @@ def zeros_like(
     other: Variable,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable: ...
@@ -1821,7 +1832,7 @@ def zeros_like(
     other: Dataset | DataArray,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray: ...
@@ -1832,7 +1843,7 @@ def zeros_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable: ...
@@ -1842,7 +1853,7 @@ def zeros_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -1925,7 +1936,7 @@ def ones_like(
     other: DataArray,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray: ...
@@ -1936,7 +1947,7 @@ def ones_like(
     other: Dataset,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset: ...
@@ -1947,7 +1958,7 @@ def ones_like(
     other: Variable,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable: ...
@@ -1958,7 +1969,7 @@ def ones_like(
     other: Dataset | DataArray,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray: ...
@@ -1969,7 +1980,7 @@ def ones_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable: ...
@@ -1979,7 +1990,7 @@ def ones_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:

@@ -13,7 +13,7 @@ from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import Index, PandasIndex
 from xarray.core.types import T_DataArray, T_Dataset, T_Variable
 from xarray.core.utils import emit_user_level_warning
-from xarray.core.variable import Variable
+from xarray.core.variable import Variable, _as_shared_dtype
 from xarray.core.variable import concat as concat_vars
 from xarray.structure.alignment import align, reindex_variables
 from xarray.structure.merge import (
@@ -729,6 +729,8 @@ def _dataset_concat(
         common_dims = tuple(utils.OrderedSet(d for v in vars for d in v.dims))
         if dim_name not in common_dims:
             common_dims = (dim_name,) + common_dims
+        if any(var.dims != common_dims for var in vars):
+            vars = _as_shared_dtype(vars)
         for var, dim_len in zip(vars, concat_dim_lengths, strict=True):
             if var.dims != common_dims:
                 common_shape = tuple(dims_sizes.get(d, dim_len) for d in common_dims)
@@ -752,8 +754,7 @@ def _dataset_concat(
                         yield PandasIndex(data, dim_name, coord_dtype=var.dtype)
 
     # create concatenation index, needed for later reindexing
-    # use np.cumulative_sum(concat_dim_lengths, include_initial=True) when we support numpy>=2
-    file_start_indexes = np.append(0, np.cumsum(concat_dim_lengths))
+    file_start_indexes = np.cumulative_sum(concat_dim_lengths, include_initial=True)
     concat_index_size = file_start_indexes[-1]
     variable_index_mask = np.ones(concat_index_size, dtype=bool)
     variable_reindexer = None

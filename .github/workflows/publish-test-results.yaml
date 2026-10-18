@@ -3,7 +3,7 @@
 name: Publish test results
 
 on:
-  # we can ignore zizmor in this case, because `ci.yaml` is run on `pull_request` not `pull_request_target`, and we restrict the permissions to the default read-only.
+  # we can ignore zizmor in this case, because `ci.yaml` is run on `pull_request` not `pull_request_target`. Only the publishing job gets checks: write; nothing from the PR is executed.
   workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: ["CI"]
     types:
@@ -20,6 +20,9 @@ jobs:
     name: Publish test results
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion != 'skipped'
+
+    permissions:
+      checks: write
 
     steps:
       - name: Download and extract artifacts

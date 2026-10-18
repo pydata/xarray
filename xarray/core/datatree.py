@@ -14,6 +14,7 @@ from collections.abc import (
 )
 from dataclasses import dataclass, field
 from html import escape
+from numbers import Number
 from os import PathLike
 from typing import (
     TYPE_CHECKING,
@@ -22,10 +23,10 @@ from typing import (
     Literal,
     NoReturn,
     ParamSpec,
-    TypeAlias,
     TypeVar,
     Union,
     overload,
+    override,
 )
 
 from xarray.core import utils
@@ -283,6 +284,7 @@ class DatasetView(Dataset):
         obj._encoding = encoding
         return obj
 
+    @override
     def __setitem__(self, key, val) -> None:
         raise AttributeError(
             "Mutation of the DatasetView is not allowed, please use `.__setitem__` on the wrapping DataTree node, "
@@ -290,6 +292,7 @@ class DatasetView(Dataset):
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
+    @override
     def update(self, other) -> NoReturn:
         raise AttributeError(
             "Mutation of the DatasetView is not allowed, please use `.update` on the wrapping DataTree node, "
@@ -297,9 +300,11 @@ class DatasetView(Dataset):
             "use `.copy()` first to get a mutable version of the input dataset."
         )
 
+    @override
     def set_close(self, close: Callable[[], None] | None) -> None:
         raise AttributeError("cannot modify a DatasetView()")
 
+    @override
     def close(self) -> None:
         raise AttributeError(
             "cannot close a DatasetView(). Close the associated DataTree node instead"
@@ -317,12 +322,14 @@ class DatasetView(Dataset):
     @overload
     def __getitem__(self, key: Any) -> Dataset: ...
 
+    @override
     def __getitem__(self, key) -> DataArray | Dataset:
         # TODO call the `_get_item` method of DataTree to allow path-like access to contents of other nodes
         # For now just call Dataset.__getitem__
         return Dataset.__getitem__(self, key)
 
     @classmethod
+    @override
     def _construct_direct(  # type: ignore[override]
         cls,
         variables: dict[Any, Variable],
@@ -351,6 +358,7 @@ class DatasetView(Dataset):
         obj._encoding = encoding
         return obj
 
+    @override
     def _replace(  # type: ignore[override]
         self,
         variables: dict[Hashable, Variable] | None = None,
@@ -380,6 +388,7 @@ class DatasetView(Dataset):
             inplace=inplace,
         )
 
+    @override
     def map(  # type: ignore[override]
         self,
         func: Callable,
@@ -397,8 +406,10 @@ class DatasetView(Dataset):
             DataArray.
         keep_attrs : bool | None, optional
             If True, both the dataset's and variables' attributes (`attrs`) will be
-            copied from the original objects to the new ones. If False, the new dataset
-            and variables will be returned without copying the attributes.
+            combined from the original objects and the function results using the
+            ``drop_conflicts`` strategy: matching attrs are kept, conflicting attrs
+            are dropped. If False, the new dataset and variables will have only
+            the attributes set by the function.
         args : iterable, optional
             Positional arguments passed on to `func`.
         **kwargs : Any
@@ -438,14 +449,19 @@ class DatasetView(Dataset):
             for k, v in self.data_vars.items()
         }
         if keep_attrs:
+            # Merge attrs from function result and original, dropping conflicts
+            from xarray.structure.merge import merge_attrs
+
             for k, v in variables.items():
-                v._copy_attrs_from(self.data_vars[k])
+                v.attrs = merge_attrs(
+                    [v.attrs, self.data_vars[k].attrs], "drop_conflicts"
+                )
         attrs = self.attrs if keep_attrs else None
         # return type(self)(variables, attrs=attrs)
         return Dataset(variables, attrs=attrs)
 
 
-FromDictDataValue: TypeAlias = "CoercibleValue | Dataset | DataTree | None"
+type FromDictDataValue = CoercibleValue | Dataset | DataTree | None
 
 
 @dataclass
@@ -560,6 +576,7 @@ class DataTree(
         self._attrs = dataset._attrs
         self._close = dataset._close
 
+    @override
     def _pre_attach(self: DataTree, parent: DataTree, name: str) -> None:
         super()._pre_attach(parent, name)
         if name in parent.dataset.variables:
@@ -811,12 +828,14 @@ class DataTree(
         """
         return self.dims
 
+    @override
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for attribute-style access"""
         yield from self._item_sources
         yield self.attrs
 
+    @override
     @property
     def _item_sources(self) -> Iterable[Mapping[Any, Any]]:
         """Places to look-up items for key-completion"""
@@ -829,6 +848,7 @@ class DataTree(
         # immediate child nodes
         yield self.children
 
+    @override
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
         See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
@@ -861,8 +881,19 @@ class DataTree(
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether
         'key' is either an array stored in the datatree or a child node, or neither.
+
+        String keys may be unix-like paths to a node or variable anywhere in the
+        tree, so ``key in tree`` is true exactly when ``tree[key]`` succeeds.
         """
-        return key in self.variables or key in self.children
+        if key in self.variables or key in self.children:
+            return True
+        if isinstance(key, str) and ("/" in key or key in ("", ".", "..")):
+            try:
+                self._get_item(key)
+            except KeyError:
+                return False
+            return True
+        return False
 
     def __bool__(self) -> bool:
         return bool(self._data_variables) or bool(self._children)
@@ -880,9 +911,11 @@ class DataTree(
             "invoking the `to_array()` method."
         )
 
+    @override
     def __repr__(self) -> str:  # type: ignore[override]
         return datatree_repr(self)
 
+    @override
     def __str__(self) -> str:
         return datatree_repr(self)
 
@@ -944,6 +977,7 @@ class DataTree(
 
         self.children = children
 
+    @override
     def _copy_node(
         self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
     ) -> Self:
@@ -955,6 +989,7 @@ class DataTree(
         new_node._set_node_data(data)
         return new_node
 
+    @override
     def get(  # type: ignore[override]
         self: DataTree, key: str, default: DataTree | DataArray | None = None
     ) -> DataTree | DataArray | None:
@@ -1013,6 +1048,7 @@ class DataTree(
         else:
             raise ValueError(f"Invalid format for key: {key}")
 
+    @override
     def _set(self, key: str, val: DataTree | CoercibleValue) -> None:
         """
         Set the child node or variable with the specified key to value.
@@ -1057,6 +1093,7 @@ class DataTree(
         else:
             raise ValueError("Invalid format for key")
 
+    @override
     def __delitem__(self, key: str) -> None:
         """Remove a variable or child node from this datatree node."""
         if key in self.children:
@@ -1938,10 +1975,12 @@ class DataTree(
         """Return all groups in the tree, given as a tuple of path-like strings."""
         return tuple(node.path for node in self.subtree)
 
+    @override
     def _unary_op(self, f, *args, **kwargs) -> DataTree:
         # TODO do we need to any additional work to avoid duplication etc.? (Similar to aggregations)
         return self.map_over_datasets(functools.partial(f, **kwargs), *args)
 
+    @override
     def _binary_op(self, other, f, reflexive=False, join=None) -> DataTree:
         from xarray.core.groupby import GroupBy
 
@@ -1970,6 +2009,7 @@ class DataTree(
 
     # TODO: dirty workaround for mypy 1.5 error with inherited DatasetOpsMixin vs. Mapping
     # related to https://github.com/python/mypy/issues/9319?
+    @override
     def __eq__(self, other: DtCompatible) -> Self:  # type: ignore[override]
         return super().__eq__(other)
 
@@ -2218,6 +2258,7 @@ class DataTree(
             all_dims.update(node._node_dims)
         return all_dims
 
+    @override
     def reduce(
         self,
         func: Callable,
@@ -2476,9 +2517,9 @@ class DataTree(
                 self[path].variables[var_name].data = data
 
         # load everything else sequentially
-        for node in self.subtree:
+        for path, node in self.subtree_with_keys:
             for k, v in node.variables.items():
-                if k not in lazy_data:
+                if k not in lazy_data[path]:
                     v.load()
 
         return self
@@ -2613,9 +2654,10 @@ class DataTree(
 
         Parameters
         ----------
-        chunks : int, tuple of int, "auto" or mapping of hashable to int or a TimeResampler, optional
+        chunks : int, "auto" or mapping of hashable to int or a TimeResampler, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
             ``{"x": 5, "y": 5}`` or ``{"x": 5, "time": TimeResampler(freq="YE")}``.
+            A single value is applied to every dimension in the tree.
         name_prefix : str, default: "xarray-"
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2650,14 +2692,23 @@ class DataTree(
         xarray.unify_chunks
         dask.array.from_array
         """
-        # don't support deprecated ways of passing chunks
-        if not isinstance(chunks, Mapping):
-            raise TypeError(
-                f"invalid type for chunks: {type(chunks)}. Only mappings are supported."
-            )
-        combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
-
         all_dims = self._get_all_dims()
+
+        combined_chunks: Mapping[Any, T_ChunkDimFreq]
+        if not isinstance(chunks, Mapping):
+            # don't support deprecated ways of passing chunks: sequences of
+            # dimension-order sizes are deprecated for Dataset.chunk, and are
+            # additionally ambiguous for a tree whose groups need not share an
+            # ordering of their dimensions
+            if not isinstance(chunks, str | Number):
+                raise TypeError(
+                    f"invalid type for chunks: {type(chunks)}. Only mappings and "
+                    'single chunk specifications (e.g. 5 or "auto") to be applied '
+                    "to every dimension are supported."
+                )
+            combined_chunks = dict.fromkeys(all_dims, chunks)
+        else:
+            combined_chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         bad_dims = combined_chunks.keys() - all_dims
         if bad_dims:

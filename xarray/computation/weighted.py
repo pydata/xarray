@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Generic, Literal, cast
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Literal, cast, override
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -132,7 +132,7 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
 
 
-class Weighted(Generic[T_Xarray]):
+class Weighted[T_Xarray: (DataArray, Dataset)]:
     """An object that implements weighted operations.
 
     You should create a Weighted object by using the ``DataArray.weighted`` or
@@ -195,13 +195,10 @@ class Weighted(Generic[T_Xarray]):
     def _check_dim(self, dim: Dims):
         """raise an error if any dimension is missing"""
 
-        dims: list[Hashable]
-        if isinstance(dim, str) or not isinstance(dim, Iterable):
-            dims = [dim] if dim else []
-        else:
-            dims = list(dim)
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
-        missing_dims = set(dims) - all_dims
+        dims = utils.parse_dims_as_set(dim, all_dims, check_exists=False)
+
+        missing_dims = dims - all_dims
         if missing_dims:
             raise ValueError(
                 f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
@@ -413,7 +410,7 @@ class Weighted(Generic[T_Xarray]):
         if np.any((q < 0) | (q > 1)):
             raise ValueError("q values must be between 0 and 1")
 
-        if dim is None:
+        if dim is None or dim is ...:
             dim = da.dims
 
         if utils.is_scalar(dim):
@@ -539,18 +536,55 @@ class Weighted(Generic[T_Xarray]):
 
 
 class DataArrayWeighted(Weighted["DataArray"]):
+    @override
     def _implementation(self, func, dim, **kwargs) -> DataArray:
         self._check_dim(dim)
 
         dataset = self.obj._to_temp_dataset()
         dataset = dataset.map(func, dim=dim, **kwargs)
-        return self.obj._from_temp_dataset(dataset)
+        result = self.obj._from_temp_dataset(dataset)
+
+        # Clear attrs when keep_attrs is explicitly False
+        # (weighted operations can propagate attrs from weights through internal computations)
+        if kwargs.get("keep_attrs") is False:
+            result.attrs = {}
+            for var in result.coords.values():
+                var.attrs = {}
+
+        return result
 
 
 class DatasetWeighted(Weighted["Dataset"]):
+    def _restore_coords(self, dim: Dims, ds: Dataset) -> Dataset:
+        """self.obj.map will drop orphaned coordinates & dims that are not in
+        the weights DataArray. This restores them.
+        """
+        all_dims = set(self.obj.dims) | set(self.weights.dims)
+        reduced_dims = utils.parse_dims_as_set(dim, all_dims, check_exists=False)
+
+        to_drop = [
+            name
+            for name, coord in self.obj.coords.items()
+            if name in ds.coords or not reduced_dims.isdisjoint(coord.dims)
+        ]
+        return ds.assign_coords(self.obj.coords.drop_vars(to_drop))
+
+    @override
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
-        return self.obj.map(func, dim=dim, **kwargs)
+        result = self.obj.map(func, dim=dim, **kwargs)
+        result = self._restore_coords(dim, result)
+
+        # Clear attrs when keep_attrs is explicitly False
+        # (weighted operations can propagate attrs from weights through internal computations)
+        if kwargs.get("keep_attrs") is False:
+            result.attrs = {}
+            for var in result.data_vars.values():
+                var.attrs = {}
+            for var in result.coords.values():
+                var.attrs = {}
+
+        return result
 
 
 def _inject_docstring(cls, cls_name):

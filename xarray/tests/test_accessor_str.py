@@ -381,6 +381,28 @@ def test_replace(dtype) -> None:
     assert_equal(result, expected)
 
 
+def test_replace_n_zero(dtype) -> None:
+    # ``n=0`` means "make no replacements", for regex and literal patterns alike
+    values = xr.DataArray(["fooBAD__barBAD"], dims=["x"]).astype(dtype)
+
+    result = values.str.replace("BAD[_]*", "", n=0)
+    assert result.dtype == values.dtype
+    assert_equal(result, values)
+
+    result = values.str.replace("BAD", "", n=0, regex=False)
+    assert result.dtype == values.dtype
+    assert_equal(result, values)
+
+    # ``n`` is broadcast, so a single zero must not spill over to its neighbours
+    n = xr.DataArray([0, 1, -1], dims=["y"])
+    result = values.str.replace("BAD[_]*", "", n=n)
+    expected = xr.DataArray(
+        [["fooBAD__barBAD", "foobarBAD", "foobar"]], dims=["x", "y"]
+    ).astype(dtype)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+
 def test_replace_callable() -> None:
     values = xr.DataArray(["fooBAD__barBAD"])
 
@@ -3700,3 +3722,41 @@ def test_mod_broadcast_multi() -> None:
 
     assert res.dtype == expected.dtype
     assert_equal(res, expected)
+
+
+@pytest.mark.parametrize(
+    "method, kwargs",
+    [
+        ("center", {"width": 7}),
+        ("ljust", {"width": 6, "fillchar": "."}),
+        ("rjust", {"width": 6}),
+        ("zfill", {"width": 5}),
+        ("pad", {"width": 6, "side": "both", "fillchar": "*"}),
+        ("split", {"dim": "s", "sep": "-"}),
+        ("rsplit", {"dim": "s", "sep": "-", "maxsplit": 1}),
+        ("partition", {"dim": "s", "sep": "-"}),
+        ("rpartition", {"dim": "s", "sep": "-"}),
+    ],
+)
+def test_object_dtype(method: str, kwargs: dict) -> None:
+    # object arrays of str (e.g. from pandas or netCDF variable-length strings)
+    # give the same result as fixed-width str arrays
+    values = ["a-b c", "xy z", "", "ÄÖ-ü-"]
+    obj = xr.DataArray(np.array(values, dtype=np.object_), dims="X")
+    fixed = xr.DataArray(np.array(values, dtype=np.str_), dims="X")
+
+    result = getattr(obj.str, method)(**kwargs)
+    expected = getattr(fixed.str, method)(**kwargs)
+
+    assert result.dtype == np.object_
+    assert_equal(result, expected.astype(np.object_))
+
+
+def test_format_object_dtype() -> None:
+    values = xr.DataArray(np.array(["{}-{}", "{}!"], dtype=np.object_), dims="X")
+    expected = xr.DataArray(np.array(["a-b", "a!"], dtype=np.object_), dims="X")
+
+    result = values.str.format("a", "b")
+
+    assert result.dtype == np.object_
+    assert_equal(result, expected)

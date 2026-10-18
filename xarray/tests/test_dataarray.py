@@ -7,17 +7,14 @@ import warnings
 from collections.abc import Hashable
 from copy import deepcopy
 from textwrap import dedent
+from types import EllipsisType
 from typing import Any, Final, Literal, cast
 
 import numpy as np
 import pandas as pd
 import pytest
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
+from numpy.exceptions import RankWarning
+from pandas.errors import UndefinedVariableError
 
 import xarray as xr
 import xarray.core.missing
@@ -50,14 +47,11 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_api,
     dask_array_type,
-    has_dask,
-    has_dask_ge_2025_1_0,
     has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
     requires_dask,
-    requires_dask_expr,
     requires_iris,
     requires_numexpr,
     requires_pint,
@@ -67,13 +61,7 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
-
-try:
-    from pandas.errors import UndefinedVariableError
-except ImportError:
-    # TODO: remove once we stop supporting pandas<1.4.3
-    from pandas.core.computation.ops import UndefinedVariableError
-
+from xarray.tests.indexes import XYIndex
 
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
@@ -410,6 +398,38 @@ class TestDataArray:
         expected = DataArray([1, 2, 3], coords=[("x", [0, 1, 2])])
         assert_identical(expected, actual)
 
+    def test_constructor_tuple_coords_warn_when_dims_override_names(self) -> None:
+        data = np.random.random((2, 3))
+        coords = [("a", [0, 1]), ("b", [-1, -2, -3])]
+
+        with pytest.warns(
+            UserWarning,
+            match="Coordinate names in tuple-style coords are ignored",
+        ):
+            actual = DataArray(data, coords=coords, dims=["x", "y"])
+
+        expected = Dataset(
+            {None: (["x", "y"], data)},
+            coords={"x": [0, 1], "y": [-1, -2, -3]},
+        )[None]
+        assert_identical(expected, actual)
+
+    def test_constructor_tuple_coords_no_warning_when_names_match_dims(self) -> None:
+        data = np.random.random((2, 3))
+
+        with assert_no_warnings():
+            actual = DataArray(
+                data,
+                coords=[("x", [0, 1]), ("y", [-1, -2, -3])],
+                dims=["x", "y"],
+            )
+
+        expected = Dataset(
+            {None: (["x", "y"], data)},
+            coords={"x": [0, 1], "y": [-1, -2, -3]},
+        )[None]
+        assert_identical(expected, actual)
+
     def test_constructor_invalid(self) -> None:
         data = np.random.randn(3, 2)
 
@@ -482,6 +502,28 @@ class TestDataArray:
 
         actual = DataArray(IndexVariable("foo", ["a", "b"]))
         assert_identical(expected, actual)
+
+    def test_assign_coords_from_named_pandas_series(self) -> None:
+        # GH9284: assigning a pandas Series (with a named index) as a
+        # coordinate should use the Series' index name as the dimension,
+        # not the keyword/dict key used in assign_coords.
+        da = DataArray(
+            np.random.rand(3, 4),
+            dims=("lat", "lon"),
+            coords={"lat": [10.0, 20.0, 30.0], "lon": [100.0, 101.0, 102.0, 103.0]},
+        )
+        series = pd.Series(
+            [1.0, 2.0, 3.0], index=pd.Index([10.0, 20.0, 30.0], name="lat")
+        )
+        actual = da.assign_coords(new_coord=series)
+        assert actual["new_coord"].dims == ("lat",)
+        assert_equal(actual["new_coord"].variable, Variable(("lat",), [1.0, 2.0, 3.0]))
+
+        # a Series with an unnamed index should fall back to using the
+        # assign_coords keyword as the dimension name, as before
+        unnamed_series = pd.Series([4.0, 5.0, 6.0])
+        actual2 = da.assign_coords(other_coord=("lat", unnamed_series))
+        assert actual2["other_coord"].dims == ("lat",)
 
     @requires_dask
     def test_constructor_from_self_described_chunked(self) -> None:
@@ -560,6 +602,18 @@ class TestDataArray:
 
         assert_identical(actual.coords, coords, check_default_indexes=False)
         assert "x_bnds" not in actual.dims
+
+    def test_replace_maybe_drop_dims_keeps_reordered_coords(self) -> None:
+        array = DataArray(
+            np.empty((0, 2)),
+            dims=("x", "y"),
+            coords={"x": [], "y": [1, 1]},
+        )
+
+        actual = array._replace_maybe_drop_dims(Variable(("y", "x"), np.empty((1, 0))))
+
+        assert "x" in actual.coords
+        assert actual.sizes == {"y": 1, "x": 0}
 
     def test_replace_maybe_drop_dims_preserves_multi_coord_index(self) -> None:
         # Regression test for https://github.com/pydata/xarray/issues/11215
@@ -956,6 +1010,10 @@ class TestDataArray:
         roundtripped = pickle.loads(pickle.dumps(data))
         assert_identical(data, roundtripped)
 
+    def test_chunk_none_raises(self) -> None:
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            DataArray(np.ones((3, 4))).chunk(None)  # type: ignore[arg-type]
+
     @requires_dask
     def test_chunk(self) -> None:
         unblocked = DataArray(np.ones((3, 4)))
@@ -971,12 +1029,12 @@ class TestDataArray:
         assert blocked.data.name != first_dask_name
 
         with pytest.warns(FutureWarning):
-            blocked = unblocked.chunk(chunks=(3, 3))
+            blocked = unblocked.chunk(chunks=(3, 3))  # type: ignore[arg-type]
         assert blocked.chunks == ((3,), (3, 1))
         assert blocked.data.name != first_dask_name
 
         with pytest.raises(ValueError), pytest.warns(FutureWarning):
-            blocked.chunk(chunks=(3, 3, 3))
+            blocked.chunk(chunks=(3, 3, 3))  # type: ignore[arg-type]
 
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined
@@ -2828,6 +2886,25 @@ class TestDataArray:
         actual = stacked.unstack("allpoints")
         assert_identical(orig, actual)
 
+    @pytest.mark.parametrize(
+        "x",
+        [
+            pytest.param([0, 1, 2], id="increasing"),
+            pytest.param([2, 1, 0], id="decreasing"),
+        ],
+    )
+    def test_stack_sel_tuple_slice(self, x: list[int]) -> None:
+        # the stacked index claimed not to be lexsorted, so slicing it with tuples
+        # raised an UnsortedIndexError
+        orig = DataArray(
+            np.arange(6).reshape(3, 2),
+            coords={"x": x, "y": ["a", "b"]},
+            dims=["x", "y"],
+        )
+        stacked = orig.stack(z=["x", "y"])
+        actual = stacked.sel(z=slice((x[0], "b"), (x[1], "a")))
+        assert_identical(actual, stacked.isel(z=slice(1, 3)))
+
     def test_unstack_pandas_consistency(self) -> None:
         df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
         s = df.set_index(["x", "y"])["foo"]
@@ -3587,6 +3664,35 @@ class TestDataArray:
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
 
+    def test_broadcast_arrays_multi_coordinate_index(self) -> None:
+        array = DataArray(
+            np.arange(6).reshape(2, 3),
+            dims=("y", "x"),
+            coords={"y": [0, 1], "x": [10, 20, 30]},
+        )
+        array = array.drop_indexes(["y", "x"]).set_xindex(["y", "x"], XYIndex)
+        other = DataArray([1, 2], dims="channel")
+        assert isinstance(array.xindexes["x"], XYIndex)
+        assert array.xindexes["x"] is array.xindexes["y"]
+
+        result, other_result = broadcast(array, other)
+
+        assert result.dims == ("y", "x", "channel")
+        assert_array_equal(
+            result.values, np.broadcast_to(array.values[..., None], result.shape)
+        )
+
+        other_x = DataArray([1, 2, 3], dims="x")
+        other_y = DataArray([1, 2], dims="y")
+        for broadcast_result in (
+            result,
+            other_result,
+            *broadcast(other_x, other_y, array),
+        ):
+            assert set(broadcast_result.coords) == {"x", "y"}
+            assert_array_equal(broadcast_result.x, [10, 20, 30])
+            assert_array_equal(broadcast_result.y, [0, 1])
+
     def test_broadcast_arrays_misaligned(self) -> None:
         # broadcast on misaligned coords must auto-align
         x = DataArray([[1, 2], [3, 4]], coords=[("a", [-1, -2]), ("b", [3, 4])])
@@ -3789,9 +3895,7 @@ class TestDataArray:
             f"v data: expected {v_dtype}, got {df['v'].dtype}"
         )
 
-    @requires_dask_expr
     @requires_dask
-    @pytest.mark.xfail(not has_dask_ge_2025_1_0, reason="dask-expr is broken")
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
@@ -3981,21 +4085,15 @@ class TestDataArray:
 
     def test_series_categorical_index(self) -> None:
         # regression test for GH700
-        if not hasattr(pd, "CategoricalIndex"):
-            pytest.skip("requires pandas with CategoricalIndex")
-
         s = pd.Series(np.arange(5), index=pd.CategoricalIndex(list("aabbc")))
         arr = DataArray(s)
         assert "a a b b" in repr(arr)  # should not error
 
-    @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("data", ["list", "array", True])
     @pytest.mark.parametrize("encoding", [True, False])
     def test_to_and_from_dict(
         self, encoding: bool, data: bool | Literal["list", "array"], use_dask: bool
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         encoding_data = {"bar": "spam"}
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
@@ -4018,10 +4116,7 @@ class TestDataArray:
         if encoding:
             expected["encoding"] = encoding_data
 
-        if has_dask:
-            da = array.chunk()
-        else:
-            da = array
+        da = array.chunk() if use_dask else array
 
         if data == "array" or data is False:
             with raise_if_dask_computes():
@@ -4297,6 +4392,13 @@ class TestDataArray:
         expected = DataArray(np.diff(da.values, axis=1), dims=["x", "y"])
         assert_equal(expected, actual)
 
+    def test_dataarray_diff_exception_invalid_dim(self) -> None:
+        # GH7748: diff along a non-existent dimension should raise instead of
+        # silently returning the array unchanged.
+        da = DataArray(np.arange(10), dims=["a"])
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            da.diff("b")
+
     def test_coordinate_diff(self) -> None:
         # regression test for GH634
         arr = DataArray(range(0, 20, 2), dims=["lon"], coords=[range(10)])
@@ -4334,6 +4436,13 @@ class TestDataArray:
         actual = arr.roll(x=1)
         expected = DataArray([3, 1, 2], coords=[("x", [0, 1, 2])])
         assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("shift", [-1, 0, 1])
+    @pytest.mark.parametrize("roll_coords", [False, True])
+    def test_roll_empty(self, shift: int, roll_coords: bool) -> None:
+        arr = DataArray([], coords={"x": range(0)}, dims="x")
+        actual = arr.roll(x=shift, roll_coords=roll_coords)
+        assert_identical(arr, actual)
 
     def test_copy_with_data(self) -> None:
         orig = DataArray(
@@ -4664,12 +4773,9 @@ class TestDataArray:
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=("z",))
         assert_equal(y.rank("z", pct=True), y)
 
-    @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("use_datetime", [True, False])
     @pytest.mark.filterwarnings("ignore:overflow encountered in multiply")
     def test_polyfit(self, use_dask, use_datetime) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         xcoord = xr.DataArray(
             pd.date_range("1970-01-01", freq="D", periods=10), dims=("x",), name="x"
         )
@@ -4888,11 +4994,8 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
     )
-    @pytest.mark.parametrize(
-        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
-    )
     def test_query(
-        self, backend, engine: QueryEngineOptions, parser: QueryParserOptions
+        self, use_dask: bool, engine: QueryEngineOptions, parser: QueryParserOptions
     ) -> None:
         """Test querying a dataset."""
 
@@ -4909,7 +5012,7 @@ class TestDataArray:
         cc = DataArray(data=c, dims=["y"], name="c", coords={"c2": ("y", c)})
         dd = DataArray(data=d, dims=["z"], name="d", coords={"d2": ("z", d)})
 
-        if backend == "dask":
+        if use_dask:
             da = dask_array_api
             aa = aa.copy(data=da.from_array(a, chunks=3))
             bb = bb.copy(data=da.from_array(b, chunks=3))
@@ -4958,11 +5061,7 @@ class TestDataArray:
             aa.query(x="spam > 50")  # name not present
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_curvefit(self, use_dask) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         def exp_decay(t, n0, tau=1):
             return n0 * np.exp(-t / tau)
 
@@ -5029,11 +5128,7 @@ class TestDataArray:
         assert params == param_names
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_curvefit_multidimensional_guess(self, use_dask: bool) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         def sine(t, a, f, p):
             return a * np.sin(2 * np.pi * (f * t + p))
 
@@ -5079,11 +5174,7 @@ class TestDataArray:
             )
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_curvefit_multidimensional_bounds(self, use_dask: bool) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         def sine(t, a, f, p):
             return a * np.sin(2 * np.pi * (f * t + p))
 
@@ -5141,11 +5232,7 @@ class TestDataArray:
             )
 
     @requires_scipy
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_curvefit_ignore_errors(self, use_dask: bool) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
-
         # nonsense function to make the optimization fail
         def line(x, a, b):
             if a > 10:
@@ -5187,6 +5274,7 @@ class TestReduce:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.attrs = {"attr1": "value1", "attr2": 2929}
+        self.coord_attrs = {"units": "m"}
 
 
 @pytest.mark.parametrize(
@@ -5247,7 +5335,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result1, expected1)
 
         result2 = ar.min(skipna=False)
-        if nanindex is not None and ar.dtype.kind != "O":
+        if nanindex is not None:
             expected2 = ar.isel(x=nanindex, drop=True)
         else:
             expected2 = expected1
@@ -5284,7 +5372,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result1, expected1)
 
         result2 = ar.max(skipna=False)
-        if nanindex is not None and ar.dtype.kind != "O":
+        if nanindex is not None:
             expected2 = ar.isel(x=nanindex, drop=True)
         else:
             expected2 = expected1
@@ -5375,15 +5463,6 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
-    @pytest.mark.parametrize(
-        "use_dask",
-        [
-            pytest.param(
-                True, marks=pytest.mark.skipif(not has_dask, reason="no dask")
-            ),
-            False,
-        ],
-    )
     def test_idxmin(
         self,
         x: np.ndarray,
@@ -5394,6 +5473,9 @@ class TestReduce1D(TestReduce):
     ) -> None:
         ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
+        )
+        ar0_raw = ar0_raw.assign_coords(
+            {d: ar0_raw[d].assign_attrs(self.coord_attrs) for d in ar0_raw.dims}
         )
         if use_dask:
             ar0 = ar0_raw.chunk()
@@ -5427,7 +5509,9 @@ class TestReduce1D(TestReduce):
             (coordarr1 * fill_value_0).isel(x=minindex, drop=True).astype("float")
         )
         expected0.name = "x"
-        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected0.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         # Default fill value (NaN)
         result0 = ar0.idxmin()
@@ -5440,14 +5524,17 @@ class TestReduce1D(TestReduce):
         # keep_attrs
         result2 = ar0.idxmin(keep_attrs=True)
         expected2 = expected0.copy()
-        expected2.attrs = self.attrs
+        expected2.attrs = self.coord_attrs
         assert_identical(result2, expected2)
+        assert ar0.idxmin("x", keep_attrs=False).attrs == {}
 
         # skipna=False
         if nanindex is not None and ar0.dtype.kind != "O":
             expected3 = coordarr0.isel(x=nanindex, drop=True).astype("float")
             expected3.name = "x"
-            expected3.attrs = self.attrs  # Default keeps attrs for reduction operations
+            expected3.attrs = (
+                self.coord_attrs
+            )  # Default keeps attrs for reduction operations
         else:
             expected3 = expected0.copy()
 
@@ -5466,7 +5553,9 @@ class TestReduce1D(TestReduce):
 
         expected5 = (coordarr1 * fill_value_5).isel(x=minindex, drop=True)
         expected5.name = "x"
-        expected5.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected5.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         result5 = ar0.idxmin(fill_value=-1.1)
         assert_identical(result5, expected5)
@@ -5479,7 +5568,9 @@ class TestReduce1D(TestReduce):
 
         expected6 = (coordarr1 * fill_value_6).isel(x=minindex, drop=True)
         expected6.name = "x"
-        expected6.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected6.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         result6 = ar0.idxmin(fill_value=-1)
         assert_identical(result6, expected6)
@@ -5492,12 +5583,13 @@ class TestReduce1D(TestReduce):
 
         expected7 = (coordarr1 * fill_value_7).isel(x=minindex, drop=True)
         expected7.name = "x"
-        expected7.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected7.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         result7 = ar0.idxmin(fill_value=-1j)
         assert_identical(result7, expected7)
 
-    @pytest.mark.parametrize("use_dask", [True, False])
     def test_idxmax(
         self,
         x: np.ndarray,
@@ -5506,12 +5598,13 @@ class TestReduce1D(TestReduce):
         nanindex: int | None,
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
         ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
+        )
+        ar0_raw = ar0_raw.assign_coords(
+            {d: ar0_raw[d].assign_attrs(self.coord_attrs) for d in ar0_raw.dims}
         )
 
         if use_dask:
@@ -5546,7 +5639,9 @@ class TestReduce1D(TestReduce):
             (coordarr1 * fill_value_0).isel(x=maxindex, drop=True).astype("float")
         )
         expected0.name = "x"
-        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected0.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         # Default fill value (NaN)
         result0 = ar0.idxmax()
@@ -5559,14 +5654,17 @@ class TestReduce1D(TestReduce):
         # keep_attrs
         result2 = ar0.idxmax(keep_attrs=True)
         expected2 = expected0.copy()
-        expected2.attrs = self.attrs
+        expected2.attrs = self.coord_attrs
         assert_identical(result2, expected2)
+        assert ar0.idxmax("x", keep_attrs=False).attrs == {}
 
         # skipna=False
         if nanindex is not None and ar0.dtype.kind != "O":
             expected3 = coordarr0.isel(x=nanindex, drop=True).astype("float")
             expected3.name = "x"
-            expected3.attrs = self.attrs  # Default keeps attrs for reduction operations
+            expected3.attrs = (
+                self.coord_attrs
+            )  # Default keeps attrs for reduction operations
         else:
             expected3 = expected0.copy()
 
@@ -5585,7 +5683,9 @@ class TestReduce1D(TestReduce):
 
         expected5 = (coordarr1 * fill_value_5).isel(x=maxindex, drop=True)
         expected5.name = "x"
-        expected5.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected5.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         result5 = ar0.idxmax(fill_value=-1.1)
         assert_identical(result5, expected5)
@@ -5598,7 +5698,9 @@ class TestReduce1D(TestReduce):
 
         expected6 = (coordarr1 * fill_value_6).isel(x=maxindex, drop=True)
         expected6.name = "x"
-        expected6.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected6.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         result6 = ar0.idxmax(fill_value=-1)
         assert_identical(result6, expected6)
@@ -5611,7 +5713,9 @@ class TestReduce1D(TestReduce):
 
         expected7 = (coordarr1 * fill_value_7).isel(x=maxindex, drop=True)
         expected7.name = "x"
-        expected7.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected7.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         result7 = ar0.idxmax(fill_value=-1j)
         assert_identical(result7, expected7)
@@ -5808,8 +5912,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result2, expected0)  # Default keeps attrs
 
         minindex = [
-            x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(minindex, nanindex, strict=True)
+            x if y is None else y for x, y in zip(minindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(minindex)
@@ -5858,8 +5961,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result2, expected0)  # Default keeps attrs
 
         maxindex = [
-            x if y is None or ar.dtype.kind == "O" else y
-            for x, y in zip(maxindex, nanindex, strict=True)
+            x if y is None else y for x, y in zip(maxindex, nanindex, strict=True)
         ]
         expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(maxindex)
@@ -5979,9 +6081,6 @@ class TestReduce2D(TestReduce):
 
         assert_identical(result3, expected2)
 
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(True, id="dask"), pytest.param(False, id="nodask")]
-    )
     def test_idxmin(
         self,
         x: np.ndarray,
@@ -5990,8 +6089,6 @@ class TestReduce2D(TestReduce):
         nanindex: list[int | None],
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
 
@@ -6007,6 +6104,9 @@ class TestReduce2D(TestReduce):
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
+        ar0_raw = ar0_raw.assign_coords(
+            {d: ar0_raw[d].assign_attrs(self.coord_attrs) for d in ar0_raw.dims}
+        )
 
         if use_dask:
             ar0 = ar0_raw.chunk({})
@@ -6015,9 +6115,13 @@ class TestReduce2D(TestReduce):
 
         assert_identical(ar0, ar0)
 
-        # No dimension specified
-        with pytest.raises(ValueError):
-            ar0.idxmin()
+        # No dimension specified: all dimensions, like ...
+        result_nodim = ar0.idxmin()
+        assert isinstance(result_nodim, dict)
+        expected_nodim = ar0.idxmin(...)
+        assert result_nodim.keys() == expected_nodim.keys()
+        for key in expected_nodim:
+            assert_identical(result_nodim[key], expected_nodim[key])
 
         # dim doesn't exist
         with pytest.raises(KeyError):
@@ -6041,7 +6145,9 @@ class TestReduce2D(TestReduce):
         ]
         expected0 = xr.concat(expected0list, dim="y")
         expected0.name = "x"
-        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected0.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         # Default fill value (NaN)
         with raise_if_dask_computes(max_computes=max_computes):
@@ -6057,7 +6163,7 @@ class TestReduce2D(TestReduce):
         with raise_if_dask_computes(max_computes=max_computes):
             result2 = ar0.idxmin(dim="x", keep_attrs=True)
         expected2 = expected0.copy()
-        expected2.attrs = self.attrs
+        expected2.attrs = self.coord_attrs
         assert_identical(result2, expected2)
 
         # skipna=False
@@ -6071,7 +6177,9 @@ class TestReduce2D(TestReduce):
         ]
         expected3 = xr.concat(expected3list, dim="y")
         expected3.name = "x"
-        expected3.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected3.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result3 = ar0.idxmin(dim="x", skipna=False)
@@ -6090,7 +6198,9 @@ class TestReduce2D(TestReduce):
         ]
         expected5 = xr.concat(expected5list, dim="y")
         expected5.name = "x"
-        expected5.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected5.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result5 = ar0.idxmin(dim="x", fill_value=-1.1)
@@ -6104,7 +6214,9 @@ class TestReduce2D(TestReduce):
         ]
         expected6 = xr.concat(expected6list, dim="y")
         expected6.name = "x"
-        expected6.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected6.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result6 = ar0.idxmin(dim="x", fill_value=-1)
@@ -6118,15 +6230,14 @@ class TestReduce2D(TestReduce):
         ]
         expected7 = xr.concat(expected7list, dim="y")
         expected7.name = "x"
-        expected7.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected7.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result7 = ar0.idxmin(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
 
-    @pytest.mark.parametrize(
-        "use_dask", [pytest.param(True, id="dask"), pytest.param(False, id="nodask")]
-    )
     def test_idxmax(
         self,
         x: np.ndarray,
@@ -6135,8 +6246,6 @@ class TestReduce2D(TestReduce):
         nanindex: list[int | None],
         use_dask: bool,
     ) -> None:
-        if use_dask and not has_dask:
-            pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
             pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
 
@@ -6152,15 +6261,22 @@ class TestReduce2D(TestReduce):
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
+        ar0_raw = ar0_raw.assign_coords(
+            {d: ar0_raw[d].assign_attrs(self.coord_attrs) for d in ar0_raw.dims}
+        )
 
         if use_dask:
             ar0 = ar0_raw.chunk({})
         else:
             ar0 = ar0_raw
 
-        # No dimension specified
-        with pytest.raises(ValueError):
-            ar0.idxmax()
+        # No dimension specified: all dimensions, like ...
+        result_nodim = ar0.idxmax()
+        assert isinstance(result_nodim, dict)
+        expected_nodim = ar0.idxmax(...)
+        assert result_nodim.keys() == expected_nodim.keys()
+        for key in expected_nodim:
+            assert_identical(result_nodim[key], expected_nodim[key])
 
         # dim doesn't exist
         with pytest.raises(KeyError):
@@ -6187,7 +6303,9 @@ class TestReduce2D(TestReduce):
         ]
         expected0 = xr.concat(expected0list, dim="y")
         expected0.name = "x"
-        expected0.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected0.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         # Default fill value (NaN)
         with raise_if_dask_computes(max_computes=max_computes):
@@ -6203,7 +6321,7 @@ class TestReduce2D(TestReduce):
         with raise_if_dask_computes(max_computes=max_computes):
             result2 = ar0.idxmax(dim="x", keep_attrs=True)
         expected2 = expected0.copy()
-        expected2.attrs = self.attrs
+        expected2.attrs = self.coord_attrs
         assert_identical(result2, expected2)
 
         # skipna=False
@@ -6217,7 +6335,9 @@ class TestReduce2D(TestReduce):
         ]
         expected3 = xr.concat(expected3list, dim="y")
         expected3.name = "x"
-        expected3.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected3.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result3 = ar0.idxmax(dim="x", skipna=False)
@@ -6236,7 +6356,9 @@ class TestReduce2D(TestReduce):
         ]
         expected5 = xr.concat(expected5list, dim="y")
         expected5.name = "x"
-        expected5.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected5.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result5 = ar0.idxmax(dim="x", fill_value=-1.1)
@@ -6250,7 +6372,9 @@ class TestReduce2D(TestReduce):
         ]
         expected6 = xr.concat(expected6list, dim="y")
         expected6.name = "x"
-        expected6.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected6.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result6 = ar0.idxmax(dim="x", fill_value=-1)
@@ -6264,7 +6388,9 @@ class TestReduce2D(TestReduce):
         ]
         expected7 = xr.concat(expected7list, dim="y")
         expected7.name = "x"
-        expected7.attrs = self.attrs  # Default keeps attrs for reduction operations
+        expected7.attrs = (
+            self.coord_attrs
+        )  # Default keeps attrs for reduction operations
 
         with raise_if_dask_computes(max_computes=max_computes):
             result7 = ar0.idxmax(dim="x", fill_value=-5j)
@@ -6414,6 +6540,136 @@ class TestReduce2D(TestReduce):
         for key in expected3:
             assert_identical(result3[key], expected3[key])
 
+    def test_idxmin_dim(
+        self,
+        x: np.ndarray,
+        minindex: list[int | float],
+        maxindex: list[int | float],
+        nanindex: list[int | None],
+    ) -> None:
+        ar = xr.DataArray(
+            x,
+            dims=["y", "x"],
+            coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
+            attrs=self.attrs,
+        )
+        ar = ar.assign_coords(
+            {d: ar[d].assign_attrs(self.coord_attrs) for d in ar.dims}
+        )
+
+        coordarr = xr.DataArray(ar.coords["x"].data, dims=["x"])
+
+        if np.isnan(minindex).any():
+            return
+
+        expected0list = [coordarr.isel(x=indi, drop=True) for indi in minindex]
+        expected0 = {"x": xr.concat(expected0list, dim=ar.coords["y"])}
+        expected0["x"].name = "x"
+        expected0[
+            "x"
+        ].attrs = self.coord_attrs  # Default keeps attrs for reduction operations
+
+        result0 = ar.idxmin(dim=["x"])
+        for key in expected0:
+            assert_identical(result0[key], expected0[key])
+
+        result1 = ar.idxmin(dim=["x"], keep_attrs=True)
+        expected1 = deepcopy(expected0)
+        expected1["x"].attrs = self.coord_attrs
+        for key in expected1:
+            assert_identical(result1[key], expected1[key])
+
+        minindex = [
+            x if y is None or ar.dtype.kind == "O" else y
+            for x, y in zip(minindex, nanindex, strict=True)
+        ]
+        expected2list = [coordarr.isel(x=indi, drop=True) for indi in minindex]
+        expected2 = {"x": xr.concat(expected2list, dim=ar.coords["y"])}
+        expected2["x"].name = "x"
+        expected2["x"].attrs = self.coord_attrs
+
+        result2 = ar.idxmin(dim=["x"], skipna=False)
+
+        for key in expected2:
+            assert_identical(result2[key], expected2[key])
+
+        result3 = ar.idxmin(...)
+        ar_expected0 = ar.sel(expected0)
+        expected3 = {
+            "y": ar_expected0.idxmin(),
+            "x": ar.coords["x"][minindex[ar_expected0.argmin("y").item()]]
+            .reset_coords(drop=True)
+            .assign_attrs(self.coord_attrs),
+        }
+
+        for key in expected3:
+            assert_identical(result3[key], expected3[key])
+
+    def test_idxmax_dim(
+        self,
+        x: np.ndarray,
+        minindex: list[int | float],
+        maxindex: list[int | float],
+        nanindex: list[int | None],
+    ) -> None:
+        ar = xr.DataArray(
+            x,
+            dims=["y", "x"],
+            coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
+            attrs=self.attrs,
+        )
+        ar = ar.assign_coords(
+            {d: ar[d].assign_attrs(self.coord_attrs) for d in ar.dims}
+        )
+
+        coordarr = xr.DataArray(ar.coords["x"].data, dims=["x"])
+
+        if np.isnan(maxindex).any():
+            return
+
+        expected0list = [coordarr.isel(x=indi, drop=True) for indi in maxindex]
+        expected0 = {"x": xr.concat(expected0list, dim=ar.coords["y"])}
+        expected0["x"].name = "x"
+        expected0[
+            "x"
+        ].attrs = self.coord_attrs  # Default keeps attrs for reduction operations
+
+        result0 = ar.idxmax(dim=["x"])
+        for key in expected0:
+            assert_identical(result0[key], expected0[key])
+
+        result1 = ar.idxmax(dim=["x"], keep_attrs=True)
+        expected1 = deepcopy(expected0)
+        expected1["x"].attrs = self.coord_attrs
+        for key in expected1:
+            assert_identical(result1[key], expected1[key])
+
+        maxindex = [
+            x if y is None or ar.dtype.kind == "O" else y
+            for x, y in zip(maxindex, nanindex, strict=True)
+        ]
+        expected2list = [coordarr.isel(x=indi, drop=True) for indi in maxindex]
+        expected2 = {"x": xr.concat(expected2list, dim=ar.coords["y"])}
+        expected2["x"].name = "x"
+        expected2["x"].attrs = self.coord_attrs
+
+        result2 = ar.idxmax(dim=["x"], skipna=False)
+
+        for key in expected2:
+            assert_identical(result2[key], expected2[key])
+
+        result3 = ar.idxmax(...)
+        ar_expected0 = ar.sel(expected0)
+        expected3 = {
+            "y": ar_expected0.idxmax(),
+            "x": ar.coords["x"][maxindex[ar_expected0.argmax("y").item()]]
+            .reset_coords(drop=True)
+            .assign_attrs(self.coord_attrs),
+        }
+
+        for key in expected3:
+            assert_identical(result3[key], expected3[key])
+
 
 @pytest.mark.parametrize(
     "x, minindices_x, minindices_y, minindices_z, minindices_xy, "
@@ -6491,7 +6747,7 @@ class TestReduce2D(TestReduce):
             },
             {"z": np.array([[0, 2], [2, 2], [np.nan, np.nan]])},
             {"x": np.array([0, 0, 0, 0]), "y": np.array([0, 0, 0, 0])},
-            {"x": np.array([0, 0]), "z": np.array([2, 2])},
+            {"x": np.array([0, 0]), "z": np.array([0, 2])},
             {"y": np.array([0, 0, np.nan]), "z": np.array([0, 2, np.nan])},
             {"x": np.array(0), "y": np.array(0), "z": np.array(0)},
             {"x": np.array([[2, 1, 2, 1], [2, 2, 2, 2]])},
@@ -6534,7 +6790,7 @@ class TestReduce2D(TestReduce):
             },
             {"z": np.array([[0, 2], [2, 2], [np.nan, np.nan]])},
             {"x": np.array([0, 0, 0, 0]), "y": np.array([0, 0, 0, 0])},
-            {"x": np.array([0, 0]), "z": np.array([2, 2])},
+            {"x": np.array([0, 0]), "z": np.array([0, 2])},
             {"y": np.array([0, 0, np.nan]), "z": np.array([0, 2, np.nan])},
             {"x": np.array(0), "y": np.array(0), "z": np.array(0)},
             {"x": np.array([[2, 1, 2, 1], [2, 2, 2, 2]])},
@@ -7063,14 +7319,92 @@ class TestReduce3D(TestReduce):
         for key in expected13:
             assert_identical(result13[key], expected13[key])
 
+    @pytest.mark.parametrize("op", ["min", "max"])
+    @pytest.mark.parametrize(
+        "dim",
+        [["x"], ["y"], ["z"], ("x", "y"), ("x", "z"), ("y", "z"), ...],
+    )
+    @pytest.mark.parametrize("skipna", [None, False])
+    def test_idxminmax_dim(
+        self,
+        x: np.ndarray,
+        minindices_x: dict[str, np.ndarray],
+        minindices_y: dict[str, np.ndarray],
+        minindices_z: dict[str, np.ndarray],
+        minindices_xy: dict[str, np.ndarray],
+        minindices_xz: dict[str, np.ndarray],
+        minindices_yz: dict[str, np.ndarray],
+        minindices_xyz: dict[str, np.ndarray],
+        maxindices_x: dict[str, np.ndarray],
+        maxindices_y: dict[str, np.ndarray],
+        maxindices_z: dict[str, np.ndarray],
+        maxindices_xy: dict[str, np.ndarray],
+        maxindices_xz: dict[str, np.ndarray],
+        maxindices_yz: dict[str, np.ndarray],
+        maxindices_xyz: dict[str, np.ndarray],
+        nanindices_x: dict[str, np.ndarray],
+        nanindices_y: dict[str, np.ndarray],
+        nanindices_z: dict[str, np.ndarray],
+        nanindices_xy: dict[str, np.ndarray],
+        nanindices_xz: dict[str, np.ndarray],
+        nanindices_yz: dict[str, np.ndarray],
+        nanindices_xyz: dict[str, np.ndarray],
+        op: str,
+        dim: list[str] | tuple[str, ...] | EllipsisType,
+        skipna: bool | None,
+        request: pytest.FixtureRequest,
+    ) -> None:
+        # the expected indices of all dims are class parameters, pick the needed ones
+        ar = xr.DataArray(
+            x,
+            dims=["x", "y", "z"],
+            coords={
+                "x": np.arange(x.shape[0]) * 4,
+                "y": 1 - np.arange(x.shape[1]),
+                "z": 2 + 3 * np.arange(x.shape[2]),
+            },
+            attrs=self.attrs,
+        )
+        ar = ar.assign_coords(
+            {d: ar[d].assign_attrs(self.coord_attrs) for d in ar.dims}
+        )
+        reduced = ar.dims if dim is ... else dim
+        remaining = [d for d in ar.dims if d not in reduced]
+
+        suffix = "".join(str(d) for d in reduced)
+        params = request.node.callspec.params
+        indices = params[f"{op}indices_{suffix}"]
+        if skipna is False and ar.dtype.kind == "O" and ar.isnull().any():
+            pytest.skip("NaN in object arrays has no defined order with skipna=False")
+        if skipna is False:
+            # NaN is the minimum/maximum, like in np.argmin/np.argmax
+            nanindices = params[f"nanindices_{suffix}"]
+            indices = {
+                key: xr.where(nanindices[key] == None, value, nanindices[key])
+                for key, value in indices.items()
+            }
+
+        result = getattr(ar, f"idx{op}")(dim=dim, skipna=skipna)
+
+        assert isinstance(result, dict)
+        assert result.keys() == indices.keys()
+        for key, value in indices.items():
+            # all-NaN slices have no index and are filled with NaN (fill_value)
+            allnan = np.isnan(np.asarray(value, dtype=float))
+            labels = ar.coords[key].values[np.where(allnan, 0, value).astype(int)]
+            if allnan.any():
+                labels = np.where(allnan, np.nan, labels)
+            expected = xr.DataArray(
+                labels, dims=remaining, name=key, attrs=self.coord_attrs
+            )
+            assert_identical(result[key].drop_vars(remaining), expected)
+
 
 class TestReduceND(TestReduce):
     @pytest.mark.parametrize("op", ["idxmin", "idxmax"])
     @pytest.mark.parametrize("ndim", [3, 5])
+    @requires_dask
     def test_idxminmax_dask(self, op: str, ndim: int) -> None:
-        if not has_dask:
-            pytest.skip("requires dask")
-
         ar0_raw = xr.DataArray(
             np.random.random_sample(size=[10] * ndim),
             dims=list("abcdefghij"[: ndim - 1]) + ["x"],
@@ -7100,6 +7434,13 @@ def test_isin(da) -> None:
         coords={"x": list("abc"), "y": list("de")},
     ).astype("bool")
     result = da.isin([2, 3]).sel(y=list("de"), z=0)
+    assert_equal(result, expected)
+
+    # set-like objects give the same answer as the equivalent list, GH10022
+    result = da.isin({2, 3}).sel(y=list("de"), z=0)
+    assert_equal(result, expected)
+
+    result = da.isin({2: "a", 3: "b"}.keys()).sel(y=list("de"), z=0)
     assert_equal(result, expected)
 
 
@@ -7981,3 +8322,29 @@ class TestArrowPyCapsule:
         np.testing.assert_array_equal(
             table["data"].to_pylist(), np.arange(6, dtype=float)
         )
+
+
+@pytest.mark.parametrize("func", ["idxmin", "idxmax"])
+def test_idxminmax_preserves_coord_dtype(func: str) -> None:
+    # GH7527: the labels keep their dtype if no slice has to be filled
+    array = xr.DataArray(
+        [
+            [2.0, 1.0, 2.0, 0.0, -2.0],
+            [-4.0, np.nan, 2.0, np.nan, -2.0],
+            [np.nan, np.nan, 1.0, np.nan, np.nan],
+        ],
+        dims=["y", "x"],
+        coords={"y": [-1, 0, 1], "x": np.arange(5.0) ** 2},
+    )
+    assert getattr(array, func)(dim="y").dtype == np.int64
+    assert getattr(array, func)(dim="x").dtype == np.float64
+
+
+@pytest.mark.parametrize("func", ["idxmin", "idxmax"])
+def test_idxminmax_all_nan_slice_fills_labels(func: str) -> None:
+    array = xr.DataArray(
+        [np.nan, np.nan], dims="x", coords={"x": np.array([1, 2], dtype=np.int64)}
+    )
+    result = getattr(array, func)()
+    assert result.dtype == np.float64
+    assert np.isnan(result)

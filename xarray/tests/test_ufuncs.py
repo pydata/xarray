@@ -9,7 +9,12 @@ import pytest
 
 import xarray as xr
 import xarray.ufuncs as xu
-from xarray.tests import assert_allclose, assert_array_equal, mock, requires_dask
+from xarray.tests import (
+    assert_allclose,
+    assert_array_equal,
+    mock,
+    requires_dask,
+)
 from xarray.tests import assert_identical as assert_identical_
 
 
@@ -131,8 +136,10 @@ def test_xarray_defers_to_unrecognized_type():
     assert np.sin(xarray_obj, out=other) == "other"  # type: ignore[call-overload]
 
 
+@requires_dask
 def test_xarray_handles_dask():
-    da = pytest.importorskip("dask.array")
+    import dask.array as da
+
     x = xr.DataArray(np.ones((2, 2)), dims=["x", "y"])
     y = da.ones((2, 2), chunks=(2, 2))
     result = np.add(x, y)
@@ -140,8 +147,10 @@ def test_xarray_handles_dask():
     assert isinstance(result, xr.DataArray)
 
 
+@requires_dask
 def test_dask_defers_to_xarray():
-    da = pytest.importorskip("dask.array")
+    import dask.array as da
+
     x = xr.DataArray(np.ones((2, 2)), dims=["x", "y"])
     y = da.ones((2, 2), chunks=(2, 2))
     result = np.add(y, x)
@@ -212,8 +221,6 @@ class TestXarrayUfuncs:
     def test_ufuncs(self, name, request):
         xu_func = getattr(xu, name)
         np_func = getattr(np, name, None)
-        if np_func is None and np.lib.NumpyVersion(np.__version__) < "2.0.0":
-            pytest.skip(f"Ufunc {name} is not available in numpy {np.__version__}.")
 
         if name == "isnat":
             args = (self.xt,)

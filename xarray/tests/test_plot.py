@@ -366,6 +366,80 @@ class TestPlot(PlotTestCase):
         assert legend is not None
         assert legend.get_title().get_text() == "dim_1"
 
+    def test_2d_line_duplicate_hue_shares_color(self) -> None:
+        # GH10998: lines sharing a hue value must share a color, and the
+        # legend must carry one entry per hue value, matching scatter.
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "a", "b", "b"], "x": [0, 1, 2]},
+        )
+        lines = da.plot.line(hue="category", x="x")
+        colors = [line.get_color() for line in lines]
+        assert colors[0] == colors[1]
+        assert colors[2] == colors[3]
+        assert colors[0] != colors[2]
+
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert [t.get_text() for t in legend.get_texts()] == ["a", "b"]
+
+    def test_2d_line_unique_hue_palette_unchanged(self) -> None:
+        # With unique hue values the recoloring must be a no-op: each line
+        # keeps the color the axes' property cycle assigned it.
+        da = xr.DataArray(
+            np.arange(9).reshape(3, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "b", "c"], "x": [0, 1, 2]},
+        )
+        prop_cycle = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
+        lines = da.plot.line(hue="category", x="x")
+        assert [line.get_color() for line in lines] == prop_cycle[:3]
+
+    def test_2d_line_duplicate_hue_respects_user_color(self) -> None:
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "a", "b", "b"], "x": [0, 1, 2]},
+        )
+        lines = da.plot.line(hue="category", x="x", color="green")
+        assert all(line.get_color() == "green" for line in lines)
+
+    @pytest.mark.parametrize(
+        "category",
+        [
+            [1.0, np.nan, np.nan, 2.0],
+            [1.0, np.nan, 3.0, 2.0],
+            pd.to_datetime(["2020", "NaT", "2021", "NaT"]),
+        ],
+    )
+    def test_2d_line_missing_hue_values(self, category: Any) -> None:
+        # Missing hue values must not raise and are grouped as one hue value.
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": category, "x": [0, 1, 2]},
+        )
+        lines = da.plot.line(hue="category", x="x")
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert len(legend.get_texts()) == len(pd.unique(np.asarray(category)))
+        assert len({line.get_color() for line in lines}) == len(legend.get_texts())
+
+    def test_2d_line_duplicate_hue_shares_cycled_style(self) -> None:
+        # Properties other than color in the property cycle are grouped too.
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "a", "b", "b"], "x": [0, 1, 2]},
+        )
+        plt.gca().set_prop_cycle(
+            color=["r", "g", "b", "k"], linestyle=["-", "--", ":", "-."]
+        )
+        lines = da.plot.line(hue="category", x="x")
+        assert [line.get_linestyle() for line in lines] == ["-", "-", "--", "--"]
+        assert [line.get_color() for line in lines] == ["r", "r", "g", "g"]
+
     def test_2d_coords_line_plot(self) -> None:
         lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
         lon += lat / 10
@@ -1345,8 +1419,6 @@ class Common2dMixin:
 
     def test_3d_raises_valueerror(self) -> None:
         a = DataArray(easy_array((2, 3, 4)))
-        if self.plotfunc.__name__ == "imshow":
-            pytest.skip()
         with pytest.raises(ValueError, match=r"DataArray must be 2d"):
             self.plotfunc(a)
 
@@ -1872,10 +1944,12 @@ class TestContour(Common2dMixin, PlotTestCase):
         artist = self.darray.plot.contour(
             levels=[-0.5, 0.0, 0.5, 1.0], colors=["k", "r", "w", "b"]
         )
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+        cmap = artist.cmap
+        assert isinstance(cmap, mpl.colors.ListedColormap)
+        assert cast(list[str], cmap.colors)[:5] == ["k", "r", "w", "b"]
 
         # the last color is now under "over"
-        assert self._color_as_tuple(artist.cmap.get_over()) == (0.0, 0.0, 1.0)
+        assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
 
     def test_colors_np_levels(self) -> None:
         # https://github.com/pydata/xarray/issues/3284
@@ -1884,7 +1958,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         cmap = artist.cmap
         assert isinstance(cmap, mpl.colors.ListedColormap)
 
-        assert artist.cmap.colors[:5] == ["k", "r", "w", "b"]  # type: ignore[attr-defined,unused-ignore]
+        assert cast(list[str], cmap.colors)[:5] == ["k", "r", "w", "b"]
 
         # the last color is now under "over"
         assert self._color_as_tuple(cmap.get_over()) == (0.0, 0.0, 1.0)
@@ -2005,6 +2079,10 @@ class TestPcolormeshLogscale(PlotTestCase):
 @pytest.mark.slow
 class TestImshow(Common2dMixin, PlotTestCase):
     plotfunc = staticmethod(xplt.imshow)
+
+    @pytest.mark.skip(reason="imshow accepts 3d arrays as RGB(A) images")
+    def test_3d_raises_valueerror(self) -> None:
+        pass
 
     @pytest.mark.xfail(
         reason=(
@@ -2204,32 +2282,32 @@ class TestSurface(Common2dMixin, PlotTestCase):
         assert "y2d" == ax.get_ylabel()
         assert f"{self.darray.long_name} [{self.darray.units}]" == ax.get_zlabel()
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_xyincrease_false_changes_axes(self) -> None:
-        # Does not make sense for surface plots
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_xyincrease_true_changes_axes(self) -> None:
-        # Does not make sense for surface plots
-        pytest.skip("does not make sense for surface plots")
+        pass
 
     def test_can_pass_in_axis(self) -> None:
         self.pass_in_axis(self.plotmethod, subplot_kw={"projection": "3d"})
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_default_cmap(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_diverging_color_limits(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_colorbar_kwargs(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
+    @pytest.mark.skip(reason="does not make sense for surface plots")
     def test_cmap_and_color_both(self) -> None:
-        # Does not make sense for surface plots with default arguments
-        pytest.skip("does not make sense for surface plots")
+        pass
 
     def test_seaborn_palette_as_cmap(self) -> None:
         # seaborn does not work with mpl_toolkits.mplot3d
@@ -2337,6 +2415,27 @@ class TestFacetGrid(PlotTestCase):
         assert cbar.vmin == 0
         assert hasattr(cbar, "vmax")
         assert cbar.vmax == 3
+
+    def test_legend_deduplicates_line_hue(self) -> None:
+        # GH10998: faceting with ``col`` must keep the same hue/color mapping
+        # and a single legend entry per hue value.
+        da = xr.DataArray(
+            np.arange(24).reshape(2, 4, 3),
+            dims=("facet", "category", "x"),
+            coords={
+                "facet": ["f1", "f2"],
+                "category": ["a", "a", "b", "b"],
+                "x": [0, 1, 2],
+            },
+        )
+        g = da.plot.line(hue="category", col="facet")
+        for ax in g.axs.flat:
+            colors = [line.get_color() for line in ax.get_lines()]
+            assert colors[0] == colors[1]
+            assert colors[2] == colors[3]
+            assert colors[0] != colors[2]
+        assert g.figlegend is not None
+        assert [t.get_text() for t in g.figlegend.get_texts()] == ["a", "b"]
 
     @pytest.mark.slow
     def test_empty_cell(self) -> None:
@@ -3029,6 +3128,57 @@ class TestDatasetScatterPlots(PlotTestCase):
         )
         assert actual == expected
 
+    def test_legend_labels_facegrid2(self) -> None:
+        ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+        g = ds.plot.scatter(
+            x="A", y="B", hue="y", markersize="x", row="x", col="w", add_colorbar=False
+        )
+
+        legend = g.figlegend
+        assert legend is not None
+        actual_text = [t.get_text() for t in legend.texts]
+        expected_text = [
+            "y [yunits]",
+            "$\\mathdefault{0.0}$",
+            "$\\mathdefault{0.1}$",
+            "$\\mathdefault{0.2}$",
+            "$\\mathdefault{0.3}$",
+            "$\\mathdefault{0.4}$",
+            "$\\mathdefault{0.5}$",
+            "$\\mathdefault{0.6}$",
+            "$\\mathdefault{0.7}$",
+            "$\\mathdefault{0.8}$",
+            "$\\mathdefault{0.9}$",
+            "$\\mathdefault{1.0}$",
+            "x [xunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+        ]
+        assert actual_text == expected_text
+
+        actual_size = [v.get_markersize() for v in legend.get_lines()]
+        expected_size = [
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            4.242640687119285,
+            6.708203932499369,
+            8.48528137423857,
+        ]
+        np.testing.assert_allclose(expected_size, actual_size)
+
     def test_add_legend_by_default(self) -> None:
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")
         fig = sc.figure
@@ -3398,8 +3548,9 @@ def test_maybe_gca() -> None:
 
 
 @requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["scatter", "lines"])
 @pytest.mark.parametrize(
-    "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
+    "x, y, z, hue, _size, row, col, add_legend, add_colorbar",
     [
         ("A", "B", None, None, None, None, None, None, None),
         ("B", "A", None, "w", None, None, None, True, None),
@@ -3408,30 +3559,33 @@ def test_maybe_gca() -> None:
         ("B", "A", "z", "w", None, None, None, True, None),
         ("A", "B", "z", "y", "x", None, None, True, True),
         ("A", "B", "z", "y", "x", "w", None, True, True),
+        ("A", "B", "z", "y", "x", "w", "x", True, True),
     ],
 )
-def test_datarray_scatter(
-    x, y, z, hue, markersize, row, col, add_legend, add_colorbar
+def test_plot1d_functions(
+    x: Hashable,
+    y: Hashable,
+    z: Hashable,
+    hue: Hashable,
+    _size: Hashable,
+    row: Hashable,
+    col: Hashable,
+    add_legend: bool | None,
+    add_colorbar: bool | None,
+    plotfunc: str,
 ) -> None:
-    """Test datarray scatter. Merge with TestPlot1D eventually."""
-    ds = xr.tutorial.scatter_example_dataset()
-
-    extra_coords = [v for v in [x, hue, markersize] if v is not None]
-
-    # Base coords:
-    coords = dict(ds.coords)
-
-    # Add extra coords to the DataArray:
-    coords.update({v: ds[v] for v in extra_coords})
-
-    darray = xr.DataArray(ds[y], coords=coords)
+    """Test plot1d function. Merge with TestPlot1D eventually."""
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
 
     with figure_context():
-        darray.plot.scatter(
+        getattr(ds.plot, plotfunc)(
             x=x,
+            y=y,
             z=z,
             hue=hue,
-            markersize=markersize,
+            _size=_size,
+            row=row,
+            col=col,
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
@@ -3555,6 +3709,107 @@ def test_plot1d_filtered_nulls() -> None:
         actual = pc.get_offsets().shape[0]
 
         assert expected == actual
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_color(plotfunc: str, x="z", color="b") -> None:
+    from matplotlib.colors import to_rgba_array
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        _, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, color=color)
+        coll = ax.collections[0]
+
+        # Make sure color is respected:
+        expected_color = np.asarray(to_rgba_array(color))
+        actual_color = np.asarray(coll.get_edgecolor())
+        np.testing.assert_allclose(expected_color, actual_color)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize("plotfunc", ["lines"])
+def test_plot1d_lines_linestyle(plotfunc: str, x="z", linestyle="dashed") -> None:
+    # TODO: Is there a public function that converts linestyle to dash pattern?
+    from matplotlib.lines import (  # type: ignore[attr-defined]
+        _get_dash_pattern,
+        _scale_dashes,
+    )
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    darray = ds.A.sel(x=0, y=0)
+
+    with figure_context():
+        _, ax = plt.subplots()
+        getattr(darray.plot, plotfunc)(x=x, linestyle=linestyle)
+        coll = ax.collections[0]
+
+        # Make sure linestyle is respected:
+        w = np.atleast_1d(coll.get_linewidth())[0]
+        expected_linestyle = [_scale_dashes(*_get_dash_pattern(linestyle), w)]
+        actual_linestyle = coll.get_linestyle()
+        assert expected_linestyle == actual_linestyle
+
+
+@requires_matplotlib
+def test_plot1d_lines_facetgrid_legend() -> None:
+    # asserts that order is correct, only unique values, no nans/masked values.
+
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
+
+    with figure_context():
+        g = ds.plot.lines(
+            x="A", y="B", hue="y", linewidth="x", row="x", col="w", add_colorbar=False
+        )
+
+        legend = g.figlegend
+        assert legend is not None
+        actual_text = [t.get_text() for t in legend.texts]
+        expected_text = [
+            "y [yunits]",
+            "$\\mathdefault{0.0}$",
+            "$\\mathdefault{0.1}$",
+            "$\\mathdefault{0.2}$",
+            "$\\mathdefault{0.3}$",
+            "$\\mathdefault{0.4}$",
+            "$\\mathdefault{0.5}$",
+            "$\\mathdefault{0.6}$",
+            "$\\mathdefault{0.7}$",
+            "$\\mathdefault{0.8}$",
+            "$\\mathdefault{0.9}$",
+            "$\\mathdefault{1.0}$",
+            "x [xunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+        ]
+        assert expected_text == actual_text
+
+        actual_size = [v.get_linewidth() for v in legend.get_lines()]
+        expected_size = [
+            1.5,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            6.0,
+            1.5,
+            1.224744871391589,
+            1.9364916731037085,
+            2.449489742783178,
+        ]
+        np.testing.assert_allclose(expected_size, actual_size)
 
 
 @requires_matplotlib

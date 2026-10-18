@@ -10,7 +10,7 @@ import functools
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import EntryPoint, entry_points
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 import numpy as np
 
@@ -20,12 +20,9 @@ from xarray.namedarray.pycompat import is_chunked_array
 
 if TYPE_CHECKING:
     from xarray.namedarray._typing import (
+        Chunks,
+        NormalizedChunks,
         T_Chunks,
-        _Chunks,
-        _DType,
-        _DType_co,
-        _NormalizedChunks,
-        _ShapeType,
         duckarray,
     )
 
@@ -37,11 +34,11 @@ class ChunkedArrayMixinProtocol(Protocol):
     def dtype(self) -> np.dtype[Any]: ...
 
     @property
-    def chunks(self) -> _NormalizedChunks: ...
+    def chunks(self) -> NormalizedChunks: ...
 
-    def compute(
+    def compute[DType: np.dtype[Any]](
         self, *data: Any, **kwargs: Any
-    ) -> tuple[np.ndarray[Any, _DType_co], ...]: ...
+    ) -> tuple[np.ndarray[Any, DType], ...]: ...
 
 
 T_ChunkedArray = TypeVar("T_ChunkedArray", bound=ChunkedArrayMixinProtocol)
@@ -144,7 +141,8 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
     """
     Detects which parallel backend should be used for given set of arrays.
 
-    Also checks that all arrays are of same chunking type (i.e. not a mix of cubed and dask).
+    Also checks that all arrays are handled by the same chunk manager (i.e. not a mix of
+    cubed and dask).
     """
 
     # TODO this list is probably redundant with something inside xarray.apply_ufunc
@@ -156,13 +154,7 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
         if is_chunked_array(a) and type(a) not in ALLOWED_NON_CHUNKED_TYPES
     ]
 
-    # Asserts all arrays are the same type (or numpy etc.)
-    chunked_array_types = {type(a) for a in chunked_arrays}
-    if len(chunked_array_types) > 1:
-        raise TypeError(
-            f"Mixing chunked array types is not supported, but received multiple types: {chunked_array_types}"
-        )
-    elif len(chunked_array_types) == 0:
+    if not chunked_arrays:
         raise TypeError("Expected a chunked array but none were found")
 
     # iterate over defined chunk managers, seeing if each recognises this array type
@@ -187,10 +179,17 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
     elif len(selected) >= 2:
         raise TypeError(f"Multiple ChunkManagers recognise type {type(chunked_arr)}")
     else:
+        # Asserts the rest of the arrays are handled by it too. One chunk manager may
+        # recognise several array types, so their types need not all be identical.
+        if not all(selected[0].is_chunked_array(a) for a in chunked_arrays[1:]):
+            chunked_array_types = {type(a) for a in chunked_arrays}
+            raise TypeError(
+                f"Mixing chunked array types is not supported, but received multiple types: {chunked_array_types}"
+            )
         return selected[0]
 
 
-class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
+class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
     """
     Interface between a particular parallel computing framework and xarray.
 
@@ -238,7 +237,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         return isinstance(data, self.array_cls)
 
     @abstractmethod
-    def chunks(self, data: T_ChunkedArray) -> _NormalizedChunks:
+    def chunks(self, data: T_ChunkedArray) -> NormalizedChunks:
         """
         Return the current chunks of the given array.
 
@@ -262,14 +261,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError()
 
     @abstractmethod
-    def normalize_chunks(
+    def normalize_chunks[DType: np.dtype[Any]](
         self,
-        chunks: _Chunks | _NormalizedChunks,
-        shape: _ShapeType | None = None,
+        chunks: Chunks | NormalizedChunks,
+        shape: tuple[int, ...] | None = None,
         limit: int | None = None,
-        dtype: _DType | None = None,
-        previous_chunks: _NormalizedChunks | None = None,
-    ) -> _NormalizedChunks:
+        dtype: DType | None = None,
+        previous_chunks: NormalizedChunks | None = None,
+    ) -> NormalizedChunks:
         """
         Normalize given chunking pattern into an explicit tuple of tuples representation.
 
@@ -300,7 +299,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
 
     @abstractmethod
     def from_array(
-        self, data: duckarray[Any, Any], chunks: _Chunks, **kwargs: Any
+        self, data: duckarray[Any, Any], chunks: Chunks, **kwargs: Any
     ) -> T_ChunkedArray:
         """
         Create a chunked array from a non-chunked numpy-like array.
@@ -327,7 +326,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
     def rechunk(
         self,
         data: T_ChunkedArray,
-        chunks: _NormalizedChunks | tuple[int, ...] | _Chunks,
+        chunks: NormalizedChunks | tuple[int, ...] | Chunks,
         **kwargs: Any,
     ) -> Any:
         """
@@ -370,9 +369,9 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         return data.rechunk(chunks2, **kwargs)
 
     @abstractmethod
-    def compute(
+    def compute[DType: np.dtype[Any]](
         self, *data: T_ChunkedArray | Any, **kwargs: Any
-    ) -> tuple[np.ndarray[Any, _DType_co], ...]:
+    ) -> tuple[np.ndarray[Any, DType], ...]:
         """
         Computes one or more chunked arrays, returning them as eager numpy arrays.
 
@@ -398,7 +397,11 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError()
 
     def shuffle(
-        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+        self,
+        x: T_ChunkedArray,
+        indexer: list[list[int]],
+        axis: int,
+        chunks: T_Chunks | None,
     ) -> T_ChunkedArray:
         raise NotImplementedError()
 
@@ -441,14 +444,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """
         raise NotImplementedError()
 
-    def reduction(
+    def reduction[DType: np.dtype[Any]](
         self,
         arr: T_ChunkedArray,
         func: Callable[..., Any],
         combine_func: Callable[..., Any] | None = None,
         aggregate_func: Callable[..., Any] | None = None,
         axis: int | Sequence[int] | None = None,
-        dtype: _DType_co | None = None,
+        dtype: DType | None = None,
         keepdims: bool = False,
     ) -> T_ChunkedArray:
         """
@@ -490,14 +493,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """
         raise NotImplementedError()
 
-    def scan(
+    def scan[DType: np.dtype[Any]](
         self,
         func: Callable[..., Any],
         binop: Callable[..., Any],
         ident: float,
         arr: T_ChunkedArray,
         axis: int | None = None,
-        dtype: _DType_co | None = None,
+        dtype: DType | None = None,
         **kwargs: Any,
     ) -> T_ChunkedArray:
         """
@@ -528,14 +531,14 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError()
 
     @abstractmethod
-    def apply_gufunc(
+    def apply_gufunc[DType: np.dtype[Any]](
         self,
         func: Callable[..., Any],
         signature: str,
         *args: Any,
         axes: Sequence[tuple[int, ...]] | None = None,
         keepdims: bool = False,
-        output_dtypes: Sequence[_DType_co] | None = None,
+        output_dtypes: Sequence[DType] | None = None,
         vectorize: bool | None = None,
         **kwargs: Any,
     ) -> Any:
@@ -614,11 +617,11 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         """
         raise NotImplementedError()
 
-    def map_blocks(
+    def map_blocks[DType: np.dtype[Any]](
         self,
         func: Callable[..., Any],
         *args: Any,
-        dtype: _DType_co | None = None,
+        dtype: DType | None = None,
         chunks: tuple[int, ...] | None = None,
         drop_axis: int | Sequence[int] | None = None,
         new_axis: int | Sequence[int] | None = None,
@@ -717,7 +720,7 @@ class ChunkManagerEntrypoint(ABC, Generic[T_ChunkedArray]):
         self,
         *args: Any,  # can't type this as mypy assumes args are all same type, but dask unify_chunks args alternate types
         **kwargs: Any,
-    ) -> tuple[dict[str, _NormalizedChunks], list[T_ChunkedArray]]:
+    ) -> tuple[dict[str, NormalizedChunks], list[T_ChunkedArray]]:
         """
         Unify chunks across a sequence of arrays.
 

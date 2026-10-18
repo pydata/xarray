@@ -7,7 +7,7 @@ from __future__ import annotations
 import itertools
 from collections.abc import Hashable, Mapping
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from xarray.core import utils
 from xarray.core.variable import Variable
@@ -65,7 +65,7 @@ def _get_breaks_cached(
 def _maybe_chunk(
     name: Hashable,
     var: Variable,
-    chunks: Mapping[Any, T_ChunkDim] | None,
+    chunks: Mapping[Any, T_ChunkDim],
     token=None,
     lock=None,
     name_prefix: str = "xarray-",
@@ -77,8 +77,7 @@ def _maybe_chunk(
 ) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
-    if chunks is not None:
-        chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
+    chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
     if var.ndim:
         chunked_array_type = guess_chunkmanager(
@@ -120,21 +119,22 @@ def _maybe_chunk(
         return var
 
 
-_T = TypeVar("_T", bound=Union["Dataset", "DataArray"])
-_U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
-_V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
+@overload
+def unify_chunks[T: Dataset | DataArray](obj: T, /) -> tuple[T]: ...
 
 
 @overload
-def unify_chunks(obj: _T, /) -> tuple[_T]: ...
+def unify_chunks[T: Dataset | DataArray, U: Dataset | DataArray](
+    obj1: T, obj2: U, /
+) -> tuple[T, U]: ...
 
 
 @overload
-def unify_chunks(obj1: _T, obj2: _U, /) -> tuple[_T, _U]: ...
-
-
-@overload
-def unify_chunks(obj1: _T, obj2: _U, obj3: _V, /) -> tuple[_T, _U, _V]: ...
+def unify_chunks[
+    T: Dataset | DataArray,
+    U: Dataset | DataArray,
+    V: Dataset | DataArray,
+](obj1: T, obj2: U, obj3: V, /) -> tuple[T, U, V]: ...
 
 
 @overload
