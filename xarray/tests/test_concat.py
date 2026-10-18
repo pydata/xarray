@@ -1493,13 +1493,17 @@ def test_concat_index_not_same_dim() -> None:
 
 
 @requires_pandas_3
-def test_concat_pandas_index_string_dtype() -> None:
+@pytest.mark.parametrize("dtype", [None, pd.StringDtype()])
+@pytest.mark.parametrize("pandas_first", [False, True])
+def test_concat_pandas_index_string_dtype(dtype, pandas_first) -> None:
     # GH11317
     da = DataArray([0], dims=["dim_a"], coords={"dim_a": ["a"]})
     db = DataArray([0], dims=["dim_b"], coords={"dim_b": ["b"]})
-    db2 = concat([db], pd.Index(["b"], name="dim_a", dtype=pd.StringDtype()))
-    result = concat([da, db2], dim="dim_a")
-    assert list(result["dim_a"].values) == ["a", "b"]
+    db2 = concat([db], pd.Index(["b"], name="dim_a", dtype=dtype))
+    objs = [db2, da] if pandas_first else [da, db2]
+    expected = ["b", "a"] if pandas_first else ["a", "b"]
+    result = concat(objs, dim="dim_a")
+    assert list(result["dim_a"].values) == expected
 
 
 class TestNewDefaults:
