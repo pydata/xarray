@@ -115,7 +115,7 @@ Breaking Changes
   By `Daisy DAI <https://github.com/ShinoKana>`_.
 - The ``meta`` and ``output_sizes`` arguments of :py:func:`apply_ufunc`,
   deprecated since v0.16.1, have been removed. Pass them in
-  ``dask_gufunc_kwargs`` instead (:issue:`11721`).
+  ``dask_gufunc_kwargs`` instead (:issue:`11721`, :pull:`11755`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
