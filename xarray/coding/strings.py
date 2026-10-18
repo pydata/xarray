@@ -127,9 +127,9 @@ def validate_char_dim_name(strlen, encoding, name) -> str:
     """Check character array dimension naming and size and return it."""
 
     if (char_dim_name := encoding.pop("char_dim_name", None)) is not None:
-        # 1 - extract all characters up to last number sequence
-        # 2 - extract last number sequence
-        match = re.search(r"^(.*?)(\d+)(?!.*\d)", char_dim_name)
+        # 1 - extract all characters before the trailing number sequence
+        # 2 - extract the trailing number sequence
+        match = re.search(r"^(.*?)(\d+)$", char_dim_name)
         if match:
             new_dim_name = match.group(1)
             if int(match.group(2)) != strlen:

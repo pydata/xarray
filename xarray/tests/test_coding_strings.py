@@ -148,6 +148,15 @@ def test_CharacterArrayCoder_encode(data) -> None:
     [
         (Variable(("x",), [b"ab", b"cdef"]), "string4"),
         (Variable(("x",), [b"ab", b"cdef"], encoding={"char_dim_name": "foo"}), "foo"),
+        # a number that is not at the end of the name must not truncate it
+        (
+            Variable(("x",), [b"ab", b"cdef"], encoding={"char_dim_name": "n4_chars"}),
+            "n4_chars",
+        ),
+        (
+            Variable(("x",), [b"ab", b"cdef"], encoding={"char_dim_name": "n2_chars"}),
+            "n2_chars",
+        ),
     ],
 )
 def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name) -> None:

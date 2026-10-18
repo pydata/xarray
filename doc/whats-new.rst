@@ -127,6 +127,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Encoding a string variable whose ``char_dim_name`` contains a number that
+  is not at the end of the name (e.g. ``"n3_chars"``) no longer silently drops
+  the part of the name after that number.
+  By `Guillaume Marty <https://github.com/LemonCondor>`_.
 - :py:func:`concat` and :py:meth:`Dataset.to_dataarray` now promote input dtypes
   before broadcasting missing dimensions, avoiding large intermediate
   allocations when combining Dask arrays with different dtypes (:issue:`10928`,
