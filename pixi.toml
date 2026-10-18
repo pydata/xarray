@@ -67,6 +67,8 @@ iris = "*"        # depends on dask
 
 [feature.accel.dependencies]
 flox = "*"
+# TODO: remove once https://github.com/xarray-contrib/flox/issues/520 is fixed
+numpy_groupies = "<0.14"
 bottleneck = "*"
 numexpr = "*"
 pyarrow = "*"
@@ -116,6 +118,7 @@ cftime = "1.6.*"
 dask-core = "2025.9.*"
 distributed = "2025.9.*"
 flox = "0.10.*"
+numpy_groupies = "0.11.*"
 # h5netcdf 1.8.0 introduced a few compatibility features with netcdf4
 # https://github.com/pydata/xarray/issues/10657#issuecomment-3711095986
 h5netcdf = "1.8.*"

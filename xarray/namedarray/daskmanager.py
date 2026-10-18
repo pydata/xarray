@@ -268,7 +268,11 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
 
     @override
     def shuffle(
-        self, x: DaskArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+        self,
+        x: DaskArray,
+        indexer: list[list[int]],
+        axis: int,
+        chunks: T_Chunks | None,
     ) -> DaskArray:
         import dask.array
 
