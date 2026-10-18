@@ -39,7 +39,8 @@ and [good first issue](https://github.com/pydata/xarray/labels/contrib-good-firs
 These are well documented issues, that do not require a deep understanding of the internals of xarray.
 
 Once you've found an interesting issue, you can return here to get your development environment setup.
-The xarray project does not assign issues. Issues are "assigned" by opening a Pull Request(PR).
+The xarray project does not assign issues. Issues are "assigned" by opening a Pull Request (PR),
+so there is no need to ask for an issue to be assigned or to announce that you are working on it.
 
 (contributing.bug_reports)=
 
