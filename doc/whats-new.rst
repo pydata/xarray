@@ -295,6 +295,11 @@ Bug Fixes
   ``.astype(np.float32)`` a no-op. Interpolating float data now always keeps its
   dtype, also without dask (:issue:`10325`, :pull:`11741`).
   By `Vladimir Saraikin <https://github.com/vsaraikin>`_.
+- Fix :py:func:`concat` failing with ``TypeError: Cannot interpret
+  '<StringDtype...>' as a data type`` when a ``pandas.Index`` with a
+  ``StringDtype`` is used as the new concat dimension and another input has a
+  numpy string-dtype coord (:issue:`11317`, :pull:`11322`).
+  By `Sai Asish Y <https://github.com/SAY-5>`_.
 
 
 Documentation
@@ -760,11 +765,6 @@ Bug Fixes
   ``"dayofweek"``, and ``"week"``, respectively; now they return objects named
   ``"days_in_month"``, ``"weekday"``, and ``"weekofyear"`` (:pull:`11270`). By
   `Spencer Clark <https://github.com/spencerkclark>`_.
-- Fix :py:func:`concat` failing with ``TypeError: Cannot interpret
-  '<StringDtype...>' as a data type`` when a ``pandas.Index`` with a
-  ``StringDtype`` is used as the new concat dimension and another input has a
-  numpy string-dtype coord (:issue:`11317`).
-
 
 Documentation
 ~~~~~~~~~~~~~
