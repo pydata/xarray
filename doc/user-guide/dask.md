@@ -78,6 +78,14 @@ Find more examples at the [Project Pythia cookbook gallery](https://cookbooks.pr
 :align: right
 :alt: A Dask array
 :width: 50 %
+:class: only-light
+```
+
+```{image} ../_static/dask-array-dark.svg
+:align: right
+:alt: A Dask array
+:width: 50 %
+:class: only-dark
 ```
 
 Dask divides arrays into smaller parts called chunks. These chunks are small, manageable pieces of the larger dataset, that Dask is able to process in parallel (see the [Dask Array docs on chunks](https://docs.dask.org/en/stable/array-chunks.html?utm_source=xarray-docs)). Commonly chunks are set when reading data, but you can also set the chunksize manually at any point in your workflow using {py:meth}`Dataset.chunk` and {py:meth}`DataArray.chunk`. See {ref}`dask.chunks` for more.
