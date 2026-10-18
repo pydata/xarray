@@ -45,20 +45,18 @@ quickly ensuring that your code can handle xarray objects of all possible struct
 
 These strategies are accessible in the {py:mod}`xarray.testing.strategies` module, which provides
 
-```{eval-rst}
-.. currentmodule:: xarray
+```{currentmodule} xarray
+
 ```
 
-```{eval-rst}
-.. autosummary::
-
-   testing.strategies.supported_dtypes
-   testing.strategies.names
-   testing.strategies.dimension_names
-   testing.strategies.dimension_sizes
-   testing.strategies.attrs
-   testing.strategies.variables
-   testing.strategies.unique_subset_of
+```{autosummary}
+testing.strategies.supported_dtypes
+testing.strategies.names
+testing.strategies.dimension_names
+testing.strategies.dimension_sizes
+testing.strategies.attrs
+testing.strategies.variables
+testing.strategies.unique_subset_of
 ```
 
 These build upon the numpy and array API strategies offered in {py:mod}`hypothesis.extra.numpy` and {py:mod}`hypothesis.extra.array_api`:

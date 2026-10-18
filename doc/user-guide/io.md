@@ -4,8 +4,8 @@ kernelspec:
   name: python3
 ---
 
-```{eval-rst}
-.. currentmodule:: xarray
+```{currentmodule} xarray
+
 ```
 
 (io)=
@@ -69,10 +69,9 @@ You can learn more about using and developing backends in the
 </style>
 ```
 
-```{eval-rst}
-.. mermaid::
-    :config: {"theme":"base","themeVariables":{"fontSize":"20px","primaryColor":"#fff","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#767985"}}
-    :alt: Flowchart illustrating how to choose the right backend engine to read your data
+```{mermaid}
+:config: {"theme":"base","themeVariables":{"fontSize":"20px","primaryColor":"#fff","primaryTextColor":"#fff","primaryBorderColor":"#59c7d6","lineColor":"#e28126","secondaryColor":"#767985"}}
+:alt: Flowchart illustrating how to choose the right backend engine to read your data
 
     flowchart LR
         built-in-eng["`**Is your data stored in one of these formats?**
@@ -155,65 +154,64 @@ xarray-compatible.
 
 ### Remote URL Resolution
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 50 10 10 10 10 10
+```{list-table}
+:header-rows: 1
+:widths: 50 10 10 10 10 10
 
-   * - URL
-     - :ref:`netcdf4 <io.netcdf>`
-     - :ref:`h5netcdf <io.hdf5>`
-     - :ref:`scipy <io.netcdf>`
-     - :ref:`pydap <io.opendap>`
-     - :ref:`zarr <io.zarr>`
-   * - ``https://example.com/store.zarr``
-     - ❌
-     - ❌
-     - ❌
-     - ❌
-     - ✅
-   * - ``https://example.com/data.nc``
-     - ✅
-     - ✅
-     - ❌
-     - ❌
-     - ❌
-   * - ``http://example.com/data.nc?var=temp``
-     - ✅
-     - ❌
-     - ❌
-     - ❌
-     - ❌
-   * - ``http://example.com/dap4/data.nc?var=x``
-     - ✅
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-   * - ``dap2://opendap.nasa.gov/dataset``
-     - ❌
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-   * - ``https://example.com/DAP4/data``
-     - ❌
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-   * - ``http://test.opendap.org/dap4/file.nc4``
-     - ✅
-     - ✅
-     - ❌
-     - ✅
-     - ❌
-   * - ``https://example.com/DAP4/data.nc``
-     - ✅
-     - ✅
-     - ❌
-     - ✅
-     - ❌
+* - URL
+  - {ref}`netcdf4 <io.netcdf>`
+  - {ref}`h5netcdf <io.hdf5>`
+  - {ref}`scipy <io.netcdf>`
+  - {ref}`pydap <io.opendap>`
+  - {ref}`zarr <io.zarr>`
+* - `https://example.com/store.zarr`
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+  - ✅
+* - `https://example.com/data.nc`
+  - ✅
+  - ✅
+  - ❌
+  - ❌
+  - ❌
+* - `http://example.com/data.nc?var=temp`
+  - ✅
+  - ❌
+  - ❌
+  - ❌
+  - ❌
+* - `http://example.com/dap4/data.nc?var=x`
+  - ✅
+  - ❌
+  - ❌
+  - ✅
+  - ❌
+* - `dap2://opendap.nasa.gov/dataset`
+  - ❌
+  - ❌
+  - ❌
+  - ✅
+  - ❌
+* - `https://example.com/DAP4/data`
+  - ❌
+  - ❌
+  - ❌
+  - ✅
+  - ❌
+* - `http://test.opendap.org/dap4/file.nc4`
+  - ✅
+  - ✅
+  - ❌
+  - ✅
+  - ❌
+* - `https://example.com/DAP4/data.nc`
+  - ✅
+  - ✅
+  - ❌
+  - ✅
+  - ❌
 ```
 
 ### Local File Resolution
@@ -223,65 +221,64 @@ If the magic number **cannot be read** (e.g., file doesn't exist, no permissions
 back to checking the file **extension**. If the magic number is readable but invalid, the
 backend returns False (does not fall back to extension).
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 40 20 10 10 10 10
+```{list-table}
+:header-rows: 1
+:widths: 40 20 10 10 10 10
 
-   * - File Path
-     - Magic Number
-     - :ref:`netcdf4 <io.netcdf>`
-     - :ref:`h5netcdf <io.hdf5>`
-     - :ref:`scipy <io.netcdf>`
-     - :ref:`zarr <io.zarr>`
-   * - ``/path/to/file.nc``
-     - ``CDF\x01`` (netCDF3)
-     - ✅
-     - ❌
-     - ✅
-     - ❌
-   * - ``/path/to/file.nc4``
-     - ``\x89HDF\r\n\x1a\n`` (HDF5/netCDF4)
-     - ✅
-     - ✅
-     - ❌
-     - ❌
-   * - ``/path/to/file.nc.gz``
-     - ``\x1f\x8b`` + ``CDF`` inside
-     - ❌
-     - ❌
-     - ✅
-     - ❌
-   * - ``/path/to/store.zarr/``
-     - (directory)
-     - ❌
-     - ❌
-     - ❌
-     - ✅
-   * - ``/path/to/file.nc``
-     - *(no magic number)*
-     - ✅
-     - ✅
-     - ✅
-     - ❌
-   * - ``/path/to/file.xyz``
-     - ``CDF\x01`` (netCDF3)
-     - ✅
-     - ❌
-     - ✅
-     - ❌
-   * - ``/path/to/file.xyz``
-     - ``\x89HDF\r\n\x1a\n`` (HDF5/netCDF4)
-     - ✅
-     - ✅
-     - ❌
-     - ❌
-   * - ``/path/to/file.xyz``
-     - *(no magic number)*
-     - ❌
-     - ❌
-     - ❌
-     - ❌
+* - File Path
+  - Magic Number
+  - {ref}`netcdf4 <io.netcdf>`
+  - {ref}`h5netcdf <io.hdf5>`
+  - {ref}`scipy <io.netcdf>`
+  - {ref}`zarr <io.zarr>`
+* - `/path/to/file.nc`
+  - `CDF\x01` (netCDF3)
+  - ✅
+  - ❌
+  - ✅
+  - ❌
+* - `/path/to/file.nc4`
+  - `\x89HDF\r\n\x1a\n` (HDF5/netCDF4)
+  - ✅
+  - ✅
+  - ❌
+  - ❌
+* - `/path/to/file.nc.gz`
+  - `\x1f\x8b` + `CDF` inside
+  - ❌
+  - ❌
+  - ✅
+  - ❌
+* - `/path/to/store.zarr/`
+  - (directory)
+  - ❌
+  - ❌
+  - ❌
+  - ✅
+* - `/path/to/file.nc`
+  - *(no magic number)*
+  - ✅
+  - ✅
+  - ✅
+  - ❌
+* - `/path/to/file.xyz`
+  - `CDF\x01` (netCDF3)
+  - ✅
+  - ❌
+  - ✅
+  - ❌
+* - `/path/to/file.xyz`
+  - `\x89HDF\r\n\x1a\n` (HDF5/netCDF4)
+  - ✅
+  - ✅
+  - ❌
+  - ❌
+* - `/path/to/file.xyz`
+  - *(no magic number)*
+  - ❌
+  - ❌
+  - ❌
+  - ❌
 ```
 
 ````{note}
