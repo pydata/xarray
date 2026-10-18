@@ -201,15 +201,6 @@ a common dimension as new coordinate.
 :alt: advanced indexing and interpolation
 :height: 200px
 :width: 400 px
-:class: only-light
-```
-
-```{image} ../_static/advanced_selection_interpolation-dark.svg
-:align: center
-:alt: advanced indexing and interpolation
-:height: 200px
-:width: 400 px
-:class: only-dark
 ```
 
 For example:

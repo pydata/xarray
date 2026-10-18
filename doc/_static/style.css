@@ -16,7 +16,7 @@ Primary Typeface: Acumin Variable Concept - Semicondensed Medium
 
 /* Adjust index page overview cards, borrowed from Pandas & Numpy */
 /* Override SVG icon color */
-html[data-theme="dark"] .sd-card img[src*=".svg"] {
+html[data-theme="dark"] .sd-card img[src*=".svg"]:not(.only-dark) {
   filter: invert(0.82) brightness(0.8) contrast(1.2);
 }
 /* https://github.com/executablebooks/sphinx-design/blob/main/style/_cards.scss */
