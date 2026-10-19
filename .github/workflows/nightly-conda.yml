@@ -71,6 +71,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           pixi upload prefix \
+            -vvv \
             -c https://prefix.dev/sp-nightly-forge \
             --generate-attestation \
             --store-github-attestation \
