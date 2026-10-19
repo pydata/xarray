@@ -1282,6 +1282,11 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         -------
         Dataset or DataArray with reshaped dimensions
 
+        See Also
+        --------
+        DataArrayRolling.construct
+        DatasetRolling.construct
+
         Examples
         --------
         >>> da = xr.DataArray(np.arange(24), dims="time")
@@ -1290,11 +1295,6 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
                [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
         Dimensions without coordinates: year, month
-
-        See Also
-        --------
-        DataArrayRolling.construct
-        DatasetRolling.construct
         """
 
         from xarray.core.dataarray import DataArray

@@ -498,9 +498,10 @@ def line(
         When either col or row is given, returns a FacetGrid, otherwise
         a list of matplotlib Line3D objects.
 
-    See also
+    See Also
     --------
-    Use :py:func:`xarray.plot.lines` for efficient plotting of many lines.
+    :py:func:`xarray.plot.lines`
+        Efficient plotting of many lines.
     """
     # Handle facetgrids first
     if row or col:

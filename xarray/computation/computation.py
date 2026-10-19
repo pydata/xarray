@@ -328,6 +328,10 @@ def cross(
         The dimension along which the cross product will be computed.
         Must be available in both vectors.
 
+    See Also
+    --------
+    numpy.cross : Corresponding numpy function
+
     Examples
     --------
     Vector cross-product with 3 dimensions:
@@ -394,10 +398,6 @@ def cross(
         x        (dim_0) int64 8B -3
         y        (dim_0) int64 8B 6
         z        (dim_0) int64 8B -3
-
-    See Also
-    --------
-    numpy.cross : Corresponding numpy function
     """
 
     if dim not in a.dims:
@@ -701,6 +701,12 @@ def where(cond, x, y, keep_attrs=None):
         In priority order: Dataset, DataArray, Variable or array, whichever
         type appears as an input argument.
 
+    See Also
+    --------
+    numpy.where : corresponding numpy function
+    Dataset.where, DataArray.where :
+        equivalent methods
+
     Examples
     --------
     >>> x = xr.DataArray(
@@ -776,12 +782,6 @@ def where(cond, x, y, keep_attrs=None):
     array([[1, 2],
            [0, 0]])
     Dimensions without coordinates: x, y
-
-    See Also
-    --------
-    numpy.where : corresponding numpy function
-    Dataset.where, DataArray.where :
-        equivalent methods
     """
     from xarray.core.dataset import Dataset
 

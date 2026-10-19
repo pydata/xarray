@@ -1188,6 +1188,11 @@ class DataTree(
             A new DataTree with the new variables or children in addition to all the
             existing items.
 
+        See Also
+        --------
+        xarray.Dataset.assign
+        pandas.DataFrame.assign
+
         Notes
         -----
         Since ``kwargs`` is a dictionary, the order of your arguments may not
@@ -1195,11 +1200,6 @@ class DataTree(
         Assigning multiple items within the same ``assign`` is
         possible, but you cannot reference other variables created within the
         same ``assign`` call.
-
-        See Also
-        --------
-        xarray.Dataset.assign
-        pandas.DataFrame.assign
         """
         items = either_dict_or_kwargs(items, items_kwargs, "assign")
         dt = self.copy()

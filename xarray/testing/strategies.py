@@ -58,7 +58,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     # TODO should this be exposed publicly?
     # We should at least decide what the set of numpy dtypes that xarray officially supports is.
@@ -101,7 +101,7 @@ def datetimes() -> st.SearchStrategy:
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     strategy = st.datetimes()
     if module_available("cftime"):
@@ -123,7 +123,7 @@ def names() -> st.SearchStrategy[str]:
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     return st.text(
         _readable_characters,
@@ -196,7 +196,7 @@ def dimension_sizes(
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
 
     if max_side is None:
@@ -239,7 +239,7 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     return st.recursive(
         st.dictionaries(_attr_keys, _attr_values),
@@ -300,6 +300,10 @@ def variables(
         If a custom array_strategy_fn returns a strategy which generates an example array inconsistent with the shape
         & dtype input passed to it.
 
+    See Also
+    --------
+    :ref:`testing.hypothesis`
+
     Examples
     --------
     Generate completely arbitrary Variable objects backed by a numpy array:
@@ -336,11 +340,7 @@ def variables(
     <xarray.Variable (a: 2, b: 1)>
     array([[-1.00000000e+007+3.40282347e+038j],
            [-2.75034266e-225+2.22507386e-311j]])
-
-    See Also
-    --------
-    :ref:`testing.hypothesis`_
-    """
+    """  # noqa: D420  # `Attributes:` in the example output is not a section
     if dtype is None:
         dtype = supported_dtypes()
 
@@ -467,16 +467,16 @@ def unique_subset_of(
     unique_subset_strategy
         Strategy generating subset of the input.
 
+    See Also
+    --------
+    :ref:`testing.hypothesis`
+
     Examples
     --------
     >>> unique_subset_of({"x": 2, "y": 3}).example()  # doctest: +SKIP
     {'y': 3}
     >>> unique_subset_of(["x", "y"]).example()  # doctest: +SKIP
     ['x']
-
-    See Also
-    --------
-    :ref:`testing.hypothesis`_
     """
     if not isinstance(objs, Iterable):
         raise TypeError(
@@ -519,7 +519,7 @@ def cftime_datetimes(draw: st.DrawFn):
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     from xarray.tests import _all_cftime_date_types
 

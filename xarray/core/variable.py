@@ -732,6 +732,12 @@ class Variable(
         out : same as object
             New object with data cast to the specified type.
 
+        See Also
+        --------
+        numpy.ndarray.astype
+        dask.array.Array.astype
+        sparse.COO.astype
+
         Notes
         -----
         The ``order``, ``casting``, ``subok`` and ``copy`` arguments are only passed
@@ -739,12 +745,6 @@ class Variable(
         different than ``None`` is supplied.
         Make sure to only supply these arguments if the underlying array class
         supports them.
-
-        See Also
-        --------
-        numpy.ndarray.astype
-        dask.array.Array.astype
-        sparse.COO.astype
         """
         from xarray.computation.apply_ufunc import apply_ufunc
 
@@ -1638,14 +1638,14 @@ class Variable(
             The returned object has transposed data and dimensions with the
             same attributes as the original.
 
+        See Also
+        --------
+        numpy.transpose
+
         Notes
         -----
         This operation returns a view of this variable's data. It is
         lazy for dask-backed Variables but not for numpy-backed Variables.
-
-        See Also
-        --------
-        numpy.transpose
         """
         if len(dim) == 0:
             dims = self.dims[::-1]

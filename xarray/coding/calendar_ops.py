@@ -369,8 +369,8 @@ def interp_calendar(source, target, dim="time"):
     dim : str
       The time coordinate name.
 
-    Return
-    ------
+    Returns
+    -------
     DataArray or Dataset
       The source interpolated on the decimal years of target,
     """

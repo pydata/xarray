@@ -579,6 +579,10 @@ def open_dataset(
     dataset : Dataset
         The newly created dataset.
 
+    See Also
+    --------
+    open_mfdataset
+
     Notes
     -----
     For files with multiple groups, ``open_dataset`` reads only the selected
@@ -591,10 +595,6 @@ def open_dataset(
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
-
-    See Also
-    --------
-    open_mfdataset
     """
 
     if cache is None:
@@ -824,6 +824,10 @@ def open_dataarray(
 
         See engine open function for kwargs accepted by each specific engine.
 
+    See Also
+    --------
+    open_dataset
+
     Notes
     -----
     This is designed to be fully compatible with `DataArray.to_netcdf`. Saving
@@ -832,10 +836,6 @@ def open_dataarray(
 
     All parameters are passed directly to `xarray.open_dataset`. See that
     documentation for further details.
-
-    See Also
-    --------
-    open_dataset
     """
 
     dataset = open_dataset(
@@ -1071,17 +1071,17 @@ def open_datatree(
     tree : DataTree
         The newly created datatree.
 
+    See Also
+    --------
+    xarray.open_groups
+    xarray.open_dataset
+
     Notes
     -----
     ``open_datatree`` opens the file with read-only access. When you modify
     values of a DataTree, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
-
-    See Also
-    --------
-    xarray.open_groups
-    xarray.open_dataset
     """
     if cache is None:
         cache = chunks is None
@@ -1323,18 +1323,18 @@ def open_groups(
     groups : dict of str to xarray.Dataset
         The groups as Dataset objects
 
+    See Also
+    --------
+    xarray.open_datatree
+    xarray.open_dataset
+    xarray.DataTree.from_dict
+
     Notes
     -----
     ``open_groups`` opens the file with read-only access. When you modify
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
-
-    See Also
-    --------
-    xarray.open_datatree
-    xarray.open_dataset
-    xarray.DataTree.from_dict
     """
     if cache is None:
         cache = chunks is None
@@ -1583,6 +1583,12 @@ def open_mfdataset(
     -------
     xarray.Dataset
 
+    See Also
+    --------
+    combine_by_coords
+    combine_nested
+    open_dataset
+
     Notes
     -----
     ``open_mfdataset`` opens files with read-only access. When you modify values
@@ -1590,11 +1596,11 @@ def open_mfdataset(
     are manipulating in xarray is modified: the original file on disk is never
     touched.
 
-    See Also
-    --------
-    combine_by_coords
-    combine_nested
-    open_dataset
+    References
+    ----------
+
+    .. [1] https://docs.xarray.dev/en/stable/dask.html
+    .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
 
     Examples
     --------
@@ -1618,12 +1624,6 @@ def open_mfdataset(
     >>> ds = xr.open_mfdataset(
     ...     "file.nc", drop_variables=["varname_1", "varname_2"]  # any list of vars
     ... )  # doctest: +SKIP
-
-    References
-    ----------
-
-    .. [1] https://docs.xarray.dev/en/stable/dask.html
-    .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
     """
     paths = _find_absolute_paths(paths, engine=engine, **kwargs)
 

@@ -1427,6 +1427,10 @@ class DataArray(
             New object with dimensions, attributes, coordinates, name,
             encoding, and optionally data copied from original.
 
+        See Also
+        --------
+        pandas.DataFrame.copy
+
         Examples
         --------
         Shallow versus deep copy
@@ -1464,10 +1468,6 @@ class DataArray(
         array([7, 2, 3])
         Coordinates:
           * x        (x) <U1 12B 'a' 'b' 'c'
-
-        See Also
-        --------
-        pandas.DataFrame.copy
         """
         return self._copy(deep=deep, data=data)
 
@@ -1667,9 +1667,11 @@ class DataArray(
 
         See Also
         --------
-        :func:`Dataset.isel <Dataset.isel>`
-        :func:`DataArray.sel <DataArray.sel>`
+        Dataset.isel
+        DataArray.sel
 
+        Notes
+        -----
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
 
@@ -1805,9 +1807,11 @@ class DataArray(
 
         See Also
         --------
-        :func:`Dataset.sel <Dataset.sel>`
-        :func:`DataArray.isel <DataArray.isel>`
+        Dataset.sel
+        DataArray.isel
 
+        Notes
+        -----
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
 
@@ -1956,6 +1960,12 @@ class DataArray(
         """Return a new DataArray whose data is given by each `n` value
         along the specified dimension(s).
 
+        See Also
+        --------
+        Dataset.thin
+        DataArray.head
+        DataArray.tail
+
         Examples
         --------
         >>> x_arr = np.arange(0, 26)
@@ -1988,12 +1998,6 @@ class DataArray(
         Coordinates:
           * x        (x) int64 8B 0
           * y        (y) int64 24B 0 5 10
-
-        See Also
-        --------
-        Dataset.thin
-        DataArray.head
-        DataArray.tail
         """
         ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
@@ -2166,6 +2170,12 @@ class DataArray(
             Another dataset array, with this array's data but coordinates from
             the other object.
 
+        See Also
+        --------
+        DataArray.reindex
+        DataArray.broadcast_like
+        align
+
         Examples
         --------
         >>> data = np.arange(12).reshape(4, 3)
@@ -2280,12 +2290,6 @@ class DataArray(
         Coordinates:
           * y        (y) int64 24B 70 80 90
             x        int64 8B 20
-
-        See Also
-        --------
-        DataArray.reindex
-        DataArray.broadcast_like
-        align
         """
         return alignment.reindex_like(
             self,
@@ -2353,6 +2357,11 @@ class DataArray(
             Another dataset array, with this array's data but replaced
             coordinates.
 
+        See Also
+        --------
+        DataArray.reindex_like
+        align
+
         Examples
         --------
         Reverse latitude:
@@ -2372,11 +2381,6 @@ class DataArray(
         array([3, 2, 1, 0])
         Coordinates:
           * lat      (lat) int64 32B 87 88 89 90
-
-        See Also
-        --------
-        DataArray.reindex_like
-        align
         """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
@@ -2431,6 +2435,10 @@ class DataArray(
         interpolated : DataArray
             New dataarray on the new coordinates.
 
+        See Also
+        --------
+        :mod:`scipy.interpolate`
+
         Notes
         -----
         - SciPy is required for certain interpolation methods.
@@ -2460,10 +2468,6 @@ class DataArray(
             4. **Interpolation along multiple dimensions of multi-dimensional data**
                 - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
                     "cubic", "quintic", "pchip"}.
-
-        See Also
-        --------
-        :mod:`scipy.interpolate`
 
         :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
             Tutorial material on manipulating data resolution using :py:func:`~xarray.DataArray.interp`
@@ -2582,6 +2586,12 @@ class DataArray(
             Another dataarray by interpolating this dataarray's data along the
             coordinates of the other object.
 
+        See Also
+        --------
+        :func:`DataArray.interp`
+        :func:`DataArray.reindex_like`
+        :mod:`scipy.interpolate`
+
         Notes
         -----
         - scipy is required.
@@ -2613,12 +2623,6 @@ class DataArray(
             4. **Interpolation along multiple dimensions of multi-dimensional data**
                 - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
                     "cubic", "quintic", "pchip"}.
-
-        See Also
-        --------
-        :func:`DataArray.interp`
-        :func:`DataArray.reindex_like`
-        :mod:`scipy.interpolate`
 
         Examples
         --------
@@ -2751,6 +2755,11 @@ class DataArray(
         swapped : DataArray
             DataArray with swapped dimensions.
 
+        See Also
+        --------
+        DataArray.rename
+        Dataset.swap_dims
+
         Examples
         --------
         >>> arr = xr.DataArray(
@@ -2779,11 +2788,6 @@ class DataArray(
             x        (z) <U1 8B 'a' 'b'
             y        (z) int64 16B 0 1
         Dimensions without coordinates: z
-
-        See Also
-        --------
-        DataArray.rename
-        Dataset.swap_dims
         """
         dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         ds = self._to_temp_dataset().swap_dims(dims_dict)
@@ -2923,6 +2927,11 @@ class DataArray(
         obj : DataArray
             Another DataArray, with this data but replaced coordinates.
 
+        See Also
+        --------
+        DataArray.reset_index
+        DataArray.set_xindex
+
         Examples
         --------
         >>> arr = xr.DataArray(
@@ -2945,11 +2954,6 @@ class DataArray(
         Coordinates:
           * x        (x) int64 16B 3 4
           * y        (y) int64 24B 0 1 2
-
-        See Also
-        --------
-        DataArray.reset_index
-        DataArray.set_xindex
         """
         ds = self._to_temp_dataset().set_index(indexes, append=append, **indexes_kwargs)
         return self._from_temp_dataset(ds)
@@ -3085,6 +3089,10 @@ class DataArray(
         stacked : DataArray
             DataArray with stacked data.
 
+        See Also
+        --------
+        DataArray.unstack
+
         Examples
         --------
         >>> arr = xr.DataArray(
@@ -3107,10 +3115,6 @@ class DataArray(
                     ('b', 1),
                     ('b', 2)],
                    name='z')
-
-        See Also
-        --------
-        DataArray.unstack
         """
         ds = self._to_temp_dataset().stack(
             dim,
@@ -3151,6 +3155,10 @@ class DataArray(
         unstacked : DataArray
             Array with unstacked data.
 
+        See Also
+        --------
+        DataArray.stack
+
         Examples
         --------
         >>> arr = xr.DataArray(
@@ -3176,10 +3184,6 @@ class DataArray(
         >>> roundtripped = stacked.unstack()
         >>> arr.identical(roundtripped)
         True
-
-        See Also
-        --------
-        DataArray.stack
         """
         ds = self._to_temp_dataset().unstack(dim, fill_value=fill_value, sparse=sparse)
         return self._from_temp_dataset(ds)
@@ -3201,6 +3205,10 @@ class DataArray(
         Returns
         -------
         unstacked: Dataset
+
+        See Also
+        --------
+        Dataset.to_stacked_array
 
         Examples
         --------
@@ -3228,10 +3236,6 @@ class DataArray(
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
         >>> data.identical(roundtripped)
         True
-
-        See Also
-        --------
-        Dataset.to_stacked_array
         """
         idx = self._indexes[dim].to_pandas_index()
         if not isinstance(idx, pd.MultiIndex):
@@ -3277,16 +3281,16 @@ class DataArray(
         transposed : DataArray
             The returned DataArray's array is transposed.
 
+        See Also
+        --------
+        numpy.transpose
+        Dataset.transpose
+
         Notes
         -----
         This operation returns a view of this array's data. It is
         lazy for dask-backed DataArrays but not for numpy-backed DataArrays
         -- the data will be fully loaded.
-
-        See Also
-        --------
-        numpy.transpose
-        Dataset.transpose
         """
         if dim:
             dim = tuple(infix_dims(dim, self.dims, missing_dims))
@@ -4350,6 +4354,10 @@ class DataArray(
             * ``dask.delayed.Delayed`` if compute is False
             * None otherwise
 
+        See Also
+        --------
+        Dataset.to_netcdf
+
         Notes
         -----
         Only xarray.Dataset objects can be written to netCDF files, so
@@ -4360,10 +4368,6 @@ class DataArray(
 
         [netCDF4 backend only] netCDF4 enums are decoded into the
         dataarray dtype metadata.
-
-        See Also
-        --------
-        Dataset.to_netcdf
         """
         from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
         from xarray.backends.writers import to_netcdf
@@ -4590,9 +4594,11 @@ class DataArray(
             * ``dask.delayed.Delayed`` if compute is False
             * ZarrStore otherwise
 
-        References
-        ----------
-        https://zarr.readthedocs.io/
+        See Also
+        --------
+        Dataset.to_zarr
+        :ref:`io.zarr`
+            The I/O user guide, with more details and examples.
 
         Notes
         -----
@@ -4614,11 +4620,9 @@ class DataArray(
             to mask the data if requested using ``mask_and_scale=True``. See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
             for more.
 
-        See Also
-        --------
-        Dataset.to_zarr
-        :ref:`io.zarr`
-            The I/O user guide, with more details and examples.
+        References
+        ----------
+        https://zarr.readthedocs.io/
         """
         from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
         from xarray.backends.writers import to_zarr
@@ -5135,6 +5139,10 @@ class DataArray(
         difference : DataArray
             The n-th order finite difference of this object.
 
+        See Also
+        --------
+        DataArray.differentiate
+
         Notes
         -----
         `n` matches numpy's behavior and is different from pandas' first argument named
@@ -5153,10 +5161,6 @@ class DataArray(
         array([ 1, -1])
         Coordinates:
           * x        (x) int64 16B 3 4
-
-        See Also
-        --------
-        DataArray.differentiate
         """
         ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
         return self._from_temp_dataset(ds)
@@ -5502,6 +5506,12 @@ class DataArray(
         --------
         numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
 
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5533,12 +5543,6 @@ class DataArray(
         Coordinates:
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
           * y         (y) float64 32B 1.0 1.5 2.0 2.5
-
-        References
-        ----------
-        .. [1] R. J. Hyndman and Y. Fan,
-           "Sample quantiles in statistical packages,"
-           The American Statistician, 50(4), pp. 361-365, 1996
         """
 
         ds = self._to_temp_dataset().quantile(
@@ -5832,6 +5836,12 @@ class DataArray(
         A single DataArray or Dataset with dask backend, reassembled from the outputs of the
         function.
 
+        See Also
+        --------
+        dask.array.map_blocks
+        xarray.apply_ufunc
+        xarray.Dataset.map_blocks
+
         Notes
         -----
         This function is designed for when ``func`` needs to manipulate a whole xarray object
@@ -5840,12 +5850,6 @@ class DataArray(
 
         If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
-
-        See Also
-        --------
-        :func:`dask.array.map_blocks <dask.array.map_blocks>`
-        :func:`xarray.apply_ufunc <xarray.apply_ufunc>`
-        :func:`xarray.Dataset.map_blocks <xarray.Dataset.map_blocks>`
 
         :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
             Advanced Tutorial on map_blocks with dask
@@ -6803,6 +6807,14 @@ class DataArray(
             [var]_curvefit_covariance
                 The covariance matrix of the coefficient estimates.
 
+        See Also
+        --------
+        DataArray.polyfit
+        scipy.optimize.curve_fit
+        xarray.DataArray.xlm.modelfit
+            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
+            with more curve fitting functionality.
+
         Examples
         --------
         Generate some exponentially decaying data, where the decay constant and amplitude are
@@ -6882,14 +6894,6 @@ class DataArray(
         Coordinates:
           * x        (x) int64 24B 0 1 2
             param    <U13 52B 'amplitude'
-
-        See Also
-        --------
-        DataArray.polyfit
-        scipy.optimize.curve_fit
-        xarray.DataArray.xlm.modelfit
-            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
-            with more curve fitting functionality.
         """
         # For DataArray, use the original implementation by converting to a dataset first
         return self._to_temp_dataset().curvefit(
@@ -7173,6 +7177,27 @@ class DataArray(
             A `DataArrayGroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
 
+        See Also
+        --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
+
+        pandas.DataFrame.groupby
+        DataArray.groupby_bins
+        Dataset.groupby
+        core.groupby.DataArrayGroupBy
+        DataArray.coarsen
+        Dataset.resample
+        DataArray.resample
+
+        Notes
+        -----
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
+
+        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
+
         Examples
         --------
         Calculate daily anomalies for daily data:
@@ -7248,26 +7273,6 @@ class DataArray(
           * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
-
-
-        See Also
-        --------
-        :ref:`groupby`
-            Users guide explanation of how to group and bin data.
-
-        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
-            Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
-
-        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
-            Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
-
-        :external:py:meth:`pandas.DataFrame.groupby <pandas.DataFrame.groupby>`
-        :func:`DataArray.groupby_bins <DataArray.groupby_bins>`
-        :func:`Dataset.groupby <Dataset.groupby>`
-        :func:`core.groupby.DataArrayGroupBy <core.groupby.DataArrayGroupBy>`
-        :func:`DataArray.coarsen <DataArray.coarsen>`
-        :func:`Dataset.resample <Dataset.resample>`
-        :func:`DataArray.resample <DataArray.resample>`
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
@@ -7391,25 +7396,24 @@ class DataArray(
             Each value in the data contributes to the reduction operation
             according to its associated weight.
 
-        Notes
-        -----
-        ``weights`` must be a DataArray and cannot contain missing values.
-        Missing values can be replaced by ``weights.fillna(0)``.
-
         Returns
         -------
         computation.weighted.DataArrayWeighted
 
         See Also
         --------
-        :func:`Dataset.weighted <Dataset.weighted>`
+        Dataset.weighted
 
         :ref:`compute.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
 
+        Notes
+        -----
+        ``weights`` must be a DataArray and cannot contain missing values.
+        Missing values can be replaced by ``weights.fillna(0)``.
+
         :doc:`xarray-tutorial:fundamentals/03.4_weighted`
             Tutorial on Weighted Reduction using :py:func:`~xarray.DataArray.weighted`
-
         """
         from xarray.computation.weighted import DataArrayWeighted
 
@@ -7445,6 +7449,12 @@ class DataArray(
         -------
         computation.rolling.DataArrayRolling
 
+        See Also
+        --------
+        DataArray.cumulative
+        Dataset.rolling
+        computation.rolling.DataArrayRolling
+
         Examples
         --------
         Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
@@ -7478,12 +7488,6 @@ class DataArray(
         array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
         Coordinates:
           * time     (time) datetime64[us] 80B 2000-01-15 2000-02-15 ... 2000-10-15
-
-        See Also
-        --------
-        DataArray.cumulative
-        Dataset.rolling
-        computation.rolling.DataArrayRolling
         """
         from xarray.computation.rolling import DataArrayRolling
 
@@ -7509,6 +7513,12 @@ class DataArray(
 
         Returns
         -------
+        computation.rolling.DataArrayRolling
+
+        See Also
+        --------
+        DataArray.rolling
+        Dataset.cumulative
         computation.rolling.DataArrayRolling
 
         Examples
@@ -7538,12 +7548,6 @@ class DataArray(
         array([ 0.,  1.,  3.,  6., 10., 15., 21., 28., 36., 45., 55., 66.])
         Coordinates:
           * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
-
-        See Also
-        --------
-        DataArray.rolling
-        Dataset.cumulative
-        computation.rolling.DataArrayRolling
         """
         from xarray.computation.rolling import DataArrayRolling
 
@@ -7592,6 +7596,22 @@ class DataArray(
         Returns
         -------
         computation.rolling.DataArrayCoarsen
+
+        See Also
+        --------
+        computation.rolling.DataArrayCoarsen
+        Dataset.coarsen
+
+        :ref:`reshape.coarsen`
+            User guide describing :py:func:`~xarray.DataArray.coarsen`
+
+        :ref:`compute.coarsen`
+            User guide on block aggregation :py:func:`~xarray.DataArray.coarsen`
+
+        Notes
+        -----
+        :doc:`xarray-tutorial:fundamentals/03.3_windowed`
+            Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
 
         Examples
         --------
@@ -7683,21 +7703,6 @@ class DataArray(
         Coordinates:
           * time     (time) datetime64[us] 968B 1999-12-16 1999-12-19 ... 2000-12-10
         >>>
-
-        See Also
-        --------
-        :class:`computation.rolling.DataArrayCoarsen <computation.rolling.DataArrayCoarsen>`
-        :func:`Dataset.coarsen <Dataset.coarsen>`
-
-        :ref:`reshape.coarsen`
-            User guide describing :py:func:`~xarray.DataArray.coarsen`
-
-        :ref:`compute.coarsen`
-            User guide on block aggregation :py:func:`~xarray.DataArray.coarsen`
-
-        :doc:`xarray-tutorial:fundamentals/03.3_windowed`
-            Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
-
         """
         from xarray.computation.rolling import DataArrayCoarsen
 
@@ -7763,6 +7768,16 @@ class DataArray(
         -------
         resampled : core.resample.DataArrayResample
             This object resampled.
+
+        See Also
+        --------
+        Dataset.resample
+        pandas.Series.resample
+        pandas.DataFrame.resample
+
+        References
+        ----------
+        .. [1] https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
 
         Examples
         --------
@@ -7837,16 +7852,6 @@ class DataArray(
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
           * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
-
-        See Also
-        --------
-        Dataset.resample
-        pandas.Series.resample
-        pandas.DataFrame.resample
-
-        References
-        ----------
-        .. [1] https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
         """
         from xarray.core.resample import DataArrayResample
 

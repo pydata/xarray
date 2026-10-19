@@ -132,16 +132,16 @@ def did_you_mean(
     n : int, default: 10
         Maximum number of suggestions to show.
 
+    References
+    ----------
+    https://en.wikipedia.org/wiki/String_metric
+
     Examples
     --------
     >>> did_you_mean("bluch", ("blech", "gray_r", 1, None, (2, 56)))
     "Did you mean one of ('blech',)?"
     >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
     'Did you mean one of (None,)?'
-
-    See Also
-    --------
-    https://en.wikipedia.org/wiki/String_metric
     """
     # Convert all values to string, get_close_matches doesn't handle all hashables:
     possibilities_str: dict[str, Hashable] = {str(k): k for k in possibilities}

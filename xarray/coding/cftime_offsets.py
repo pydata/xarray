@@ -1017,6 +1017,10 @@ def cftime_range(
     -------
     CFTimeIndex
 
+    See Also
+    --------
+    pandas.date_range
+
     Notes
     -----
     This function is an analog of ``pandas.date_range`` for use in generating
@@ -1156,10 +1160,6 @@ def cftime_range(
     <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
     for more examples of the behavior of ``date_range`` with each of the
     parameters.
-
-    See Also
-    --------
-    pandas.date_range
     """
     emit_user_level_warning(
         "cftime_range() is deprecated, please use xarray.date_range(..., use_cftime=True) instead.",
@@ -1311,6 +1311,12 @@ def date_range(
     -------
     CFTimeIndex or pd.DatetimeIndex
 
+    See Also
+    --------
+    pandas.date_range
+    cftime_range
+    date_range_like
+
     Notes
     -----
     When ``use_cftime=True``, or a calendar other than "standard", "gregorian",
@@ -1451,12 +1457,6 @@ def date_range(
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
                 dtype='object', length=6, calendar='noleap', freq='2MS')
-
-    See Also
-    --------
-    pandas.date_range
-    cftime_range
-    date_range_like
     """
     if tz is not None:
         use_cftime = False

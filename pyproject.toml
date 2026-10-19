@@ -266,6 +266,8 @@ extend-select = [
   "FURB", # refurb
   "RUF",
 ]
+# D420 only runs in a separate pre-commit hook, keep its noqa comments
+external = ["D420"]
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
@@ -314,6 +316,9 @@ ignore = [
 # looks like ruff bugs
 "xarray/core/_typed_ops.py" = ["PYI034"]
 "xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]

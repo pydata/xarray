@@ -732,6 +732,11 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         -------
         DataArrayGroupBy or DatasetGroupBy
 
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+
         Examples
         --------
         >>> import dask.array
@@ -754,11 +759,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         Coordinates:
           * x         (x) int64 32B 0 1 2 3
             quantile  float64 8B 0.5
-
-        See Also
-        --------
-        dask.dataframe.DataFrame.shuffle
-        dask.array.shuffle
         """
         self._raise_if_by_is_chunked()
         obj, _ = self._shuffle_obj(chunks)
@@ -1420,6 +1420,12 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
 
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1467,12 +1473,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
         Data variables:
             a         (y, quantile) float64 48B 0.7 5.35 8.4 0.7 2.25 9.4
-
-        References
-        ----------
-        .. [1] R. J. Hyndman and Y. Fan,
-           "Sample quantiles in statistical packages,"
-           The American Statistician, 50(4), pp. 361-365, 1996
         """
         # Dataset.quantile does this, do it for flox to ensure same output.
         q = np.asarray(q, dtype=np.float64)

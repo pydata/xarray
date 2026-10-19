@@ -325,7 +325,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     for applicable DataArrays.
 
     Examples
-    ---------
+    --------
     >>> dates = pd.date_range(start="2000/01/01", freq="D", periods=10)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts

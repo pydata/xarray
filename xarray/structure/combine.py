@@ -590,6 +590,11 @@ def combine_nested(
     -------
     combined : xarray.Dataset or xarray.DataTree
 
+    See Also
+    --------
+    concat
+    merge
+
     Examples
     --------
 
@@ -676,11 +681,6 @@ def combine_nested(
     Data variables:
         temperature    (t) float64 80B -0.8878 -1.981 -0.3479 ... -0.4381 -1.253
         precipitation  (t) float64 80B 1.202 -0.3873 -0.3023 ... -0.8955 0.3869
-
-    See Also
-    --------
-    concat
-    merge
     """
     any_datasets = any(isinstance(obj, Dataset) for obj in iterate_nested(datasets))
     any_unnamed_arrays = any(

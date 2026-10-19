@@ -1021,6 +1021,17 @@ def apply_ufunc(
     an input. For DataTree inputs, ``func`` is applied to the datasets at each
     node and the results are rebuilt into trees with the same structure.
 
+    See Also
+    --------
+    numpy.broadcast_arrays
+    numba.vectorize
+    numba.guvectorize
+    dask.array.apply_gufunc
+    xarray.map_blocks
+
+    :ref:`dask.automatic-parallelization`
+        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
+
     Notes
     -----
     This function is designed for the more common case where ``func`` can work on numpy
@@ -1029,11 +1040,13 @@ def apply_ufunc(
 
     Note that due to the overhead :py:func:`xarray.map_blocks` is considerably slower than ``apply_ufunc``.
 
-    :ref:`dask.automatic-parallelization`
-        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
-
     :doc:`xarray-tutorial:advanced/apply_ufunc/apply_ufunc`
         Advanced Tutorial on applying numpy function using :py:func:`apply_ufunc`
+
+    References
+    ----------
+    .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
+    .. [2] https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html
 
     Examples
     --------
@@ -1127,19 +1140,6 @@ def apply_ufunc(
     appropriately for use in ``apply_ufunc``. You may find helper functions such as
     :py:func:`numpy.broadcast_arrays` helpful in writing your function. ``apply_ufunc`` also
     works well with :py:func:`numba.vectorize` and :py:func:`numba.guvectorize`.
-
-    See Also
-    --------
-    numpy.broadcast_arrays
-    numba.vectorize
-    numba.guvectorize
-    dask.array.apply_gufunc
-    xarray.map_blocks
-
-    References
-    ----------
-    .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
-    .. [2] https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.datatree import DataTree

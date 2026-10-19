@@ -269,8 +269,8 @@ def fake_target_chunksize(
     work for object dtypes.  So we rescale the `limit` to an appropriate one based
     on `float64` dtype, and pass that to `normalize_chunks`.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     data : Variable or ChunkedArray
         The data for which we want to determine chunk sizes.
     limit : int

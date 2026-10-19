@@ -271,6 +271,11 @@ def map_blocks(
         A single DataArray or Dataset with dask backend, reassembled from the outputs of the
         function.
 
+    See Also
+    --------
+    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
+    xarray.DataArray.map_blocks
+
     Notes
     -----
     This function is designed for when ``func`` needs to manipulate a whole xarray object
@@ -279,11 +284,6 @@ def map_blocks(
 
     If none of the variables in ``obj`` is backed by dask arrays, calling this function is
     equivalent to calling ``func(obj, *args, **kwargs)``.
-
-    See Also
-    --------
-    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
-    xarray.DataArray.map_blocks
 
     Examples
     --------

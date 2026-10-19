@@ -466,6 +466,11 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         concatenated : same type as values
 
+        See Also
+        --------
+        pandas.Series.str.cat
+        str.join
+
         Examples
         --------
         Create a string array
@@ -504,11 +509,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['4 bb 3.4  test', '4, bb, 3.4, , test'],
                 ['4 cccc 3.4  test', '4, cccc, 3.4, , test']]], dtype='<U24')
         Dimensions without coordinates: X, Y, ZZ
-
-        See Also
-        --------
-        pandas.Series.str.cat
-        str.join
         """
         sep = self._stringify(sep)
         others = tuple(self._stringify(x) for x in others)
@@ -549,6 +549,11 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         joined : same type as values
 
+        See Also
+        --------
+        pandas.Series.str.join
+        str.join
+
         Examples
         --------
         Create an array
@@ -572,11 +577,6 @@ class StringAccessor[T_DataArray: DataArray]:
         array([['a-bab-abc', 'a_bab_abc'],
                ['abcd--abcdef', 'abcd__abcdef']], dtype='<U12')
         Dimensions without coordinates: X, ZZ
-
-        See Also
-        --------
-        pandas.Series.str.join
-        str.join
         """
         if self._obj.ndim > 1 and dim is None:
             raise ValueError("Dimension must be specified for multidimensional arrays.")
@@ -632,6 +632,10 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         formatted : same type as values
 
+        See Also
+        --------
+        str.format
+
         Examples
         --------
         Create an array to format.
@@ -666,10 +670,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['egg and lancelot are like a duck',
                  'egg and arthur are like a duck']]], dtype='<U33')
         Dimensions without coordinates: X, Y, ZZ
-
-        See Also
-        --------
-        str.format
         """
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
@@ -2016,6 +2016,14 @@ class StringAccessor[T_DataArray: DataArray]:
         KeyError
             The given dimension is already present in the DataArray.
 
+        See Also
+        --------
+        DataArray.str.extractall
+        DataArray.str.findall
+        re.compile
+        re.search
+        pandas.Series.str.extract
+
         Examples
         --------
         Create a string array
@@ -2048,14 +2056,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['', ''],
                 ['abcdef', '101']]], dtype='<U6')
         Dimensions without coordinates: X, Y, match
-
-        See Also
-        --------
-        DataArray.str.extractall
-        DataArray.str.findall
-        re.compile
-        re.search
-        pandas.Series.str.extract
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -2168,6 +2168,14 @@ class StringAccessor[T_DataArray: DataArray]:
         KeyError
             The given dimensions names are the same.
 
+        See Also
+        --------
+        DataArray.str.extract
+        DataArray.str.findall
+        re.compile
+        re.findall
+        pandas.Series.str.extractall
+
         Examples
         --------
         Create a string array
@@ -2219,14 +2227,6 @@ class StringAccessor[T_DataArray: DataArray]:
                  ['fef', '5543210'],
                  ['', '']]]], dtype='<U7')
         Dimensions without coordinates: X, Y, group, match
-
-        See Also
-        --------
-        DataArray.str.extract
-        DataArray.str.findall
-        re.compile
-        re.findall
-        pandas.Series.str.extractall
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -2334,6 +2334,14 @@ class StringAccessor[T_DataArray: DataArray]:
         ValueError
             `case` is set when `pat` is a compiled regular expression.
 
+        See Also
+        --------
+        DataArray.str.extract
+        DataArray.str.extractall
+        re.compile
+        re.findall
+        pandas.Series.str.findall
+
         Examples
         --------
         Create a string array
@@ -2364,14 +2372,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 list([]), list([('abcdef', '101'), ('fef', '5543210')])]],
               dtype=object)
         Dimensions without coordinates: X, Y
-
-        See Also
-        --------
-        DataArray.str.extract
-        DataArray.str.extractall
-        re.compile
-        re.findall
-        pandas.Series.str.findall
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -2577,6 +2577,12 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         splitted : same type as values or object array
 
+        See Also
+        --------
+        DataArray.str.rsplit
+        str.split
+        pandas.Series.str.split
+
         Examples
         --------
         Create a string DataArray
@@ -2647,12 +2653,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
         Dimensions without coordinates: X, Y, splitted
-
-        See Also
-        --------
-        DataArray.str.rsplit
-        str.split
-        pandas.Series.str.split
         """
         return self._splitter(
             func=self._method("split"),
@@ -2694,6 +2694,12 @@ class StringAccessor[T_DataArray: DataArray]:
         Returns
         -------
         rsplitted : same type as values or object array
+
+        See Also
+        --------
+        DataArray.str.split
+        str.rsplit
+        pandas.Series.str.rsplit
 
         Examples
         --------
@@ -2765,12 +2771,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
         Dimensions without coordinates: X, Y, splitted
-
-        See Also
-        --------
-        DataArray.str.split
-        str.rsplit
-        pandas.Series.str.rsplit
         """
         return self._splitter(
             func=self._method("rsplit"),
@@ -2808,6 +2808,10 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         dummies : array of bool
 
+        See Also
+        --------
+        pandas.Series.str.get_dummies
+
         Examples
         --------
         Create a string array
@@ -2834,10 +2838,6 @@ class StringAccessor[T_DataArray: DataArray]:
         Coordinates:
           * dummies  (dummies) <U6 120B 'a' 'ab' 'abc' 'abcd' 'ab~abc'
         Dimensions without coordinates: X, Y
-
-        See Also
-        --------
-        pandas.Series.str.get_dummies
         """
         # _apply breaks on an empty array in this case
         if not self._obj.size:

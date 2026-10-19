@@ -941,6 +941,17 @@ def merge(
         Objects with combined variables from the inputs. If any inputs are a
         DataTree, this will also be a DataTree. Otherwise it will be a Dataset.
 
+    Raises
+    ------
+    xarray.MergeError
+        If any variables with the same name have conflicting values.
+
+    See Also
+    --------
+    concat
+    combine_nested
+    combine_by_coords
+
     Examples
     --------
     >>> x = xr.DataArray(
@@ -1086,17 +1097,6 @@ def merge(
     Traceback (most recent call last):
     ...
     xarray.structure.alignment.AlignmentError: cannot align objects with join='exact' where ...
-
-    Raises
-    ------
-    xarray.MergeError
-        If any variables with the same name have conflicting values.
-
-    See Also
-    --------
-    concat
-    combine_nested
-    combine_by_coords
     """
 
     from xarray.core.coordinates import Coordinates
