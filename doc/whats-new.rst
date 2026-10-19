@@ -55,6 +55,10 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The ``interpolation`` argument of ``quantile`` on :py:class:`Dataset`,
+  :py:class:`DataArray`, :py:class:`Variable` and groupby objects, deprecated
+  since v2022.03.0, has been removed. Use ``method`` instead (:issue:`11721`, :pull:`11750`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - Passing keyword-only arguments of :py:meth:`Dataset.groupby`,
   :py:meth:`DataArray.groupby`, :py:meth:`Dataset.resample` and
   :py:meth:`DataArray.resample` positionally, deprecated since v2024.07.0, now
