@@ -74,7 +74,6 @@ jobs:
             -vvv \
             -c https://prefix.dev/sp-nightly-forge \
             --generate-attestation \
-            --store-github-attestation \
             dist/xarray-*.conda
 
       - name: Report failures
