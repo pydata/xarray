@@ -82,6 +82,8 @@ jobs:
 
         run: |
           # Read the template
+          pwd
+          ls -l .github
           template=$(cat .github/nightly-conda-failure-template.md)
 
           # Replace placeholders
