@@ -139,6 +139,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Writing fixed-width strings no longer truncates values that are longer than the
+  width stored in ``encoding["dtype"]``, e.g. after concatenating datasets read
+  from files with strings of different lengths. A width-only difference in the
+  encoding is now ignored, while a change between bytes and unicode strings is
+  still applied (:issue:`10968`, :pull:`11752`).
+  By `Matt Van Horn <https://github.com/mvanhorn>`_.
 - :py:func:`concat` and :py:meth:`Dataset.to_dataarray` now promote input dtypes
   before broadcasting missing dimensions, avoiding large intermediate
   allocations when combining Dask arrays with different dtypes (:issue:`10928`,
