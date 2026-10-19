@@ -74,6 +74,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
 
         run: |
