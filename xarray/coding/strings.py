@@ -127,17 +127,19 @@ def validate_char_dim_name(strlen, encoding, name) -> str:
     """Check character array dimension naming and size and return it."""
 
     if (char_dim_name := encoding.pop("char_dim_name", None)) is not None:
-        # 1 - extract all characters before the trailing number sequence
-        # 2 - extract the trailing number sequence
-        match = re.search(r"^(.*?)(\d+)$", char_dim_name)
+        # 1 - extract all characters up to last number sequence
+        # 2 - extract last number sequence
+        # 3 - extract the remaining characters after it
+        match = re.search(r"^(.*?)(\d+)(\D*)$", char_dim_name)
         if match:
-            new_dim_name = match.group(1)
-            if int(match.group(2)) != strlen:
+            prefix, length, suffix = match.groups()
+            new_dim_name = f"{prefix}{strlen}{suffix}"
+            if int(length) != strlen:
                 emit_user_level_warning(
-                    f"String dimension naming mismatch on variable {name!r}. {char_dim_name!r} provided by encoding, but data has length of '{strlen}'. Using '{new_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
+                    f"String dimension naming mismatch on variable {name!r}. {char_dim_name!r} provided by encoding, but data has length of '{strlen}'. Using {new_dim_name!r} instead of {char_dim_name!r} to prevent possible naming clash.\n"
                     "To silence this warning either remove 'char_dim_name' from encoding or provide a fitting name."
                 )
-            char_dim_name = f"{new_dim_name}{strlen}"
+            char_dim_name = new_dim_name
         elif (
             original_shape := encoding.get("original_shape", [-1])[-1]
         ) != -1 and original_shape != strlen:
