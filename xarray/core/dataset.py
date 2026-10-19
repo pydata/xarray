@@ -108,6 +108,7 @@ from xarray.core.variable import (
     UNSUPPORTED_EXTENSION_ARRAY_TYPES,
     IndexVariable,
     Variable,
+    _as_shared_dtype,
     as_variable,
     broadcast_variables,
     calculate_dimensions,
@@ -2643,13 +2644,7 @@ class Dataset(
         from xarray.groupers import Resampler
 
         if chunks is None and not chunks_kwargs:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            chunks = {}
+            raise TypeError("chunks=None is not supported. Use chunks={} instead.")
         chunks_mapping: Mapping[Any, Any]
         if not isinstance(chunks, Mapping) and chunks is not None:
             if isinstance(chunks, tuple | list):
@@ -3099,7 +3094,7 @@ class Dataset(
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
         return result._overwrite_indexes(*query_results.as_tuple()[1:])
 
-    def _shuffle(self, dim, *, indices: GroupIndices, chunks: T_Chunks) -> Self:
+    def _shuffle(self, dim, *, indices: GroupIndices, chunks: T_Chunks | None) -> Self:
         # Shuffling is only different from `isel` for chunked arrays.
         # Extract them out, and treat them specially. The rest, we route through isel.
         # This makes it easy to ensure correct handling of indexes.
@@ -7271,7 +7266,7 @@ class Dataset(
         from xarray.core.dataarray import DataArray
 
         data_vars = [self.variables[k] for k in self.data_vars]
-        broadcast_vars = broadcast_variables(*data_vars)
+        broadcast_vars = broadcast_variables(*_as_shared_dtype(data_vars))
         data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=0)
 
         dims = (dim,) + broadcast_vars[0].dims

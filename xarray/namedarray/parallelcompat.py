@@ -397,7 +397,11 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         raise NotImplementedError()
 
     def shuffle(
-        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+        self,
+        x: T_ChunkedArray,
+        indexer: list[list[int]],
+        axis: int,
+        chunks: T_Chunks | None,
     ) -> T_ChunkedArray:
         raise NotImplementedError()
 
