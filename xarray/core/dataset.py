@@ -10431,7 +10431,7 @@ class Dataset(
 
         return DatasetGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
-    @_deprecate_positional_args("v2026.09.1")
+    @_deprecate_positional_args("v2026.10.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
