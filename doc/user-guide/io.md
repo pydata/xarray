@@ -438,6 +438,18 @@ with xr.open_dataset(nc_filename) as ds:
     print(ds.keys())
 ```
 
+```{warning}
+Lazily loaded datasets keep reading from their source until they are closed.
+Don't overwrite a file or store while a dataset opened from it, e.g. with
+{py:func}`open_dataset` or {py:func}`open_mfdataset`, is still in use.
+Depending on the backend, this either raises an error (e.g. netCDF4, h5netcdf)
+or silently changes the values of the open dataset (e.g. Zarr, scipy).
+
+To overwrite a source, first read it into memory with {py:func}`load_dataset`,
+which also closes the file, or call {py:meth}`Dataset.load` followed by
+{py:meth}`Dataset.close`, or use a `with` block.
+```
+
 Although xarray provides reasonable support for incremental reads of files on
 disk, it does not support incremental writes, which can be a useful strategy
 for dealing with datasets too big to fit into memory. Instead, xarray integrates
@@ -1340,7 +1352,10 @@ So you can set `fill_value` in `encoding` as usual.
 
 Note that at read-time, you can control whether `_FillValue` is masked using the
 `mask_and_scale` kwarg; and whether Zarr's `fill_value` is treated as synonymous
-with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`.
+with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`,
+{py:func}`xarray.open_dataset`, {py:func}`xarray.open_datatree` or {py:func}`xarray.open_groups`
+(where it applies to every group). By default (`None`), Zarr fill values are masked for format 2
+and are not masked for format 3.
 
 (io-kerchunk)=
 

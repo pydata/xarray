@@ -196,7 +196,6 @@ _DATETIMEINDEX_COMPONENTS = [
     "date",
     "time",
     "dayofyear",
-    "weekofyear",
     "dayofweek",
     "quarter",
 ]
@@ -2644,13 +2643,7 @@ class Dataset(
         from xarray.groupers import Resampler
 
         if chunks is None and not chunks_kwargs:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            chunks = {}
+            raise TypeError("chunks=None is not supported. Use chunks={} instead.")
         chunks_mapping: Mapping[Any, Any]
         if not isinstance(chunks, Mapping) and chunks is not None:
             if isinstance(chunks, tuple | list):
@@ -3100,7 +3093,7 @@ class Dataset(
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
         return result._overwrite_indexes(*query_results.as_tuple()[1:])
 
-    def _shuffle(self, dim, *, indices: GroupIndices, chunks: T_Chunks) -> Self:
+    def _shuffle(self, dim, *, indices: GroupIndices, chunks: T_Chunks | None) -> Self:
         # Shuffling is only different from `isel` for chunked arrays.
         # Extract them out, and treat them specially. The rest, we route through isel.
         # This makes it easy to ensure correct handling of indexes.
@@ -10310,7 +10303,6 @@ class Dataset(
         """
         return interp_calendar(self, target, dim=dim)
 
-    @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
         group: GroupInput = None,
@@ -10423,11 +10415,12 @@ class Dataset(
 
         return DatasetGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
-    @_deprecate_positional_args("v2024.07.0")
+    @_deprecate_positional_args("v2026.10.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
         bins: Bins,
+        *,
         right: bool = True,
         labels: ArrayLike | None = None,
         precision: int = 3,
@@ -10696,7 +10689,6 @@ class Dataset(
             coord_func=coord_func,
         )
 
-    @_deprecate_positional_args("v2024.07.0")
     def resample(
         self,
         indexer: Mapping[Any, ResampleCompatible | Resampler] | None = None,
