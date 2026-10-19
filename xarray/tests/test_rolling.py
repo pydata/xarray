@@ -15,7 +15,6 @@ from xarray.tests import (
     dask_array_api,
     requires_bottleneck,
     requires_dask,
-    requires_dask_ge_2024_11_0,
     requires_numbagg,
 )
 
@@ -185,6 +184,17 @@ class TestDataArrayRolling:
         actual = getattr(rolling_obj, name)()["time"]
         # Using assert_allclose because we get tiny (1e-17) differences in numbagg.
         assert_allclose(actual, da["time"])
+
+    @requires_dask
+    @pytest.mark.parametrize("name", ("sum", "mean", "count"))
+    def test_rolling_dask_keeps_chunks(self, name) -> None:
+        # these reductions don't copy the windows, so dask doesn't need to split
+        # the chunks to limit the memory of the window views
+        da = DataArray(np.ones((40, 20)), dims=("x", "y")).chunk({"x": 10, "y": 10})
+        with set_options(use_bottleneck=False, use_numbagg=False):
+            actual = getattr(da.rolling(x=4), name)()
+        assert actual.chunksizes["y"] == da.chunksizes["y"]
+        assert len(actual.chunksizes["x"]) == len(da.chunksizes["x"])
 
     @requires_dask
     @pytest.mark.parametrize("name", ("mean", "count"))
@@ -475,7 +485,7 @@ class TestDataArrayRolling:
         assert chunked_result.dtype == unchunked_result.dtype
 
     @requires_bottleneck
-    @requires_dask_ge_2024_11_0
+    @requires_dask
     @pytest.mark.parametrize(
         "name, center, dtype",
         [
@@ -717,7 +727,7 @@ class TestDatasetRolling:
         ):
             ds.rolling(foo=2)
 
-    @requires_dask_ge_2024_11_0
+    @requires_dask
     def test_rolling_construct_automatic_rechunk(self):
         da = dask_array_api
 

@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
+from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
 
-from . import parameterized, randn, requires_dask
+from . import randn, requires_dask
 
 nx = 3000
 long_nx = 30000
@@ -64,20 +65,19 @@ class Rolling:
             randn_long, dims="x", coords={"x": np.arange(long_nx) * 0.1}
         )
 
-    @parameterized(
-        ["func", "center", "backend"], (["mean", "count"], [True, False], BACKENDS)
+    @parameterize(
+        {"func": ["mean", "count"], "center": [True, False], "backend": BACKENDS}
     )
     def time_rolling(self, func, center, backend):
         with _backend_options(backend):
             getattr(self.ds.rolling(x=window, center=center), func)().load()
 
-    @parameterized(
-        ["func", "center", "backend"],
-        (
-            ["mean", "count", "max", "argmax", "idxmax"],
-            [True, False],
-            [*BACKENDS, "pandas"],
-        ),
+    @parameterize(
+        {
+            "func": ["mean", "count", "max", "argmax", "idxmax"],
+            "center": [True, False],
+            "backend": [*BACKENDS, "pandas"],
+        }
     )
     def time_rolling_long(self, func, center, backend):
         if backend == "pandas":
@@ -92,11 +92,11 @@ class Rolling:
 
     time_rolling_long.setup = _requires_rolling_method
 
-    @parameterized(["window_"], ([20, 40],))
+    @parameterize({"window_": [20, 40]})
     def time_rolling_np(self, window_):
         self.ds.rolling(x=window_, min_periods=5).reduce(np.nansum).load()
 
-    @parameterized(["center"], ([True, False],))
+    @parameterize({"center": [True, False]})
     def time_rolling_construct(self, center):
         self.ds.rolling(x=window, center=center).construct("window_dim").sum(
             dim="window_dim"
@@ -123,8 +123,8 @@ class Cumulative:
             coords={"t": pd.date_range("1970-01-01", periods=nt, freq="D")},
         )
 
-    @parameterized(
-        ["func", "backend"], (["sum", "mean", "max", "argmax", "idxmax"], BACKENDS)
+    @parameterize(
+        {"func": ["sum", "mean", "max", "argmax", "idxmax"], "backend": BACKENDS}
     )
     def time_cumulative(self, func, backend):
         with _backend_options(backend):
@@ -136,7 +136,7 @@ class Cumulative:
         # reference for time_cumulative with func="sum"
         self.da.cumsum("t").load()
 
-    @parameterized(["func", "backend"], (["sum", "max", "argmax"], BACKENDS))
+    @parameterize({"func": ["sum", "max", "argmax"], "backend": BACKENDS})
     def peakmem_cumulative(self, func, backend):
         with _backend_options(backend):
             getattr(self.da.cumulative("t"), func)().load()
@@ -155,31 +155,31 @@ class RollingMemory:
 
 
 class DataArrayRollingMemory(RollingMemory):
-    @parameterized(["func"], (["sum", "max", "mean"],))
+    @parameterize({"func": ["sum", "max", "mean"]})
     def peakmem_ndrolling_reduce(self, func):
         getattr(self.ds.var1.rolling(x=10, y=4), func)()
 
-    @parameterized(["func", "backend"], (["sum", "max", "mean"], BACKENDS))
+    @parameterize({"func": ["sum", "max", "mean"], "backend": BACKENDS})
     def peakmem_1drolling_reduce(self, func, backend):
         with _backend_options(backend):
             getattr(self.ds.var3.rolling(t=100), func)()
 
-    @parameterized(["stride"], ([None, 5, 50],))
+    @parameterize({"stride": [None, 5, 50]})
     def peakmem_1drolling_construct(self, stride):
         self.ds.var2.rolling(t=100).construct("w", stride=stride)
         self.ds.var3.rolling(t=100).construct("w", stride=stride)
 
 
 class DatasetRollingMemory(RollingMemory):
-    @parameterized(["func"], (["sum", "max", "mean"],))
+    @parameterize({"func": ["sum", "max", "mean"]})
     def peakmem_ndrolling_reduce(self, func):
         getattr(self.ds.rolling(x=10, y=4), func)()
 
-    @parameterized(["func", "backend"], (["sum", "max", "mean"], BACKENDS))
+    @parameterize({"func": ["sum", "max", "mean"], "backend": BACKENDS})
     def peakmem_1drolling_reduce(self, func, backend):
         with _backend_options(backend):
             getattr(self.ds.rolling(t=100), func)()
 
-    @parameterized(["stride"], ([None, 5, 50],))
+    @parameterize({"stride": [None, 5, 50]})
     def peakmem_1drolling_construct(self, stride):
         self.ds.rolling(t=100).construct("w", stride=stride)

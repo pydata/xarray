@@ -26,7 +26,6 @@ from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.coders import CFTimedeltaCoder
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
-from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.indexes import PandasIndex
@@ -550,7 +549,6 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
-    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
     def test_roundtrip_stringdtype_data(self) -> None:
         # GH11199
         data = np.array(["ab", "cdef"], dtype=np.dtypes.StringDType())
@@ -558,7 +556,6 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
-    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
     def test_roundtrip_stringdtype_nulls(self) -> None:
         # GH11199 — null values in StringDType are written as empty strings
         data = np.array(["ab", None], dtype=np.dtypes.StringDType(na_object=None))
@@ -567,7 +564,6 @@ class DatasetIOBase:
             expected = Dataset({"x": ("t", np.array(["ab", ""]))})
             assert_identical(expected, actual)
 
-    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
     def test_roundtrip_stringdtype_with_na_object(self) -> None:
         # GH11199 — StringDType(na_object="") should roundtrip correctly
         data = np.array(["ab", "cdef"], dtype=np.dtypes.StringDType(na_object=""))
@@ -975,10 +971,8 @@ class CFEncodedBase(DatasetIOBase):
                 # eg. NETCDF3 based backends do not roundtrip metadata
                 if actual["a"].dtype.metadata is not None:
                     assert check_vlen_dtype(actual["a"].dtype) is str
-            elif HAS_STRING_DTYPE:
-                assert np.issubdtype(actual["a"].dtype, np.dtypes.StringDType())
             else:
-                assert np.issubdtype(actual["a"].dtype, np.dtype("=U1"))
+                assert np.issubdtype(actual["a"].dtype, np.dtypes.StringDType())
 
     @pytest.mark.parametrize("decoded_fn, encoded_fn", MASK_AND_SCALE_DATA)
     @pytest.mark.parametrize("dtype", [np.dtype("float64"), np.dtype("float32")])

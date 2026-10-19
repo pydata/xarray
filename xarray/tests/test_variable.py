@@ -38,6 +38,7 @@ from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import (
+    DuckArrayWrapper,
     IndexableArray,
     assert_allclose,
     assert_array_equal,
@@ -46,7 +47,6 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_type,
     has_dask_array_expr,
-    has_dask_ge_2024_11_0,
     has_pandas_3,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -1088,6 +1088,10 @@ class TestVariable(VariableSubclassobjects):
         v.values = d2
         assert source_ndarray(v.values) is d2
 
+    def test_chunk_none_raises(self) -> None:
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            Variable(["x"], np.arange(3)).chunk(None)  # type: ignore[arg-type]
+
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0  # type: ignore[attr-defined]
@@ -1341,6 +1345,23 @@ class TestVariable(VariableSubclassobjects):
         vind = Variable(("a", "b"), [[0, 2], [1, 3]])
         _, ind, _ = v._broadcast_indexes((vind, 3))
         assert type(ind) is indexing.VectorizedIndexer
+
+    def test_broadcast_indexes_0d_duck_array(self) -> None:
+        # GH8820: a 0d non-numpy duck array indexer should drop its dimension
+        v = Variable(["x", "y"], np.arange(24).reshape(4, 6))
+        key = DuckArrayWrapper(np.array(2))
+
+        dims, ind, _ = v._broadcast_indexes((key, slice(None)))
+        assert dims == ("y",)
+        assert type(ind) is indexing.OuterIndexer
+
+        dims, ind, _ = v._broadcast_indexes((key, Variable("y", [0, 2])))
+        assert dims == ("y",)
+        assert type(ind) is indexing.OuterIndexer
+
+        dims, ind, _ = v._broadcast_indexes((key, Variable("z", [0, 2])))
+        assert dims == ("z",)
+        assert type(ind) is indexing.OuterIndexer
 
     def test_indexer_type(self):
         # GH:issue:1688. Wrong indexer type induces NotImplementedError
@@ -1938,6 +1959,15 @@ class TestVariable(VariableSubclassobjects):
         expected = _percentile_func(d, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
 
+    def test_quantile_all_nan_slice_does_not_warn(self) -> None:
+        values = Variable(("time", "position"), [[np.nan, 1.0], [np.nan, 3.0]])
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            actual = values.quantile(
+                0.5, dim="time", skipna=True, method="median_unbiased"
+            )
+        np.testing.assert_allclose(actual.values, [np.nan, 2.0])
+
     @requires_dask
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize("axis, dim", [[1, "y"], [[1], ["y"]]])
@@ -1990,16 +2020,10 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        if has_dask_ge_2024_11_0:
-            # Dask rechunks
-            np.testing.assert_allclose(
-                v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
-            )
-
-        else:
-            # this checks for ValueError in dask.array.apply_gufunc
-            with pytest.raises(ValueError, match=r"consists of multiple chunks"):
-                v.quantile(0.5, dim="x")
+        # Dask rechunks
+        np.testing.assert_allclose(
+            v.compute().quantile(0.5, dim="x"), v.quantile(0.5, dim="x")
+        )
 
     @pytest.mark.parametrize("compute_backend", ["numbagg", None], indirect=True)
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])

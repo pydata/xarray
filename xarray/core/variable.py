@@ -65,7 +65,6 @@ from xarray.namedarray.pycompat import (
     array_type,
     async_to_duck_array,
     integer_types,
-    is_0d_dask_array,
     is_chunked_array,
     to_duck_array,
 )
@@ -781,15 +780,11 @@ class Variable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
-    to_variable = utils.alias(to_base_variable, "to_variable")
-
     def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
-
-    to_coord = utils.alias(to_index_variable, "to_coord")
 
     def _to_index(self) -> pd.Index:
         return self.to_index_variable()._to_index()
@@ -948,11 +943,11 @@ class Variable(
                         )
 
     def _broadcast_indexes_outer(self, key):
-        # drop dim if k is integer or if k is a 0d dask array
+        # drop dim if k is integer or if k is a 0d duck array (e.g. dask, cupy)
         dims = tuple(
             k.dims[0] if isinstance(k, Variable) else dim
             for k, dim in zip(key, self.dims, strict=True)
-            if (not isinstance(k, integer_types) and not is_0d_dask_array(k))
+            if not (isinstance(k, integer_types) or (is_duck_array(k) and k.ndim == 0))
         )
 
         new_key = []
@@ -1148,9 +1143,9 @@ class Variable(
             raise ValueError("encoding must be castable to a dictionary") from err
 
     def reset_encoding(self) -> Self:
-        warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
-            stacklevel=2,
+        emit_user_level_warning(
+            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
+            FutureWarning,
         )
         return self.drop_encoding()
 
@@ -1315,7 +1310,7 @@ class Variable(
         self,
         indices: list[list[int]],
         dim: DimType_co,  # type: ignore[misc]
-        chunks: T_Chunks,
+        chunks: T_Chunks | None,
     ) -> Variable[Shape, DType_co, DimType_co]:
         # TODO (dcherian): consider making this public API
         array = self._data
@@ -2280,7 +2275,11 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", r"All-NaN (slice|axis) encountered", RuntimeWarning
+                )
+                return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
         # jax requires hashable
         axis = tuple(range(-1, -1 * len(dim) - 1, -1))
@@ -3300,8 +3299,6 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
         """Return this variable as an xarray.IndexVariable"""
         return self.copy(deep=False)
 
-    to_coord = utils.alias(to_index_variable, "to_coord")
-
     @override
     def _to_index(self) -> pd.Index:
         # n.b. creating a new pandas.Index from an old pandas.Index is
@@ -3393,6 +3390,19 @@ def _broadcast_compat_variables(*variables):
     """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
+
+
+def _as_shared_dtype(variables: Sequence[Variable]) -> tuple[Variable, ...]:
+    """Cast variables to a shared dtype, preserving their attrs and encoding."""
+    # Casting after broadcasting can materialize the full expanded array before
+    # it is split into chunks for concatenation or stacking.
+    arrays = [var._data for var in variables]
+    arrays = duck_array_ops.as_shared_dtype(
+        arrays, xp=duck_array_ops.get_array_namespace(*arrays)
+    )
+    return tuple(
+        var._replace(data=data) for var, data in zip(variables, arrays, strict=True)
+    )
 
 
 def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:

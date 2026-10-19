@@ -90,7 +90,7 @@ You can learn more about using and developing backends in the
         installed-eng["""<b>One of these formats?</b>
             - <a href='https://github.com/ecmwf/cfgrib'>GRIB</a>
             - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation'>TileDB</a>
-            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
+            - <a href='https://vylor.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
             - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE</a>
             """]
 
@@ -436,6 +436,18 @@ netCDF file. However, it's often cleaner to use a `with` statement:
 # this automatically closes the dataset after use
 with xr.open_dataset(nc_filename) as ds:
     print(ds.keys())
+```
+
+```{warning}
+Lazily loaded datasets keep reading from their source until they are closed.
+Don't overwrite a file or store while a dataset opened from it, e.g. with
+{py:func}`open_dataset` or {py:func}`open_mfdataset`, is still in use.
+Depending on the backend, this either raises an error (e.g. netCDF4, h5netcdf)
+or silently changes the values of the open dataset (e.g. Zarr, scipy).
+
+To overwrite a source, first read it into memory with {py:func}`load_dataset`,
+which also closes the file, or call {py:meth}`Dataset.load` followed by
+{py:meth}`Dataset.close`, or use a `with` block.
 ```
 
 Although xarray provides reasonable support for incremental reads of files on
@@ -1340,7 +1352,10 @@ So you can set `fill_value` in `encoding` as usual.
 
 Note that at read-time, you can control whether `_FillValue` is masked using the
 `mask_and_scale` kwarg; and whether Zarr's `fill_value` is treated as synonymous
-with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`.
+with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`,
+{py:func}`xarray.open_dataset`, {py:func}`xarray.open_datatree` or {py:func}`xarray.open_groups`
+(where it applies to every group). By default (`None`), Zarr fill values are masked for format 2
+and are not masked for format 3.
 
 (io-kerchunk)=
 
@@ -1750,7 +1765,7 @@ For CSV files, one might also consider [xarray_extras].
 [obstore]: https://developmentseed.org/obstore/latest/
 [pyproj]: https://github.com/pyproj4/pyproj
 [rasterio]: https://rasterio.readthedocs.io/en/latest/
-[rioxarray]: https://corteva.github.io/rioxarray/stable/
+[rioxarray]: https://vylor.github.io/rioxarray/stable/
 [test files]: https://github.com/rasterio/rasterio/blob/master/tests/data/RGB.byte.tif
 [xarray_extras]: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 [zarr]: https://zarr.readthedocs.io/

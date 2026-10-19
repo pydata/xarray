@@ -451,32 +451,6 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         return self._date_field("nanosecond", np.int64)
 
     @property
-    def weekofyear(self) -> DataArray:
-        "The week ordinal of the year"
-
-        warnings.warn(
-            "dt.weekofyear and dt.week have been deprecated. Please use "
-            "dt.isocalendar().week instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-        return self.isocalendar().week.rename("weekofyear")
-
-    @property
-    def week(self) -> DataArray:
-        "The week ordinal of the year"
-
-        warnings.warn(
-            "dt.weekofyear and dt.week have been deprecated. Please use "
-            "dt.isocalendar().week instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-        return self.isocalendar().week
-
-    @property
     def day_of_week(self) -> T_DataArray:
         """The day of the week with Monday=0, Sunday=6"""
         return self._date_field("day_of_week", np.int64)

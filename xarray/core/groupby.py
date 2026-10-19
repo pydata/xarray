@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Literal, Union, cast, override
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 from xarray.computation import ops
 from xarray.computation.apply_ufunc import apply_ufunc
@@ -713,7 +712,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def shuffle_to_chunks(self, chunks: T_Chunks = None) -> T_Xarray:
+    def shuffle_to_chunks(self, chunks: T_Chunks | None = None) -> T_Xarray:
         """
         Sort or "shuffle" the underlying object.
 
@@ -765,7 +764,9 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         obj, _ = self._shuffle_obj(chunks)
         return obj
 
-    def _shuffle_obj(self, chunks: T_Chunks) -> tuple[T_Xarray, tuple[DataArray, ...]]:
+    def _shuffle_obj(
+        self, chunks: T_Chunks | None
+    ) -> tuple[T_Xarray, tuple[DataArray, ...]]:
         """Shuffle the object, so that all members of a group are in the same chunk.
 
         The codes of each grouper are shuffled along with it, so that they match
@@ -1123,7 +1124,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         **kwargs: Any,
     ) -> T_Xarray:
         """Adaptor function that translates our groupby API to that of flox."""
-        import flox
         from flox.xarray import xarray_reduce
 
         if "keepdims" in kwargs:
@@ -1156,12 +1156,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-
-        if Version(flox.__version__) < Version("0.9") and not self._by_chunked:
-            # preserve current strategy (approximately) for dask groupby
-            # on older flox versions to prevent surprises.
-            # flox >=0.9 will choose this on its own.
-            kwargs.setdefault("method", "cohorts")
 
         midx_grouping_vars: tuple[Hashable, ...] = ()
         for grouper in self.groupers:
@@ -1488,7 +1482,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
             method == "linear"
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
-            and module_available("flox", minversion="0.9.4")
+            and module_available("flox")
         ):
             result = self._flox_reduce(
                 func="quantile", q=q, dim=dim, keep_attrs=keep_attrs, skipna=skipna
@@ -1546,7 +1540,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
         if (
-            module_available("flox", minversion="0.10.0")
+            module_available("flox")
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
         ):
