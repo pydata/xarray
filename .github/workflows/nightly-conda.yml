@@ -72,7 +72,7 @@ jobs:
         run: |
           pixi upload prefix \
             -vvv \
-            -c https://prefix.dev/sp-nightly-forge \
+            -c sp-nightly-forge \
             --generate-attestation \
             dist/xarray-*.conda
 
