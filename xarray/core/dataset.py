@@ -10148,30 +10148,44 @@ class Dataset(
         ...     {"temperature": ("time", [10, 12, 14, 16])},
         ...     coords={"time": [0, 1, 1, 2]},
         ... )
-        >>> ds["time"].values.tolist()
-        [0, 1, 1, 2]
-        >>> ds["temperature"].values.tolist()
-        [10, 12, 14, 16]
-
+        
+        >>> ds
+        <xarray.Dataset> Size: 64B
+        Dimensions:      (time: 4)
+        Coordinates:
+          * time         (time) int64 32B 0 1 1 2
+        Data variables:
+            temperature  (time) int64 32B 10 12 14 16
+        
         By default, the first value for each coordinate label is kept:
-
-        >>> unique = ds.drop_duplicates("time")
-        >>> unique["time"].values.tolist()
-        [0, 1, 2]
-        >>> unique["temperature"].values.tolist()
-        [10, 12, 16]
-
+        
+        >>> ds.drop_duplicates("time")
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) int64 24B 10 12 16
+        
         Use ``keep="last"`` to retain the last value for a repeated label:
-
-        >>> ds.drop_duplicates("time", keep="last")["temperature"].values.tolist()
-        [10, 14, 16]
-
+        
+        >>> ds.drop_duplicates("time", keep="last")
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) int64 24B 10 14 16
+        
         Use ``keep=False`` to discard every occurrence of duplicated labels:
-
-        >>> ds.drop_duplicates("time", keep=False)["time"].values.tolist()
-        [0, 2]
-        >>> ds.drop_duplicates("time", keep=False)["temperature"].values.tolist()
-        [10, 16]
+        
+        >>> ds.drop_duplicates("time", keep=False)
+        <xarray.Dataset> Size: 32B
+        Dimensions:      (time: 2)
+        Coordinates:
+          * time         (time) int64 16B 0 2
+        Data variables:
+            temperature  (time) int64 16B 10 16
 
         See Also
         --------
