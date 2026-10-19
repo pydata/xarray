@@ -38,6 +38,7 @@ from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import (
+    DuckArrayWrapper,
     IndexableArray,
     assert_allclose,
     assert_array_equal,
@@ -1344,6 +1345,23 @@ class TestVariable(VariableSubclassobjects):
         vind = Variable(("a", "b"), [[0, 2], [1, 3]])
         _, ind, _ = v._broadcast_indexes((vind, 3))
         assert type(ind) is indexing.VectorizedIndexer
+
+    def test_broadcast_indexes_0d_duck_array(self) -> None:
+        # GH8820: a 0d non-numpy duck array indexer should drop its dimension
+        v = Variable(["x", "y"], np.arange(24).reshape(4, 6))
+        key = DuckArrayWrapper(np.array(2))
+
+        dims, ind, _ = v._broadcast_indexes((key, slice(None)))
+        assert dims == ("y",)
+        assert type(ind) is indexing.OuterIndexer
+
+        dims, ind, _ = v._broadcast_indexes((key, Variable("y", [0, 2])))
+        assert dims == ("y",)
+        assert type(ind) is indexing.OuterIndexer
+
+        dims, ind, _ = v._broadcast_indexes((key, Variable("z", [0, 2])))
+        assert dims == ("z",)
+        assert type(ind) is indexing.OuterIndexer
 
     def test_indexer_type(self):
         # GH:issue:1688. Wrong indexer type induces NotImplementedError
