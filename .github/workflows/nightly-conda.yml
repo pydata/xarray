@@ -37,7 +37,7 @@ jobs:
 
   upload:
     needs: build-artifacts
-    if: github.event_name == 'schedule'
+    # if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
 
     environment:
