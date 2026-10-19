@@ -55,6 +55,9 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The ``DataArray.dt.weekofyear`` and ``DataArray.dt.week`` accessors,
+  deprecated since v0.16.2, have been removed. Use
+  ``DataArray.dt.isocalendar().week`` instead (:issue:`11721`, :pull:`11742`).
 - Passing ``chunks=None`` to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`
   or :py:meth:`Variable.chunk`, deprecated since v0.17.0, now raises a
   ``TypeError``. Use ``chunks={}`` instead (:issue:`11721`, :pull:`11743`).
