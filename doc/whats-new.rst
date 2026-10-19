@@ -422,6 +422,9 @@ Internal Changes
   ``asv_runner.benchmarks.mark``, so slow benchmarks are no longer discovered
   in CI instead of being skipped in their ``setup`` (:issue:`8353`, :pull:`11709`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Lint docstrings with ruff's pydocstyle rules, including the order of the
+  numpydoc sections, and fix the existing violations (:pull:`11763`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
