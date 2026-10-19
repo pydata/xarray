@@ -1966,3 +1966,11 @@ def test_conjugate():
     assert dask.is_dask_collection(conj_data)
 
     assert_equal(conj_data, data.conj())
+
+
+def test_isel_0d_dask_indexer_with_outer_indexer() -> None:
+    # GH8820: 0d dask indexer combined with an outer indexer on numpy data
+    data = xr.DataArray(np.arange(24).reshape(4, 6), dims=["x", "y"])
+    actual = data.isel(x=da.from_array(np.array(2)), y=[0, 2])
+    expected = data.isel(x=2, y=[0, 2])
+    assert_identical(actual, expected)

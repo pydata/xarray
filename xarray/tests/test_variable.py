@@ -38,6 +38,7 @@ from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import (
+    DuckArrayWrapper,
     IndexableArray,
     assert_allclose,
     assert_array_equal,
@@ -1087,6 +1088,10 @@ class TestVariable(VariableSubclassobjects):
         v.values = d2
         assert source_ndarray(v.values) is d2
 
+    def test_chunk_none_raises(self) -> None:
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            Variable(["x"], np.arange(3)).chunk(None)  # type: ignore[arg-type]
+
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0  # type: ignore[attr-defined]
@@ -1340,6 +1345,23 @@ class TestVariable(VariableSubclassobjects):
         vind = Variable(("a", "b"), [[0, 2], [1, 3]])
         _, ind, _ = v._broadcast_indexes((vind, 3))
         assert type(ind) is indexing.VectorizedIndexer
+
+    def test_broadcast_indexes_0d_duck_array(self) -> None:
+        # GH8820: a 0d non-numpy duck array indexer should drop its dimension
+        v = Variable(["x", "y"], np.arange(24).reshape(4, 6))
+        key = DuckArrayWrapper(np.array(2))
+
+        dims, ind, _ = v._broadcast_indexes((key, slice(None)))
+        assert dims == ("y",)
+        assert type(ind) is indexing.OuterIndexer
+
+        dims, ind, _ = v._broadcast_indexes((key, Variable("y", [0, 2])))
+        assert dims == ("y",)
+        assert type(ind) is indexing.OuterIndexer
+
+        dims, ind, _ = v._broadcast_indexes((key, Variable("z", [0, 2])))
+        assert dims == ("z",)
+        assert type(ind) is indexing.OuterIndexer
 
     def test_indexer_type(self):
         # GH:issue:1688. Wrong indexer type induces NotImplementedError

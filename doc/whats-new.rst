@@ -55,6 +55,17 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- Passing keyword-only arguments of :py:meth:`Dataset.groupby`,
+  :py:meth:`DataArray.groupby`, :py:meth:`Dataset.resample` and
+  :py:meth:`DataArray.resample` positionally, deprecated since v2024.07.0, now
+  raises a ``TypeError`` (:issue:`11721`, :pull:`11744`).
+- The ``DataArray.dt.weekofyear`` and ``DataArray.dt.week`` accessors,
+  deprecated since v0.16.2, have been removed. Use
+  ``DataArray.dt.isocalendar().week`` instead (:issue:`11721`, :pull:`11742`).
+- Passing ``chunks=None`` to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`
+  or :py:meth:`Variable.chunk`, deprecated since v0.17.0, now raises a
+  ``TypeError``. Use ``chunks={}`` instead (:issue:`11721`, :pull:`11743`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 - The ``Variable.to_variable``, ``Variable.to_coord`` and
   ``IndexVariable.to_coord`` aliases, deprecated since v0.9.0, have been removed.
   Use :py:meth:`Variable.to_base_variable` and
@@ -113,6 +124,11 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Passing any argument after ``bins`` positionally to
+  :py:meth:`Dataset.groupby_bins` and :py:meth:`DataArray.groupby_bins` is
+  deprecated. It was meant to be deprecated in v2024.07.0, but the warning never
+  fired (:issue:`11721`, :pull:`11744`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 - ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
   :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
   like the other deprecations, and gives the right version (2023.10).
@@ -214,6 +230,10 @@ Bug Fixes
   The object is now shuffled so that each group is in a single chunk first
   (:issue:`11651`, :pull:`11653`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`DataArray.plot.line` now draws lines sharing a hue value with the
+  same color (and other cycled styles) and deduplicates their legend entries, consistent with
+  :py:meth:`DataArray.plot.scatter` (:issue:`10998`, :pull:`11164`).
+  By `Harikrishna KP <https://github.com/Mr-Neutr0n>`_.
 - Fix occasional deadlocks when combined locks, e.g. the HDF5 or netCDF-C lock
   together with a per-file write lock, are used from several threads of a dask
   worker. The locks are now always acquired in the same order, also after
@@ -273,14 +293,24 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix indexing with a 0-dimensional non-NumPy array, e.g. a CuPy array, which
+  raised ``ValueError`` instead of dropping the indexed dimension (:issue:`8820`).
+  By `Trinh Quoc Anh <https://github.com/tqa236>`_.
+- Fix indexing with a 0-dimensional dask array combined with an outer indexer, e.g.
+  ``da.isel(x=dask.array.from_array(np.array(2)), y=[0, 2])``, which raised
+  ``ValueError`` (:issue:`8820`).
+  By `Trinh Quoc Anh <https://github.com/tqa236>`_.
 - Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
   the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
   By `Charles Turner <https://github.com/charles-turner-1>`_.
 - :py:func:`open_dataset` and :py:func:`open_zarr` no longer ignore
-  ``use_zarr_fill_value_as_mask``. The option was not passed on to the Zarr
-  store, so the default for the Zarr format was always used, e.g. the Zarr
-  ``fill_value`` of a Zarr v3 array was never used as a mask (:issue:`10269`, :pull:`11748`).
-  By `Vladimir Saraikin <https://github.com/vsaraikin>`_.
+  ``use_zarr_fill_value_as_mask``, and :py:func:`open_datatree` and
+  :py:func:`open_groups` now accept it. The option was not passed on to the
+  Zarr store, so the default for the Zarr format was always used, e.g. the Zarr
+  ``fill_value`` of a Zarr v3 array was never used as a mask (:issue:`10269`,
+  :issue:`11361`, :pull:`11748`, :pull:`11663`).
+  By `Vladimir Saraikin <https://github.com/vsaraikin>`_ and
+  `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` now return the
   dtype they report for dask arrays. Float32 data could be computed as float64
   depending on the method and the coordinate dtypes, which also made a later
