@@ -55,6 +55,10 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- Passing keyword-only arguments of :py:meth:`Dataset.groupby`,
+  :py:meth:`DataArray.groupby`, :py:meth:`Dataset.resample` and
+  :py:meth:`DataArray.resample` positionally, deprecated since v2024.07.0, now
+  raises a ``TypeError`` (:issue:`11721`, :pull:`11744`).
 - The ``DataArray.dt.weekofyear`` and ``DataArray.dt.week`` accessors,
   deprecated since v0.16.2, have been removed. Use
   ``DataArray.dt.isocalendar().week`` instead (:issue:`11721`, :pull:`11742`).
@@ -120,6 +124,11 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Passing any argument after ``bins`` positionally to
+  :py:meth:`Dataset.groupby_bins` and :py:meth:`DataArray.groupby_bins` is
+  deprecated. It was meant to be deprecated in v2024.07.0, but the warning never
+  fired (:issue:`11721`, :pull:`11744`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 - ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
   :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
   like the other deprecations, and gives the right version (2023.10).
