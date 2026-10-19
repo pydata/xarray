@@ -11,11 +11,20 @@ kernelspec:
 ```{code-cell}
 :tags: [remove-input]
 
+import random
+
 import numpy as np
 import pandas as pd
+from hypothesis import settings
+
 import xarray as xr
 
 np.random.seed(123456)
+
+# make the outputs of the hypothesis strategies reproducible between doc builds
+settings.register_profile("docs", derandomize=True)
+settings.load_profile("docs")
+random.seed(123456)
 ```
 
 (testing.hypothesis)=
