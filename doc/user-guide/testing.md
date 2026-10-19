@@ -49,14 +49,16 @@ These strategies are accessible in the {py:mod}`xarray.testing.strategies` modul
 
 ```
 
-```{autosummary}
-testing.strategies.supported_dtypes
-testing.strategies.names
-testing.strategies.dimension_names
-testing.strategies.dimension_sizes
-testing.strategies.attrs
-testing.strategies.variables
-testing.strategies.unique_subset_of
+```{eval-rst}
+.. autosummary::
+
+   testing.strategies.supported_dtypes
+   testing.strategies.names
+   testing.strategies.dimension_names
+   testing.strategies.dimension_sizes
+   testing.strategies.attrs
+   testing.strategies.variables
+   testing.strategies.unique_subset_of
 ```
 
 These build upon the numpy and array API strategies offered in {py:mod}`hypothesis.extra.numpy` and {py:mod}`hypothesis.extra.array_api`:
