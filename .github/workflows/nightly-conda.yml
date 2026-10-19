@@ -62,6 +62,9 @@ jobs:
 
       - name: Upload packages
         id: upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           pixi upload prefix \
             -c https://prefix.dev/sp-nightly-forge \
