@@ -877,8 +877,8 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
     @property
     def groups(self) -> dict[GroupKey, GroupIndex]:
-        """
-        Mapping from group labels to indices. The indices can be used to index the underlying object.
+        """Mapping from group labels to indices. The indices can be used to index the
+        underlying object.
         """
         # provided to mimic pandas.groupby
         if self._groups is None:
@@ -892,9 +892,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         return self._groups
 
     def __getitem__(self, key: GroupKey) -> T_Xarray:
-        """
-        Get DataArray or Dataset corresponding to a particular group label.
-        """
+        """Get DataArray or Dataset corresponding to a particular group label."""
         self._raise_if_by_is_chunked()
         return self._obj.isel({self._group_dim: self.groups[key]})
 
@@ -1057,7 +1055,8 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
     def _maybe_unstack(self, obj):
         """This gets called if we are applying on an array with a
-        multidimensional group."""
+        multidimensional group.
+        """
         from xarray.groupers import UniqueGrouper
 
         stacked_dim = self._stacked_dim
@@ -1919,7 +1918,6 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         --------
         DatasetGroupBy.map
         """
-
         warnings.warn(
             "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
             PendingDeprecationWarning,
@@ -1990,7 +1988,6 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-
         if self._by_chunked:
             raise ValueError(
                 "This method is not supported when lazily grouping by a chunked array. "

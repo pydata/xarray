@@ -394,7 +394,6 @@ class Aligner[T_Alignable: Alignable]:
 
     def align_indexes(self) -> None:
         """Compute all aligned indexes and their corresponding coordinate variables."""
-
         aligned_indexes: dict[MatchingIndexKey, Index] = {}
         aligned_index_vars: dict[MatchingIndexKey, dict[Hashable, Variable]] = {}
         reindex: dict[MatchingIndexKey, bool] = {}
@@ -1076,7 +1075,6 @@ def reindex(
     Not public API.
 
     """
-
     # TODO: (benbovy - explicit indexes): uncomment?
     # --> from reindex docstrings: "any mismatched dimension is simply ignored"
     # bad_keys = [k for k in indexers if k not in obj._indexes and k not in obj.dims]
@@ -1319,7 +1317,6 @@ def broadcast(
         a        (x, y) int64 48B 1 1 2 2 3 3
         b        (x, y) int64 48B 5 6 5 6 5 6
     """
-
     if exclude is None:
         exclude = set()
     args = align(*args, join="outer", copy=False, exclude=exclude)

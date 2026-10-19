@@ -2945,9 +2945,7 @@ def test_cftime_resample_gh_9108() -> None:
 
 def test_custom_grouper() -> None:
     class YearGrouper(Grouper):
-        """
-        An example re-implementation of ``.groupby("time.year")``.
-        """
+        """An example re-implementation of ``.groupby("time.year")``."""
 
         def factorize(self, group) -> EncodedGroups:
             assert np.issubdtype(group.dtype, np.datetime64)

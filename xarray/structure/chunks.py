@@ -1,6 +1,4 @@
-"""
-Functions for handling chunked arrays.
-"""
+"""Functions for handling chunked arrays."""
 
 from __future__ import annotations
 

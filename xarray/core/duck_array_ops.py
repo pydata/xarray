@@ -629,6 +629,7 @@ def _datetime_nanreduce(array, func):
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to numerical values.
     Convert the datetime array to a timedelta relative to an offset.
+
     Parameters
     ----------
     array : array-like
@@ -641,10 +642,12 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         conversions are not allowed due to non-linear relationships between units.
     dtype : dtype
         Output dtype.
+
     Returns
     -------
     array
         Numerical representation of datetime object relative to an offset.
+
     Notes
     -----
     Some datetime unit conversions won't work, for example from days to years, even
@@ -766,8 +769,9 @@ def py_timedelta_to_float(array, datetime_unit):
 
 
 def mean(array, axis=None, skipna=None, **kwargs):
-    """inhouse mean that can handle np.datetime64 or cftime.datetime
-    dtypes"""
+    """Inhouse mean that can handle np.datetime64 or cftime.datetime
+    dtypes
+    """
     from xarray.core.common import _contains_cftime_datetimes
 
     array = asarray(array)
@@ -874,10 +878,7 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
 
 
 def _push(array, n: int | None = None, axis: int = -1):
-    """
-    Use either bottleneck or numbagg depending on options & what's available
-    """
-
+    """Use either bottleneck or numbagg depending on options & what's available"""
     if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."

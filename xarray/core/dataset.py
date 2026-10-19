@@ -502,7 +502,8 @@ class Dataset(
 
     def drop_encoding(self) -> Self:
         """Return a new Dataset without encoding on the dataset or any of its
-        variables/coords."""
+        variables/coords.
+        """
         variables = {k: v.drop_encoding() for k, v in self.variables.items()}
         return self._replace(variables=variables, encoding={})
 
@@ -1616,7 +1617,6 @@ class Dataset(
         self, other: Self, compat: str | Callable[[Variable, Variable], bool]
     ) -> bool:
         """Helper function for equals and identical"""
-
         if not callable(compat):
             compat_str = compat
 
@@ -1652,7 +1652,6 @@ class Dataset(
 
         Examples
         --------
-
         # 2D array with shape (1, 3)
 
         >>> data = np.array([[1, 2, 3]])
@@ -1720,7 +1719,6 @@ class Dataset(
 
         Examples
         --------
-
         # 2D array with shape (1, 3)
 
         >>> data = np.array([[1, 2, 3]])
@@ -1795,7 +1793,6 @@ class Dataset(
 
         Examples
         --------
-
         >>> a = xr.Dataset(
         ...     {"Width": ("X", [1, 2, 3])},
         ...     coords={"X": [1, 2, 3]},
@@ -2868,7 +2865,6 @@ class Dataset(
 
         Examples
         --------
-
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -3432,7 +3428,6 @@ class Dataset(
         exclude_vars: frozenset[Hashable],
     ) -> Self:
         """Callback called from ``Aligner`` to create a new reindexed Dataset."""
-
         new_variables = variables.copy()
         new_indexes = indexes.copy()
 
@@ -3778,9 +3773,7 @@ class Dataset(
         sparse: bool = False,
         **indexers_kwargs: Any,
     ) -> Self:
-        """
-        Same as reindex but supports sparse option.
-        """
+        """Same as reindex but supports sparse option."""
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
@@ -5668,7 +5661,6 @@ class Dataset(
         --------
         Dataset.stack
         """
-
         if dim is None:
             dims = list(self.dims)
         else:
@@ -5912,7 +5904,6 @@ class Dataset(
 
         Examples
         --------
-
         >>> dataset = xr.Dataset(
         ...     {
         ...         "temperature": (
@@ -6277,7 +6268,6 @@ class Dataset(
         Data variables:
             A        (x, y) int64 32B 0 2 3 5
         """
-
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "drop_isel")
 
         ds = self
@@ -6944,7 +6934,6 @@ class Dataset(
 
         Examples
         --------
-
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -7460,7 +7449,6 @@ class Dataset(
             Dataset as a pandas DataFrame.
 
         """
-
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         return self._to_dataframe(ordered_dims=ordered_dims)
@@ -7700,7 +7688,6 @@ class Dataset(
         -------
         dask.dataframe.DataFrame
         """
-
         import dask.dataframe as dd
 
         chunkmanager = guess_chunkmanager("dask")
@@ -7868,7 +7855,6 @@ class Dataset(
             title:    air temperature
 
         """
-
         variables: Iterable[tuple[Hashable, Any]]
         if not {"coords", "data_vars"}.issubset(set(d)):
             variables = d.items()
@@ -8491,7 +8477,6 @@ class Dataset(
         Data variables:
             a         (quantile, y) float64 96B 0.7 4.2 2.6 1.5 3.6 ... 6.5 7.3 9.4 1.9
         """
-
         dims: set[Hashable]
         if isinstance(dim, str):
             dims = {dim}
@@ -8987,7 +8972,6 @@ class Dataset(
         --------
         dask.array.core.unify_chunks
         """
-
         return unify_chunks(self)[0]
 
     def map_blocks(
@@ -9722,7 +9706,6 @@ class Dataset(
 
         Examples
         --------
-
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -9992,7 +9975,6 @@ class Dataset(
             a        (x) int64 16B 3 4
             b        (x) float64 16B 0.75 1.0
         """
-
         # allow queries to be given either as a dict or as kwargs
         queries = either_dict_or_kwargs(queries, queries_kwargs, "query")
 

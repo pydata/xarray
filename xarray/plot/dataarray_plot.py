@@ -2026,7 +2026,6 @@ def imshow(
     The pixels are centered on the coordinates. For example, if the coordinate
     value is 3.2, then the pixels for those coordinates will be centered on 3.2.
     """
-
     if x.ndim != 1 or y.ndim != 1:
         raise ValueError(
             "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
@@ -2495,7 +2494,6 @@ def pcolormesh(
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.pcolormesh`.
     """
-
     # decide on a default for infer_intervals (GH781)
     x = np.asarray(x)
     if infer_intervals is None:

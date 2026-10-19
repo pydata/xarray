@@ -342,7 +342,6 @@ def map_blocks(
         Wrapper function that receives datasets in args; converts to dataarrays when necessary;
         passes these to the user function `func` and checks returned objects for expected shapes/sizes/etc.
         """
-
         converted_args = [
             dataset_to_dataarray(arg) if is_array else arg
             for is_array, arg in zip(arg_is_array, args, strict=True)

@@ -340,7 +340,6 @@ class TreeNode:
     @property
     def ancestors(self) -> tuple[Self, ...]:
         """All parent nodes and their parent nodes, starting with the most distant."""
-
         from warnings import warn
 
         warn(
@@ -384,9 +383,7 @@ class TreeNode:
 
     @property
     def siblings(self) -> dict[str, Self]:
-        """
-        Nodes with the same parent as this node.
-        """
+        """Nodes with the same parent as this node."""
         if self.parent:
             return {
                 name: child
@@ -787,7 +784,6 @@ class NamedNode(TreeNode):
 
     def _path_to_ancestor(self, ancestor: Self) -> NodePath:
         """Return the relative path from this node to the given ancestor node"""
-
         if not self.same_tree(ancestor):
             raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because nodes do not lie within the same tree"

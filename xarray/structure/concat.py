@@ -376,9 +376,7 @@ def _calc_concat_over(
     coords: ConcatOptions | Iterable[Hashable] | CombineKwargDefault,
     compat: CompatOptions | CombineKwargDefault,
 ) -> tuple[set[Hashable], dict[Hashable, bool], list[int], set[Hashable]]:
-    """
-    Determine which dataset variables need to be concatenated in the result,
-    """
+    """Determine which dataset variables need to be concatenated in the result,"""
     # variables to be concatenated
     concat_over = set()
     # variables checked for equality
@@ -616,9 +614,7 @@ def _dataset_concat(
     *,
     preexisting_dim: bool = False,
 ) -> T_Dataset:
-    """
-    Concatenate a sequence of datasets along a new or existing dimension
-    """
+    """Concatenate a sequence of datasets along a new or existing dimension"""
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -939,9 +935,7 @@ def _datatree_concat(
     combine_attrs: CombineAttrsOptions,
     create_index_for_new_dim: bool,
 ) -> DataTree:
-    """
-    Concatenate a sequence of datatrees along a new or existing dimension
-    """
+    """Concatenate a sequence of datatrees along a new or existing dimension"""
     from xarray.core.datatree import DataTree
     from xarray.core.treenode import TreeIsomorphismError, group_subtrees
 

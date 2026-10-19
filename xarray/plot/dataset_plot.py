@@ -672,7 +672,6 @@ def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
     dataarray_plotfunc : Callable
         Function that returns a finished plot primitive.
     """
-
     # Build on the original docstring
     da_doc = dataarray_plotfunc.__doc__
     if da_doc is None:

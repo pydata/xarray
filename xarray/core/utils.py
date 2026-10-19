@@ -182,7 +182,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
 
 
 def maybe_coerce_to_str(index, original_coords):
-    """maybe coerce a pandas Index back to a numpy array of type str
+    """Maybe coerce a pandas Index back to a numpy array of type str
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
@@ -323,7 +323,8 @@ def flat_items[T](
 ) -> Iterable[tuple[str, T]]:
     """Yields flat items from a nested dictionary of dicts.
 
-    Notes:
+    Notes
+    -----
     - Only dict subclasses are flattened.
     - Duplicate items are not removed. These should be checked separately.
     """
@@ -841,7 +842,8 @@ def decode_numpy_dict_values[K, V](attrs: Mapping[K, V]) -> dict[K, V]:
 
 def ensure_us_time_resolution(val):
     """Convert val out of numpy time, for use in to_dict.
-    Needed because of numpy bug GH#7619"""
+    Needed because of numpy bug GH#7619
+    """
     if np.issubdtype(val.dtype, np.datetime64):
         val = val.astype("datetime64[us]")
     elif np.issubdtype(val.dtype, np.timedelta64):
@@ -919,7 +921,6 @@ def drop_dims_from_indexers(
     dims : sequence
     missing_dims : {"raise", "warn", "ignore"}
     """
-
     if missing_dims == "raise":
         invalid = indexers.keys() - set(dims)
         if invalid:
@@ -1174,7 +1175,8 @@ def iterate_nested(nested_list):
 def contains_only_chunked_or_numpy(obj) -> bool:
     """Returns True if xarray object contains only numpy arrays or chunked arrays (i.e. pure dask or cubed).
 
-    Expects obj to be Dataset or DataArray"""
+    Expects obj to be Dataset or DataArray
+    """
     from xarray.core.dataarray import DataArray
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.pycompat import is_chunked_array
@@ -1256,7 +1258,6 @@ def consolidate_dask_from_array_kwargs(
 
     Temporary function, to be deleted once explicitly passing dask-specific kwargs to .chunk() is deprecated.
     """
-
     from_array_kwargs = _resolve_doubly_passed_kwarg(
         from_array_kwargs,
         kwarg_name="name",

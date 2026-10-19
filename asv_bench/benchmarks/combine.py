@@ -26,7 +26,6 @@ class Combine1d:
 
     def setup(self) -> None:
         """Create 2 datasets with two different variables"""
-
         t_size = 8000
         t = np.arange(t_size)
         data = np.random.randn(t_size)
@@ -65,7 +64,6 @@ class Combine3d:
 
     def setup(self):
         """Create 4 datasets with two different variables"""
-
         t_size, x_size, y_size = 50, 450, 400
         t = np.arange(t_size)
         data = np.random.randn(t_size, x_size, y_size)

@@ -463,7 +463,6 @@ class DatasetResample(
         --------
         DataSetResample.map
         """
-
         warnings.warn(
             "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
             PendingDeprecationWarning,

@@ -204,8 +204,8 @@ def _get_chunk(  # type: ignore[no-untyped-def]
     preferred_chunks,
     dims=None,
 ) -> Mapping[Any, T_ChunkDim]:
-    """
-    Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
+    """Return map from each dim to chunk sizes, accounting for backend's preferred
+    chunks.
     """
     from xarray.core.common import _contains_cftime_datetimes
     from xarray.core.utils import emit_user_level_warning
@@ -276,7 +276,6 @@ def fake_target_chunksize(
     limit : int
         The target chunk size in bytes. Passed to the chunk manager's `normalize_chunks` method.
     """
-
     # Short circuit for non-object dtypes
     from xarray.core.common import _contains_cftime_datetimes
 

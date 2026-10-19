@@ -198,7 +198,6 @@ def dimension_sizes(
     --------
     :ref:`testing.hypothesis`
     """
-
     if max_side is None:
         max_side = min_side + 3
 
@@ -340,7 +339,7 @@ def variables(
     <xarray.Variable (a: 2, b: 1)>
     array([[-1.00000000e+007+3.40282347e+038j],
            [-2.75034266e-225+2.22507386e-311j]])
-    """  # noqa: D420  # `Attributes:` in the example output is not a section
+    """  # noqa: D406, D407, D410, D411, D420  # `Attributes:` in the example output is not a section
     if dtype is None:
         dtype = supported_dtypes()
 

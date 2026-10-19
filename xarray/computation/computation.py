@@ -399,7 +399,6 @@ def cross(
         y        (dim_0) int64 8B 6
         z        (dim_0) int64 8B -3
     """
-
     if dim not in a.dims:
         raise ValueError(f"Dimension {dim!r} not on a")
     elif dim not in b.dims:
@@ -882,7 +881,6 @@ def polyval(
     xarray.DataArray.polyfit
     numpy.polynomial.polynomial.polyval
     """
-
     if degree_dim not in coeffs._indexes:
         raise ValueError(
             f"Dimension `{degree_dim}` should be a coordinate variable with labels."

@@ -131,7 +131,6 @@ def _infer_coords_and_dims(
     dims: str | Iterable[Hashable] | None,
 ) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
-
     if (
         coords is not None
         and not utils.is_dict_like(coords)
@@ -715,7 +714,7 @@ class DataArray(
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
-        """splits dataarray along dimension 'dim'"""
+        """Splits dataarray along dimension 'dim'"""
 
         def subset(dim, label):
             array = self.loc[{dim: label}]
@@ -1070,7 +1069,8 @@ class DataArray(
     @property
     def encoding(self) -> dict[Any, Any]:
         """Dictionary of format-specific settings for how this array should be
-        serialized."""
+        serialized.
+        """
         return self.variable.encoding
 
     @encoding.setter
@@ -1086,7 +1086,8 @@ class DataArray(
 
     def drop_encoding(self) -> Self:
         """Return a new DataArray without encoding on the array or any attached
-        coords."""
+        coords.
+        """
         ds = self._to_temp_dataset().drop_encoding()
         return self._from_temp_dataset(ds)
 
@@ -1698,7 +1699,6 @@ class DataArray(
         array([ 0,  6, 12, 18, 24])
         Dimensions without coordinates: points
         """
-
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
 
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
@@ -2090,7 +2090,6 @@ class DataArray(
         exclude_vars: frozenset[Hashable],
     ) -> Self:
         """Callback called from ``Aligner`` to create a new reindexed DataArray."""
-
         if isinstance(fill_value, dict):
             fill_value = fill_value.copy()
             sentinel = object()
@@ -2680,7 +2679,6 @@ class DataArray(
           * x        (x) int64 32B 10 20 30 40
           * y        (y) int64 24B 70 80 90
         """
-
         if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
@@ -4040,7 +4038,6 @@ class DataArray(
             DataArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-
         var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims, **kwargs)
         return self._replace_maybe_drop_dims(var)
 
@@ -4813,7 +4810,6 @@ class DataArray(
 
     def _all_compat(self, other: Self, compat_str: str) -> bool:
         """Helper function for equals, broadcast_equals, and identical"""
-
         # For identical, also compare indexes
         if compat_str == "identical":
             from xarray.core.indexes import indexes_identical
@@ -5544,7 +5540,6 @@ class DataArray(
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
           * y         (y) float64 32B 1.0 1.5 2.0 2.5
         """
-
         ds = self._to_temp_dataset().quantile(
             q,
             dim=dim,
@@ -5595,7 +5590,6 @@ class DataArray(
         array([1., 2., 3.])
         Dimensions without coordinates: x
         """
-
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
@@ -5633,7 +5627,6 @@ class DataArray(
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     np.arange(12).reshape(4, 3),
         ...     dims=["x", "y"],
@@ -5692,7 +5685,6 @@ class DataArray(
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     np.arange(12).reshape(4, 3),
         ...     dims=["x", "y"],
@@ -5749,7 +5741,6 @@ class DataArray(
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     np.arange(12).reshape(4, 3),
         ...     dims=["x", "y"],
@@ -5789,7 +5780,6 @@ class DataArray(
         --------
         dask.array.core.unify_chunks
         """
-
         return unify_chunks(self)[0]
 
     def map_blocks(
@@ -6725,7 +6715,6 @@ class DataArray(
         array([3, 4])
         Dimensions without coordinates: x
         """
-
         ds = self._to_dataset_whole(shallow_copy=True)
         ds = ds.query(
             queries=queries,

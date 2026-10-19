@@ -200,7 +200,6 @@ def _get_lock_maker(scheduler: str | None = None) -> Callable[..., Lock]:
     --------
     dask.utils.get_scheduler_lock
     """
-
     if scheduler is None or scheduler == "threaded":
         return _get_threaded_lock
     elif scheduler == "multiprocessing":

@@ -907,7 +907,6 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
-
         if "keep_attrs" in window_kwargs:
             warnings.warn(
                 "Passing ``keep_attrs`` to ``rolling_exp`` has no effect. Pass"

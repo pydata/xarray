@@ -265,6 +265,7 @@ extend-select = [
   "UP",   # pyupgrade
   "FURB", # refurb
   "RUF",
+  "D",    # pydocstyle
 ]
 # D420 only runs in a separate pre-commit hook, keep its noqa comments
 external = ["D420"]
@@ -273,6 +274,11 @@ extend-safe-fixes = [
 ]
 ignore = [
   "C40",     # unnecessary generator, comprehension, or literal
+  "D1",      # missing docstrings
+  "D205",    # 1 blank line required between summary line and description
+  "D400",    # first line should end with a period
+  "D401",    # first line should be in imperative mood
+  "D404",    # first word of the docstring should not be "This"
   "PIE790",  # unnecessary pass statement
   "PYI019",  # use `Self` instead of custom TypeVar
   "PYI041",  # use `float` instead of `int | float`

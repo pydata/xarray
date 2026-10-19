@@ -1,6 +1,4 @@
-"""
-Property-based tests for roundtripping between xarray and pandas objects.
-"""
+"""Property-based tests for roundtripping between xarray and pandas objects."""
 
 from functools import partial
 from typing import cast

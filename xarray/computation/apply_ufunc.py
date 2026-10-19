@@ -1,6 +1,4 @@
-"""
-Functions for applying functions that act on arrays to xarray's labeled data.
-"""
+"""Functions for applying functions that act on arrays to xarray's labeled data."""
 
 from __future__ import annotations
 

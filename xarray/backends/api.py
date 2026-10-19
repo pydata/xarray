@@ -596,7 +596,6 @@ def open_dataset(
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
     """
-
     if cache is None:
         cache = chunks is None
 
@@ -837,7 +836,6 @@ def open_dataarray(
     All parameters are passed directly to `xarray.open_dataset`. See that
     documentation for further details.
     """
-
     dataset = open_dataset(
         filename_or_obj,
         decode_cf=decode_cf,

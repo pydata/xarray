@@ -1098,7 +1098,6 @@ def merge(
     ...
     xarray.structure.alignment.AlignmentError: cannot align objects with join='exact' where ...
     """
-
     from xarray.core.coordinates import Coordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset

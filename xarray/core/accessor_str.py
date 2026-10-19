@@ -1008,7 +1008,7 @@ class StringAccessor[T_DataArray: DataArray]:
         return self._apply(func=lambda x: x.isnumeric(), dtype=bool)
 
     def isspace(self) -> T_DataArray:
-        """
+        r"""
         Check whether all characters in each string are spaces.
 
         Returns
@@ -1018,10 +1018,10 @@ class StringAccessor[T_DataArray: DataArray]:
 
         Examples
         --------
-        >>> da = xr.DataArray(["", " ", "\\t", "\\n"], dims="x")
+        >>> da = xr.DataArray(["", " ", "\t", "\n"], dims="x")
         >>> da
         <xarray.DataArray (x: 4)> Size: 16B
-        array(['', ' ', '\\t', '\\n'], dtype='<U1')
+        array(['', ' ', '\t', '\n'], dtype='<U1')
         Dimensions without coordinates: x
         >>> isspace = da.str.isspace()
         >>> isspace
@@ -1344,9 +1344,7 @@ class StringAccessor[T_DataArray: DataArray]:
         width: int | Any,
         fillchar: str | bytes | Any = " ",
     ) -> T_DataArray:
-        """
-        Wrapper function to handle padding operations
-        """
+        """Wrapper function to handle padding operations"""
         fillchar = self._stringify(fillchar)
 
         def overfunc(x, iwidth, ifillchar):
@@ -2390,9 +2388,7 @@ class StringAccessor[T_DataArray: DataArray]:
         dim: Hashable | None,
         sep: str | bytes | Any | None,
     ) -> T_DataArray:
-        """
-        Implements logic for `partition` and `rpartition`.
-        """
+        """Implements logic for `partition` and `rpartition`."""
         sep = self._stringify(sep)
 
         if dim is None:
@@ -2503,9 +2499,7 @@ class StringAccessor[T_DataArray: DataArray]:
         sep: str | bytes | Any | None,
         maxsplit: int,
     ) -> DataArray:
-        """
-        Implements logic for `split` and `rsplit`.
-        """
+        """Implements logic for `split` and `rsplit`."""
         if sep is not None:
             sep = self._stringify(sep)
 

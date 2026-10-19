@@ -168,7 +168,8 @@ class BaseCFTimeOffset:
 
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        using a length-one version of this offset class.
+        """
         test_date = (self + date) - self
         return date == test_date
 
@@ -250,7 +251,6 @@ def _get_day_of_month(other, day_option: DayOption) -> int:
     day_of_month : int
 
     """
-
     if day_option == "start":
         return 1
     elif day_option == "end":
@@ -275,7 +275,8 @@ def _adjust_n_months(other_day, n, reference_day):
 
 def _adjust_n_years(other, n, month, reference_day):
     """Adjust the number of times an annual offset is applied based on
-    another date, and the reference day provided"""
+    another date, and the reference day provided
+    """
     if n > 0:
         if other.month < month or (other.month == month and other.day < reference_day):
             n -= 1
@@ -340,7 +341,6 @@ def roll_qtrday(
     --------
     _get_day_of_month : Find the day in a month provided an offset.
     """
-
     months_since = other.month % modby - month % modby
 
     if n > 0:
@@ -386,7 +386,8 @@ class MonthBegin(BaseCFTimeOffset):
     @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        using a length-one version of this offset class.
+        """
         return date.day == 1
 
 
@@ -401,7 +402,8 @@ class MonthEnd(BaseCFTimeOffset):
     @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        using a length-one version of this offset class.
+        """
         return date.day == date.daysinmonth
 
 
@@ -448,7 +450,8 @@ class QuarterOffset(BaseCFTimeOffset):
     @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        using a length-one version of this offset class.
+        """
         mod_month = (date.month - self.month) % 3
         return mod_month == 0 and date.day == self._get_offset_day(date)
 
@@ -586,7 +589,8 @@ class YearBegin(YearOffset):
     @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        using a length-one version of this offset class.
+        """
         return date.day == 1 and date.month == self.month
 
     @override
@@ -614,7 +618,8 @@ class YearEnd(YearOffset):
     @override
     def onOffset(self, date) -> bool:
         """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        using a length-one version of this offset class.
+        """
         return date.day == date.daysinmonth and date.month == self.month
 
     @override
@@ -813,7 +818,8 @@ def to_offset(
     warn: bool = True,
 ) -> BaseCFTimeOffset:
     """Convert a frequency string to the appropriate subclass of
-    BaseCFTimeOffset."""
+    BaseCFTimeOffset.
+    """
     if isinstance(freq, BaseCFTimeOffset):
         return freq
     if isinstance(freq, timedelta | pd.Timedelta):
@@ -890,7 +896,7 @@ def normalize_date(date):
 
 
 def _get_normalized_cfdate(date, calendar, normalize):
-    """convert to cf datetime and round down to midnight if normalize."""
+    """Convert to cf datetime and round down to midnight if normalize."""
     if date is None:
         return date
 
@@ -901,7 +907,8 @@ def _get_normalized_cfdate(date, calendar, normalize):
 
 def _generate_linear_date_range(start, end, periods):
     """Generate an equally-spaced sequence of cftime.datetime objects between
-    and including two dates (whose length equals the number of periods)."""
+    and including two dates (whose length equals the number of periods).
+    """
     if TYPE_CHECKING:
         import cftime
     else:
