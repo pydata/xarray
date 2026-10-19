@@ -10148,7 +10148,7 @@ class Dataset(
         ...     {"temperature": ("time", [10, 12, 14, 16])},
         ...     coords={"time": [0, 1, 1, 2]},
         ... )
-        
+
         >>> ds
         <xarray.Dataset> Size: 64B
         Dimensions:      (time: 4)
@@ -10156,9 +10156,9 @@ class Dataset(
           * time         (time) int64 32B 0 1 1 2
         Data variables:
             temperature  (time) int64 32B 10 12 14 16
-        
+
         By default, the first value for each coordinate label is kept:
-        
+
         >>> ds.drop_duplicates("time")
         <xarray.Dataset> Size: 48B
         Dimensions:      (time: 3)
@@ -10166,9 +10166,9 @@ class Dataset(
           * time         (time) int64 24B 0 1 2
         Data variables:
             temperature  (time) int64 24B 10 12 16
-        
+
         Use ``keep="last"`` to retain the last value for a repeated label:
-        
+
         >>> ds.drop_duplicates("time", keep="last")
         <xarray.Dataset> Size: 48B
         Dimensions:      (time: 3)
@@ -10176,9 +10176,9 @@ class Dataset(
           * time         (time) int64 24B 0 1 2
         Data variables:
             temperature  (time) int64 24B 10 14 16
-        
+
         Use ``keep=False`` to discard every occurrence of duplicated labels:
-        
+
         >>> ds.drop_duplicates("time", keep=False)
         <xarray.Dataset> Size: 32B
         Dimensions:      (time: 2)
