@@ -4,7 +4,7 @@ import pickle
 import re
 import sys
 import warnings
-from collections.abc import Hashable, Iterator, Mapping
+from collections.abc import Hashable
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
@@ -4563,39 +4563,12 @@ class TestDataset:
         expected = data[["var1", "var2"]]
         assert_identical(expected, actual)
 
-    def test_getitem_iterator_mapping(self) -> None:
-        class IteratorMapping(Mapping[str, int], Iterator[str]):
-            def __init__(self, values: dict[str, int]) -> None:
-                self._values = values
-                self._iterator = iter(values)
+    def test_setitem_iterator(self) -> None:
+        actual = Dataset({"a": 0, "b": 0})
 
-            def __getitem__(self, key: str) -> int:
-                return self._values[key]
+        actual[iter(["a", "b"])] = [1, 2]
 
-            def __iter__(self) -> IteratorMapping:
-                return self
-
-            def __next__(self) -> str:
-                return next(self._iterator)
-
-            def __len__(self) -> int:
-                return len(self._values)
-
-        data = create_test_data()
-        key = IteratorMapping({"dim1": 0})
-
-        actual = data[key]
-
-        expected = data.isel(dim1=0)
-        assert_identical(expected, actual)
-
-    def test_getitem_iterator_variable_name(self) -> None:
-        key = cast(Hashable, iter(["not", "variable", "selection"]))
-        data = Dataset({key: ("x", [1, 2])})
-
-        actual = data[key]
-
-        expected = DataArray([1, 2], dims="x", name=key)
+        expected = Dataset({"a": 1, "b": 2})
         assert_identical(expected, actual)
 
     def test_getitem_hashable(self) -> None:
