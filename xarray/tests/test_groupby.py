@@ -619,31 +619,6 @@ def test_ds_groupby_quantile() -> None:
     assert_identical(expected, actual)
 
 
-@pytest.mark.filterwarnings(
-    "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-)
-@pytest.mark.parametrize("as_dataset", [False, True])
-def test_groupby_quantile_interpolation_deprecated(as_dataset: bool) -> None:
-    array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
-
-    arr: xr.DataArray | xr.Dataset
-    arr = array.to_dataset(name="name") if as_dataset else array
-
-    with pytest.warns(
-        FutureWarning,
-        match="`interpolation` argument to quantile was renamed to `method`",
-    ):
-        actual = arr.quantile(0.5, interpolation="lower")
-
-    expected = arr.quantile(0.5, method="lower")
-
-    assert_identical(actual, expected)
-
-    with warnings.catch_warnings(record=True):
-        with pytest.raises(TypeError, match="interpolation and method keywords"):
-            arr.quantile(0.5, method="lower", interpolation="lower")
-
-
 def test_da_groupby_assign_coords() -> None:
     actual = xr.DataArray(
         [[3, 4, 5], [6, 7, 8]], dims=["y", "x"], coords={"y": range(2), "x": range(3)}

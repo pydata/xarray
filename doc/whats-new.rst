@@ -55,6 +55,10 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The ``interpolation`` argument of ``quantile`` on :py:class:`Dataset`,
+  :py:class:`DataArray`, :py:class:`Variable` and groupby objects, deprecated
+  since v2022.03.0, has been removed. Use ``method`` instead (:issue:`11721`, :pull:`11750`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
 - Passing keyword-only arguments of :py:meth:`Dataset.groupby`,
   :py:meth:`DataArray.groupby`, :py:meth:`Dataset.resample` and
   :py:meth:`DataArray.resample` positionally, deprecated since v2024.07.0, now
@@ -120,6 +124,10 @@ Breaking Changes
   Passing it to :py:func:`set_options` now raises a ``ValueError``
   (:issue:`11721`, :pull:`11729`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- The ``meta`` and ``output_sizes`` arguments of :py:func:`apply_ufunc`,
+  deprecated since v0.16.1, have been removed. Pass them in
+  ``dask_gufunc_kwargs`` instead (:issue:`11721`, :pull:`11755`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Deprecations
@@ -139,6 +147,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Writing fixed-width strings no longer truncates values that are longer than the
+  width stored in ``encoding["dtype"]``, e.g. after concatenating datasets read
+  from files with strings of different lengths. A width-only difference in the
+  encoding is now ignored, while a change between bytes and unicode strings is
+  still applied (:issue:`10968`, :pull:`11752`).
+  By `Matt Van Horn <https://github.com/mvanhorn>`_.
 - :py:func:`concat` and :py:meth:`Dataset.to_dataarray` now promote input dtypes
   before broadcasting missing dimensions, avoiding large intermediate
   allocations when combining Dask arrays with different dtypes (:issue:`10928`,

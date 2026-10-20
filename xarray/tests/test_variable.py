@@ -1994,28 +1994,6 @@ class TestVariable(VariableSubclassobjects):
 
         np.testing.assert_allclose(actual.values, expected)
 
-    @pytest.mark.filterwarnings(
-        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-    )
-    @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    def test_quantile_interpolation_deprecation(self, method) -> None:
-        v = Variable(["x", "y"], self.d)
-        q = np.array([0.25, 0.5, 0.75])
-
-        with pytest.warns(
-            FutureWarning,
-            match="`interpolation` argument to quantile was renamed to `method`",
-        ):
-            actual = v.quantile(q, dim="y", interpolation=method)
-
-        expected = v.quantile(q, dim="y", method=method)
-
-        np.testing.assert_allclose(actual.values, expected.values)
-
-        with warnings.catch_warnings(record=True):
-            with pytest.raises(TypeError, match="interpolation and method keywords"):
-                v.quantile(q, dim="y", interpolation=method, method=method)
-
     @requires_dask
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
