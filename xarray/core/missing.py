@@ -723,7 +723,10 @@ def interpolate_variable(
     # we are explicitly interpolating. These are the dimensions along which we vectorize.
     # `q` is the only input core dimensions, and changes size (disappears)
     # so it is in exclude_dims.
-    vectorize_dims = (result_dims - all_in_core_dims) & set(var.dims)
+    # ordered like var.dims, since it also determines the loop order
+    vectorize_dims = [
+        d for d in var.dims if d in result_dims and d not in all_in_core_dims
+    ]
 
     # remove any output broadcast dimensions from the list of core dimensions
     output_core_dims = tuple(d for d in result_dims if d not in vectorize_dims)
@@ -770,7 +773,7 @@ def interpolate_variable(
         output_dtypes=[dtype],
         # only loop over the dimensions along which the destination coordinates vary,
         # np.vectorize would also loop over all other broadcast dimensions (GH10683)
-        vectorize=[d for d in var.dims if d in vectorize_dims],
+        vectorize=vectorize_dims,
         keep_attrs=True,
     )
     return result
