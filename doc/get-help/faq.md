@@ -169,17 +169,13 @@ See section {ref}`ecosystem`.
 
 To open format X file in xarray, you need to know the [format of the data](https://docs.xarray.dev/en/stable/user-guide/io.html#csv-and-other-formats-supported-by-pandas/) you want to read. If the format is supported, you can use the appropriate function provided by xarray. The following table provides functions used for different file formats in xarray, as well as links to other packages that can be used:
 
-```{eval-rst}
-.. csv-table::
-   :header: "File Format", "Open via", " Related Packages"
-   :widths: 15, 45, 15
-
-   "NetCDF (.nc, .nc4, .cdf)","``open_dataset()`` OR ``open_mfdataset()``", "`netCDF4 <https://pypi.org/project/netCDF4/>`_, `cdms2 <https://cdms.readthedocs.io/en/latest/cdms2.html>`_"
-   "HDF5 (.h5, .hdf5)","``open_dataset()`` OR ``open_mfdataset()``", "`h5py <https://www.h5py.org/>`_, `pytables <https://www.pytables.org/>`_ "
-   "GRIB (.grb, .grib)", "``open_dataset()``", "`cfgrib <https://pypi.org/project/cfgrib/>`_, `pygrib <https://pypi.org/project/pygrib/>`_"
-   "CSV (.csv)","``open_dataset()``", "`pandas <https://pandas.pydata.org/>`_ , `dask <https://www.dask.org/>`_"
-   "Zarr (.zarr)","``open_dataset()`` OR ``open_mfdataset()``", "`zarr <https://pypi.org/project/zarr/>`_ , `dask <https://www.dask.org/>`_ "
-```
+| File Format              | Open via                               | Related Packages                                                                                        |
+| ------------------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| NetCDF (.nc, .nc4, .cdf) | `open_dataset()` OR `open_mfdataset()` | [netCDF4](https://pypi.org/project/netCDF4/), [cdms2](https://cdms.readthedocs.io/en/latest/cdms2.html) |
+| HDF5 (.h5, .hdf5)        | `open_dataset()` OR `open_mfdataset()` | [h5py](https://www.h5py.org/), [pytables](https://www.pytables.org/)                                    |
+| GRIB (.grb, .grib)       | `open_dataset()`                       | [cfgrib](https://pypi.org/project/cfgrib/), [pygrib](https://pypi.org/project/pygrib/)                  |
+| CSV (.csv)               | `open_dataset()`                       | [pandas](https://pandas.pydata.org/), [dask](https://www.dask.org/)                                     |
+| Zarr (.zarr)             | `open_dataset()` OR `open_mfdataset()` | [zarr](https://pypi.org/project/zarr/), [dask](https://www.dask.org/)                                   |
 
 If you are unable to open a file in xarray:
 

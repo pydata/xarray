@@ -4,8 +4,8 @@ kernelspec:
   name: python3
 ---
 
-```{eval-rst}
-.. currentmodule:: xarray
+```{currentmodule} xarray
+
 ```
 
 (plotting)=
@@ -841,15 +841,11 @@ plotting function based on the dimensions of the `DataArray` and whether
 the coordinates are sorted and uniformly spaced. This table
 describes what gets plotted:
 
-```{eval-rst}
-=============== ===========================
-Dimensions      Plotting function
---------------- ---------------------------
-1               :py:func:`xarray.plot.line`
-2               :py:func:`xarray.plot.pcolormesh`
-Anything else   :py:func:`xarray.plot.hist`
-=============== ===========================
-```
+| Dimensions    | Plotting function                 |
+| ------------- | --------------------------------- |
+| 1             | {py:func}`xarray.plot.line`       |
+| 2             | {py:func}`xarray.plot.pcolormesh` |
+| Anything else | {py:func}`xarray.plot.hist`       |
 
 ### Coordinates
 
