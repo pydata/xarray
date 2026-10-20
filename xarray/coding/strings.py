@@ -246,8 +246,10 @@ def _numpy_char_to_bytes(arr):
 
 
 class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Wrapper around array-like objects to create a new indexable object where
-    values, when accessed, are automatically stacked along the last dimension.
+    """Wrapper that stacks character arrays along the last dimension.
+
+    Wraps array-like objects to create a new indexable object where values, when
+    accessed, are automatically stacked along the last dimension.
 
     >>> indexer = indexing.BasicIndexer((slice(None),))
     >>> np.array(StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer])
@@ -255,7 +257,8 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """
 
     def __init__(self, array):
-        """
+        """Initialize the wrapper.
+
         Parameters
         ----------
         array : array-like

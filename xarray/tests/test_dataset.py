@@ -215,7 +215,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 
 
 class DuckBackendArrayWrapper(backends.common.BackendArray):
-    """Mimic a BackendArray wrapper around DuckArrayWrapper"""
+    """Mimic a BackendArray wrapper around DuckArrayWrapper."""
 
     def __init__(self, array):
         self.array = DuckArrayWrapper(array)
@@ -231,8 +231,9 @@ class DuckBackendArrayWrapper(backends.common.BackendArray):
 
 class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
     """
-    Store that returns a duck array, not convertible to numpy array,
-    on read. Modeled after nVIDIA's kvikio.
+    Store that returns a duck array, not convertible to numpy array, on read.
+
+    Modeled after nVIDIA's kvikio.
     """
 
     def __init__(self):
@@ -1614,7 +1615,7 @@ class TestDataset:
         assert_identical(actual, expected)
 
     def test_isel_dataarray(self) -> None:
-        """Test for indexing by DataArray"""
+        """Test for indexing by DataArray."""
         data = create_test_data()
         # indexing with DataArray with same-name coordinates.
         indexing_da = DataArray(
@@ -3336,7 +3337,9 @@ class TestDataset:
         ],
     )
     def test_copy_coords(self, deep, expected_orig) -> None:
-        """The test fails for the shallow copy, and apparently only on Windows
+        """Test how modifying the coords of a deep or shallow copy affects the original.
+
+        The test fails for the shallow copy, and apparently only on Windows
         for some reason. In windows coords seem to be immutable unless it's one
         dataset deep copied from another.
         """
@@ -8499,8 +8502,10 @@ def test_subclass_slots() -> None:
 
 
 def test_weakref() -> None:
-    """Classes with __slots__ are incompatible with the weakref module unless they
-    explicitly state __weakref__ among their slots
+    """Test that a Dataset can be weakly referenced.
+
+    Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots.
     """
     from weakref import ref
 
@@ -8660,7 +8665,7 @@ class TestNumpyCoercion:
 
 
 def test_string_keys_typing() -> None:
-    """Tests that string keys to `variables` are permitted by mypy"""
+    """Tests that string keys to `variables` are permitted by mypy."""
     da = xr.DataArray(np.arange(10), dims=["x"])
     ds = xr.Dataset(dict(x=da))
     mapping = {"y": da}

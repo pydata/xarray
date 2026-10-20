@@ -89,7 +89,9 @@ def dataarray_to_dataset(obj: DataArray) -> Dataset:
 
 
 def make_meta(obj):
-    """If obj is a DataArray or Dataset, return a new object of the same type and with
+    """Create a size-0 version of a DataArray or Dataset with numpy backend.
+
+    If obj is a DataArray or Dataset, return a new object of the same type and with
     the same variables and dtypes, but where all variables have size 0 and numpy
     backend.
     If obj is neither a DataArray nor Dataset, return it unaltered.
@@ -140,8 +142,9 @@ def infer_template(
 
 
 def make_dict(x: DataArray | Dataset) -> dict[Hashable, Any]:
-    """Map variable name to numpy(-like) data
-    (Dataset.to_dict() is too complicated).
+    """Map variable name to numpy(-like) data.
+
+    Dataset.to_dict() is too complicated for this purpose.
     """
     if isinstance(x, DataArray):
         x = x._to_temp_dataset()
@@ -160,7 +163,8 @@ def subset_dataset_to_block(
     graph: dict, gname: str, dataset: Dataset, input_chunk_bounds, chunk_index
 ):
     """
-    Creates a task that subsets an xarray dataset to a block determined by chunk_index.
+    Create a task that subsets an xarray dataset to a block determined by chunk_index.
+
     Block extents are determined by input_chunk_bounds.
     Also subtasks that subset the constituent variables of a dataset.
     """
@@ -339,6 +343,8 @@ def map_blocks(
         expected_indexes: dict[Hashable, Index],
     ):
         """
+        Call the user function `func` on a block and check the result.
+
         Wrapper function that receives datasets in args; converts to dataarrays when necessary;
         passes these to the user function `func` and checks returned objects for expected shapes/sizes/etc.
         """

@@ -49,7 +49,7 @@ EMPTY = inspect.Parameter.empty
 
 
 def _deprecate_positional_args(version) -> Callable[[T], T]:
-    """Decorator for methods that issues warnings for positional arguments
+    """Decorate methods to issue warnings for positional arguments.
 
     Using the keyword-only argument syntax in pep 3102, arguments after the
     ``*`` will issue a warning when passed as a positional argument.
@@ -125,6 +125,8 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
 
 def deprecate_dims[T: Callable](func: T, old_name="dims") -> T:
     """
+    Deprecate the `dims` keyword argument in favor of `dim`.
+
     For functions that previously took `dims` as a kwarg, and have now transitioned to
     `dim`. This decorator will issue a warning if `dims` is passed while forwarding it
     to `dim`.

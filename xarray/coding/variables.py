@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from non-native to native endianness
+    """Decode arrays on the fly from non-native to native endianness.
 
     This is useful for decoding arrays from netCDF3 files (which are all
     big endian) into native endianness, so they can be used with Cython
@@ -80,7 +80,7 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from integer to boolean datatype
+    """Decode arrays on the fly from integer to boolean datatype.
 
     This is useful for decoding boolean arrays from integer typed netCDF
     variables.

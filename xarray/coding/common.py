@@ -37,11 +37,11 @@ class VariableCoder:
     """
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """Convert an encoded variable to a decoded variable"""
+        """Convert an encoded variable to a decoded variable."""
         raise NotImplementedError()
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """Convert a decoded variable to an encoded variable"""
+        """Convert a decoded variable to an encoded variable."""
         raise NotImplementedError()
 
 
@@ -133,7 +133,8 @@ def pop_to(
     source: MutableMapping, dest: MutableMapping, key: Hashable, name: T_Name = None
 ) -> Any:
     """
-    A convenience function which pops a key k from source to dest.
+    Pop a key k from source to dest.
+
     None values are not passed on.  If k already exists in dest an
     error is raised.
     """

@@ -1344,7 +1344,7 @@ class StringAccessor[T_DataArray: DataArray]:
         width: int | Any,
         fillchar: str | bytes | Any = " ",
     ) -> T_DataArray:
-        """Wrapper function to handle padding operations"""
+        """Handle padding operations."""
         fillchar = self._stringify(fillchar)
 
         def overfunc(x, iwidth, ifillchar):
@@ -1726,9 +1726,10 @@ class StringAccessor[T_DataArray: DataArray]:
         side: str = "left",
     ) -> T_DataArray:
         """
-        Return lowest or highest indexes in each strings in the array
-        where the substring is fully contained between [start:end].
-        Return -1 on failure.
+        Return lowest or highest indexes of a substring in each string in the array.
+
+        Return the indexes where the substring is fully contained between
+        [start:end]. Return -1 on failure.
 
         If `start`, `end`, or 'sub` is array-like, they are broadcast
         against the array and applied elementwise.
@@ -1770,9 +1771,10 @@ class StringAccessor[T_DataArray: DataArray]:
         end: int | Any = None,
     ) -> T_DataArray:
         """
-        Return highest indexes in each strings in the array
-        where the substring is fully contained between [start:end].
-        Return -1 on failure.
+        Return highest indexes of a substring in each string in the array.
+
+        Return the indexes where the substring is fully contained between
+        [start:end]. Return -1 on failure.
 
         If `start`, `end`, or 'sub` is array-like, they are broadcast
         against the array and applied elementwise.
@@ -1803,10 +1805,11 @@ class StringAccessor[T_DataArray: DataArray]:
         side: str = "left",
     ) -> T_DataArray:
         """
-        Return lowest or highest indexes in each strings where the substring is
-        fully contained between [start:end]. This is the same as
-        ``str.find`` except instead of returning -1, it raises a ValueError
-        when the substring is not found.
+        Return lowest or highest indexes of a substring in each string in the array.
+
+        Return the indexes where the substring is fully contained between
+        [start:end]. This is the same as ``str.find`` except instead of
+        returning -1, it raises a ValueError when the substring is not found.
 
         If `start`, `end`, or 'sub` is array-like, they are broadcast
         against the array and applied elementwise.
@@ -1853,10 +1856,11 @@ class StringAccessor[T_DataArray: DataArray]:
         end: int | Any = None,
     ) -> T_DataArray:
         """
-        Return highest indexes in each strings where the substring is
-        fully contained between [start:end]. This is the same as
-        ``str.rfind`` except instead of returning -1, it raises a ValueError
-        when the substring is not found.
+        Return highest indexes of a substring in each string in the array.
+
+        Return the indexes where the substring is fully contained between
+        [start:end]. This is the same as ``str.rfind`` except instead of
+        returning -1, it raises a ValueError when the substring is not found.
 
         If `start`, `end`, or 'sub` is array-like, they are broadcast
         against the array and applied elementwise.
@@ -1982,8 +1986,7 @@ class StringAccessor[T_DataArray: DataArray]:
         flags: int = 0,
     ) -> T_DataArray:
         r"""
-        Extract the first match of capture groups in the regex pat as a new
-        dimension in a DataArray.
+        Extract the first match of capture groups in the regex pat as a new dimension.
 
         For each string in the DataArray, extract groups from the first match
         of regular expression pat.
@@ -2130,8 +2133,7 @@ class StringAccessor[T_DataArray: DataArray]:
         flags: int = 0,
     ) -> T_DataArray:
         r"""
-        Extract all matches of capture groups in the regex pat as new
-        dimensions in a DataArray.
+        Extract all matches of capture groups in the regex pat as new dimensions.
 
         For each string in the DataArray, extract groups from all matches
         of regular expression pat.
@@ -2399,7 +2401,7 @@ class StringAccessor[T_DataArray: DataArray]:
         dim: Hashable | None,
         sep: str | bytes | Any | None,
     ) -> T_DataArray:
-        """Implements logic for `partition` and `rpartition`."""
+        """Implement logic for `partition` and `rpartition`."""
         sep = self._stringify(sep)
 
         if dim is None:
@@ -2510,7 +2512,7 @@ class StringAccessor[T_DataArray: DataArray]:
         sep: str | bytes | Any | None,
         maxsplit: int,
     ) -> DataArray:
-        """Implements logic for `split` and `rsplit`."""
+        """Implement logic for `split` and `rsplit`."""
         if sep is not None:
             sep = self._stringify(sep)
 

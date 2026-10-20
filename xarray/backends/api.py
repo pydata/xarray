@@ -125,7 +125,7 @@ def _protect_datatree_variables_inplace(tree: DataTree, cache: bool) -> None:
 
 
 def _finalize_store(writes, store):
-    """Finalize this store by explicitly syncing and closing"""
+    """Finalize this store by explicitly syncing and closing."""
     del writes  # ensure writing is done first
     store.close()
 
@@ -142,8 +142,7 @@ def _multi_file_closer(closers):
 
 
 def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
-    """Open, load into memory, and close a Dataset from a file or file-like
-    object.
+    """Open, load into memory, and close a Dataset from a file or file-like object.
 
     This is a thin wrapper around :py:meth:`~xarray.open_dataset`. It differs
     from `open_dataset` in that it loads the Dataset into memory, closes the
@@ -168,8 +167,9 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
 
 
 def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArray:
-    """Open, load into memory, and close a DataArray from a file or file-like
-    object containing a single data variable.
+    """Open, load into memory, and close a DataArray from a file or file-like object.
+
+    The file must contain a single data variable.
 
     This is a thin wrapper around :py:meth:`~xarray.open_dataarray`. It differs
     from `open_dataarray` in that it loads the Dataset into memory, closes the
@@ -194,8 +194,7 @@ def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArra
 
 
 def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
-    """Open, load into memory, and close a DataTree from a file or file-like
-    object.
+    """Open, load into memory, and close a DataTree from a file or file-like object.
 
     This is a thin wrapper around :py:meth:`~xarray.open_datatree`. It differs
     from `open_datatree` in that it loads the DataTree into memory, closes the
@@ -669,8 +668,7 @@ def open_dataarray(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
-    """Open a DataArray from a file or file-like object containing a single
-    data variable.
+    """Open a DataArray from a file or file-like object with a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
     multiple variables are present then a ValueError is raised.

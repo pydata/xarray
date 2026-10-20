@@ -116,7 +116,7 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
         center: bool | Mapping[Any, bool] = False,
     ) -> None:
         """
-        Moving window object.
+        Initialize a moving window object.
 
         Parameters
         ----------
@@ -165,7 +165,7 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
         )
 
     def __repr__(self) -> str:
-        """Provide a nice str repr of our rolling object"""
+        """Provide a nice str repr of our rolling object."""
         attrs = ",".join(
             f"{k}->{w}{'(center)' if c else ''}"
             for k, w, c in zip(self.dim, self.window, self.center, strict=True)
@@ -185,8 +185,10 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
         rolling_agg_func: Callable | None = None,
         automatic_rechunk: bool = False,
     ) -> Callable[..., T_Xarray]:
-        """Constructs reduction methods built on a numpy reduction function (e.g. sum),
-        a numbagg reduction function (e.g. move_sum), a bottleneck reduction function
+        """Construct a rolling reduction method.
+
+        The method is built on a numpy reduction function (e.g. sum), a numbagg
+        reduction function (e.g. move_sum), a bottleneck reduction function
         (e.g. move_sum), or a Rolling reduction (_mean).
 
         The logic here for which function to run is quite diffuse, across this method &
@@ -313,7 +315,8 @@ class DataArrayRolling(Rolling["DataArray"]):
         center: bool | Mapping[Any, bool] = False,
     ) -> None:
         """
-        Moving window object for DataArray.
+        Initialize a moving window object for DataArray.
+
         You should use DataArray.rolling() method to construct this object
         instead of the class constructor.
 
@@ -379,8 +382,9 @@ class DataArrayRolling(Rolling["DataArray"]):
         **window_dim_kwargs: Hashable,
     ) -> DataArray:
         """
-        Convert this rolling object to xr.DataArray,
-        where the window dimension is stacked as a new dimension
+        Convert this rolling object to xr.DataArray.
+
+        The window dimension is stacked as a new dimension.
 
         Parameters
         ----------
@@ -624,7 +628,7 @@ class DataArrayRolling(Rolling["DataArray"]):
 
     @override
     def _counts(self, keep_attrs: bool | None) -> DataArray:
-        """Number of non-nan entries in each rolling window."""
+        """Count the non-nan entries in each rolling window."""
         rolling_dim = {
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
@@ -769,8 +773,10 @@ class DataArrayRolling(Rolling["DataArray"]):
         return result
 
     def _unpad_window_index(self, result: DataArray) -> DataArray:
-        """Make indices within the padded windows relative to the first value of
-        each window that lies inside the array (GH #11336).
+        """Make indices within the padded windows relative to the array.
+
+        Indices become relative to the first value of each window that lies inside
+        the array (GH #11336).
 
         Windows at the edges extend beyond the array and are padded on the left,
         which would otherwise be counted. E.g. ``cumulative`` uses windows of the
@@ -879,7 +885,8 @@ class DatasetRolling(Rolling["Dataset"]):
         center: bool | Mapping[Any, bool] = False,
     ) -> None:
         """
-        Moving window object for Dataset.
+        Initialize a moving window object for Dataset.
+
         You should use Dataset.rolling() method to construct this object
         instead of the class constructor.
 
@@ -950,8 +957,7 @@ class DatasetRolling(Rolling["Dataset"]):
         sliding_window_view_kwargs: Mapping[Any, Any] | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """Reduce the items in this group by applying `func` along some
-        dimension(s).
+        """Reduce the items in this group by applying `func` along some dimension(s).
 
         Parameters
         ----------
@@ -1032,8 +1038,9 @@ class DatasetRolling(Rolling["Dataset"]):
         **window_dim_kwargs: Hashable,
     ) -> Dataset:
         """
-        Convert this rolling object to xr.Dataset,
-        where the window dimension is stacked as a new dimension
+        Convert this rolling object to xr.Dataset.
+
+        The window dimension is stacked as a new dimension.
 
         Parameters
         ----------
@@ -1151,7 +1158,7 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         coord_func: str | Callable | Mapping[Any, str | Callable],
     ) -> None:
         """
-        Moving window object.
+        Initialize a coarsen object.
 
         Parameters
         ----------
@@ -1200,7 +1207,7 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         return keep_attrs
 
     def __repr__(self) -> str:
-        """Provide a nice str repr of our coarsen object"""
+        """Provide a nice str repr of our coarsen object."""
         attrs = ",".join(
             f"{k}->{getattr(self, k)}"
             for k in self._attributes
@@ -1210,7 +1217,7 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
 
     @staticmethod
     def _reduce_method_impl(name: str, include_skipna: bool) -> Callable[..., T_Xarray]:
-        """Creates methods that mirror the implementation in Rolling."""
+        """Create methods that mirror the implementation in Rolling."""
         kwargs: dict[str, Any] = {}
         if include_skipna:
             kwargs["skipna"] = None
@@ -1256,9 +1263,9 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         **window_dim_kwargs,
     ) -> T_Xarray:
         """
-        Convert this Coarsen object to a DataArray or Dataset,
-        where the coarsening dimension is split or reshaped to two
-        new dimensions.
+        Convert this Coarsen object to a DataArray or Dataset.
+
+        The coarsening dimension is split or reshaped to two new dimensions.
 
         Parameters
         ----------
@@ -1403,8 +1410,7 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
     def reduce(
         self, func: Callable, keep_attrs: bool | None = None, **kwargs
     ) -> DataArray:
-        """Reduce the items in this group by applying `func` along some
-        dimension(s).
+        """Reduce the items in this group by applying `func` along some dimension(s).
 
         Parameters
         ----------
@@ -1494,8 +1500,7 @@ class DatasetCoarsen(Coarsen["Dataset"]):
         return wrapped_func
 
     def reduce(self, func: Callable, keep_attrs=None, **kwargs) -> Dataset:
-        """Reduce the items in this group by applying `func` along some
-        dimension(s).
+        """Reduce the items in this group by applying `func` along some dimension(s).
 
         Parameters
         ----------

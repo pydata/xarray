@@ -57,9 +57,9 @@ def as_dataset(obj: Any) -> Dataset:
 def _get_virtual_variable(
     variables, key: Hashable, dim_sizes: Mapping | None = None
 ) -> tuple[Hashable, Hashable, Variable]:
-    """Get a virtual variable (e.g., 'time.year') from a dict of xarray.Variable
-    objects (if possible)
+    """Get a virtual variable (e.g., 'time.year') from a dict of variables, if possible.
 
+    The dict maps names to xarray.Variable objects.
     """
     from xarray.core.dataarray import DataArray
 
