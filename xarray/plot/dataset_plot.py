@@ -652,9 +652,9 @@ def streamplot(
     return hdl.lines
 
 
-
-
-def _update_doc_to_dataset[F: Callable](dataarray_plotfunc: Callable) -> Callable[[F], F]:
+def _update_doc_to_dataset[F: Callable](
+    dataarray_plotfunc: Callable,
+) -> Callable[[F], F]:
     """
     Add a common docstring by reusing the DataArray one.
 
