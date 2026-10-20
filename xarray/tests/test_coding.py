@@ -24,6 +24,31 @@ def test_CFMaskCoder_decode() -> None:
     assert_identical(expected, encoded)
 
 
+@pytest.mark.parametrize("fill_attr", ["_FillValue", "missing_value"])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.dtype([("foo", "i4")]),
+        np.dtype([("foo", "i4"), ("bar", "f2")]),
+        np.dtype([("foo", "i4"), ("bar", [("nested", "f4")])]),
+        np.dtype([("foo", "i4"), ("bar", "f4", (2,))]),
+    ],
+)
+def test_CFMaskCoder_decode_structured(dtype, fill_attr) -> None:
+    fill_value = np.zeros((), dtype=dtype)
+    fill_value["foo"] = 42
+    data = np.ones(3, dtype=dtype)
+    data[0] = fill_value
+    original = xr.Variable("x", data, {fill_attr: fill_value})
+
+    decoded = variables.CFMaskCoder().decode(original)
+
+    assert decoded.dtype == dtype
+    np.testing.assert_array_equal(decoded.values, data)
+    np.testing.assert_array_equal(decoded.attrs[fill_attr], fill_value)
+    np.testing.assert_array_equal(original.attrs[fill_attr], fill_value)
+
+
 encoding_with_dtype = {
     "dtype": np.dtype("float64"),
     "_FillValue": np.float32(1e20),

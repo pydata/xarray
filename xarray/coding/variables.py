@@ -383,6 +383,11 @@ class CFMaskCoder(VariableCoder):
 
     @override
     def decode(self, variable: Variable, name: T_Name = None):
+        if isinstance(variable.dtype, np.dtype) and variable.dtype.fields is not None:
+            # Structured dtypes cannot be masked with NaN. Keep their fill values
+            # in attrs so that they can be written again without losing metadata.
+            return variable
+
         raw_fill_dict, encoded_fill_values = _check_fill_values(
             variable.attrs, name, variable.dtype
         )

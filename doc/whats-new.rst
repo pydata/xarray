@@ -147,6 +147,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Reading structured data from Zarr format 2 stores, including reads performed
+  when writing a region with ``mode="r+"``, no longer fails when a structured
+  ``_FillValue`` is present. Structured records are not masked, and their fill
+  value is retained in attributes for subsequent writes (:issue:`10591`).
 - Writing fixed-width strings no longer truncates values that are longer than the
   width stored in ``encoding["dtype"]``, e.g. after concatenating datasets read
   from files with strings of different lengths. A width-only difference in the
