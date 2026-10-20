@@ -1316,11 +1316,7 @@ class ZarrBase(CFEncodedBase):
 
         # turn off all decoding so we see what Zarr returns to us.
         # Since chunks, are not written, we should receive on `fill_value`
-        open_kwargs = {
-            "mask_and_scale": False,
-            "consolidated": False,
-            "use_zarr_fill_value_as_mask": False,
-        }
+        open_kwargs = {"mask_and_scale": False, "consolidated": False}
         save_kwargs = dict(compute=False, consolidated=False)
         with self.roundtrip(
             ds,
@@ -1369,6 +1365,26 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(ds, open_kwargs=open_kwargs) as opened:
             with self.roundtrip(opened, open_kwargs=open_kwargs) as actual:
                 assert actual.foo.encoding["fill_value"] == -99
+
+    @skip_if_zarr_format_2("fill_value is only an encoding key for zarr_format 3")
+    @pytest.mark.parametrize(
+        "use_zarr_fill_value_as_mask, expected",
+        [(True, [1.0, np.nan, 3.0]), (False, [1.0, -99.0, 3.0])],
+    )
+    def test_use_zarr_fill_value_as_mask(
+        self, use_zarr_fill_value_as_mask, expected
+    ) -> None:
+        # GH #10269: the option has to reach the store, otherwise the
+        # zarr_format 3 default (False) is always used
+        ds = xr.Dataset({"foo": ("x", [1.0, -99.0, 3.0])})
+        ds.foo.encoding = {"fill_value": -99.0}
+
+        open_kwargs = {
+            "consolidated": False,
+            "use_zarr_fill_value_as_mask": use_zarr_fill_value_as_mask,
+        }
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as actual:
+            np.testing.assert_equal(actual.foo.values, expected)
 
 
 @requires_zarr
@@ -1778,7 +1794,6 @@ class TestZarrDictStore(ZarrBase):
         zarr_format,
     ):
         """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
-
         original = create_test_data()
         with self.create_zarr_target() as store:
             original.to_zarr(store, consolidated=False, zarr_format=zarr_format)
@@ -2376,8 +2391,9 @@ class TestZarrRectilinearChunksRead:
 
     @requires_dask
     def test_read_zero_length_dim(self, tmp_path) -> None:
-        """zarr reports no chunk sizes at all along a zero-length dimension,
-        which must not be passed to dask as an empty tuple."""
+        """Zarr reports no chunk sizes at all along a zero-length dimension,
+        which must not be passed to dask as an empty tuple.
+        """
         import zarr
 
         store_path = tmp_path / "source.zarr"
@@ -2396,7 +2412,8 @@ class TestZarrRectilinearChunksRead:
 
     def test_read_rectilinear_shards(self, tmp_path) -> None:
         """Regular inner chunks with rectilinear shards. The regular chunks
-        must be reported as an int regardless of zarr-python version."""
+        must be reported as an int regardless of zarr-python version.
+        """
         import zarr
 
         data = np.array([1.0, 2.0, 3.0], dtype="float32")
@@ -2422,7 +2439,8 @@ class TestZarrRectilinearChunksRead:
 
     def test_write_after_read_gives_helpful_error(self, tmp_path) -> None:
         """Writing isn't supported yet; the error should say so, not just
-        "must be an int"."""
+        "must be an int".
+        """
         import zarr
 
         data = np.arange(60, dtype="float32")
@@ -2847,8 +2865,8 @@ class TestZarrRegionAuto:
 
     @requires_dask
     def test_zarr_region_chunk_partial(self):
-        """
-        Check that writing to partial chunks with `region` fails, assuming `safe_chunks=False`.
+        """Check that writing to partial chunks with `region` fails, assuming
+        `safe_chunks=False`.
         """
         ds = (
             xr.DataArray(np.arange(120).reshape(4, 3, -1), dims=list("abc"))

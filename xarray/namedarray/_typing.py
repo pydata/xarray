@@ -71,8 +71,17 @@ NormalizedChunks = tuple[tuple[int, ...], ...]
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
 type T_ChunkDim = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
+# A top-level `None` is not allowed (use `T_Chunks | None` where it means "don't
+# chunk"), but `None` stays valid for single dimensions inside the mapping or tuple.
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-type T_Chunks = T_ChunkDim | Mapping[Any, T_ChunkDim] | tuple[T_ChunkDim, ...]
+type T_Chunks = (
+    str
+    | int
+    | Literal["auto"]  # noqa: PYI051
+    | tuple[int, ...]
+    | Mapping[Any, T_ChunkDim]
+    | tuple[T_ChunkDim, ...]
+)
 
 # single str is also allowed, but luckily str = Iterable[str]
 type DimsLike[DimType: Hashable] = Iterable[DimType] | EllipsisType | None

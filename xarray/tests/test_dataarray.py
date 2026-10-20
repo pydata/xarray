@@ -1010,6 +1010,10 @@ class TestDataArray:
         roundtripped = pickle.loads(pickle.dumps(data))
         assert_identical(data, roundtripped)
 
+    def test_chunk_none_raises(self) -> None:
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            DataArray(np.ones((3, 4))).chunk(None)  # type: ignore[arg-type]
+
     @requires_dask
     def test_chunk(self) -> None:
         unblocked = DataArray(np.ones((3, 4)))
@@ -3320,28 +3324,6 @@ class TestDataArray:
 
         np.testing.assert_allclose(actual.values, expected)
 
-    @pytest.mark.filterwarnings(
-        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-    )
-    @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    def test_quantile_interpolation_deprecated(self, method) -> None:
-        da = DataArray(self.va)
-        q = [0.25, 0.5, 0.75]
-
-        with pytest.warns(
-            FutureWarning,
-            match="`interpolation` argument to quantile was renamed to `method`",
-        ):
-            actual = da.quantile(q, interpolation=method)
-
-        expected = da.quantile(q, method=method)
-
-        np.testing.assert_allclose(actual.values, expected.values)
-
-        with warnings.catch_warnings(record=True):
-            with pytest.raises(TypeError, match="interpolation and method keywords"):
-                da.quantile(q, method=method, interpolation=method)
-
     def test_reduce_keep_attrs(self) -> None:
         # Test default behavior (keeps attrs for reduction operations)
         vm = self.va.mean()
@@ -4479,7 +4461,8 @@ class TestDataArray:
     def test_copy_coords(self, deep, expected_orig) -> None:
         """The test fails for the shallow copy, and apparently only on Windows
         for some reason. In windows coords seem to be immutable unless it's one
-        dataarray deep copied from another."""
+        dataarray deep copied from another.
+        """
         da = xr.DataArray(
             np.ones([2, 2, 2]),
             coords={"a": [1, 2], "b": ["x", "y"], "c": [0, 1]},
@@ -4994,7 +4977,6 @@ class TestDataArray:
         self, use_dask: bool, engine: QueryEngineOptions, parser: QueryParserOptions
     ) -> None:
         """Test querying a dataset."""
-
         # setup test data
         np.random.seed(42)
         a = np.arange(0, 10, 1)

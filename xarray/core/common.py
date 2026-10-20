@@ -561,6 +561,12 @@ class DataWithCoords(AttrAccessMixin):
             A new object with the new coordinates in addition to the existing
             data.
 
+        See Also
+        --------
+        Dataset.assign
+        Dataset.swap_dims
+        Dataset.set_coords
+
         Examples
         --------
         Convert `DataArray` longitude coordinates from 0-359 to -180-179:
@@ -650,12 +656,6 @@ class DataWithCoords(AttrAccessMixin):
             precipitation   (x, y, time) float64 128B 2.0 0.0 0.0 0.0 ... 0.0 0.0 2.0
         Attributes:
             description:  Weather-related data
-
-        See Also
-        --------
-        Dataset.assign
-        Dataset.swap_dims
-        Dataset.set_coords
         """
         from xarray.core.coordinates import Coordinates
 
@@ -682,6 +682,15 @@ class DataWithCoords(AttrAccessMixin):
             positional arguments passed into ``attrs.update``.
         **kwargs
             keyword arguments passed into ``attrs.update``.
+
+        Returns
+        -------
+        assigned : same type as caller
+            A new object with the new attrs in addition to the existing data.
+
+        See Also
+        --------
+        Dataset.assign
 
         Examples
         --------
@@ -712,15 +721,6 @@ class DataWithCoords(AttrAccessMixin):
 
         >>> new_dataset.attrs
         {'units': 'Celsius', 'description': 'Temperature data'}
-
-        Returns
-        -------
-        assigned : same type as caller
-            A new object with the new attrs in addition to the existing data.
-
-        See Also
-        --------
-        Dataset.assign
         """
         out = self.copy(deep=False)
         out.attrs.update(*args, **kwargs)
@@ -770,6 +770,10 @@ class DataWithCoords(AttrAccessMixin):
         -------
         object : Any
             the return type of ``func``.
+
+        See Also
+        --------
+        pandas.DataFrame.pipe
 
         Notes
         -----
@@ -858,10 +862,6 @@ class DataWithCoords(AttrAccessMixin):
         Data variables:
             temperature_c  (lat, lon) float64 32B 10.98 14.3 12.06 10.9
             precipitation  (lat, lon) float64 32B 0.4237 0.6459 0.4376 0.8918
-
-        See Also
-        --------
-        pandas.DataFrame.pipe
         """
         if isinstance(func, tuple):
             # Use different var when unpacking function from tuple because the type
@@ -907,7 +907,6 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
-
         if "keep_attrs" in window_kwargs:
             warnings.warn(
                 "Passing ``keep_attrs`` to ``rolling_exp`` has no effect. Pass"
@@ -975,6 +974,15 @@ class DataWithCoords(AttrAccessMixin):
         -------
         resampled : same type as caller
             This object resampled.
+
+        See Also
+        --------
+        pandas.Series.resample
+        pandas.DataFrame.resample
+
+        References
+        ----------
+        .. [1] https://pandas.pydata.org/docs/user_guide/timeseries.html#dateoffset-objects
 
         Examples
         --------
@@ -1082,15 +1090,6 @@ class DataWithCoords(AttrAccessMixin):
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
           * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
-
-        See Also
-        --------
-        pandas.Series.resample
-        pandas.DataFrame.resample
-
-        References
-        ----------
-        .. [1] https://pandas.pydata.org/docs/user_guide/timeseries.html#dateoffset-objects
         """
         # TODO support non-string indexer after removing the old API.
 
@@ -1163,6 +1162,11 @@ class DataWithCoords(AttrAccessMixin):
         DataArray or Dataset
             Same xarray type as caller, with dtype float64.
 
+        See Also
+        --------
+        numpy.where : corresponding numpy function
+        where : equivalent function
+
         Examples
         --------
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
@@ -1209,11 +1213,6 @@ class DataWithCoords(AttrAccessMixin):
                [ 15, -16, -17, -18, -19],
                [-20, -21, -22, -23, -24]])
         Dimensions without coordinates: x, y
-
-        See Also
-        --------
-        numpy.where : corresponding numpy function
-        where : equivalent function
         """
         from xarray.core.dataarray import DataArray
         from xarray.core.dataset import Dataset
@@ -1380,6 +1379,10 @@ class DataWithCoords(AttrAccessMixin):
         isin : DataArray or Dataset
             Has the same type and shape as this object, but with a bool dtype.
 
+        See Also
+        --------
+        numpy.isin
+
         Examples
         --------
         >>> array = xr.DataArray([1, 2, 3], dims="x")
@@ -1387,10 +1390,6 @@ class DataWithCoords(AttrAccessMixin):
         <xarray.DataArray (x: 3)> Size: 3B
         array([ True, False,  True])
         Dimensions without coordinates: x
-
-        See Also
-        --------
-        numpy.isin
         """
         from xarray.computation.apply_ufunc import apply_ufunc
         from xarray.core.dataarray import DataArray
@@ -1465,6 +1464,12 @@ class DataWithCoords(AttrAccessMixin):
         out : same as object
             New object with data cast to the specified type.
 
+        See Also
+        --------
+        numpy.ndarray.astype
+        dask.array.Array.astype
+        sparse.COO.astype
+
         Notes
         -----
         The ``order``, ``casting``, ``subok`` and ``copy`` arguments are only passed
@@ -1472,12 +1477,6 @@ class DataWithCoords(AttrAccessMixin):
         different than ``None`` is supplied.
         Make sure to only supply these arguments if the underlying array class
         supports them.
-
-        See Also
-        --------
-        numpy.ndarray.astype
-        dask.array.Array.astype
-        sparse.COO.astype
         """
         from xarray.computation.apply_ufunc import apply_ufunc
 
@@ -1510,7 +1509,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray: ...
@@ -1522,7 +1521,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset: ...
@@ -1534,7 +1533,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable: ...
@@ -1558,7 +1557,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable: ...
@@ -1569,7 +1568,7 @@ def full_like(
     fill_value: Any,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -1609,6 +1608,11 @@ def full_like(
         filled with fill_value. Coords will be copied from other.
         If other is based on dask, the new one will be as well, and will be
         split in the same chunks.
+
+    See Also
+    --------
+    zeros_like
+    ones_like
 
     Examples
     --------
@@ -1685,11 +1689,6 @@ def full_like(
         a        (x) bool 3B True True True
         b        (x) float64 24B 2.0 2.0 2.0
 
-    See Also
-    --------
-    zeros_like
-    ones_like
-
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
@@ -1755,7 +1754,7 @@ def _full_like_variable(
     other: Variable,
     fill_value: Any,
     dtype: DTypeLike | None = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
@@ -1799,7 +1798,7 @@ def zeros_like(
     other: DataArray,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray: ...
@@ -1810,7 +1809,7 @@ def zeros_like(
     other: Dataset,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset: ...
@@ -1821,7 +1820,7 @@ def zeros_like(
     other: Variable,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable: ...
@@ -1832,7 +1831,7 @@ def zeros_like(
     other: Dataset | DataArray,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray: ...
@@ -1843,7 +1842,7 @@ def zeros_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable: ...
@@ -1853,7 +1852,7 @@ def zeros_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -1883,6 +1882,11 @@ def zeros_like(
     -------
     out : DataArray, Dataset or Variable
         New object of zeros with the same shape and type as other.
+
+    See Also
+    --------
+    ones_like
+    full_like
 
     Examples
     --------
@@ -1915,11 +1919,6 @@ def zeros_like(
       * lat      (lat) int64 16B 1 2
       * lon      (lon) int64 24B 0 1 2
 
-    See Also
-    --------
-    ones_like
-    full_like
-
     """
     return full_like(
         other,
@@ -1936,7 +1935,7 @@ def ones_like(
     other: DataArray,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> DataArray: ...
@@ -1947,7 +1946,7 @@ def ones_like(
     other: Dataset,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset: ...
@@ -1958,7 +1957,7 @@ def ones_like(
     other: Variable,
     dtype: DTypeLikeSave | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable: ...
@@ -1969,7 +1968,7 @@ def ones_like(
     other: Dataset | DataArray,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray: ...
@@ -1980,7 +1979,7 @@ def ones_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable: ...
@@ -1990,7 +1989,7 @@ def ones_like(
     other: Dataset | DataArray | Variable,
     dtype: DTypeMaybeMapping | None = None,
     *,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
@@ -2021,6 +2020,11 @@ def ones_like(
     out : same as object
         New object of ones with the same shape and type as other.
 
+    See Also
+    --------
+    zeros_like
+    full_like
+
     Examples
     --------
     >>> x = xr.DataArray(
@@ -2043,11 +2047,6 @@ def ones_like(
     Coordinates:
       * lat      (lat) int64 16B 1 2
       * lon      (lon) int64 24B 0 1 2
-
-    See Also
-    --------
-    zeros_like
-    full_like
 
     """
     return full_like(

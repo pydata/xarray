@@ -1,13 +1,10 @@
-"""
-Functions for applying functions that act on arrays to xarray's labeled data.
-"""
+"""Functions for applying functions that act on arrays to xarray's labeled data."""
 
 from __future__ import annotations
 
 import functools
 import itertools
 import operator
-import warnings
 from collections import Counter
 from collections.abc import (
     Callable,
@@ -907,8 +904,6 @@ def apply_ufunc(
     kwargs: Mapping | None = None,
     dask: Literal["forbidden", "allowed", "parallelized"] = "forbidden",
     output_dtypes: Sequence | None = None,
-    output_sizes: Mapping[Any, int] | None = None,
-    meta: Any = None,
     dask_gufunc_kwargs: dict[str, Any] | None = None,
     on_missing_core_dim: MissingCoreDimOptions = "raise",
 ) -> Any:
@@ -1014,16 +1009,6 @@ def apply_ufunc(
     output_dtypes : list of dtype, optional
         Optional list of output dtypes. Only used if ``dask='parallelized'`` or
         ``vectorize=True``.
-    output_sizes : dict, optional
-        Optional mapping from dimension names to sizes for outputs. Only used
-        if dask='parallelized' and new dimensions (not found on inputs) appear
-        on outputs. ``output_sizes`` should be given in the ``dask_gufunc_kwargs``
-        parameter. It will be removed as direct parameter in a future version.
-    meta : optional
-        Size-0 object representing the type of array wrapped by dask array. Passed on to
-        :py:func:`dask.array.apply_gufunc`. ``meta`` should be given in the
-        ``dask_gufunc_kwargs`` parameter . It will be removed as direct parameter
-        a future version.
     on_missing_core_dim : {"raise", "copy", "drop"}, default: "raise"
         How to handle missing core dimensions on input variables.
 
@@ -1034,6 +1019,17 @@ def apply_ufunc(
     an input. For DataTree inputs, ``func`` is applied to the datasets at each
     node and the results are rebuilt into trees with the same structure.
 
+    See Also
+    --------
+    numpy.broadcast_arrays
+    numba.vectorize
+    numba.guvectorize
+    dask.array.apply_gufunc
+    xarray.map_blocks
+
+    :ref:`dask.automatic-parallelization`
+        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
+
     Notes
     -----
     This function is designed for the more common case where ``func`` can work on numpy
@@ -1042,11 +1038,13 @@ def apply_ufunc(
 
     Note that due to the overhead :py:func:`xarray.map_blocks` is considerably slower than ``apply_ufunc``.
 
-    :ref:`dask.automatic-parallelization`
-        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
-
     :doc:`xarray-tutorial:advanced/apply_ufunc/apply_ufunc`
         Advanced Tutorial on applying numpy function using :py:func:`apply_ufunc`
+
+    References
+    ----------
+    .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
+    .. [2] https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html
 
     Examples
     --------
@@ -1140,19 +1138,6 @@ def apply_ufunc(
     appropriately for use in ``apply_ufunc``. You may find helper functions such as
     :py:func:`numpy.broadcast_arrays` helpful in writing your function. ``apply_ufunc`` also
     works well with :py:func:`numba.vectorize` and :py:func:`numba.guvectorize`.
-
-    See Also
-    --------
-    numpy.broadcast_arrays
-    numba.vectorize
-    numba.guvectorize
-    dask.array.apply_gufunc
-    xarray.map_blocks
-
-    References
-    ----------
-    .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
-    .. [2] https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.datatree import DataTree
@@ -1193,24 +1178,6 @@ def apply_ufunc(
             dask_gufunc_kwargs = {}
         else:
             dask_gufunc_kwargs = dask_gufunc_kwargs.copy()
-        # todo: remove warnings after deprecation cycle
-        if meta is not None:
-            warnings.warn(
-                "``meta`` should be given in the ``dask_gufunc_kwargs`` parameter."
-                " It will be removed as direct parameter in a future version.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            dask_gufunc_kwargs.setdefault("meta", meta)
-        if output_sizes is not None:
-            warnings.warn(
-                "``output_sizes`` should be given in the ``dask_gufunc_kwargs`` "
-                "parameter. It will be removed as direct parameter in a future "
-                "version.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            dask_gufunc_kwargs.setdefault("output_sizes", output_sizes)
 
     if kwargs:
         if "where" in kwargs and isinstance(kwargs["where"], DataArray):

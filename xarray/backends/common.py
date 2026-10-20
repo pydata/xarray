@@ -469,11 +469,11 @@ class AbstractWritableDataStore(AbstractDataStore):
         return encoded_variables, encoded_attributes
 
     def encode_variable(self, v, name=None):
-        """encode one variable"""
+        """Encode one variable"""
         return v
 
     def encode_attribute(self, a):
-        """encode one attribute"""
+        """Encode one attribute"""
         return a
 
     def prepare_variable(self, name, variable, check_encoding, unlimited_dims):
@@ -490,7 +490,7 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def store_dataset(self, dataset):
         """
-        in stores, variables are all variables AND coordinates
+        In stores, variables are all variables AND coordinates
         in xarray.Dataset variables are variables NOT coordinates,
         so here we pass the whole dataset in instead of doing
         dataset.variables
@@ -566,7 +566,6 @@ class AbstractWritableDataStore(AbstractDataStore):
             List of dimension names that should be treated as unlimited
             dimensions.
         """
-
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -746,7 +745,6 @@ class BackendEntrypoint:
 
     Attributes
     ----------
-
     open_dataset_parameters : tuple, default: None
         A list of ``open_dataset`` method parameters.
         The setting of this attribute is not mandatory.
@@ -780,20 +778,18 @@ class BackendEntrypoint:
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
+        """Backend open_dataset method used by Xarray in
+        :py:func:`~xarray.open_dataset`.
         """
-        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
-        """
-
         raise NotImplementedError()
 
     def guess_can_open(
         self,
         filename_or_obj: T_PathFileOrDataStore,
     ) -> bool:
+        """Backend open_dataset method used by Xarray in
+        :py:func:`~xarray.open_dataset`.
         """
-        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
-        """
-
         return False
 
     def open_datatree(
@@ -807,7 +803,6 @@ class BackendEntrypoint:
 
         If implemented, set the class variable supports_groups to True.
         """
-
         raise NotImplementedError()
 
     def open_groups_as_dict(
@@ -826,7 +821,6 @@ class BackendEntrypoint:
 
         If implemented, set the class variable supports_groups to True.
         """
-
         raise NotImplementedError()
 
 

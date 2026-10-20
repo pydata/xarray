@@ -136,9 +136,7 @@
    core.accessor_dt.DatetimeAccessor.season
    core.accessor_dt.DatetimeAccessor.second
    core.accessor_dt.DatetimeAccessor.time
-   core.accessor_dt.DatetimeAccessor.week
    core.accessor_dt.DatetimeAccessor.weekday
-   core.accessor_dt.DatetimeAccessor.weekofyear
    core.accessor_dt.DatetimeAccessor.year
 
    core.accessor_dt.TimedeltaAccessor.ceil

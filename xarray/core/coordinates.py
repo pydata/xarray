@@ -625,7 +625,6 @@ class Coordinates(AbstractCoordinates):
 
     def update(self, other: Mapping[Any, Any]) -> None:
         """Update this Coordinates variables with other coordinate variables."""
-
         if not len(other):
             return
 
@@ -942,7 +941,6 @@ class DatasetCoordinates(Coordinates):
     @override
     def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
-
         names = [name for name in self._data._variables if name in self._names]
         return self._data._copy_listed(names)
 

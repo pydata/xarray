@@ -230,7 +230,6 @@ def permute_dims[DType: np.dtype[Any], DimType: Hashable](
         data type as x.
 
     """
-
     dims = x.dims
     new_dims = tuple(dims[i] for i in axes)
     if isinstance(x._data, arrayapi):

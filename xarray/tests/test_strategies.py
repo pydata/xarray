@@ -263,8 +263,8 @@ class TestUniqueSubsetOf:
 
 
 class TestReduction:
-    """
-    These tests are for checking that the examples given in the docs page on testing actually work.
+    """These tests are for checking that the examples given in the docs page on testing
+    actually work.
     """
 
     @given(st.data(), variables(dims=dimension_names(min_dims=1)))

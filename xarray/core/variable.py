@@ -65,7 +65,6 @@ from xarray.namedarray.pycompat import (
     array_type,
     async_to_duck_array,
     integer_types,
-    is_0d_dask_array,
     is_chunked_array,
     to_duck_array,
 )
@@ -733,6 +732,12 @@ class Variable(
         out : same as object
             New object with data cast to the specified type.
 
+        See Also
+        --------
+        numpy.ndarray.astype
+        dask.array.Array.astype
+        sparse.COO.astype
+
         Notes
         -----
         The ``order``, ``casting``, ``subok`` and ``copy`` arguments are only passed
@@ -740,12 +745,6 @@ class Variable(
         different than ``None`` is supplied.
         Make sure to only supply these arguments if the underlying array class
         supports them.
-
-        See Also
-        --------
-        numpy.ndarray.astype
-        dask.array.Array.astype
-        sparse.COO.astype
         """
         from xarray.computation.apply_ufunc import apply_ufunc
 
@@ -944,11 +943,11 @@ class Variable(
                         )
 
     def _broadcast_indexes_outer(self, key):
-        # drop dim if k is integer or if k is a 0d dask array
+        # drop dim if k is integer or if k is a 0d duck array (e.g. dask, cupy)
         dims = tuple(
             k.dims[0] if isinstance(k, Variable) else dim
             for k, dim in zip(key, self.dims, strict=True)
-            if (not isinstance(k, integer_types) and not is_0d_dask_array(k))
+            if not (isinstance(k, integer_types) or (is_duck_array(k) and k.ndim == 0))
         )
 
         new_key = []
@@ -1311,7 +1310,7 @@ class Variable(
         self,
         indices: list[list[int]],
         dim: DimType_co,  # type: ignore[misc]
-        chunks: T_Chunks,
+        chunks: T_Chunks | None,
     ) -> Variable[Shape, DType_co, DimType_co]:
         # TODO (dcherian): consider making this public API
         array = self._data
@@ -1639,14 +1638,14 @@ class Variable(
             The returned object has transposed data and dimensions with the
             same attributes as the original.
 
+        See Also
+        --------
+        numpy.transpose
+
         Notes
         -----
         This operation returns a view of this variable's data. It is
         lazy for dask-backed Variables but not for numpy-backed Variables.
-
-        See Also
-        --------
-        numpy.transpose
         """
         if len(dim) == 0:
             dims = self.dims[::-1]
@@ -1838,7 +1837,6 @@ class Variable(
         ``full_product`` is the result of ``is_full_ordered_product(index)``,
         which is computed if not given.
         """
-
         reordered = self.transpose(..., dim)
 
         new_dim_sizes = [lev.size for lev in index.levels]
@@ -2170,7 +2168,6 @@ class Variable(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> Variable[Shape, Any, DimType_co]:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -2240,20 +2237,7 @@ class Variable(
            "Sample quantiles in statistical packages,"
            The American Statistician, 50(4), pp. 361-365, 1996
         """
-
         from xarray.computation.apply_ufunc import apply_ufunc
-
-        if interpolation is not None:
-            warnings.warn(
-                "The `interpolation` argument to quantile was renamed to `method`.",
-                FutureWarning,
-                stacklevel=2,
-            )
-
-            if method != "linear":
-                raise TypeError("Cannot pass interpolation and method keywords!")
-
-            method = interpolation
 
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
             _quantile_func = nputils.nanquantile
@@ -2487,9 +2471,7 @@ class Variable(
     def coarsen(
         self, windows, func, boundary="exact", side="left", keep_attrs=None, **kwargs
     ):
-        """
-        Apply reduction function.
-        """
+        """Apply reduction function."""
         windows = {k: v for k, v in windows.items() if k in self.dims}
 
         if keep_attrs is None:
@@ -2513,9 +2495,7 @@ class Variable(
         return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
     def coarsen_reshape(self, windows, boundary, side):
-        """
-        Construct a reshaped-array for coarsen
-        """
+        """Construct a reshaped-array for coarsen"""
         if not is_dict_like(boundary):
             boundary = dict.fromkeys(windows.keys(), boundary)
 
@@ -2893,17 +2873,13 @@ class Variable(
 
     @override
     def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Self:
-        """
-        Use sparse-array as backend.
-        """
+        """Use sparse-array as backend."""
         out = super()._as_sparse(sparse_format, fill_value)
         return cast("Self", out)
 
     @override
     def _to_dense(self) -> Self:
-        """
-        Change backend from sparse to np.array.
-        """
+        """Change backend from sparse to np.array."""
         out = super()._to_dense()
         return cast("Self", out)
 
@@ -2966,7 +2942,6 @@ class Variable(
         xarray.unify_chunks
         dask.array.from_array
         """
-
         if from_array_kwargs is None:
             from_array_kwargs = {}
 
@@ -3391,6 +3366,19 @@ def _broadcast_compat_variables(*variables):
     """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
+
+
+def _as_shared_dtype(variables: Sequence[Variable]) -> tuple[Variable, ...]:
+    """Cast variables to a shared dtype, preserving their attrs and encoding."""
+    # Casting after broadcasting can materialize the full expanded array before
+    # it is split into chunks for concatenation or stacking.
+    arrays = [var._data for var in variables]
+    arrays = duck_array_ops.as_shared_dtype(
+        arrays, xp=duck_array_ops.get_array_namespace(*arrays)
+    )
+    return tuple(
+        var._replace(data=data) for var, data in zip(variables, arrays, strict=True)
+    )
 
 
 def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:

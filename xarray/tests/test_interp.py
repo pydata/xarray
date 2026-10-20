@@ -391,7 +391,6 @@ def test_interpolate_nd_nd(method: InterpnOptions) -> None:
 @pytest.mark.filterwarnings("ignore:All-NaN slice")
 def test_interpolate_nd_with_nan() -> None:
     """Interpolate an array with an nd indexer and `NaN` values."""
-
     # Create indexer into `a` with dimensions (y, x)
     x = [0, 1, 2]
     y = [10, 20]
@@ -661,7 +660,6 @@ def test_dataset() -> None:
 @pytest.mark.parametrize("case", [pytest.param(0, id="2D"), pytest.param(3, id="3D")])
 def test_interpolate_dimorder(case: int) -> None:
     """Make sure the resultant dimension order is consistent with .sel()"""
-
     da = get_example_data(case)
 
     new_x = xr.DataArray([0, 1, 2], dims="x")
@@ -939,7 +937,6 @@ def test_interpolate_chunk_1d(
 
     It should do a series of 1d interpolation
     """
-
     # 3d non chunked data
     x = np.linspace(0, 1, 6)
     y = np.linspace(2, 4, 7)

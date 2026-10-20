@@ -59,6 +59,11 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
     version : str
         version of the library when the positional arguments were deprecated
 
+    Notes
+    -----
+    This function is adapted from scikit-learn under the terms of its license. See
+    licences/SCIKIT_LEARN_LICENSE
+
     Examples
     --------
     Deprecate passing `b` as positional argument:
@@ -71,11 +76,6 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
         pass
 
     func(1, 2)
-
-    Notes
-    -----
-    This function is adapted from scikit-learn under the terms of its license. See
-    licences/SCIKIT_LEARN_LICENSE
     """
 
     def _decorator(func):

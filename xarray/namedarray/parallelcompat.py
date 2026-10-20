@@ -70,7 +70,6 @@ def load_chunkmanagers(
     entrypoints: Sequence[EntryPoint],
 ) -> dict[str, ChunkManagerEntrypoint[Any]]:
     """Load entrypoints and instantiate chunkmanagers only once."""
-
     loaded_entrypoints = {}
     for entrypoint in entrypoints:
         try:
@@ -97,7 +96,6 @@ def guess_chunkmanager(
     If the name of a specific ChunkManager is given (e.g. "dask"), then use that.
     Else use whatever is installed, defaulting to dask if there are multiple options.
     """
-
     available_chunkmanagers = list_chunkmanagers()
 
     if manager is None:
@@ -144,7 +142,6 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
     Also checks that all arrays are handled by the same chunk manager (i.e. not a mix of
     cubed and dask).
     """
-
     # TODO this list is probably redundant with something inside xarray.apply_ufunc
     ALLOWED_NON_CHUNKED_TYPES = {int, float, np.ndarray}
 
@@ -397,7 +394,11 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         raise NotImplementedError()
 
     def shuffle(
-        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+        self,
+        x: T_ChunkedArray,
+        indexer: list[list[int]],
+        axis: int,
+        chunks: T_Chunks | None,
     ) -> T_ChunkedArray:
         raise NotImplementedError()
 
@@ -786,7 +787,6 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         chunk_size : int
             The chunk size in bytes.
         """
-
         raise NotImplementedError(
             "For 'auto' rechunking of cftime arrays, get_auto_chunk_size must be implemented by the chunk manager"
         )

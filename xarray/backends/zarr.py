@@ -331,7 +331,8 @@ class ZarrArrayWrapper(BackendArray):
 
 def _rectilinear_encoding_error(key: str, value, name) -> TypeError:
     """Error for a rectilinear (variable-sized) chunk or shard spec, which xarray
-    can read but not yet write."""
+    can read but not yet write.
+    """
     return TypeError(
         f"encoding[{key!r}]={value!r} for variable {name!r} is a rectilinear "
         "(variable-sized) grid, e.g. read from a store opened with "
@@ -348,7 +349,6 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
     """
-
     # zarr chunk spec:
     # chunks : int or tuple of ints, optional
     #   Chunk shape. If not provided, will be guessed from shape and dtype.
@@ -514,12 +514,12 @@ def extract_zarr_variable_encoding(
     raise_on_invalid : bool, optional
     name: str | Hashable, optional
     zarr_format: Literal[2,3]
+
     Returns
     -------
     encoding : dict
         Zarr encoding for `variable`
     """
-
     encoding = variable.encoding.copy()
 
     safe_to_drop = {"source", "original_shape", "preferred_chunks"}
@@ -906,9 +906,7 @@ class ZarrStore(AbstractWritableDataStore):
             return self._members
 
     def _fetch_members(self) -> dict[str, ZarrArray | ZarrGroup]:
-        """
-        Get the arrays and groups defined in the zarr group modelled by this Store
-        """
+        """Get the arrays and groups defined in the zarr group modelled by this Store"""
         return dict(self.zarr_group.members())
 
     def array_keys(self) -> tuple[str, ...]:
@@ -1277,7 +1275,6 @@ class ZarrStore(AbstractWritableDataStore):
             List of dimension names that should be treated as unlimited
             dimensions.
         """
-
         existing_keys = self.array_keys()
         is_zarr_v3_format = self.zarr_group.metadata.zarr_format == 3
 
@@ -1778,7 +1775,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 consolidated=consolidated,
                 consolidate_on_close=False,
                 storage_options=storage_options,
-                use_zarr_fill_value_as_mask=None,
+                use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
                 zarr_format=zarr_format,
                 cache_members=cache_members,
             )
@@ -1814,6 +1811,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         storage_options=None,
         zarr_format=None,
+        use_zarr_fill_value_as_mask=None,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
@@ -1830,6 +1828,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidated=consolidated,
             storage_options=storage_options,
             zarr_format=zarr_format,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -1851,6 +1850,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         storage_options=None,
         zarr_format=None,
+        use_zarr_fill_value_as_mask=None,
     ) -> dict[str, Dataset]:
         filename_or_obj = _normalize_path(filename_or_obj)
 
@@ -1868,6 +1868,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidate_on_close=False,
             storage_options=storage_options,
             zarr_format=zarr_format,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
         )
 
         groups_dict = {}

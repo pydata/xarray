@@ -1076,12 +1076,22 @@ def _outer_to_vectorized_indexer(
     """
     key = indexer.tuple
 
-    n_dim = len([k for k in key if not isinstance(k, integer_types)])
+    # 0d duck arrays (e.g. dask, cupy) are treated like integers
+    n_dim = len(
+        [
+            k
+            for k in key
+            if not isinstance(k, integer_types) and getattr(k, "ndim", None) != 0
+        ]
+    )
     i_dim = 0
     new_key = []
     for k, size in zip(key, shape, strict=True):
         if isinstance(k, integer_types):
             new_key.append(np.array(k).reshape((1,) * n_dim))
+        elif getattr(k, "ndim", None) == 0:
+            # 0d duck array: reshape without converting to numpy
+            new_key.append(k.reshape((1,) * n_dim))
         else:  # np.ndarray or slice
             if isinstance(k, slice):
                 k = np.arange(*k.indices(size))
@@ -1238,7 +1248,7 @@ def decompose_indexer(
 
 
 def _decompose_slice(key: slice, size: int) -> tuple[slice, slice]:
-    """convert a slice to successive two slices. The first slice always has
+    """Convert a slice to successive two slices. The first slice always has
     a positive step.
 
     >>> _decompose_slice(slice(2, 98, 2), 99)
@@ -1568,7 +1578,6 @@ def _chunked_array_with_chunks_hint(
     array, chunks, chunkmanager: ChunkManagerEntrypoint[Any]
 ):
     """Create a chunked array using the chunks hint for dimensions of size > 1."""
-
     if len(chunks) < array.ndim:
         raise ValueError("not enough chunks in hint")
     new_chunks = []

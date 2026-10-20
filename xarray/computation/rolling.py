@@ -165,8 +165,7 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
         )
 
     def __repr__(self) -> str:
-        """provide a nice str repr of our rolling object"""
-
+        """Provide a nice str repr of our rolling object"""
         attrs = ",".join(
             f"{k}->{w}{'(center)' if c else ''}"
             for k, w, c in zip(self.dim, self.window, self.center, strict=True)
@@ -454,7 +453,6 @@ class DataArrayRolling(Rolling["DataArray"]):
         Dimensions without coordinates: a, b, window_dim
 
         """
-
         if sliding_window_view_kwargs is None:
             sliding_window_view_kwargs = {}
         return self._construct(
@@ -596,7 +594,6 @@ class DataArrayRolling(Rolling["DataArray"]):
                [ 4.,  9., 15., 18.]])
         Dimensions without coordinates: a, b
         """
-
         keep_attrs = self._get_keep_attrs(keep_attrs)
 
         rolling_dim = {
@@ -628,7 +625,6 @@ class DataArrayRolling(Rolling["DataArray"]):
     @override
     def _counts(self, keep_attrs: bool | None) -> DataArray:
         """Number of non-nan entries in each rolling window."""
-
         rolling_dim = {
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
@@ -1074,7 +1070,6 @@ class DatasetRolling(Rolling["Dataset"]):
         Importantly, each chunk will be a view of the data so large chunk sizes are
         only safe if *no* copies are made later.
         """
-
         from xarray.core.dataset import Dataset
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
@@ -1205,8 +1200,7 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         return keep_attrs
 
     def __repr__(self) -> str:
-        """provide a nice str repr of our coarsen object"""
-
+        """Provide a nice str repr of our coarsen object"""
         attrs = ",".join(
             f"{k}->{getattr(self, k)}"
             for k in self._attributes
@@ -1217,7 +1211,6 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
     @staticmethod
     def _reduce_method_impl(name: str, include_skipna: bool) -> Callable[..., T_Xarray]:
         """Creates methods that mirror the implementation in Rolling."""
-
         kwargs: dict[str, Any] = {}
         if include_skipna:
             kwargs["skipna"] = None
@@ -1282,6 +1275,11 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         -------
         Dataset or DataArray with reshaped dimensions
 
+        See Also
+        --------
+        DataArrayRolling.construct
+        DatasetRolling.construct
+
         Examples
         --------
         >>> da = xr.DataArray(np.arange(24), dims="time")
@@ -1290,13 +1288,7 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
                [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
         Dimensions without coordinates: year, month
-
-        See Also
-        --------
-        DataArrayRolling.construct
-        DatasetRolling.construct
         """
-
         from xarray.core.dataarray import DataArray
         from xarray.core.dataset import Dataset
 
@@ -1372,9 +1364,7 @@ class DataArrayCoarsen(Coarsen["DataArray"]):
     def _reduce_method(
         cls, func: Callable, include_skipna: bool = False, numeric_only: bool = False
     ) -> Callable[..., DataArray]:
-        """
-        Return a wrapped function for injecting reduction methods.
-        """
+        """Return a wrapped function for injecting reduction methods."""
         kwargs: dict[str, Any] = {}
         if include_skipna:
             kwargs["skipna"] = None
@@ -1458,9 +1448,7 @@ class DatasetCoarsen(Coarsen["Dataset"]):
     def _reduce_method(
         cls, func: Callable, include_skipna: bool = False, numeric_only: bool = False
     ) -> Callable[..., Dataset]:
-        """
-        Return a wrapped function for injecting reduction methods.
-        """
+        """Return a wrapped function for injecting reduction methods."""
         kwargs: dict[str, Any] = {}
         if include_skipna:
             kwargs["skipna"] = None
