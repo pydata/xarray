@@ -42,7 +42,7 @@ jobs:
 
     environment:
       name: scientific-python-nightly-conda
-      url: https://prefix.dev/@scientific-python/scientific-python-nightly
+      url: https://prefix.dev/scientific-python/scientific-python-nightly
 
     permissions:
       contents: read
