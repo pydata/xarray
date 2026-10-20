@@ -1599,13 +1599,7 @@ class DataArray(
         """
         chunk_mapping: T_ChunksFreq
         if chunks is None:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            chunk_mapping = {}
+            raise TypeError("chunks=None is not supported. Use chunks={} instead.")
 
         if isinstance(chunks, float | str | int):
             # ignoring type; unclear why it won't accept a Literal into the value.
@@ -1859,7 +1853,7 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def _shuffle(
-        self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks
+        self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks | None
     ) -> Self:
         ds = self._to_temp_dataset()._shuffle(dim=dim, indices=indices, chunks=chunks)
         return self._from_temp_dataset(ds)
@@ -5447,7 +5441,6 @@ class DataArray(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> Self:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5554,7 +5547,6 @@ class DataArray(
             keep_attrs=keep_attrs,
             method=method,
             skipna=skipna,
-            interpolation=interpolation,
         )
         return self._from_temp_dataset(ds)
 
@@ -7146,7 +7138,6 @@ class DataArray(
         """
         return interp_calendar(self, target, dim=dim)
 
-    @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
         group: GroupInput = None,
@@ -7290,11 +7281,12 @@ class DataArray(
         )
         return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
-    @_deprecate_positional_args("v2024.07.0")
+    @_deprecate_positional_args("v2026.10.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
         bins: Bins,
+        *,
         right: bool = True,
         labels: ArrayLike | Literal[False] | None = None,
         precision: int = 3,
@@ -7718,7 +7710,6 @@ class DataArray(
             coord_func=coord_func,
         )
 
-    @_deprecate_positional_args("v2024.07.0")
     def resample(
         self,
         indexer: Mapping[Hashable, ResampleCompatible | Resampler] | None = None,

@@ -1777,7 +1777,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 consolidated=consolidated,
                 consolidate_on_close=False,
                 storage_options=storage_options,
-                use_zarr_fill_value_as_mask=None,
+                use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
                 zarr_format=zarr_format,
                 cache_members=cache_members,
             )
@@ -1813,6 +1813,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         storage_options=None,
         zarr_format=None,
+        use_zarr_fill_value_as_mask=None,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
@@ -1829,6 +1830,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidated=consolidated,
             storage_options=storage_options,
             zarr_format=zarr_format,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -1850,6 +1852,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         storage_options=None,
         zarr_format=None,
+        use_zarr_fill_value_as_mask=None,
     ) -> dict[str, Dataset]:
         filename_or_obj = _normalize_path(filename_or_obj)
 
@@ -1867,6 +1870,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidate_on_close=False,
             storage_options=storage_options,
             zarr_format=zarr_format,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
         )
 
         groups_dict = {}

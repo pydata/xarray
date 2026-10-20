@@ -32,13 +32,23 @@ uv run dmypy run  # Type checking with mypy
   2. Related third-party imports
   3. Local application/library specific imports
 
+## CI
+
+- The `test-py314 (flaky)` job runs tests that depend on external services
+  (e.g. test.opendap.org) and fails regularly for unrelated reasons. It does not
+  block merging, so don't skip or change these tests, ask for reruns, or explain
+  these failures in PRs.
+
 ## GitHub Interaction Guidelines
 
 - **NEVER impersonate the user on GitHub**, always sign off with something like
-  "[This is Claude Code on behalf of Jane Doe]"
+  "[This is <tool name> on behalf of Jane Doe]"
 - Never create issues nor pull requests on the xarray GitHub repository unless
   explicitly instructed
 - Never post "update" messages, progress reports, or explanatory comments on
   GitHub issues/PRs unless specifically instructed
-- When creating commits, always include a co-authorship trailer:
-  `Co-authored-by: Claude <noreply@anthropic.com>`
+- Don't comment on an issue to ask to be assigned or to announce that you are
+  working on it or will open a PR. xarray does not assign issues: just open the
+  PR and reference the issue in its description.
+- When creating commits, always include a co-authorship trailer for the tool,
+  e.g. `Co-authored-by: Claude <noreply@anthropic.com>`

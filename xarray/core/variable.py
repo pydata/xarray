@@ -65,7 +65,6 @@ from xarray.namedarray.pycompat import (
     array_type,
     async_to_duck_array,
     integer_types,
-    is_0d_dask_array,
     is_chunked_array,
     to_duck_array,
 )
@@ -944,11 +943,11 @@ class Variable(
                         )
 
     def _broadcast_indexes_outer(self, key):
-        # drop dim if k is integer or if k is a 0d dask array
+        # drop dim if k is integer or if k is a 0d duck array (e.g. dask, cupy)
         dims = tuple(
             k.dims[0] if isinstance(k, Variable) else dim
             for k, dim in zip(key, self.dims, strict=True)
-            if (not isinstance(k, integer_types) and not is_0d_dask_array(k))
+            if not (isinstance(k, integer_types) or (is_duck_array(k) and k.ndim == 0))
         )
 
         new_key = []
@@ -1311,7 +1310,7 @@ class Variable(
         self,
         indices: list[list[int]],
         dim: DimType_co,  # type: ignore[misc]
-        chunks: T_Chunks,
+        chunks: T_Chunks | None,
     ) -> Variable[Shape, DType_co, DimType_co]:
         # TODO (dcherian): consider making this public API
         array = self._data
@@ -2170,7 +2169,6 @@ class Variable(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> Variable[Shape, Any, DimType_co]:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -2242,18 +2240,6 @@ class Variable(
         """
 
         from xarray.computation.apply_ufunc import apply_ufunc
-
-        if interpolation is not None:
-            warnings.warn(
-                "The `interpolation` argument to quantile was renamed to `method`.",
-                FutureWarning,
-                stacklevel=2,
-            )
-
-            if method != "linear":
-                raise TypeError("Cannot pass interpolation and method keywords!")
-
-            method = interpolation
 
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
             _quantile_func = nputils.nanquantile
@@ -3391,6 +3377,19 @@ def _broadcast_compat_variables(*variables):
     """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
+
+
+def _as_shared_dtype(variables: Sequence[Variable]) -> tuple[Variable, ...]:
+    """Cast variables to a shared dtype, preserving their attrs and encoding."""
+    # Casting after broadcasting can materialize the full expanded array before
+    # it is split into chunks for concatenation or stacking.
+    arrays = [var._data for var in variables]
+    arrays = duck_array_ops.as_shared_dtype(
+        arrays, xp=duck_array_ops.get_array_namespace(*arrays)
+    )
+    return tuple(
+        var._replace(data=data) for var, data in zip(variables, arrays, strict=True)
+    )
 
 
 def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:

@@ -1520,14 +1520,10 @@ class StringAccessor[T_DataArray: DataArray]:
             pat = self._stringify(pat)
             if case or case is None:
                 func = lambda x, ipat: ipat in x
-            elif self._obj.dtype.char == "U":
-                uppered = self.casefold()
-                uppat = StringAccessor(pat).casefold()  # type: ignore[type-var]  # hack?
-                return uppered.str.contains(uppat, regex=False)  # type: ignore[return-value]
+            elif self._obj.dtype.kind == "S":
+                func = lambda x, ipat: ipat.upper() in x.upper()
             else:
-                uppered = self.upper()
-                uppat = StringAccessor(pat).upper()  # type: ignore[type-var]  # hack?
-                return uppered.str.contains(uppat, regex=False)  # type: ignore[return-value]
+                func = lambda x, ipat: ipat.casefold() in x.casefold()
 
         return self._apply(func=func, func_args=(pat,), dtype=bool)
 
@@ -1962,7 +1958,22 @@ class StringAccessor[T_DataArray: DataArray]:
             )
         else:
             pat = self._stringify(pat)
-            func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
+            if case is False:
+                # Literal match, but case-insensitive: escape the pattern and
+                # return the replacement as-is so it is not parsed as a template.
+                func = lambda x, ipat, irepl, i_n: (
+                    x
+                    if i_n == 0
+                    else re.sub(
+                        re.escape(ipat),
+                        lambda _: irepl,
+                        x,
+                        count=max(i_n, 0),
+                        flags=re.IGNORECASE,
+                    )
+                )
+            else:
+                func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
         return self._apply(func=func, func_args=(pat, repl, n))
 
     def extract(

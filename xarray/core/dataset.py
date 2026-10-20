@@ -108,6 +108,7 @@ from xarray.core.variable import (
     UNSUPPORTED_EXTENSION_ARRAY_TYPES,
     IndexVariable,
     Variable,
+    _as_shared_dtype,
     as_variable,
     broadcast_variables,
     calculate_dimensions,
@@ -195,7 +196,6 @@ _DATETIMEINDEX_COMPONENTS = [
     "date",
     "time",
     "dayofyear",
-    "weekofyear",
     "dayofweek",
     "quarter",
 ]
@@ -2643,13 +2643,7 @@ class Dataset(
         from xarray.groupers import Resampler
 
         if chunks is None and not chunks_kwargs:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            chunks = {}
+            raise TypeError("chunks=None is not supported. Use chunks={} instead.")
         chunks_mapping: Mapping[Any, Any]
         if not isinstance(chunks, Mapping) and chunks is not None:
             if isinstance(chunks, tuple | list):
@@ -3099,7 +3093,7 @@ class Dataset(
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
         return result._overwrite_indexes(*query_results.as_tuple()[1:])
 
-    def _shuffle(self, dim, *, indices: GroupIndices, chunks: T_Chunks) -> Self:
+    def _shuffle(self, dim, *, indices: GroupIndices, chunks: T_Chunks | None) -> Self:
         # Shuffling is only different from `isel` for chunked arrays.
         # Extract them out, and treat them specially. The rest, we route through isel.
         # This makes it easy to ensure correct handling of indexes.
@@ -7271,7 +7265,7 @@ class Dataset(
         from xarray.core.dataarray import DataArray
 
         data_vars = [self.variables[k] for k in self.data_vars]
-        broadcast_vars = broadcast_variables(*data_vars)
+        broadcast_vars = broadcast_variables(*_as_shared_dtype(data_vars))
         data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=0)
 
         dims = (dim,) + broadcast_vars[0].dims
@@ -8389,7 +8383,6 @@ class Dataset(
         numeric_only: bool = False,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> Self:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -8497,20 +8490,6 @@ class Dataset(
            "Sample quantiles in statistical packages,"
            The American Statistician, 50(4), pp. 361-365, 1996
         """
-
-        # interpolation renamed to method in version 0.21.0
-        # check here and in variable to avoid repeated warnings
-        if interpolation is not None:
-            warnings.warn(
-                "The `interpolation` argument to quantile was renamed to `method`.",
-                FutureWarning,
-                stacklevel=2,
-            )
-
-            if method != "linear":
-                raise TypeError("Cannot pass interpolation and method keywords!")
-
-            method = interpolation
 
         dims: set[Hashable]
         if isinstance(dim, str):
@@ -10148,6 +10127,51 @@ class Dataset(
         -------
         Dataset
 
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("time", [10, 12, 14, 16])},
+        ...     coords={"time": [0, 1, 1, 2]},
+        ... )
+
+        >>> ds
+        <xarray.Dataset> Size: 64B
+        Dimensions:      (time: 4)
+        Coordinates:
+          * time         (time) int64 32B 0 1 1 2
+        Data variables:
+            temperature  (time) int64 32B 10 12 14 16
+
+        By default, the first value for each coordinate label is kept:
+
+        >>> ds.drop_duplicates("time")
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) int64 24B 10 12 16
+
+        Use ``keep="last"`` to retain the last value for a repeated label:
+
+        >>> ds.drop_duplicates("time", keep="last")
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) int64 24B 10 14 16
+
+        Use ``keep=False`` to discard every occurrence of duplicated labels:
+
+        >>> ds.drop_duplicates("time", keep=False)
+        <xarray.Dataset> Size: 32B
+        Dimensions:      (time: 2)
+        Coordinates:
+          * time         (time) int64 16B 0 2
+        Data variables:
+            temperature  (time) int64 16B 10 16
+
         See Also
         --------
         DataArray.drop_duplicates
@@ -10324,7 +10348,6 @@ class Dataset(
         """
         return interp_calendar(self, target, dim=dim)
 
-    @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
         group: GroupInput = None,
@@ -10437,11 +10460,12 @@ class Dataset(
 
         return DatasetGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
-    @_deprecate_positional_args("v2024.07.0")
+    @_deprecate_positional_args("v2026.10.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
         bins: Bins,
+        *,
         right: bool = True,
         labels: ArrayLike | None = None,
         precision: int = 3,
@@ -10710,7 +10734,6 @@ class Dataset(
             coord_func=coord_func,
         )
 
-    @_deprecate_positional_args("v2024.07.0")
     def resample(
         self,
         indexer: Mapping[Any, ResampleCompatible | Resampler] | None = None,

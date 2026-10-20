@@ -1010,6 +1010,10 @@ class TestDataArray:
         roundtripped = pickle.loads(pickle.dumps(data))
         assert_identical(data, roundtripped)
 
+    def test_chunk_none_raises(self) -> None:
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            DataArray(np.ones((3, 4))).chunk(None)  # type: ignore[arg-type]
+
     @requires_dask
     def test_chunk(self) -> None:
         unblocked = DataArray(np.ones((3, 4)))
@@ -3319,28 +3323,6 @@ class TestDataArray:
         expected = np.nanquantile(self.dv.values, np.array(q), method=method)
 
         np.testing.assert_allclose(actual.values, expected)
-
-    @pytest.mark.filterwarnings(
-        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-    )
-    @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    def test_quantile_interpolation_deprecated(self, method) -> None:
-        da = DataArray(self.va)
-        q = [0.25, 0.5, 0.75]
-
-        with pytest.warns(
-            FutureWarning,
-            match="`interpolation` argument to quantile was renamed to `method`",
-        ):
-            actual = da.quantile(q, interpolation=method)
-
-        expected = da.quantile(q, method=method)
-
-        np.testing.assert_allclose(actual.values, expected.values)
-
-        with warnings.catch_warnings(record=True):
-            with pytest.raises(TypeError, match="interpolation and method keywords"):
-                da.quantile(q, method=method, interpolation=method)
 
     def test_reduce_keep_attrs(self) -> None:
         # Test default behavior (keeps attrs for reduction operations)

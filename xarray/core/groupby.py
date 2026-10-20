@@ -712,7 +712,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def shuffle_to_chunks(self, chunks: T_Chunks = None) -> T_Xarray:
+    def shuffle_to_chunks(self, chunks: T_Chunks | None = None) -> T_Xarray:
         """
         Sort or "shuffle" the underlying object.
 
@@ -764,7 +764,9 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         obj, _ = self._shuffle_obj(chunks)
         return obj
 
-    def _shuffle_obj(self, chunks: T_Chunks) -> tuple[T_Xarray, tuple[DataArray, ...]]:
+    def _shuffle_obj(
+        self, chunks: T_Chunks | None
+    ) -> tuple[T_Xarray, tuple[DataArray, ...]]:
         """Shuffle the object, so that all members of a group are in the same chunk.
 
         The codes of each grouper are shuffled along with it, so that they match
@@ -1355,7 +1357,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> T_Xarray:
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
@@ -1497,7 +1498,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
                 method=method,
                 keep_attrs=keep_attrs,
                 skipna=skipna,
-                interpolation=interpolation,
             )
 
     def where(self, cond, other=dtypes.NA) -> T_Xarray:

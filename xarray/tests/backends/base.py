@@ -21,7 +21,14 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset, load_dataset, open_dataset, open_mfdataset
+from xarray import (
+    DataArray,
+    Dataset,
+    concat,
+    load_dataset,
+    open_dataset,
+    open_mfdataset,
+)
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.coders import CFTimedeltaCoder
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
@@ -548,6 +555,17 @@ class DatasetIOBase:
         expected = Dataset({"x": ("t", ["ab", "cdef"])})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
+
+    # netCDF3 stores the strings as char arrays and warns that the width in
+    # char_dim_name no longer fits
+    @pytest.mark.filterwarnings("ignore:String dimension naming mismatch")
+    def test_roundtrip_longer_strings_after_concat(self) -> None:
+        # regression test for GH10968: the string width recorded in the encoding
+        # on read must not truncate longer values that are written later
+        with self.roundtrip(Dataset({"x": ("t", ["base"])})) as short:
+            combined = concat([short, Dataset({"x": ("t", ["base_case"])})], dim="t")
+            with self.roundtrip(combined) as actual:
+                assert_identical(combined, actual)
 
     def test_roundtrip_stringdtype_data(self) -> None:
         # GH11199

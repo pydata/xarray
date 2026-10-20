@@ -1316,11 +1316,7 @@ class ZarrBase(CFEncodedBase):
 
         # turn off all decoding so we see what Zarr returns to us.
         # Since chunks, are not written, we should receive on `fill_value`
-        open_kwargs = {
-            "mask_and_scale": False,
-            "consolidated": False,
-            "use_zarr_fill_value_as_mask": False,
-        }
+        open_kwargs = {"mask_and_scale": False, "consolidated": False}
         save_kwargs = dict(compute=False, consolidated=False)
         with self.roundtrip(
             ds,
@@ -1369,6 +1365,26 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(ds, open_kwargs=open_kwargs) as opened:
             with self.roundtrip(opened, open_kwargs=open_kwargs) as actual:
                 assert actual.foo.encoding["fill_value"] == -99
+
+    @skip_if_zarr_format_2("fill_value is only an encoding key for zarr_format 3")
+    @pytest.mark.parametrize(
+        "use_zarr_fill_value_as_mask, expected",
+        [(True, [1.0, np.nan, 3.0]), (False, [1.0, -99.0, 3.0])],
+    )
+    def test_use_zarr_fill_value_as_mask(
+        self, use_zarr_fill_value_as_mask, expected
+    ) -> None:
+        # GH #10269: the option has to reach the store, otherwise the
+        # zarr_format 3 default (False) is always used
+        ds = xr.Dataset({"foo": ("x", [1.0, -99.0, 3.0])})
+        ds.foo.encoding = {"fill_value": -99.0}
+
+        open_kwargs = {
+            "consolidated": False,
+            "use_zarr_fill_value_as_mask": use_zarr_fill_value_as_mask,
+        }
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as actual:
+            np.testing.assert_equal(actual.foo.values, expected)
 
 
 @requires_zarr
