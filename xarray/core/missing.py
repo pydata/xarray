@@ -769,8 +769,8 @@ def interpolate_variable(
         dask_gufunc_kwargs=dict(output_sizes=output_sizes, allow_rechunk=True),
         output_dtypes=[dtype],
         # only loop over the dimensions along which the destination coordinates vary,
-        # np.vectorize would loop over all of them (GH10683)
-        vectorize="shared",
+        # np.vectorize would also loop over all other broadcast dimensions (GH10683)
+        vectorize=[d for d in var.dims if d in vectorize_dims],
         keep_attrs=True,
     )
     return result
@@ -808,9 +808,9 @@ def _interpnd(
     the other half are destination coordinates.
 
     `data` has the loop dimensions first, followed by the dimensions we
-    interpolate along. ``apply_ufunc(..., vectorize="shared")`` only loops over
-    the loop dimensions along which the destination coordinates vary, e.g. ``t``
-    for ``da[t, r, z].interp(z=target[t])``, so the destination coordinates have
+    interpolate along. ``apply_ufunc`` only loops over the loop dimensions along
+    which the destination coordinates vary, e.g. ``t`` for
+    ``da[t, r, z].interp(z=target[t])``, so the destination coordinates have
     size 1 along all remaining loop dimensions.
     """
     n_x = len(coords) // 2

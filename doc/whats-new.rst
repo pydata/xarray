@@ -13,8 +13,8 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- :py:func:`apply_ufunc` supports ``vectorize="shared"``, which only loops over
-  the broadcast dimensions along which more than one input varies and passes
+- :py:func:`apply_ufunc` accepts dimension names for ``vectorize``, e.g.
+  ``vectorize=["time"]``, to only loop over these broadcast dimensions and pass
   all other broadcast dimensions to ``func`` in bulk. This is much faster than
   ``vectorize=True`` if ``func`` can broadcast its inputs, for numpy and dask
   arrays alike (:pull:`11681`).
@@ -349,9 +349,10 @@ Bug Fixes
 Documentation
 ~~~~~~~~~~~~~
 - Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
-  docstring, and a section on ``vectorize="shared"`` to the
-  :doc:`apply_ufunc example notebook <examples/apply_ufunc_vectorize_1d>`,
-  which is executed again in the documentation build (:pull:`11681`).
+  docstring. The ``apply_ufunc`` example notebook was removed in favor of the
+  `apply_ufunc interpolation tutorial
+  <https://tutorial.xarray.dev/advanced/apply_ufunc/example-interp.html>`_
+  (:pull:`11681`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Add hidden intersphinx inventory entries for methods, properties and
   attributes at the path where they are defined, e.g.
@@ -6578,7 +6579,7 @@ Documentation
 - Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
   ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Add new :doc:`example notebook <examples/apply_ufunc_vectorize_1d>` example notebook demonstrating
+- Add new example notebook demonstrating
   vectorization of a 1D function using :py:func:`apply_ufunc` , dask and numba.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added example for :py:func:`~xarray.map_blocks`. (:pull:`3667`)

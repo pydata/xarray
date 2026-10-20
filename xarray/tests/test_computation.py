@@ -1645,7 +1645,19 @@ def test_vectorize_exclude_dims_dask() -> None:
     assert_identical(expected, actual)
 
 
-def test_vectorize_shared(use_dask: bool) -> None:
+@pytest.mark.parametrize(
+    "vectorize, expected_shapes",
+    [
+        (["t"], [((3, 1, 5), (1, 2, 5))] * 4),
+        ("t", [((3, 1, 5), (1, 2, 5))] * 4),
+        (["t", "r"], [((1, 5), (2, 5))] * 12),
+    ],
+)
+def test_vectorize_dims(
+    use_dask: bool,
+    vectorize: str | list[str],
+    expected_shapes: list[tuple[tuple[int, ...], tuple[int, ...]]],
+) -> None:
     rng = np.random.default_rng(0)
     a = xr.DataArray(rng.random((4, 3, 5)), dims=("t", "r", "z"))
     b = xr.DataArray(rng.random((4, 2, 5)), dims=("t", "s", "z"))
@@ -1662,18 +1674,30 @@ def test_vectorize_shared(use_dask: bool) -> None:
         a,
         b,
         input_core_dims=[["z"], ["z"]],
-        vectorize="shared",
+        vectorize=vectorize,
         dask="parallelized",
         output_dtypes=[float],
     ).compute()
     expected = (a * b).sum("z").transpose("t", "r", "s").compute()
     xr.testing.assert_allclose(actual, expected)
-    # only "t" is looped over, "r" and "s" are passed in bulk
-    assert len(shapes) == 4
-    assert set(shapes) == {((3, 1, 5), (1, 2, 5))}
+    # only the given dimensions are looped over, all others are passed in bulk
+    assert shapes == expected_shapes
 
 
-def test_vectorize_shared_without_loop() -> None:
+def test_vectorize_dims_loop_order() -> None:
+    a = xr.DataArray(np.arange(6.0).reshape(2, 3), dims=("x", "y"))
+    calls = []
+
+    def func(x: np.ndarray) -> np.ndarray:
+        calls.append(x.item())
+        return x
+
+    actual = apply_ufunc(func, a, vectorize=["y", "x"])
+    assert_identical(actual, a)
+    assert calls == [0.0, 3.0, 1.0, 4.0, 2.0, 5.0]
+
+
+def test_vectorize_dims_missing_on_some_inputs() -> None:
     a = xr.DataArray(np.arange(6.0).reshape(2, 3), dims=("x", "z"))
     b = xr.DataArray(np.arange(3.0), dims="z")
     shapes = []
@@ -1682,12 +1706,23 @@ def test_vectorize_shared_without_loop() -> None:
         shapes.append((x.shape, y.shape))
         return (x * y).sum(axis=-1)
 
-    actual = apply_ufunc(dot, a, b, input_core_dims=[["z"], ["z"]], vectorize="shared")
+    actual = apply_ufunc(dot, a, b, input_core_dims=[["z"], ["z"]], vectorize=["x"])
     assert_identical(actual, xr.DataArray([5.0, 14.0], dims="x"))
-    assert shapes == [((2, 3), (3,))]
+    assert shapes == [((3,), (3,))] * 2
 
 
-def test_vectorize_shared_multiple_outputs() -> None:
+def test_vectorize_dims_dataset() -> None:
+    # the loop dimension is missing on one of the data variables
+    ds = xr.Dataset(
+        {"a": (("x", "z"), np.arange(6.0).reshape(2, 3)), "b": ("z", np.arange(3.0))}
+    )
+    actual = apply_ufunc(
+        np.sum, ds, input_core_dims=[["z"]], kwargs={"axis": -1}, vectorize=["x"]
+    )
+    assert_identical(actual, ds.sum("z"))
+
+
+def test_vectorize_dims_multiple_outputs() -> None:
     a = xr.DataArray(np.arange(12.0).reshape(2, 2, 3), dims=("x", "y", "z"))
     b = xr.DataArray(np.ones((2, 3)), dims=("x", "z"))
 
@@ -1700,13 +1735,13 @@ def test_vectorize_shared_multiple_outputs() -> None:
         b,
         input_core_dims=[["z"], ["z"]],
         output_core_dims=[[], []],
-        vectorize="shared",
+        vectorize=["x"],
     )
     assert_identical(actual_sum, a.sum("z"))
     assert_identical(actual_max, a.max("z"))
 
 
-def test_vectorize_shared_empty_loop() -> None:
+def test_vectorize_dims_empty_loop() -> None:
     a = xr.DataArray(np.zeros((0, 3, 2)), dims=("x", "y", "z"))
     b = xr.DataArray(np.zeros((0, 2)), dims=("x", "z"))
 
@@ -1718,20 +1753,22 @@ def test_vectorize_shared_empty_loop() -> None:
         a,
         b,
         input_core_dims=[["z"], ["z"]],
-        vectorize="shared",
+        vectorize=["x"],
         output_dtypes=[float],
     )
     assert actual.sizes == {"x": 0, "y": 3}
     assert actual.dtype == float
 
     with pytest.raises(ValueError, match=r"empty loop dimension"):
-        apply_ufunc(func, a, b, input_core_dims=[["z"], ["z"]], vectorize="shared")
+        apply_ufunc(func, a, b, input_core_dims=[["z"], ["z"]], vectorize=["x"])
 
 
-def test_vectorize_invalid() -> None:
-    a = xr.DataArray([1.0], dims="x")
-    with pytest.raises(ValueError, match=r"vectorize must be a bool or 'shared'"):
-        apply_ufunc(np.sum, a, vectorize="all")  # type: ignore[arg-type]
+def test_vectorize_dims_invalid() -> None:
+    a = xr.DataArray([[1.0]], dims=("x", "y"))
+    with pytest.raises(ValueError, match=r"only loop over broadcast dimensions"):
+        apply_ufunc(np.sum, a, input_core_dims=[["y"]], vectorize=["y"])
+    with pytest.raises(ValueError, match=r"not present on any of the arguments"):
+        apply_ufunc(np.sum, a, input_core_dims=[["y"]], vectorize=["z"])
 
 
 def test_corr_only_dataarray() -> None:
