@@ -1684,6 +1684,21 @@ def test_vectorize_dims(
     assert shapes == expected_shapes
 
 
+def test_vectorize_dims_empty() -> None:
+    # no loop dimensions, same as vectorize=False
+    a = xr.DataArray(np.arange(6.0).reshape(2, 3), dims=("x", "z"))
+    b = xr.DataArray(np.arange(3.0), dims="z")
+    shapes = []
+
+    def dot(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        shapes.append((x.shape, y.shape))
+        return (x * y).sum(axis=-1)
+
+    actual = apply_ufunc(dot, a, b, input_core_dims=[["z"], ["z"]], vectorize=[])
+    assert_identical(actual, xr.DataArray([5.0, 14.0], dims="x"))
+    assert shapes == [((2, 3), (3,))]
+
+
 def test_vectorize_dims_loop_order() -> None:
     a = xr.DataArray(np.arange(6.0).reshape(2, 3), dims=("x", "y"))
     calls = []
