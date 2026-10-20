@@ -70,7 +70,6 @@ def load_chunkmanagers(
     entrypoints: Sequence[EntryPoint],
 ) -> dict[str, ChunkManagerEntrypoint[Any]]:
     """Load entrypoints and instantiate chunkmanagers only once."""
-
     loaded_entrypoints = {}
     for entrypoint in entrypoints:
         try:
@@ -97,7 +96,6 @@ def guess_chunkmanager(
     If the name of a specific ChunkManager is given (e.g. "dask"), then use that.
     Else use whatever is installed, defaulting to dask if there are multiple options.
     """
-
     available_chunkmanagers = list_chunkmanagers()
 
     if manager is None:
@@ -141,9 +139,9 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
     """
     Detects which parallel backend should be used for given set of arrays.
 
-    Also checks that all arrays are of same chunking type (i.e. not a mix of cubed and dask).
+    Also checks that all arrays are handled by the same chunk manager (i.e. not a mix of
+    cubed and dask).
     """
-
     # TODO this list is probably redundant with something inside xarray.apply_ufunc
     ALLOWED_NON_CHUNKED_TYPES = {int, float, np.ndarray}
 
@@ -153,13 +151,7 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
         if is_chunked_array(a) and type(a) not in ALLOWED_NON_CHUNKED_TYPES
     ]
 
-    # Asserts all arrays are the same type (or numpy etc.)
-    chunked_array_types = {type(a) for a in chunked_arrays}
-    if len(chunked_array_types) > 1:
-        raise TypeError(
-            f"Mixing chunked array types is not supported, but received multiple types: {chunked_array_types}"
-        )
-    elif len(chunked_array_types) == 0:
+    if not chunked_arrays:
         raise TypeError("Expected a chunked array but none were found")
 
     # iterate over defined chunk managers, seeing if each recognises this array type
@@ -184,6 +176,13 @@ def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
     elif len(selected) >= 2:
         raise TypeError(f"Multiple ChunkManagers recognise type {type(chunked_arr)}")
     else:
+        # Asserts the rest of the arrays are handled by it too. One chunk manager may
+        # recognise several array types, so their types need not all be identical.
+        if not all(selected[0].is_chunked_array(a) for a in chunked_arrays[1:]):
+            chunked_array_types = {type(a) for a in chunked_arrays}
+            raise TypeError(
+                f"Mixing chunked array types is not supported, but received multiple types: {chunked_array_types}"
+            )
         return selected[0]
 
 
@@ -395,7 +394,11 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         raise NotImplementedError()
 
     def shuffle(
-        self, x: T_ChunkedArray, indexer: list[list[int]], axis: int, chunks: T_Chunks
+        self,
+        x: T_ChunkedArray,
+        indexer: list[list[int]],
+        axis: int,
+        chunks: T_Chunks | None,
     ) -> T_ChunkedArray:
         raise NotImplementedError()
 
@@ -784,7 +787,6 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         chunk_size : int
             The chunk size in bytes.
         """
-
         raise NotImplementedError(
             "For 'auto' rechunking of cftime arrays, get_auto_chunk_size must be implemented by the chunk manager"
         )

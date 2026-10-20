@@ -18,7 +18,7 @@ name = "xarray"
 readme = "README.md"
 requires-python = ">=3.12"
 
-dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
+dependencies = ["numpy>=2.2", "packaging>=25.0", "pandas>=2.3"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -27,7 +27,7 @@ dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 
 [project.optional-dependencies]
 accel = [
-  "scipy>=1.15",
+  "scipy>=1.16",
   "bottleneck",
   "numbagg>=0.9,!=0.9.5", # 0.9.5 breaks dask.array.nanmedian
   "numba>=0.62",          # numba 0.62 added support for numpy 2.3
@@ -36,21 +36,21 @@ accel = [
 ]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
-  "netCDF4>=1.6.0",
+  "netCDF4>=1.7.0",
   # h5netcdf 1.8.0 introduced a few compatibility features with netcdf4
   # https://github.com/pydata/xarray/issues/10657#issuecomment-3711095986
   "h5netcdf[h5py]>=1.8.0",
   "pydap",
-  "scipy>=1.15",
-  "zarr>=3.0",
+  "scipy>=1.16",
+  "zarr>=3.1",
   "fsspec",
   "cftime",
   "pooch",
 ]
 arrow = ["pyarrow"]
-etc = ["sparse>=0.15"]
+etc = ["sparse>=0.17"]
 parallel = ["dask[complete]"]
-viz = ["cartopy>=0.24", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.25", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
@@ -118,10 +118,10 @@ fallback_version = "9999"
 omit = [
   "*/xarray/tests/*",
   "*/xarray/compat/dask_array_compat.py",
-  "*/xarray/compat/npcompat.py",
   "*/xarray/compat/pdcompat.py",
   "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",
+  "*/xarray/util/generate_*.py",
 ]
 source = ["xarray"]
 
@@ -265,12 +265,20 @@ extend-select = [
   "UP",   # pyupgrade
   "FURB", # refurb
   "RUF",
+  "D",    # pydocstyle
 ]
+# D420 only runs in a separate pre-commit hook, keep its noqa comments
+external = ["D420"]
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
 ignore = [
   "C40",     # unnecessary generator, comprehension, or literal
+  "D1",      # missing docstrings
+  "D205",    # 1 blank line required between summary line and description
+  "D400",    # first line should end with a period
+  "D401",    # first line should be in imperative mood
+  "D404",    # first word of the docstring should not be "This"
   "PIE790",  # unnecessary pass statement
   "PYI019",  # use `Self` instead of custom TypeVar
   "PYI041",  # use `float` instead of `int | float`
@@ -314,6 +322,9 @@ ignore = [
 # looks like ruff bugs
 "xarray/core/_typed_ops.py" = ["PYI034"]
 "xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]

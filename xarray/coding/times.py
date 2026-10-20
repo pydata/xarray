@@ -812,7 +812,8 @@ def cftime_to_nptime(
     numpy.datetime64 objects of the same size
 
     If raise_on_invalid is True (default), invalid dates trigger a ValueError.
-    Otherwise, the invalid element is replaced by np.NaT."""
+    Otherwise, the invalid element is replaced by np.NaT.
+    """
     times = np.asarray(times)
     new = []
     dt: np.datetime64

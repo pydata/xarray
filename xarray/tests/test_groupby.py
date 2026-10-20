@@ -46,9 +46,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
-    requires_dask_ge_2024_08_1,
     requires_flox,
-    requires_flox_0_9_12,
     requires_scipy,
 )
 
@@ -619,31 +617,6 @@ def test_ds_groupby_quantile() -> None:
     )
     actual = ds.groupby("x").quantile(0.5, method="lower")
     assert_identical(expected, actual)
-
-
-@pytest.mark.filterwarnings(
-    "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-)
-@pytest.mark.parametrize("as_dataset", [False, True])
-def test_groupby_quantile_interpolation_deprecated(as_dataset: bool) -> None:
-    array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
-
-    arr: xr.DataArray | xr.Dataset
-    arr = array.to_dataset(name="name") if as_dataset else array
-
-    with pytest.warns(
-        FutureWarning,
-        match="`interpolation` argument to quantile was renamed to `method`",
-    ):
-        actual = arr.quantile(0.5, interpolation="lower")
-
-    expected = arr.quantile(0.5, method="lower")
-
-    assert_identical(actual, expected)
-
-    with warnings.catch_warnings(record=True):
-        with pytest.raises(TypeError, match="interpolation and method keywords"):
-            arr.quantile(0.5, method="lower", interpolation="lower")
 
 
 def test_da_groupby_assign_coords() -> None:
@@ -2972,9 +2945,7 @@ def test_cftime_resample_gh_9108() -> None:
 
 def test_custom_grouper() -> None:
     class YearGrouper(Grouper):
-        """
-        An example re-implementation of ``.groupby("time.year")``.
-        """
+        """An example re-implementation of ``.groupby("time.year")``."""
 
         def factorize(self, group) -> EncodedGroups:
             assert np.issubdtype(group.dtype, np.datetime64)
@@ -3071,15 +3042,35 @@ def test_multiple_groupers_string(as_dataset) -> None:
     actual = obj.groupby(("labels1", "labels2")).mean()
     assert_identical(expected, actual)
 
-    # Passes `"labels2"` to squeeze; will raise an error around kwargs rather than the
-    # warning & type error in the future
-    with pytest.warns(FutureWarning):
-        with pytest.raises(TypeError):
-            obj.groupby("labels1", "labels2")  # type: ignore[arg-type, call-arg]
+    with pytest.raises(TypeError, match=r"positional argument"):
+        obj.groupby("labels1", "labels2")  # type: ignore[arg-type, call-arg]
     with pytest.raises(ValueError):
         obj.groupby("labels1", foo="bar")  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         obj.groupby("labels1", foo=UniqueGrouper())
+
+
+@pytest.mark.parametrize("as_dataset", [True, False])
+def test_keyword_only_args(as_dataset: bool) -> None:
+    obj: DataArray | Dataset = DataArray(
+        [1, 2, 3],
+        dims="time",
+        coords={"time": pd.date_range("2000-01-01", periods=3)},
+        name="foo",
+    )
+    if as_dataset:
+        obj = obj.to_dataset()
+
+    with pytest.raises(TypeError, match=r"positional argument"):
+        obj.groupby("time", False)  # type: ignore[call-arg]
+    with pytest.raises(TypeError, match=r"positional argument"):
+        obj.resample({"time": "D"}, True)  # type: ignore[call-arg]
+
+    obj = obj.assign_coords(x=("time", [1, 2, 3]))
+    expected = obj.groupby_bins("x", [0, 2, 4], right=False).sum()
+    with pytest.warns(FutureWarning, match=r"Passing 'right' as positional"):
+        actual = obj.groupby_bins("x", [0, 2, 4], False).sum()  # type: ignore[call-arg]
+    assert_identical(expected, actual)
 
 
 @pytest.mark.parametrize("shuffle", [True, False])
@@ -3260,7 +3251,7 @@ def test_multiple_groupers_lazy(use_flox: bool) -> None:
                 gb.count()
 
 
-@requires_flox_0_9_12
+@requires_flox
 @pytest.mark.parametrize(
     "reduction", ["max", "min", "nanmax", "nanmin", "sum", "nansum", "prod", "nanprod"]
 )
@@ -3290,7 +3281,7 @@ def test_groupby_preserve_dtype(reduction):
 
 
 @requires_dask
-@requires_flox_0_9_12
+@requires_flox
 @pytest.mark.parametrize("reduction", ["any", "all", "count"])
 @pytest.mark.xfail_with_dask_array(
     reason="flox resample currently mixes legacy dask arrays"
@@ -3502,7 +3493,7 @@ def test_groupby_multiple_bin_grouper_missing_groups() -> None:
     assert_identical(actual, expected)
 
 
-@requires_dask_ge_2024_08_1
+@requires_dask
 def test_shuffle_simple() -> None:
     array_api = dask_array_api
 
@@ -3519,7 +3510,7 @@ def test_shuffle_simple() -> None:
         da.chunk(x=2, eagerly_load_group=False).groupby("label").shuffle_to_chunks()
 
 
-@requires_dask_ge_2024_08_1
+@requires_dask
 @pytest.mark.parametrize(
     "chunks, expected_chunks",
     [

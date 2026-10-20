@@ -66,7 +66,8 @@ RESAMPLE_DIM = "__resample_dim__"
 
 def _datetime64_via_timestamp(unit: PDDatetimeUnitOptions, **kwargs) -> np.datetime64:
     """Construct a numpy.datetime64 object through the pandas.Timestamp
-    constructor with a specific resolution."""
+    constructor with a specific resolution.
+    """
     # TODO: when pandas 3 is our minimum requirement we will no longer need to
     # convert to np.datetime64 values prior to passing to the DatetimeIndex
     # constructor. With pandas < 3 the DatetimeIndex constructor does not
@@ -171,9 +172,7 @@ class Grouper(ABC):
 
     @abstractmethod
     def reset(self) -> Self:
-        """
-        Creates a new version of this Grouper clearing any caches.
-        """
+        """Creates a new version of this Grouper clearing any caches."""
         pass
 
 

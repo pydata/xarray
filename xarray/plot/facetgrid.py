@@ -16,6 +16,7 @@ from xarray.plot.utils import (
     _add_legend,
     _determine_guide,
     _get_nice_quiver_magnitude,
+    _group_hue_values,
     _guess_coords_to_plot,
     _infer_xy_labels,
     _Normalize,
@@ -45,9 +46,7 @@ _NTICKS = 5
 
 
 def _nicetitle(coord, value, maxchar, template):
-    """
-    Put coord, value in template and truncate at maxchar
-    """
+    """Put coord, value in template and truncate at maxchar"""
     prettyvalue = format_item(value, quote_strings=False)
     title = template.format(coord=coord, value=prettyvalue)
 
@@ -191,7 +190,6 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             Dictionary of keyword arguments for Matplotlib subplots
             (:py:func:`matplotlib.pyplot.subplots`).
         """
-
         import matplotlib.pyplot as plt
 
         # Handle corner case of nonunique coordinates
@@ -377,7 +375,6 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         self : FacetGrid object
 
         """
-
         if kwargs.get("cbar_ax") is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
@@ -769,9 +766,19 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             self.figlegend = _add_legend(**kwargs)
         else:
             assert self._hue_var is not None
+            handles: Any = self._mappables[-1]
+            labels = list(self._hue_var.to_numpy())
+            # DataArray.plot.line draws one line per position along the hue
+            # coordinate, so repeated hue values would otherwise appear
+            # multiple times in the legend (GH10998). Keep the first handle
+            # drawn for each hue value, matching the non-faceted line legend.
+            if isinstance(handles, list) and len(handles) == len(labels):
+                _, hue_first = _group_hue_values(self._hue_var.to_numpy())
+                handles = [handles[i] for i in hue_first]
+                labels = [labels[i] for i in hue_first]
             self.figlegend = self.fig.legend(
-                handles=self._mappables[-1],
-                labels=list(self._hue_var.to_numpy()),
+                handles=handles,
+                labels=labels,
                 title=label if label is not None else label_from_attrs(self._hue_var),
                 loc=kwargs.pop("loc", "center right"),
                 **kwargs,

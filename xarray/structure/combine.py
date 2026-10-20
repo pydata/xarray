@@ -60,7 +60,6 @@ def _infer_tile_ids_from_nested_list[T](
     -------
     combined_tile_ids : dict[tuple(int, ...), obj]
     """
-
     for i, item in enumerate(entry):
         position = current_pos + (i,)
         if not isinstance(item, str) and isinstance(item, Sequence):
@@ -243,7 +242,6 @@ def _combine_nd(
     -------
     combined_ds : xarray.Dataset | xarray.DataTree
     """
-
     example_tile_id = next(iter(combined_ids.keys()))
 
     n_dims = len(example_tile_id)
@@ -316,7 +314,6 @@ def _combine_1d(
     Applies either concat or merge to 1D list of datasets depending on value
     of concat_dim
     """
-
     if concat_dim is not None:
         try:
             combined = concat(
@@ -590,9 +587,13 @@ def combine_nested(
     -------
     combined : xarray.Dataset or xarray.DataTree
 
+    See Also
+    --------
+    concat
+    merge
+
     Examples
     --------
-
     A common task is collecting data from a parallelized simulation in which
     each process wrote out to a separate file. A domain which was decomposed
     into 4 parts, 2 each along both the x and y axes, requires organising the
@@ -676,11 +677,6 @@ def combine_nested(
     Data variables:
         temperature    (t) float64 80B -0.8878 -1.981 -0.3479 ... -0.4381 -1.253
         precipitation  (t) float64 80B 1.202 -0.3873 -0.3023 ... -0.8955 0.3869
-
-    See Also
-    --------
-    concat
-    merge
     """
     any_datasets = any(isinstance(obj, Dataset) for obj in iterate_nested(datasets))
     any_unnamed_arrays = any(
@@ -723,7 +719,7 @@ def groupby_defaultdict[T, K: Hashable](
     iter: list[T],
     key: Callable[[T], K],
 ) -> Iterator[tuple[K, Iterator[T]]]:
-    """replacement for itertools.groupby"""
+    """Replacement for itertools.groupby"""
     idx = defaultdict(list)
     for i, obj in enumerate(iter):
         idx[key(obj)].append(i)
@@ -928,7 +924,6 @@ def combine_by_coords(
 
     Examples
     --------
-
     Combining two datasets using their common dimension coordinates. Notice
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.

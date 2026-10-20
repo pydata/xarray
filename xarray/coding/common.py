@@ -95,6 +95,7 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike | None):
     """Lazily apply an element-wise function to an array.
+
     Parameters
     ----------
     array : any valid value of Variable._data

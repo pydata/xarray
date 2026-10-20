@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, Union, cast
@@ -273,14 +272,13 @@ def _update_bounds_attributes(variables: T_Variables) -> None:
     decoded. This copies the attributes from the time variable to the
     associated boundaries.
 
-    See Also:
-
+    See Also
+    --------
     http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
          cf-conventions.html#cell-boundaries
 
     https://github.com/pydata/xarray/issues/2565
     """
-
     # For all time variables with bounds
     for v in variables.values():
         attrs = v.attrs
@@ -301,14 +299,13 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
     decoded. This copies the encoding from the time variable to the
     associated bounds variable so that we write CF-compliant files.
 
-    See Also:
-
+    See Also
+    --------
     http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
          cf-conventions.html#cell-boundaries
 
     https://github.com/pydata/xarray/issues/2565
     """
-
     # For all time variables with bounds
     for name, v in variables.items():
         attrs = v.attrs
@@ -344,8 +341,8 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
 def _item_or_default[T, U](
     obj: Mapping[Any, T | U] | T, key: Hashable, default: T
 ) -> T | U:
-    """
-    Return item by key if obj is mapping and key is present, else return default value.
+    """Return item by key if obj is mapping and key is present, else return default
+    value.
     """
     return obj.get(key, default) if isinstance(obj, Mapping) else obj
 
@@ -369,10 +366,6 @@ def decode_cf_variables(
 
     See: decode_cf_variable
     """
-    # Only emit one instance of the decode_timedelta default change
-    # FutureWarning. This can be removed once this change is made.
-    warnings.filterwarnings("once", "decode_timedelta", FutureWarning)
-
     dimensions_used_by = defaultdict(list)
     for v in variables.values():
         for d in v.dims:
@@ -792,7 +785,6 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     --------
     decode_cf_variable, encode_cf_variable
     """
-
     # add encoding for time bounds variables if present.
     _update_bounds_encoding(variables)
 

@@ -13,6 +13,7 @@ from typing import (
     Any,
     Generic,
     Literal,
+    Never,
     NoReturn,
     cast,
     overload,
@@ -30,6 +31,7 @@ from xarray.computation.arithmetic import VariableArithmetic
 from xarray.core import common, dtypes, duck_array_ops, indexing, nputils, utils
 from xarray.core.common import AbstractArray
 from xarray.core.extension_array import PandasExtensionArray
+from xarray.core.indexes import is_full_ordered_product
 from xarray.core.indexing import (
     BasicIndexer,
     CoordinateTransformIndexingAdapter,
@@ -56,14 +58,13 @@ from xarray.core.utils import (
     is_duck_dask_array,
     maybe_coerce_to_str,
 )
-from xarray.namedarray._typing import DimType_co
+from xarray.namedarray._typing import DimType_co, DType_co, ShapeType_co
 from xarray.namedarray.core import NamedArray, _raise_if_any_duplicate_dimensions
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import (
     array_type,
     async_to_duck_array,
     integer_types,
-    is_0d_dask_array,
     is_chunked_array,
     to_duck_array,
 )
@@ -85,6 +86,8 @@ UNSUPPORTED_EXTENSION_ARRAY_TYPES = (
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
+
     from xarray.core.types import (
         ErrorOptionsWithWarn,
         PadModeOptions,
@@ -95,7 +98,13 @@ if TYPE_CHECKING:
         T_DuckArray,
         T_VarPadConstantValues,
     )
-    from xarray.namedarray._typing import AttrsLike, DimsLike, duckarray
+    from xarray.namedarray._typing import (
+        AttrsLike,
+        DimsLike,
+        NestedList,
+        Shape,
+        duckarray,
+    )
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 
@@ -107,9 +116,9 @@ class MissingDimensionsError(ValueError):
 
 
 @overload
-def as_variable[DimType: Hashable](
-    obj: Variable[DimType], name: Hashable = None, auto_convert: bool = True
-) -> Variable[DimType]: ...
+def as_variable[V: Variable[Any, Any, Any]](
+    obj: V, name: Hashable = None, auto_convert: bool = True
+) -> V: ...
 
 
 @overload
@@ -119,7 +128,7 @@ def as_variable[DimType: Hashable](
     | tuple[Iterable[DimType], Any, AttrsLike, Mapping[Any, Any] | None],
     name: Hashable = None,
     auto_convert: bool = True,
-) -> Variable[DimType]: ...
+) -> Variable[Shape, Any, DimType]: ...
 
 
 @overload
@@ -190,6 +199,8 @@ def as_variable(obj: Any, name: Hashable = None, auto_convert: bool = True) -> V
             ) from error
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
+    elif isinstance(obj, pd.Series) and obj.index.name is not None:
+        obj = Variable((obj.index.name,), obj)
     elif isinstance(obj, pd.Index | IndexVariable) and obj.name is not None:
         obj = Variable((obj.name,), obj)
     elif isinstance(obj, Coordinates):
@@ -390,10 +401,10 @@ def _as_array_or_item(data):
 # and the setters would make Variable invariant. Hence the explicitly covariant
 # TypeVar with `Generic`.
 class Variable(
-    NamedArray[Any, Any, DimType_co],
+    NamedArray[ShapeType_co, DType_co, DimType_co],
     AbstractArray[DimType_co],
-    VariableArithmetic,
-    Generic[DimType_co],  # noqa: UP046
+    VariableArithmetic[ShapeType_co, DType_co, DimType_co],
+    Generic[ShapeType_co, DType_co, DimType_co],  # noqa: UP046
 ):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
@@ -416,6 +427,106 @@ class Variable(
     """
 
     __slots__ = ("_attrs", "_data", "_dims", "_encoding")
+
+    # The dtype is inferred from duck arrays, like for NamedArray, and from Python
+    # scalars and lists, as numpy converts them. Their shape type cannot be
+    # inferred, so it is Shape, numpy's type for unknown shapes. Any would make
+    # mypy lose all type arguments in overloaded functions with a fallback for
+    # Any, e.g. as_variable. as_compatible_data can change the dtype in rare
+    # cases, e.g. for masked arrays or object arrays of datetimes, which is not
+    # reflected here. The overloads for lists are tried in order, so e.g. a list
+    # literal of ints is not taken for a list of floats. Tuples are not
+    # included, as they become 0-d object arrays.
+    @overload
+    def __init__(
+        self: Variable[Shape, DType_co, DimType_co],
+        dims: Iterable[DimType_co],
+        data: duckarray[Any, DType_co],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    # the data of another Variable is used as is
+    @overload
+    def __init__(
+        self: Variable[Shape, DType_co, DimType_co],
+        dims: Iterable[DimType_co],
+        data: Variable[Any, DType_co, Any],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.float64], DimType_co],
+        dims: Iterable[DimType_co],
+        data: list[Never],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.bool_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: bool | NestedList[bool],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.int_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: int | NestedList[int],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.float64], DimType_co],
+        dims: Iterable[DimType_co],
+        data: float | NestedList[float],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.complex128], DimType_co],
+        dims: Iterable[DimType_co],
+        data: complex | NestedList[complex],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, np.dtype[np.str_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: str | NestedList[str],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: Variable[Shape, Any, DimType_co],
+        dims: Iterable[DimType_co],
+        data: Any,
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
 
     def __init__(
         self,
@@ -467,23 +578,25 @@ class Variable(
         dims: Iterable[DimType] = ...,
         data: Default = ...,
         attrs: AttrsLike | Default = ...,
-    ) -> Variable[DimType]: ...
+    ) -> Variable[ShapeType_co, DType_co, DimType]: ...
 
+    # As for __init__, the shape type of new data cannot be inferred. It is Any
+    # instead of Shape, to stay compatible with NamedArray._new.
     @overload
-    def _new(
+    def _new[DType: np.dtype[Any]](
         self,
         dims: Default = ...,
-        data: duckarray[Any, Any] = ...,
+        data: duckarray[Any, DType] = ...,
         attrs: AttrsLike | Default = ...,
-    ) -> Self: ...
+    ) -> Variable[Any, DType, DimType_co]: ...
 
     @overload
-    def _new[DimType: Hashable](
+    def _new[DimType: Hashable, DType: np.dtype[Any]](
         self,
         dims: Iterable[DimType] = ...,
-        data: duckarray[Any, Any] = ...,
+        data: duckarray[Any, DType] = ...,
         attrs: AttrsLike | Default = ...,
-    ) -> Variable[DimType]: ...
+    ) -> Variable[Any, DType, DimType]: ...
 
     @override
     def _new(
@@ -491,7 +604,7 @@ class Variable(
         dims: Iterable[Hashable] | Default = _default,
         data: Any = _default,
         attrs: AttrsLike | Default = _default,
-    ) -> Variable[Any]:
+    ) -> Variable[Any, Any, Any]:
         dims_ = copy.copy(self._dims) if dims is _default else dims
 
         attrs_: AttrsLike
@@ -502,8 +615,27 @@ class Variable(
 
         data_: Any = copy.copy(self._data) if data is _default else data
 
-        cls_: type[Variable[Any]] = type(self)
+        cls_: type[Variable[Any, Any, Any]] = type(self)
         return cls_(dims_, data_, attrs_)
+
+    if TYPE_CHECKING:
+        # AbstractArray.__array__ cannot type the dtype, so that e.g.
+        # np.asarray(variable) keeps it
+        @overload
+        def __array__(
+            self, dtype: None = None, /, *, copy: bool | None = None
+        ) -> np.ndarray[Any, DType_co]: ...
+        @overload
+        def __array__[DType: np.dtype[Any]](
+            self, dtype: DType, /, *, copy: bool | None = None
+        ) -> np.ndarray[Any, DType]: ...
+        @overload
+        def __array__(
+            self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
+        ) -> np.ndarray[Any, np.dtype[Any]]: ...
+        def __array__(
+            self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
+        ) -> np.ndarray[Any, np.dtype[Any]]: ...
 
     @property
     def _in_memory(self) -> bool:
@@ -562,7 +694,7 @@ class Variable(
         subok=None,
         copy=None,
         keep_attrs=True,
-    ) -> Self:
+    ) -> Variable[ShapeType_co, Any, DimType_co]:
         """
         Copy of the Variable object, with data cast to a specified type.
 
@@ -600,6 +732,12 @@ class Variable(
         out : same as object
             New object with data cast to the specified type.
 
+        See Also
+        --------
+        numpy.ndarray.astype
+        dask.array.Array.astype
+        sparse.COO.astype
+
         Notes
         -----
         The ``order``, ``casting``, ``subok`` and ``copy`` arguments are only passed
@@ -607,12 +745,6 @@ class Variable(
         different than ``None`` is supplied.
         Make sure to only supply these arguments if the underlying array class
         supports them.
-
-        See Also
-        --------
-        numpy.ndarray.astype
-        dask.array.Array.astype
-        sparse.COO.astype
         """
         from xarray.computation.apply_ufunc import apply_ufunc
 
@@ -642,21 +774,17 @@ class Variable(
     def values(self, values):
         self.data = values
 
-    def to_base_variable(self) -> Variable[DimType_co]:
+    def to_base_variable(self) -> Variable[ShapeType_co, DType_co, DimType_co]:
         """Return this variable as a base xarray.Variable"""
         return Variable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
-    to_variable = utils.alias(to_base_variable, "to_variable")
-
-    def to_index_variable(self) -> IndexVariable[DimType_co]:
+    def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
-
-    to_coord = utils.alias(to_index_variable, "to_coord")
 
     def _to_index(self) -> pd.Index:
         return self.to_index_variable()._to_index()
@@ -815,11 +943,11 @@ class Variable(
                         )
 
     def _broadcast_indexes_outer(self, key):
-        # drop dim if k is integer or if k is a 0d dask array
+        # drop dim if k is integer or if k is a 0d duck array (e.g. dask, cupy)
         dims = tuple(
             k.dims[0] if isinstance(k, Variable) else dim
             for k, dim in zip(key, self.dims, strict=True)
-            if (not isinstance(k, integer_types) and not is_0d_dask_array(k))
+            if not (isinstance(k, integer_types) or (is_duck_array(k) and k.ndim == 0))
         )
 
         new_key = []
@@ -896,7 +1024,7 @@ class Variable(
 
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
-    def __getitem__(self, key) -> Self:
+    def __getitem__(self, key) -> Variable[Shape, DType_co, DimType_co]:
         """Return a new Variable object whose contents are consistent with
         getting the provided key from the underlying data.
 
@@ -918,7 +1046,9 @@ class Variable(
             data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
-    def _finalize_indexing_result(self, dims, data) -> Self:
+    def _finalize_indexing_result(
+        self, dims, data
+    ) -> Variable[Shape, DType_co, DimType_co]:
         """Used by IndexVariable to return IndexVariable objects when possible."""
         return self._replace(dims=dims, data=data)
 
@@ -1013,9 +1143,9 @@ class Variable(
             raise ValueError("encoding must be castable to a dictionary") from err
 
     def reset_encoding(self) -> Self:
-        warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
-            stacklevel=2,
+        emit_user_level_warning(
+            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
+            FutureWarning,
         )
         return self.drop_encoding()
 
@@ -1180,8 +1310,8 @@ class Variable(
         self,
         indices: list[list[int]],
         dim: DimType_co,  # type: ignore[misc]
-        chunks: T_Chunks,
-    ) -> Self:
+        chunks: T_Chunks | None,
+    ) -> Variable[Shape, DType_co, DimType_co]:
         # TODO (dcherian): consider making this public API
         array = self._data
         if is_chunked_array(array):
@@ -1202,7 +1332,7 @@ class Variable(
         indexers: Mapping[Any, Any] | None = None,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
-    ) -> Self:
+    ) -> Variable[Shape, DType_co, DimType_co]:
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -1487,7 +1617,7 @@ class Variable(
         self,
         *dim: DimType_co | EllipsisType,
         missing_dims: ErrorOptionsWithWarn = "raise",
-    ) -> Self:
+    ) -> Variable[Shape, DType_co, DimType_co]:
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1508,14 +1638,14 @@ class Variable(
             The returned object has transposed data and dimensions with the
             same attributes as the original.
 
+        See Also
+        --------
+        numpy.transpose
+
         Notes
         -----
         This operation returns a view of this variable's data. It is
         lazy for dask-backed Variables but not for numpy-backed Variables.
-
-        See Also
-        --------
-        numpy.transpose
         """
         if len(dim) == 0:
             dims = self.dims[::-1]
@@ -1533,7 +1663,7 @@ class Variable(
 
     @override
     @property
-    def T(self) -> Self:
+    def T(self) -> Variable[Shape, DType_co, DimType_co]:
         return self.transpose()
 
     @deprecate_dims
@@ -1595,7 +1725,7 @@ class Variable(
 
     def _stack_once[NewDimType: Hashable](
         self, dim: list[DimType_co], new_dim: NewDimType
-    ) -> Variable[DimType_co | NewDimType]:
+    ) -> Variable[Shape, DType_co, DimType_co | NewDimType]:
         if not set(dim) <= set(self.dims):
             raise ValueError(f"invalid existing dimensions: {dim}")
 
@@ -1617,7 +1747,7 @@ class Variable(
         new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + (new_dim,)
 
-        cls_: type[Variable[DimType_co | NewDimType]] = type(self)
+        cls_: type[Variable[Shape, DType_co, DimType_co | NewDimType]] = type(self)
         return cls_(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
 
     @partial(deprecate_dims, old_name="dimensions")
@@ -1653,7 +1783,9 @@ class Variable(
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once_full(self, dim: Mapping[Any, int], old_dim: Hashable) -> Self:
+    def _unstack_once_full(
+        self, dim: Mapping[Any, int], old_dim: Hashable
+    ) -> Variable[Shape, DType_co, DimType_co]:
         """
         Unstacks the variable without needing an index.
 
@@ -1696,12 +1828,15 @@ class Variable(
         dim: DimType_co,  # type: ignore[misc]
         fill_value=dtypes.NA,
         sparse: bool = False,
+        full_product: bool | None = None,
     ) -> Variable:
         """
         Unstacks this variable given an index to unstack and the name of the
         dimension to which the index refers.
-        """
 
+        ``full_product`` is the result of ``is_full_ordered_product(index)``,
+        which is computed if not given.
+        """
         reordered = self.transpose(..., dim)
 
         new_dim_sizes = [lev.size for lev in index.levels]
@@ -1712,6 +1847,14 @@ class Variable(
         other_dims = [d for d in self.dims if d != dim]
         new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + tuple(new_dim_names)
+
+        if full_product is None:
+            full_product = is_full_ordered_product(index)
+        if not sparse and full_product:
+            # every combination of labels is present in order: a reshape is
+            # enough and avoids allocating and filling a new array
+            data = duck_array_ops.reshape(reordered.data, new_shape)
+            return self.to_base_variable()._replace(dims=new_dims, data=data)
 
         create_template: Callable
         if fill_value is dtypes.NA:
@@ -1794,7 +1937,7 @@ class Variable(
         Dataset.unstack
         """
         dim = either_dict_or_kwargs(dim, dim_kwargs, "unstack")
-        result = self
+        result: Variable[Shape, DType_co, DimType_co] = self
         for old_dim, dims in dim.items():
             result = result._unstack_once_full(dims, old_dim)
         return result
@@ -1830,7 +1973,7 @@ class Variable(
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs,
-    ) -> Variable[DimType_co]:
+    ) -> Variable[Shape, Any, DimType_co]:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -2025,8 +2168,7 @@ class Variable(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
-    ) -> Self:
+    ) -> Variable[Shape, Any, DimType_co]:
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -2095,20 +2237,7 @@ class Variable(
            "Sample quantiles in statistical packages,"
            The American Statistician, 50(4), pp. 361-365, 1996
         """
-
         from xarray.computation.apply_ufunc import apply_ufunc
-
-        if interpolation is not None:
-            warnings.warn(
-                "The `interpolation` argument to quantile was renamed to `method`.",
-                FutureWarning,
-                stacklevel=2,
-            )
-
-            if method != "linear":
-                raise TypeError("Cannot pass interpolation and method keywords!")
-
-            method = interpolation
 
         if skipna or (skipna is None and self.dtype.kind in "cfO"):
             _quantile_func = nputils.nanquantile
@@ -2131,7 +2260,11 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", r"All-NaN (slice|axis) encountered", RuntimeWarning
+                )
+                return xp.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
         # jax requires hashable
         axis = tuple(range(-1, -1 * len(dim) - 1, -1))
@@ -2338,9 +2471,7 @@ class Variable(
     def coarsen(
         self, windows, func, boundary="exact", side="left", keep_attrs=None, **kwargs
     ):
-        """
-        Apply reduction function.
-        """
+        """Apply reduction function."""
         windows = {k: v for k, v in windows.items() if k in self.dims}
 
         if keep_attrs is None:
@@ -2364,9 +2495,7 @@ class Variable(
         return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
     def coarsen_reshape(self, windows, boundary, side):
-        """
-        Construct a reshaped-array for coarsen
-        """
+        """Construct a reshaped-array for coarsen"""
         if not is_dict_like(boundary):
             boundary = dict.fromkeys(windows.keys(), boundary)
 
@@ -2500,7 +2629,7 @@ class Variable(
 
     @override
     @property
-    def imag(self) -> Self:
+    def imag(self) -> Variable[ShapeType_co, Any, DimType_co]:
         """
         The imaginary part of the variable.
 
@@ -2512,7 +2641,7 @@ class Variable(
 
     @override
     @property
-    def real(self) -> Self:
+    def real(self) -> Variable[ShapeType_co, Any, DimType_co]:
         """
         The real part of the variable.
 
@@ -2744,17 +2873,13 @@ class Variable(
 
     @override
     def _as_sparse(self, sparse_format=_default, fill_value=_default) -> Self:
-        """
-        Use sparse-array as backend.
-        """
+        """Use sparse-array as backend."""
         out = super()._as_sparse(sparse_format, fill_value)
         return cast("Self", out)
 
     @override
     def _to_dense(self) -> Self:
-        """
-        Change backend from sparse to np.array.
-        """
+        """Change backend from sparse to np.array."""
         out = super()._to_dense()
         return cast("Self", out)
 
@@ -2817,7 +2942,6 @@ class Variable(
         xarray.unify_chunks
         dask.array.from_array
         """
-
         if from_array_kwargs is None:
             from_array_kwargs = {}
 
@@ -2837,7 +2961,7 @@ class Variable(
         )
 
 
-class IndexVariable(Variable[DimType_co]):
+class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
     """Wrapper for accommodating a pandas.Index in an xarray.Variable.
 
     IndexVariable preserve loaded values in the form of a pandas.Index instead
@@ -2852,6 +2976,98 @@ class IndexVariable(Variable[DimType_co]):
 
     # TODO: PandasIndexingAdapter doesn't match the array api:
     _data: PandasIndexingAdapter  # type: ignore[assignment]
+
+    # see Variable.__init__
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, DType_co, DimType_co],
+        dims: Iterable[DimType_co],
+        data: duckarray[Any, DType_co],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    # the data of another Variable is used as is
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, DType_co, DimType_co],
+        dims: Iterable[DimType_co],
+        data: Variable[Any, DType_co, Any],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.float64], DimType_co],
+        dims: Iterable[DimType_co],
+        data: list[Never],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.bool_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: bool | NestedList[bool],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.int_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: int | NestedList[int],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.float64], DimType_co],
+        dims: Iterable[DimType_co],
+        data: float | NestedList[float],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.complex128], DimType_co],
+        dims: Iterable[DimType_co],
+        data: complex | NestedList[complex],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, np.dtype[np.str_], DimType_co],
+        dims: Iterable[DimType_co],
+        data: str | NestedList[str],
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: IndexVariable[Shape, Any, DimType_co],
+        dims: Iterable[DimType_co],
+        data: Any,
+        attrs: AttrsLike = None,
+        encoding: Mapping[Any, Any] | None = None,
+        fastpath: bool = False,
+    ) -> None: ...
 
     def __init__(
         self,
@@ -3055,11 +3271,9 @@ class IndexVariable(Variable[DimType_co]):
         return self._to_index().equals(other._to_index())
 
     @override
-    def to_index_variable(self) -> IndexVariable[DimType_co]:
+    def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
         """Return this variable as an xarray.IndexVariable"""
         return self.copy(deep=False)
-
-    to_coord = utils.alias(to_index_variable, "to_coord")
 
     @override
     def _to_index(self) -> pd.Index:
@@ -3152,6 +3366,19 @@ def _broadcast_compat_variables(*variables):
     """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
+
+
+def _as_shared_dtype(variables: Sequence[Variable]) -> tuple[Variable, ...]:
+    """Cast variables to a shared dtype, preserving their attrs and encoding."""
+    # Casting after broadcasting can materialize the full expanded array before
+    # it is split into chunks for concatenation or stacking.
+    arrays = [var._data for var in variables]
+    arrays = duck_array_ops.as_shared_dtype(
+        arrays, xp=duck_array_ops.get_array_namespace(*arrays)
+    )
+    return tuple(
+        var._replace(data=data) for var, data in zip(variables, arrays, strict=True)
+    )
 
 
 def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:

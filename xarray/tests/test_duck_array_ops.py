@@ -14,7 +14,6 @@ from numpy import array, nan
 
 from xarray import DataArray, Dataset, concat, date_range
 from xarray.coding.times import _NS_PER_TIME_DELTA
-from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv,
@@ -409,9 +408,9 @@ def from_series_or_scalar(se):
 
 
 def series_reduce(da, func, dim, **kwargs):
-    """convert DataArray to pd.Series, apply pd.func, then convert back to
-    a DataArray. Multiple dims cannot be specified."""
-
+    """Convert DataArray to pd.Series, apply pd.func, then convert back to
+    a DataArray. Multiple dims cannot be specified.
+    """
     # pd no longer accepts skipna=None https://github.com/pandas-dev/pandas/issues/44178
     if kwargs.get("skipna", True) is None:
         kwargs["skipna"] = True
@@ -785,7 +784,6 @@ def test_dask_or_eager_func_does_not_fallback_to_legacy_dask_array(func):
         assert isinstance(result, dask_array_type)
 
 
-@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType to exist")
 @pytest.mark.parametrize(
     ["input", "na_object", "expected"],
     [
@@ -813,7 +811,6 @@ def test_isnull_with_different_StringDType_na_objects(input, na_object, expected
     np.testing.assert_equal(actual, expected)
 
 
-@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType to exist")
 def test_isnull_with_default_StringDType():
     dtype = np.dtypes.StringDType()
     array = np.array(["a", np.nan, "c"], dtype=dtype)

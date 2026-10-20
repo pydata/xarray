@@ -24,6 +24,12 @@ class NodePath(PurePosixPath):
     """Represents a path from one node to another within a tree."""
 
     def __init__(self, *pathsegments):
+        # POSIX keeps exactly two leading slashes as a distinct root ("//a"),
+        # which has no meaning in a tree, so treat it like "/" as "///a" is
+        pathsegments = tuple(
+            "/" + s.lstrip("/") if isinstance(s, str) and s.startswith("//") else s
+            for s in pathsegments
+        )
         super().__init__(*pathsegments)
         if self.drive:
             raise ValueError("NodePaths cannot have drives")
@@ -324,7 +330,7 @@ class TreeNode:
             FutureWarning,
             stacklevel=2,
         )
-        return self.iter_lineage()
+        return (self, *self.parents)
 
     @property
     def parents(self) -> tuple[Self, ...]:
@@ -334,7 +340,6 @@ class TreeNode:
     @property
     def ancestors(self) -> tuple[Self, ...]:
         """All parent nodes and their parent nodes, starting with the most distant."""
-
         from warnings import warn
 
         warn(
@@ -378,9 +383,7 @@ class TreeNode:
 
     @property
     def siblings(self) -> dict[str, Self]:
-        """
-        Nodes with the same parent as this node.
-        """
+        """Nodes with the same parent as this node."""
         if self.parent:
             return {
                 name: child
@@ -546,6 +549,9 @@ class TreeNode:
             parts = list(path.parts)
 
         for part in parts:
+            if not isinstance(current_node, TreeNode):
+                # the path continues past a variable, which has no children
+                raise KeyError(f"Could not find node at {path}")
             if part == "..":
                 if current_node.parent is None:
                     raise KeyError(f"Could not find node at {path}")
@@ -778,7 +784,6 @@ class NamedNode(TreeNode):
 
     def _path_to_ancestor(self, ancestor: Self) -> NodePath:
         """Return the relative path from this node to the given ancestor node"""
-
         if not self.same_tree(ancestor):
             raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because nodes do not lie within the same tree"

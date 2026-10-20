@@ -29,6 +29,7 @@ from xarray.tests import (
     has_dask_array_expr,
     mock,
     raise_if_dask_computes,
+    requires_cftime,
     requires_pint,
     requires_scipy_or_netCDF4,
 )
@@ -1222,6 +1223,7 @@ def test_partial_auto_chunk_zero_len_dim_variable(obj):
     obj.chunk({"y": "auto"})
 
 
+@requires_cftime
 def test_auto_chunk_da_cftime():
     yrs = np.arange(2000, 2120)
     cftime_dates = xr.date_range(
@@ -1237,6 +1239,7 @@ def test_auto_chunk_da_cftime():
     assert actual.chunks == expected.chunks
 
 
+@requires_cftime
 @pytest.mark.parametrize(
     ("chunks", "expected"),
     [({"x": 2, "y": 3}, ((2,), (3,))), ({"x": 2}, ((2,), (1, 1, 1)))],
@@ -1963,3 +1966,11 @@ def test_conjugate():
     assert dask.is_dask_collection(conj_data)
 
     assert_equal(conj_data, data.conj())
+
+
+def test_isel_0d_dask_indexer_with_outer_indexer() -> None:
+    # GH8820: 0d dask indexer combined with an outer indexer on numpy data
+    data = xr.DataArray(np.arange(24).reshape(4, 6), dims=["x", "y"])
+    actual = data.isel(x=da.from_array(np.array(2)), y=[0, 2])
+    expected = data.isel(x=2, y=[0, 2])
+    assert_identical(actual, expected)

@@ -38,7 +38,6 @@ from __future__ import annotations
 
 import contextlib
 import difflib
-import functools
 import importlib
 import inspect
 import io
@@ -118,28 +117,6 @@ def is_allowed_extension_array(array: Any) -> bool:
     )
 
 
-def alias_message(old_name: str, new_name: str) -> str:
-    return f"{old_name} has been deprecated. Use {new_name} instead."
-
-
-def alias_warning(old_name: str, new_name: str, stacklevel: int = 3) -> None:
-    warnings.warn(
-        alias_message(old_name, new_name), FutureWarning, stacklevel=stacklevel
-    )
-
-
-def alias[T](obj: Callable[..., T], old_name: str) -> Callable[..., T]:
-    assert isinstance(old_name, str)
-
-    @functools.wraps(obj)
-    def wrapper(*args, **kwargs):
-        alias_warning(old_name, obj.__name__)
-        return obj(*args, **kwargs)
-
-    wrapper.__doc__ = alias_message(old_name, obj.__name__)
-    return wrapper
-
-
 def did_you_mean(
     word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
 ) -> str:
@@ -155,16 +132,16 @@ def did_you_mean(
     n : int, default: 10
         Maximum number of suggestions to show.
 
+    References
+    ----------
+    https://en.wikipedia.org/wiki/String_metric
+
     Examples
     --------
     >>> did_you_mean("bluch", ("blech", "gray_r", 1, None, (2, 56)))
     "Did you mean one of ('blech',)?"
     >>> did_you_mean("none", ("blech", "gray_r", 1, None, (2, 56)))
     'Did you mean one of (None,)?'
-
-    See Also
-    --------
-    https://en.wikipedia.org/wiki/String_metric
     """
     # Convert all values to string, get_close_matches doesn't handle all hashables:
     possibilities_str: dict[str, Hashable] = {str(k): k for k in possibilities}
@@ -205,7 +182,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
 
 
 def maybe_coerce_to_str(index, original_coords):
-    """maybe coerce a pandas Index back to a numpy array of type str
+    """Maybe coerce a pandas Index back to a numpy array of type str
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
@@ -346,7 +323,8 @@ def flat_items[T](
 ) -> Iterable[tuple[str, T]]:
     """Yields flat items from a nested dictionary of dicts.
 
-    Notes:
+    Notes
+    -----
     - Only dict subclasses are flattened.
     - Duplicate items are not removed. These should be checked separately.
     """
@@ -773,7 +751,14 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
         raise TypeError(f"cannot read the magic number from {type(filename_or_obj)}")
     if filename_or_obj.tell() != 0:
         filename_or_obj.seek(0)
-    magic_number = filename_or_obj.read(count)
+    # unbuffered files can return fewer bytes than requested, so read until
+    # `count` bytes or the end of the file
+    magic_number = b""
+    while len(magic_number) < count:
+        chunk = filename_or_obj.read(count - len(magic_number))
+        if not chunk:
+            break
+        magic_number += chunk
     filename_or_obj.seek(0)
     return magic_number
 
@@ -782,7 +767,10 @@ def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
     if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
         path = os.fspath(pathlike)
         try:
-            with open(path, "rb") as f:
+            # Open unbuffered: a buffered reader fills its whole buffer, whose size
+            # follows the filesystem block size and can be several MB on parallel
+            # filesystems, effectively reading entire small files (GH7697).
+            with open(path, "rb", buffering=0) as f:
                 return read_magic_number_from_file(f, count)
         except (FileNotFoundError, IsADirectoryError, TypeError):
             pass
@@ -854,7 +842,8 @@ def decode_numpy_dict_values[K, V](attrs: Mapping[K, V]) -> dict[K, V]:
 
 def ensure_us_time_resolution(val):
     """Convert val out of numpy time, for use in to_dict.
-    Needed because of numpy bug GH#7619"""
+    Needed because of numpy bug GH#7619
+    """
     if np.issubdtype(val.dtype, np.datetime64):
         val = val.astype("datetime64[us]")
     elif np.issubdtype(val.dtype, np.timedelta64):
@@ -932,7 +921,6 @@ def drop_dims_from_indexers(
     dims : sequence
     missing_dims : {"raise", "warn", "ignore"}
     """
-
     if missing_dims == "raise":
         invalid = indexers.keys() - set(dims)
         if invalid:
@@ -1187,7 +1175,8 @@ def iterate_nested(nested_list):
 def contains_only_chunked_or_numpy(obj) -> bool:
     """Returns True if xarray object contains only numpy arrays or chunked arrays (i.e. pure dask or cubed).
 
-    Expects obj to be Dataset or DataArray"""
+    Expects obj to be Dataset or DataArray
+    """
     from xarray.core.dataarray import DataArray
     from xarray.core.indexing import ExplicitlyIndexed
     from xarray.namedarray.pycompat import is_chunked_array
@@ -1269,7 +1258,6 @@ def consolidate_dask_from_array_kwargs(
 
     Temporary function, to be deleted once explicitly passing dask-specific kwargs to .chunk() is deprecated.
     """
-
     from_array_kwargs = _resolve_doubly_passed_kwarg(
         from_array_kwargs,
         kwarg_name="name",

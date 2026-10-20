@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -60,3 +62,31 @@ def test_where() -> None:
     output = where(data < 1, 1, data).all()
     assert output
     assert isinstance(output, cp.ndarray)
+
+
+@pytest.mark.parametrize(
+    "indexers, expected_dims, expected",
+    [
+        ({"x": xr.DataArray(cp.array(2))}, ("y",), [12, 13, 14, 15, 16, 17]),
+        ({"x": cp.array(2)}, ("y",), [12, 13, 14, 15, 16, 17]),
+        (
+            {"x": xr.DataArray(cp.array(2)), "y": xr.DataArray(cp.array([0, 2]))},
+            ("dim_0",),
+            [12, 14],
+        ),
+        (
+            {"x": cp.array(2), "y": xr.DataArray(cp.array([0, 2]), dims="y")},
+            ("y",),
+            [12, 14],
+        ),
+    ],
+)
+def test_isel_0d_cupy_indexer(
+    indexers: dict[str, Any], expected_dims: tuple[str, ...], expected: list[int]
+) -> None:
+    # GH8820
+    da = xr.DataArray(cp.arange(24).reshape(4, 6), dims=["x", "y"])
+    actual = da.isel(indexers)
+    assert actual.dims == expected_dims
+    assert isinstance(actual.data, cp.ndarray)
+    np.testing.assert_array_equal(actual.data.get(), expected)

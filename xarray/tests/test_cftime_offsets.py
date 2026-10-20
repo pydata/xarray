@@ -494,7 +494,8 @@ def test_mul_float_multiple_next_higher_resolution():
 )
 def test_nonTick_offset_multiplied_float_error(offset):
     """Test that the appropriate error is raised if a non-Tick offset is
-    multiplied by a float."""
+    multiplied by a float.
+    """
     with pytest.raises(TypeError, match="unsupported operand type"):
         offset * 0.5
 
@@ -502,7 +503,8 @@ def test_nonTick_offset_multiplied_float_error(offset):
 def test_Microsecond_multiplied_float_error():
     """Test that the appropriate error is raised if a Tick offset is multiplied
     by a float which causes it not to be representable by a
-    microsecond-precision timedelta."""
+    microsecond-precision timedelta.
+    """
     with pytest.raises(
         ValueError, match="Could not convert to integer offset at any resolution"
     ):

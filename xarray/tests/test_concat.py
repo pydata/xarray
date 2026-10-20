@@ -4,6 +4,7 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -39,6 +40,35 @@ from xarray.tests.test_dataset import create_test_data
 
 if TYPE_CHECKING:
     from xarray.core.types import CombineAttrsOptions, JoinOptions
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize(
+    "operation", ["concat_array", "concat_dataset", "to_dataarray"]
+)
+def test_broadcast_mixed_dtypes_view(reverse, operation):
+    a = DataArray(np.ones((2, 3)), dims=("x", "y"), name="v")
+    b = DataArray(np.ones(3, dtype=np.int64), dims="y", name="v")
+    arrays = [b, a] if reverse else [a, b]
+    numpy_func = "concat" if hasattr(np, "concat") else "concatenate"
+    if operation == "to_dataarray":
+        numpy_func = "stack"
+    with patch.object(np, numpy_func, wraps=getattr(np, numpy_func)) as join:
+        if operation == "to_dataarray":
+            result = Dataset(dict(zip(["a", "b"], arrays, strict=True))).to_dataarray()
+        elif operation == "concat_dataset":
+            result = concat([array.to_dataset() for array in arrays], dim="y")["v"]
+        else:
+            result = concat(arrays, dim="y")
+    assert_array_equal(result, 1)
+
+    # NumPy allocates the output; its broadcast input should still be a view
+    # backed by the small, already-cast array (GH10928).
+    broadcasted = join.call_args.args[0][0 if reverse else 1]
+    assert broadcasted.dtype == np.float64
+    assert broadcasted.size == a.size
+    assert broadcasted.base is not None
+    assert broadcasted.base.shape == b.shape
 
 
 # helper method to create multiple tests datasets to concat
@@ -882,7 +912,7 @@ class TestConcatDataset:
     def test_concat_combine_attrs_kwarg_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        """check that combine_attrs is used on data variables and coords"""
+        """Check that combine_attrs is used on data variables and coords"""
         ds1 = Dataset({"a": ("x", [0], attrs1)}, coords={"x": ("x", [0], attrs1)})
         ds2 = Dataset({"a": ("x", [0], attrs2)}, coords={"x": ("x", [1], attrs2)})
 

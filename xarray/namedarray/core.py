@@ -11,6 +11,7 @@ from typing import (
     Any,
     Generic,
     Literal,
+    Never,
     cast,
     overload,
     override,
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
         Default,
         DimsLike,
         IntOrUnknown,
+        NestedList,
         Shape,
         duckarray,
     )
@@ -183,6 +185,57 @@ def from_array[DimType_co: Hashable, ShapeType, DType: np.dtype[Any]](
     data: duckarray[ShapeType, DType],
     attrs: AttrsLike = ...,
 ) -> NamedArray[ShapeType, DType, DimType_co]: ...
+
+
+# Python scalars and lists, which numpy converts to arrays of a known dtype. They
+# are tried in order, so e.g. a list literal of ints is not taken for a list of
+# floats. An empty list becomes float64.
+@overload
+def from_array[DimType_co: Hashable](  # type: ignore[overload-overlap]
+    dims: Iterable[DimType_co],
+    data: list[Never],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.float64], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](  # type: ignore[overload-overlap]
+    dims: Iterable[DimType_co],
+    data: bool | NestedList[bool],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.bool_], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](
+    dims: Iterable[DimType_co],
+    data: int | NestedList[int],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.int_], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](
+    dims: Iterable[DimType_co],
+    data: float | NestedList[float],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.float64], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](
+    dims: Iterable[DimType_co],
+    data: complex | NestedList[complex],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.complex128], DimType_co]: ...
+
+
+@overload
+def from_array[DimType_co: Hashable](
+    dims: Iterable[DimType_co],
+    data: str | NestedList[str],
+    attrs: AttrsLike = ...,
+) -> NamedArray[Any, np.dtype[np.str_], DimType_co]: ...
 
 
 @overload
@@ -614,7 +667,6 @@ class NamedArray(
         (e.g. dask, sparse, pint) is preserved.
 
         """
-
         return self._data
 
     @data.setter
@@ -881,18 +933,11 @@ class NamedArray(
         xarray.unify_chunks
         dask.array.from_array
         """
-
         if from_array_kwargs is None:
             from_array_kwargs = {}
 
         if chunks is None:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            chunks = {}
+            raise TypeError("chunks=None is not supported. Use chunks={} instead.")
 
         if isinstance(chunks, float | str | int | tuple | list):
             # TODO we shouldn't assume here that other chunkmanagers can handle these types
@@ -1056,9 +1101,7 @@ class NamedArray(
         sparse_format: Literal["coo"] | Default = _default,
         fill_value: ArrayLike | Default = _default,
     ) -> NamedArray[Any, DType_co, DimType_co]:
-        """
-        Use sparse-array as backend.
-        """
+        """Use sparse-array as backend."""
         import sparse
 
         from xarray.namedarray._array_api import astype
@@ -1080,9 +1123,7 @@ class NamedArray(
         return self._new(data=data)
 
     def _to_dense(self) -> NamedArray[Any, DType_co, DimType_co]:
-        """
-        Change backend from sparse to np.array.
-        """
+        """Change backend from sparse to np.array."""
         if isinstance(self._data, _sparsearrayfunction_or_api):
             data_dense: np.ndarray[Any, DType_co] = self._data.todense()
             return self._new(data=data_dense)
@@ -1119,7 +1160,6 @@ class NamedArray(
         --------
         numpy.transpose
         """
-
         from xarray.namedarray._array_api import permute_dims
 
         if not dim:
@@ -1182,7 +1222,6 @@ class NamedArray(
         >>> broadcasted.sizes
         {'x': 2, 'y': 2}
         """
-
         from xarray.core import duck_array_ops
 
         combined_dims = either_dict_or_kwargs(dim, dim_kwargs, "broadcast_to")
@@ -1244,7 +1283,6 @@ class NamedArray(
 
         Examples
         --------
-
         >>> data = np.asarray([[1.0, 2.0], [3.0, 4.0]])
         >>> array = xr.NamedArray(("x", "y"), data)
 
@@ -1255,7 +1293,6 @@ class NamedArray(
         ('z', 'x', 'y')
 
         """
-
         from xarray.namedarray._array_api import expand_dims
 
         return expand_dims(self, dim=dim)

@@ -90,7 +90,6 @@ def maybe_transpose_dims(a, b, check_dim_order: bool):
 
     Returns (a, b) tuple with dimensions transposed to canonical order if needed.
     """
-
     __tracebackhide__ = True
 
     if check_dim_order:
@@ -349,7 +348,6 @@ def assert_chunks_equal(a, b):
     b : xarray.Dataset or xarray.DataArray
         The second object to compare.
     """
-
     if isinstance(a, DataArray) != isinstance(b, DataArray):
         raise TypeError("a and b have mismatched types")
 

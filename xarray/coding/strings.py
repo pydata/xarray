@@ -17,12 +17,10 @@ from xarray.coding.variables import (
     unpack_for_encoding,
 )
 from xarray.core import indexing
-from xarray.core.utils import emit_user_level_warning, module_available
+from xarray.core.utils import emit_user_level_warning
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
-
-HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
 
 
 def create_vlen_dtype(element_type):
@@ -127,7 +125,6 @@ def ensure_fixed_length_bytes(var: Variable) -> Variable:
 
 def validate_char_dim_name(strlen, encoding, name) -> str:
     """Check character array dimension naming and size and return it."""
-
     if (char_dim_name := encoding.pop("char_dim_name", None)) is not None:
         # 1 - extract all characters up to last number sequence
         # 2 - extract last number sequence
@@ -199,12 +196,8 @@ def bytes_to_char(arr):
 
 def _numpy_bytes_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible."""
-    # adapt handling of copy-kwarg to numpy 2.0
-    # see https://github.com/numpy/numpy/issues/25916
-    # and https://github.com/numpy/numpy/pull/25922
-    copy = None if HAS_NUMPY_2_0 else False
     # ensure the array is contiguous
-    arr = np.array(arr, copy=copy, order="C", dtype=np.bytes_)
+    arr = np.array(arr, copy=None, order="C", dtype=np.bytes_)
     return arr.reshape(arr.shape + (1,)).view("S1")
 
 
@@ -246,12 +239,8 @@ def char_to_bytes(arr):
 
 def _numpy_char_to_bytes(arr):
     """Like netCDF4.chartostring, but faster and more flexible."""
-    # adapt handling of copy-kwarg to numpy 2.0
-    # see https://github.com/numpy/numpy/issues/25916
-    # and https://github.com/numpy/numpy/pull/25922
-    copy = None if HAS_NUMPY_2_0 else False
     # based on: https://stackoverflow.com/a/10984878/809705
-    arr = np.array(arr, copy=copy, order="C")
+    arr = np.array(arr, copy=None, order="C")
     dtype = "S" + str(arr.shape[-1])
     return arr.view(dtype).reshape(arr.shape[:-1])
 

@@ -52,7 +52,8 @@ class _NoDefault(Enum):
     """Used by pandas to specify a default value for a deprecated argument.
     Copied from pandas._libs.lib._NoDefault.
 
-    See also:
+    See Also
+    --------
     - pandas-dev/pandas#30788
     - pandas-dev/pandas#40684
     - pandas-dev/pandas#40715

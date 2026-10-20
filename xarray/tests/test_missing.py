@@ -410,7 +410,17 @@ def test_interpolate_dask_raises_for_invalid_chunk_dim():
 
 @requires_dask
 @requires_scipy
-@pytest.mark.parametrize("dtype, method", [(int, "linear"), (int, "nearest")])
+@pytest.mark.parametrize(
+    "dtype, method",
+    [
+        (int, "linear"),
+        (int, "nearest"),
+        (np.float32, "linear"),
+        (np.float32, "nearest"),
+        (np.float32, "slinear"),
+        (np.complex64, "linear"),
+    ],
+)
 def test_interpolate_dask_expected_dtype(dtype, method):
     da = xr.DataArray(
         data=np.array([0, 1], dtype=dtype),
@@ -433,9 +443,7 @@ def test_ffill():
 @pytest.mark.parametrize("compute_backend", [None], indirect=True)
 @pytest.mark.parametrize("method", ["ffill", "bfill"])
 def test_b_ffill_use_bottleneck_numbagg(method, compute_backend):
-    """
-    bfill & ffill fail if both bottleneck and numba are disabled
-    """
+    """Bfill & ffill fail if both bottleneck and numba are disabled"""
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     with pytest.raises(RuntimeError):
         getattr(da, method)("x")
@@ -445,9 +453,7 @@ def test_b_ffill_use_bottleneck_numbagg(method, compute_backend):
 @pytest.mark.parametrize("compute_backend", [None], indirect=True)
 @pytest.mark.parametrize("method", ["ffill", "bfill"])
 def test_b_ffill_use_bottleneck_dask(method, compute_backend):
-    """
-    ffill fails if both bottleneck and numba are disabled, on dask arrays
-    """
+    """Ffill fails if both bottleneck and numba are disabled, on dask arrays"""
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     with pytest.raises(RuntimeError):
         getattr(da, method)("x")
@@ -753,7 +759,6 @@ def test_interpolate_na_2d(coords):
 @requires_scipy
 def test_interpolators_complex_out_of_bounds():
     """Ensure complex nans are used for complex data"""
-
     xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
     yi = np.exp(1j * xi)
     x = np.array([-2, 1, 6], dtype=np.float64)
