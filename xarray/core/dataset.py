@@ -502,7 +502,8 @@ class Dataset(
 
     def drop_encoding(self) -> Self:
         """Return a new Dataset without encoding on the dataset or any of its
-        variables/coords."""
+        variables/coords.
+        """
         variables = {k: v.drop_encoding() for k, v in self.variables.items()}
         return self._replace(variables=variables, encoding={})
 
@@ -1141,6 +1142,10 @@ class Dataset(
             New object with dimensions, attributes, coordinates, name, encoding,
             and optionally data copied from original.
 
+        See Also
+        --------
+        pandas.DataFrame.copy
+
         Examples
         --------
         Shallow copy versus deep copy
@@ -1205,10 +1210,6 @@ class Dataset(
         Data variables:
             foo      (dim_0, dim_1) float64 48B 7.0 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 16B -1 2
-
-        See Also
-        --------
-        pandas.DataFrame.copy
         """
         return self._copy(deep=deep, data=data)
 
@@ -1616,7 +1617,6 @@ class Dataset(
         self, other: Self, compat: str | Callable[[Variable, Variable], bool]
     ) -> bool:
         """Helper function for equals and identical"""
-
         if not callable(compat):
             compat_str = compat
 
@@ -1644,9 +1644,14 @@ class Dataset(
         the other dataset can still be broadcast equal if the the non-scalar
         variable is a constant.
 
+        See Also
+        --------
+        Dataset.equals
+        Dataset.identical
+        Dataset.broadcast
+
         Examples
         --------
-
         # 2D array with shape (1, 3)
 
         >>> data = np.array([[1, 2, 3]])
@@ -1691,12 +1696,6 @@ class Dataset(
         >>> a2, b2 = xr.broadcast(a, b)
         >>> a2.equals(b2)
         True
-
-        See Also
-        --------
-        Dataset.equals
-        Dataset.identical
-        Dataset.broadcast
         """
         try:
             return self._all_compat(other, "broadcast_equals")
@@ -1713,9 +1712,13 @@ class Dataset(
         This method is necessary because `v1 == v2` for ``Dataset``
         does element-wise comparisons (like numpy.ndarrays).
 
+        See Also
+        --------
+        Dataset.broadcast_equals
+        Dataset.identical
+
         Examples
         --------
-
         # 2D array with shape (1, 3)
 
         >>> data = np.array([[1, 2, 3]])
@@ -1773,11 +1776,6 @@ class Dataset(
         ... )
         >>> ds1.equals(ds2)
         True
-
-        See Also
-        --------
-        Dataset.broadcast_equals
-        Dataset.identical
         """
         try:
             return self._all_compat(other, "equals")
@@ -1788,9 +1786,13 @@ class Dataset(
         """Like equals, but also checks all dataset attributes, the
         attributes on all variables and coordinates, and indexes.
 
+        See Also
+        --------
+        Dataset.broadcast_equals
+        Dataset.equals
+
         Examples
         --------
-
         >>> a = xr.Dataset(
         ...     {"Width": ("X", [1, 2, 3])},
         ...     coords={"X": [1, 2, 3]},
@@ -1847,11 +1849,6 @@ class Dataset(
 
         >>> a.identical(c)
         False
-
-        See Also
-        --------
-        Dataset.broadcast_equals
-        Dataset.equals
         """
         try:
             return utils.dict_equiv(self.attrs, other.attrs) and self._all_compat(
@@ -1906,6 +1903,15 @@ class Dataset(
         names : hashable or iterable of hashable
             Name(s) of variables in this dataset to convert into coordinates.
 
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        Dataset.swap_dims
+        Dataset.assign_coords
+
         Examples
         --------
         >>> dataset = xr.Dataset(
@@ -1932,15 +1938,6 @@ class Dataset(
             *empty*
 
         On calling ``set_coords`` , these data variables are converted to coordinates, as shown in the final dataset.
-
-        Returns
-        -------
-        Dataset
-
-        See Also
-        --------
-        Dataset.swap_dims
-        Dataset.assign_coords
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
@@ -1970,6 +1967,14 @@ class Dataset(
         drop : bool, default: False
             If True, remove coordinates instead of converting them into
             variables.
+
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        Dataset.set_coords
 
         Examples
         --------
@@ -2023,14 +2028,6 @@ class Dataset(
             temperature    (time, lat, lon) int64 64B 25 26 27 28 29 30 31 32
             precipitation  (time, lat, lon) float64 64B 0.5 0.8 0.2 0.4 0.3 0.6 0.7 0.9
             altitude       int64 8B 1000
-
-        Returns
-        -------
-        Dataset
-
-        See Also
-        --------
-        Dataset.set_coords
         """
         if names is None:
             names = self._coord_names - set(self._indexes)
@@ -2439,9 +2436,10 @@ class Dataset(
             * ``dask.delayed.Delayed`` if compute is False
             * ZarrStore otherwise
 
-        References
-        ----------
-        https://zarr.readthedocs.io/
+        See Also
+        --------
+        :ref:`io.zarr`
+            The I/O user guide, with more details and examples.
 
         Notes
         -----
@@ -2468,10 +2466,9 @@ class Dataset(
             See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
             for more.
 
-        See Also
-        --------
-        :ref:`io.zarr`
-            The I/O user guide, with more details and examples.
+        References
+        ----------
+        https://zarr.readthedocs.io/
         """
         from xarray.backends.writers import to_zarr
 
@@ -2853,9 +2850,21 @@ class Dataset(
             in this dataset, unless vectorized indexing was triggered by using
             an array indexer, in which case the data will be a copy.
 
+        See Also
+        --------
+        Dataset.sel
+        DataArray.isel
+
+        Notes
+        -----
+        :doc:`xarray-tutorial:intermediate/indexing/indexing`
+            Tutorial material on indexing with Xarray objects
+
+        :doc:`xarray-tutorial:fundamentals/02.1_indexing_Basic`
+            Tutorial material on basics of indexing
+
         Examples
         --------
-
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -2909,18 +2918,6 @@ class Dataset(
         Data variables:
             math_scores     (student, test) int64 48B 90 85 92 95 92 98
             english_scores  (student, test) int64 48B 88 90 92 93 96 91
-
-        See Also
-        --------
-        :func:`Dataset.sel <Dataset.sel>`
-        :func:`DataArray.isel <DataArray.isel>`
-
-        :doc:`xarray-tutorial:intermediate/indexing/indexing`
-            Tutorial material on indexing with Xarray objects
-
-        :doc:`xarray-tutorial:fundamentals/02.1_indexing_Basic`
-            Tutorial material on basics of indexing
-
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
@@ -3066,15 +3063,16 @@ class Dataset(
 
         See Also
         --------
-        :func:`Dataset.isel <Dataset.isel>`
-        :func:`DataArray.sel <DataArray.sel>`
+        Dataset.isel
+        DataArray.sel
 
+        Notes
+        -----
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
 
         :doc:`xarray-tutorial:fundamentals/02.1_indexing_Basic`
             Tutorial material on basics of indexing
-
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
         query_results = map_index_queries(
@@ -3145,6 +3143,12 @@ class Dataset(
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
+        See Also
+        --------
+        Dataset.tail
+        Dataset.thin
+        DataArray.head
+
         Examples
         --------
         >>> dates = pd.date_range(start="2023-01-01", periods=5)
@@ -3188,12 +3192,6 @@ class Dataset(
         Data variables:
             pageviews  (date) int64 24B 2000 1800 1500
             visitors   (date) int64 24B 1500 1200 1000
-
-        See Also
-        --------
-        Dataset.tail
-        Dataset.thin
-        DataArray.head
         """
         if not indexers_kwargs:
             if indexers is None:
@@ -3234,6 +3232,12 @@ class Dataset(
         **indexers_kwargs : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
+
+        See Also
+        --------
+        Dataset.head
+        Dataset.thin
+        DataArray.tail
 
         Examples
         --------
@@ -3276,12 +3280,6 @@ class Dataset(
         Data variables:
             duration            (activity) int64 24B 60 30 60
             energy_expenditure  (activity) int64 24B 250 150 100
-
-        See Also
-        --------
-        Dataset.head
-        Dataset.thin
-        DataArray.tail
         """
         if not indexers_kwargs:
             if indexers is None:
@@ -3326,6 +3324,12 @@ class Dataset(
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
+        See Also
+        --------
+        Dataset.head
+        Dataset.tail
+        DataArray.thin
+
         Examples
         --------
         >>> x_arr = np.arange(0, 26)
@@ -3361,12 +3365,6 @@ class Dataset(
         Coordinates:
           * x        (x) int64 8B 0
           * y        (y) int64 24B 0 5 10
-
-        See Also
-        --------
-        Dataset.head
-        Dataset.tail
-        DataArray.thin
         """
         if (
             not indexers_kwargs
@@ -3430,7 +3428,6 @@ class Dataset(
         exclude_vars: frozenset[Hashable],
     ) -> Self:
         """Callback called from ``Aligner`` to create a new reindexed Dataset."""
-
         new_variables = variables.copy()
         new_indexes = indexes.copy()
 
@@ -3776,9 +3773,7 @@ class Dataset(
         sparse: bool = False,
         **indexers_kwargs: Any,
     ) -> Self:
-        """
-        Same as reindex but supports sparse option.
-        """
+        """Same as reindex but supports sparse option."""
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
             self,
@@ -3862,11 +3857,14 @@ class Dataset(
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
 
-
         Returns
         -------
         interpolated : Dataset
             New dataset on the new coordinates.
+
+        See Also
+        --------
+        :mod:`scipy.interpolate`
 
         Notes
         -----
@@ -3897,10 +3895,6 @@ class Dataset(
             4. **Interpolation along multiple dimensions of multi-dimensional data**
                 - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
                     "cubic", "quintic", "pchip"}.
-
-        See Also
-        --------
-        :mod:`scipy.interpolate`
 
         :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
             Tutorial material on manipulating data resolution using :py:func:`~xarray.Dataset.interp`
@@ -4171,6 +4165,12 @@ class Dataset(
             Another dataset by interpolating this dataset's data along the
             coordinates of the other object.
 
+        See Also
+        --------
+        :func:`Dataset.interp`
+        :func:`Dataset.reindex_like`
+        :mod:`scipy.interpolate`
+
         Notes
         -----
         - scipy is required.
@@ -4202,12 +4202,6 @@ class Dataset(
             4. **Interpolation along multiple dimensions of multi-dimensional data**
                 - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
                     "cubic", "quintic", "pchip"}.
-
-        See Also
-        --------
-        :func:`Dataset.interp`
-        :func:`Dataset.reindex_like`
-        :mod:`scipy.interpolate`
         """
         if kwargs is None:
             kwargs = {}
@@ -4481,6 +4475,11 @@ class Dataset(
         swapped : Dataset
             Dataset with swapped dimensions.
 
+        See Also
+        --------
+        Dataset.rename
+        DataArray.swap_dims
+
         Examples
         --------
         >>> ds = xr.Dataset(
@@ -4517,11 +4516,6 @@ class Dataset(
         Data variables:
             a        (z) int64 16B 5 7
             b        (z) float64 16B 0.1 2.4
-
-        See Also
-        --------
-        Dataset.rename
-        DataArray.swap_dims
         """
         # TODO: deprecate this method in favor of a (less confusing)
         # rename_dims() method that only renames dimensions.
@@ -4614,6 +4608,10 @@ class Dataset(
         expanded : Dataset
             This object, but with additional dimension(s).
 
+        See Also
+        --------
+        DataArray.expand_dims
+
         Examples
         --------
         >>> dataset = xr.Dataset({"temperature": ([], 25.0)})
@@ -4698,10 +4696,6 @@ class Dataset(
         >>> ds.expand_dims("x", create_index_for_new_dim=False).indexes
         Indexes:
             *empty*
-
-        See Also
-        --------
-        DataArray.expand_dims
         """
         if dim is None:
             pass
@@ -4844,6 +4838,12 @@ class Dataset(
         obj : Dataset
             Another dataset, with this dataset's data but replaced coordinates.
 
+        See Also
+        --------
+        Dataset.reset_index
+        Dataset.set_xindex
+        Dataset.swap_dims
+
         Examples
         --------
         >>> arr = xr.DataArray(
@@ -4869,12 +4869,6 @@ class Dataset(
           * y        (y) int64 24B 0 1 2
         Data variables:
             v        (x, y) float64 48B 1.0 1.0 1.0 1.0 1.0 1.0
-
-        See Also
-        --------
-        Dataset.reset_index
-        Dataset.set_xindex
-        Dataset.swap_dims
         """
         dim_coords = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
 
@@ -5667,7 +5661,6 @@ class Dataset(
         --------
         Dataset.stack
         """
-
         if dim is None:
             dims = list(self.dims)
         else:
@@ -5896,9 +5889,21 @@ class Dataset(
             passed are not in the dataset. If 'ignore', any given names that are in the
             dataset are dropped and no error is raised.
 
+        Returns
+        -------
+        dropped : Dataset
+
+        Raises
+        ------
+        ValueError
+             Raised if you attempt to drop a variable which is not present, and the kwarg ``errors='raise'``.
+
+        See Also
+        --------
+        DataArray.drop_vars
+
         Examples
         --------
-
         >>> dataset = xr.Dataset(
         ...     {
         ...         "temperature": (
@@ -5987,19 +5992,6 @@ class Dataset(
         >>> dataset.drop_vars(["pressure"], errors="raise")
         Traceback (most recent call last):
         ValueError: These variables cannot be found in this dataset: ['pressure']
-
-        Raises
-        ------
-        ValueError
-             Raised if you attempt to drop a variable which is not present, and the kwarg ``errors='raise'``.
-
-        Returns
-        -------
-        dropped : Dataset
-
-        See Also
-        --------
-        DataArray.drop_vars
 
         """
         if callable(names):
@@ -6276,7 +6268,6 @@ class Dataset(
         Data variables:
             A        (x, y) int64 32B 0 2 3 5
         """
-
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "drop_isel")
 
         ds = self
@@ -6363,16 +6354,16 @@ class Dataset(
             Each array in the dataset (including) coordinates will be
             transposed to the given order.
 
+        See Also
+        --------
+        numpy.transpose
+        DataArray.transpose
+
         Notes
         -----
         This operation returns a view of each array's data. It is
         lazy for dask-backed DataArrays but not for numpy-backed DataArrays
         -- the data will be fully loaded into memory.
-
-        See Also
-        --------
-        numpy.transpose
-        DataArray.transpose
         """
         # Raise error if list is passed as dim
         if (len(dim) > 0) and (isinstance(dim[0], list)):
@@ -6416,6 +6407,15 @@ class Dataset(
         subset : iterable of hashable or None, optional
             Which variables to check for missing values. By default, all
             variables in the dataset are checked.
+
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        DataArray.dropna
+        pandas.DataFrame.dropna
 
         Examples
         --------
@@ -6480,15 +6480,6 @@ class Dataset(
           * location     (location) <U1 8B 'A' 'B'
         Data variables:
             temperature  (time, location) float64 48B 23.4 24.1 21.8 24.2 20.5 25.3
-
-        Returns
-        -------
-        Dataset
-
-        See Also
-        --------
-        DataArray.dropna
-        pandas.DataFrame.dropna
         """
         # TODO: consider supporting multiple dimensions? Or not, given that
         # there are some ugly edge cases, e.g., pandas's dropna differs
@@ -6768,6 +6759,14 @@ class Dataset(
             than 0 or None for no limit. Must be None or greater than or equal
             to axis length if filling along chunked axes (dimensions).
 
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        Dataset.bfill
+
         Examples
         --------
         >>> time = pd.date_range("2023-01-01", periods=10, freq="D")
@@ -6802,14 +6801,6 @@ class Dataset(
           * time     (time) datetime64[us] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 1.0 1.0 nan 5.0 5.0 5.0 8.0 8.0 10.0
-
-        Returns
-        -------
-        Dataset
-
-        See Also
-        --------
-        Dataset.bfill
         """
         from xarray.core.missing import _apply_over_vars_with_dim, ffill
 
@@ -6832,6 +6823,14 @@ class Dataset(
             consecutive NaNs, it will only be partially filled. Must be greater
             than 0 or None for no limit. Must be None or greater than or equal
             to axis length if filling along chunked axes (dimensions).
+
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        Dataset.ffill
 
         Examples
         --------
@@ -6867,14 +6866,6 @@ class Dataset(
           * time     (time) datetime64[us] 80B 2023-01-01 2023-01-02 ... 2023-01-10
         Data variables:
             data     (time) float64 80B 1.0 nan 5.0 5.0 5.0 8.0 8.0 8.0 10.0 10.0
-
-        Returns
-        -------
-        Dataset
-
-        See Also
-        --------
-        Dataset.ffill
         """
         from xarray.core.missing import _apply_over_vars_with_dim, bfill
 
@@ -6943,7 +6934,6 @@ class Dataset(
 
         Examples
         --------
-
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -7156,6 +7146,10 @@ class Dataset(
             A new Dataset with the new variables in addition to all the
             existing variables.
 
+        See Also
+        --------
+        pandas.DataFrame.assign
+
         Notes
         -----
         Since ``kwargs`` is a dictionary, the order of your arguments may not
@@ -7167,10 +7161,6 @@ class Dataset(
         The new assigned variables that replace existing coordinates in the
         original dataset are still listed as coordinates in the returned
         Dataset.
-
-        See Also
-        --------
-        pandas.DataFrame.assign
 
         Examples
         --------
@@ -7459,7 +7449,6 @@ class Dataset(
             Dataset as a pandas DataFrame.
 
         """
-
         ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         return self._to_dataframe(ordered_dims=ordered_dims)
@@ -7699,7 +7688,6 @@ class Dataset(
         -------
         dask.dataframe.DataFrame
         """
-
         import dask.dataframe as dd
 
         chunkmanager = guess_chunkmanager("dask")
@@ -7867,7 +7855,6 @@ class Dataset(
             title:    air temperature
 
         """
-
         variables: Iterable[tuple[Hashable, Any]]
         if not {"coords", "data_vars"}.issubset(set(d)):
             variables = d.items()
@@ -8036,6 +8023,10 @@ class Dataset(
         difference : Dataset
             The n-th order finite difference of this object.
 
+        See Also
+        --------
+        Dataset.differentiate
+
         Notes
         -----
         `n` matches numpy's behavior and is different from pandas' first argument named
@@ -8056,10 +8047,6 @@ class Dataset(
         Dimensions without coordinates: x
         Data variables:
             foo      (x) int64 16B 1 -1
-
-        See Also
-        --------
-        Dataset.differentiate
         """
         if dim not in self.dims:
             raise ValueError(
@@ -8447,6 +8434,12 @@ class Dataset(
         --------
         numpy.nanquantile, numpy.quantile, pandas.Series.quantile, DataArray.quantile
 
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
+
         Examples
         --------
         >>> ds = xr.Dataset(
@@ -8483,14 +8476,7 @@ class Dataset(
           * y         (y) float64 32B 1.0 1.5 2.0 2.5
         Data variables:
             a         (quantile, y) float64 96B 0.7 4.2 2.6 1.5 3.6 ... 6.5 7.3 9.4 1.9
-
-        References
-        ----------
-        .. [1] R. J. Hyndman and Y. Fan,
-           "Sample quantiles in statistical packages,"
-           The American Statistician, 50(4), pp. 361-365, 1996
         """
-
         dims: set[Hashable]
         if isinstance(dim, str):
             dims = {dim}
@@ -8986,7 +8972,6 @@ class Dataset(
         --------
         dask.array.core.unify_chunks
         """
-
         return unify_chunks(self)[0]
 
     def map_blocks(
@@ -9033,6 +9018,12 @@ class Dataset(
         A single DataArray or Dataset with dask backend, reassembled from the outputs of the
         function.
 
+        See Also
+        --------
+        dask.array.map_blocks
+        xarray.apply_ufunc
+        xarray.DataArray.map_blocks
+
         Notes
         -----
         This function is designed for when ``func`` needs to manipulate a whole xarray object
@@ -9042,15 +9033,8 @@ class Dataset(
         If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
 
-        See Also
-        --------
-        :func:`dask.array.map_blocks <dask.array.map_blocks>`
-        :func:`xarray.apply_ufunc <apply_ufunc>`
-        :func:`xarray.DataArray.map_blocks <xarray.DataArray.map_blocks>`
-
         :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
             Advanced Tutorial on map_blocks with dask
-
 
         Examples
         --------
@@ -9613,6 +9597,11 @@ class Dataset(
         -------
         result : Dataset
 
+        See Also
+        --------
+        Dataset.idxmin
+        DataArray.argmin
+
         Examples
         --------
         >>> dataset = xr.Dataset(
@@ -9655,11 +9644,6 @@ class Dataset(
         Coordinates:
           * test     (test) <U6 72B 'Test 1' 'Test 2' 'Test 3'
             student  (test) <U7 84B 'Charlie' 'Bob' 'Charlie'
-
-        See Also
-        --------
-        Dataset.idxmin
-        DataArray.argmin
         """
         if dim is None:
             warnings.warn(
@@ -9716,9 +9700,12 @@ class Dataset(
         -------
         result : Dataset
 
+        See Also
+        --------
+        DataArray.argmax
+
         Examples
         --------
-
         >>> dataset = xr.Dataset(
         ...     {
         ...         "math_scores": (
@@ -9748,10 +9735,6 @@ class Dataset(
         Data variables:
             math_scores     (student) int64 24B 2 2 2
             english_scores  (student) int64 24B 2 1 1
-
-        See Also
-        --------
-        DataArray.argmax
 
         """
         if dim is None:
@@ -9992,7 +9975,6 @@ class Dataset(
             a        (x) int64 16B 3 4
             b        (x) float64 16B 0.75 1.0
         """
-
         # allow queries to be given either as a dict or as kwargs
         queries = either_dict_or_kwargs(queries, queries_kwargs, "query")
 
@@ -10383,6 +10365,27 @@ class Dataset(
             A `DatasetGroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
 
+        See Also
+        --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
+
+        pandas.DataFrame.groupby
+        Dataset.groupby_bins
+        DataArray.groupby
+        :class:`core.groupby.DatasetGroupBy`
+        Dataset.coarsen
+        Dataset.resample
+        DataArray.resample
+
+        Notes
+        -----
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
+            Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
+
+        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
+            Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.Dataset.resample`.
+
         Examples
         --------
         >>> ds = xr.Dataset(
@@ -10427,25 +10430,6 @@ class Dataset(
         Dimensions without coordinates: y
         Data variables:
             foo      (y, x_bins, letters) float64 96B 0.0 nan nan 3.0 ... nan nan 5.0
-
-        See Also
-        --------
-        :ref:`groupby`
-            Users guide explanation of how to group and bin data.
-
-        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
-            Tutorial on :py:func:`~xarray.Dataset.Groupby` for windowed computation.
-
-        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
-            Tutorial on :py:func:`~xarray.Dataset.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.Dataset.resample`.
-
-        :external:py:meth:`pandas.DataFrame.groupby <pandas.DataFrame.groupby>`
-        :func:`Dataset.groupby_bins <Dataset.groupby_bins>`
-        :func:`DataArray.groupby <DataArray.groupby>`
-        :class:`core.groupby.DatasetGroupBy`
-        :func:`Dataset.coarsen <Dataset.coarsen>`
-        :func:`Dataset.resample <Dataset.resample>`
-        :func:`DataArray.resample <DataArray.resample>`
         """
         from xarray.core.groupby import (
             DatasetGroupBy,
@@ -10570,25 +10554,24 @@ class Dataset(
             Each value in the data contributes to the reduction operation
             according to its associated weight.
 
-        Notes
-        -----
-        ``weights`` must be a DataArray and cannot contain missing values.
-        Missing values can be replaced by ``weights.fillna(0)``.
-
         Returns
         -------
         computation.weighted.DatasetWeighted
 
         See Also
         --------
-        :func:`DataArray.weighted <DataArray.weighted>`
+        DataArray.weighted
 
         :ref:`compute.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.Dataset.weighted`
 
+        Notes
+        -----
+        ``weights`` must be a DataArray and cannot contain missing values.
+        Missing values can be replaced by ``weights.fillna(0)``.
+
         :doc:`xarray-tutorial:fundamentals/03.4_weighted`
             Tutorial on Weighted Reduction using :py:func:`~xarray.Dataset.weighted`
-
         """
         from xarray.computation.weighted import DatasetWeighted
 
@@ -10711,7 +10694,7 @@ class Dataset(
         See Also
         --------
         :class:`computation.rolling.DatasetCoarsen`
-        :func:`DataArray.coarsen <DataArray.coarsen>`
+        DataArray.coarsen
 
         :ref:`reshape.coarsen`
             User guide describing :py:func:`~xarray.Dataset.coarsen`
@@ -10719,9 +10702,10 @@ class Dataset(
         :ref:`compute.coarsen`
             User guide on block aggregation :py:func:`~xarray.Dataset.coarsen`
 
+        Notes
+        -----
         :doc:`xarray-tutorial:fundamentals/03.3_windowed`
             Tutorial on windowed computation using :py:func:`~xarray.Dataset.coarsen`
-
         """
         from xarray.computation.rolling import DatasetCoarsen
 

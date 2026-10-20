@@ -160,9 +160,7 @@ def type(request):
 
 @pytest.fixture(params=[1])
 def d(request, use_dask, type) -> DataArray | Dataset:
-    """
-    For tests which can test either a DataArray or a Dataset.
-    """
+    """For tests which can test either a DataArray or a Dataset."""
     result: DataArray | Dataset
     if request.param == 1:
         ds = Dataset(

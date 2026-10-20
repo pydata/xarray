@@ -1,5 +1,5 @@
-"""
-This module contains various lazy array classes which can be wrapped and manipulated by xarray objects but will raise on data access.
+"""This module contains various lazy array classes which can be wrapped and manipulated
+by xarray objects but will raise on data access.
 """
 
 from collections.abc import Callable, Iterable
@@ -53,7 +53,8 @@ class IndexableArray(InaccessibleArray):
 
 class DuckArrayWrapper(utils.NDArrayMixin):
     """Array-like that prevents casting to array.
-    Modeled after cupy."""
+    Modeled after cupy.
+    """
 
     def __init__(self, array: np.ndarray):
         self.array = array
@@ -132,8 +133,8 @@ def result_type(*arrays_and_dtypes) -> np.dtype:
 def broadcast_to(
     x: "ConcatenatableArray", /, shape: tuple[int, ...]
 ) -> "ConcatenatableArray":
-    """
-    Broadcasts an array to a specified shape, by either manipulating chunk keys or copying chunk manifest entries.
+    """Broadcasts an array to a specified shape, by either manipulating chunk keys or
+    copying chunk manifest entries.
     """
     if not isinstance(x, ConcatenatableArray):
         raise TypeError
@@ -146,8 +147,8 @@ def broadcast_to(
 def full_like(
     x: "ConcatenatableArray", /, fill_value, **kwargs
 ) -> "ConcatenatableArray":
-    """
-    Broadcasts an array to a specified shape, by either manipulating chunk keys or copying chunk manifest entries.
+    """Broadcasts an array to a specified shape, by either manipulating chunk keys or
+    copying chunk manifest entries.
     """
     if not isinstance(x, ConcatenatableArray):
         raise TypeError

@@ -806,7 +806,6 @@ class IndexWithExtraVariables(Index):
 
 def test_set_xindex_with_extra_variables() -> None:
     """Test that set_xindex raises an error when custom index creates extra variables."""
-
     ds = xr.Dataset(coords={"time": [1, 2, 3]}).reset_index("time")
 
     # Test that set_xindex raises error for extra variables

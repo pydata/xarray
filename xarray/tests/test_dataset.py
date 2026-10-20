@@ -192,9 +192,7 @@ def create_test_stacked_array() -> tuple[DataArray, DataArray]:
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
-    """
-    Store that does not allow any data access.
-    """
+    """Store that does not allow any data access."""
 
     def __init__(self):
         super().__init__()
@@ -3340,7 +3338,8 @@ class TestDataset:
     def test_copy_coords(self, deep, expected_orig) -> None:
         """The test fails for the shallow copy, and apparently only on Windows
         for some reason. In windows coords seem to be immutable unless it's one
-        dataset deep copied from another."""
+        dataset deep copied from another.
+        """
         ds = xr.DataArray(
             np.ones([2, 2, 2]),
             coords={"a": [1, 2], "b": ["x", "y"], "c": [0, 1]},
@@ -7914,7 +7913,6 @@ class TestDataset:
     )
     def test_query(self, use_dask: bool, engine, parser) -> None:
         """Test querying a dataset."""
-
         # setup test data
         np.random.seed(42)
         a = np.arange(0, 10, 1)
@@ -8663,7 +8661,6 @@ class TestNumpyCoercion:
 
 def test_string_keys_typing() -> None:
     """Tests that string keys to `variables` are permitted by mypy"""
-
     da = xr.DataArray(np.arange(10), dims=["x"])
     ds = xr.Dataset(dict(x=da))
     mapping = {"y": da}

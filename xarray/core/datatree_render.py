@@ -105,7 +105,6 @@ class RenderDataTree:
 
         Examples
         --------
-
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
@@ -252,7 +251,6 @@ class RenderDataTree:
 
         Examples
         --------
-
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree

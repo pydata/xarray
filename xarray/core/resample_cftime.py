@@ -67,7 +67,8 @@ if typing.TYPE_CHECKING:
 class CFTimeGrouper:
     """This is a simple container for the grouping parameters that implements a
     single method, the only one required for resampling in xarray.  It cannot
-    be used in a call to groupby like a pandas.Grouper object can."""
+    be used in a call to groupby like a pandas.Grouper object can.
+    """
 
     freq: BaseCFTimeOffset
     closed: SideOptions
@@ -151,7 +152,6 @@ class CFTimeGrouper:
 
         with index being a CFTimeIndex instead of a DatetimeIndex.
         """
-
         datetime_bins, labels = _get_time_bins(
             index, self.freq, self.closed, self.label, self.origin, self.offset
         )
@@ -218,7 +218,6 @@ def _get_time_bins(
     labels : CFTimeIndex
         Define what the user actually sees the bins labeled as.
     """
-
     if not isinstance(index, CFTimeIndex):
         raise TypeError(
             "index must be a CFTimeIndex, but got "

@@ -125,7 +125,6 @@ def ensure_fixed_length_bytes(var: Variable) -> Variable:
 
 def validate_char_dim_name(strlen, encoding, name) -> str:
     """Check character array dimension naming and size and return it."""
-
     if (char_dim_name := encoding.pop("char_dim_name", None)) is not None:
         # 1 - extract all characters up to last number sequence
         # 2 - extract last number sequence

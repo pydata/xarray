@@ -57,8 +57,7 @@ with contextlib.suppress(ImportError):
 
 @contextlib.contextmanager
 def figure_context(*args, **kwargs):
-    """context manager which autocloses a figure (even if the test failed)"""
-
+    """Context manager which autocloses a figure (even if the test failed)"""
     try:
         yield None
     finally:
@@ -86,9 +85,7 @@ def test_all_figures_closed():
 @pytest.mark.flaky
 @pytest.mark.skip(reason="maybe flaky")
 def text_in_fig() -> set[str]:
-    """
-    Return the set of all text in the figure
-    """
+    """Return the set of all text in the figure"""
     return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
 
 
@@ -98,17 +95,13 @@ def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
 
 
 def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
-    """
-    Return True if a substring is found anywhere in an axes
-    """
+    """Return True if a substring is found anywhere in an axes"""
     alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     return any(substring in txt for txt in alltxt)
 
 
 def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
-    """
-    Return True if a substring is not found anywhere in an axes
-    """
+    """Return True if a substring is not found anywhere in an axes"""
     alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     check = [(substring not in txt) for txt in alltxt]
     return all(check)
@@ -634,9 +627,7 @@ class TestPlot(PlotTestCase):
             _infer_interval_breaks(np.array([0, 2, 1]), check_monotonic=True)
 
     def test__infer_interval_breaks_logscale(self) -> None:
-        """
-        Check if interval breaks are defined in the logspace if scale="log"
-        """
+        """Check if interval breaks are defined in the logspace if ``scale="log"``."""
         # Check for 1d arrays
         x = np.logspace(-4, 3, 8)
         expected_interval_breaks = 10 ** np.linspace(-4.5, 3.5, 9)
@@ -654,9 +645,7 @@ class TestPlot(PlotTestCase):
         np.testing.assert_allclose(x2d, expected_interval_breaks)
 
     def test__infer_interval_breaks_logscale_invalid_coords(self) -> None:
-        """
-        Check error is raised when passing non-positive coordinates with logscale
-        """
+        """Check error is raised when passing non-positive coordinates with logscale"""
         # Check if error is raised after a zero value in the array
         x = np.linspace(0, 5, 6)
         with pytest.raises(ValueError):
@@ -2031,9 +2020,7 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
 
 
 class TestPcolormeshLogscale(PlotTestCase):
-    """
-    Test pcolormesh axes when x and y are in logscale
-    """
+    """Test pcolormesh axes when x and y are in logscale"""
 
     plotfunc = staticmethod(xplt.pcolormesh)
 
@@ -3189,9 +3176,7 @@ class TestDatasetScatterPlots(PlotTestCase):
 class TestDatetimePlot(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self) -> None:
-        """
-        Create a DataArray with a time-axis that contains datetime objects.
-        """
+        """Create a DataArray with a time-axis that contains datetime objects."""
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
         times = pd.date_range(start="2017-01-01", freq="MS", periods=12)
@@ -3298,9 +3283,7 @@ class TestNcAxisNotInstalled(PlotTestCase):
 class TestAxesKwargs:
     @pytest.fixture(params=[1, 2, 3])
     def data_array(self, request) -> DataArray:
-        """
-        Return a simple DataArray
-        """
+        """Return a simple DataArray"""
         dims = request.param
         if dims == 1:
             return DataArray(easy_array((10,)))
@@ -3313,9 +3296,7 @@ class TestAxesKwargs:
 
     @pytest.fixture(params=[1, 2])
     def data_array_logspaced(self, request) -> DataArray:
-        """
-        Return a simple DataArray with logspaced coordinates
-        """
+        """Return a simple DataArray with logspaced coordinates"""
         dims = request.param
         if dims == 1:
             return DataArray(

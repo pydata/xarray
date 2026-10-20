@@ -1248,7 +1248,7 @@ def decompose_indexer(
 
 
 def _decompose_slice(key: slice, size: int) -> tuple[slice, slice]:
-    """convert a slice to successive two slices. The first slice always has
+    """Convert a slice to successive two slices. The first slice always has
     a positive step.
 
     >>> _decompose_slice(slice(2, 98, 2), 99)
@@ -1578,7 +1578,6 @@ def _chunked_array_with_chunks_hint(
     array, chunks, chunkmanager: ChunkManagerEntrypoint[Any]
 ):
     """Create a chunked array using the chunks hint for dimensions of size > 1."""
-
     if len(chunks) < array.ndim:
         raise ValueError("not enough chunks in hint")
     new_chunks = []

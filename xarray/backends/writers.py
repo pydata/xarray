@@ -109,7 +109,6 @@ def _validate_attrs(dataset, engine, invalid_netcdf=False):
     A numpy.bool_ is only allowed when using the h5netcdf engine with
     `invalid_netcdf=True`.
     """
-
     valid_types = (str, Number, np.ndarray, np.number, list, tuple, bytes)
     if invalid_netcdf and engine == "h5netcdf":
         valid_types += (np.bool_,)
@@ -167,7 +166,6 @@ def get_default_netcdf_write_engine(
     format: T_NetcdfTypes | None,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
     """Return the default netCDF library to use for writing a netCDF file."""
-
     module_names = {
         "netcdf4": "netCDF4",
         "scipy": "scipy",
@@ -743,7 +741,6 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
-
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
 
@@ -806,7 +803,6 @@ def _datatree_to_netcdf(
     auto_complex: bool | None = None,
 ) -> memoryview | Delayed | None:
     """Implementation of `DataTree.to_netcdf`."""
-
     if format not in [None, *get_args(T_DataTreeNetcdfTypes)]:
         raise ValueError("DataTree.to_netcdf only supports the NETCDF4 format")
 
@@ -928,7 +924,6 @@ def _datatree_to_zarr(
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> ZarrStore | Delayed:
     """Implementation of `DataTree.to_zarr`."""
-
     if group is not None:
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"

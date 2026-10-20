@@ -53,7 +53,6 @@ def _get_nan_block_lengths(
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
     """
-
     # make variable so that we get broadcasting for free
     index = Variable([dim], index)
 
@@ -273,7 +272,6 @@ def get_clean_interp_index(
     If indexing is along the time dimension, datetime coordinates are converted
     to time deltas with respect to 1970-01-01.
     """
-
     # Question: If use_coordinate is a string, what role does `dim` play?
     from xarray.coding.cftimeindex import CFTimeIndex
 
@@ -409,7 +407,7 @@ def interp_na(
 
 
 def func_interpolate_na(interpolator, y, x, **kwargs):
-    """helper function to apply interpolation along 1 dimension"""
+    """Helper function to apply interpolation along 1 dimension"""
     # reversed arguments are so that attrs are preserved from da, not index
     # it would be nice if this wasn't necessary, works around:
     # "ValueError: assignment destination is read-only" in assignment below
@@ -429,7 +427,7 @@ def func_interpolate_na(interpolator, y, x, **kwargs):
 
 
 def _bfill(arr, n=None, axis=-1):
-    """inverse of ffill"""
+    """Inverse of ffill"""
     arr = np.flip(arr, axis=axis)
 
     # fill
@@ -440,8 +438,7 @@ def _bfill(arr, n=None, axis=-1):
 
 
 def ffill(arr, dim=None, limit=None):
-    """forward fill missing values"""
-
+    """Forward fill missing values"""
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -458,8 +455,7 @@ def ffill(arr, dim=None, limit=None):
 
 
 def bfill(arr, dim=None, limit=None):
-    """backfill missing values"""
-
+    """Backfill missing values"""
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -488,7 +484,7 @@ def _import_interpolant(interpolant, method):
 def _get_interpolator(
     method: InterpOptions, vectorizeable_only: bool = False, **kwargs
 ):
-    """helper function to select the appropriate interpolator class
+    """Helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
     """
@@ -546,7 +542,7 @@ def _get_interpolator(
 
 
 def _get_interpolator_nd(method, **kwargs):
-    """helper function to select the appropriate interpolator class
+    """Helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
     """
@@ -565,8 +561,9 @@ def _get_interpolator_nd(method, **kwargs):
 
 
 def _get_valid_fill_mask(arr, dim, limit):
-    """helper function to determine values that can be filled when limit is not
-    None"""
+    """Helper function to determine values that can be filled when limit is not
+    None
+    """
     kw = {dim: limit + 1}
     # we explicitly use construct method to avoid copy.
     new_dim = utils.get_temp_dimname(arr.dims, "_window")
@@ -692,7 +689,7 @@ def interpolate_variable(
     method: InterpOptions,
     kwargs: dict[str, Any],
 ) -> Variable:
-    """core routine that returns the interpolated variable."""
+    """Core routine that returns the interpolated variable."""
     if not indexes_coords:
         return var.copy()
 
@@ -857,7 +854,6 @@ def _interpnd(
 
 def decompose_interp(indexes_coords: SourceDest) -> Generator[SourceDest, None]:
     """Decompose the interpolation into a succession of independent interpolation keeping the order"""
-
     dest_dims = [
         dest[1].dims if dest[1].ndim > 0 else (dim,)
         for dim, dest in indexes_coords.items()

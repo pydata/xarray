@@ -732,6 +732,11 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         -------
         DataArrayGroupBy or DatasetGroupBy
 
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+
         Examples
         --------
         >>> import dask.array
@@ -754,11 +759,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         Coordinates:
           * x         (x) int64 32B 0 1 2 3
             quantile  float64 8B 0.5
-
-        See Also
-        --------
-        dask.dataframe.DataFrame.shuffle
-        dask.array.shuffle
         """
         self._raise_if_by_is_chunked()
         obj, _ = self._shuffle_obj(chunks)
@@ -877,8 +877,8 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
     @property
     def groups(self) -> dict[GroupKey, GroupIndex]:
-        """
-        Mapping from group labels to indices. The indices can be used to index the underlying object.
+        """Mapping from group labels to indices. The indices can be used to index the
+        underlying object.
         """
         # provided to mimic pandas.groupby
         if self._groups is None:
@@ -892,9 +892,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         return self._groups
 
     def __getitem__(self, key: GroupKey) -> T_Xarray:
-        """
-        Get DataArray or Dataset corresponding to a particular group label.
-        """
+        """Get DataArray or Dataset corresponding to a particular group label."""
         self._raise_if_by_is_chunked()
         return self._obj.isel({self._group_dim: self.groups[key]})
 
@@ -1057,7 +1055,8 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
     def _maybe_unstack(self, obj):
         """This gets called if we are applying on an array with a
-        multidimensional group."""
+        multidimensional group.
+        """
         from xarray.groupers import UniqueGrouper
 
         stacked_dim = self._stacked_dim
@@ -1420,6 +1419,12 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
 
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1467,12 +1472,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
         Data variables:
             a         (y, quantile) float64 48B 0.7 5.35 8.4 0.7 2.25 9.4
-
-        References
-        ----------
-        .. [1] R. J. Hyndman and Y. Fan,
-           "Sample quantiles in statistical packages,"
-           The American Statistician, 50(4), pp. 361-365, 1996
         """
         # Dataset.quantile does this, do it for flox to ensure same output.
         q = np.asarray(q, dtype=np.float64)
@@ -1919,7 +1918,6 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         --------
         DatasetGroupBy.map
         """
-
         warnings.warn(
             "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
             PendingDeprecationWarning,
@@ -1990,7 +1988,6 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-
         if self._by_chunked:
             raise ValueError(
                 "This method is not supported when lazily grouping by a chunked array. "

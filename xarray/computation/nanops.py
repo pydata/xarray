@@ -17,9 +17,7 @@ from xarray.core.duck_array_ops import (
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
-    """
-    xarray version of pandas.core.nanops._maybe_null_out
-    """
+    """Xarray version of pandas.core.nanops._maybe_null_out"""
     if axis is not None and getattr(result, "ndim", False):
         null_mask = (
             np.take(mask.shape, axis).prod()

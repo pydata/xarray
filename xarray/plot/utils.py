@@ -77,9 +77,7 @@ def _determine_extend(calc_data, vmin, vmax):
 
 
 def _build_discrete_cmap(cmap, levels, extend, filled):
-    """
-    Build a discrete colormap and normalization of the data.
-    """
+    """Build a discrete colormap and normalization of the data."""
     import matplotlib as mpl
 
     if len(levels) == 1:
@@ -440,10 +438,7 @@ def _infer_xy_labels(
 def _assert_valid_xy(
     darray: DataArray | Dataset, xy: Hashable | None, name: str
 ) -> None:
-    """
-    make sure x and y passed to plotting functions are valid
-    """
-
+    """Make sure x and y passed to plotting functions are valid"""
     # MultiIndex cannot be plotted; no point in allowing them here
     multiindex_dims = {
         idx.dim
@@ -537,7 +532,8 @@ def _get_units_from_attrs(da: DataArray) -> str:
 
 def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
-    CF conventions."""
+    CF conventions.
+    """
     if da is None:
         return ""
 
@@ -570,7 +566,6 @@ def _interval_to_mid_points(array: Iterable[pd.Interval]) -> np.ndarray:
     Helper function which returns an array
     with the Intervals' mid points.
     """
-
     return np.array([x.mid for x in array])
 
 
@@ -579,7 +574,6 @@ def _interval_to_bound_points(array: Sequence[pd.Interval]) -> np.ndarray:
     Helper function which returns an array
     with the Intervals' boundaries.
     """
-
     array_boundaries = np.array([x.left for x in array])
     array_boundaries = np.concatenate((array_boundaries, np.array([array[-1].right])))
 
@@ -594,7 +588,6 @@ def _interval_to_double_bound_points(
     interval is replaced with both boundaries. I.e. the length of xarray
     doubles. yarray is modified so it matches the new shape of xarray.
     """
-
     xarray1 = np.array([x.left for x in xarray])
     xarray2 = np.array([x.right for x in xarray])
 
@@ -673,16 +666,12 @@ def _resolve_intervals_2dplot(val, func_name):
 def _valid_other_type(
     x: ArrayLike, types: type[object] | tuple[type[object], ...]
 ) -> bool:
-    """
-    Do all elements of x have a type from types?
-    """
+    """Do all elements of x have a type from types?"""
     return all(isinstance(el, types) for el in np.ravel(x))
 
 
 def _valid_numpy_subdtype(x, numpy_types):
-    """
-    Is any dtype from numpy_types superior to the dtype of x?
-    """
+    """Is any dtype from numpy_types superior to the dtype of x?"""
     # If any of the types given in numpy_types is understood as numpy.generic,
     # all possible x will be considered valid.  This is probably unwanted.
     for t in numpy_types:
@@ -802,9 +791,7 @@ def _update_axes(
     xlim: tuple[float, float] | None = None,
     ylim: tuple[float, float] | None = None,
 ) -> None:
-    """
-    Update axes with provided parameters
-    """
+    """Update axes with provided parameters"""
     if xincrease is None:
         pass
     elif (xincrease and ax.xaxis_inverted()) or (
@@ -1477,9 +1464,7 @@ class _Normalize(Sequence):
     def _calc_widths(self, y: DataArray) -> DataArray: ...
 
     def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
-        """
-        Normalize the values so they're in between self._width.
-        """
+        """Normalize the values so they're in between self._width."""
         if self._width is None:
             return y
 

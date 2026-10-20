@@ -282,7 +282,6 @@ class TimeAccessor[T_DataArray: DataArray]:
         floor-ed timestamps : same type as values
             Array-like of datetime fields accessed for each element in values
         """
-
         return self._tslib_round_accessor("floor", freq)
 
     def ceil(self, freq: str) -> T_DataArray:
@@ -325,7 +324,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     for applicable DataArrays.
 
     Examples
-    ---------
+    --------
     >>> dates = pd.date_range(start="2000/01/01", freq="D", periods=10)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
@@ -393,7 +392,6 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         -----
         The iso year and weekday differ from the nominal year and weekday.
         """
-
         from xarray.core.dataset import Dataset
 
         if not is_np_datetime_like(self._obj.data.dtype):

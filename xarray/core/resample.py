@@ -84,6 +84,11 @@ class Resample(GroupBy[T_Xarray]):
         -------
         DataArrayGroupBy or DatasetGroupBy
 
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+
         Examples
         --------
         >>> import dask.array
@@ -99,11 +104,6 @@ class Resample(GroupBy[T_Xarray]):
         dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(4,), chunktype=numpy.ndarray>
         Coordinates:
           * time     (time) datetime64[ns] 80B 2001-01-01 ... 2001-01-05T12:00:00
-
-        See Also
-        --------
-        dask.dataframe.DataFrame.shuffle
-        dask.array.shuffle
         """
         (_grouper,) = self.groupers
         obj, _ = self._shuffle_obj(chunks)
@@ -463,7 +463,6 @@ class DatasetResample(
         --------
         DataSetResample.map
         """
-
         warnings.warn(
             "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
             PendingDeprecationWarning,

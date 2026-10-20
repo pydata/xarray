@@ -1794,7 +1794,6 @@ class TestZarrDictStore(ZarrBase):
         zarr_format,
     ):
         """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
-
         original = create_test_data()
         with self.create_zarr_target() as store:
             original.to_zarr(store, consolidated=False, zarr_format=zarr_format)
@@ -2392,8 +2391,9 @@ class TestZarrRectilinearChunksRead:
 
     @requires_dask
     def test_read_zero_length_dim(self, tmp_path) -> None:
-        """zarr reports no chunk sizes at all along a zero-length dimension,
-        which must not be passed to dask as an empty tuple."""
+        """Zarr reports no chunk sizes at all along a zero-length dimension,
+        which must not be passed to dask as an empty tuple.
+        """
         import zarr
 
         store_path = tmp_path / "source.zarr"
@@ -2412,7 +2412,8 @@ class TestZarrRectilinearChunksRead:
 
     def test_read_rectilinear_shards(self, tmp_path) -> None:
         """Regular inner chunks with rectilinear shards. The regular chunks
-        must be reported as an int regardless of zarr-python version."""
+        must be reported as an int regardless of zarr-python version.
+        """
         import zarr
 
         data = np.array([1.0, 2.0, 3.0], dtype="float32")
@@ -2438,7 +2439,8 @@ class TestZarrRectilinearChunksRead:
 
     def test_write_after_read_gives_helpful_error(self, tmp_path) -> None:
         """Writing isn't supported yet; the error should say so, not just
-        "must be an int"."""
+        "must be an int".
+        """
         import zarr
 
         data = np.arange(60, dtype="float32")
@@ -2863,8 +2865,8 @@ class TestZarrRegionAuto:
 
     @requires_dask
     def test_zarr_region_chunk_partial(self):
-        """
-        Check that writing to partial chunks with `region` fails, assuming `safe_chunks=False`.
+        """Check that writing to partial chunks with `region` fails, assuming
+        `safe_chunks=False`.
         """
         ds = (
             xr.DataArray(np.arange(120).reshape(4, 3, -1), dims=list("abc"))

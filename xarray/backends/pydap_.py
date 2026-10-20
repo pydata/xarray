@@ -220,7 +220,7 @@ class PydapDataStore(AbstractDataStore):
         return get_group(self.dataset, self.group)
 
     def _get_data_array(self, var):
-        """gets dimension data all at once, storing the numpy
+        """Gets dimension data all at once, storing the numpy
         arrays within a cached dictionary
         """
         from pydap.client import get_batch_data
@@ -397,7 +397,8 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             # that returns a dict of group names and their paths
             def group_fqn(store, path=None, g_fqn=None) -> dict[str, str]:
                 """To be removed for pydap > 3.5.0.
-                Derives the fully qualifying name of a Group."""
+                Derives the fully qualifying name of a Group.
+                """
                 from pydap.model import GroupType
 
                 if not path:

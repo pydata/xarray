@@ -373,7 +373,6 @@ class DatasetView(Dataset):
         Overriding this method (along with ._construct_direct) and modifying it to return a Dataset object
         should hopefully ensure that the return type of any method on this object is a Dataset.
         """
-
         if inplace:
             raise AttributeError("In-place mutation of the DatasetView is not allowed")
 
@@ -439,7 +438,6 @@ class DatasetView(Dataset):
             foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 16B 1.0 2.0
         """
-
         # Copied from xarray.Dataset so as not to call type(self), which causes problems (see https://github.com/xarray-contrib/datatree/issues/188).
         # TODO Refactor xarray upstream to avoid needing to overwrite this.
         if keep_attrs is None:
@@ -854,7 +852,6 @@ class DataTree(
         See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
-
         # TODO allow auto-completing relative string paths, e.g. `dt['path/to/../ <tab> node'`
         # Would require changes to ipython's autocompleter, see https://github.com/ipython/ipython/issues/12420
         # Instead for now we only list direct paths to all node in subtree explicitly
@@ -1029,7 +1026,6 @@ class DataTree(
         -------
         DataTree | DataArray
         """
-
         # Either:
         if utils.is_dict_like(key):
             # dict-like indexing
@@ -1188,6 +1184,11 @@ class DataTree(
             A new DataTree with the new variables or children in addition to all the
             existing items.
 
+        See Also
+        --------
+        xarray.Dataset.assign
+        pandas.DataFrame.assign
+
         Notes
         -----
         Since ``kwargs`` is a dictionary, the order of your arguments may not
@@ -1195,11 +1196,6 @@ class DataTree(
         Assigning multiple items within the same ``assign`` is
         possible, but you cannot reference other variables created within the
         same ``assign`` call.
-
-        See Also
-        --------
-        xarray.Dataset.assign
-        pandas.DataFrame.assign
         """
         items = either_dict_or_kwargs(items, items_kwargs, "assign")
         dt = self.copy()
@@ -1322,7 +1318,6 @@ class DataTree(
 
         Examples
         --------
-
         Construct a tree from a dict of Dataset objects:
 
         >>> dt = DataTree.from_dict(
@@ -1682,7 +1677,6 @@ class DataTree(
 
         Examples
         --------
-
         >>> dt = DataTree.from_dict(
         ...     {
         ...         "/a/A": None,

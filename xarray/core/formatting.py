@@ -1141,7 +1141,6 @@ def diff_dataset_repr(a, b, compat):
 
 def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
     """Iterates over all corresponding nodes, recording differences between data at each location."""
-
     summary = []
     for path, (node_a, node_b) in group_subtrees(a, b):
         a_ds, b_ds = node_a.dataset, node_b.dataset

@@ -1008,9 +1008,7 @@ def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"
 
 
 def remove_unused_levels_categories[T_PDIndex: pd.Index](index: T_PDIndex) -> T_PDIndex:
-    """
-    Remove unused levels from MultiIndex and unused categories from CategoricalIndex
-    """
+    """Remove unused MultiIndex levels and unused CategoricalIndex categories."""
     if isinstance(index, pd.MultiIndex):
         new_index = index.remove_unused_levels()
         # if it contains CategoricalIndex, we need to remove unused categories
@@ -1040,7 +1038,8 @@ def remove_unused_levels_categories[T_PDIndex: pd.Index](index: T_PDIndex) -> T_
 
 def is_full_ordered_product(index: pd.MultiIndex) -> bool:
     """Whether index contains every combination of its levels' values in
-    C order, i.e. whether its codes are those of ``MultiIndex.from_product``."""
+    C order, i.e. whether its codes are those of ``MultiIndex.from_product``.
+    """
     shape = tuple(len(level) for level in index.levels)
     if len(index) != math.prod(shape):
         return False
@@ -1864,7 +1863,6 @@ class Indexes[T_PandasOrXarrayIndex: (Index, pd.Index)](collections.abc.Mapping)
 
     def get_unique(self) -> list[T_PandasOrXarrayIndex]:
         """Return a list of unique indexes, preserving order."""
-
         unique_indexes: list[T_PandasOrXarrayIndex] = []
         seen: set[int] = set()
 
@@ -1940,7 +1938,6 @@ class Indexes[T_PandasOrXarrayIndex: (Index, pd.Index)](collections.abc.Mapping)
         self,
     ) -> list[tuple[T_PandasOrXarrayIndex, dict[Hashable, Variable]]]:
         """Returns a list of unique indexes and their corresponding coordinates."""
-
         index_coords = []
         for i, index in self._id_index.items():
             coords = {k: self._variables[k] for k in self._id_coord_names[i]}
@@ -2326,7 +2323,6 @@ def assert_no_index_corrupted(
     action: str = "remove coordinate(s)",
 ) -> None:
     """Assert removing coordinates or indexes will not corrupt indexes."""
-
     # An index may be corrupted when the set of its corresponding coordinate name(s)
     # partially overlaps the set of coordinate names to remove
     for index, index_coords in indexes.group_by_index():

@@ -462,7 +462,6 @@ class TestGenericNetCDFIO(NetCDFIOBase):
     @requires_dask
     def test_open_groups_chunks(self, tmpdir) -> None:
         """Test `open_groups` with chunks on a netcdf4 file."""
-
         chunks = {"x": 2, "y": 1}
         filepath = tmpdir / "test.nc"
 
@@ -1034,7 +1033,6 @@ class TestZarrDatatreeIO:
     )
     def test_open_groups(self, unaligned_datatree_zarr_factory, zarr_format) -> None:
         """Test `open_groups` with a zarr store of an unaligned group hierarchy."""
-
         storepath = unaligned_datatree_zarr_factory(zarr_format=zarr_format)
         unaligned_dict_of_datasets = open_groups(storepath, engine="zarr")
 
@@ -1084,7 +1082,6 @@ class TestZarrDatatreeIO:
     @requires_dask
     def test_open_groups_chunks(self, tmpdir, zarr_format) -> None:
         """Test `open_groups` with chunks on a zarr store."""
-
         chunks = {"x": 2, "y": 1}
         filepath = str(tmpdir / "test.zarr")
         root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
