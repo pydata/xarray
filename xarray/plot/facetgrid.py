@@ -81,8 +81,6 @@ def _auto_grid(
     return ncol, nrow
 
 
-
-
 class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
     """Initialize the Matplotlib figure and FacetGrid object.
 
