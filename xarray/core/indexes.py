@@ -6,7 +6,7 @@ import inspect
 import math
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, TypeVar, cast, overload, override
+from typing import TYPE_CHECKING, Any, cast, overload, override
 
 import numpy as np
 import pandas as pd
@@ -642,7 +642,6 @@ def get_indexer_nd(index: pd.Index, labels, method=None, tolerance=None) -> np.n
     return indexer
 
 
-T_PandasIndex = TypeVar("T_PandasIndex", bound="PandasIndex")
 
 
 class PandasIndex(Index):
@@ -956,7 +955,7 @@ class PandasIndex(Index):
         return self._replace(index, dim=new_dim)
 
     @override
-    def _copy(
+    def _copy[T_PandasIndex: "PandasIndex"](
         self: T_PandasIndex, deep: bool = True, memo: dict[int, Any] | None = None
     ) -> T_PandasIndex:
         if deep:
