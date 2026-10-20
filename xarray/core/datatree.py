@@ -22,8 +22,6 @@ from typing import (
     Concatenate,
     Literal,
     NoReturn,
-    ParamSpec,
-    TypeVar,
     Union,
     overload,
     override,
@@ -117,8 +115,6 @@ if TYPE_CHECKING:
 
 
 T_Path = Union[str, NodePath]
-T = TypeVar("T")
-P = ParamSpec("P")
 
 
 def _collect_data_and_coord_variables(
@@ -1880,7 +1876,7 @@ class DataTree(
         return map_over_datasets(func, self, *args, kwargs=kwargs)  # type: ignore[arg-type]
 
     @overload
-    def pipe(
+    def pipe[T, **P](
         self,
         func: Callable[Concatenate[Self, P], T],
         *args: P.args,
@@ -1888,14 +1884,14 @@ class DataTree(
     ) -> T: ...
 
     @overload
-    def pipe(
+    def pipe[T](
         self,
         func: tuple[Callable[..., T], str],
         *args: Any,
         **kwargs: Any,
     ) -> T: ...
 
-    def pipe(
+    def pipe[T, **P](
         self,
         func: Callable[Concatenate[Self, P], T] | tuple[Callable[..., T], str],
         *args: Any,
