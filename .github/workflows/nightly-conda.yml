@@ -46,7 +46,6 @@ jobs:
 
     permissions:
       contents: read
-      attestations: write # generate and store attestations
       issues: write # report failures
       id-token: write # upload to prefix.dev
 
