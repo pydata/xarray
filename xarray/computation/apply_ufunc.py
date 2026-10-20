@@ -1122,17 +1122,10 @@ def apply_ufunc(
         :py:func:`numpy.vectorize`. This option exists for convenience, but is
         almost always slower than supplying a pre-vectorized function.
 
-        If one or more dimension names, only loop over these broadcast
-        dimensions, in the given order, and pass all other broadcast dimensions
-        to ``func`` in bulk. ``func`` then has to accept inputs with leading
-        broadcast dimensions that broadcast against each other following
-        numpy's rules, e.g. an input of shape ``(r, z)`` together with an input
-        of shape ``(1, z)``, and return outputs with the broadcast dimensions
-        followed by the output core dimensions. This is much faster than
-        ``vectorize=True`` if ``func`` can handle some broadcast dimensions
-        itself. If a loop dimension has size 0, ``output_dtypes`` and the sizes
-        of all output core dimensions (from the inputs or ``output_sizes`` in
-        ``dask_gufunc_kwargs``) are required.
+        If dimension names, only loop over these broadcast dimensions and pass
+        all others to ``func`` in bulk, so ``func`` must broadcast its inputs
+        following numpy's rules. Loop dimensions of size 0 require
+        ``output_dtypes`` and known sizes of all output core dimensions.
     join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
@@ -1222,8 +1215,6 @@ def apply_ufunc(
 
     Examples
     --------
-    The examples below go from basic to advanced usage.
-
     **Element-wise functions.** Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
@@ -1254,10 +1245,8 @@ def apply_ufunc(
     Coordinates:
       * x        (x) float64 24B 0.1 0.2 0.3
 
-    **Core dimensions.** Functions that operate along a dimension, e.g. a
-    reduction, need ``input_core_dims``. Core dimensions are moved to the end
-    of the arrays passed to ``func``, so here we reduce over ``axis=-1``, like
-    ``.mean("y")``:
+    **Core dimensions** are moved to the end of the arrays passed to ``func``.
+    Reduce over ``y`` like ``.mean("y")``:
 
     >>> da = xr.DataArray(
     ...     np.arange(6.0).reshape(2, 3), coords={"x": [10, 20], "y": [0, 1, 2]}
@@ -1278,9 +1267,8 @@ def apply_ufunc(
     ...     return xr.apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
     ...
 
-    **Output core dimensions.** If ``func`` returns a dimension, list it in
-    ``output_core_dims``. If its size changes, it also has to be listed in
-    ``exclude_dims``, and its coordinates are dropped:
+    **Output core dimensions** that change size must be listed in
+    ``exclude_dims``:
 
     >>> xr.apply_ufunc(
     ...     np.diff,
@@ -1313,8 +1301,7 @@ def apply_ufunc(
     ...     return result
     ...
 
-    **Multiple outputs.** A function returning a tuple needs one entry in
-    ``output_core_dims`` per output:
+    **Multiple outputs** need one entry in ``output_core_dims`` each:
 
     >>> quotient, remainder = xr.apply_ufunc(
     ...     np.divmod, da, 4, output_core_dims=[[], []]
@@ -1326,23 +1313,6 @@ def apply_ufunc(
     Coordinates:
       * x        (x) int64 16B 10 20
       * y        (y) int64 24B 0 1 2
-
-    **Dask arrays.** With ``dask="parallelized"``, ``func`` is applied to each
-    block of a chunked array. Core dimensions must not be split into several
-    chunks:
-
-    >>> xr.apply_ufunc(
-    ...     np.mean,
-    ...     da.chunk(x=1),
-    ...     input_core_dims=[["y"]],
-    ...     kwargs={"axis": -1},
-    ...     dask="parallelized",
-    ...     output_dtypes=[float],
-    ... ).compute()
-    <xarray.DataArray (x: 2)> Size: 16B
-    array([1., 4.])
-    Coordinates:
-      * x        (x) int64 16B 10 20
 
     **Vectorizing functions.** If your function is not vectorized but can be
     applied only to core dimensions, you can use ``vectorize=True`` to turn into
@@ -1362,12 +1332,8 @@ def apply_ufunc(
     ...     )
     ...
 
-    **Vectorizing over some dimensions only.** ``vectorize=True`` calls
-    ``func`` once for every combination of the broadcast dimensions. If
-    ``func`` can handle some of them itself, pass the dimensions to loop over
-    instead, all others are passed in bulk. Here, ``np.quantile`` computes a
-    single quantile per call for all ``x`` at once, but the quantile differs
-    along ``time``:
+    **Vectorizing over some dimensions only.** ``np.quantile`` handles all
+    ``x`` at once, but takes a single quantile, so only loop over ``time``:
 
     >>> data = xr.DataArray(
     ...     np.arange(24.0).reshape(2, 3, 4), dims=("time", "x", "sample")
@@ -1384,9 +1350,6 @@ def apply_ufunc(
     array([[ 0.75,  4.75,  8.75],
            [14.25, 18.25, 22.25]])
     Dimensions without coordinates: time, x
-
-    This calls ``quantile`` twice, once per ``time``, while ``vectorize=True``
-    would call it six times, once per ``time`` and ``x``.
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in ``apply_ufunc``. You may find helper functions such as
