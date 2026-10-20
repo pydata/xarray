@@ -298,6 +298,24 @@ class NetCDFIOBase:
         assert list(root.dimensions) == ["x"]
         assert list(child.dimensions) == []
 
+    def test_load_datatree_overwrite_same_named_variable(self, tmpdir) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/11672
+        # load_datatree followed by to_netcdf to the same path must succeed
+        # even when a variable shares its parent group's name.
+        filepath = str(tmpdir / "test.nc")
+        original_dt = DataTree.from_dict(
+            {
+                "/a": xr.Dataset({"a": 0}),
+                "/b/b": xr.Dataset({"c": 1}),
+            }
+        )
+        original_dt.to_netcdf(filepath, engine=self.engine)
+        load_datatree(filepath, engine=self.engine).to_netcdf(
+            filepath, engine=self.engine
+        )
+        with open_datatree(filepath, engine=self.engine) as roundtrip_dt:
+            assert_identical(original_dt, roundtrip_dt)
+
     @requires_dask
     def test_compute_false(self, tmpdir, simple_datatree):
         filepath = tmpdir / "test.nc"
@@ -682,6 +700,50 @@ class TestPyDAPDatatreeIO:
 @parametrize_zarr_format
 class TestZarrDatatreeIO:
     engine = "zarr"
+
+    @pytest.mark.parametrize("opener", [open_datatree, open_groups])
+    @pytest.mark.parametrize("use_zarr_fill_value_as_mask", [True, False, None])
+    def test_use_zarr_fill_value_as_mask(
+        self, tmp_path, zarr_format, opener, use_zarr_fill_value_as_mask
+    ) -> None:
+        filepath = tmp_path / "fill_value.zarr"
+        dataset = xr.Dataset({"a": ("x", [0, 1])})
+        encoding = {
+            "a": (
+                {"_FillValue": 0}
+                if zarr_format == 2
+                else {"_FillValue": None, "fill_value": 0}
+            )
+        }
+        for group in ["/", "/child"]:
+            dataset.to_zarr(
+                filepath,
+                group=group,
+                mode="a",
+                encoding=encoding,
+                consolidated=False,
+                zarr_format=zarr_format,
+            )
+
+        masked = use_zarr_fill_value_as_mask
+        if masked is None:
+            masked = zarr_format == 2
+        expected = [np.nan, 1] if masked else [0, 1]
+        result = opener(
+            filepath,
+            engine="zarr",
+            consolidated=False,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+        )
+        try:
+            for group in ["/", "/child"]:
+                np.testing.assert_equal(result[group]["a"].values, expected)
+        finally:
+            if isinstance(result, DataTree):
+                result.close()
+            else:
+                for dataset in result.values():
+                    dataset.close()
 
     def test_to_zarr(self, tmpdir, simple_datatree, zarr_format) -> None:
         filepath = str(tmpdir / "test.zarr")

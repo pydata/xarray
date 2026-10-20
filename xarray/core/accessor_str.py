@@ -220,6 +220,17 @@ class StringAccessor[T_DataArray: DataArray]:
         else:
             return self._obj.dtype.type(invar)
 
+    def _method(self, name: str) -> Callable:
+        """
+        Get the str/bytes method ``name`` to apply to each element.
+
+        Object arrays have no string type to take the method from,
+        so look it up on each element instead.
+        """
+        if self._obj.dtype == np.object_:
+            return lambda x, *args, **kwargs: getattr(x, name)(*args, **kwargs)
+        return getattr(self._obj.dtype.type, name)
+
     def _apply(
         self,
         *,
@@ -663,7 +674,7 @@ class StringAccessor[T_DataArray: DataArray]:
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
         return self._apply(
-            func=self._obj.dtype.type.format,
+            func=self._method("format"),
             func_args=args,
             func_kwargs={"kwargs": kwargs},
         )
@@ -1367,7 +1378,7 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         filled : same type as values
         """
-        func = self._obj.dtype.type.center
+        func = self._method("center")
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def ljust(
@@ -1394,7 +1405,7 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         filled : same type as values
         """
-        func = self._obj.dtype.type.ljust
+        func = self._method("ljust")
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def rjust(
@@ -1421,7 +1432,7 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         filled : same type as values
         """
-        func = self._obj.dtype.type.rjust
+        func = self._method("rjust")
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def zfill(self, width: int | Any) -> T_DataArray:
@@ -1509,14 +1520,10 @@ class StringAccessor[T_DataArray: DataArray]:
             pat = self._stringify(pat)
             if case or case is None:
                 func = lambda x, ipat: ipat in x
-            elif self._obj.dtype.char == "U":
-                uppered = self.casefold()
-                uppat = StringAccessor(pat).casefold()  # type: ignore[type-var]  # hack?
-                return uppered.str.contains(uppat, regex=False)  # type: ignore[return-value]
+            elif self._obj.dtype.kind == "S":
+                func = lambda x, ipat: ipat.upper() in x.upper()
             else:
-                uppered = self.upper()
-                uppat = StringAccessor(pat).upper()  # type: ignore[type-var]  # hack?
-                return uppered.str.contains(uppat, regex=False)  # type: ignore[return-value]
+                func = lambda x, ipat: ipat.casefold() in x.casefold()
 
         return self._apply(func=func, func_args=(pat,), dtype=bool)
 
@@ -1951,7 +1958,22 @@ class StringAccessor[T_DataArray: DataArray]:
             )
         else:
             pat = self._stringify(pat)
-            func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
+            if case is False:
+                # Literal match, but case-insensitive: escape the pattern and
+                # return the replacement as-is so it is not parsed as a template.
+                func = lambda x, ipat, irepl, i_n: (
+                    x
+                    if i_n == 0
+                    else re.sub(
+                        re.escape(ipat),
+                        lambda _: irepl,
+                        x,
+                        count=max(i_n, 0),
+                        flags=re.IGNORECASE,
+                    )
+                )
+            else:
+                func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
         return self._apply(func=func, func_args=(pat, repl, n))
 
     def extract(
@@ -2443,7 +2465,7 @@ class StringAccessor[T_DataArray: DataArray]:
         str.partition
         pandas.Series.str.partition
         """
-        return self._partitioner(func=self._obj.dtype.type.partition, dim=dim, sep=sep)
+        return self._partitioner(func=self._method("partition"), dim=dim, sep=sep)
 
     def rpartition(
         self,
@@ -2481,7 +2503,7 @@ class StringAccessor[T_DataArray: DataArray]:
         str.rpartition
         pandas.Series.str.rpartition
         """
-        return self._partitioner(func=self._obj.dtype.type.rpartition, dim=dim, sep=sep)
+        return self._partitioner(func=self._method("rpartition"), dim=dim, sep=sep)
 
     def _splitter(
         self,
@@ -2644,7 +2666,7 @@ class StringAccessor[T_DataArray: DataArray]:
         pandas.Series.str.split
         """
         return self._splitter(
-            func=self._obj.dtype.type.split,
+            func=self._method("split"),
             pre=True,
             dim=dim,
             sep=sep,
@@ -2762,7 +2784,7 @@ class StringAccessor[T_DataArray: DataArray]:
         pandas.Series.str.rsplit
         """
         return self._splitter(
-            func=self._obj.dtype.type.rsplit,
+            func=self._method("rsplit"),
             pre=False,
             dim=dim,
             sep=sep,

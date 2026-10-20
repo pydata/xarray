@@ -732,8 +732,10 @@ class TestFormatting:
         assert actual == expected
 
     def test_diff_datatree_repr_equals(self) -> None:
-        ds1 = xr.Dataset(data_vars={"data": ("y", [5, 2])})
-        ds2 = xr.Dataset(data_vars={"data": (("x", "y"), [[5, 2]])})
+        ds1 = xr.Dataset(data_vars={"data": ("y", np.array([5, 2], dtype=np.int64))})
+        ds2 = xr.Dataset(
+            data_vars={"data": (("x", "y"), np.array([[5, 2]], dtype=np.int64))}
+        )
         dt1 = xr.DataTree.from_dict({"node": ds1})
         dt2 = xr.DataTree.from_dict({"node": ds2})
 
@@ -1225,24 +1227,26 @@ def test_repr_pandas_multi_index() -> None:
     coords = xr.Coordinates.from_pandas_multiindex(midx, "x")
     ds = xr.Dataset(coords=coords)
 
+    obj_nbytes = 4 * np.dtype(object).itemsize
+
     actual = repr(ds.x)
-    expected = """
-<xarray.DataArray 'x' (x: 4)> Size: 32B
+    expected = f"""
+<xarray.DataArray 'x' (x: 4)> Size: {obj_nbytes}B
 [4 values with dtype=object]
 Coordinates:
-  * x        (x) object 32B MultiIndex
-  * foo      (x) object 32B 'a' 'a' 'b' 'b'
+  * x        (x) object {obj_nbytes}B MultiIndex
+  * foo      (x) object {obj_nbytes}B 'a' 'a' 'b' 'b'
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected
 
     actual = repr(ds.foo)
-    expected = """
-<xarray.DataArray 'foo' (x: 4)> Size: 32B
+    expected = f"""
+<xarray.DataArray 'foo' (x: 4)> Size: {obj_nbytes}B
 [4 values with dtype=object]
 Coordinates:
-  * x        (x) object 32B MultiIndex
-  * foo      (x) object 32B 'a' 'a' 'b' 'b'
+  * x        (x) object {obj_nbytes}B MultiIndex
+  * foo      (x) object {obj_nbytes}B 'a' 'a' 'b' 'b'
   * bar      (x) int64 32B 1 2 1 2
     """.strip()
     assert actual == expected

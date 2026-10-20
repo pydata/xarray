@@ -21,12 +21,18 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset, load_dataset, open_dataset, open_mfdataset
+from xarray import (
+    DataArray,
+    Dataset,
+    concat,
+    load_dataset,
+    open_dataset,
+    open_mfdataset,
+)
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.coders import CFTimedeltaCoder
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
 from xarray.coding.variables import SerializationWarning
-from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.indexes import PandasIndex
@@ -550,7 +556,17 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
-    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+    # netCDF3 stores the strings as char arrays and warns that the width in
+    # char_dim_name no longer fits
+    @pytest.mark.filterwarnings("ignore:String dimension naming mismatch")
+    def test_roundtrip_longer_strings_after_concat(self) -> None:
+        # regression test for GH10968: the string width recorded in the encoding
+        # on read must not truncate longer values that are written later
+        with self.roundtrip(Dataset({"x": ("t", ["base"])})) as short:
+            combined = concat([short, Dataset({"x": ("t", ["base_case"])})], dim="t")
+            with self.roundtrip(combined) as actual:
+                assert_identical(combined, actual)
+
     def test_roundtrip_stringdtype_data(self) -> None:
         # GH11199
         data = np.array(["ab", "cdef"], dtype=np.dtypes.StringDType())
@@ -558,7 +574,6 @@ class DatasetIOBase:
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
-    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
     def test_roundtrip_stringdtype_nulls(self) -> None:
         # GH11199 — null values in StringDType are written as empty strings
         data = np.array(["ab", None], dtype=np.dtypes.StringDType(na_object=None))
@@ -567,7 +582,6 @@ class DatasetIOBase:
             expected = Dataset({"x": ("t", np.array(["ab", ""]))})
             assert_identical(expected, actual)
 
-    @pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
     def test_roundtrip_stringdtype_with_na_object(self) -> None:
         # GH11199 — StringDType(na_object="") should roundtrip correctly
         data = np.array(["ab", "cdef"], dtype=np.dtypes.StringDType(na_object=""))
@@ -975,10 +989,8 @@ class CFEncodedBase(DatasetIOBase):
                 # eg. NETCDF3 based backends do not roundtrip metadata
                 if actual["a"].dtype.metadata is not None:
                     assert check_vlen_dtype(actual["a"].dtype) is str
-            elif HAS_STRING_DTYPE:
-                assert np.issubdtype(actual["a"].dtype, np.dtypes.StringDType())
             else:
-                assert np.issubdtype(actual["a"].dtype, np.dtype("=U1"))
+                assert np.issubdtype(actual["a"].dtype, np.dtypes.StringDType())
 
     @pytest.mark.parametrize("decoded_fn, encoded_fn", MASK_AND_SCALE_DATA)
     @pytest.mark.parametrize("dtype", [np.dtype("float64"), np.dtype("float32")])
@@ -2156,6 +2168,14 @@ class InMemoryNetCDF:
         with open_dataset(netcdf_bytes, engine=self.engine) as roundtrip:
             with pickle.loads(pickle.dumps(roundtrip)) as unpickled:
                 assert_identical(unpickled, original)
+
+    def test_pickle_open_dataset_after_multiple_opens(self) -> None:
+        original = Dataset({"foo": ("x", [1, 2, 3])})
+        netcdf_bytes = bytes(original.to_netcdf(engine=self.engine))
+        with open_dataset(netcdf_bytes, engine=self.engine) as ds1:
+            with open_dataset(netcdf_bytes, engine=self.engine):
+                with pickle.loads(pickle.dumps(ds1)) as unpickled:
+                    assert_identical(unpickled, original)
 
     def test_compute_false(self) -> None:
         original = create_test_data()

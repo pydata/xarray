@@ -18,7 +18,7 @@ name = "xarray"
 readme = "README.md"
 requires-python = ">=3.12"
 
-dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
+dependencies = ["numpy>=2.2", "packaging>=25.0", "pandas>=2.3"]
 
 # We don't encode minimum requirements here (though if we can write a script to
 # generate the text from `min_deps_check.py`, that's welcome...). We do add
@@ -27,7 +27,7 @@ dependencies = ["numpy>=1.26", "packaging>=24.2", "pandas>=2.2"]
 
 [project.optional-dependencies]
 accel = [
-  "scipy>=1.15",
+  "scipy>=1.16",
   "bottleneck",
   "numbagg>=0.9,!=0.9.5", # 0.9.5 breaks dask.array.nanmedian
   "numba>=0.62",          # numba 0.62 added support for numpy 2.3
@@ -36,21 +36,21 @@ accel = [
 ]
 complete = ["xarray[accel,etc,io,parallel,viz]"]
 io = [
-  "netCDF4>=1.6.0",
+  "netCDF4>=1.7.0",
   # h5netcdf 1.8.0 introduced a few compatibility features with netcdf4
   # https://github.com/pydata/xarray/issues/10657#issuecomment-3711095986
   "h5netcdf[h5py]>=1.8.0",
   "pydap",
-  "scipy>=1.15",
-  "zarr>=3.0",
+  "scipy>=1.16",
+  "zarr>=3.1",
   "fsspec",
   "cftime",
   "pooch",
 ]
 arrow = ["pyarrow"]
-etc = ["sparse>=0.15"]
+etc = ["sparse>=0.17"]
 parallel = ["dask[complete]"]
-viz = ["cartopy>=0.24", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
+viz = ["cartopy>=0.25", "matplotlib>=3.10", "nc-time-axis", "seaborn"]
 types = [
   "pandas-stubs",
   "scipy-stubs",
@@ -78,7 +78,7 @@ types = [
 dev = [
   "hypothesis",
   "jinja2",
-  "mypy==2.3.1",
+  "mypy==2.4.0",
   "pre-commit",
   "pytest",
   "pytest-cov",
@@ -118,10 +118,10 @@ fallback_version = "9999"
 omit = [
   "*/xarray/tests/*",
   "*/xarray/compat/dask_array_compat.py",
-  "*/xarray/compat/npcompat.py",
   "*/xarray/compat/pdcompat.py",
   "*/xarray/namedarray/pycompat.py",
   "*/xarray/core/types.py",
+  "*/xarray/util/generate_*.py",
 ]
 source = ["xarray"]
 

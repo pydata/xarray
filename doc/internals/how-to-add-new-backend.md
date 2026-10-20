@@ -463,7 +463,7 @@ array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
 ```python
 # shall support integers
-backend_array._raw_indexing_method(1, 1)
+backend_array._raw_indexing_method((1, 1))
 ```
 
 ```
@@ -472,7 +472,7 @@ backend_array._raw_indexing_method(1, 1)
 
 ```python
 # shall support slices
-backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+backend_array._raw_indexing_method((slice(0, 3), slice(2, 4)))
 ```
 
 ```
@@ -486,7 +486,7 @@ support also lists of integers. The outer indexing is equivalent to
 combining multiple input list with `itertools.product()`:
 
 ```python
-backend_array._raw_indexing_method([0, 1], [0, 1, 2])
+backend_array._raw_indexing_method(([0, 1], [0, 1, 2]))
 ```
 
 ```
@@ -495,7 +495,7 @@ array([[0, 1, 2], [4, 5, 6]])
 
 ```python
 # shall support integers
-backend_array._raw_indexing_method(1, 1)
+backend_array._raw_indexing_method((1, 1))
 ```
 
 ```

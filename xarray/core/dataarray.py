@@ -280,7 +280,7 @@ class _NumpyEncoder(json.JSONEncoder):
 
 
 class DataArray(
-    AbstractArray,
+    AbstractArray[Hashable],
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
@@ -1078,9 +1078,9 @@ class DataArray(
         self.variable.encoding = dict(value)
 
     def reset_encoding(self) -> Self:
-        warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
-            stacklevel=2,
+        utils.emit_user_level_warning(
+            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
+            FutureWarning,
         )
         return self.drop_encoding()
 
@@ -1599,13 +1599,7 @@ class DataArray(
         """
         chunk_mapping: T_ChunksFreq
         if chunks is None:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            chunk_mapping = {}
+            raise TypeError("chunks=None is not supported. Use chunks={} instead.")
 
         if isinstance(chunks, float | str | int):
             # ignoring type; unclear why it won't accept a Literal into the value.
@@ -1859,7 +1853,7 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def _shuffle(
-        self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks
+        self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks | None
     ) -> Self:
         ds = self._to_temp_dataset()._shuffle(dim=dim, indices=indices, chunks=chunks)
         return self._from_temp_dataset(ds)
@@ -2697,7 +2691,7 @@ class DataArray(
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new DataArray with renamed coordinates, dimensions or a new name.
+        """Returns a DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
         ----------
@@ -5447,7 +5441,6 @@ class DataArray(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> Self:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5554,7 +5547,6 @@ class DataArray(
             keep_attrs=keep_attrs,
             method=method,
             skipna=skipna,
-            interpolation=interpolation,
         )
         return self._from_temp_dataset(ds)
 
@@ -6137,49 +6129,89 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    def idxmin(
+    @overload
+    def idxmin(  # type: ignore[overload-overlap]
         self,
-        dim: Hashable | None = None,
+        dim: str,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the minimum value along a dimension.
+    ) -> Self: ...
+
+    @overload
+    def idxmin(
+        self,
+        dim: Sequence[Hashable] | EllipsisType,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
+    @overload
+    def idxmin(
+        self,
+        dim: None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]: ...
+
+    def idxmin(
+        self,
+        dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the minimum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to minimum
         values along that dimension.
+
+        If a sequence of dimensions or ``...`` is passed to ``dim``, the
+        minimum is taken over all of them and a dict of `DataArray` objects,
+        one for each dimension, is returned instead, like
+        :py:meth:`~DataArray.argmin`. The result can be passed to
+        :py:meth:`~DataArray.sel`.
 
         In comparison to :py:meth:`~DataArray.argmin`, this returns the
         coordinate label while :py:meth:`~DataArray.argmin` returns the index.
 
         Parameters
         ----------
-        dim : str, optional
-            Dimension over which to apply `idxmin`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : Hashable, sequence of Hashable or ..., optional
+            Dimension(s) over which to apply `idxmin`. ``...`` means all
+            dimensions. If not given, the only dimension of a 1D array is used,
+            and all dimensions of an array with 2 or more dimensions.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the minimum like in
+            :py:func:`numpy.argmin`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
         keep_attrs : bool or None, optional
-            If True, the attributes (``attrs``) will be copied from the
-            original object to the new one. If False, the new object
-            will be returned without attributes.
+            If True, the attributes (``attrs``) of the coordinate are copied to
+            the result. If False, the result is returned without attributes.
 
         Returns
         -------
-        reduced : DataArray
+        reduced : DataArray or dict of DataArray
             New `DataArray` object with `idxmin` applied to its data and the
-            indicated dimension removed.
+            indicated dimension removed, or a dict of them mapping each
+            dimension to its coordinate labels if ``dim`` is a sequence or
+            ``...``.
 
         See Also
         --------
@@ -6224,6 +6256,10 @@ class DataArray(
         array([16.,  0.,  4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmin(dim=["y", "x"])
+        {'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(0), 'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.)}
         """
         return computation._calc_idxminmax(
             array=self,
@@ -6234,49 +6270,89 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    def idxmax(
+    @overload
+    def idxmax(  # type: ignore[overload-overlap]
         self,
-        dim: Hashable = None,
+        dim: str,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the maximum value along a dimension.
+    ) -> Self: ...
+
+    @overload
+    def idxmax(
+        self,
+        dim: Sequence[Hashable] | EllipsisType,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
+    @overload
+    def idxmax(
+        self,
+        dim: None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]: ...
+
+    def idxmax(
+        self,
+        dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the maximum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to maximum
         values along that dimension.
+
+        If a sequence of dimensions or ``...`` is passed to ``dim``, the
+        maximum is taken over all of them and a dict of `DataArray` objects,
+        one for each dimension, is returned instead, like
+        :py:meth:`~DataArray.argmax`. The result can be passed to
+        :py:meth:`~DataArray.sel`.
 
         In comparison to :py:meth:`~DataArray.argmax`, this returns the
         coordinate label while :py:meth:`~DataArray.argmax` returns the index.
 
         Parameters
         ----------
-        dim : Hashable, optional
-            Dimension over which to apply `idxmax`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : Hashable, sequence of Hashable or ..., optional
+            Dimension(s) over which to apply `idxmax`. ``...`` means all
+            dimensions. If not given, the only dimension of a 1D array is used,
+            and all dimensions of an array with 2 or more dimensions.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the maximum like in
+            :py:func:`numpy.argmax`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
         keep_attrs : bool or None, optional
-            If True, the attributes (``attrs``) will be copied from the
-            original object to the new one. If False, the new object
-            will be returned without attributes.
+            If True, the attributes (``attrs``) of the coordinate are copied to
+            the result. If False, the result is returned without attributes.
 
         Returns
         -------
-        reduced : DataArray
+        reduced : DataArray or dict of DataArray
             New `DataArray` object with `idxmax` applied to its data and the
-            indicated dimension removed.
+            indicated dimension removed, or a dict of them mapping each
+            dimension to its coordinate labels if ``dim`` is a sequence or
+            ``...``.
 
         See Also
         --------
@@ -6321,6 +6397,10 @@ class DataArray(
         array([0., 4., 4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmax(dim=["y", "x"])
+        {'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(-1), 'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.)}
         """
         return computation._calc_idxminmax(
             array=self,
@@ -6710,7 +6790,7 @@ class DataArray(
             If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
             raise an exception. If 'ignore', the coefficients and covariances for the
             coordinates where the fitting failed will be NaN.
-        **kwargs : optional
+        kwargs : dict[str, Any], optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
@@ -7058,7 +7138,6 @@ class DataArray(
         """
         return interp_calendar(self, target, dim=dim)
 
-    @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
         group: GroupInput = None,
@@ -7202,11 +7281,12 @@ class DataArray(
         )
         return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
-    @_deprecate_positional_args("v2024.07.0")
+    @_deprecate_positional_args("v2026.10.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
         bins: Bins,
+        *,
         right: bool = True,
         labels: ArrayLike | Literal[False] | None = None,
         precision: int = 3,
@@ -7630,7 +7710,6 @@ class DataArray(
             coord_func=coord_func,
         )
 
-    @_deprecate_positional_args("v2024.07.0")
     def resample(
         self,
         indexer: Mapping[Hashable, ResampleCompatible | Resampler] | None = None,

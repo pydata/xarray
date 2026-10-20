@@ -90,7 +90,7 @@ You can learn more about using and developing backends in the
         installed-eng["""<b>One of these formats?</b>
             - <a href='https://github.com/ecmwf/cfgrib'>GRIB</a>
             - <a href='https://tiledb-inc.github.io/TileDB-CF-Py/documentation'>TileDB</a>
-            - <a href='https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
+            - <a href='https://vylor.github.io/rioxarray/stable/getting_started/getting_started.html#rioxarray'>GeoTIFF, JPEG-2000, etc. (via GDAL)</a>
             - <a href='https://www.bopen.eu/xarray-sentinel-open-source-library/'>Sentinel-1 SAFE</a>
             """]
 
@@ -438,6 +438,18 @@ with xr.open_dataset(nc_filename) as ds:
     print(ds.keys())
 ```
 
+```{warning}
+Lazily loaded datasets keep reading from their source until they are closed.
+Don't overwrite a file or store while a dataset opened from it, e.g. with
+{py:func}`open_dataset` or {py:func}`open_mfdataset`, is still in use.
+Depending on the backend, this either raises an error (e.g. netCDF4, h5netcdf)
+or silently changes the values of the open dataset (e.g. Zarr, scipy).
+
+To overwrite a source, first read it into memory with {py:func}`load_dataset`,
+which also closes the file, or call {py:meth}`Dataset.load` followed by
+{py:meth}`Dataset.close`, or use a `with` block.
+```
+
 Although xarray provides reasonable support for incremental reads of files on
 disk, it does not support incremental writes, which can be a useful strategy
 for dealing with datasets too big to fit into memory. Instead, xarray integrates
@@ -679,6 +691,13 @@ argument takes a dictionary with variable names as keys and variable specific
 encodings as values. These encodings are saved as attributes on the netCDF
 variables on disk, which allows xarray to faithfully read encoded data back into
 memory.
+
+```{warning}
+Encoding options can also be provided as attributes on individual variables.
+This alternative path is generally not recommended because the options are
+passed to the backend as-is, without CF compliance checks and adjustments.
+But it can be useful in some cases when full control over the backend is needed.
+```
 
 It is important to note that using encodings is entirely optional: if you do not
 supply any of these encoding options, xarray will write data to disk using a
@@ -1333,7 +1352,10 @@ So you can set `fill_value` in `encoding` as usual.
 
 Note that at read-time, you can control whether `_FillValue` is masked using the
 `mask_and_scale` kwarg; and whether Zarr's `fill_value` is treated as synonymous
-with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`.
+with `_FillValue` using the `use_zarr_fill_value_as_mask` kwarg to {py:func}`xarray.open_zarr`,
+{py:func}`xarray.open_dataset`, {py:func}`xarray.open_datatree` or {py:func}`xarray.open_groups`
+(where it applies to every group). By default (`None`), Zarr fill values are masked for format 2
+and are not masked for format 3.
 
 (io-kerchunk)=
 
@@ -1723,12 +1745,6 @@ For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of [IO tools].
 For CSV files, one might also consider [xarray_extras].
 
-## Third party libraries
-
-More formats are supported by extension libraries:
-
-- [xarray-mongodb](https://xarray-mongodb.readthedocs.io/en/latest/): Store xarray objects on MongoDB
-
 [amazon s3]: https://aws.amazon.com/s3/
 [blog post]: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 [cf conventions]: https://cfconventions.org/
@@ -1749,7 +1765,7 @@ More formats are supported by extension libraries:
 [obstore]: https://developmentseed.org/obstore/latest/
 [pyproj]: https://github.com/pyproj4/pyproj
 [rasterio]: https://rasterio.readthedocs.io/en/latest/
-[rioxarray]: https://corteva.github.io/rioxarray/stable/
+[rioxarray]: https://vylor.github.io/rioxarray/stable/
 [test files]: https://github.com/rasterio/rasterio/blob/master/tests/data/RGB.byte.tif
 [xarray_extras]: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 [zarr]: https://zarr.readthedocs.io/

@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Literal, Union, cast, override
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 
 from xarray.computation import ops
 from xarray.computation.apply_ufunc import apply_ufunc
@@ -713,7 +712,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
             self._sizes = self._obj.isel({self._group_dim: index}).sizes
         return self._sizes
 
-    def shuffle_to_chunks(self, chunks: T_Chunks = None) -> T_Xarray:
+    def shuffle_to_chunks(self, chunks: T_Chunks | None = None) -> T_Xarray:
         """
         Sort or "shuffle" the underlying object.
 
@@ -762,26 +761,82 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         dask.array.shuffle
         """
         self._raise_if_by_is_chunked()
-        return self._shuffle_obj(chunks)
+        obj, _ = self._shuffle_obj(chunks)
+        return obj
 
-    def _shuffle_obj(self, chunks: T_Chunks) -> T_Xarray:
+    def _shuffle_obj(
+        self, chunks: T_Chunks | None
+    ) -> tuple[T_Xarray, tuple[DataArray, ...]]:
+        """Shuffle the object, so that all members of a group are in the same chunk.
+
+        The codes of each grouper are shuffled along with it, so that they match
+        the shuffled object.
+        """
         from xarray.core.dataarray import DataArray
 
         was_array = isinstance(self._obj, DataArray)
         as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
 
-        for grouper in self.groupers:
-            if grouper.name not in as_dataset._variables:
-                as_dataset.coords[grouper.name] = grouper.group
+        group_coords = {
+            grouper.name: grouper.group
+            for grouper in self.groupers
+            if grouper.name not in as_dataset._variables
+        }
+        codes_names = [f"__codes_{i}__" for i in range(len(self.groupers))]
+        codes_coords = {
+            name: grouper.codes.variable
+            for name, grouper in zip(codes_names, self.groupers, strict=True)
+        }
+        as_dataset = as_dataset.assign_coords(group_coords | codes_coords)
 
         shuffled = as_dataset._shuffle(
             dim=self._group_dim, indices=self.encoded.group_indices, chunks=chunks
         )
-        unstacked: Dataset = self._maybe_unstack(shuffled)
+        codes = tuple(
+            shuffled[name].rename(grouper.codes.name)
+            for name, grouper in zip(codes_names, self.groupers, strict=True)
+        )
+        unstacked: Dataset = self._maybe_unstack(shuffled.drop_vars(codes_names))
         if was_array:
-            return self._obj._from_temp_dataset(unstacked)
-        else:
-            return unstacked  # type: ignore[return-value]
+            return self._obj._from_temp_dataset(unstacked), codes
+        return unstacked, codes  # type: ignore[return-value]
+
+    def _needs_shuffle_for_blockwise(self) -> bool:
+        """Whether flox's blockwise strategy needs us to shuffle first.
+
+        Flox can only rechunk so that chunk boundaries line up with group
+        boundaries, which requires the members of each group to be contiguous.
+        """
+        # Obsolete once xarray-contrib/flox#501 is fixed, see `_flox_reduce`.
+        # _shuffle_obj can't shuffle by a chunked array, and the order would be
+        # lost again when unstacking a multi-dimensional group.
+        if self._by_chunked or self._stacked_dim is not None:
+            return False
+
+        from xarray.core.dataarray import DataArray
+
+        # Without multiple chunks along the group dimension, e.g. for numpy
+        # arrays, blockwise always works. Shuffling would only copy the data.
+        was_array = isinstance(self._obj, DataArray)
+        as_dataset = self._obj._to_temp_dataset() if was_array else self._obj
+        dim = self._group_dim
+        if not any(
+            var.chunks is not None and len(var.chunks[var.get_axis_num(dim)]) > 1
+            for var in as_dataset._variables.values()
+            if dim in var.dims
+        ):
+            return False
+
+        # Flox can rechunk contiguous groups on its own, e.g. for resampling, so
+        # only shuffle if some group is interrupted by another one. Missing
+        # values (code -1) are dropped by the reduction and don't count.
+        codes = self.encoded.codes.data
+        codes = codes[codes >= 0]
+        if codes.size == 0:
+            return False
+        # every group is contiguous if it forms exactly one run of equal codes
+        n_runs = np.count_nonzero(np.diff(codes)) + 1
+        return n_runs != len(np.unique(codes))
 
     def map(
         self,
@@ -1069,7 +1124,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         **kwargs: Any,
     ) -> T_Xarray:
         """Adaptor function that translates our groupby API to that of flox."""
-        import flox
         from flox.xarray import xarray_reduce
 
         if "keepdims" in kwargs:
@@ -1085,6 +1139,15 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         from xarray.core.dataset import Dataset
 
         obj = self._original_obj
+        codes = tuple(g.codes for g in self.groupers)
+        # flox can only rechunk contiguous groups for blockwise reductions,
+        # so shuffle every group into a single chunk ourselves (GH11651).
+        # TODO: Once flox shuffles automatically for blockwise-only reductions
+        # (https://github.com/xarray-contrib/flox/issues/501), restrict this to
+        # older flox versions and remove it when the minimum flox version allows.
+        if kwargs.get("method") == "blockwise" and self._needs_shuffle_for_blockwise():
+            obj, codes = self._shuffle_obj(chunks=None)
+
         variables = (
             {k: v.variable for k, v in obj.data_vars.items()}
             if isinstance(obj, Dataset)  # type: ignore[redundant-expr]  # seems to be a mypy bug
@@ -1093,12 +1156,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-
-        if Version(flox.__version__) < Version("0.9") and not self._by_chunked:
-            # preserve current strategy (approximately) for dask groupby
-            # on older flox versions to prevent surprises.
-            # flox >=0.9 will choose this on its own.
-            kwargs.setdefault("method", "cohorts")
 
         midx_grouping_vars: tuple[Hashable, ...] = ()
         for grouper in self.groupers:
@@ -1154,7 +1211,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
             pd.RangeIndex(len(grouper)) for grouper in self.groupers
         )
 
-        codes = tuple(g.codes for g in self.groupers)
         result = xarray_reduce(
             obj.drop_vars(non_numeric.keys()),
             *codes,
@@ -1184,7 +1240,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
                     # all associated levels properly.
                     coordinates_from_variable(
                         IndexVariable(
-                            dims=grouper.name,
+                            dims=(grouper.name,),
                             data=output_index,
                             attrs=grouper.codes.attrs,
                         )
@@ -1301,7 +1357,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> T_Xarray:
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
@@ -1426,7 +1481,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
             method == "linear"
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
-            and module_available("flox", minversion="0.9.4")
+            and module_available("flox")
         ):
             result = self._flox_reduce(
                 func="quantile", q=q, dim=dim, keep_attrs=keep_attrs, skipna=skipna
@@ -1443,7 +1498,6 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
                 method=method,
                 keep_attrs=keep_attrs,
                 skipna=skipna,
-                interpolation=interpolation,
             )
 
     def where(self, cond, other=dtypes.NA) -> T_Xarray:
@@ -1484,7 +1538,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
         if (
-            module_available("flox", minversion="0.10.0")
+            module_available("flox")
             and OPTIONS["use_flox"]
             and contains_only_chunked_or_numpy(self._obj)
         ):
@@ -1884,6 +1938,9 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             coords="different",
             compat="equals",
             join="outer",
+            # the index is created by assigning the group coordinates below, and
+            # creating it here warns if the group is a data variable (GH9890)
+            create_index_for_new_dim=False,
         )
         combined = _maybe_reorder(combined, dim, positions, N=self.group1d.size)
         # assign coord when the applied function does not return that coord

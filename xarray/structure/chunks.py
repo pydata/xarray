@@ -65,7 +65,7 @@ def _get_breaks_cached(
 def _maybe_chunk(
     name: Hashable,
     var: Variable,
-    chunks: Mapping[Any, T_ChunkDim] | None,
+    chunks: Mapping[Any, T_ChunkDim],
     token=None,
     lock=None,
     name_prefix: str = "xarray-",
@@ -77,8 +77,7 @@ def _maybe_chunk(
 ) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
-    if chunks is not None:
-        chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
+    chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
     if var.ndim:
         chunked_array_type = guess_chunkmanager(
