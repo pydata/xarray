@@ -381,8 +381,9 @@ Performance
   ``len``, ``startswith``, ``endswith``, ``find``, ``rfind``, ``index``,
   ``rindex``, ``strip``, ``lstrip``, ``rstrip``, ``pad``, ``center``,
   ``ljust``, ``rjust``, ``zfill``, ``repeat``, the ``is*`` methods and
-  ``contains`` and ``replace`` with ``regex=False``, which makes them 5-80
-  times faster for arrays with a string dtype (:pull:`11746`).
+  ``contains`` and ``replace`` with ``regex=False`` and case-sensitive matching,
+  which makes them 5-80 times faster for arrays with a string dtype
+  (:pull:`11746`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up rolling reductions of dask arrays without bottleneck, e.g. ``sum``,
   ``mean`` and ``count``, by about 7x with about 12x fewer tasks for a window of 20.
