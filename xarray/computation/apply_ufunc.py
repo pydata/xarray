@@ -1332,24 +1332,40 @@ def apply_ufunc(
     ...     )
     ...
 
-    **Vectorizing over some dimensions only.** ``np.quantile`` handles all
-    ``x`` at once, but takes a single quantile, so only loop over ``time``:
+    **Vectorizing over some dimensions only.** ``make_interp_spline``
+    interpolates all ``x`` at once, but only to a single set of new points.
+    These vary along ``time``, so only loop over ``time``:
 
-    >>> data = xr.DataArray(
-    ...     np.arange(24.0).reshape(2, 3, 4), dims=("time", "x", "sample")
+    >>> from scipy.interpolate import make_interp_spline
+    >>> da = xr.DataArray(
+    ...     np.arange(24.0).reshape(2, 3, 4),
+    ...     dims=("time", "x", "z"),
+    ...     coords={"z": [0, 1, 2, 3]},
     ... )
-    >>> q = xr.DataArray([0.25, 0.75], dims="time")
-    >>> def quantile(a, q):
-    ...     # a has shape (x, sample), q has size 1 along x
-    ...     return np.quantile(a, q.item(), axis=-1)
+    >>> new_z = xr.DataArray([[0.5, 1.5], [1.0, 2.5]], dims=("time", "new_z"))
+    >>> def interp(data, z, new_z):
+    ...     # data has shape (x, z), new_z has size 1 along x
+    ...     return make_interp_spline(z, data, k=1, axis=-1)(new_z.reshape(-1))
     ...
     >>> xr.apply_ufunc(
-    ...     quantile, data, q, input_core_dims=[["sample"], []], vectorize=["time"]
+    ...     interp,
+    ...     da,
+    ...     da.z,
+    ...     new_z,
+    ...     input_core_dims=[["z"], ["z"], ["new_z"]],
+    ...     output_core_dims=[["new_z"]],
+    ...     exclude_dims={"z"},
+    ...     vectorize=["time"],
     ... )
-    <xarray.DataArray (time: 2, x: 3)> Size: 48B
-    array([[ 0.75,  4.75,  8.75],
-           [14.25, 18.25, 22.25]])
-    Dimensions without coordinates: time, x
+    <xarray.DataArray (time: 2, x: 3, new_z: 2)> Size: 96B
+    array([[[ 0.5,  1.5],
+            [ 4.5,  5.5],
+            [ 8.5,  9.5]],
+    <BLANKLINE>
+           [[13. , 14.5],
+            [17. , 18.5],
+            [21. , 22.5]]])
+    Dimensions without coordinates: time, x, new_z
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in ``apply_ufunc``. You may find helper functions such as
