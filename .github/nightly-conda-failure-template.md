@@ -4,7 +4,7 @@
 **Run:** [{{RUN_ID}}]({{RUN_URL}})
 **Date:** {{DATE}}
 
-The nightly conda build or upload to the `https://prefix.dev/scientific-python/scientific-python-nightly` channel has failed.
+The nightly conda build or upload to the [`scientific-python/scientific-python-nightly`](https://prefix.dev/scientific-python/scientific-python-nightly) channel has failed.
 
 Please check the [workflow run]({{RUN_URL}}) for details.
 
