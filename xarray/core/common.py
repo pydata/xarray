@@ -67,8 +67,6 @@ if TYPE_CHECKING:
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
 
-
-
 class ImplementsArrayReduce:
     __slots__ = ()
 

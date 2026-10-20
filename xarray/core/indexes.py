@@ -642,8 +642,6 @@ def get_indexer_nd(index: pd.Index, labels, method=None, tolerance=None) -> np.n
     return indexer
 
 
-
-
 class PandasIndex(Index):
     """Wrap a pandas.Index as an xarray compatible index."""
 
