@@ -10109,6 +10109,10 @@ class Dataset(
         -------
         Dataset
 
+        See Also
+        --------
+        DataArray.drop_duplicates
+
         Examples
         --------
         >>> ds = xr.Dataset(
@@ -10153,10 +10157,6 @@ class Dataset(
           * time         (time) int64 16B 0 2
         Data variables:
             temperature  (time) int64 16B 10 16
-
-        See Also
-        --------
-        DataArray.drop_duplicates
         """
         if isinstance(dim, str):
             dims: Iterable = (dim,)
