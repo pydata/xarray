@@ -41,12 +41,11 @@ jobs:
     runs-on: ubuntu-latest
 
     environment:
-      name: scientific-python-nightly-forge
-      url: https://prefix.dev/sp-nightly-forge
+      name: scientific-python-nightly-conda
+      url: https://prefix.dev/scientific-python/scientific-python-nightly
 
     permissions:
       contents: read
-      attestations: write # generate and store attestations
       issues: write # report failures
       id-token: write # upload to prefix.dev
 
@@ -72,7 +71,7 @@ jobs:
         run: |
           pixi upload prefix \
             -vvv \
-            -c sp-nightly-forge \
+            -c scientific-python/scientific-python-nightly \
             --generate-attestation \
             dist/xarray-*.conda
 
@@ -83,19 +82,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
+          ISSUE_LABEL: "CI"
+          ISSUE_TITLE: "Nightly conda build/upload failed"
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_URL: ${{ github.repository}}/actions/runs/${{ github.run_id }}
         run: |
           # Read the template
           template=$(cat .github/nightly-conda-failure-template.md)
 
           # Replace placeholders
           issue_body="${template//\{\{WORKFLOW\}\}/$GITHUB_WORKFLOW}"
-          issue_body="${issue_body//\{\{RUN_ID\}\}/${{ github.run_id }}}"
-          issue_body="${issue_body//\{\{RUN_URL\}\}/${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}}"
+          issue_body="${issue_body//\{\{RUN_ID\}\}/$GITHUB_RUN_ID}"
+          issue_body="${issue_body//\{\{RUN_URL\}\}/$GITHUB_RUN_URL}"
           issue_body="${issue_body//\{\{DATE\}\}/$(date -u)}"
 
           # Check for existing open issue with same title
-          issue_title="Nightly conda build/upload failed"
-          existing_issue=$(gh issue list --state open --label "CI" --search "\"$issue_title\" in:title" --json number --jq '.[0].number // empty')
+          existing_issue=$(gh issue list --state open --label "$ISSUE_LABEL" --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number // empty')
 
           if [ -n "$existing_issue" ]; then
             echo "Found existing open issue #$existing_issue, updating it..."
@@ -104,8 +106,8 @@ jobs:
           else
             echo "No existing open issue found, creating new one..."
             echo "$issue_body" | gh issue create \
-              --title "$issue_title" \
+              --title $ISSUE_TITLE" \
               --body-file - \
-              --label "CI"
+              --label "$ISSUE_LABEL"
             echo "Created new issue"
           fi
