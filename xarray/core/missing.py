@@ -772,7 +772,7 @@ def interpolate_variable(
         dask_gufunc_kwargs=dict(output_sizes=output_sizes, allow_rechunk=True),
         output_dtypes=[dtype],
         # only loop over the dimensions along which the destination coordinates vary,
-        # np.vectorize would also loop over all other broadcast dimensions (GH10683)
+        # vectorize=True would also loop over all other broadcast dimensions (GH10683)
         vectorize=vectorize_dims,
         keep_attrs=True,
     )
