@@ -124,8 +124,7 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
 
 
 def deprecate_dims[T: Callable](func: T, old_name="dims") -> T:
-    """
-    Deprecate the `dims` keyword argument in favor of `dim`.
+    """Deprecate the `dims` keyword argument in favor of `dim`.
 
     For functions that previously took `dims` as a kwarg, and have now transitioned to
     `dim`. This decorator will issue a warning if `dims` is passed while forwarding it

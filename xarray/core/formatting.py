@@ -585,8 +585,7 @@ def _element_formatter(
     max_rows: int | None = None,
     delimiter: str = ", ",
 ) -> str:
-    """
-    Format elements for better readability.
+    """Format elements for better readability.
 
     Once it becomes wider than the display width it will create a newline and
     continue indented to col_width.
@@ -664,8 +663,7 @@ def set_numpy_options(*args, **kwargs):
 
 
 def limit_lines(string: str, *, limit: int):
-    """
-    Limit the number of lines of a string.
+    """Limit the number of lines of a string.
 
     If the string is more lines than the limit, this returns the middle lines
     replaced by an ellipsis.
@@ -1104,8 +1102,7 @@ def diff_array_repr(a, b, compat):
 
 
 def diff_treestructure(a: DataTree, b: DataTree) -> str | None:
-    """
-    Return a summary of why two trees are not isomorphic.
+    """Return a summary of why two trees are not isomorphic.
 
     If they are isomorphic return None.
     """

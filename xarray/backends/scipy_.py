@@ -400,8 +400,7 @@ def _normalize_filename_or_obj(
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the scipy package.
+    """Backend for netCDF files based on the scipy package.
 
     It can open ".nc", ".cdf", and "nc..gz" files but will only be
     selected as the default if the "netcdf4" and "h5netcdf" engines are

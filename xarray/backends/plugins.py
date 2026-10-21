@@ -115,8 +115,7 @@ def build_engines(entrypoints: EntryPoints) -> dict[str, BackendEntrypoint]:
 
 @functools.lru_cache(maxsize=1)
 def list_engines() -> dict[str, BackendEntrypoint]:
-    """
-    Return a dictionary of available engines and their BackendEntrypoint objects.
+    """Return a dictionary of available engines and their BackendEntrypoint objects.
 
     Returns
     -------

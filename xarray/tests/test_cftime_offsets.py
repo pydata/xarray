@@ -1603,8 +1603,7 @@ def test_cftime_range_same_as_pandas(start, end, freq) -> None:
     ],
 )
 def test_cftime_range_no_freq(start, end, periods):
-    """
-    Test whether date_range produces the same result as Pandas without freq.
+    """Test whether date_range produces the same result as Pandas without freq.
 
     That is, when freq is not provided, but start, end and periods are.
     """
@@ -1626,8 +1625,7 @@ def test_cftime_range_no_freq(start, end, periods):
     ],
 )
 def test_date_range_no_freq(start, end, periods):
-    """
-    Test whether date_range produces the same result as Pandas without freq.
+    """Test whether date_range produces the same result as Pandas without freq.
 
     That is, when freq is not provided, but start, end and periods are.
     """

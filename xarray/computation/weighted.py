@@ -147,8 +147,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
     __slots__ = ("obj", "weights")
 
     def __init__(self, obj: T_Xarray, weights: T_DataArray) -> None:
-        """
-        Create a Weighted object.
+        """Create a Weighted object.
 
         Parameters
         ----------

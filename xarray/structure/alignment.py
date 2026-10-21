@@ -782,8 +782,7 @@ def align(
     exclude: str | Iterable[Hashable] = frozenset(),
     fill_value=dtypes.NA,
 ) -> tuple[T_Alignable, ...]:
-    """
-    Align any number of Dataset and/or DataArray objects.
+    """Align any number of Dataset and/or DataArray objects.
 
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.

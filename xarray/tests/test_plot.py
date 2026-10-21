@@ -120,8 +120,7 @@ def property_in_axes_text(
 
 
 def easy_array(shape: tuple[int, ...], start: float = 0, stop: float = 1) -> np.ndarray:
-    """
-    Make an array with desired shape using np.linspace.
+    """Make an array with desired shape using np.linspace.
 
     shape is a tuple like (2, 3)
     """
@@ -1347,8 +1346,7 @@ class TestDiscreteColorMap:
 
 
 class Common2dMixin:
-    """
-    Common tests for 2d plotting go here.
+    """Common tests for 2d plotting go here.
 
     These tests assume that a staticmethod for `self.plotfunc` exists.
     Should have the same name as the method.
@@ -2036,8 +2034,7 @@ class TestPcolormeshLogscale(PlotTestCase):
         self.darray = da
 
     def test_interval_breaks_logspace(self) -> None:
-        """
-        Check if the outer vertices of the pcolormesh are the expected values.
+        """Check if the outer vertices of the pcolormesh are the expected values.
 
         Checks bugfix for #5333
         """

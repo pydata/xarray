@@ -60,8 +60,7 @@ _ONE_DAY = 24 * _ONE_HOUR
 
 
 def infer_freq(index):
-    """
-    Infer the most likely frequency given the input index.
+    """Infer the most likely frequency given the input index.
 
     Parameters
     ----------

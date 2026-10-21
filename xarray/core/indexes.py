@@ -38,8 +38,7 @@ IndexVars = dict[Any, "Variable"]
 
 
 class Index:
-    """
-    Base class inherited by all xarray-compatible indexes.
+    """Base class inherited by all xarray-compatible indexes.
 
     Do not use this class directly for creating index objects. Xarray indexes
     are created exclusively from subclasses of ``Index``, mostly via Xarray's
@@ -593,8 +592,7 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None):
 
 
 def _asarray_tuplesafe(values):
-    """
-    Convert values into a numpy array of at most 1-dimension, preserving tuples.
+    """Convert values into a numpy array of at most 1-dimension, preserving tuples.
 
     Adapted from pandas.core.common._asarray_tuplesafe
     """

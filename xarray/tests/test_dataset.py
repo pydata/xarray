@@ -230,8 +230,7 @@ class DuckBackendArrayWrapper(backends.common.BackendArray):
 
 
 class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
-    """
-    Store that returns a duck array, not convertible to numpy array, on read.
+    """Store that returns a duck array, not convertible to numpy array, on read.
 
     Modeled after nVIDIA's kvikio.
     """

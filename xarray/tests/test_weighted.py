@@ -525,8 +525,7 @@ def test_weighted_std_bool():
 
 
 def expected_weighted(da, weights, dim, skipna, operation):
-    """
-    Generate expected result using ``*`` and ``sum``.
+    """Generate expected result using ``*`` and ``sum``.
 
     This is checked against the result of da.weighted which uses ``dot``.
     """

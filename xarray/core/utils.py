@@ -120,8 +120,7 @@ def is_allowed_extension_array(array: Any) -> bool:
 def did_you_mean(
     word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
 ) -> str:
-    """
-    Suggest a few correct words based on a list of possibilities.
+    """Suggest a few correct words based on a list of possibilities.
 
     Parameters
     ----------
@@ -324,6 +323,13 @@ def flat_items[T](
 ) -> Iterable[tuple[str, T]]:
     """Yield flat items from a nested dictionary of dicts.
 
+    Yields
+    ------
+    key : str
+        The flattened key, joined with ``separator``.
+    value
+        The value.
+
     Notes
     -----
     - Only dict subclasses are flattened.
@@ -504,8 +510,7 @@ def FrozenDict(*args, **kwargs) -> Frozen:
 
 
 class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
-    """
-    Class which behaves like a Mapping but warns if the values are accessed.
+    """Class which behaves like a Mapping but warns if the values are accessed.
 
     Temporary object to aid in deprecation cycle of `Dataset.dims` (see GH issue #8496).
     `Dataset.dims` is being changed from returning a mapping of dimension names to lengths to just
@@ -643,8 +648,7 @@ class NdimSizeLenMixin:
 
     @property
     def ndim(self: Any) -> int:
-        """
-        Number of array dimensions.
+        """Number of array dimensions.
 
         See Also
         --------
@@ -654,8 +658,7 @@ class NdimSizeLenMixin:
 
     @property
     def size(self: Any) -> int:
-        """
-        Number of elements in the array.
+        """Number of elements in the array.
 
         Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
 
@@ -1270,8 +1273,7 @@ def consolidate_dask_from_array_kwargs(
     lock: bool | None = None,
     inline_array: bool | None = None,
 ) -> dict[Any, Any]:
-    """
-    Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
+    """Merge dask-specific kwargs with arbitrary from_array_kwargs dict.
 
     Temporary function, to be deleted once explicitly passing dask-specific kwargs to .chunk() is deprecated.
     """

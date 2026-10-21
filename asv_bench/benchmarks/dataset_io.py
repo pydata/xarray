@@ -618,8 +618,7 @@ class IOReadSingleFile(IOSingleNetCDF):
 
 class IOReadCustomEngine:
     def setup(self, *args, **kwargs):
-        """
-        Set up a custom backend that does the bare minimum to be considered lazy.
+        """Set up a custom backend that does the bare minimum to be considered lazy.
 
         The data in it is still in memory so slow file reading shouldn't affect the
         results.
@@ -672,8 +671,7 @@ class IOReadCustomEngine:
                 return cls(manager, mode=mode, lock=locker, autoclose=autoclose)
 
             def load(self) -> tuple:
-                """
-                Load a bunch of test data quickly.
+                """Load a bunch of test data quickly.
 
                 Normally this method would've opened a file and parsed it.
                 """
@@ -732,8 +730,7 @@ class IOReadCustomEngine:
 
     @parameterize({"chunks": [None, {}, {"time": 10}]})
     def time_open_dataset(self, chunks):
-        """
-        Time how fast xr.open_dataset is without the slow data reading part.
+        """Time how fast xr.open_dataset is without the slow data reading part.
 
         Test with and without dask.
         """

@@ -239,8 +239,7 @@ def as_variable(obj: Any, name: Hashable = None, auto_convert: bool = True) -> V
 
 
 def _maybe_wrap_data(data):
-    """
-    Put pandas.Index and numpy.ndarray arguments in adapter objects.
+    """Put pandas.Index and numpy.ndarray arguments in adapter objects.
 
     This ensures they can be indexed properly.
 
@@ -541,8 +540,7 @@ class Variable(
         encoding: Mapping[Any, Any] | None = None,
         fastpath: bool = False,
     ) -> None:
-        """
-        Initialize a Variable.
+        """Initialize a Variable.
 
         Parameters
         ----------
@@ -661,8 +659,7 @@ class Variable(
 
     @property
     def data(self):
-        """
-        The Variable's data as an array.
+        """The Variable's data as an array.
 
         The underlying array type (e.g. dask, sparse, pint) is preserved.
 
@@ -703,8 +700,7 @@ class Variable(
         copy=None,
         keep_attrs=True,
     ) -> Variable[ShapeType_co, Any, DimType_co]:
-        """
-        Copy of the Variable object, with data cast to a specified type.
+        """Copy of the Variable object, with data cast to a specified type.
 
         Parameters
         ----------
@@ -1437,8 +1433,7 @@ class Variable(
         return self._replace(data=data)
 
     def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
-        """
-        Return a new Variable with shifted data.
+        """Return a new Variable with shifted data.
 
         Parameters
         ----------
@@ -1493,8 +1488,7 @@ class Variable(
         keep_attrs: bool | None = None,
         **pad_width_kwargs: Any,
     ):
-        """
-        Return a new Variable with padded data.
+        """Return a new Variable with padded data.
 
         Parameters
         ----------
@@ -1602,8 +1596,7 @@ class Variable(
         return self._replace(data=data)
 
     def roll(self, shifts=None, **shifts_kwargs):
-        """
-        Return a new Variable with rolled data.
+        """Return a new Variable with rolled data.
 
         Parameters
         ----------
@@ -1768,8 +1761,7 @@ class Variable(
 
     @partial(deprecate_dims, old_name="dimensions")
     def stack(self, dim=None, **dim_kwargs):
-        """
-        Stack any number of existing dim into a single new dimension.
+        """Stack any number of existing dim into a single new dimension.
 
         New dim will be added at the end, and the order of the data
         along each new dimension will be in contiguous (C) order.
@@ -1802,8 +1794,7 @@ class Variable(
     def _unstack_once_full(
         self, dim: Mapping[Any, int], old_dim: Hashable
     ) -> Variable[Shape, DType_co, DimType_co]:
-        """
-        Unstacks the variable without needing an index.
+        """Unstacks the variable without needing an index.
 
         Unlike `_unstack_once`, this function requires the existing dimension to
         contain the full product of the new dimensions.
@@ -1846,8 +1837,7 @@ class Variable(
         sparse: bool = False,
         full_product: bool | None = None,
     ) -> Variable:
-        """
-        Unstack this variable given an index and the name of its dimension.
+        """Unstack this variable given an index and the name of its dimension.
 
         The dimension is the one to which the index to unstack refers.
 
@@ -1922,8 +1912,7 @@ class Variable(
 
     @partial(deprecate_dims, old_name="dimensions")
     def unstack(self, dim=None, **dim_kwargs) -> Variable:
-        """
-        Unstack an existing dimension into multiple new dimensions.
+        """Unstack an existing dimension into multiple new dimensions.
 
         New dimensions will be added at the end, and the order of the data
         along each new dimension will be in contiguous (C) order.
@@ -1966,8 +1955,7 @@ class Variable(
         return ops.where_method(self, cond, other)
 
     def clip(self, min=None, max=None):
-        """
-        Return an array whose values are limited to ``[min, max]``.
+        """Return an array whose values are limited to ``[min, max]``.
 
         At least one of max or min must be given.
 
@@ -2371,8 +2359,7 @@ class Variable(
         fill_value=dtypes.NA,
         **kwargs,
     ):
-        """
-        Make a rolling_window along dim and add a new_dim to the last place.
+        """Make a rolling_window along dim and add a new_dim to the last place.
 
         Parameters
         ----------
@@ -2652,8 +2639,7 @@ class Variable(
     @override
     @property
     def imag(self) -> Variable[ShapeType_co, Any, DimType_co]:
-        """
-        The imaginary part of the variable.
+        """The imaginary part of the variable.
 
         See Also
         --------
@@ -2664,8 +2650,7 @@ class Variable(
     @override
     @property
     def real(self) -> Variable[ShapeType_co, Any, DimType_co]:
-        """
-        The real part of the variable.
+        """The real part of the variable.
 
         See Also
         --------

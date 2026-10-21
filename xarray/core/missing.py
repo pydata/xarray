@@ -49,8 +49,7 @@ if TYPE_CHECKING:
 def _get_nan_block_lengths(
     obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
 ):
-    """
-    Return an object where each NaN element in 'obj' is replaced by its gap length.
+    """Return an object where each NaN element in 'obj' is replaced by its gap length.
 
     The gap length is the length of the gap the element is in.
     """
@@ -795,8 +794,7 @@ def _interpnd(
     result_coord_core_dims: list[tuple[Hashable, ...]],
     dtype: np.dtype,
 ) -> np.ndarray:
-    """
-    Core nD array interpolation routine.
+    """Core nD array interpolation routine.
 
     The first half arrays in `coords` are original coordinates,
     the other half are destination coordinates.
@@ -858,6 +856,12 @@ def decompose_interp(indexes_coords: SourceDest) -> Generator[SourceDest, None]:
     """Decompose the interpolation into a succession of independent interpolations.
 
     The order of the interpolations is kept.
+
+    Yields
+    ------
+    dict
+        The source and destination coordinates of each independent
+        interpolation.
     """
     dest_dims = [
         dest[1].dims if dest[1].ndim > 0 else (dim,)

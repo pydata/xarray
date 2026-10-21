@@ -153,8 +153,7 @@ def _new[
     | NamedArray[Any, DType_co, DimType_co]
     | NamedArray[Any, DType_co, DimType]
 ):
-    """
-    Create a new array with new typing information.
+    """Create a new array with new typing information.
 
     Parameters
     ----------
@@ -251,8 +250,7 @@ def from_array[DimType_co: Hashable, ShapeType, DType: np.dtype[Any]](
     data: duckarray[ShapeType, DType] | ArrayLike,
     attrs: AttrsLike = None,
 ) -> NamedArray[ShapeType, DType, DimType_co] | NamedArray[Any, Any, DimType_co]:
-    """
-    Create a Named array from an array-like object.
+    """Create a Named array from an array-like object.
 
     Parameters
     ----------
@@ -314,8 +312,7 @@ class NamedArray(
     NamedArrayAggregations[DimType_co],
     Generic[ShapeType_co, DType_co, DimType_co],  # noqa: UP046
 ):
-    """
-    A wrapper around duck arrays with named dimensions and attributes.
+    """A wrapper around duck arrays with named dimensions and attributes.
 
     Together, the data, dimensions and attributes describe a single Array.
     Numeric operations on this object implement array broadcasting and
@@ -415,8 +412,7 @@ class NamedArray(
         | NamedArray[ShapeType_co, DType_co, DimType_co]
         | NamedArray[ShapeType_co, DType_co, DimType]
     ):
-        """
-        Create a new array with new typing information.
+        """Create a new array with new typing information.
 
         _new has to be reimplemented each time NamedArray is subclassed,
         otherwise type hints will not be correct. The same is likely true
@@ -444,8 +440,7 @@ class NamedArray(
         data: duckarray[ShapeType_co, DType_co] | Default = _default,
         attrs: AttrsLike | Default = _default,
     ) -> Self:
-        """
-        Create a new array with the same typing information.
+        """Create a new array with the same typing information.
 
         The types for each argument cannot change,
         use self._new if that is a risk.
@@ -526,8 +521,7 @@ class NamedArray(
 
     @property
     def ndim(self) -> int:
-        """
-        Number of array dimensions.
+        """Number of array dimensions.
 
         See Also
         --------
@@ -537,8 +531,7 @@ class NamedArray(
 
     @property
     def size(self) -> IntOrUnknown:
-        """
-        Number of elements in the array.
+        """Number of elements in the array.
 
         Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
 
@@ -556,8 +549,7 @@ class NamedArray(
 
     @property
     def dtype(self) -> DType_co:
-        """
-        Data-type of the array’s elements.
+        """Data-type of the array’s elements.
 
         See Also
         --------
@@ -568,8 +560,7 @@ class NamedArray(
 
     @property
     def shape(self) -> Shape:
-        """
-        Get the shape of the array.
+        """Get the shape of the array.
 
         Returns
         -------
@@ -584,8 +575,7 @@ class NamedArray(
 
     @property
     def nbytes(self) -> IntOrUnknown:
-        """
-        Total bytes consumed by the elements of the data array.
+        """Total bytes consumed by the elements of the data array.
 
         If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
@@ -663,8 +653,7 @@ class NamedArray(
 
     @property
     def data(self) -> duckarray[Any, DType_co]:
-        """
-        The NamedArray's data as an array.
+        """The NamedArray's data as an array.
 
         The underlying array type (e.g. dask, sparse, pint) is preserved.
         """
@@ -679,8 +668,7 @@ class NamedArray(
     def imag[ShapeType, ScalarType: np.generic](
         self: NamedArray[ShapeType, np.dtype[SupportsImag[ScalarType]], DimType_co],  # type: ignore[type-var]
     ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType_co]:
-        """
-        The imaginary part of the array.
+        """The imaginary part of the array.
 
         See Also
         --------
@@ -697,8 +685,7 @@ class NamedArray(
     def real[ShapeType, ScalarType: np.generic](
         self: NamedArray[ShapeType, np.dtype[SupportsReal[ScalarType]], DimType_co],  # type: ignore[type-var]
     ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType_co]:
-        """
-        The real part of the array.
+        """The real part of the array.
 
         See Also
         --------
@@ -841,8 +828,7 @@ class NamedArray(
 
     @property
     def chunks(self) -> Chunks | None:
-        """
-        Tuple of block lengths for this NamedArray's data, in order of dimensions.
+        """Tuple of block lengths for this NamedArray's data, in order of dimensions.
 
         None if the underlying data is not a dask array.
 
@@ -862,8 +848,7 @@ class NamedArray(
     def chunksizes(
         self,
     ) -> Mapping[DimType_co, Shape]:
-        """
-        Mapping from dimension names to block lengths for this NamedArray's data.
+        """Mapping from dimension names to block lengths for this NamedArray's data.
 
         If this NamedArray does not contain chunked arrays, the mapping will be empty.
 
@@ -1192,8 +1177,7 @@ class NamedArray(
     def broadcast_to(
         self, dim: Mapping[DimType_co, int] | None = None, **dim_kwargs: int
     ) -> NamedArray[Any, DType_co, DimType_co]:
-        """
-        Broadcast the NamedArray to a new shape. New dimensions are not allowed.
+        """Broadcast the NamedArray to a new shape. New dimensions are not allowed.
 
         This method allows for the expansion of the array's dimensions to a specified shape.
         It handles both positional and keyword arguments for specifying the dimensions to broadcast.
@@ -1267,8 +1251,7 @@ class NamedArray(
         NamedArray[Any, DType_co, DimType_co]
         | NamedArray[Any, DType_co, DimType_co | str]
     ):
-        """
-        Expand the dimensions of the NamedArray.
+        """Expand the dimensions of the NamedArray.
 
         This method adds new dimensions to the object. The new dimensions are added at the beginning of the array.
 

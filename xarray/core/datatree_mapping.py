@@ -43,8 +43,7 @@ def map_over_datasets(
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
-    """
-    Apply a function to every dataset in one or more DataTree objects.
+    """Apply a function to every dataset in one or more DataTree objects.
 
     The DataTree objects must have the same structure (ie.., be isomorphic).
     Returns new trees which store the results.

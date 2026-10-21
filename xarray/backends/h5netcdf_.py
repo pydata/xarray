@@ -496,8 +496,7 @@ def _normalize_filename_or_obj(
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the h5netcdf package.
+    """Backend for netCDF files based on the h5netcdf package.
 
     It can open ".nc", ".nc4", ".cdf" files but will only be
     selected as the default if the "netcdf4" engine is not available.

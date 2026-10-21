@@ -402,7 +402,7 @@ def sum_where(data, axis=None, dtype=None, where=None):
 
 
 def where(condition, x, y):
-    """Three argument where() with better dtype promotion rules."""
+    """Choose elements from ``x`` or ``y`` with better dtype promotion rules."""
     xp = get_array_namespace(condition, x, y)
 
     dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
@@ -440,7 +440,7 @@ def clip(data, min=None, max=None):
 
 
 def concatenate(arrays, axis=0):
-    """concatenate() with better dtype promotion rules."""
+    """Concatenate arrays with better dtype promotion rules."""
     # TODO: `concat` is the xp compliant name, but fallback to concatenate for
     # older numpy and for cupy
     xp = get_array_namespace(*arrays)
@@ -451,7 +451,7 @@ def concatenate(arrays, axis=0):
 
 
 def stack(arrays, axis=0):
-    """stack() with better dtype promotion rules."""
+    """Stack arrays with better dtype promotion rules."""
     xp = get_array_namespace(arrays[0])
     return xp.stack(as_shared_dtype(arrays, xp=xp), axis=axis)
 

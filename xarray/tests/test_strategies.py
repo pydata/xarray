@@ -213,8 +213,7 @@ class TestVariablesStrategy:
 
     @given(st.data())
     def test_make_strategies_namespace(self, data):
-        """
-        Test not causing a hypothesis.InvalidArgument by generating a dtype that's not in the array API.
+        """Test not causing a hypothesis.InvalidArgument by generating a dtype that's not in the array API.
 
         We still want to generate dtypes not in the array API by default, but this checks we don't accidentally override
         the user's choice of dtypes with non-API-compliant ones.
@@ -271,8 +270,7 @@ class TestReduction:
 
     @given(st.data(), variables(dims=dimension_names(min_dims=1)))
     def test_mean(self, data, var):
-        """
-        Test that the mean of a Variable equals the mean of the underlying array.
+        """Test that the mean of a Variable equals the mean of the underlying array.
 
         This must hold for any Variable of at least one dimension.
         """

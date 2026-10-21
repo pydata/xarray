@@ -149,10 +149,13 @@ def infix_dims[DimType: Hashable](
     dims_all: Iterable[DimType],
     missing_dims: ErrorHandlingWithWarn = "raise",
 ) -> Iterator[DimType]:
-    """
-    Resolve a supplied list containing an ellipsis representing other items.
+    """Resolve a supplied list containing an ellipsis representing other items.
 
-    Return a generator with the 'realized' list of all items.
+    Yields
+    ------
+    dim
+        The supplied dimensions, with the ellipsis replaced by all other
+        dimensions.
     """
     if ... in dims_supplied:
         dims_all_list = list(dims_all)
@@ -267,8 +270,7 @@ def fake_target_chunksize(
     data: DuckArray[Any],
     limit: int,
 ) -> tuple[int, np.dtype[Any]]:
-    """
-    Rescale the chunk size `limit` for use with `normalize_chunks`.
+    """Rescale the chunk size `limit` for use with `normalize_chunks`.
 
     The `normalize_chunks` algorithm takes a size `limit` in bytes, but will not
     work for object dtypes.  So we rescale the `limit` to an appropriate one based
