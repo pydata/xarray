@@ -87,7 +87,7 @@ jobs:
           ISSUE_LABEL: "CI"
           ISSUE_TITLE: "Nightly conda build/upload failed"
           GITHUB_RUN_ID: ${{ github.run_id }}
-          GITHUB_RUN_URL: ${{ github.repository}}/actions/runs/${{ github.run_id }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository}}/actions/runs/${{ github.run_id }}
           TEMPLATE: ".github/nightly-conda-failure-template.md"
         run: |
           # Read the template
