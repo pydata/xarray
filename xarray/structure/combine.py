@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 import pandas as pd
 
@@ -31,16 +31,13 @@ if TYPE_CHECKING:
     )
 
 
-T = TypeVar("T")
-
-
-def _infer_concat_order_from_positions(
+def _infer_concat_order_from_positions[T](
     datasets: NestedSequence[T],
 ) -> dict[tuple[int, ...], T]:
     return dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
 
-def _infer_tile_ids_from_nested_list(
+def _infer_tile_ids_from_nested_list[T](
     entry: NestedSequence[T], current_pos: tuple[int, ...]
 ) -> Iterator[tuple[tuple[int, ...], T]]:
     """
@@ -63,12 +60,12 @@ def _infer_tile_ids_from_nested_list(
     -------
     combined_tile_ids : dict[tuple(int, ...), obj]
     """
-
-    if not isinstance(entry, str) and isinstance(entry, Sequence):
-        for i, item in enumerate(entry):
-            yield from _infer_tile_ids_from_nested_list(item, current_pos + (i,))
-    else:
-        yield current_pos, cast(T, entry)
+    for i, item in enumerate(entry):
+        position = current_pos + (i,)
+        if not isinstance(item, str) and isinstance(item, Sequence):
+            yield from _infer_tile_ids_from_nested_list(item, position)
+        else:
+            yield position, cast(T, item)
 
 
 def _ensure_same_types(series, dim):
@@ -245,7 +242,6 @@ def _combine_nd(
     -------
     combined_ds : xarray.Dataset | xarray.DataTree
     """
-
     example_tile_id = next(iter(combined_ids.keys()))
 
     n_dims = len(example_tile_id)
@@ -318,7 +314,6 @@ def _combine_1d(
     Applies either concat or merge to 1D list of datasets depending on value
     of concat_dim
     """
-
     if concat_dim is not None:
         try:
             combined = concat(
@@ -356,7 +351,7 @@ def _combine_1d(
                 "If you are intending to concatenate datasets, please specify the concatenation dimension explicitly. "
                 "Using merge to concatenate is quite inefficient."
             )
-            raise e
+            raise
 
     return combined
 
@@ -410,15 +405,15 @@ def _nested_combine(
 # Define types for arbitrarily-nested list of lists.
 # Mypy doesn't seem to handle overloads properly with recursive types, so we
 # explicitly expand the first handful of levels of recursion.
-DatasetLike: TypeAlias = DataArray | Dataset
-DatasetHyperCube: TypeAlias = (
+type DatasetLike = DataArray | Dataset
+type DatasetHyperCube = (
     DatasetLike
     | Sequence[DatasetLike]
     | Sequence[Sequence[DatasetLike]]
     | Sequence[Sequence[Sequence[DatasetLike]]]
     | Sequence[Sequence[Sequence[Sequence[DatasetLike]]]]
 )
-DataTreeHyperCube: TypeAlias = (
+type DataTreeHyperCube = (
     DataTree
     | Sequence[DataTree]
     | Sequence[Sequence[DataTree]]
@@ -592,9 +587,13 @@ def combine_nested(
     -------
     combined : xarray.Dataset or xarray.DataTree
 
+    See Also
+    --------
+    concat
+    merge
+
     Examples
     --------
-
     A common task is collecting data from a parallelized simulation in which
     each process wrote out to a separate file. A domain which was decomposed
     into 4 parts, 2 each along both the x and y axes, requires organising the
@@ -678,11 +677,6 @@ def combine_nested(
     Data variables:
         temperature    (t) float64 80B -0.8878 -1.981 -0.3479 ... -0.4381 -1.253
         precipitation  (t) float64 80B 1.202 -0.3873 -0.3023 ... -0.8955 0.3869
-
-    See Also
-    --------
-    concat
-    merge
     """
     any_datasets = any(isinstance(obj, Dataset) for obj in iterate_nested(datasets))
     any_unnamed_arrays = any(
@@ -721,14 +715,11 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-K = TypeVar("K", bound=Hashable)
-
-
-def groupby_defaultdict(
+def groupby_defaultdict[T, K: Hashable](
     iter: list[T],
     key: Callable[[T], K],
 ) -> Iterator[tuple[K, Iterator[T]]]:
-    """replacement for itertools.groupby"""
+    """Replacement for itertools.groupby"""
     idx = defaultdict(list)
     for i, obj in enumerate(iter):
         idx[key(obj)].append(i)
@@ -799,9 +790,9 @@ def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     data_vars: Literal["all", "minimal", "different"]
-    | None
     | list[str]
-    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    | CombineKwargDefault
+    | None = _DATA_VARS_DEFAULT,
     coords: str | CombineKwargDefault = _COORDS_DEFAULT,
     fill_value: object = dtypes.NA,
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
@@ -933,7 +924,6 @@ def combine_by_coords(
 
     Examples
     --------
-
     Combining two datasets using their common dimension coordinates. Notice
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.

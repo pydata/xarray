@@ -4,7 +4,7 @@ import functools
 import itertools
 import warnings
 from collections.abc import Callable, Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import numpy as np
 
@@ -16,6 +16,7 @@ from xarray.plot.utils import (
     _add_legend,
     _determine_guide,
     _get_nice_quiver_magnitude,
+    _group_hue_values,
     _guess_coords_to_plot,
     _infer_xy_labels,
     _Normalize,
@@ -34,6 +35,7 @@ if TYPE_CHECKING:
     from matplotlib.text import Annotation
 
     from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
@@ -44,9 +46,7 @@ _NTICKS = 5
 
 
 def _nicetitle(coord, value, maxchar, template):
-    """
-    Put coord, value in template and truncate at maxchar
-    """
+    """Put coord, value in template and truncate at maxchar"""
     prettyvalue = format_item(value, quote_strings=False)
     title = template.format(coord=coord, value=prettyvalue)
 
@@ -84,7 +84,7 @@ def _auto_grid(
 T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
 
 
-class FacetGrid(Generic[T_DataArrayOrSet]):
+class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
     """
     Initialize the Matplotlib figure and FacetGrid object.
 
@@ -190,7 +190,6 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             Dictionary of keyword arguments for Matplotlib subplots
             (:py:func:`matplotlib.pyplot.subplots`).
         """
-
         import matplotlib.pyplot as plt
 
         # Handle corner case of nonunique coordinates
@@ -376,7 +375,6 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         self : FacetGrid object
 
         """
-
         if kwargs.get("cbar_ax") is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
@@ -526,7 +524,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         func_kwargs["add_title"] = False
 
         add_labels_ = np.zeros(self.axs.shape + (3,), dtype=bool)
-        if kwargs.get("z") is not None:
+        if coords_to_plot["z"] is not None:
             # 3d plots looks better with all labels. 3d plots can't sharex either so it
             # is easy to get lost while rotating the plots:
             add_labels_[:] = True
@@ -539,10 +537,10 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         # Set up the lists of names for the row and column facet variables:
         if self._single_group:
             full = tuple(
-                {self._single_group: x}
-                for x in range(self.data[self._single_group].size)
+                {self._single_group: v}
+                for v in range(self.data[self._single_group].size)
             )
-            empty = tuple(None for x in range(self._nrow * self._ncol - len(full)))
+            empty = (None,) * (self._nrow * self._ncol - len(full))
             name_d = full + empty
         else:
             rowcols = itertools.product(
@@ -565,8 +563,8 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 subset = self.data.isel(d)
                 mappable = func(
                     subset,
-                    x=x,
-                    y=y,
+                    x=coords_to_plot["x"],
+                    z=coords_to_plot["z"],
                     ax=ax,
                     hue=hue,
                     _size=size_,
@@ -768,9 +766,19 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             self.figlegend = _add_legend(**kwargs)
         else:
             assert self._hue_var is not None
+            handles: Any = self._mappables[-1]
+            labels = list(self._hue_var.to_numpy())
+            # DataArray.plot.line draws one line per position along the hue
+            # coordinate, so repeated hue values would otherwise appear
+            # multiple times in the legend (GH10998). Keep the first handle
+            # drawn for each hue value, matching the non-faceted line legend.
+            if isinstance(handles, list) and len(handles) == len(labels):
+                _, hue_first = _group_hue_values(self._hue_var.to_numpy())
+                handles = [handles[i] for i in hue_first]
+                labels = [labels[i] for i in hue_first]
             self.figlegend = self.fig.legend(
-                handles=self._mappables[-1],
-                labels=list(self._hue_var.to_numpy()),
+                handles=handles,
+                labels=labels,
                 title=label if label is not None else label_from_attrs(self._hue_var),
                 loc=kwargs.pop("loc", "center right"),
                 **kwargs,

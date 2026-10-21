@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Literal, Union, cast
+from typing import TYPE_CHECKING, Literal, Union, cast, override
 
 import numpy as np
 import pandas as pd
@@ -861,7 +861,8 @@ def cftime_to_nptime(
     numpy.datetime64 objects of the same size
 
     If raise_on_invalid is True (default), invalid dates trigger a ValueError.
-    Otherwise, the invalid element is replaced by np.NaT."""
+    Otherwise, the invalid element is replaced by np.NaT.
+    """
     times = np.asarray(times)
     new = []
     dt: np.datetime64
@@ -1025,7 +1026,7 @@ def _encode_datetime_with_cftime(dates, units: str, calendar: str) -> np.ndarray
     dates = np.atleast_1d(dates)
 
     # Find all the None position
-    none_position = dates == None  # noqa: E711
+    none_position = dates == None
     filtered_dates = dates[~none_position]
 
     # Since netCDF files do not support storing float128 values, we ensure
@@ -1451,6 +1452,7 @@ class CFDatetimeCoder(VariableCoder):
         self.time_unit = time_unit
         self.infer_dtype = infer_dtype
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
             variable
@@ -1475,6 +1477,7 @@ class CFDatetimeCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
         if isinstance(units, str) and "since" in units:
@@ -1575,6 +1578,7 @@ class CFTimedeltaCoder(VariableCoder):
         self.decode_via_units = decode_via_units
         self.decode_via_dtype = decode_via_dtype
 
+    @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
         if np.issubdtype(variable.dtype, np.timedelta64):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
@@ -1597,6 +1601,7 @@ class CFTimedeltaCoder(VariableCoder):
         else:
             return variable
 
+    @override
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
         units = variable.attrs.get("units", None)
         has_timedelta_units = isinstance(units, str) and units in TIME_UNITS

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 import numpy as np
 
@@ -37,7 +36,16 @@ CF_RELATED_DATA_NEEDS_PARSING = (
     "cell_measures",
     "formula_terms",
 )
-
+ZARR_CODERS = (
+    CFDatetimeCoder(),
+    CFTimedeltaCoder(),
+    variables.CFScaleOffsetCoder(),
+    variables.CFMaskCoder(),
+    variables.NativeEnumCoder(),
+    variables.NonStringCoder(),
+    variables.DefaultFillvalueCoder(),
+)
+DEFAULT_CODERS = ZARR_CODERS + (variables.BooleanCoder(),)
 
 if TYPE_CHECKING:
     from xarray.backends.common import AbstractDataStore
@@ -66,7 +74,7 @@ def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
 
 
 def encode_cf_variable(
-    var: Variable, needs_copy: bool = True, name: T_Name = None
+    var: Variable, needs_copy: bool = True, name: T_Name = None, coders=None
 ) -> Variable:
     """
     Converts a Variable into a Variable which follows some
@@ -81,6 +89,8 @@ def encode_cf_variable(
     ----------
     var : Variable
         A variable holding un-encoded data.
+    coders : list of VariableCoder, optional
+        List of coders to apply. If None, uses the default CF coder chain.
 
     Returns
     -------
@@ -89,16 +99,10 @@ def encode_cf_variable(
     """
     ensure_not_multiindex(var, name=name)
 
-    for coder in [
-        CFDatetimeCoder(),
-        CFTimedeltaCoder(),
-        variables.CFScaleOffsetCoder(),
-        variables.CFMaskCoder(),
-        variables.NativeEnumCoder(),
-        variables.NonStringCoder(),
-        variables.DefaultFillvalueCoder(),
-        variables.BooleanCoder(),
-    ]:
+    if coders is None:
+        coders = DEFAULT_CODERS
+
+    for coder in coders:
         var = coder.encode(var, name=name)
 
     for attr_name in CF_RELATED_DATA:
@@ -268,14 +272,13 @@ def _update_bounds_attributes(variables: T_Variables) -> None:
     decoded. This copies the attributes from the time variable to the
     associated boundaries.
 
-    See Also:
-
+    See Also
+    --------
     http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
          cf-conventions.html#cell-boundaries
 
     https://github.com/pydata/xarray/issues/2565
     """
-
     # For all time variables with bounds
     for v in variables.values():
         attrs = v.attrs
@@ -296,14 +299,13 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
     decoded. This copies the encoding from the time variable to the
     associated bounds variable so that we write CF-compliant files.
 
-    See Also:
-
+    See Also
+    --------
     http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
          cf-conventions.html#cell-boundaries
 
     https://github.com/pydata/xarray/issues/2565
     """
-
     # For all time variables with bounds
     for name, v in variables.items():
         attrs = v.attrs
@@ -336,13 +338,11 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
                 bounds_encoding.setdefault("calendar", encoding["calendar"])
 
 
-T = TypeVar("T")
-U = TypeVar("U")
-
-
-def _item_or_default(obj: Mapping[Any, T | U] | T, key: Hashable, default: T) -> T | U:
-    """
-    Return item by key if obj is mapping and key is present, else return default value.
+def _item_or_default[T, U](
+    obj: Mapping[Any, T | U] | T, key: Hashable, default: T
+) -> T | U:
+    """Return item by key if obj is mapping and key is present, else return default
+    value.
     """
     return obj.get(key, default) if isinstance(obj, Mapping) else obj
 
@@ -366,10 +366,6 @@ def decode_cf_variables(
 
     See: decode_cf_variable
     """
-    # Only emit one instance of the decode_timedelta default change
-    # FutureWarning. This can be removed once this change is made.
-    warnings.filterwarnings("once", "decode_timedelta", FutureWarning)
-
     dimensions_used_by = defaultdict(list)
     for v in variables.values():
         for d in v.dims:
@@ -789,7 +785,6 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     --------
     decode_cf_variable, encode_cf_variable
     """
-
     # add encoding for time bounds variables if present.
     _update_bounds_encoding(variables)
 

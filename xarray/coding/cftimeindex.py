@@ -285,9 +285,7 @@ class CFTimeIndex(pd.Index):
         return result
 
     def __repr__(self):
-        """
-        Return a string representation for this object.
-        """
+        """Return a string representation for this object."""
         klass_name = type(self).__name__
         display_width = OPTIONS["display_width"]
         offset = len(klass_name) + 2
@@ -457,7 +455,8 @@ class CFTimeIndex(pd.Index):
 
     def __contains__(self, key: Any) -> bool:
         """Adapted from
-        pandas.tseries.base.DatetimeIndexOpsMixin.__contains__"""
+        pandas.tseries.base.DatetimeIndexOpsMixin.__contains__
+        """
         try:
             result = self.get_loc(key)
             return (
@@ -613,7 +612,6 @@ class CFTimeIndex(pd.Index):
         >>> times.to_datetimeindex(time_unit="ns")
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
-
         if not self._data.size:
             return pd.DatetimeIndex([])
 

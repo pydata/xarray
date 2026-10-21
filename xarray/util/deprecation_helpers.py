@@ -59,6 +59,11 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
     version : str
         version of the library when the positional arguments were deprecated
 
+    Notes
+    -----
+    This function is adapted from scikit-learn under the terms of its license. See
+    licences/SCIKIT_LEARN_LICENSE
+
     Examples
     --------
     Deprecate passing `b` as positional argument:
@@ -71,11 +76,6 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
         pass
 
     func(1, 2)
-
-    Notes
-    -----
-    This function is adapted from scikit-learn under the terms of its license. See
-    licences/SCIKIT_LEARN_LICENSE
     """
 
     def _decorator(func):
@@ -123,7 +123,7 @@ def _deprecate_positional_args(version) -> Callable[[T], T]:
     return _decorator
 
 
-def deprecate_dims(func: T, old_name="dims") -> T:
+def deprecate_dims[T: Callable](func: T, old_name="dims") -> T:
     """
     For functions that previously took `dims` as a kwarg, and have now transitioned to
     `dim`. This decorator will issue a warning if `dims` is passed while forwarding it

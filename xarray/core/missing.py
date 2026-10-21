@@ -7,7 +7,7 @@ from collections import ChainMap
 from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, TypeVar, get_args
+from typing import TYPE_CHECKING, Any, TypeVar, get_args, override
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,7 @@ from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.duck_array_ops import (
+    astype,
     datetime_to_numeric,
     push,
     ravel,
@@ -52,7 +53,6 @@ def _get_nan_block_lengths(
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
     """
-
     # make variable so that we get broadcasting for free
     index = Variable([dim], index)
 
@@ -123,6 +123,7 @@ class NumpyInterpolator(BaseInterpolator):
         else:
             raise ValueError(f"{fill_value} is not a valid fill_value")
 
+    @override
     def __call__(self, x):
         return self.f(
             x,
@@ -271,7 +272,6 @@ def get_clean_interp_index(
     If indexing is along the time dimension, datetime coordinates are converted
     to time deltas with respect to 1970-01-01.
     """
-
     # Question: If use_coordinate is a string, what role does `dim` play?
     from xarray.coding.cftimeindex import CFTimeIndex
 
@@ -407,7 +407,7 @@ def interp_na(
 
 
 def func_interpolate_na(interpolator, y, x, **kwargs):
-    """helper function to apply interpolation along 1 dimension"""
+    """Helper function to apply interpolation along 1 dimension"""
     # reversed arguments are so that attrs are preserved from da, not index
     # it would be nice if this wasn't necessary, works around:
     # "ValueError: assignment destination is read-only" in assignment below
@@ -427,7 +427,7 @@ def func_interpolate_na(interpolator, y, x, **kwargs):
 
 
 def _bfill(arr, n=None, axis=-1):
-    """inverse of ffill"""
+    """Inverse of ffill"""
     arr = np.flip(arr, axis=axis)
 
     # fill
@@ -438,8 +438,7 @@ def _bfill(arr, n=None, axis=-1):
 
 
 def ffill(arr, dim=None, limit=None):
-    """forward fill missing values"""
-
+    """Forward fill missing values"""
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -456,8 +455,7 @@ def ffill(arr, dim=None, limit=None):
 
 
 def bfill(arr, dim=None, limit=None):
-    """backfill missing values"""
-
+    """Backfill missing values"""
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -486,7 +484,7 @@ def _import_interpolant(interpolant, method):
 def _get_interpolator(
     method: InterpOptions, vectorizeable_only: bool = False, **kwargs
 ):
-    """helper function to select the appropriate interpolator class
+    """Helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
     """
@@ -544,7 +542,7 @@ def _get_interpolator(
 
 
 def _get_interpolator_nd(method, **kwargs):
-    """helper function to select the appropriate interpolator class
+    """Helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
     """
@@ -563,8 +561,9 @@ def _get_interpolator_nd(method, **kwargs):
 
 
 def _get_valid_fill_mask(arr, dim, limit):
-    """helper function to determine values that can be filled when limit is not
-    None"""
+    """Helper function to determine values that can be filled when limit is not
+    None
+    """
     kw = {dim: limit + 1}
     # we explicitly use construct method to avoid copy.
     new_dim = utils.get_temp_dimname(arr.dims, "_window")
@@ -576,7 +575,7 @@ def _get_valid_fill_mask(arr, dim, limit):
     ) <= limit
 
 
-def _localize(obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
+def _localize[T](obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
     """Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """
@@ -690,7 +689,7 @@ def interpolate_variable(
     method: InterpOptions,
     kwargs: dict[str, Any],
 ) -> Variable:
-    """core routine that returns the interpolated variable."""
+    """Core routine that returns the interpolated variable."""
     if not indexes_coords:
         return var.copy()
 
@@ -736,7 +735,7 @@ def interpolate_variable(
     output_sizes = {k: result_sizes[k] for k in output_core_dims}
 
     # scipy.interpolate.interp1d always forces to float.
-    dtype = float if not issubclass(var.dtype.type, np.inexact) else var.dtype
+    dtype = np.dtype(float) if not issubclass(var.dtype.type, np.inexact) else var.dtype
     result = apply_ufunc(
         _interpnd,
         var,
@@ -755,6 +754,10 @@ def interpolate_variable(
             # This would be unnecessary if we could tell apply_ufunc
             # to insert size-1 broadcast dimensions
             result_coord_core_dims=input_core_dims[-len(result_coords) :],
+            # the interpolators may upcast, e.g. float32 to float64 depending
+            # on the method and the coordinate dtypes, so cast the result to
+            # the dtype we promise dask
+            dtype=dtype,
         ),
         # TODO: deprecate and have the user rechunk themselves
         dask_gufunc_kwargs=dict(output_sizes=output_sizes, allow_rechunk=True),
@@ -789,6 +792,7 @@ def _interpnd(
     interp_func: Interpolator | InterpCallable,
     interp_kwargs,
     result_coord_core_dims: list[tuple[Hashable, ...]],
+    dtype: np.dtype,
 ) -> np.ndarray:
     """
     Core nD array interpolation routine.
@@ -801,7 +805,7 @@ def _interpnd(
 
     # Convert everything to Variables, since that makes applying
     # `_localize` and `_floatize_x` much easier
-    x = [
+    x: list[Variable] = [
         Variable([f"dim_{nconst + dim}"], _x, fastpath=True)
         for dim, _x in enumerate(coords[:n_x])
     ]
@@ -830,7 +834,11 @@ def _interpnd(
 
     if len(x) == 1:
         # TODO: narrow interp_func to interpolator here
-        return _interp1d(var, x_list, new_x_list, interp_func, interp_kwargs)  # type: ignore[arg-type]
+        return astype(
+            _interp1d(var, x_list, new_x_list, interp_func, interp_kwargs),  # type: ignore[arg-type]
+            dtype,
+            copy=False,
+        )
 
     # move the interpolation axes to the start position
     data = transpose(var._data, range(-len(x), var.ndim - len(x)))
@@ -840,12 +848,12 @@ def _interpnd(
     rslt: np.ndarray = interp_func(x_list, data, xi, **interp_kwargs)  # type: ignore[assignment]
     # move back the interpolation axes to the last position
     rslt = transpose(rslt, range(-rslt.ndim + 1, 1))
-    return reshape(rslt, rslt.shape[:-1] + new_x[0].shape)
+    rslt = reshape(rslt, rslt.shape[:-1] + new_x[0].shape)
+    return astype(rslt, dtype, copy=False)
 
 
 def decompose_interp(indexes_coords: SourceDest) -> Generator[SourceDest, None]:
     """Decompose the interpolation into a succession of independent interpolation keeping the order"""
-
     dest_dims = [
         dest[1].dims if dest[1].ndim > 0 else (dim,)
         for dim, dest in indexes_coords.items()

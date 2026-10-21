@@ -16,7 +16,7 @@ from collections.abc import Callable, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 from itertools import chain, pairwise
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 import numpy as np
 import pandas as pd
@@ -66,7 +66,8 @@ RESAMPLE_DIM = "__resample_dim__"
 
 def _datetime64_via_timestamp(unit: PDDatetimeUnitOptions, **kwargs) -> np.datetime64:
     """Construct a numpy.datetime64 object through the pandas.Timestamp
-    constructor with a specific resolution."""
+    constructor with a specific resolution.
+    """
     # TODO: when pandas 3 is our minimum requirement we will no longer need to
     # convert to np.datetime64 values prior to passing to the DatetimeIndex
     # constructor. With pandas < 3 the DatetimeIndex constructor does not
@@ -138,7 +139,7 @@ class EncodedGroups:
             unique_codes = unique_codes[unique_codes >= 0]
             unique_values = full_index[unique_codes]
             self.unique_coord = Variable(
-                dims=codes.name, data=unique_values, attrs=codes.attrs
+                dims=(codes.name,), data=unique_values, attrs=codes.attrs
             )
         else:
             self.unique_coord = unique_coord
@@ -171,9 +172,7 @@ class Grouper(ABC):
 
     @abstractmethod
     def reset(self) -> Self:
-        """
-        Creates a new version of this Grouper clearing any caches.
-        """
+        """Creates a new version of this Grouper clearing any caches."""
         pass
 
 
@@ -233,9 +232,11 @@ class UniqueGrouper(Grouper):
                 self._group_as_index = pd.Index(np.array(self.group).ravel())
         return self._group_as_index
 
+    @override
     def reset(self) -> Self:
         return type(self)()
 
+    @override
     def factorize(self, group: T_Group) -> EncodedGroups:
         self.group = group
 
@@ -388,6 +389,7 @@ class BinGrouper(Grouper):
     include_lowest: bool = False
     duplicates: Literal["raise", "drop"] = "raise"
 
+    @override
     def reset(self) -> Self:
         return type(self)(
             bins=self.bins,
@@ -421,6 +423,7 @@ class BinGrouper(Grouper):
             self.bins = bins
         return binned.codes.reshape(data.shape)
 
+    @override
     def factorize(self, group: T_Group) -> EncodedGroups:
         if isinstance(group, _DummyGroup):
             group = DataArray(group.data, dims=group.dims, name=group.name)
@@ -508,6 +511,7 @@ class TimeResampler(Resampler):
     index_grouper: CFTimeGrouper | pd.Grouper = field(init=False, repr=False)
     group_as_index: pd.Index = field(init=False, repr=False)
 
+    @override
     def reset(self) -> Self:
         return type(self)(
             freq=self.freq,
@@ -574,6 +578,7 @@ class TimeResampler(Resampler):
             codes = np.repeat(np.arange(len(first_items)), counts)
             return first_items, codes
 
+    @override
     def factorize(self, group: T_Group) -> EncodedGroups:
         self._init_properties(group)
         full_index, first_items, codes_ = self._get_index_and_items()
@@ -583,7 +588,7 @@ class TimeResampler(Resampler):
         )
 
         unique_coord = Variable(
-            dims=group.name, data=first_items.index, attrs=group.attrs
+            dims=(group.name,), data=first_items.index, attrs=group.attrs
         )
         codes = group.copy(data=codes_.reshape(group.shape), deep=False)
 
@@ -595,6 +600,7 @@ class TimeResampler(Resampler):
             coords=coordinates_from_variable(unique_coord),
         )
 
+    @override
     def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
         """
         Compute chunk sizes for this time resampler.
@@ -825,6 +831,7 @@ class SeasonGrouper(Grouper):
     seasons: Sequence[str]
     # drop_incomplete: bool = field(default=True) # TODO
 
+    @override
     def factorize(self, group: T_Group) -> EncodedGroups:
         if TYPE_CHECKING:
             assert not isinstance(group, _DummyGroup)
@@ -865,6 +872,7 @@ class SeasonGrouper(Grouper):
             full_index=full_index,
         )
 
+    @override
     def reset(self) -> Self:
         return type(self)(self.seasons)
 
@@ -912,6 +920,7 @@ class SeasonResampler(Resampler):
                 f"Provided seasons {self.seasons!r} are not sorted."
             )
 
+    @override
     def factorize(self, group: T_Group) -> EncodedGroups:
         if group.ndim != 1:
             raise ValueError(
@@ -1053,6 +1062,7 @@ class SeasonResampler(Resampler):
 
         return EncodedGroups(codes=codes, full_index=full_index)
 
+    @override
     def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
         """
         Compute chunk sizes for this season resampler.
@@ -1104,5 +1114,6 @@ class SeasonResampler(Resampler):
         chunks_tuple: tuple[int, ...] = tuple(chunks.data.tolist())
         return chunks_tuple
 
+    @override
     def reset(self) -> Self:
         return type(self)(seasons=self.seasons, drop_incomplete=self.drop_incomplete)

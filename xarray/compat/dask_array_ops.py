@@ -103,9 +103,7 @@ def _dtype_push(a, axis, dtype=None):
 
 
 def push(array, n, axis, method="blelloch"):
-    """
-    Dask-aware bottleneck.push
-    """
+    """Dask-aware bottleneck.push"""
     import numpy as np
 
     from xarray.core.duck_array_ops import _push

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """A script that can be quickly run that explores the public API of Xarray
-and validates docstrings along the way according to the numpydoc conventions."""
+and validates docstrings along the way according to the numpydoc conventions.
+"""
 
 import functools
 import importlib

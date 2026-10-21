@@ -291,7 +291,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``max`` along some dimension(s).
+        Reduce this DataTree's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -386,7 +386,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``min`` along some dimension(s).
+        Reduce this DataTree's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -519,7 +519,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -581,7 +581,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``prod`` along some dimension(s).
+        Reduce this DataTree's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -625,7 +625,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -741,7 +741,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -813,7 +813,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``std`` along some dimension(s).
+        Reduce this DataTree's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -854,7 +854,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -926,7 +926,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``var`` along some dimension(s).
+        Reduce this DataTree's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -967,7 +967,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1076,7 +1076,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1137,7 +1137,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataTree's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -1176,7 +1176,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -1247,7 +1247,7 @@ class DataTreeAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataTree's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataTree's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -1286,7 +1286,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -1603,7 +1603,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -1691,7 +1691,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -1814,6 +1814,10 @@ class DatasetAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1868,7 +1872,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -1911,7 +1915,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2019,7 +2023,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2084,7 +2088,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -2124,7 +2128,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2189,7 +2193,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -2229,7 +2233,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2330,7 +2334,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2385,7 +2389,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -2423,7 +2427,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -2488,7 +2492,7 @@ class DatasetAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -2526,7 +2530,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -2808,7 +2812,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -2888,7 +2892,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -3003,6 +3007,10 @@ class DataArrayAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3049,7 +3057,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -3092,7 +3100,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3190,7 +3198,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3245,7 +3253,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -3285,7 +3293,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3340,7 +3348,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -3380,7 +3388,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3471,7 +3479,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3518,7 +3526,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -3556,7 +3564,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -3613,7 +3621,7 @@ class DataArrayAggregations:
         **kwargs: Any,
     ) -> Self:
         """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -3651,7 +3659,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -4033,7 +4041,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -4148,7 +4156,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -4306,6 +4314,8 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4379,7 +4389,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -4428,7 +4438,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4564,7 +4574,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4651,7 +4661,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -4697,7 +4707,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4784,7 +4794,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -4830,7 +4840,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4959,7 +4969,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4999,15 +5009,31 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 24B nan 2.0 1.5
         """
-        out = self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-        return out
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            kwargs.setdefault("method", "blockwise")
+            return self._flox_reduce(
+                func="median",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out
 
     def cumsum(
         self,
@@ -5018,7 +5044,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -5062,7 +5088,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -5143,7 +5169,7 @@ class DatasetGroupByAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -5187,7 +5213,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -5577,7 +5603,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -5692,7 +5718,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -5850,6 +5876,8 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5923,7 +5951,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -5972,7 +6000,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6108,7 +6136,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6195,7 +6223,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -6241,7 +6269,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6328,7 +6356,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -6374,7 +6402,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6503,7 +6531,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6543,15 +6571,31 @@ class DatasetResampleAggregations:
         Data variables:
             da       (time) float64 24B 1.0 2.0 nan
         """
-        out = self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-        return out
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            kwargs.setdefault("method", "blockwise")
+            return self._flox_reduce(
+                func="median",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out
 
     def cumsum(
         self,
@@ -6562,7 +6606,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -6606,7 +6650,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -6687,7 +6731,7 @@ class DatasetResampleAggregations:
         **kwargs: Any,
     ) -> Dataset:
         """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -6731,7 +6775,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -7100,7 +7144,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -7206,7 +7250,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -7355,6 +7399,8 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -7419,7 +7465,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -7468,7 +7514,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7593,7 +7639,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7669,7 +7715,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -7715,7 +7761,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7791,7 +7837,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -7837,7 +7883,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7955,7 +8001,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7988,14 +8034,29 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
         """
-        out = self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-        return out
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            kwargs.setdefault("method", "blockwise")
+            return self._flox_reduce(
+                func="median",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out
 
     def cumsum(
         self,
@@ -8006,7 +8067,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -8050,7 +8111,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -8122,7 +8183,7 @@ class DataArrayGroupByAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -8166,7 +8227,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -8527,7 +8588,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -8633,7 +8694,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -8782,6 +8843,8 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -8846,7 +8909,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -8895,7 +8958,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9020,7 +9083,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9096,7 +9159,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -9142,7 +9205,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9218,7 +9281,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -9264,7 +9327,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9382,7 +9445,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9415,14 +9478,29 @@ class DataArrayResampleAggregations:
         Coordinates:
           * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
-        out = self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
-        return out
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            kwargs.setdefault("method", "blockwise")
+            return self._flox_reduce(
+                func="median",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out
 
     def cumsum(
         self,
@@ -9433,7 +9511,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -9477,7 +9555,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -9549,7 +9627,7 @@ class DataArrayResampleAggregations:
         **kwargs: Any,
     ) -> DataArray:
         """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -9593,7 +9671,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated

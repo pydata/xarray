@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, override
 
 from xarray.core._aggregations import (
     DataArrayResampleAggregations,
@@ -49,6 +49,7 @@ class Resample(GroupBy[T_Xarray]):
 
         super().__init__(*args, **kwargs)
 
+    @override
     def _flox_reduce(
         self,
         dim: Dims,
@@ -62,7 +63,8 @@ class Resample(GroupBy[T_Xarray]):
         )
         return result
 
-    def shuffle_to_chunks(self, chunks: T_Chunks = None):
+    @override
+    def shuffle_to_chunks(self, chunks: T_Chunks | None = None):
         """
         Sort or "shuffle" the underlying object.
 
@@ -82,6 +84,11 @@ class Resample(GroupBy[T_Xarray]):
         -------
         DataArrayGroupBy or DatasetGroupBy
 
+        See Also
+        --------
+        dask.dataframe.DataFrame.shuffle
+        dask.array.shuffle
+
         Examples
         --------
         >>> import dask.array
@@ -97,15 +104,12 @@ class Resample(GroupBy[T_Xarray]):
         dask.array<shuffle, shape=(10,), dtype=int64, chunksize=(4,), chunktype=numpy.ndarray>
         Coordinates:
           * time     (time) datetime64[ns] 80B 2001-01-01 ... 2001-01-05T12:00:00
-
-        See Also
-        --------
-        dask.dataframe.DataFrame.shuffle
-        dask.array.shuffle
         """
         (_grouper,) = self.groupers
-        return self._shuffle_obj(chunks).drop_vars(RESAMPLE_DIM)
+        obj, _ = self._shuffle_obj(chunks)
+        return obj.drop_vars(RESAMPLE_DIM)
 
+    @override
     def _first_or_last(
         self, op: Literal["first", "last"], skipna: bool | None, keep_attrs: bool | None
     ) -> T_Xarray:
@@ -257,6 +261,7 @@ class DataArrayResample(
     specified dimension
     """
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -264,7 +269,6 @@ class DataArrayResample(
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
-        keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
     ) -> DataArray:
@@ -297,11 +301,11 @@ class DataArrayResample(
             dim=dim,
             axis=axis,
             keep_attrs=keep_attrs,
-            keepdims=keepdims,
             shortcut=shortcut,
             **kwargs,
         )
 
+    @override
     def map(
         self,
         func: Callable[..., Any],
@@ -365,6 +369,7 @@ class DataArrayResample(
 
         return combined
 
+    @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
         Backward compatible implementation of ``map``
@@ -397,6 +402,7 @@ class DatasetResample(
 ):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
+    @override
     def map(
         self,
         func: Callable[..., Any],
@@ -448,6 +454,7 @@ class DatasetResample(
 
         return combined
 
+    @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
         Backward compatible implementation of ``map``
@@ -456,7 +463,6 @@ class DatasetResample(
         --------
         DataSetResample.map
         """
-
         warnings.warn(
             "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
             PendingDeprecationWarning,
@@ -464,6 +470,7 @@ class DatasetResample(
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
+    @override
     def reduce(
         self,
         func: Callable[..., Any],
@@ -471,7 +478,6 @@ class DatasetResample(
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
-        keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
     ) -> Dataset:
@@ -504,7 +510,6 @@ class DatasetResample(
             dim=dim,
             axis=axis,
             keep_attrs=keep_attrs,
-            keepdims=keepdims,
             shortcut=shortcut,
             **kwargs,
         )

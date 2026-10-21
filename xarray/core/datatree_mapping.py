@@ -39,7 +39,7 @@ def map_over_datasets(
 
 
 def map_over_datasets(
-    func: Callable[..., Dataset | None | tuple[Dataset | None, ...]],
+    func: Callable[..., Dataset | tuple[Dataset | None, ...] | None],
     *args: Any,
     kwargs: Mapping[str, Any] | None = None,
 ) -> DataTree | tuple[DataTree, ...]:
@@ -166,7 +166,6 @@ def _check_single_set_return_values(path_to_node: str, obj: Any) -> int | None:
 
 def _check_all_return_values(returned_objects) -> int | None:
     """Walk through all values returned by mapping func over subtrees, raising on any invalid or inconsistent types."""
-
     result_data_objects = list(returned_objects.items())
 
     first_path, result = result_data_objects[0]

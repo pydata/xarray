@@ -473,8 +473,10 @@ def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     dims = tuple(coords._data.dims)
+    # sort the variables, not the coordinate DataArrays: constructing all of them
+    # is slow, while only the first and last max_rows are displayed
     dim_ordered_coords = sorted(
-        coords.items(), key=functools.partial(_coord_sort_key, dims=dims)
+        coords.variables.items(), key=functools.partial(_coord_sort_key, dims=dims)
     )
     return _mapping_repr(
         dict(dim_ordered_coords),
@@ -1139,7 +1141,6 @@ def diff_dataset_repr(a, b, compat):
 
 def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
     """Iterates over all corresponding nodes, recording differences between data at each location."""
-
     summary = []
     for path, (node_a, node_b) in group_subtrees(a, b):
         a_ds, b_ds = node_a.dataset, node_b.dataset

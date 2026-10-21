@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 import numpy as np
 
@@ -175,6 +175,7 @@ class PydapDataStore(AbstractDataStore):
 
         return Variable(dimensions, data, var.attributes)
 
+    @override
     def get_variables(self):
         # get first all variables arrays, excluding any container type like,
         # `Groups`, `Sequence` or `Structure` types
@@ -193,6 +194,7 @@ class PydapDataStore(AbstractDataStore):
 
         return FrozenDict((k, self.open_store_variable(self.ds[k])) for k in _vars)
 
+    @override
     def get_attrs(self):
         """Remove any opendap specific attributes"""
         opendap_attrs = (
@@ -209,6 +211,7 @@ class PydapDataStore(AbstractDataStore):
         list(map(attrs.pop, opendap_attrs, [None] * len(opendap_attrs)))
         return Frozen(attrs)
 
+    @override
     def get_dimensions(self):
         return Frozen(sorted(self.ds.dimensions))
 
@@ -217,7 +220,7 @@ class PydapDataStore(AbstractDataStore):
         return get_group(self.dataset, self.group)
 
     def _get_data_array(self, var):
-        """gets dimension data all at once, storing the numpy
+        """Gets dimension data all at once, storing the numpy
         arrays within a cached dictionary
         """
         from pydap.client import get_batch_data
@@ -249,11 +252,13 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     description = "Open remote datasets via OPeNDAP using pydap in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.PydapBackendEntrypoint.html"
 
+    @override
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         if not isinstance(filename_or_obj, str):
             return False
         return _is_likely_dap_url(filename_or_obj)
 
+    @override
     def open_dataset(
         self,
         filename_or_obj: (
@@ -301,6 +306,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             )
             return ds
 
+    @override
     def open_datatree(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -340,6 +346,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
+    @override
     def open_groups_as_dict(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -390,7 +397,8 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             # that returns a dict of group names and their paths
             def group_fqn(store, path=None, g_fqn=None) -> dict[str, str]:
                 """To be removed for pydap > 3.5.0.
-                Derives the fully qualifying name of a Group."""
+                Derives the fully qualifying name of a Group.
+                """
                 from pydap.model import GroupType
 
                 if not path:

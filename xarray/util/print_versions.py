@@ -12,7 +12,6 @@ import sys
 
 def get_sys_info():
     """Returns system information as a dict"""
-
     blob = []
 
     # get full commit hash
@@ -78,7 +77,7 @@ def netcdf_and_hdf5_versions():
 
 
 def show_versions(file=sys.stdout):
-    """print the versions of xarray and its dependencies
+    """Print the versions of xarray and its dependencies
 
     Parameters
     ----------

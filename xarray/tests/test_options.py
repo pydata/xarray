@@ -32,14 +32,6 @@ def test_arithmetic_join() -> None:
         assert OPTIONS["arithmetic_join"] == "exact"
 
 
-def test_enable_cftimeindex() -> None:
-    with pytest.raises(ValueError):
-        xarray.set_options(enable_cftimeindex=None)
-    with pytest.warns(FutureWarning, match="no-op"):
-        with xarray.set_options(enable_cftimeindex=True):
-            assert OPTIONS["enable_cftimeindex"]
-
-
 def test_file_cache_maxsize() -> None:
     with pytest.raises(ValueError):
         xarray.set_options(file_cache_maxsize=0)

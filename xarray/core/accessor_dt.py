@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Generic, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -240,7 +240,7 @@ def _index_or_data(obj):
         return obj.data
 
 
-class TimeAccessor(Generic[T_DataArray]):
+class TimeAccessor[T_DataArray: DataArray]:
     __slots__ = ("_obj",)
 
     def __init__(self, obj: T_DataArray) -> None:
@@ -282,7 +282,6 @@ class TimeAccessor(Generic[T_DataArray]):
         floor-ed timestamps : same type as values
             Array-like of datetime fields accessed for each element in values
         """
-
         return self._tslib_round_accessor("floor", freq)
 
     def ceil(self, freq: str) -> T_DataArray:
@@ -325,7 +324,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     for applicable DataArrays.
 
     Examples
-    ---------
+    --------
     >>> dates = pd.date_range(start="2000/01/01", freq="D", periods=10)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
@@ -393,7 +392,6 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
         -----
         The iso year and weekday differ from the nominal year and weekday.
         """
-
         from xarray.core.dataset import Dataset
 
         if not is_np_datetime_like(self._obj.data.dtype):
@@ -449,32 +447,6 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     def nanosecond(self) -> T_DataArray:
         """The nanoseconds of the datetime"""
         return self._date_field("nanosecond", np.int64)
-
-    @property
-    def weekofyear(self) -> DataArray:
-        "The week ordinal of the year"
-
-        warnings.warn(
-            "dt.weekofyear and dt.week have been deprecated. Please use "
-            "dt.isocalendar().week instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-        return self.isocalendar().week.rename("weekofyear")
-
-    @property
-    def week(self) -> DataArray:
-        "The week ordinal of the year"
-
-        warnings.warn(
-            "dt.weekofyear and dt.week have been deprecated. Please use "
-            "dt.isocalendar().week instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-        return self.isocalendar().week
 
     @property
     def day_of_week(self) -> T_DataArray:

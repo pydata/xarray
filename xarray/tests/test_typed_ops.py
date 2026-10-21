@@ -5,7 +5,6 @@ from xarray import DataArray, Dataset, Variable
 
 def test_variable_typed_ops() -> None:
     """Tests for type checking of typed_ops on Variable"""
-
     var = Variable(dims=["t"], data=[1, 2, 3])
 
     def _test(var: Variable) -> None:
@@ -54,7 +53,6 @@ def test_variable_typed_ops() -> None:
 
 def test_dataarray_typed_ops() -> None:
     """Tests for type checking of typed_ops on DataArray"""
-
     da = DataArray([1, 2, 3], dims=["t"])
 
     def _test(da: DataArray) -> None:
@@ -111,7 +109,6 @@ def test_dataarray_typed_ops() -> None:
 
 def test_dataset_typed_ops() -> None:
     """Tests for type checking of typed_ops on Dataset"""
-
     ds = Dataset({"a": ("t", [1, 2, 3])})
 
     def _test(ds: Dataset) -> None:
@@ -176,7 +173,6 @@ def test_dataset_typed_ops() -> None:
 
 def test_dataarray_groupy_typed_ops() -> None:
     """Tests for type checking of typed_ops on DataArrayGroupBy"""
-
     da = DataArray([1, 2, 3], coords={"x": ("t", [1, 2, 2])}, dims=["t"])
     grp = da.groupby("x")
 
@@ -214,7 +210,6 @@ def test_dataarray_groupy_typed_ops() -> None:
 
 def test_dataset_groupy_typed_ops() -> None:
     """Tests for type checking of typed_ops on DatasetGroupBy"""
-
     ds = Dataset({"a": ("t", [1, 2, 3])}, coords={"x": ("t", [1, 2, 2])})
     grp = ds.groupby("x")
 

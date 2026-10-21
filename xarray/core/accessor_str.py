@@ -46,7 +46,7 @@ from collections.abc import Callable, Hashable, Mapping
 from functools import reduce
 from operator import or_ as set_union
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
 
 import numpy as np
@@ -141,55 +141,55 @@ def _apply_str_ufunc(
     )
 
 
-class StringAccessor(Generic[T_DataArray]):
+class StringAccessor[T_DataArray: DataArray]:
     r"""Vectorized string functions for string-like arrays.
 
     Similar to pandas, fields can be accessed through the `.str` attribute
     for applicable DataArrays.
 
-        >>> da = xr.DataArray(["some", "text", "in", "an", "array"])
-        >>> da.str.len()
-        <xarray.DataArray (dim_0: 5)> Size: 40B
-        array([4, 4, 2, 2, 5])
-        Dimensions without coordinates: dim_0
+    >>> da = xr.DataArray(["some", "text", "in", "an", "array"])
+    >>> da.str.len()
+    <xarray.DataArray (dim_0: 5)> Size: 40B
+    array([4, 4, 2, 2, 5])
+    Dimensions without coordinates: dim_0
 
     It also implements ``+``, ``*``, and ``%``, which operate as elementwise
     versions of the corresponding ``str`` methods. These will automatically
     broadcast for array-like inputs.
 
-        >>> da1 = xr.DataArray(["first", "second", "third"], dims=["X"])
-        >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
-        >>> da1.str + da2
-        <xarray.DataArray (X: 3, Y: 3)> Size: 252B
-        array([['first1', 'first2', 'first3'],
-               ['second1', 'second2', 'second3'],
-               ['third1', 'third2', 'third3']], dtype='<U7')
-        Dimensions without coordinates: X, Y
+    >>> da1 = xr.DataArray(["first", "second", "third"], dims=["X"])
+    >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
+    >>> da1.str + da2
+    <xarray.DataArray (X: 3, Y: 3)> Size: 252B
+    array([['first1', 'first2', 'first3'],
+           ['second1', 'second2', 'second3'],
+           ['third1', 'third2', 'third3']], dtype='<U7')
+    Dimensions without coordinates: X, Y
 
-        >>> da1 = xr.DataArray(["a", "b", "c", "d"], dims=["X"])
-        >>> reps = xr.DataArray([3, 4], dims=["Y"])
-        >>> da1.str * reps
-        <xarray.DataArray (X: 4, Y: 2)> Size: 128B
-        array([['aaa', 'aaaa'],
-               ['bbb', 'bbbb'],
-               ['ccc', 'cccc'],
-               ['ddd', 'dddd']], dtype='<U4')
-        Dimensions without coordinates: X, Y
+    >>> da1 = xr.DataArray(["a", "b", "c", "d"], dims=["X"])
+    >>> reps = xr.DataArray([3, 4], dims=["Y"])
+    >>> da1.str * reps
+    <xarray.DataArray (X: 4, Y: 2)> Size: 128B
+    array([['aaa', 'aaaa'],
+           ['bbb', 'bbbb'],
+           ['ccc', 'cccc'],
+           ['ddd', 'dddd']], dtype='<U4')
+    Dimensions without coordinates: X, Y
 
-        >>> da1 = xr.DataArray(["%s_%s", "%s-%s", "%s|%s"], dims=["X"])
-        >>> da2 = xr.DataArray([1, 2], dims=["Y"])
-        >>> da3 = xr.DataArray([0.1, 0.2], dims=["Z"])
-        >>> da1.str % (da2, da3)
-        <xarray.DataArray (X: 3, Y: 2, Z: 2)> Size: 240B
-        array([[['1_0.1', '1_0.2'],
-                ['2_0.1', '2_0.2']],
-        <BLANKLINE>
-               [['1-0.1', '1-0.2'],
-                ['2-0.1', '2-0.2']],
-        <BLANKLINE>
-               [['1|0.1', '1|0.2'],
-                ['2|0.1', '2|0.2']]], dtype='<U5')
-        Dimensions without coordinates: X, Y, Z
+    >>> da1 = xr.DataArray(["%s_%s", "%s-%s", "%s|%s"], dims=["X"])
+    >>> da2 = xr.DataArray([1, 2], dims=["Y"])
+    >>> da3 = xr.DataArray([0.1, 0.2], dims=["Z"])
+    >>> da1.str % (da2, da3)
+    <xarray.DataArray (X: 3, Y: 2, Z: 2)> Size: 240B
+    array([[['1_0.1', '1_0.2'],
+            ['2_0.1', '2_0.2']],
+    <BLANKLINE>
+           [['1-0.1', '1-0.2'],
+            ['2-0.1', '2-0.2']],
+    <BLANKLINE>
+           [['1|0.1', '1|0.2'],
+            ['2|0.1', '2|0.2']]], dtype='<U5')
+    Dimensions without coordinates: X, Y, Z
 
     .. note::
         When using ``%`` formatting with a dict, the values are always used as a
@@ -219,6 +219,17 @@ class StringAccessor(Generic[T_DataArray]):
             return invar.astype(self._obj.dtype.kind)
         else:
             return self._obj.dtype.type(invar)
+
+    def _method(self, name: str) -> Callable:
+        """
+        Get the str/bytes method ``name`` to apply to each element.
+
+        Object arrays have no string type to take the method from,
+        so look it up on each element instead.
+        """
+        if self._obj.dtype == np.object_:
+            return lambda x, *args, **kwargs: getattr(x, name)(*args, **kwargs)
+        return getattr(self._obj.dtype.type, name)
 
     def _apply(
         self,
@@ -455,6 +466,11 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         concatenated : same type as values
 
+        See Also
+        --------
+        pandas.Series.str.cat
+        str.join
+
         Examples
         --------
         Create a string array
@@ -493,11 +509,6 @@ class StringAccessor(Generic[T_DataArray]):
                 ['4 bb 3.4  test', '4, bb, 3.4, , test'],
                 ['4 cccc 3.4  test', '4, cccc, 3.4, , test']]], dtype='<U24')
         Dimensions without coordinates: X, Y, ZZ
-
-        See Also
-        --------
-        pandas.Series.str.cat
-        str.join
         """
         sep = self._stringify(sep)
         others = tuple(self._stringify(x) for x in others)
@@ -538,6 +549,11 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         joined : same type as values
 
+        See Also
+        --------
+        pandas.Series.str.join
+        str.join
+
         Examples
         --------
         Create an array
@@ -561,11 +577,6 @@ class StringAccessor(Generic[T_DataArray]):
         array([['a-bab-abc', 'a_bab_abc'],
                ['abcd--abcdef', 'abcd__abcdef']], dtype='<U12')
         Dimensions without coordinates: X, ZZ
-
-        See Also
-        --------
-        pandas.Series.str.join
-        str.join
         """
         if self._obj.ndim > 1 and dim is None:
             raise ValueError("Dimension must be specified for multidimensional arrays.")
@@ -621,6 +632,10 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         formatted : same type as values
 
+        See Also
+        --------
+        str.format
+
         Examples
         --------
         Create an array to format.
@@ -655,15 +670,11 @@ class StringAccessor(Generic[T_DataArray]):
                 ['egg and lancelot are like a duck',
                  'egg and arthur are like a duck']]], dtype='<U33')
         Dimensions without coordinates: X, Y, ZZ
-
-        See Also
-        --------
-        str.format
         """
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
         return self._apply(
-            func=self._obj.dtype.type.format,
+            func=self._method("format"),
             func_args=args,
             func_kwargs={"kwargs": kwargs},
         )
@@ -997,7 +1008,7 @@ class StringAccessor(Generic[T_DataArray]):
         return self._apply(func=lambda x: x.isnumeric(), dtype=bool)
 
     def isspace(self) -> T_DataArray:
-        """
+        r"""
         Check whether all characters in each string are spaces.
 
         Returns
@@ -1007,10 +1018,10 @@ class StringAccessor(Generic[T_DataArray]):
 
         Examples
         --------
-        >>> da = xr.DataArray(["", " ", "\\t", "\\n"], dims="x")
+        >>> da = xr.DataArray(["", " ", "\t", "\n"], dims="x")
         >>> da
         <xarray.DataArray (x: 4)> Size: 16B
-        array(['', ' ', '\\t', '\\n'], dtype='<U1')
+        array(['', ' ', '\t', '\n'], dtype='<U1')
         Dimensions without coordinates: x
         >>> isspace = da.str.isspace()
         >>> isspace
@@ -1333,9 +1344,7 @@ class StringAccessor(Generic[T_DataArray]):
         width: int | Any,
         fillchar: str | bytes | Any = " ",
     ) -> T_DataArray:
-        """
-        Wrapper function to handle padding operations
-        """
+        """Wrapper function to handle padding operations"""
         fillchar = self._stringify(fillchar)
 
         def overfunc(x, iwidth, ifillchar):
@@ -1367,7 +1376,7 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         filled : same type as values
         """
-        func = self._obj.dtype.type.center
+        func = self._method("center")
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def ljust(
@@ -1394,7 +1403,7 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         filled : same type as values
         """
-        func = self._obj.dtype.type.ljust
+        func = self._method("ljust")
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def rjust(
@@ -1421,7 +1430,7 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         filled : same type as values
         """
-        func = self._obj.dtype.type.rjust
+        func = self._method("rjust")
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def zfill(self, width: int | Any) -> T_DataArray:
@@ -1509,14 +1518,10 @@ class StringAccessor(Generic[T_DataArray]):
             pat = self._stringify(pat)
             if case or case is None:
                 func = lambda x, ipat: ipat in x
-            elif self._obj.dtype.char == "U":
-                uppered = self.casefold()
-                uppat = StringAccessor(pat).casefold()  # type: ignore[type-var]  # hack?
-                return uppered.str.contains(uppat, regex=False)  # type: ignore[return-value]
+            elif self._obj.dtype.kind == "S":
+                func = lambda x, ipat: ipat.upper() in x.upper()
             else:
-                uppered = self.upper()
-                uppat = StringAccessor(pat).upper()  # type: ignore[type-var]  # hack?
-                return uppered.str.contains(uppat, regex=False)  # type: ignore[return-value]
+                func = lambda x, ipat: ipat.casefold() in x.casefold()
 
         return self._apply(func=func, func_args=(pat,), dtype=bool)
 
@@ -1944,12 +1949,29 @@ class StringAccessor(Generic[T_DataArray]):
 
         if regex:
             pat = self._re_compile(pat=pat, flags=flags, case=case)
-            func = lambda x, ipat, irepl, i_n: ipat.sub(
-                repl=irepl, string=x, count=max(i_n, 0)
+            # ``re.sub`` interprets ``count=0`` as "replace every occurrence",
+            # so ``n=0`` has to be special-cased to mean "replace nothing".
+            func = lambda x, ipat, irepl, i_n: (
+                x if i_n == 0 else ipat.sub(repl=irepl, string=x, count=max(i_n, 0))
             )
         else:
             pat = self._stringify(pat)
-            func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
+            if case is False:
+                # Literal match, but case-insensitive: escape the pattern and
+                # return the replacement as-is so it is not parsed as a template.
+                func = lambda x, ipat, irepl, i_n: (
+                    x
+                    if i_n == 0
+                    else re.sub(
+                        re.escape(ipat),
+                        lambda _: irepl,
+                        x,
+                        count=max(i_n, 0),
+                        flags=re.IGNORECASE,
+                    )
+                )
+            else:
+                func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
         return self._apply(func=func, func_args=(pat, repl, n))
 
     def extract(
@@ -2003,6 +2025,14 @@ class StringAccessor(Generic[T_DataArray]):
         KeyError
             The given dimension is already present in the DataArray.
 
+        See Also
+        --------
+        DataArray.str.extractall
+        DataArray.str.findall
+        re.compile
+        re.search
+        pandas.Series.str.extract
+
         Examples
         --------
         Create a string array
@@ -2035,14 +2065,6 @@ class StringAccessor(Generic[T_DataArray]):
                 ['', ''],
                 ['abcdef', '101']]], dtype='<U6')
         Dimensions without coordinates: X, Y, match
-
-        See Also
-        --------
-        DataArray.str.extractall
-        DataArray.str.findall
-        re.compile
-        re.search
-        pandas.Series.str.extract
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -2155,6 +2177,14 @@ class StringAccessor(Generic[T_DataArray]):
         KeyError
             The given dimensions names are the same.
 
+        See Also
+        --------
+        DataArray.str.extract
+        DataArray.str.findall
+        re.compile
+        re.findall
+        pandas.Series.str.extractall
+
         Examples
         --------
         Create a string array
@@ -2206,14 +2236,6 @@ class StringAccessor(Generic[T_DataArray]):
                  ['fef', '5543210'],
                  ['', '']]]], dtype='<U7')
         Dimensions without coordinates: X, Y, group, match
-
-        See Also
-        --------
-        DataArray.str.extract
-        DataArray.str.findall
-        re.compile
-        re.findall
-        pandas.Series.str.extractall
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -2321,6 +2343,14 @@ class StringAccessor(Generic[T_DataArray]):
         ValueError
             `case` is set when `pat` is a compiled regular expression.
 
+        See Also
+        --------
+        DataArray.str.extract
+        DataArray.str.extractall
+        re.compile
+        re.findall
+        pandas.Series.str.findall
+
         Examples
         --------
         Create a string array
@@ -2351,14 +2381,6 @@ class StringAccessor(Generic[T_DataArray]):
                 list([]), list([('abcdef', '101'), ('fef', '5543210')])]],
               dtype=object)
         Dimensions without coordinates: X, Y
-
-        See Also
-        --------
-        DataArray.str.extract
-        DataArray.str.extractall
-        re.compile
-        re.findall
-        pandas.Series.str.findall
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -2377,9 +2399,7 @@ class StringAccessor(Generic[T_DataArray]):
         dim: Hashable | None,
         sep: str | bytes | Any | None,
     ) -> T_DataArray:
-        """
-        Implements logic for `partition` and `rpartition`.
-        """
+        """Implements logic for `partition` and `rpartition`."""
         sep = self._stringify(sep)
 
         if dim is None:
@@ -2441,7 +2461,7 @@ class StringAccessor(Generic[T_DataArray]):
         str.partition
         pandas.Series.str.partition
         """
-        return self._partitioner(func=self._obj.dtype.type.partition, dim=dim, sep=sep)
+        return self._partitioner(func=self._method("partition"), dim=dim, sep=sep)
 
     def rpartition(
         self,
@@ -2479,7 +2499,7 @@ class StringAccessor(Generic[T_DataArray]):
         str.rpartition
         pandas.Series.str.rpartition
         """
-        return self._partitioner(func=self._obj.dtype.type.rpartition, dim=dim, sep=sep)
+        return self._partitioner(func=self._method("rpartition"), dim=dim, sep=sep)
 
     def _splitter(
         self,
@@ -2490,9 +2510,7 @@ class StringAccessor(Generic[T_DataArray]):
         sep: str | bytes | Any | None,
         maxsplit: int,
     ) -> DataArray:
-        """
-        Implements logic for `split` and `rsplit`.
-        """
+        """Implements logic for `split` and `rsplit`."""
         if sep is not None:
             sep = self._stringify(sep)
 
@@ -2564,6 +2582,12 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         splitted : same type as values or object array
 
+        See Also
+        --------
+        DataArray.str.rsplit
+        str.split
+        pandas.Series.str.split
+
         Examples
         --------
         Create a string DataArray
@@ -2634,15 +2658,9 @@ class StringAccessor(Generic[T_DataArray]):
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
         Dimensions without coordinates: X, Y, splitted
-
-        See Also
-        --------
-        DataArray.str.rsplit
-        str.split
-        pandas.Series.str.split
         """
         return self._splitter(
-            func=self._obj.dtype.type.split,
+            func=self._method("split"),
             pre=True,
             dim=dim,
             sep=sep,
@@ -2681,6 +2699,12 @@ class StringAccessor(Generic[T_DataArray]):
         Returns
         -------
         rsplitted : same type as values or object array
+
+        See Also
+        --------
+        DataArray.str.split
+        str.rsplit
+        pandas.Series.str.rsplit
 
         Examples
         --------
@@ -2752,15 +2776,9 @@ class StringAccessor(Generic[T_DataArray]):
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
         Dimensions without coordinates: X, Y, splitted
-
-        See Also
-        --------
-        DataArray.str.split
-        str.rsplit
-        pandas.Series.str.rsplit
         """
         return self._splitter(
-            func=self._obj.dtype.type.rsplit,
+            func=self._method("rsplit"),
             pre=False,
             dim=dim,
             sep=sep,
@@ -2795,6 +2813,10 @@ class StringAccessor(Generic[T_DataArray]):
         -------
         dummies : array of bool
 
+        See Also
+        --------
+        pandas.Series.str.get_dummies
+
         Examples
         --------
         Create a string array
@@ -2821,10 +2843,6 @@ class StringAccessor(Generic[T_DataArray]):
         Coordinates:
           * dummies  (dummies) <U6 120B 'a' 'ab' 'abc' 'abcd' 'ab~abc'
         Dimensions without coordinates: X, Y
-
-        See Also
-        --------
-        pandas.Series.str.get_dummies
         """
         # _apply breaks on an empty array in this case
         if not self._obj.size:

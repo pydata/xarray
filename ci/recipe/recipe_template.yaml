@@ -1,0 +1,41 @@
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  path: ../..
+
+build:
+  number: 0
+  noarch: python
+  script: SETUPTOOLS_SCM_PRETEND_VERSION=${{ version }} ${{ PYTHON }} -m pip install -vvv . --no-deps --no-build-isolation
+
+  files:
+    exclude:
+      - "**/__pycache__/**"
+      - "**/*.pyc"
+      - "**/test_*.py"
+  python:
+    skip_pyc_compilation:
+      - "**/*.py"
+
+requirements:
+  build:
+    - python
+  host:
+    - python
+    - pip
+    - setuptools
+    - setuptools-scm
+  run:
+    - python
+    - numpy
+    - pandas
+    - packaging
+
+about:
+  summary: N-D labeled arrays and datasets in Python
+  license: Apache-2.0
+  license_file: LICENSE
+  homepage: https://github.com/pydata/xarray
+  repository: https://github.com/pydata/xarray

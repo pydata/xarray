@@ -45,8 +45,9 @@ import numpy as np
 import pandas as pd
 
 from xarray.coding.cftime_offsets import (
-    CFTIME_TICKS,
     BaseCFTimeOffset,
+    Day,
+    Hour,
     MonthEnd,
     QuarterEnd,
     Tick,
@@ -66,7 +67,8 @@ if typing.TYPE_CHECKING:
 class CFTimeGrouper:
     """This is a simple container for the grouping parameters that implements a
     single method, the only one required for resampling in xarray.  It cannot
-    be used in a call to groupby like a pandas.Grouper object can."""
+    be used in a call to groupby like a pandas.Grouper object can.
+    """
 
     freq: BaseCFTimeOffset
     closed: SideOptions
@@ -86,19 +88,19 @@ class CFTimeGrouper:
         self.freq = to_offset(freq)
         self.origin = origin
 
-        if not isinstance(self.freq, CFTIME_TICKS):
+        if not isinstance(self.freq, (Tick, Day)):
             if offset is not None:
                 message = (
                     "The 'offset' keyword does not take effect when "
-                    "resampling with a 'freq' that is not Tick-like (h, m, s, "
-                    "ms, us)"
+                    "resampling with a 'freq' that is not Tick-like (D, h, m, "
+                    "s, ms, us)"
                 )
                 emit_user_level_warning(message, category=RuntimeWarning)
             if origin != "start_day":
                 message = (
                     "The 'origin' keyword does not take effect when "
-                    "resampling with a 'freq' that is not Tick-like (h, m, s, "
-                    "ms, us)"
+                    "resampling with a 'freq' that is not Tick-like (D, h, m, "
+                    "s, ms, us)"
                 )
                 emit_user_level_warning(message, category=RuntimeWarning)
 
@@ -150,7 +152,6 @@ class CFTimeGrouper:
 
         with index being a CFTimeIndex instead of a DatetimeIndex.
         """
-
         datetime_bins, labels = _get_time_bins(
             index, self.freq, self.closed, self.label, self.origin, self.offset
         )
@@ -217,7 +218,6 @@ def _get_time_bins(
     labels : CFTimeIndex
         Define what the user actually sees the bins labeled as.
     """
-
     if not isinstance(index, CFTimeIndex):
         raise TypeError(
             "index must be a CFTimeIndex, but got "
@@ -338,7 +338,9 @@ def _get_range_edges(
     last : cftime.datetime
         Corrected ending datetime object for resampled CFTimeIndex range.
     """
-    if isinstance(freq, Tick):
+    if isinstance(freq, (Tick, Day)):
+        if isinstance(freq, Day):
+            freq = Hour(24 * freq.n)
         first, last = _adjust_dates_anchored(
             first, last, freq, closed=closed, origin=origin, offset=offset
         )

@@ -17,9 +17,7 @@ from xarray.core.duck_array_ops import (
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
-    """
-    xarray version of pandas.core.nanops._maybe_null_out
-    """
+    """Xarray version of pandas.core.nanops._maybe_null_out"""
     if axis is not None and getattr(result, "ndim", False):
         null_mask = (
             np.take(mask.shape, axis).prod()
@@ -153,11 +151,21 @@ def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
     if a.dtype.kind == "O":
         return _nanvar_object(a, axis=axis, dtype=dtype, ddof=ddof)
 
-    return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"Degrees of freedom <= 0 for slice", category=RuntimeWarning
+        )
+
+        return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
-    return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"Degrees of freedom <= 0 for slice", category=RuntimeWarning
+        )
+
+        return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
