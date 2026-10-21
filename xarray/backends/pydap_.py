@@ -88,7 +88,8 @@ class PydapDataStore(AbstractDataStore):
         protocol=None,
         checksums=True,
     ):
-        """
+        """Initialize the data store.
+
         Parameters
         ----------
         ds : pydap DatasetType
@@ -196,7 +197,7 @@ class PydapDataStore(AbstractDataStore):
 
     @override
     def get_attrs(self):
-        """Remove any opendap specific attributes"""
+        """Remove any opendap specific attributes."""
         opendap_attrs = (
             "configuration",
             "build_dmrpp",
@@ -220,8 +221,9 @@ class PydapDataStore(AbstractDataStore):
         return get_group(self.dataset, self.group)
 
     def _get_data_array(self, var):
-        """Gets dimension data all at once, storing the numpy
-        arrays within a cached dictionary
+        """Get dimension data all at once.
+
+        The numpy arrays are stored within a cached dictionary.
         """
         from pydap.client import get_batch_data
 
@@ -235,9 +237,10 @@ class PydapDataStore(AbstractDataStore):
 
 class PydapBackendEntrypoint(BackendEntrypoint):
     """
-    Backend for steaming datasets over the internet using
-    the Data Access Protocol, also known as DODS or OPeNDAP
-    based on the pydap package.
+    Backend for streaming datasets over the internet using pydap.
+
+    Uses the Data Access Protocol, also known as DODS or OPeNDAP, based on
+    the pydap package.
 
     This backend is selected by default for urls.
 
@@ -396,8 +399,9 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             # `pydap>= 3.5.1` has a new method `groups()`
             # that returns a dict of group names and their paths
             def group_fqn(store, path=None, g_fqn=None) -> dict[str, str]:
-                """To be removed for pydap > 3.5.0.
-                Derives the fully qualifying name of a Group.
+                """Derive the fully qualifying name of a Group.
+
+                To be removed for pydap > 3.5.0.
                 """
                 from pydap.model import GroupType
 

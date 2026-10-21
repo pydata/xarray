@@ -148,7 +148,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
 
     def __init__(self, obj: T_Xarray, weights: T_DataArray) -> None:
         """
-        Create a Weighted object
+        Create a Weighted object.
 
         Parameters
         ----------
@@ -192,7 +192,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         self.weights: T_DataArray = weights
 
     def _check_dim(self, dim: Dims):
-        """Raise an error if any dimension is missing"""
+        """Raise an error if any dimension is missing."""
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
         dims = utils.parse_dims_as_set(dim, all_dims, check_exists=False)
 
@@ -209,7 +209,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         dim: Dims = None,
         skipna: bool | None = None,
     ) -> T_DataArray:
-        """Reduce using dot; equivalent to (da * weights).sum(dim, skipna)
+        """Reduce using dot; equivalent to (da * weights).sum(dim, skipna).
 
         for internal use only
         """
@@ -226,7 +226,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         return dot(da, weights, dim=dim)
 
     def _sum_of_weights(self, da: T_DataArray, dim: Dims = None) -> T_DataArray:
-        """Calculate the sum of weights, accounting for missing values"""
+        """Calculate the sum of weights, accounting for missing values."""
         # we need to mask data values that are nan; else the weights are wrong
         mask = da.notnull()
 
@@ -519,7 +519,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         )
 
     def __repr__(self) -> str:
-        """Provide a nice str repr of our Weighted object"""
+        """Provide a nice str repr of our Weighted object."""
         klass = self.__class__.__name__
         weight_dims = ", ".join(map(str, self.weights.dims))
         return f"{klass} with weights along dimensions: {weight_dims}"
@@ -546,7 +546,9 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 class DatasetWeighted(Weighted["Dataset"]):
     def _restore_coords(self, dim: Dims, ds: Dataset) -> Dataset:
-        """self.obj.map will drop orphaned coordinates & dims that are not in
+        """Restore orphaned coordinates and dimensions.
+
+        self.obj.map will drop orphaned coordinates & dims that are not in
         the weights DataArray. This restores them.
         """
         all_dims = set(self.obj.dims) | set(self.weights.dims)

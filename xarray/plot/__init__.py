@@ -1,4 +1,6 @@
 """
+Plotting functions for xarray objects.
+
 Use this module directly:
     import xarray.plot as xplt
 

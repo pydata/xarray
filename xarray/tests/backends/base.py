@@ -283,7 +283,7 @@ class NetCDF3Only:
 
     @requires_scipy
     def test_dtype_coercion_error(self) -> None:
-        """Failing dtype coercion should lead to an error"""
+        """Failing dtype coercion should lead to an error."""
         for dtype, format in itertools.product(
             _nc3_dtype_coercions, self.netcdf3_formats
         ):
@@ -946,7 +946,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def test_ondisk_after_print(self) -> None:
-        """Make sure print does not load file into memory"""
+        """Make sure print does not load file into memory."""
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
             repr(on_disk)
@@ -1547,7 +1547,7 @@ class NetCDFBase(CFEncodedBase):
 
     @pytest.fixture
     def byte_attrs_dataset(self) -> dict[str, Any]:
-        """For testing issue #9407"""
+        """Create a dataset with byte attributes for testing issue #9407."""
         null_byte = b"\x00"
         other_bytes = bytes(range(1, 256))
         ds = Dataset({"x": 1}, coords={"x_coord": [1]})
@@ -2068,10 +2068,7 @@ class NetCDF4Base(NetCDFBase):
 
     @requires_netCDF4
     def test_encoding_enum__error_multiple_variable_with_changing_enum(self):
-        """
-        Given 2 variables, if they share the same enum type,
-        the 2 enum definition should be identical.
-        """
+        """Test that variables sharing an enum type need identical enum definitions."""
         with create_tmp_file() as tmp_file:
             cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
             with nc4.Dataset(tmp_file, mode="w") as nc:

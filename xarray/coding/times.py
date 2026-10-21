@@ -593,8 +593,9 @@ def decode_cf_datetime(
     use_cftime: bool | None = None,
     time_unit: PDDatetimeUnitOptions = "ns",
 ) -> np.ndarray:
-    """Given an array of numeric dates in netCDF format, convert it into a
-    numpy array of date time objects.
+    """Convert an array of numeric dates in netCDF format into datetime objects.
+
+    The result is a numpy array of date time objects.
 
     For standard (Gregorian) calendars, this function uses vectorized
     operations, which makes it much faster than cftime.num2date. In such a
@@ -732,8 +733,9 @@ def _numbers_to_timedelta(
 def decode_cf_timedelta(
     num_timedeltas, units: str, time_unit: PDDatetimeUnitOptions = "ns"
 ) -> np.ndarray:
-    """Given an array of numeric timedeltas in netCDF format, convert it into a
-    numpy timedelta64 ["s", "ms", "us", "ns"] array.
+    """Convert an array of numeric timedeltas in netCDF format into timedelta64.
+
+    The result is a numpy timedelta64 ["s", "ms", "us", "ns"] array.
     """
     num_timedeltas = to_numpy(num_timedeltas)
     unit = _netcdf_to_numpy_timeunit(units)
@@ -804,7 +806,7 @@ def _time_units_to_timedelta(units: str) -> timedelta:
 
 
 def infer_calendar_name(dates) -> CFCalendar:
-    """Given an array of datetimes, infer the CF calendar name"""
+    """Given an array of datetimes, infer the CF calendar name."""
     if is_np_datetime_like(dates.dtype):
         return "proleptic_gregorian"
     elif dates.dtype == np.dtype("O") and dates.size > 0:
@@ -823,10 +825,11 @@ def infer_calendar_name(dates) -> CFCalendar:
 
 
 def infer_datetime_units(dates) -> str:
-    """Given an array of datetimes, returns a CF compatible time-unit string of
-    the form "{time_unit} since {date[0]}", where `time_unit` is 'days',
-    'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
-    unique time deltas in `dates`)
+    """Infer a CF compatible time-unit string from an array of datetimes.
+
+    The string has the form "{time_unit} since {date[0]}", where `time_unit` is
+    'days', 'hours', 'minutes' or 'seconds' (the first one that can evenly divide
+    all unique time deltas in `dates`).
     """
     dates = ravel(np.asarray(dates))
     if np.issubdtype(np.asarray(dates).dtype, "datetime64"):
@@ -843,16 +846,18 @@ def infer_datetime_units(dates) -> str:
 
 
 def format_cftime_datetime(date) -> str:
-    """Converts a cftime.datetime object to a string with the format:
-    YYYY-MM-DD HH:MM:SS.UUUUUU
+    """Convert a cftime.datetime object to a string.
+
+    The string has the format YYYY-MM-DD HH:MM:SS.UUUUUU.
     """
     return f"{date.year:04d}-{date.month:02d}-{date.day:02d} {date.hour:02d}:{date.minute:02d}:{date.second:02d}.{date.microsecond:06d}"
 
 
 def infer_timedelta_units(deltas) -> str:
-    """Given an array of timedeltas, returns a CF compatible time-unit from
-    {'days', 'hours', 'minutes' 'seconds'} (the first one that can evenly
-    divide all unique time deltas in `deltas`)
+    """Infer a CF compatible time-unit from an array of timedeltas.
+
+    The unit is one of {'days', 'hours', 'minutes' 'seconds'} (the first one that
+    can evenly divide all unique time deltas in `deltas`).
     """
     deltas = ravel(deltas)
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
@@ -862,8 +867,9 @@ def infer_timedelta_units(deltas) -> str:
 def cftime_to_nptime(
     times, raise_on_invalid: bool = True, time_unit: PDDatetimeUnitOptions = "ns"
 ) -> np.ndarray:
-    """Given an array of cftime.datetime objects, return an array of
-    numpy.datetime64 objects of the same size
+    """Convert an array of cftime.datetime objects to numpy.datetime64 objects.
+
+    The returned array has the same size as the input.
 
     If raise_on_invalid is True (default), invalid dates trigger a ValueError.
     Otherwise, the invalid element is replaced by np.NaT.
@@ -974,7 +980,9 @@ def convert_time_or_go_back(date, date_type):
 def _should_cftime_be_used(
     source, target_calendar: str, use_cftime: bool | None
 ) -> bool:
-    """Return whether conversion of the source to the target calendar should
+    """Return whether converting to the target calendar gives a cftime array.
+
+    That is, whether conversion of the source to the target calendar should
     result in a cftime-backed array.
 
     Source is a 1D datetime array, target_cal a string (calendar name) and
@@ -1079,8 +1087,10 @@ def encode_cf_datetime(
     calendar: str | None = None,
     dtype: np.dtype | None = None,
 ) -> tuple[T_DuckArray, str, str]:
-    """Given an array of datetime objects, returns the tuple `(num, units,
-    calendar)` suitable for a CF compliant time variable.
+    """Encode an array of datetime objects as a CF compliant time variable.
+
+    Returns the tuple `(num, units, calendar)` suitable for a CF compliant time
+    variable.
 
     Unlike `date2num`, this function can handle datetime64 arrays.
 

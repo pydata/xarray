@@ -319,6 +319,11 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix the ``preferred_chunks`` encoding of sharded Zarr variables read with
+  :py:func:`open_zarr`: it now holds the shard (outer/storage chunk) sizes
+  instead of the inner chunk sizes, so the default dask chunks align with the
+  stored shards rather than splitting them (:issue:`11460`, :pull:`11464`).
+  By `Taus Møller <https://github.com/taus>`_.
 - Fix indexing with a 0-dimensional non-NumPy array, e.g. a CuPy array, which
   raised ``ValueError`` instead of dropping the indexed dimension (:issue:`8820`).
   By `Trinh Quoc Anh <https://github.com/tqa236>`_.
@@ -436,6 +441,9 @@ Internal Changes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Lint docstrings with ruff's pydocstyle rules, including the order of the
   numpydoc sections, and fix the existing violations (:pull:`11763`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Check the style of docstring summaries with ruff (a single line in imperative
+  mood, ending with a period) and fix the existing violations (:pull:`11769`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 

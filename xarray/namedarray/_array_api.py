@@ -32,7 +32,7 @@ def astype[ShapeType, DimType: Hashable, DType: np.dtype[Any]](
     x: NamedArray[ShapeType, Any, DimType], dtype: DType, /, *, copy: bool = True
 ) -> NamedArray[ShapeType, DType, DimType]:
     """
-    Copies an array to a specified data type irrespective of Type Promotion Rules rules.
+    Copy an array to a specified data type irrespective of Type Promotion Rules rules.
 
     Parameters
     ----------
@@ -80,8 +80,9 @@ def imag[ShapeType, DimType: Hashable, ScalarType: np.generic](
     /,
 ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType]:
     """
-    Returns the imaginary component of a complex number for each element x_i of the
-    input array x.
+    Return the imaginary component of each element of a complex array.
+
+    The imaginary component is returned for each element x_i of the input array x.
 
     Parameters
     ----------
@@ -113,8 +114,9 @@ def real[ShapeType, DimType: Hashable, ScalarType: np.generic](
     /,
 ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType]:
     """
-    Returns the real component of a complex number for each element x_i of the
-    input array x.
+    Return the real component of each element of a complex array.
+
+    The real component is returned for each element x_i of the input array x.
 
     Parameters
     ----------
@@ -172,8 +174,9 @@ def expand_dims[DType: np.dtype[Any], DimType: Hashable](
     axis: Axis = 0,
 ) -> NamedArray[Any, DType, DimType] | NamedArray[Any, DType, DimType | str]:
     """
-    Expands the shape of an array by inserting a new dimension of size one at the
-    position specified by dims.
+    Expand the shape of an array by inserting a new dimension of size one.
+
+    The new dimension is inserted at the position specified by dims.
 
     Parameters
     ----------

@@ -240,8 +240,9 @@ def as_variable(obj: Any, name: Hashable = None, auto_convert: bool = True) -> V
 
 def _maybe_wrap_data(data):
     """
-    Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
-    they can be indexed properly.
+    Put pandas.Index and numpy.ndarray arguments in adapter objects.
+
+    This ensures they can be indexed properly.
 
     NumpyArrayAdapter, PandasIndexingAdapter and LazilyIndexedArray should
     all pass through unmodified.
@@ -258,9 +259,10 @@ def _maybe_wrap_data(data):
 
 
 def _possibly_convert_objects(values):
-    """Convert object arrays into datetime64 and timedelta64 according
-    to the pandas convention.  For backwards compat, as of 3.0.0 pandas,
-    object dtype inputs are cast to strings by `pandas.Series`
+    """Convert object arrays into datetime64 and timedelta64.
+
+    The conversion follows the pandas convention.  For backwards compat, as of
+    3.0.0 pandas, object dtype inputs are cast to strings by `pandas.Series`
     but we output them as object dtype with the input metadata preserved as well.
 
 
@@ -372,8 +374,9 @@ def as_compatible_data(
 
 
 def _as_array_or_item(data):
-    """Return the given values as a numpy array, or as an individual item if
-    it's a 0d datetime64 or timedelta64 array.
+    """Return the given values as a numpy array, or as an individual item.
+
+    An individual item is returned if it's a 0d datetime64 or timedelta64 array.
 
     Importantly, this function does not copy data if it is already an ndarray -
     otherwise, it will not be possible to update Variable values in place.
@@ -406,10 +409,12 @@ class Variable(
     VariableArithmetic[ShapeType_co, DType_co, DimType_co],
     Generic[ShapeType_co, DType_co, DimType_co],  # noqa: UP046
 ):
-    """A netcdf-like variable consisting of dimensions, data and attributes
-    which describe a single Array. A single Variable object is not fully
-    described outside the context of its parent Dataset (if you want such a
-    fully described object, use a DataArray instead).
+    """A netcdf-like variable consisting of dimensions, data and attributes.
+
+    The dimensions, data and attributes describe a single Array. A single
+    Variable object is not fully described outside the context of its parent
+    Dataset (if you want such a fully described object, use a DataArray
+    instead).
 
     The main functional difference between Variables and numpy arrays is that
     numerical operations on Variables implement array broadcasting by dimension
@@ -537,6 +542,8 @@ class Variable(
         fastpath: bool = False,
     ) -> None:
         """
+        Initialize a Variable.
+
         Parameters
         ----------
         dims : str or sequence of str
@@ -655,8 +662,9 @@ class Variable(
     @property
     def data(self):
         """
-        The Variable's data as an array. The underlying array type
-        (e.g. dask, sparse, pint) is preserved.
+        The Variable's data as an array.
+
+        The underlying array type (e.g. dask, sparse, pint) is preserved.
 
         See Also
         --------
@@ -767,7 +775,7 @@ class Variable(
 
     @property
     def values(self) -> np.ndarray:
-        """The variable's data as a numpy.ndarray"""
+        """The variable's data as a numpy.ndarray."""
         return _as_array_or_item(self._data)
 
     @values.setter
@@ -775,13 +783,13 @@ class Variable(
         self.data = values
 
     def to_base_variable(self) -> Variable[ShapeType_co, DType_co, DimType_co]:
-        """Return this variable as a base xarray.Variable"""
+        """Return this variable as a base xarray.Variable."""
         return Variable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
     def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
-        """Return this variable as an xarray.IndexVariable"""
+        """Return this variable as an xarray.IndexVariable."""
         return IndexVariable(
             self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
@@ -790,13 +798,13 @@ class Variable(
         return self.to_index_variable()._to_index()
 
     def to_index(self) -> pd.Index:
-        """Convert this variable to a pandas.Index"""
+        """Convert this variable to a pandas.Index."""
         return self.to_index_variable().to_index()
 
     def to_dict(
         self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
-        """Dictionary representation of variable."""
+        """Return a dictionary representation of the variable."""
         item: dict[str, Any] = {
             "dims": self.dims,
             "attrs": decode_numpy_dict_values(self.attrs),
@@ -907,7 +915,7 @@ class Variable(
         return dims, BasicIndexer(key), None
 
     def _validate_indexers(self, key):
-        """Make sanity checks"""
+        """Make sanity checks."""
         for dim, k in zip(self.dims, key, strict=True):
             if not isinstance(k, BASIC_INDEXING_TYPES):
                 if not isinstance(k, Variable):
@@ -1025,8 +1033,10 @@ class Variable(
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
     def __getitem__(self, key) -> Variable[Shape, DType_co, DimType_co]:
-        """Return a new Variable object whose contents are consistent with
-        getting the provided key from the underlying data.
+        """Return a new Variable object indexed by the provided key.
+
+        The contents of the new Variable are consistent with getting the provided
+        key from the underlying data.
 
         NB. __getitem__ and __setitem__ implement xarray-style indexing,
         where if keys are unlabeled arrays, we index the array orthogonally
@@ -1049,7 +1059,10 @@ class Variable(
     def _finalize_indexing_result(
         self, dims, data
     ) -> Variable[Shape, DType_co, DimType_co]:
-        """Used by IndexVariable to return IndexVariable objects when possible."""
+        """Create the Variable resulting from indexing.
+
+        Used by IndexVariable to return IndexVariable objects when possible.
+        """
         return self._replace(dims=dims, data=data)
 
     def _getitem_with_mask(self, key, fill_value=dtypes.NA):
@@ -1098,7 +1111,9 @@ class Variable(
         return self._finalize_indexing_result(dims, data)
 
     def __setitem__(self, key, value):
-        """__setitem__ is overloaded to access the underlying numpy values with
+        """Set values of the underlying numpy array with orthogonal indexing.
+
+        __setitem__ is overloaded to access the underlying numpy values with
         orthogonal indexing.
 
         See __getitem__ for more details.
@@ -1669,6 +1684,7 @@ class Variable(
     @deprecate_dims
     def set_dims(self, dim, shape=None):
         """Return a new variable with given set of dimensions.
+
         This method might be used to attach new dimension(s) to variable.
 
         When possible, this operation does not copy this variable's data.
@@ -1831,8 +1847,9 @@ class Variable(
         full_product: bool | None = None,
     ) -> Variable:
         """
-        Unstacks this variable given an index to unstack and the name of the
-        dimension to which the index refers.
+        Unstack this variable given an index and the name of its dimension.
+
+        The dimension is the one to which the index to unstack refers.
 
         ``full_product`` is the result of ``is_full_ordered_product(index)``,
         which is computed if not given.
@@ -1951,6 +1968,7 @@ class Variable(
     def clip(self, min=None, max=None):
         """
         Return an array whose values are limited to ``[min, max]``.
+
         At least one of max or min must be given.
 
         Refer to `numpy.clip` for full documentation.
@@ -2113,8 +2131,9 @@ class Variable(
         return cls(dims, data, attrs, encoding, fastpath=True)
 
     def equals(self, other, equiv=duck_array_ops.array_equiv):
-        """True if two Variables have the same dimensions and values;
-        otherwise False.
+        """Return True if two Variables have the same dimensions and values.
+
+        Otherwise return False.
 
         Variables can still be equal (like pandas objects) if they have NaN
         values in the same locations.
@@ -2131,8 +2150,10 @@ class Variable(
             return False
 
     def broadcast_equals(self, other, equiv=duck_array_ops.array_equiv):
-        """True if two Variables have the values after being broadcast against
-        each other; otherwise False.
+        """Return True if two Variables have the same values after broadcasting.
+
+        The Variables are broadcast against each other before being compared.
+        If their values differ, return False.
 
         Variables can still be equal (like pandas objects) if they have NaN
         values in the same locations.
@@ -2153,8 +2174,9 @@ class Variable(
             return False
 
     def no_conflicts(self, other, equiv=duck_array_ops.array_notnull_equiv):
-        """True if the intersection of two Variable's non-null data is
-        equal; otherwise false.
+        """Return True if the intersection of two Variable's non-null data is equal.
+
+        Otherwise return False.
 
         Variables can thus still be equal if there are locations where either,
         or both, contain NaN values.
@@ -2495,7 +2517,7 @@ class Variable(
         return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
     def coarsen_reshape(self, windows, boundary, side):
-        """Construct a reshaped-array for coarsen"""
+        """Construct a reshaped-array for coarsen."""
         if not is_dict_like(boundary):
             boundary = dict.fromkeys(windows.keys(), boundary)
 
@@ -2703,8 +2725,9 @@ class Variable(
         return self
 
     def _to_numeric(self, offset=None, datetime_unit=None, dtype=float):
-        """A (private) method to convert datetime array to numeric dtype
-        See duck_array_ops.datetime_to_numeric
+        """Convert datetime array to numeric dtype (private method).
+
+        See duck_array_ops.datetime_to_numeric.
         """
         numeric_array = duck_array_ops.datetime_to_numeric(
             self.data, offset, datetime_unit, dtype
@@ -2719,8 +2742,10 @@ class Variable(
         keep_attrs: bool | None,
         skipna: bool | None,
     ) -> Variable | dict[Hashable, Variable]:
-        """Apply argmin or argmax over one or more dimensions, returning the result as a
-        dict of DataArray that can be passed directly to isel.
+        """Apply argmin or argmax over one or more dimensions.
+
+        Returns the result as a dict of DataArray that can be passed directly to
+        isel.
         """
         if dim is None and axis is None:
             warnings.warn(
@@ -2789,6 +2814,7 @@ class Variable(
         skipna: bool | None = None,
     ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the minimum of the Variable over one or more dimensions.
+
         If a sequence is passed to 'dim', then result returned as dict of Variables,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
         returns a Variable with dtype int.
@@ -2834,6 +2860,7 @@ class Variable(
         skipna: bool | None = None,
     ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the maximum of the Variable over one or more dimensions.
+
         If a sequence is passed to 'dim', then result returned as dict of Variables,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
         returns a Variable with dtype int.
@@ -3213,7 +3240,7 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
     def copy(
         self, deep: bool = True, data: T_DuckArray | np.typing.ArrayLike | None = None
     ):
-        """Returns a copy of this object.
+        """Return a copy of this object.
 
         `deep` is ignored since data is stored in the form of
         pandas.Index, which is already immutable. Dimensions, attributes
@@ -3272,7 +3299,7 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
 
     @override
     def to_index_variable(self) -> IndexVariable[ShapeType_co, DType_co, DimType_co]:
-        """Return this variable as an xarray.IndexVariable"""
+        """Return this variable as an xarray.IndexVariable."""
         return self.copy(deep=False)
 
     @override
@@ -3298,7 +3325,7 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
 
     @override
     def to_index(self) -> pd.Index:
-        """Convert this variable to a pandas.Index"""
+        """Convert this variable to a pandas.Index."""
         index = self._to_index()
         level = getattr(self._data, "level", None)
         if level is not None:
@@ -3309,9 +3336,7 @@ class IndexVariable(Variable[ShapeType_co, DType_co, DimType_co]):
 
     @property
     def level_names(self) -> list[Hashable | None] | None:
-        """Return MultiIndex level names or None if this IndexVariable has no
-        MultiIndex.
-        """
+        """MultiIndex level names, or None if this IndexVariable has no MultiIndex."""
         index = self.to_index()
         if isinstance(index, pd.MultiIndex):
             return list(index.names)
@@ -3382,8 +3407,10 @@ def _as_shared_dtype(variables: Sequence[Variable]) -> tuple[Variable, ...]:
 
 
 def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
-    """Given any number of variables, return variables with matching dimensions
-    and broadcast data.
+    """Broadcast any number of variables against each other.
+
+    Given any number of variables, return variables with matching dimensions and
+    broadcast data.
 
     The data on the returned variables will be a view of the data on the
     corresponding original arrays, but dimensions will be reordered and

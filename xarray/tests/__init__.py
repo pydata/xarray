@@ -285,8 +285,9 @@ class IndexerMaker:
 
 
 def source_ndarray(array):
-    """Given an ndarray, return the base object which holds its memory, or the
-    object itself.
+    """Return the base object which holds the memory of an ndarray.
+
+    If there is no base object, return the object itself.
     """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "DatetimeIndex.base")
@@ -298,7 +299,7 @@ def source_ndarray(array):
 
 
 def format_record(record) -> str:
-    """Format warning record like `FutureWarning('Function will be deprecated...')`"""
+    """Format warning record like `FutureWarning('Function will be deprecated...')`."""
     return f"{str(record.category)[8:-2]}('{record.message}'))"
 
 

@@ -23,10 +23,7 @@ _ENGINES = tuple(sorted(xr.backends.list_engines().keys() - {"store"}))
 
 
 class IOSingleNetCDF:
-    """
-    A few examples that benchmark reading/writing a single netCDF file with
-    xarray
-    """
+    """Benchmark reading/writing a single netCDF file with xarray."""
 
     timeout = 300.0
     repeat = 1
@@ -232,10 +229,7 @@ class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
 
 
 class IOMultipleNetCDF:
-    """
-    A few examples that benchmark reading/writing multiple netCDF files with
-    xarray
-    """
+    """Benchmark reading/writing multiple netCDF files with xarray."""
 
     timeout = 300.0
     repeat = 1
@@ -460,10 +454,7 @@ def create_delayed_write():
 
 
 class IONestedDataTree:
-    """
-    A few examples that benchmark reading/writing a heavily nested netCDF datatree with
-    xarray
-    """
+    """Benchmark reading/writing a heavily nested netCDF datatree with xarray."""
 
     timeout = 300.0
     repeat = 1
@@ -628,8 +619,9 @@ class IOReadSingleFile(IOSingleNetCDF):
 class IOReadCustomEngine:
     def setup(self, *args, **kwargs):
         """
-        The custom backend does the bare minimum to be considered a lazy backend. But
-        the data in it is still in memory so slow file reading shouldn't affect the
+        Set up a custom backend that does the bare minimum to be considered lazy.
+
+        The data in it is still in memory so slow file reading shouldn't affect the
         results.
         """
         requires_dask()
@@ -742,6 +734,7 @@ class IOReadCustomEngine:
     def time_open_dataset(self, chunks):
         """
         Time how fast xr.open_dataset is without the slow data reading part.
+
         Test with and without dask.
         """
         xr.open_dataset(None, engine=self.engine, chunks=chunks)

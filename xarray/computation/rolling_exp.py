@@ -50,7 +50,8 @@ def _get_alpha(
 class RollingExp[T_DataWithCoords: DataWithCoords]:
     """
     Exponentially-weighted moving window object.
-    Similar to EWM in pandas
+
+    Similar to EWM in pandas.
 
     Parameters
     ----------

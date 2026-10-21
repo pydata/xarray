@@ -1,4 +1,4 @@
-"""Internal utilities; not for external use"""
+"""Internal utilities; not for external use."""
 
 # Some functions in this module are derived from functions in pandas. For
 # reference, here is a copy of the pandas copyright notice:
@@ -121,7 +121,7 @@ def did_you_mean(
     word: Hashable, possibilities: Iterable[Hashable], *, n: int = 10
 ) -> str:
     """
-    Suggest a few correct words based on a list of possibilities
+    Suggest a few correct words based on a list of possibilities.
 
     Parameters
     ----------
@@ -159,8 +159,7 @@ def did_you_mean(
 
 
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
-    """Return a numpy compatible dtype from either
-    a numpy array or a pandas.Index.
+    """Return a numpy compatible dtype from either a numpy array or a pandas.Index.
 
     Used for wrapping a pandas.Index as an xarray.Variable.
 
@@ -182,7 +181,7 @@ def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
 
 
 def maybe_coerce_to_str(index, original_coords):
-    """Maybe coerce a pandas Index back to a numpy array of type str
+    """Maybe coerce a pandas Index back to a numpy array of type str.
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
@@ -213,8 +212,9 @@ def maybe_wrap_array(original, new_array):
 
 
 def equivalent[T](first: T, second: T) -> bool:
-    """Compare two objects for equivalence (identity or equality), using
-    array_equiv if either object is an ndarray. If both objects are lists,
+    """Compare two objects for equivalence (identity or equality).
+
+    Uses array_equiv if either object is an ndarray. If both objects are lists,
     equivalent is sequentially called on all the elements.
 
     Returns False for any comparison that doesn't return a boolean,
@@ -257,8 +257,9 @@ def list_equiv[T](first: Sequence[T], second: Sequence[T]) -> bool:
 
 
 def peek_at[T](iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
-    """Returns the first value from iterable, as well as a new iterator with
-    the same content as the original iterable
+    """Return the first value from iterable and a new iterator over all values.
+
+    The returned iterator has the same content as the original iterable.
     """
     gen = iter(iterable)
     peek = next(gen)
@@ -321,7 +322,7 @@ def flat_items[T](
     prefix: str | None = None,
     separator: str = "/",
 ) -> Iterable[tuple[str, T]]:
-    """Yields flat items from a nested dictionary of dicts.
+    """Yield flat items from a nested dictionary of dicts.
 
     Notes
     -----
@@ -390,8 +391,9 @@ def dict_equiv[K, V](
     second: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> bool:
-    """Test equivalence of two dict-like objects. If any of the values are
-    numpy arrays, compare them correctly.
+    """Test equivalence of two dict-like objects.
+
+    If any of the values are numpy arrays, compare them correctly.
 
     Parameters
     ----------
@@ -470,9 +472,10 @@ def compat_dict_union[K, V](
 
 
 class Frozen(Mapping[K, V]):
-    """Wrapper around an object implementing the mapping interface to make it
-    immutable. If you really want to modify the mapping, the mutable version is
-    saved under the `mapping` attribute.
+    """Immutable wrapper around an object implementing the mapping interface.
+
+    If you really want to modify the mapping, the mutable version is saved under
+    the `mapping` attribute.
     """
 
     __slots__ = ("mapping",)
@@ -551,7 +554,9 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
 
 
 class FilteredMapping(Mapping[K, V]):
-    """Implements the Mapping interface. Uses the wrapped mapping for item lookup
+    """Mapping that restricts a wrapped mapping to a separate collection of keys.
+
+    Implements the Mapping interface. Uses the wrapped mapping for item lookup
     and a separate wrapped keys collection for iteration.
 
     Can be used to construct a mapping object from another dict-like object without
@@ -628,8 +633,10 @@ class OrderedSet(MutableSet[T]):
 
 
 class NdimSizeLenMixin:
-    """Mixin class that extends a class that defines a ``shape`` property to
-    one that also defines ``ndim``, ``size`` and ``__len__``.
+    """Mixin class that adds ``ndim``, ``size`` and ``__len__`` based on ``shape``.
+
+    Extends a class that defines a ``shape`` property to one that also defines
+    ``ndim``, ``size`` and ``__len__``.
     """
 
     __slots__ = ()
@@ -666,8 +673,10 @@ class NdimSizeLenMixin:
 
 
 class NDArrayMixin(NdimSizeLenMixin):
-    """Mixin class for making wrappers of N-dimensional arrays that conform to
-    the ndarray interface required for the data argument to Variable objects.
+    """Mixin class for making wrappers of N-dimensional arrays.
+
+    The wrappers conform to the ndarray interface required for the data argument
+    to Variable objects.
 
     A subclass should set the `array` property and override one or more of
     `dtype`, `shape` and `__getitem__`.
@@ -692,7 +701,9 @@ class NDArrayMixin(NdimSizeLenMixin):
 
 @contextlib.contextmanager
 def close_on_error(f):
-    """Context manager to ensure that a file opened by xarray is closed if an
+    """Close a file opened by xarray if an exception is raised.
+
+    Context manager to ensure that a file opened by xarray is closed if an
     exception is raised before the user sees the file object.
     """
     try:
@@ -703,7 +714,7 @@ def close_on_error(f):
 
 
 def is_remote_uri(path: str) -> bool:
-    """Finds URLs of the form protocol:// or protocol::
+    """Find URLs of the form ``protocol://`` or ``protocol::``.
 
     This also matches for http[s]://, which were the only remote URLs
     supported in <=v0.16.2.
@@ -828,8 +839,9 @@ def iterable_of_hashable(v: Any) -> TypeGuard[Iterable[Hashable]]:
 
 
 def decode_numpy_dict_values[K, V](attrs: Mapping[K, V]) -> dict[K, V]:
-    """Convert attribute values from numpy objects to native Python objects,
-    for use in to_dict
+    """Convert attribute values from numpy objects to native Python objects.
+
+    For use in to_dict.
     """
     attrs = dict(attrs)
     for k, v in attrs.items():
@@ -842,7 +854,8 @@ def decode_numpy_dict_values[K, V](attrs: Mapping[K, V]) -> dict[K, V]:
 
 def ensure_us_time_resolution(val):
     """Convert val out of numpy time, for use in to_dict.
-    Needed because of numpy bug GH#7619
+
+    Needed because of numpy bug GH#7619.
     """
     if np.issubdtype(val.dtype, np.datetime64):
         val = val.astype("datetime64[us]")
@@ -891,6 +904,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
     """Get a new dimension name based on new_dim, that is not used in dims.
+
     If the same name exists, we add an underscore(s) in the head.
 
     Example1:
@@ -912,7 +926,9 @@ def drop_dims_from_indexers(
     dims: Iterable[Hashable] | Mapping[Any, int],
     missing_dims: ErrorOptionsWithWarn,
 ) -> Mapping[Hashable, Any]:
-    """Depending on the setting of missing_dims, drop any dimensions from indexers that
+    """Drop dimensions from indexers that are not present in dims.
+
+    Depending on the setting of missing_dims, drop any dimensions from indexers that
     are not present in dims.
 
     Parameters
@@ -1141,7 +1157,7 @@ def _check_dims(dim: AbstractSet[Hashable], all_dims: AbstractSet[Hashable]) -> 
 
 
 class UncachedAccessor[Accessor]:
-    """Acts like a property, but on both classes and class instances
+    """Acts like a property, but on both classes and class instances.
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
     inspect classes for which property returns itself and not the
@@ -1173,9 +1189,10 @@ def iterate_nested(nested_list):
 
 
 def contains_only_chunked_or_numpy(obj) -> bool:
-    """Returns True if xarray object contains only numpy arrays or chunked arrays (i.e. pure dask or cubed).
+    """Return True if xarray object contains only numpy arrays or chunked arrays.
 
-    Expects obj to be Dataset or DataArray
+    Chunked arrays are e.g. pure dask or cubed arrays. Expects obj to be Dataset or
+    DataArray.
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.indexing import ExplicitlyIndexed
@@ -1379,7 +1396,9 @@ def result_name(objects: Iterable[Any]) -> Any:
 
 
 def _get_func_args(func, param_names):
-    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    """Get the argument names of `func`.
+
+    Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
     they are provided by user.
     """
     try:

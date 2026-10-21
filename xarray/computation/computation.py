@@ -151,8 +151,9 @@ def corr(
     weights: T_DataArray | None = None,
 ) -> T_DataArray:
     """
-    Compute the Pearson correlation coefficient between
-    two DataArray objects along a shared dimension.
+    Compute the Pearson correlation coefficient between two DataArray objects.
+
+    The correlation is computed along a shared dimension.
 
     Parameters
     ----------
@@ -256,7 +257,9 @@ def _cov_corr(
     method: Literal["cov", "corr"] | None = None,
 ) -> T_DataArray:
     """
-    Internal method for xr.cov() and xr.corr() so only have to
+    Compute the covariance or correlation of two arrays.
+
+    Internal method for xr.cov() and xr.corr() so we only have to
     sanitize the input arrays once and we don't repeat code.
     """
     # 1. Broadcast the two arrays
@@ -477,8 +480,10 @@ def dot(
     dim: Dims = None,
     **kwargs: Any,
 ):
-    """Generalized dot product for xarray objects. Like ``np.einsum``, but
-    provides a simpler interface based on array dimension names.
+    """Generalized dot product for xarray objects.
+
+    Like ``np.einsum``, but provides a simpler interface based on array
+    dimension names.
 
     Parameters
     ----------
@@ -860,7 +865,7 @@ def polyval(
     coeffs: Dataset | DataArray,
     degree_dim: Hashable = "degree",
 ) -> Dataset | DataArray:
-    """Evaluate a polynomial at specific values
+    """Evaluate a polynomial at specific values.
 
     Parameters
     ----------
@@ -906,7 +911,7 @@ def polyval(
 
 
 def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
-    """Converts all datetime64 variables to float64
+    """Convert all datetime64 variables to float64.
 
     Parameters
     ----------

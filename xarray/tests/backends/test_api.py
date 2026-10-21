@@ -573,7 +573,7 @@ def test_open_mfdataset_can_open_path_objects() -> None:
 @requires_netCDF4
 @requires_dask
 def test_open_mfdataset_list_attr() -> None:
-    """Case when an attribute of type list differs across the multiple files"""
+    """Case when an attribute of type list differs across the multiple files."""
     with create_tmp_files(2) as nfiles:
         for i in range(2):
             with nc4.Dataset(nfiles[i], "w") as f:
@@ -763,7 +763,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                             assert ds.attrs == expected
 
     def test_open_mfdataset_dataset_attr_by_coords(self) -> None:
-        """Case when an attribute differs across the multiple files"""
+        """Case when an attribute differs across the multiple files."""
         with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
@@ -777,9 +777,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                     assert ds.test_dataset_attr == 10
 
     def test_open_mfdataset_dataarray_attr_by_coords(self) -> None:
-        """Case when an attribute of a member DataArray differs across the multiple
-        files
-        """
+        """Case when an attribute of a member DataArray differs across the files."""
         with self.setup_files_and_datasets(new_combine_kwargs=True) as (
             files,
             [_ds1, _ds2],
@@ -1476,9 +1474,7 @@ class TestDask(DatasetIOBase):
 
     @requires_cftime
     def test_open_dataset_cftime_autochunk(self) -> None:
-        """Create a dataset with cftime datetime objects and
-        ensure that auto-chunking works correctly.
-        """
+        """Test that auto-chunking works correctly with cftime datetime objects."""
         import cftime
 
         original = xr.Dataset(

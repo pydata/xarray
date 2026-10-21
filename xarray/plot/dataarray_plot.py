@@ -763,7 +763,7 @@ def hist(
 
 
 def _plot1d(plotfunc):
-    """Decorator for common 1d plotting logic."""
+    """Decorate a 1d plotting function with common 1d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -1500,7 +1500,7 @@ def scatter(
 
 
 def _plot2d(plotfunc):
-    """Decorator for common 2d plotting logic."""
+    """Decorate a 2d plotting function with common 2d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -2350,7 +2350,7 @@ def contourf(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> QuadContourSet:
     """
-    Filled contour plot of 2D DataArray.
+    Draw a filled contour plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.contourf`.
     """

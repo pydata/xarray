@@ -402,7 +402,7 @@ def _infer_xy_labels(
     rgb: Hashable | None = None,
 ) -> tuple[Hashable, Hashable]:
     """
-    Determine x and y labels. For use in _plot2d
+    Determine x and y labels. For use in _plot2d.
 
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
@@ -438,7 +438,7 @@ def _infer_xy_labels(
 def _assert_valid_xy(
     darray: DataArray | Dataset, xy: Hashable | None, name: str
 ) -> None:
-    """Make sure x and y passed to plotting functions are valid"""
+    """Make sure x and y passed to plotting functions are valid."""
     # MultiIndex cannot be plotted; no point in allowing them here
     multiindex_dims = {
         idx.dim
@@ -518,7 +518,7 @@ def _maybe_gca(**subplot_kws: Any) -> Axes:
 
 
 def _get_units_from_attrs(da: DataArray) -> str:
-    """Extracts and formats the unit/units from their attributes."""
+    """Extract and format the unit/units from their attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
     if isinstance(da.data, pint_array_type):
@@ -531,9 +531,7 @@ def _get_units_from_attrs(da: DataArray) -> str:
 
 
 def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
-    """Makes informative labels if variable metadata (attrs) follows
-    CF conventions.
-    """
+    """Make informative labels if variable metadata (attrs) follows CF conventions."""
     if da is None:
         return ""
 
@@ -562,18 +560,12 @@ def label_from_attrs(da: DataArray | None, extra: str = "") -> str:
 
 
 def _interval_to_mid_points(array: Iterable[pd.Interval]) -> np.ndarray:
-    """
-    Helper function which returns an array
-    with the Intervals' mid points.
-    """
+    """Return an array with the Intervals' mid points."""
     return np.array([x.mid for x in array])
 
 
 def _interval_to_bound_points(array: Sequence[pd.Interval]) -> np.ndarray:
-    """
-    Helper function which returns an array
-    with the Intervals' boundaries.
-    """
+    """Return an array with the Intervals' boundaries."""
     array_boundaries = np.array([x.left for x in array])
     array_boundaries = np.concatenate((array_boundaries, np.array([array[-1].right])))
 
@@ -584,8 +576,9 @@ def _interval_to_double_bound_points(
     xarray: Iterable[pd.Interval], yarray: Iterable
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Helper function to deal with an xarray consisting of pd.Intervals. Each
-    interval is replaced with both boundaries. I.e. the length of xarray
+    Deal with an xarray consisting of pd.Intervals for step plots.
+
+    Each interval is replaced with both boundaries. I.e. the length of xarray
     doubles. yarray is modified so it matches the new shape of xarray.
     """
     xarray1 = np.array([x.left for x in xarray])
@@ -605,9 +598,11 @@ def _resolve_intervals_1dplot(
     xval: np.ndarray, yval: np.ndarray, kwargs: dict
 ) -> tuple[np.ndarray, np.ndarray, str, str, dict]:
     """
-    Helper function to replace the values of x and/or y coordinate arrays
-    containing pd.Interval with their mid-points or - for step plots - double
-    points which double the length.
+    Replace pd.Interval values of x and/or y coordinate arrays for 1d plots.
+
+    The values of x and/or y coordinate arrays containing pd.Interval are
+    replaced with their mid-points or - for step plots - double points which
+    double the length.
     """
     x_suffix = ""
     y_suffix = ""
@@ -648,9 +643,11 @@ def _resolve_intervals_1dplot(
 
 def _resolve_intervals_2dplot(val, func_name):
     """
-    Helper function to replace the values of a coordinate array containing
-    pd.Interval with their mid-points or - for pcolormesh - boundaries which
-    increases length by 1.
+    Replace pd.Interval values of a coordinate array for 2d plots.
+
+    The values of a coordinate array containing pd.Interval are replaced with
+    their mid-points or - for pcolormesh - boundaries which increases length
+    by 1.
     """
     label_extra = ""
     if _valid_other_type(val, pd.Interval):
@@ -666,12 +663,12 @@ def _resolve_intervals_2dplot(val, func_name):
 def _valid_other_type(
     x: ArrayLike, types: type[object] | tuple[type[object], ...]
 ) -> bool:
-    """Do all elements of x have a type from types?"""
+    """Check whether all elements of x have a type from types."""
     return all(isinstance(el, types) for el in np.ravel(x))
 
 
 def _valid_numpy_subdtype(x, numpy_types):
-    """Is any dtype from numpy_types superior to the dtype of x?"""
+    """Check whether any dtype from numpy_types is superior to the dtype of x."""
     # If any of the types given in numpy_types is understood as numpy.generic,
     # all possible x will be considered valid.  This is probably unwanted.
     for t in numpy_types:
@@ -682,8 +679,9 @@ def _valid_numpy_subdtype(x, numpy_types):
 
 def _ensure_plottable(*args) -> None:
     """
-    Raise exception if there is anything in args that can't be plotted on an
-    axis by matplotlib.
+    Raise an exception if anything in args can't be plotted on an axis.
+
+    The axis plotting is done by matplotlib.
     """
     numpy_types: tuple[type[object], ...] = (
         np.floating,
@@ -791,7 +789,7 @@ def _update_axes(
     xlim: tuple[float, float] | None = None,
     ylim: tuple[float, float] | None = None,
 ) -> None:
-    """Update axes with provided parameters"""
+    """Update axes with provided parameters."""
     if xincrease is None:
         pass
     elif (xincrease and ax.xaxis_inverted()) or (
@@ -829,6 +827,10 @@ def _update_axes(
 
 def _is_monotonic(coord, axis=0):
     """
+    Check whether a coordinate is monotonic along an axis.
+
+    Examples
+    --------
     >>> _is_monotonic(np.array([0, 1, 2]))
     np.True_
     >>> _is_monotonic(np.array([2, 1, 0]))
@@ -851,6 +853,10 @@ def _is_monotonic(coord, axis=0):
 
 def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
     """
+    Infer the interval breaks of a coordinate.
+
+    Examples
+    --------
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
     >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
@@ -909,6 +915,8 @@ def _process_cmap_cbar_kwargs(
     **kwargs,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """
+    Process the colormap and colorbar keyword arguments.
+
     Parameters
     ----------
     func : plotting function
@@ -1489,6 +1497,7 @@ class _Normalize(Sequence):
     def _indexes_centered(self, x: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
         Offset indexes to make sure being in the center of self.levels.
+
         ["a", "b", "c"] -> [1, 3, 5]
         """
         return x * 2 + 1
@@ -1595,6 +1604,7 @@ class _Normalize(Sequence):
     def levels(self) -> np.ndarray:
         """
         Return discrete levels that will evenly bound self.values.
+
         ["a", "b", "c"] -> [0, 2, 4, 6]
 
         Examples
@@ -1624,8 +1634,10 @@ class _Normalize(Sequence):
     @property
     def format(self) -> FuncFormatter:
         """
-        Return a FuncFormatter that maps self.values elements back to
-        the original value as a string. Useful with plt.colorbar.
+        Return a FuncFormatter that maps self.values elements to original values.
+
+        The elements are mapped back to the original value as a string. Useful
+        with plt.colorbar.
 
         Examples
         --------
@@ -1650,8 +1662,10 @@ class _Normalize(Sequence):
     @property
     def func(self) -> Callable[[Any, Any | None], Any]:
         """
-        Return a lambda function that maps self.values elements back to
-        the original value as a numpy array. Useful with ax.legend_elements.
+        Return a lambda function that maps self.values elements to original values.
+
+        The elements are mapped back to the original value as a numpy array.
+        Useful with ax.legend_elements.
 
         Examples
         --------
@@ -1758,8 +1772,9 @@ def _guess_coords_to_plot(
     ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((),),
 ) -> MutableMapping[str, Hashable]:
     """
-    Guess what coords to plot if some of the values in coords_to_plot are None which
-    happens when the user has not defined all available ways of visualizing
+    Guess what coords to plot if some of the values in coords_to_plot are None.
+
+    This happens when the user has not defined all available ways of visualizing
     the data.
 
     Parameters
@@ -2092,7 +2107,9 @@ def _line(
 
 def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
     """
-    Use ConciseDateFormatter which is meant to improve the
+    Use ConciseDateFormatter for the tick labels of an axis.
+
+    ConciseDateFormatter is meant to improve the
     strings chosen for the ticklabels, and to minimize the
     strings used in those tick labels as much as possible.
 

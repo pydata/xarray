@@ -50,6 +50,7 @@ def count_not_none(*args) -> int:
 
 class _NoDefault(Enum):
     """Used by pandas to specify a default value for a deprecated argument.
+
     Copied from pandas._libs.lib._NoDefault.
 
     See Also

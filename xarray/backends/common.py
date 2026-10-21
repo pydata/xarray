@@ -257,7 +257,7 @@ def find_root_and_group(ds):
 
 
 def collect_ancestor_dimensions(group) -> dict[str, int]:
-    """Returns dimensions defined in parent groups.
+    """Return dimensions defined in parent groups.
 
     If dimensions are defined in multiple ancestors, use the size of the closest
     ancestor.
@@ -285,8 +285,10 @@ def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> Da
 
 def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500):
     """
-    Robustly index an array, using retry logic with exponential backoff if any
-    of the errors ``catch`` are raised. The initial_delay is measured in ms.
+    Robustly index an array, using retry logic with exponential backoff.
+
+    The retry logic is used if any of the errors ``catch`` are raised. The
+    initial_delay is measured in ms.
 
     With the default settings, the maximum delay will be in the range of 32-64
     seconds.
@@ -348,7 +350,8 @@ class AbstractDataStore:
 
     def load(self):
         """
-        This loads the variables and attributes simultaneously.
+        Load the variables and attributes simultaneously.
+
         A centralized loading function makes it easier to create
         data stores that do automatic encoding/decoding.
 
@@ -435,7 +438,7 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def encode(self, variables, attributes):
         """
-        Encode the variables and attributes in this store
+        Encode the variables and attributes in this store.
 
         Parameters
         ----------
@@ -469,11 +472,11 @@ class AbstractWritableDataStore(AbstractDataStore):
         return encoded_variables, encoded_attributes
 
     def encode_variable(self, v, name=None):
-        """Encode one variable"""
+        """Encode one variable."""
         return v
 
     def encode_attribute(self, a):
-        """Encode one attribute"""
+        """Encode one attribute."""
         return a
 
     def prepare_variable(self, name, variable, check_encoding, unlimited_dims):
@@ -490,10 +493,12 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def store_dataset(self, dataset):
         """
+        Store a whole dataset in this store.
+
         In stores, variables are all variables AND coordinates
         in xarray.Dataset variables are variables NOT coordinates,
         so here we pass the whole dataset in instead of doing
-        dataset.variables
+        dataset.variables.
         """
         self.store(dataset, dataset.attrs)
 
@@ -506,7 +511,10 @@ class AbstractWritableDataStore(AbstractDataStore):
         unlimited_dims=None,
     ):
         """
+        Put data on this store.
+
         Top level method for putting data on this store, this method:
+
           - encodes variables/attributes
           - sets dimensions
           - sets variables
@@ -538,6 +546,8 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def set_attributes(self, attributes):
         """
+        Set the dataset attributes on the data store.
+
         This provides a centralized method to set the dataset attributes on the
         data store.
 
@@ -551,6 +561,8 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
         """
+        Set the variables on the data store.
+
         This provides a centralized method to set the variables on the data
         store.
 
@@ -577,6 +589,8 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def set_dimensions(self, variables, unlimited_dims=None):
         """
+        Set the dimensions on the data store.
+
         This provides a centralized method to set the dimensions on the data
         store.
 
@@ -725,6 +739,8 @@ class WritableCFDataStore(AbstractWritableDataStore):
 
 class BackendEntrypoint:
     """
+    Main interface for the backend plugins.
+
     ``BackendEntrypoint`` is a class container and it is the main interface
     for the backend plugins, see :ref:`rst-backend-entrypoint`.
     It shall implement:
@@ -778,18 +794,14 @@ class BackendEntrypoint:
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
-        """Backend open_dataset method used by Xarray in
-        :py:func:`~xarray.open_dataset`.
-        """
+        """Backend open_dataset method used by :py:func:`~xarray.open_dataset`."""
         raise NotImplementedError()
 
     def guess_can_open(
         self,
         filename_or_obj: T_PathFileOrDataStore,
     ) -> bool:
-        """Backend open_dataset method used by Xarray in
-        :py:func:`~xarray.open_dataset`.
-        """
+        """Backend guess_can_open method used by :py:func:`~xarray.open_dataset`."""
         return False
 
     def open_datatree(
@@ -812,7 +824,7 @@ class BackendEntrypoint:
         drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:
         """
-        Opens a dictionary mapping from group names to Datasets.
+        Open a dictionary mapping from group names to Datasets.
 
         Called by :py:func:`~xarray.open_groups`.
         This function exists to provide a universal way to open all groups in a file,
@@ -830,8 +842,10 @@ BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}
 
 def _is_likely_dap_url(url: str) -> bool:
     """
-    Determines if a URL is likely an OPeNDAP (DAP) endpoint based on
-    known protocols, server software path patterns, and file extensions.
+    Determine if a URL is likely an OPeNDAP (DAP) endpoint.
+
+    The decision is based on known protocols, server software path patterns,
+    and file extensions.
 
     Parameters
     ----------

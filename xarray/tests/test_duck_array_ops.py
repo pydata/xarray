@@ -408,7 +408,9 @@ def from_series_or_scalar(se):
 
 
 def series_reduce(da, func, dim, **kwargs):
-    """Convert DataArray to pd.Series, apply pd.func, then convert back to
+    """Reduce a DataArray by applying the pandas Series function func.
+
+    Convert DataArray to pd.Series, apply pd.func, then convert back to
     a DataArray. Multiple dims cannot be specified.
     """
     # pd no longer accepts skipna=None https://github.com/pandas-dev/pandas/issues/44178

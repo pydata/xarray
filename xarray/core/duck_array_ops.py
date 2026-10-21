@@ -154,7 +154,7 @@ around: Callable = round
 
 
 def isna(data: Any) -> bool:
-    """Checks if data is literally np.nan or pd.NA.
+    """Check if data is literally np.nan or pd.NA.
 
     Parameters
     ----------
@@ -318,10 +318,11 @@ def broadcast_to(array, shape):
 
 def lazy_array_equiv(arr1, arr2):
     """Like array_equal, but doesn't actually compare values.
+
     Returns True when arr1, arr2 identical or their dask tokens are equal.
     Returns False when shapes are not equal.
-    Returns None when equality cannot determined: one or both of arr1, arr2 are numpy arrays;
-    or their dask tokens are not equal
+    Returns None when equality cannot be determined: one or both of arr1, arr2 are
+    numpy arrays; or their dask tokens are not equal.
     """
     if arr1 is arr2:
         return True
@@ -341,7 +342,7 @@ def lazy_array_equiv(arr1, arr2):
 
 
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
-    """Like np.allclose, but also allows values to be NaN in both arrays"""
+    """Like np.allclose, but also allows values to be NaN in both arrays."""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
 
@@ -357,7 +358,7 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
 
 
 def array_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in both arrays"""
+    """Like np.array_equal, but also allows values to be NaN in both arrays."""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
     lazy_equiv = lazy_array_equiv(arr1, arr2)
@@ -371,9 +372,7 @@ def array_equiv(arr1, arr2):
 
 
 def array_notnull_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in either or both
-    arrays
-    """
+    """Like np.array_equal, but also allows NaN values in either or both arrays."""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
     lazy_equiv = lazy_array_equiv(arr1, arr2)
@@ -387,7 +386,7 @@ def array_notnull_equiv(arr1, arr2):
 
 
 def count(data, axis=None):
-    """Count the number of non-NA in this array along the given axis or axes"""
+    """Count the number of non-NA in this array along the given axis or axes."""
     xp = get_array_namespace(data)
     return xp.sum(xp.logical_not(isnull(data)), axis=axis)
 
@@ -628,6 +627,7 @@ def _datetime_nanreduce(array, func):
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to numerical values.
+
     Convert the datetime array to a timedelta relative to an offset.
 
     Parameters
@@ -769,9 +769,7 @@ def py_timedelta_to_float(array, datetime_unit):
 
 
 def mean(array, axis=None, skipna=None, **kwargs):
-    """Inhouse mean that can handle np.datetime64 or cftime.datetime
-    dtypes
-    """
+    """Inhouse mean that can handle np.datetime64 or cftime.datetime dtypes."""
     from xarray.core.common import _contains_cftime_datetimes
 
     array = asarray(array)
@@ -837,7 +835,7 @@ def cumsum(array, axis=None, **kwargs):
 
 
 def first(values, axis, skipna=None):
-    """Return the first non-NA elements in this array along the given axis"""
+    """Return the first non-NA elements in this array along the given axis."""
     if (skipna or skipna is None) and not (
         dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
     ):
@@ -851,7 +849,7 @@ def first(values, axis, skipna=None):
 
 
 def last(values, axis, skipna=None):
-    """Return the last non-NA elements in this array along the given axis"""
+    """Return the last non-NA elements in this array along the given axis."""
     if (skipna or skipna is None) and not (
         dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
     ):
@@ -878,7 +876,7 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
 
 
 def _push(array, n: int | None = None, axis: int = -1):
-    """Use either bottleneck or numbagg depending on options & what's available"""
+    """Use either bottleneck or numbagg depending on options & what's available."""
     if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."
