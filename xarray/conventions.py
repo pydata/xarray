@@ -6,6 +6,7 @@ from collections.abc import Hashable, Iterable, Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, Union, cast
 
 import numpy as np
+import pandas as pd
 
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding import strings, variables
@@ -310,9 +311,11 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
         attrs = v.attrs
         encoding = v.encoding
         has_date_units = "units" in encoding and "since" in encoding["units"]
-        is_datetime_type = np.issubdtype(
-            v.dtype, np.datetime64
-        ) or contains_cftime_datetimes(v)
+        is_datetime_type = (
+            isinstance(v.dtype, pd.DatetimeTZDtype)
+            or np.issubdtype(v.dtype, np.datetime64)
+            or contains_cftime_datetimes(v)
+        )
 
         if (
             is_datetime_type

@@ -1393,6 +1393,15 @@ class CFDatetimeCoder(VariableCoder):
 
     @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
+        if isinstance(variable.dtype, pd.DatetimeTZDtype):
+            # CF times are in UTC unless the units specify another offset, so
+            # encode timezone-aware datetimes as timezone-naive UTC datetimes
+            # (GH 3320).
+            data = pd.DatetimeIndex(variable.data).tz_convert(None).to_numpy()
+            variable = Variable(
+                variable.dims, data, variable.attrs, variable.encoding, fastpath=True
+            )
+
         if np.issubdtype(variable.dtype, np.datetime64) or contains_cftime_datetimes(
             variable
         ):

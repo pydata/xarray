@@ -950,6 +950,50 @@ def test_time_units_with_timezone_roundtrip(calendar) -> None:
     assert result_calendar == calendar
 
 
+@pytest.mark.parametrize(
+    ("units", "expected_units", "expected_num"),
+    [
+        (None, "hours since 2000-01-01 05:00:00", [0, 1, 2]),
+        (
+            "hours since 2000-01-01T00:00:00-02:00",
+            "hours since 2000-01-01T00:00:00-02:00",
+            [3, 4, 5],
+        ),
+    ],
+)
+def test_encode_decode_roundtrip_timezone_aware_datetime64(
+    units: str | None, expected_units: str, expected_num: list[int]
+) -> None:
+    # Regression test for GH 3320
+    times = pd.date_range("2000-01-01 05:00", periods=3, freq="h", tz="UTC")
+    variable = Dataset(coords={"time": times.tz_convert("Asia/Kolkata")}).time.variable
+    if units is not None:
+        variable.encoding["units"] = units
+
+    encoded = conventions.encode_cf_variable(variable)
+    assert_array_equal(encoded.values, expected_num)
+    assert encoded.attrs["units"] == expected_units
+
+    # times are decoded as timezone-naive UTC datetimes
+    decoded = conventions.decode_cf_variable("time", encoded)
+    assert_array_equal(decoded.values, times.tz_convert(None).to_numpy())
+
+
+def test_encode_time_bounds_timezone_aware() -> None:
+    # Regression test for GH 3320
+    time = pd.date_range("2000-01-16", periods=1, tz="Europe/Paris")
+    ds = Dataset(coords=dict(time=time))
+    ds["time_bounds"] = ("time_bounds", pd.date_range("2000-01-01", periods=2))
+    ds.time.attrs = {"bounds": "time_bounds"}
+    ds.time.encoding = {"units": "hours since 2000-01-01"}
+
+    encoded, _ = cf_encoder(ds.variables, ds.attrs)
+    # 2000-01-16 00:00 in Paris is 2000-01-15 23:00 UTC
+    assert_array_equal(encoded["time"].values, [14 * 24 + 23])
+    assert_array_equal(encoded["time_bounds"].values, [0, 24])
+    assert "units" not in encoded["time_bounds"].attrs
+
+
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_use_cftime_default_standard_calendar_in_range(calendar) -> None:
     numerical_dates = [0, 1]
