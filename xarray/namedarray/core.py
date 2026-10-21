@@ -1281,11 +1281,6 @@ class NamedArray(
         return expand_dims(self, dim=dim)
 
 
-type _NamedArray[ScalarType: np.generic, DimType: Hashable] = NamedArray[
-    Any, np.dtype[ScalarType], DimType
-]
-
-
 def _raise_if_any_duplicate_dimensions[DimType_co: Hashable](
     dims: tuple[DimType_co, ...], err_context: str = "This function"
 ) -> None:
