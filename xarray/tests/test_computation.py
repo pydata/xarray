@@ -1963,6 +1963,50 @@ def test_equally_weighted_cov_corr() -> None:
     )
 
 
+@pytest.mark.parametrize("weighted", [True, False])
+def test_cov_corr_large_offset(weighted: bool, use_dask: bool) -> None:
+    # cov and corr must not lose precision if the mean is large compared to the
+    # spread of the data, e.g. for temperatures in Kelvin (GH4804)
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((3, 1000))
+    y = 0.5 * x + rng.standard_normal((3, 1000))
+    da = xr.DataArray((300 + 0.01 * x).astype(np.float32), dims=("x", "time"))
+    db = xr.DataArray((300 + 0.01 * y).astype(np.float32), dims=("x", "time"))
+    weights = xr.DataArray(rng.random(1000), dims="time") if weighted else None
+
+    # the same values without offset in float64 give the exact result
+    da_ref = da.astype(np.float64) - 300
+    db_ref = db.astype(np.float64) - 300
+    if use_dask:
+        da = da.chunk({"time": 100})
+        db = db.chunk({"time": 100})
+    for func in (xr.cov, xr.corr):
+        actual = func(da, db, dim="time", weights=weights)
+        expected = func(da_ref, db_ref, dim="time", weights=weights)
+        assert_allclose(actual.compute(), expected, rtol=1e-3)
+
+
+@pytest.mark.parametrize("weighted", [True, False])
+def test_cov_corr_leading_nans(weighted: bool) -> None:
+    # all values used to shift the data before computing the covariance are invalid
+    rng = np.random.default_rng(0)
+    da = xr.DataArray(rng.random((3, 50)), dims=("x", "time"))
+    db = xr.DataArray(rng.random((3, 50)), dims=("x", "time"))
+    da[:, :12] = np.nan
+    weights = xr.DataArray(rng.random(50), dims="time") if weighted else None
+
+    valid = {"time": slice(12, None)}
+    for func in (xr.cov, xr.corr):
+        actual = func(da, db, dim="time", weights=weights)
+        expected = func(
+            da.isel(valid),
+            db.isel(valid),
+            dim="time",
+            weights=None if weights is None else weights.isel(valid),
+        )
+        assert_allclose(actual, expected)
+
+
 @requires_dask
 def test_vectorize_dask_new_output_dims() -> None:
     # regression test for GH3574
