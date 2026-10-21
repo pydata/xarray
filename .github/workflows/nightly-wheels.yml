@@ -83,12 +83,9 @@ jobs:
         if: failure()
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_WORKFLOW: ${{ github.workflow }}
           ISSUE_LABEL: "CI"
           ISSUE_TITLE: "Nightly wheel build/upload failed"
-          GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository}}/actions/runs/${{ github.run_id }}
           TEMPLATE: ".github/nightly-wheel-failure-template.md"
         run: |
