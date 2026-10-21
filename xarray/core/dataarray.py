@@ -1960,7 +1960,7 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray with each `n`th value along the given dimension(s).
+        """Return a new DataArray with each `n`-th value along the given dimension(s).
 
         See Also
         --------
