@@ -69,6 +69,27 @@ def test_something_with_dask():
     ...
 ```
 
+### Testing with and without dask: the `use_dask` fixture
+
+To run the same test with numpy and with dask, use the `use_dask` fixture instead
+of writing two tests. It runs the test once with `False` (id `numpy`) and once with
+`True` (id `dask`), and the dask case is skipped automatically if dask is not
+installed:
+
+```python
+def test_mean(use_dask: bool) -> None:
+    ds = create_test_data()
+    if use_dask:
+        ds = ds.chunk()
+    result = ds.mean()
+```
+
+### Fixtures
+
+Shared fixtures are defined in `xarray/tests/conftest.py`, e.g. `use_dask`,
+`compute_backend`, `use_cftime` and `time_unit`, and test data like `ds`, `da` and
+`simple_datatree`. Check there before writing your own fixture or parametrization.
+
 ### Multiple dependencies
 
 When a test requires multiple optional dependencies:
