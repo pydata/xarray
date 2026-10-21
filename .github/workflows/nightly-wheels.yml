@@ -86,7 +86,7 @@ jobs:
           ISSUE_TITLE: "Nightly wheel build/upload failed"
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_URL: ${{ github.repository}}/actions/runs/${{ github.run_id }}
-          TEMPLATE: "nightly-wheel-failure-template.md"
+          TEMPLATE: ".github/nightly-wheel-failure-template.md"
         run: |
           # Read the template
           template=$(cat $TEMPLATE)
