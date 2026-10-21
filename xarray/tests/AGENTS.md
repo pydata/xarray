@@ -102,12 +102,16 @@ def test_interpolation_with_dask(): ...
 
 ### Importing optional dependencies in tests
 
-For imports within test functions, use `pytest.importorskip`:
+Skip tests at collection time with the `requires_*` decorators (or
+`pytest.param(..., marks=requires_*)` in a parametrization), not at runtime with
+`pytest.importorskip`. Import the optional dependency inside the decorated test:
 
 ```python
+@requires_cftime
 def test_cftime_functionality():
-    cftime = pytest.importorskip("cftime")
-    # Now use cftime
+    import cftime
+
+    ...
 ```
 
 ### Common patterns
@@ -129,18 +133,7 @@ def test_cftime_functionality():
        assert result is not None
    ```
 
-2. **Use fixtures for dependency-specific setup**:
-
-   ```python
-   @pytest.fixture
-   def dask_array():
-       pytest.importorskip("dask.array")
-       import dask.array as da
-
-       return da.from_array([1, 2, 3], chunks=2)
-   ```
-
-3. **Check available implementations**:
+2. **Check available implementations**:
 
    ```python
    from xarray.core.duck_array_ops import available_implementations
