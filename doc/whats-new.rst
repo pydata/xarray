@@ -312,6 +312,11 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix the ``preferred_chunks`` encoding of sharded Zarr variables read with
+  :py:func:`open_zarr`: it now holds the shard (outer/storage chunk) sizes
+  instead of the inner chunk sizes, so the default dask chunks align with the
+  stored shards rather than splitting them (:issue:`11460`, :pull:`11464`).
+  By `Taus Møller <https://github.com/taus>`_.
 - Fix indexing with a 0-dimensional non-NumPy array, e.g. a CuPy array, which
   raised ``ValueError`` instead of dropping the indexed dimension (:issue:`8820`).
   By `Trinh Quoc Anh <https://github.com/tqa236>`_.

@@ -962,14 +962,6 @@ class ZarrStore(AbstractWritableDataStore):
         chunks = _compact_chunk_sizes(
             tuple(x if isinstance(x, tuple) else (x,) for x in chunks)
         )
-        preferred_chunks = dict(zip(dimensions, chunks, strict=True))
-
-        encoding = {
-            "chunks": chunks,
-            "preferred_chunks": preferred_chunks,
-        }
-        if array_wrapper.dtype.kind == "T":
-            encoding["dtype"] = array_wrapper.dtype
 
         try:
             shards = zarr_array.shards
@@ -978,13 +970,20 @@ class ZarrStore(AbstractWritableDataStore):
             # (i.e. outer/storage chunk) sizes instead, e.g. ((1, 2),).
             shards = _compact_chunk_sizes(zarr_array.write_chunk_sizes)
 
-        encoding.update(
-            {
-                "compressors": zarr_array.compressors,
-                "filters": zarr_array.filters,
-                "shards": shards,
-            }
-        )
+        outer_chunks = shards if shards is not None else chunks
+        preferred_chunks = dict(zip(dimensions, outer_chunks, strict=True))
+
+        encoding = {
+            "chunks": chunks,
+            "preferred_chunks": preferred_chunks,
+            "compressors": zarr_array.compressors,
+            "filters": zarr_array.filters,
+            "shards": shards,
+        }
+
+        if array_wrapper.dtype.kind == "T":
+            encoding["dtype"] = array_wrapper.dtype
+
         if self.zarr_group.metadata.zarr_format == 3:
             encoding.update({"serializer": zarr_array.serializer})
 
