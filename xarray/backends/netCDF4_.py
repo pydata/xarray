@@ -374,8 +374,7 @@ def _is_list_of_strings(value) -> bool:
 def _build_and_get_enum(
     store, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
 ) -> ncEnumType | h5EnumType:
-    """
-    Add or get the netCDF4 Enum based on the dtype in encoding.
+    """Add or get the netCDF4 Enum based on the dtype in encoding.
 
     The return type should be ``netCDF4.EnumType``,
     but we avoid importing netCDF4 globally for performances.
@@ -786,8 +785,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
 
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the netCDF4 package.
+    """Backend for netCDF files based on the netCDF4 package.
 
     It can open ".nc", ".nc4", ".cdf" files and will be chosen
     as default for these files.

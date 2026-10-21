@@ -18,8 +18,7 @@ if TYPE_CHECKING:
 
 
 class DuckArrayModule:
-    """
-    Solely for internal isinstance and version checks.
+    """Solely for internal isinstance and version checks.
 
     Motivated by having to only import pint when required (as pint currently imports xarray)
     https://github.com/pydata/xarray/pull/5561#discussion_r664815718

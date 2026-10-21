@@ -483,8 +483,7 @@ class DataWithCoords(AttrAccessMixin):
         *,
         keep_attrs: bool | None = None,
     ) -> Self:
-        """
-        Return an array whose values are limited to ``[min, max]``.
+        """Return an array whose values are limited to ``[min, max]``.
 
         At least one of max or min must be given.
 
@@ -759,8 +758,7 @@ class DataWithCoords(AttrAccessMixin):
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> T:
-        """
-        Apply ``func(self, *args, **kwargs)``.
+        """Apply ``func(self, *args, **kwargs)``.
 
         This method replicates the pandas method of the same name.
 
@@ -895,8 +893,7 @@ class DataWithCoords(AttrAccessMixin):
         window_type: str = "span",
         **window_kwargs,
     ) -> RollingExp[T_DataWithCoords]:
-        """
-        Exponentially-weighted moving window.
+        """Exponentially-weighted moving window.
 
         Similar to EWM in pandas.
 
@@ -1438,8 +1435,7 @@ class DataWithCoords(AttrAccessMixin):
         copy=None,
         keep_attrs=True,
     ) -> Self:
-        """
-        Return a copy of the xarray object, with data cast to a specified type.
+        """Return a copy of the xarray object, with data cast to a specified type.
 
         Leaves coordinate dtype unchanged.
 
@@ -1585,8 +1581,7 @@ def full_like(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
-    """
-    Return a new object with the same shape and type as a given object.
+    """Return a new object with the same shape and type as a given object.
 
     Returned object will be chunked if if the given object is chunked, or if chunks or chunked_array_type are specified.
 

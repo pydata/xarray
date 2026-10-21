@@ -92,8 +92,9 @@ class PydapDataStore(AbstractDataStore):
 
         Parameters
         ----------
-        ds : pydap DatasetType
-        group: str or None (default None)
+        dataset : pydap DatasetType
+            The opened pydap dataset.
+        group : str or None, default: None
             The group to open. If None, the root group is opened.
         """
         self.dataset = dataset
@@ -236,8 +237,7 @@ class PydapDataStore(AbstractDataStore):
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for streaming datasets over the internet using pydap.
+    """Backend for streaming datasets over the internet using pydap.
 
     Uses the Data Access Protocol, also known as DODS or OPeNDAP, based on
     the pydap package.

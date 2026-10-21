@@ -229,8 +229,7 @@ def _check_for_slashes_in_names(variables: Iterable[Hashable]) -> None:
 
 
 class DatasetView(Dataset):
-    """
-    An immutable Dataset-like view onto the data in a single DataTree node.
+    """An immutable Dataset-like view onto the data in a single DataTree node.
 
     In-place operations modifying this object should raise an AttributeError.
     This requires overriding all inherited constructors.
@@ -340,8 +339,7 @@ class DatasetView(Dataset):
         encoding: dict | None = None,
         close: Callable[[], None] | None = None,
     ) -> Dataset:
-        """
-        Construct a new Dataset directly.
+        """Construct a new Dataset directly.
 
         Overriding this method (along with ._replace) and modifying it to return a Dataset object
         should hopefully ensure that the return type of any method on this object is a Dataset.
@@ -371,8 +369,7 @@ class DatasetView(Dataset):
         encoding: dict | Default | None = _default,
         inplace: bool = False,
     ) -> Dataset:
-        """
-        Return a new Dataset with replaced attributes.
+        """Return a new Dataset with replaced attributes.
 
         Overriding this method (along with ._construct_direct) and modifying it to return a Dataset object
         should hopefully ensure that the return type of any method on this object is a Dataset.
@@ -484,8 +481,7 @@ class DataTree(
     TreeAttrAccessMixin,
     Mapping[str, "DataArray | DataTree"],
 ):
-    """
-    A tree-like hierarchical collection of xarray objects.
+    """A tree-like hierarchical collection of xarray objects.
 
     Attempts to present an API like that of xarray.Dataset, but methods are wrapped to also update all the tree's child nodes.
     """
@@ -538,8 +534,7 @@ class DataTree(
         children: Mapping[str, DataTree] | None = None,
         name: str | None = None,
     ):
-        """
-        Create a single node of a DataTree.
+        """Create a single node of a DataTree.
 
         The node may optionally contain data in the form of data and coordinate
         variables, stored in the same way as data is stored in an
@@ -553,10 +548,6 @@ class DataTree(
             Any child nodes of this node.
         name : str, optional
             Name for this node of the tree.
-
-        Returns
-        -------
-        DataTree
 
         See Also
         --------
@@ -691,8 +682,7 @@ class DataTree(
 
     @property
     def dataset(self) -> DatasetView:
-        """
-        An immutable Dataset-like view onto the data in this node.
+        """An immutable Dataset-like view onto the data in this node.
 
         Includes inherited coordinates and indexes from parent nodes.
 
@@ -717,8 +707,7 @@ class DataTree(
     def to_dataset(
         self, inherit: bool | Literal["all_coords", "indexes"] = True
     ) -> Dataset:
-        """
-        Return the data in this node as a new xarray.Dataset object.
+        """Return the data in this node as a new xarray.Dataset object.
 
         Parameters
         ----------
@@ -997,8 +986,7 @@ class DataTree(
     def get(  # type: ignore[override]
         self: DataTree, key: str, default: DataTree | DataArray | None = None
     ) -> DataTree | DataArray | None:
-        """
-        Access child nodes, variables, or coordinates stored in this node.
+        """Access child nodes, variables, or coordinates stored in this node.
 
         Returned object will be either a DataTree or DataArray object depending on whether the key given points to a
         child or variable.
@@ -1018,8 +1006,7 @@ class DataTree(
             return default
 
     def __getitem__(self: DataTree, key: str) -> DataTree | DataArray:
-        """
-        Access child nodes, variables, or coordinates stored anywhere in this tree.
+        """Access child nodes, variables, or coordinates stored anywhere in this tree.
 
         Returned object will be either a DataTree or DataArray object depending on whether the key given points to a
         child or variable.
@@ -1053,8 +1040,7 @@ class DataTree(
 
     @override
     def _set(self, key: str, val: DataTree | CoercibleValue) -> None:
-        """
-        Set the child node or variable with the specified key to value.
+        """Set the child node or variable with the specified key to value.
 
         Counterpart to the public .get method, and also only works on the immediate node, not other nodes in the tree.
         """
@@ -1075,8 +1061,7 @@ class DataTree(
         key: str,
         value: Any,
     ) -> None:
-        """
-        Add either a child node or an array to the tree, at any position.
+        """Add either a child node or an array to the tree, at any position.
 
         Data can be added anywhere, and new nodes will be created to cross the path to the new location if necessary.
 
@@ -1132,8 +1117,7 @@ class DataTree(
             | Mapping[str, DataTree | DataArray | Variable]
         ),
     ) -> None:
-        """
-        Update this node's children and / or variables.
+        """Update this node's children and / or variables.
 
         Just like `dict.update` this is an in-place operation.
         """
@@ -1170,8 +1154,7 @@ class DataTree(
     def assign(
         self, items: Mapping[Any, Any] | None = None, **items_kwargs: Any
     ) -> DataTree:
-        """
-        Assign new data variables or child nodes to a DataTree.
+        """Assign new data variables or child nodes to a DataTree.
 
         Returns a new object with all the original items in addition to the new ones.
 
@@ -1213,8 +1196,7 @@ class DataTree(
     def drop_nodes(
         self: DataTree, names: str | Iterable[str], *, errors: ErrorOptions = "raise"
     ) -> DataTree:
-        """
-        Drop child nodes from this node.
+        """Drop child nodes from this node.
 
         Parameters
         ----------
@@ -1283,8 +1265,7 @@ class DataTree(
         name: str | None = None,
         nested: bool = False,
     ) -> Self:
-        """
-        Create a datatree from a dictionary of data objects, organised by paths into the tree.
+        """Create a datatree from a dictionary of data objects, organised by paths into the tree.
 
         Parameters
         ----------
@@ -1491,8 +1472,7 @@ class DataTree(
         return obj
 
     def to_dict(self, relative: bool = False) -> dict[str, Dataset]:
-        """
-        Create a dictionary mapping of paths to the data contained in those nodes.
+        """Create a dictionary mapping of paths to the data contained in those nodes.
 
         Parameters
         ----------
@@ -1550,8 +1530,7 @@ class DataTree(
         return DataVariables(self.to_dataset())
 
     def isomorphic(self, other: DataTree) -> bool:
-        """
-        Check whether two DataTrees are isomorphic.
+        """Check whether two DataTrees are isomorphic.
 
         Two DataTrees are considered isomorphic if the set of paths to their
         descendent nodes are the same.
@@ -1574,8 +1553,7 @@ class DataTree(
         return diff_treestructure(self, other) is None
 
     def equals(self, other: DataTree) -> bool:
-        """
-        Check whether two DataTrees are equal.
+        """Check whether two DataTrees are equal.
 
         Two DataTrees are equal if they have isomorphic node structures, with
         matching node names, and if they have matching variables and
@@ -1606,8 +1584,7 @@ class DataTree(
         return set(self.parent.coords if self.parent else [])  # type: ignore[arg-type]
 
     def identical(self, other: DataTree) -> bool:
-        """
-        Check whether two DataTrees are identical.
+        """Check whether two DataTrees are identical.
 
         Like equals, but also checks attributes on all datasets, variables and
         coordinates, and requires that any inherited coordinates at the tree
@@ -1639,8 +1616,7 @@ class DataTree(
         )
 
     def filter(self: DataTree, filterfunc: Callable[[DataTree], bool]) -> DataTree:
-        """
-        Filter nodes according to a specified condition.
+        """Filter nodes according to a specified condition.
 
         Returns a new tree containing only the nodes in the original tree for which `fitlerfunc(node)` is True.
         Will also contain empty nodes at intermediate positions if required to support leaves.
@@ -1668,8 +1644,7 @@ class DataTree(
         return DataTree.from_dict(filtered_nodes, name=self.name)
 
     def filter_like(self, other: DataTree) -> DataTree:
-        """
-        Filter a datatree like another datatree.
+        """Filter a datatree like another datatree.
 
         Returns a new tree containing only the nodes in the original tree which are also present in the other tree.
 
@@ -1715,8 +1690,7 @@ class DataTree(
         return self.filter(lambda node: node.relative_to(self) in other_keys)
 
     def prune(self, drop_size_zero_vars: bool = False) -> DataTree:
-        """
-        Remove empty nodes from the tree.
+        """Remove empty nodes from the tree.
 
         Returns a new tree containing only nodes that contain data variables with actual data.
         Intermediate nodes are kept if they are required to support non-empty children.
@@ -1783,8 +1757,7 @@ class DataTree(
         return self.filter(non_empty_cond)
 
     def match(self, pattern: str) -> DataTree:
-        """
-        Return nodes with paths matching pattern.
+        """Return nodes with paths matching pattern.
 
         Uses unix glob-like syntax for pattern-matching.
 
@@ -1858,8 +1831,7 @@ class DataTree(
         *args: Any,
         kwargs: Mapping[str, Any] | None = None,
     ) -> DataTree | tuple[DataTree, ...]:
-        """
-        Apply a function to every dataset in this subtree, returning a new tree which stores the results.
+        """Apply a function to every dataset in this subtree, returning a new tree which stores the results.
 
         The function will be applied to any dataset stored in this node, as well as any dataset stored in any of the
         descendant nodes. The returned tree will have the same structure as the original subtree.
@@ -2081,8 +2053,7 @@ class DataTree(
         compute: bool = True,
         **kwargs,
     ) -> memoryview | Delayed | None:
-        """
-        Write datatree contents to a netCDF file.
+        """Write datatree contents to a netCDF file.
 
         Parameters
         ----------
@@ -2195,8 +2166,7 @@ class DataTree(
         compute: bool = True,
         **kwargs,
     ) -> ZarrStore | Delayed:
-        """
-        Write datatree contents to a Zarr store.
+        """Write datatree contents to a Zarr store.
 
         Parameters
         ----------
@@ -2621,8 +2591,7 @@ class DataTree(
 
     @property
     def chunksizes(self) -> Mapping[str, Mapping[Hashable, tuple[int, ...]]]:
-        """
-        Mapping from group paths to a mapping of chunksizes.
+        """Mapping from group paths to a mapping of chunksizes.
 
         If there's no chunked data in a group, the corresponding mapping of chunksizes will be empty.
 

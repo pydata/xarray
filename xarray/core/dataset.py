@@ -1271,8 +1271,7 @@ class Dataset(
         return self._copy(deep=True, memo=memo)
 
     def as_numpy(self) -> Self:
-        """
-        Coerces wrapped data and coordinates into numpy arrays, returning a Dataset.
+        """Coerces wrapped data and coordinates into numpy arrays, returning a Dataset.
 
         See Also
         --------
@@ -1412,8 +1411,7 @@ class Dataset(
 
     @property
     def nbytes(self) -> int:
-        """
-        Total bytes consumed by the data arrays of all variables in this dataset.
+        """Total bytes consumed by the data arrays of all variables in this dataset.
 
         If the backend array for any variable does not include ``nbytes``, estimates
         the total bytes for that array based on the ``size`` and ``dtype``.
@@ -2517,8 +2515,7 @@ class Dataset(
         return formatting_html.dataset_repr(self)
 
     def info(self, buf: IO | None = None) -> None:
-        """
-        Concise summary of a Dataset variables and attributes.
+        """Concise summary of a Dataset variables and attributes.
 
         Parameters
         ----------
@@ -2554,8 +2551,7 @@ class Dataset(
 
     @property
     def chunks(self) -> Mapping[Hashable, tuple[int, ...]]:
-        """
-        Mapping from dimension names to block lengths for this dataset's data.
+        """Mapping from dimension names to block lengths for this dataset's data.
 
         If this dataset does not contain chunked arrays, the mapping will be empty.
 
@@ -2573,8 +2569,7 @@ class Dataset(
 
     @property
     def chunksizes(self) -> Mapping[Hashable, tuple[int, ...]]:
-        """
-        Mapping from dimension names to block lengths for this dataset's data.
+        """Mapping from dimension names to block lengths for this dataset's data.
 
         If this dataset does not contain chunked arrays, the mapping will be empty.
 
@@ -2734,6 +2729,13 @@ class Dataset(
         + indexer is in a valid data type
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
+
+        Yields
+        ------
+        key : Hashable
+            The dimension name.
+        indexer : int, slice, numpy.ndarray or Variable
+            The validated indexer.
         """
         from xarray.core.dataarray import DataArray
 
@@ -3508,8 +3510,7 @@ class Dataset(
         copy: bool = True,
         fill_value: Any = xrdtypes.NA,
     ) -> Self:
-        """
-        Conform this object onto the indexes of another object.
+        """Conform this object onto the indexes of another object.
 
         Only the indexes which the objects share are used. Missing values are
         filled with ``fill_value``. The default fill value is NaN.
@@ -3850,8 +3851,7 @@ class Dataset(
         method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
     ) -> Self:
-        """
-        Interpolate a Dataset onto new coordinates.
+        """Interpolate a Dataset onto new coordinates.
 
         Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
         utilizing either NumPy or SciPy interpolation routines.
@@ -5398,8 +5398,7 @@ class Dataset(
         index_cls: type[Index] = PandasMultiIndex,
         **dim_kwargs: Sequence[Hashable | EllipsisType],
     ) -> Self:
-        """
-        Stack any number of existing dimensions into a single new dimension.
+        """Stack any number of existing dimensions into a single new dimension.
 
         New dimensions will be added at the end, and by default the corresponding
         coordinate variables will be combined into a MultiIndex.
@@ -5663,8 +5662,7 @@ class Dataset(
         fill_value: Any = xrdtypes.NA,
         sparse: bool = False,
     ) -> Self:
-        """
-        Unstack existing dimensions corresponding to MultiIndexes into new dimensions.
+        """Unstack existing dimensions corresponding to MultiIndexes into new dimensions.
 
         New dimensions will be added at the end.
 
@@ -7136,8 +7134,7 @@ class Dataset(
         args: Iterable[Any] = (),
         **kwargs: Any,
     ) -> Self:
-        """
-        Apply a function to each data variable (backward compatible ``map``).
+        """Apply a function to each data variable (backward compatible ``map``).
 
         See Also
         --------
@@ -7309,8 +7306,7 @@ class Dataset(
     def _normalize_dim_order(
         self, dim_order: Sequence[Hashable] | None = None
     ) -> dict[Hashable, int]:
-        """
-        Check the validity of the provided dimensions.
+        """Check the validity of the provided dimensions.
 
         If any are provided, return the mapping between dimension name and their size.
 
@@ -7696,8 +7692,7 @@ class Dataset(
     def to_dask_dataframe(
         self, dim_order: Sequence[Hashable] | None = None, set_index: bool = False
     ) -> DaskDataFrame:
-        """
-        Convert this dataset into a dask.dataframe.DataFrame.
+        """Convert this dataset into a dask.dataframe.DataFrame.
 
         The dimensions, coordinates and data variables in this dataset form
         the columns of the DataFrame.
@@ -7779,8 +7774,7 @@ class Dataset(
     def to_dict(
         self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
-        """
-        Convert this dataset to a dictionary following xarray naming conventions.
+        """Convert this dataset to a dictionary following xarray naming conventions.
 
         Converts all variables and attributes to native Python objects
         Useful for converting to json. To avoid datetime incompatibility
@@ -8290,8 +8284,7 @@ class Dataset(
         ),
         ascending: bool = True,
     ) -> Self:
-        """
-        Sort object by labels or values (along an axis).
+        """Sort object by labels or values (along an axis).
 
         Sorts the dataset, either along specified dimensions,
         or according to values of 1-D dataarrays that share dimension
@@ -8877,8 +8870,7 @@ class Dataset(
 
     @property
     def real(self) -> Self:
-        """
-        The real part of each data variable.
+        """The real part of each data variable.
 
         See Also
         --------
@@ -8888,8 +8880,7 @@ class Dataset(
 
     @property
     def imag(self) -> Self:
-        """
-        The imaginary part of each data variable.
+        """The imaginary part of each data variable.
 
         See Also
         --------
@@ -9014,8 +9005,7 @@ class Dataset(
         kwargs: Mapping[str, Any] | None = None,
         template: DataArray | Dataset | None = None,
     ) -> T_Xarray:
-        """
-        Apply a function to each block of this Dataset.
+        """Apply a function to each block of this Dataset.
 
         .. warning::
             This method is experimental and its signature may change.
@@ -9128,8 +9118,7 @@ class Dataset(
         full: bool = False,
         cov: bool | Literal["unscaled"] = False,
     ) -> Self:
-        """
-        Least squares polynomial fit.
+        """Least squares polynomial fit.
 
         This replicates the behaviour of `numpy.polyfit` but differs by skipping
         invalid values when `skipna = True`.
@@ -9831,8 +9820,7 @@ class Dataset(
         *,
         parser: QueryParserOptions | Default = _default,
     ) -> Self | DataArray:
-        """
-        Calculate an expression supplied as a string in the context of the dataset.
+        """Calculate an expression supplied as a string in the context of the dataset.
 
         This is currently experimental; the API may change particularly around
         assignments, which currently return a ``Dataset`` with the additional variable.
@@ -10039,8 +10027,7 @@ class Dataset(
         errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
     ) -> Self:
-        """
-        Curve fitting optimization for arbitrary functions.
+        """Curve fitting optimization for arbitrary functions.
 
         Wraps :py:func:`scipy.optimize.curve_fit` with :py:func:`~xarray.apply_ufunc`.
 
@@ -10578,8 +10565,7 @@ class Dataset(
         )
 
     def weighted(self, weights: DataArray) -> DatasetWeighted:
-        """
-        Weighted Dataset operations.
+        """Weighted Dataset operations.
 
         Parameters
         ----------
@@ -10618,8 +10604,7 @@ class Dataset(
         center: bool | Mapping[Any, bool] = False,
         **window_kwargs: int,
     ) -> DatasetRolling:
-        """
-        Return a rolling window object for Datasets.
+        """Return a rolling window object for Datasets.
 
         Parameters
         ----------
@@ -10657,8 +10642,7 @@ class Dataset(
         dim: str | Iterable[Hashable],
         min_periods: int = 1,
     ) -> DatasetRolling:
-        """
-        Return an accumulating object for Datasets.
+        """Return an accumulating object for Datasets.
 
         Parameters
         ----------
@@ -10705,8 +10689,7 @@ class Dataset(
         coord_func: str | Callable | Mapping[Any, str | Callable] = "mean",
         **window_kwargs: int,
     ) -> DatasetCoarsen:
-        """
-        Coarsen object for Datasets.
+        """Coarsen object for Datasets.
 
         Parameters
         ----------
@@ -10833,8 +10816,7 @@ class Dataset(
         )
 
     def drop_attrs(self, *, deep: bool = True) -> Self:
-        """
-        Remove all attributes from the Dataset and its variables.
+        """Remove all attributes from the Dataset and its variables.
 
         Parameters
         ----------

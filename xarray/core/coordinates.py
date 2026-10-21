@@ -1001,8 +1001,7 @@ class DatasetCoordinates(Coordinates):
 
 
 class DataTreeCoordinates(Coordinates):
-    """
-    Dictionary like container for coordinates of a DataTree node (variables + indexes).
+    """Dictionary like container for coordinates of a DataTree node (variables + indexes).
 
     This collection can be passed directly to the :py:class:`~xarray.Dataset`
     and :py:class:`~xarray.DataArray` constructors via their `coords` argument.

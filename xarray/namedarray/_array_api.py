@@ -31,8 +31,7 @@ def _get_data_namespace(x: NamedArray[Any, Any, Any]) -> ModuleType:
 def astype[ShapeType, DimType: Hashable, DType: np.dtype[Any]](
     x: NamedArray[ShapeType, Any, DimType], dtype: DType, /, *, copy: bool = True
 ) -> NamedArray[ShapeType, DType, DimType]:
-    """
-    Copy an array to a specified data type irrespective of Type Promotion Rules rules.
+    """Copy an array to a specified data type irrespective of Type Promotion Rules rules.
 
     Parameters
     ----------
@@ -79,8 +78,7 @@ def imag[ShapeType, DimType: Hashable, ScalarType: np.generic](
     x: NamedArray[ShapeType, np.dtype[SupportsImag[ScalarType]], DimType],  # type: ignore[type-var]
     /,
 ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType]:
-    """
-    Return the imaginary component of each element of a complex array.
+    """Return the imaginary component of each element of a complex array.
 
     The imaginary component is returned for each element x_i of the input array x.
 
@@ -113,8 +111,7 @@ def real[ShapeType, DimType: Hashable, ScalarType: np.generic](
     x: NamedArray[ShapeType, np.dtype[SupportsReal[ScalarType]], DimType],  # type: ignore[type-var]
     /,
 ) -> NamedArray[ShapeType, np.dtype[ScalarType], DimType]:
-    """
-    Return the real component of each element of a complex array.
+    """Return the real component of each element of a complex array.
 
     The real component is returned for each element x_i of the input array x.
 
@@ -173,8 +170,7 @@ def expand_dims[DType: np.dtype[Any], DimType: Hashable](
     dim: DimType | Default = _default,
     axis: Axis = 0,
 ) -> NamedArray[Any, DType, DimType] | NamedArray[Any, DType, DimType | str]:
-    """
-    Expand the shape of an array by inserting a new dimension of size one.
+    """Expand the shape of an array by inserting a new dimension of size one.
 
     The new dimension is inserted at the position specified by dims.
 
@@ -216,8 +212,7 @@ def expand_dims[DType: np.dtype[Any], DimType: Hashable](
 def permute_dims[DType: np.dtype[Any], DimType: Hashable](
     x: NamedArray[Any, DType, DimType], axes: Axes
 ) -> NamedArray[Any, DType, DimType]:
-    """
-    Permutes the dimensions of an array.
+    """Permutes the dimensions of an array.
 
     Parameters
     ----------

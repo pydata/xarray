@@ -11,8 +11,7 @@ from xarray.core.variable import Variable
 
 
 class InMemoryDataStore(AbstractWritableDataStore):
-    """
-    Store dimensions, variables and attributes in ordered dictionaries.
+    """Store dimensions, variables and attributes in ordered dictionaries.
 
     This makes the store fast compared to stores which save to disk.
 

@@ -115,8 +115,7 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
         min_periods: int | None = None,
         center: bool | Mapping[Any, bool] = False,
     ) -> None:
-        """
-        Initialize a moving window object.
+        """Initialize a moving window object.
 
         Parameters
         ----------
@@ -132,10 +131,6 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
         center : bool or dict-like Hashable to bool, default: False
             Set the labels at the center of the window. If dict-like, set this
             property per rolling dimension.
-
-        Returns
-        -------
-        rolling : type of input argument
         """
         self.dim = []
         self.window = []
@@ -314,8 +309,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         min_periods: int | None = None,
         center: bool | Mapping[Any, bool] = False,
     ) -> None:
-        """
-        Initialize a moving window object for DataArray.
+        """Initialize a moving window object for DataArray.
 
         You should use DataArray.rolling() method to construct this object
         instead of the class constructor.
@@ -334,10 +328,6 @@ class DataArrayRolling(Rolling["DataArray"]):
         center : bool, default: False
             Set the labels at the center of the window. The default, False,
             sets the labels at the right edge of the window.
-
-        Returns
-        -------
-        rolling : type of input argument
 
         See Also
         --------
@@ -381,8 +371,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         sliding_window_view_kwargs: Mapping[Any, Any] | None = None,
         **window_dim_kwargs: Hashable,
     ) -> DataArray:
-        """
-        Convert this rolling object to xr.DataArray.
+        """Convert this rolling object to xr.DataArray.
 
         The window dimension is stacked as a new dimension.
 
@@ -884,8 +873,7 @@ class DatasetRolling(Rolling["Dataset"]):
         min_periods: int | None = None,
         center: bool | Mapping[Any, bool] = False,
     ) -> None:
-        """
-        Initialize a moving window object for Dataset.
+        """Initialize a moving window object for Dataset.
 
         You should use Dataset.rolling() method to construct this object
         instead of the class constructor.
@@ -904,10 +892,6 @@ class DatasetRolling(Rolling["Dataset"]):
         center : bool or mapping of hashable to bool, default: False
             Set the labels at the center of the window. The default, False,
             sets the labels at the right edge of the window.
-
-        Returns
-        -------
-        rolling : type of input argument
 
         See Also
         --------
@@ -1037,8 +1021,7 @@ class DatasetRolling(Rolling["Dataset"]):
         sliding_window_view_kwargs: Mapping[Any, Any] | None = None,
         **window_dim_kwargs: Hashable,
     ) -> Dataset:
-        """
-        Convert this rolling object to xr.Dataset.
+        """Convert this rolling object to xr.Dataset.
 
         The window dimension is stacked as a new dimension.
 
@@ -1157,8 +1140,7 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         side: SideOptions | Mapping[Any, SideOptions],
         coord_func: str | Callable | Mapping[Any, str | Callable],
     ) -> None:
-        """
-        Initialize a coarsen object.
+        """Initialize a coarsen object.
 
         Parameters
         ----------
@@ -1173,10 +1155,6 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
         coord_func : function (name) or mapping from coordinate name to function (name).
-
-        Returns
-        -------
-        coarsen
 
         """
         self.obj = obj
@@ -1262,8 +1240,7 @@ class Coarsen[T_Xarray: (DataArray, Dataset)]:
         keep_attrs=None,
         **window_dim_kwargs,
     ) -> T_Xarray:
-        """
-        Convert this Coarsen object to a DataArray or Dataset.
+        """Convert this Coarsen object to a DataArray or Dataset.
 
         The coarsening dimension is split or reshaped to two new dimensions.
 

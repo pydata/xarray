@@ -44,8 +44,7 @@ def _backend_options(backend):
 
 
 def _requires_rolling_method(func, *args):
-    """
-    Set up benchmarks whose first parameter is a rolling method.
+    """Set up benchmarks whose first parameter is a rolling method.
 
     Skip the methods that don't exist in older versions or in pandas (if the last
     parameter is "pandas"). asv only skips benchmarks when a setup raises

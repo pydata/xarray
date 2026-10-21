@@ -1,5 +1,4 @@
-"""
-Functions for applying functions that act on arrays to xarray's labeled data.
+"""Functions for applying functions that act on arrays to xarray's labeled data.
 
 NOTE: This module is currently large and contains various computational functionality.
 The long-term plan is to break it down into more focused submodules.
@@ -45,8 +44,7 @@ def cov(
     ddof: int = 1,
     weights: T_DataArray | None = None,
 ) -> T_DataArray:
-    """
-    Compute covariance between two DataArray objects along a shared dimension.
+    """Compute covariance between two DataArray objects along a shared dimension.
 
     Parameters
     ----------
@@ -150,8 +148,7 @@ def corr(
     dim: Dims = None,
     weights: T_DataArray | None = None,
 ) -> T_DataArray:
-    """
-    Compute the Pearson correlation coefficient between two DataArray objects.
+    """Compute the Pearson correlation coefficient between two DataArray objects.
 
     The correlation is computed along a shared dimension.
 
@@ -256,8 +253,7 @@ def _cov_corr(
     ddof: int = 0,
     method: Literal["cov", "corr"] | None = None,
 ) -> T_DataArray:
-    """
-    Compute the covariance or correlation of two arrays.
+    """Compute the covariance or correlation of two arrays.
 
     Internal method for xr.cov() and xr.corr() so we only have to
     sanitize the input arrays once and we don't repeat code.
@@ -311,8 +307,7 @@ def _cov_corr(
 def cross(
     a: DataArray | Variable, b: DataArray | Variable, *, dim: Hashable
 ) -> DataArray | Variable:
-    """
-    Compute the cross product of two (arrays of) vectors.
+    """Compute the cross product of two (arrays of) vectors.
 
     The cross product of `a` and `b` in :math:`R^3` is a vector
     perpendicular to both `a` and `b`. The vectors in `a` and `b` are

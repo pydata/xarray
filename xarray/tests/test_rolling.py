@@ -993,8 +993,7 @@ class TestDatasetRolling:
     @pytest.mark.parametrize("ds", (2,), indirect=True)
     @pytest.mark.parametrize("name", ("mean", "max"))
     def test_raise_no_warning_dask_rolling_assert_close(self, ds, name) -> None:
-        """
-        Test that no warning is raised by assert_allclose on rolling dask data.
+        """Test that no warning is raised by assert_allclose on rolling dask data.
 
         This is a puzzle — I can't easily find the source of the warning. It
         requires `assert_allclose` to be run, for the `ds` param to be 2, and is

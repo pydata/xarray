@@ -1248,8 +1248,7 @@ class ZarrBase(CFEncodedBase):
             assert original.chunks == actual.chunks
 
     def test_cache_members(self) -> None:
-        """
-        Ensure that `ZarrStore` caches its members if `cache_members` is `True`.
+        """Ensure that `ZarrStore` caches its members if `cache_members` is `True`.
 
         If `ZarrStore` is created with `cache_members` set to `True`,
         a `ZarrStore` only inspects the underlying zarr group once,
@@ -1840,8 +1839,7 @@ def get_xr_obj(
 
 
 class NoConsolidatedMetadataSupportStore(WrapperStore):
-    """
-    Store that explicitly does not support consolidated metadata.
+    """Store that explicitly does not support consolidated metadata.
 
     Useful as a proxy for stores like Icechunk, see https://github.com/zarr-developers/zarr-python/pull/3119.
     """

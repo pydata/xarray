@@ -30,8 +30,7 @@ class TreeAdapter(abc.ABC):
 
     @abc.abstractmethod
     def __init__(self, points: np.ndarray, *, options: Mapping[str, Any]):
-        """
-        Build the tree structure from the given points.
+        """Build the tree structure from the given points.
 
         Parameters
         ----------

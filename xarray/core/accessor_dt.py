@@ -283,8 +283,7 @@ class TimeAccessor[T_DataArray: DataArray]:
         return self._obj._replace(newvar, name=name)
 
     def floor(self, freq: str) -> T_DataArray:
-        """
-        Round timestamps downward to specified frequency resolution.
+        """Round timestamps downward to specified frequency resolution.
 
         Parameters
         ----------
@@ -299,8 +298,7 @@ class TimeAccessor[T_DataArray: DataArray]:
         return self._tslib_round_accessor("floor", freq)
 
     def ceil(self, freq: str) -> T_DataArray:
-        """
-        Round timestamps upward to specified frequency resolution.
+        """Round timestamps upward to specified frequency resolution.
 
         Parameters
         ----------
@@ -315,8 +313,7 @@ class TimeAccessor[T_DataArray: DataArray]:
         return self._tslib_round_accessor("ceil", freq)
 
     def round(self, freq: str) -> T_DataArray:
-        """
-        Round timestamps to specified frequency resolution.
+        """Round timestamps to specified frequency resolution.
 
         Parameters
         ----------
@@ -367,8 +364,7 @@ class DatetimeAccessor(TimeAccessor[T_DataArray]):
     """
 
     def strftime(self, date_format: str) -> T_DataArray:
-        """
-        Return an array of formatted strings specified by date_format.
+        """Return an array of formatted strings specified by date_format.
 
         The format supports the same string format as the python standard library.
         Details of the string format can be found in `python string format doc

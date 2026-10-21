@@ -287,8 +287,7 @@ def _ensure_1d(
 
 @dataclass
 class ResolvedGrouper[T_DataWithCoords: DataWithCoords]:
-    """
-    Wrapper around a Grouper object.
+    """Wrapper around a Grouper object.
 
     The Grouper object represents an abstract instruction to group an object.
     The ResolvedGrouper object is a concrete version that contains all the common
@@ -511,8 +510,7 @@ def _resolve_group(
 
 @dataclass
 class ComposedGrouper:
-    """
-    Helper class for multi-variable GroupBy.
+    """Helper class for multi-variable GroupBy.
 
     This satisfies the Grouper interface, but is awkward to wrap in ResolvedGrouper.
     For one, it simply re-infers a new EncodedGroups using known information
@@ -649,8 +647,8 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         ----------
         obj : Dataset or DataArray
             Object to group.
-        grouper : Grouper
-            Grouper object
+        groupers : tuple of ResolvedGrouper
+            The resolved groupers to group by.
         restore_coord_dims : bool, default: True
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -714,8 +712,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
         return self._sizes
 
     def shuffle_to_chunks(self, chunks: T_Chunks | None = None) -> T_Xarray:
-        """
-        Sort or "shuffle" the underlying object.
+        """Sort or "shuffle" the underlying object.
 
         "Shuffle" means the object is sorted so that all group members occur sequentially,
         in the same chunk. Multiple groups may occur in the same chunk.
@@ -1570,8 +1567,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
     def first(
         self, skipna: bool | None = None, keep_attrs: bool | None = None
     ) -> T_Xarray:
-        """
-        Return the first element of each group along the group dimension.
+        """Return the first element of each group along the group dimension.
 
         Parameters
         ----------
@@ -1591,8 +1587,7 @@ class GroupBy[T_Xarray: (DataArray, Dataset)]:
     def last(
         self, skipna: bool | None = None, keep_attrs: bool | None = None
     ) -> T_Xarray:
-        """
-        Return the last element of each group along the group dimension.
+        """Return the last element of each group along the group dimension.
 
         Parameters
         ----------
@@ -1737,8 +1732,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         return self._combine(applied, shortcut=shortcut)
 
     def apply(self, func, shortcut=False, args=(), **kwargs):
-        """
-        Backward compatible implementation of ``map``.
+        """Backward compatible implementation of ``map``.
 
         See Also
         --------
@@ -1918,8 +1912,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         return self._combine(applied)
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
-        """
-        Backward compatible implementation of ``map``.
+        """Backward compatible implementation of ``map``.
 
         See Also
         --------

@@ -54,8 +54,7 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
 
 @ensure_warnings
 def assert_isomorphic(a: DataTree, b: DataTree):
-    """
-    Assert that two DataTrees are isomorphic.
+    """Assert that two DataTrees are isomorphic.
 
     Two DataTrees are considered isomorphic if the set of paths to their
     descendent nodes are the same.
@@ -338,8 +337,7 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
 
 
 def assert_chunks_equal(a, b):
-    """
-    Assert that chunksizes along chunked dimensions are equal.
+    """Assert that chunksizes along chunked dimensions are equal.
 
     Parameters
     ----------
