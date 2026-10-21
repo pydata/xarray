@@ -14,15 +14,15 @@ Use the dask helpers from `xarray.tests` instead of importing `dask.array`
 directly. In dask-array expression test mode those helpers point at the
 registered chunk manager, so tests can run against either implementation.
 
-### DO NOT use conditional imports or skipif
+### Skip at collection time, not at runtime
 
-❌ **WRONG - Do not do this:**
+❌ **WRONG - Do not check for a dependency inside the test:**
 
 ```python
-def test_mean_with_cftime() -> None:
+def test_mean() -> None:
     if has_dask:  # WRONG!
         ds = ds.chunk({})
-        result = ds.mean()
+    result = ds.mean()
 ```
 
 ❌ **ALSO WRONG - Avoid pytest.mark.skipif in parametrize:**
@@ -40,24 +40,10 @@ def test_mean_with_cftime() -> None:
 def test_something(chunk: bool) -> None: ...
 ```
 
-✅ **CORRECT - Do this instead:**
-
-```python
-def test_mean_with_cftime() -> None:
-    # Test without dask
-    result = ds.mean()
-
-
-@requires_dask
-def test_mean_with_cftime_dask() -> None:
-    # Separate test for dask functionality
-    ds = ds.chunk({})
-    result = ds.mean()
-```
-
-✅ **OR use the `use_dask` fixture:** it runs the test once with `False` (id
-`numpy`) and once with `True` (id `dask`), and skips the dask case automatically if
-dask is not installed:
+✅ **CORRECT - Parametrize, e.g. with the `use_dask` fixture:** it runs the test
+once with `False` (id `numpy`) and once with `True` (id `dask`), and the dask case
+is skipped at collection time if dask is not installed. Sharing the test body
+avoids duplicate code and checks that numpy and dask give the same result:
 
 ```python
 def test_mean(use_dask: bool) -> None:
@@ -67,9 +53,17 @@ def test_mean(use_dask: bool) -> None:
     result = ds.mean()
 ```
 
-Use `use_dask` if the test is the same for numpy and dask apart from chunking the
-data, and separate tests if the dask case checks something specific to dask, e.g.
-that the result stays lazy.
+For other optional dependencies, mark the parameters that need them:
+
+```python
+@pytest.mark.parametrize(
+    "calendar", ["standard", pytest.param("noleap", marks=requires_cftime)]
+)
+def test_something(calendar: str) -> None: ...
+```
+
+Only write a separate test, decorated with e.g. `@requires_dask`, if it checks
+something specific to that dependency, e.g. that the result stays lazy.
 
 ### Fixtures
 
@@ -101,37 +95,10 @@ def test_cftime_functionality() -> None:
     ...
 ```
 
-### Common patterns
-
-1. **Split tests by dependency** - Don't mix optional dependency code with base functionality:
-
-   ```python
-   def test_base_functionality() -> None:
-       # Core test without optional deps
-       result = ds.mean()
-       assert result is not None
-
-
-   @requires_dask
-   def test_dask_functionality() -> None:
-       # Dask-specific test
-       ds_chunked = ds.chunk({})
-       result = ds_chunked.mean()
-       assert result is not None
-   ```
-
-2. **Check available implementations**:
-
-   ```python
-   from xarray.core.duck_array_ops import available_implementations
-
-
-   @pytest.mark.parametrize("implementation", available_implementations())
-   def test_with_available_backends(implementation: str) -> None: ...
-   ```
-
 ### Key Points
 
-- CI environments intentionally exclude certain dependencies (e.g., `all-but-dask`, `bare-minimum`)
-- A test failing in "all-but-dask" because it uses dask is a test bug, not a CI issue
+- CI environments intentionally exclude certain dependencies (e.g.,
+  `test-py314-no-dask`, `test-py312-bare-minimum`)
+- A test failing in `test-py314-no-dask` because it uses dask is a test bug, not a
+  CI issue
 - Look at similar existing tests for patterns to follow
