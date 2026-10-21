@@ -17,26 +17,22 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install build twine
+          cache: false
+          environments: build-wheels
 
       - name: Build tarball and wheels
         id: build
         run: |
           git clean -xdf
           git restore -SW .
-          python -m build
+          pixi run build-wheels
 
       - name: Check built artifacts
         id: check
         run: |
-          python -m twine check --strict dist/*
+          pixi run -e build-wheels python -m twine check --strict dist/*
           pwd
           if [ -f dist/xarray-0.0.0.tar.gz ]; then
               echo "❌ INVALID VERSION NUMBER"
