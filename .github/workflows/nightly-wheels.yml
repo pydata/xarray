@@ -30,8 +30,6 @@ jobs:
       - name: Build tarball and wheels
         id: build
         run: |
-          git clean -xdf
-          git restore -SW .
           pixi run build-wheels
 
       - name: Check built artifacts
