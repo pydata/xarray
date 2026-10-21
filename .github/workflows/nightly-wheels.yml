@@ -6,8 +6,13 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-artifacts:
+    name: Build artifacts
     runs-on: ubuntu-latest
     if: github.repository == 'pydata/xarray'
 
@@ -47,6 +52,7 @@ jobs:
           path: dist
 
   upload:
+    name: Publish artifacts
     needs: build-artifacts
     # if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
@@ -56,7 +62,7 @@ jobs:
 
     permissions:
       contents: read
-      issues: write
+      issues: write # report failing uploads
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
