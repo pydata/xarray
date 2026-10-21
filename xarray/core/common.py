@@ -12,8 +12,6 @@ from typing import (
     Any,
     Concatenate,
     Generic,
-    ParamSpec,
-    TypeVar,
     Union,
     overload,
     override,
@@ -57,7 +55,6 @@ if TYPE_CHECKING:
         DatetimeLike,
         DTypeLikeSave,
         ScalarOrArray,
-        Self,
         SideOptions,
         T_Chunks,
         T_DataWithCoords,
@@ -68,11 +65,7 @@ if TYPE_CHECKING:
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
-
-T_Resample = TypeVar("T_Resample", bound="Resample")
-C = TypeVar("C")
-T = TypeVar("T")
-P = ParamSpec("P")
+    from typing import Self
 
 
 class ImplementsArrayReduce:
@@ -530,8 +523,8 @@ class DataWithCoords(AttrAccessMixin):
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
-    def _calc_assign_results(
-        self: C, kwargs: Mapping[Any, T | Callable[[C], T]]
+    def _calc_assign_results[T](
+        self, kwargs: Mapping[Any, T | Callable[[Self], T]]
     ) -> dict[Hashable, T]:
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
@@ -738,7 +731,7 @@ class DataWithCoords(AttrAccessMixin):
         return out
 
     @overload
-    def pipe(
+    def pipe[T, **P](
         self,
         func: Callable[Concatenate[Self, P], T],
         *args: P.args,
@@ -746,14 +739,14 @@ class DataWithCoords(AttrAccessMixin):
     ) -> T: ...
 
     @overload
-    def pipe(
+    def pipe[T](
         self,
         func: tuple[Callable[..., T], str],
         *args: Any,
         **kwargs: Any,
     ) -> T: ...
 
-    def pipe(
+    def pipe[T, **P](
         self,
         func: Callable[Concatenate[Self, P], T] | tuple[Callable[P, T], str],
         *args: P.args,
@@ -933,7 +926,7 @@ class DataWithCoords(AttrAccessMixin):
 
         return RollingExp(self, window, window_type)
 
-    def _resample(
+    def _resample[T_Resample: "Resample"](
         self,
         resample_cls: type[T_Resample],
         indexer: Mapping[Hashable, ResampleCompatible | Resampler] | None,

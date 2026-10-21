@@ -61,8 +61,9 @@ from xarray.core.types import PDDatetimeUnitOptions
 from xarray.core.utils import attempt_import, emit_user_level_warning, is_scalar
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from xarray.coding.cftime_offsets import BaseCFTimeOffset
-    from xarray.core.types import Self
 
 
 # constants for cftimeindex.repr
