@@ -147,6 +147,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Writing timezone-aware datetimes, e.g. a coordinate created from a
+  :py:class:`pandas.DatetimeIndex` with a timezone, to netCDF or zarr no longer
+  fails. Following the CF conventions, they are encoded as UTC, or relative to
+  the offset in ``encoding["units"]`` if given, and are decoded as
+  timezone-naive UTC datetimes (:issue:`3320`).
 - Encoding a string variable whose ``char_dim_name`` has characters after its
   last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
   not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).
