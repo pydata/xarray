@@ -341,6 +341,7 @@ rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
 [feature.build-wheels.dependencies]
 python-build = "*"
 python = "3.14.*"
+twine = "*"
 
 [feature.build-wheels.tasks]
 build-wheels = { cmd = "python -m build .", cwd = "." }
