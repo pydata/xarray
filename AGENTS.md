@@ -2,22 +2,26 @@
 
 ## Setup
 
-```bash
-uv sync
-```
+Development environments are managed with [pixi](https://pixi.sh), the same ones
+CI uses (see `[environments]` in `pixi.toml`). They are installed on first use.
 
 ## Run tests
 
 ```bash
-uv run pytest xarray -n auto  # All tests in parallel
-uv run pytest xarray/tests/test_dataarray.py  # Specific file
+pixi run -e test-py313 -- python -m pytest xarray -n auto  # All tests in parallel
+pixi run -e test-py313 -- python -m pytest xarray/tests/test_dataarray.py  # Specific file
 ```
+
+Environments like `test-py314-no-dask` or `test-py312-bare-minimum` run the tests
+without some optional dependencies.
+
+See `xarray/tests/AGENTS.md` for guidelines on writing tests.
 
 ## Linting & type checking
 
 ```bash
-pre-commit run --all-files  # Includes ruff and other checks
-uv run dmypy run  # Type checking with mypy
+pixi exec pre-commit run --all-files  # Includes ruff and other checks
+pixi run -e test-py314-with-typing -- python -m mypy  # Type checking with mypy
 ```
 
 ## Code Style Guidelines
@@ -31,6 +35,11 @@ uv run dmypy run  # Type checking with mypy
   1. Standard library imports
   2. Related third-party imports
   3. Local application/library specific imports
+
+### Type hints
+
+- Always add type hints to every function and method you create or edit,
+  including tests (`-> None`), fixtures and helpers
 
 ## CI
 
