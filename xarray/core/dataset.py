@@ -1447,6 +1447,8 @@ class Dataset(
         """
         from xarray.core.formatting import shorten_list_repr
 
+        if isinstance(key, Iterator):
+            key = list(key)
         if utils.is_dict_like(key):
             return self.isel(**key)
         if utils.hashable(key):
@@ -1494,6 +1496,8 @@ class Dataset(
         """
         from xarray.core.dataarray import DataArray
 
+        if isinstance(key, Iterator):
+            key = list(key)
         if utils.is_dict_like(key):
             # check for consistency and convert value to dataset
             value = self._setitem_check(key, value)

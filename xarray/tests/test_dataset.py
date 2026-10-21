@@ -4610,6 +4610,23 @@ class TestDataset:
         expected3 = data.isel(dim1=0)
         assert_identical(expected3, actual3)
 
+    def test_getitem_iterator(self) -> None:
+        data = create_test_data()
+        keys = iter(["var1", "var2"])
+
+        actual = data[keys]
+
+        expected = data[["var1", "var2"]]
+        assert_identical(expected, actual)
+
+    def test_setitem_iterator(self) -> None:
+        actual = Dataset({"a": 0, "b": 0})
+
+        actual[iter(["a", "b"])] = [1, 2]
+
+        expected = Dataset({"a": 1, "b": 2})
+        assert_identical(expected, actual)
+
     def test_getitem_hashable(self) -> None:
         data = create_test_data()
         data[(3, 4)] = data["var1"] + 1
