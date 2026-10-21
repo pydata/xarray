@@ -55,7 +55,6 @@ if TYPE_CHECKING:
         DatetimeLike,
         DTypeLikeSave,
         ScalarOrArray,
-        Self,
         SideOptions,
         T_Chunks,
         T_DataWithCoords,
@@ -65,6 +64,8 @@ if TYPE_CHECKING:
     from xarray.groupers import Resampler
 
     DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
+
+    from typing import Self
 
 
 class ImplementsArrayReduce:
@@ -521,8 +522,8 @@ class DataWithCoords(AttrAccessMixin):
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
-    def _calc_assign_results[C, T](
-        self: C, kwargs: Mapping[Any, T | Callable[[C], T]]
+    def _calc_assign_results[T](
+        self, kwargs: Mapping[Any, T | Callable[[Self], T]]
     ) -> dict[Hashable, T]:
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
