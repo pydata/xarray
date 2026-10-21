@@ -1,11 +1,10 @@
 from collections.abc import Hashable, Iterable, Mapping, Sequence
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 
 from xarray import Variable
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.types import Self
 
 
 class ScalarIndex(Index):

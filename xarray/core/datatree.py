@@ -22,6 +22,7 @@ from typing import (
     Concatenate,
     Literal,
     NoReturn,
+    Self,
     Union,
     overload,
     override,
@@ -51,7 +52,6 @@ from xarray.core.indexes import Index, Indexes
 from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.options import _get_keep_attrs
 from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
-from xarray.core.types import Self
 from xarray.core.utils import (
     Default,
     FilteredMapping,
