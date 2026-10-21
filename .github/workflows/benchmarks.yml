@@ -126,14 +126,17 @@ jobs:
             echo "## $title"
             echo
             if [ $status -eq 0 ] && [ -n "$changes" ]; then
-              # replace asv's markers by something more fun
+              # replace asv's markers by something more fun, and separate the tables
+              # of the different groups by a blank line: with --only-changed, asv
+              # prints them right after each other, which markdown renders as one table
               sed -E \
                 -e 's/^\| - +\|/| 🚀 |/' \
                 -e 's/^\| \+ +\|/| 🐌 |/' \
                 -e 's/^\| ! +\|/| 💥 |/' \
                 -e 's/^\| \* +\|/| 🩹 |/' \
                 -e 's/^\| x +\|/| 🤷 |/' \
-                <<< "$compare"
+                <<< "$compare" \
+                | awk '/^\| Change / && NR > 1 { print "" } { print }'
               echo
               echo "🚀 better · 🐌 worse · 💥 now failing · 🩹 fixed · 🤷 not comparable"
               echo
