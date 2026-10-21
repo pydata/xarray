@@ -1025,9 +1025,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             ):
                 tick.label1.set_fontsize(fontsize)
 
-    def map(
-        self, func: Callable, *args: Hashable, **kwargs: Any
-    ) -> Self:
+    def map(self, func: Callable, *args: Hashable, **kwargs: Any) -> Self:
         """
         Apply a plotting function to each facet's subset of the data.
 
