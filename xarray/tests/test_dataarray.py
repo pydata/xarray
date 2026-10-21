@@ -3871,6 +3871,7 @@ class TestDataArray:
         )
 
     @requires_dask
+    @requires_pyarrow
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
