@@ -36,6 +36,11 @@ pixi run -e test-py314-with-typing -- python -m mypy  # Type checking with mypy
   2. Related third-party imports
   3. Local application/library specific imports
 
+### Type hints
+
+- Always add type hints to every function and method you create or edit,
+  including tests (`-> None`), fixtures and helpers
+
 ## CI
 
 - The `test-py314 (flaky)` job runs tests that depend on external services

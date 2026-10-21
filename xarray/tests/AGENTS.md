@@ -19,7 +19,7 @@ registered chunk manager, so tests can run against either implementation.
 ❌ **WRONG - Do not do this:**
 
 ```python
-def test_mean_with_cftime():
+def test_mean_with_cftime() -> None:
     if has_dask:  # WRONG!
         ds = ds.chunk({})
         result = ds.mean()
@@ -37,19 +37,19 @@ def test_mean_with_cftime():
         False,
     ],
 )
-def test_something(chunk): ...
+def test_something(chunk: bool) -> None: ...
 ```
 
 ✅ **CORRECT - Do this instead:**
 
 ```python
-def test_mean_with_cftime():
+def test_mean_with_cftime() -> None:
     # Test without dask
     result = ds.mean()
 
 
 @requires_dask
-def test_mean_with_cftime_dask():
+def test_mean_with_cftime_dask() -> None:
     # Separate test for dask functionality
     ds = ds.chunk({})
     result = ds.mean()
@@ -84,7 +84,7 @@ When a test requires multiple optional dependencies:
 ```python
 @requires_dask
 @requires_scipy
-def test_interpolation_with_dask(): ...
+def test_interpolation_with_dask() -> None: ...
 ```
 
 ### Importing optional dependencies in tests
@@ -95,7 +95,7 @@ Skip tests at collection time with the `requires_*` decorators (or
 
 ```python
 @requires_cftime
-def test_cftime_functionality():
+def test_cftime_functionality() -> None:
     import cftime
 
     ...
@@ -106,14 +106,14 @@ def test_cftime_functionality():
 1. **Split tests by dependency** - Don't mix optional dependency code with base functionality:
 
    ```python
-   def test_base_functionality():
+   def test_base_functionality() -> None:
        # Core test without optional deps
        result = ds.mean()
        assert result is not None
 
 
    @requires_dask
-   def test_dask_functionality():
+   def test_dask_functionality() -> None:
        # Dask-specific test
        ds_chunked = ds.chunk({})
        result = ds_chunked.mean()
@@ -127,7 +127,7 @@ def test_cftime_functionality():
 
 
    @pytest.mark.parametrize("implementation", available_implementations())
-   def test_with_available_backends(implementation): ...
+   def test_with_available_backends(implementation: str) -> None: ...
    ```
 
 ### Key Points
