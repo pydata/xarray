@@ -55,26 +55,9 @@ def test_mean_with_cftime_dask():
     result = ds.mean()
 ```
 
-✅ **OR for parametrized tests, split them:**
-
-```python
-def test_something_without_dask():
-    # Test the False case
-    ...
-
-
-@requires_dask
-def test_something_with_dask():
-    # Test the True case with dask
-    ...
-```
-
-### Testing with and without dask: the `use_dask` fixture
-
-To run the same test with numpy and with dask, use the `use_dask` fixture instead
-of writing two tests. It runs the test once with `False` (id `numpy`) and once with
-`True` (id `dask`), and the dask case is skipped automatically if dask is not
-installed:
+✅ **OR use the `use_dask` fixture:** it runs the test once with `False` (id
+`numpy`) and once with `True` (id `dask`), and skips the dask case automatically if
+dask is not installed:
 
 ```python
 def test_mean(use_dask: bool) -> None:
@@ -83,6 +66,10 @@ def test_mean(use_dask: bool) -> None:
         ds = ds.chunk()
     result = ds.mean()
 ```
+
+Use `use_dask` if the test is the same for numpy and dask apart from chunking the
+data, and separate tests if the dask case checks something specific to dask, e.g.
+that the result stays lazy.
 
 ### Fixtures
 
