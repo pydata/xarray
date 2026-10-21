@@ -89,7 +89,7 @@ jobs:
           TEMPLATE: ".github/nightly-wheel-failure-template.md"
         run: |
           # Read the template
-          template=$(cat $TEMPLATE)
+          template=$(cat "$TEMPLATE")
 
           # Replace placeholders
           issue_body="${template//\{\{WORKFLOW\}\}/$GITHUB_WORKFLOW}"
