@@ -46,9 +46,7 @@ _NTICKS = 5
 
 
 def _nicetitle(coord, value, maxchar, template):
-    """
-    Put coord, value in template and truncate at maxchar
-    """
+    """Put coord, value in template and truncate at maxchar."""
     prettyvalue = format_item(value, quote_strings=False)
     title = template.format(coord=coord, value=prettyvalue)
 
@@ -165,6 +163,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         subplot_kws: dict[str, Any] | None = None,
     ) -> None:
         """
+        Initialize the FacetGrid.
+
         Parameters
         ----------
         data : DataArray or Dataset
@@ -192,7 +192,6 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             Dictionary of keyword arguments for Matplotlib subplots
             (:py:func:`matplotlib.pyplot.subplots`).
         """
-
         import matplotlib.pyplot as plt
 
         # Handle corner case of nonunique coordinates
@@ -378,7 +377,6 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         self : FacetGrid object
 
         """
-
         if kwargs.get("cbar_ax") is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
@@ -1092,7 +1090,7 @@ def _easy_facetgrid(
     **kwargs: Any,
 ) -> FacetGrid[T_DataArrayOrSet]:
     """
-    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
+    Call xarray.plot.FacetGrid from 2d plotting methods.
 
     kwargs are the arguments to 2d plotting method
     """

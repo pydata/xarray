@@ -55,6 +55,17 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The ``interpolation`` argument of ``quantile`` on :py:class:`Dataset`,
+  :py:class:`DataArray`, :py:class:`Variable` and groupby objects, deprecated
+  since v2022.03.0, has been removed. Use ``method`` instead (:issue:`11721`, :pull:`11750`).
+  By `Yagnik Trivedi <https://github.com/Yagnik-Trivedi>`_.
+- Passing keyword-only arguments of :py:meth:`Dataset.groupby`,
+  :py:meth:`DataArray.groupby`, :py:meth:`Dataset.resample` and
+  :py:meth:`DataArray.resample` positionally, deprecated since v2024.07.0, now
+  raises a ``TypeError`` (:issue:`11721`, :pull:`11744`).
+- The ``DataArray.dt.weekofyear`` and ``DataArray.dt.week`` accessors,
+  deprecated since v0.16.2, have been removed. Use
+  ``DataArray.dt.isocalendar().week`` instead (:issue:`11721`, :pull:`11742`).
 - Passing ``chunks=None`` to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`
   or :py:meth:`Variable.chunk`, deprecated since v0.17.0, now raises a
   ``TypeError``. Use ``chunks={}`` instead (:issue:`11721`, :pull:`11743`).
@@ -113,10 +124,19 @@ Breaking Changes
   Passing it to :py:func:`set_options` now raises a ``ValueError``
   (:issue:`11721`, :pull:`11729`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- The ``meta`` and ``output_sizes`` arguments of :py:func:`apply_ufunc`,
+  deprecated since v0.16.1, have been removed. Pass them in
+  ``dask_gufunc_kwargs`` instead (:issue:`11721`, :pull:`11755`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Deprecations
 ~~~~~~~~~~~~
+- Passing any argument after ``bins`` positionally to
+  :py:meth:`Dataset.groupby_bins` and :py:meth:`DataArray.groupby_bins` is
+  deprecated. It was meant to be deprecated in v2024.07.0, but the warning never
+  fired (:issue:`11721`, :pull:`11744`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 - ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
   :py:class:`Variable` now emits a ``FutureWarning`` instead of a ``UserWarning``,
   like the other deprecations, and gives the right version (2023.10).
@@ -131,6 +151,12 @@ Bug Fixes
   last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
   not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).
   By `Guillaume Marty <https://github.com/LemonCondor>`_.
+- Writing fixed-width strings no longer truncates values that are longer than the
+  width stored in ``encoding["dtype"]``, e.g. after concatenating datasets read
+  from files with strings of different lengths. A width-only difference in the
+  encoding is now ignored, while a change between bytes and unicode strings is
+  still applied (:issue:`10968`, :pull:`11752`).
+  By `Matt Van Horn <https://github.com/mvanhorn>`_.
 - :py:func:`concat` and :py:meth:`Dataset.to_dataarray` now promote input dtypes
   before broadcasting missing dimensions, avoiding large intermediate
   allocations when combining Dask arrays with different dtypes (:issue:`10928`,
@@ -176,6 +202,11 @@ Bug Fixes
   the array. Previously, e.g. ``da.cumulative("time").argmax()`` returned indices
   shifted by the number of missing values in front of the array (:issue:`11336`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`DataArray.str.replace` now respects ``case=False`` when ``regex=False``;
+  the option was silently ignored. :py:meth:`DataArray.str.contains` with
+  ``case=False, regex=False`` no longer raises ``AttributeError`` on object-dtype
+  or ``StringDType`` arrays (:pull:`11747`).
+  By `Novain Shibu <https://github.com/novain-shibu>`_.
 - Fix :py:func:`tutorial.open_dataset` and :py:func:`tutorial.open_datatree`
   with ``cache=False`` failing on Windows, because the downloaded file was
   removed while still open (:pull:`11703`).
@@ -285,14 +316,29 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix the ``preferred_chunks`` encoding of sharded Zarr variables read with
+  :py:func:`open_zarr`: it now holds the shard (outer/storage chunk) sizes
+  instead of the inner chunk sizes, so the default dask chunks align with the
+  stored shards rather than splitting them (:issue:`11460`, :pull:`11464`).
+  By `Taus Møller <https://github.com/taus>`_.
+- Fix indexing with a 0-dimensional non-NumPy array, e.g. a CuPy array, which
+  raised ``ValueError`` instead of dropping the indexed dimension (:issue:`8820`).
+  By `Trinh Quoc Anh <https://github.com/tqa236>`_.
+- Fix indexing with a 0-dimensional dask array combined with an outer indexer, e.g.
+  ``da.isel(x=dask.array.from_array(np.array(2)), y=[0, 2])``, which raised
+  ``ValueError`` (:issue:`8820`).
+  By `Trinh Quoc Anh <https://github.com/tqa236>`_.
 - Fix DatasetWeighted dropping coordinates/dimensions which are not affected by
   the reduction nor in the weights array (:issue:`11560`, :pull:`11562`).
   By `Charles Turner <https://github.com/charles-turner-1>`_.
 - :py:func:`open_dataset` and :py:func:`open_zarr` no longer ignore
-  ``use_zarr_fill_value_as_mask``. The option was not passed on to the Zarr
-  store, so the default for the Zarr format was always used, e.g. the Zarr
-  ``fill_value`` of a Zarr v3 array was never used as a mask (:issue:`10269`, :pull:`11748`).
-  By `Vladimir Saraikin <https://github.com/vsaraikin>`_.
+  ``use_zarr_fill_value_as_mask``, and :py:func:`open_datatree` and
+  :py:func:`open_groups` now accept it. The option was not passed on to the
+  Zarr store, so the default for the Zarr format was always used, e.g. the Zarr
+  ``fill_value`` of a Zarr v3 array was never used as a mask (:issue:`10269`,
+  :issue:`11361`, :pull:`11748`, :pull:`11663`).
+  By `Vladimir Saraikin <https://github.com/vsaraikin>`_ and
+  `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - :py:meth:`DataArray.interp` and :py:meth:`Dataset.interp` now return the
   dtype they report for dask arrays. Float32 data could be computed as float64
   depending on the method and the coordinate dtypes, which also made a later
@@ -389,6 +435,12 @@ Internal Changes
 - Parameterize and skip the asv benchmarks with the decorators of
   ``asv_runner.benchmarks.mark``, so slow benchmarks are no longer discovered
   in CI instead of being skipped in their ``setup`` (:issue:`8353`, :pull:`11709`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Lint docstrings with ruff's pydocstyle rules, including the order of the
+  numpydoc sections, and fix the existing violations (:pull:`11763`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Check the style of docstring summaries with ruff (a single line in imperative
+  mood, ending with a period) and fix the existing violations (:pull:`11769`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 

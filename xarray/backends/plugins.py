@@ -132,7 +132,7 @@ def list_engines() -> dict[str, BackendEntrypoint]:
 
 
 def refresh_engines() -> None:
-    """Refreshes the backend engines based on installed packages."""
+    """Refresh the backend engines based on installed packages."""
     list_engines.cache_clear()
 
 

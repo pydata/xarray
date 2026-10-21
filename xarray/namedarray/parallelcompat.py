@@ -1,4 +1,6 @@
 """
+Experimental support for multiple parallel computing frameworks in xarray.
+
 The code in this module is an experiment in going from N=1 to N=2 parallel computing frameworks in xarray.
 It could later be used as the basis for a public interface allowing any N frameworks to interoperate with xarray,
 but for now it is just a private experiment.
@@ -70,7 +72,6 @@ def load_chunkmanagers(
     entrypoints: Sequence[EntryPoint],
 ) -> dict[str, ChunkManagerEntrypoint[Any]]:
     """Load entrypoints and instantiate chunkmanagers only once."""
-
     loaded_entrypoints = {}
     for entrypoint in entrypoints:
         try:
@@ -97,7 +98,6 @@ def guess_chunkmanager(
     If the name of a specific ChunkManager is given (e.g. "dask"), then use that.
     Else use whatever is installed, defaulting to dask if there are multiple options.
     """
-
     available_chunkmanagers = list_chunkmanagers()
 
     if manager is None:
@@ -139,12 +139,11 @@ def guess_chunkmanager(
 
 def get_chunked_array_type(*args: Any) -> ChunkManagerEntrypoint[Any]:
     """
-    Detects which parallel backend should be used for given set of arrays.
+    Detect which parallel backend should be used for given set of arrays.
 
     Also checks that all arrays are handled by the same chunk manager (i.e. not a mix of
     cubed and dask).
     """
-
     # TODO this list is probably redundant with something inside xarray.apply_ufunc
     ALLOWED_NON_CHUNKED_TYPES = {int, float, np.ndarray}
 
@@ -213,7 +212,7 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
 
     @abstractmethod
     def __init__(self) -> None:
-        """Used to set the array_cls attribute at import time."""
+        """Set the array_cls attribute at import time."""
         raise NotImplementedError()
 
     def is_chunked_array(self, data: duckarray[Any, Any]) -> bool:
@@ -330,7 +329,7 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         **kwargs: Any,
     ) -> Any:
         """
-        Changes the chunking pattern of the given array.
+        Change the chunking pattern of the given array.
 
         Called when the .chunk method is called on an xarray object that is already chunked.
 
@@ -373,7 +372,7 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         self, *data: T_ChunkedArray | Any, **kwargs: Any
     ) -> tuple[np.ndarray[Any, DType], ...]:
         """
-        Computes one or more chunked arrays, returning them as eager numpy arrays.
+        Compute one or more chunked arrays, returning them as eager numpy arrays.
 
         Called anytime something needs to computed, including multiple arrays at once.
         Used by `.compute`, `.persist`, `.values`.
@@ -455,6 +454,8 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         keepdims: bool = False,
     ) -> T_ChunkedArray:
         """
+        Reduce an array along one or more axes.
+
         A general version of array reductions along one or more axes.
 
         Used inside some reductions like nanfirst, which is used by ``groupby.first``.
@@ -790,7 +791,6 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         chunk_size : int
             The chunk size in bytes.
         """
-
         raise NotImplementedError(
             "For 'auto' rechunking of cftime arrays, get_auto_chunk_size must be implemented by the chunk manager"
         )

@@ -26,6 +26,7 @@ class AbstractStyle:
     def __init__(self, vertical: str, cont: str, end: str):
         """
         Tree Render Style.
+
         Args:
             vertical: Sign for vertical line.
             cont: Chars for a continued branch.
@@ -87,6 +88,7 @@ class RenderDataTree:
     ):
         """
         Render tree starting at `node`.
+
         Keyword Args:
             style (AbstractStyle): Render Style.
             childiter: Child iterator. Note, due to the use of node.children.values(),
@@ -105,7 +107,6 @@ class RenderDataTree:
 
         Examples
         --------
-
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree
@@ -252,7 +253,6 @@ class RenderDataTree:
 
         Examples
         --------
-
         >>> from xarray import Dataset
         >>> from xarray.core.datatree import DataTree
         >>> from xarray.core.datatree_render import RenderDataTree

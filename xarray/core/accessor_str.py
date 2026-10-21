@@ -466,6 +466,11 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         concatenated : same type as values
 
+        See Also
+        --------
+        pandas.Series.str.cat
+        str.join
+
         Examples
         --------
         Create a string array
@@ -504,11 +509,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['4 bb 3.4  test', '4, bb, 3.4, , test'],
                 ['4 cccc 3.4  test', '4, cccc, 3.4, , test']]], dtype='<U24')
         Dimensions without coordinates: X, Y, ZZ
-
-        See Also
-        --------
-        pandas.Series.str.cat
-        str.join
         """
         sep = self._stringify(sep)
         others = tuple(self._stringify(x) for x in others)
@@ -549,6 +549,11 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         joined : same type as values
 
+        See Also
+        --------
+        pandas.Series.str.join
+        str.join
+
         Examples
         --------
         Create an array
@@ -572,11 +577,6 @@ class StringAccessor[T_DataArray: DataArray]:
         array([['a-bab-abc', 'a_bab_abc'],
                ['abcd--abcdef', 'abcd__abcdef']], dtype='<U12')
         Dimensions without coordinates: X, ZZ
-
-        See Also
-        --------
-        pandas.Series.str.join
-        str.join
         """
         if self._obj.ndim > 1 and dim is None:
             raise ValueError("Dimension must be specified for multidimensional arrays.")
@@ -632,6 +632,10 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         formatted : same type as values
 
+        See Also
+        --------
+        str.format
+
         Examples
         --------
         Create an array to format.
@@ -666,10 +670,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['egg and lancelot are like a duck',
                  'egg and arthur are like a duck']]], dtype='<U33')
         Dimensions without coordinates: X, Y, ZZ
-
-        See Also
-        --------
-        str.format
         """
         args = tuple(self._stringify(x) for x in args)
         kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
@@ -1008,7 +1008,7 @@ class StringAccessor[T_DataArray: DataArray]:
         return self._apply(func=lambda x: x.isnumeric(), dtype=bool)
 
     def isspace(self) -> T_DataArray:
-        """
+        r"""
         Check whether all characters in each string are spaces.
 
         Returns
@@ -1018,10 +1018,10 @@ class StringAccessor[T_DataArray: DataArray]:
 
         Examples
         --------
-        >>> da = xr.DataArray(["", " ", "\\t", "\\n"], dims="x")
+        >>> da = xr.DataArray(["", " ", "\t", "\n"], dims="x")
         >>> da
         <xarray.DataArray (x: 4)> Size: 16B
-        array(['', ' ', '\\t', '\\n'], dtype='<U1')
+        array(['', ' ', '\t', '\n'], dtype='<U1')
         Dimensions without coordinates: x
         >>> isspace = da.str.isspace()
         >>> isspace
@@ -1344,9 +1344,7 @@ class StringAccessor[T_DataArray: DataArray]:
         width: int | Any,
         fillchar: str | bytes | Any = " ",
     ) -> T_DataArray:
-        """
-        Wrapper function to handle padding operations
-        """
+        """Handle padding operations."""
         fillchar = self._stringify(fillchar)
 
         def overfunc(x, iwidth, ifillchar):
@@ -1520,14 +1518,10 @@ class StringAccessor[T_DataArray: DataArray]:
             pat = self._stringify(pat)
             if case or case is None:
                 func = lambda x, ipat: ipat in x
-            elif self._obj.dtype.char == "U":
-                uppered = self.casefold()
-                uppat = StringAccessor(pat).casefold()  # type: ignore[type-var]  # hack?
-                return uppered.str.contains(uppat, regex=False)  # type: ignore[return-value]
+            elif self._obj.dtype.kind == "S":
+                func = lambda x, ipat: ipat.upper() in x.upper()
             else:
-                uppered = self.upper()
-                uppat = StringAccessor(pat).upper()  # type: ignore[type-var]  # hack?
-                return uppered.str.contains(uppat, regex=False)  # type: ignore[return-value]
+                func = lambda x, ipat: ipat.casefold() in x.casefold()
 
         return self._apply(func=func, func_args=(pat,), dtype=bool)
 
@@ -1732,9 +1726,10 @@ class StringAccessor[T_DataArray: DataArray]:
         side: str = "left",
     ) -> T_DataArray:
         """
-        Return lowest or highest indexes in each strings in the array
-        where the substring is fully contained between [start:end].
-        Return -1 on failure.
+        Return lowest or highest indexes of a substring in each string in the array.
+
+        Return the indexes where the substring is fully contained between
+        [start:end]. Return -1 on failure.
 
         If `start`, `end`, or 'sub` is array-like, they are broadcast
         against the array and applied elementwise.
@@ -1776,9 +1771,10 @@ class StringAccessor[T_DataArray: DataArray]:
         end: int | Any = None,
     ) -> T_DataArray:
         """
-        Return highest indexes in each strings in the array
-        where the substring is fully contained between [start:end].
-        Return -1 on failure.
+        Return highest indexes of a substring in each string in the array.
+
+        Return the indexes where the substring is fully contained between
+        [start:end]. Return -1 on failure.
 
         If `start`, `end`, or 'sub` is array-like, they are broadcast
         against the array and applied elementwise.
@@ -1809,10 +1805,11 @@ class StringAccessor[T_DataArray: DataArray]:
         side: str = "left",
     ) -> T_DataArray:
         """
-        Return lowest or highest indexes in each strings where the substring is
-        fully contained between [start:end]. This is the same as
-        ``str.find`` except instead of returning -1, it raises a ValueError
-        when the substring is not found.
+        Return lowest or highest indexes of a substring in each string in the array.
+
+        Return the indexes where the substring is fully contained between
+        [start:end]. This is the same as ``str.find`` except instead of
+        returning -1, it raises a ValueError when the substring is not found.
 
         If `start`, `end`, or 'sub` is array-like, they are broadcast
         against the array and applied elementwise.
@@ -1859,10 +1856,11 @@ class StringAccessor[T_DataArray: DataArray]:
         end: int | Any = None,
     ) -> T_DataArray:
         """
-        Return highest indexes in each strings where the substring is
-        fully contained between [start:end]. This is the same as
-        ``str.rfind`` except instead of returning -1, it raises a ValueError
-        when the substring is not found.
+        Return highest indexes of a substring in each string in the array.
+
+        Return the indexes where the substring is fully contained between
+        [start:end]. This is the same as ``str.rfind`` except instead of
+        returning -1, it raises a ValueError when the substring is not found.
 
         If `start`, `end`, or 'sub` is array-like, they are broadcast
         against the array and applied elementwise.
@@ -1962,7 +1960,22 @@ class StringAccessor[T_DataArray: DataArray]:
             )
         else:
             pat = self._stringify(pat)
-            func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
+            if case is False:
+                # Literal match, but case-insensitive: escape the pattern and
+                # return the replacement as-is so it is not parsed as a template.
+                func = lambda x, ipat, irepl, i_n: (
+                    x
+                    if i_n == 0
+                    else re.sub(
+                        re.escape(ipat),
+                        lambda _: irepl,
+                        x,
+                        count=max(i_n, 0),
+                        flags=re.IGNORECASE,
+                    )
+                )
+            else:
+                func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
         return self._apply(func=func, func_args=(pat, repl, n))
 
     def extract(
@@ -1973,8 +1986,7 @@ class StringAccessor[T_DataArray: DataArray]:
         flags: int = 0,
     ) -> T_DataArray:
         r"""
-        Extract the first match of capture groups in the regex pat as a new
-        dimension in a DataArray.
+        Extract the first match of capture groups in the regex pat as a new dimension.
 
         For each string in the DataArray, extract groups from the first match
         of regular expression pat.
@@ -2016,6 +2028,14 @@ class StringAccessor[T_DataArray: DataArray]:
         KeyError
             The given dimension is already present in the DataArray.
 
+        See Also
+        --------
+        DataArray.str.extractall
+        DataArray.str.findall
+        re.compile
+        re.search
+        pandas.Series.str.extract
+
         Examples
         --------
         Create a string array
@@ -2048,14 +2068,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['', ''],
                 ['abcdef', '101']]], dtype='<U6')
         Dimensions without coordinates: X, Y, match
-
-        See Also
-        --------
-        DataArray.str.extractall
-        DataArray.str.findall
-        re.compile
-        re.search
-        pandas.Series.str.extract
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -2121,8 +2133,7 @@ class StringAccessor[T_DataArray: DataArray]:
         flags: int = 0,
     ) -> T_DataArray:
         r"""
-        Extract all matches of capture groups in the regex pat as new
-        dimensions in a DataArray.
+        Extract all matches of capture groups in the regex pat as new dimensions.
 
         For each string in the DataArray, extract groups from all matches
         of regular expression pat.
@@ -2167,6 +2178,14 @@ class StringAccessor[T_DataArray: DataArray]:
             Either of the given dimensions is already present in the DataArray.
         KeyError
             The given dimensions names are the same.
+
+        See Also
+        --------
+        DataArray.str.extract
+        DataArray.str.findall
+        re.compile
+        re.findall
+        pandas.Series.str.extractall
 
         Examples
         --------
@@ -2219,14 +2238,6 @@ class StringAccessor[T_DataArray: DataArray]:
                  ['fef', '5543210'],
                  ['', '']]]], dtype='<U7')
         Dimensions without coordinates: X, Y, group, match
-
-        See Also
-        --------
-        DataArray.str.extract
-        DataArray.str.findall
-        re.compile
-        re.findall
-        pandas.Series.str.extractall
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -2334,6 +2345,14 @@ class StringAccessor[T_DataArray: DataArray]:
         ValueError
             `case` is set when `pat` is a compiled regular expression.
 
+        See Also
+        --------
+        DataArray.str.extract
+        DataArray.str.extractall
+        re.compile
+        re.findall
+        pandas.Series.str.findall
+
         Examples
         --------
         Create a string array
@@ -2364,14 +2383,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 list([]), list([('abcdef', '101'), ('fef', '5543210')])]],
               dtype=object)
         Dimensions without coordinates: X, Y
-
-        See Also
-        --------
-        DataArray.str.extract
-        DataArray.str.extractall
-        re.compile
-        re.findall
-        pandas.Series.str.findall
         """
         pat = self._re_compile(pat=pat, flags=flags, case=case)
 
@@ -2390,9 +2401,7 @@ class StringAccessor[T_DataArray: DataArray]:
         dim: Hashable | None,
         sep: str | bytes | Any | None,
     ) -> T_DataArray:
-        """
-        Implements logic for `partition` and `rpartition`.
-        """
+        """Implement logic for `partition` and `rpartition`."""
         sep = self._stringify(sep)
 
         if dim is None:
@@ -2503,9 +2512,7 @@ class StringAccessor[T_DataArray: DataArray]:
         sep: str | bytes | Any | None,
         maxsplit: int,
     ) -> DataArray:
-        """
-        Implements logic for `split` and `rsplit`.
-        """
+        """Implement logic for `split` and `rsplit`."""
         if sep is not None:
             sep = self._stringify(sep)
 
@@ -2577,6 +2584,12 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         splitted : same type as values or object array
 
+        See Also
+        --------
+        DataArray.str.rsplit
+        str.split
+        pandas.Series.str.split
+
         Examples
         --------
         Create a string DataArray
@@ -2647,12 +2660,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
         Dimensions without coordinates: X, Y, splitted
-
-        See Also
-        --------
-        DataArray.str.rsplit
-        str.split
-        pandas.Series.str.split
         """
         return self._splitter(
             func=self._method("split"),
@@ -2694,6 +2701,12 @@ class StringAccessor[T_DataArray: DataArray]:
         Returns
         -------
         rsplitted : same type as values or object array
+
+        See Also
+        --------
+        DataArray.str.split
+        str.rsplit
+        pandas.Series.str.rsplit
 
         Examples
         --------
@@ -2765,12 +2778,6 @@ class StringAccessor[T_DataArray: DataArray]:
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
         Dimensions without coordinates: X, Y, splitted
-
-        See Also
-        --------
-        DataArray.str.split
-        str.rsplit
-        pandas.Series.str.rsplit
         """
         return self._splitter(
             func=self._method("rsplit"),
@@ -2808,6 +2815,10 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         dummies : array of bool
 
+        See Also
+        --------
+        pandas.Series.str.get_dummies
+
         Examples
         --------
         Create a string array
@@ -2834,10 +2845,6 @@ class StringAccessor[T_DataArray: DataArray]:
         Coordinates:
           * dummies  (dummies) <U6 120B 'a' 'ab' 'abc' 'abcd' 'ab~abc'
         Dimensions without coordinates: X, Y
-
-        See Also
-        --------
-        pandas.Series.str.get_dummies
         """
         # _apply breaks on an empty array in this case
         if not self._obj.size:

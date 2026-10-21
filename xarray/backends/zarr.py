@@ -102,6 +102,7 @@ ZarrFormat = Literal[2, 3]
 
 class FillValueCoder:
     """Handle custom logic to safely encode and decode fill values in Zarr.
+
     Possibly redundant with logic in xarray/coding/variables.py but needs to be
     isolated from NetCDF-specific logic.
     """
@@ -209,7 +210,7 @@ class FillValueCoder:
 
 def encode_zarr_attr_value(value):
     """
-    Encode an attribute value as something that can be serialized as json
+    Encode an attribute value as something that can be serialized as json.
 
     Many xarray datasets / variables have numpy arrays and values. This
     function handles encoding / decoding of such items.
@@ -330,8 +331,10 @@ class ZarrArrayWrapper(BackendArray):
 
 
 def _rectilinear_encoding_error(key: str, value, name) -> TypeError:
-    """Error for a rectilinear (variable-sized) chunk or shard spec, which xarray
-    can read but not yet write."""
+    """Error for a rectilinear (variable-sized) chunk or shard spec.
+
+    xarray can read such specs but not yet write them.
+    """
     return TypeError(
         f"encoding[{key!r}]={value!r} for variable {name!r} is a rectilinear "
         "(variable-sized) grid, e.g. read from a store opened with "
@@ -345,10 +348,11 @@ def _rectilinear_encoding_error(key: str, value, name) -> TypeError:
 
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     """
+    Determine the zarr chunks for a variable.
+
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
     """
-
     # zarr chunk spec:
     # chunks : int or tuple of ints, optional
     #   Chunk shape. If not provided, will be guessed from shape and dtype.
@@ -423,7 +427,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 def _compact_chunk_sizes(
     chunk_sizes: tuple[tuple[int, ...], ...],
 ) -> tuple[int | tuple[int, ...], ...]:
-    """Replace a dask-style listing of chunk sizes with a single int along any
+    """Simplify a dask-style listing of chunk sizes along regular dimensions.
+
+    Replace a dask-style listing of chunk sizes with a single int along any
     dimension where it describes a regular grid, e.g. ((10, 10, 5),) -> (10,).
 
     Gives a consistent representation across zarr-python versions.
@@ -506,7 +512,7 @@ def extract_zarr_variable_encoding(
     zarr_format: ZarrFormat,
 ):
     """
-    Extract zarr encoding dictionary from xarray Variable
+    Extract zarr encoding dictionary from xarray Variable.
 
     Parameters
     ----------
@@ -514,12 +520,12 @@ def extract_zarr_variable_encoding(
     raise_on_invalid : bool, optional
     name: str | Hashable, optional
     zarr_format: Literal[2,3]
+
     Returns
     -------
     encoding : dict
         Zarr encoding for `variable`
     """
-
     encoding = variable.encoding.copy()
 
     safe_to_drop = {"source", "original_shape", "preferred_chunks"}
@@ -586,8 +592,9 @@ def encode_zarr_variable(
     var, needs_copy=True, name=None, *, zarr_format: ZarrFormat | None = None
 ):
     """
-    Converts a Variable into another Variable which follows some
-    of the CF conventions:
+    Convert a Variable into another Variable which follows the CF conventions.
+
+    In particular:
 
         - Nans are masked using _FillValue (or the deprecated missing_value)
         - Rescaling via: scale_factor and add_offset
@@ -626,8 +633,10 @@ def encode_zarr_variable(
 
 
 def _validate_datatypes_for_zarr_append(vname, existing_var, new_var):
-    """If variable exists in the store, confirm dtype of the data to append is compatible with
-    existing dtype.
+    """Check that the dtype of the data to append is compatible with the store.
+
+    If variable exists in the store, confirm dtype of the data to append is
+    compatible with existing dtype.
     """
     if (
         np.issubdtype(new_var.dtype, np.number)
@@ -702,7 +711,7 @@ def _put_attrs(zarr_obj, attrs):
 
 
 class ZarrStore(AbstractWritableDataStore):
-    """Store for reading and writing data via zarr"""
+    """Store for reading and writing data via zarr."""
 
     __slots__ = (
         "_align_chunks",
@@ -897,8 +906,10 @@ class ZarrStore(AbstractWritableDataStore):
     @property
     def members(self) -> dict[str, ZarrArray | ZarrGroup]:
         """
-        Model the arrays and groups contained in self.zarr_group as a dict. If `self._cache_members`
-        is true, the dict is cached. Otherwise, it is retrieved from storage.
+        Model the arrays and groups contained in self.zarr_group as a dict.
+
+        If `self._cache_members` is true, the dict is cached. Otherwise, it is
+        retrieved from storage.
         """
         if not self._cache_members:
             return self._fetch_members()
@@ -906,9 +917,7 @@ class ZarrStore(AbstractWritableDataStore):
             return self._members
 
     def _fetch_members(self) -> dict[str, ZarrArray | ZarrGroup]:
-        """
-        Get the arrays and groups defined in the zarr group modelled by this Store
-        """
+        """Get the arrays and groups defined in the zarr group of this Store."""
         return dict(self.zarr_group.members())
 
     def array_keys(self) -> tuple[str, ...]:
@@ -953,14 +962,6 @@ class ZarrStore(AbstractWritableDataStore):
         chunks = _compact_chunk_sizes(
             tuple(x if isinstance(x, tuple) else (x,) for x in chunks)
         )
-        preferred_chunks = dict(zip(dimensions, chunks, strict=True))
-
-        encoding = {
-            "chunks": chunks,
-            "preferred_chunks": preferred_chunks,
-        }
-        if array_wrapper.dtype.kind == "T":
-            encoding["dtype"] = array_wrapper.dtype
 
         try:
             shards = zarr_array.shards
@@ -969,13 +970,20 @@ class ZarrStore(AbstractWritableDataStore):
             # (i.e. outer/storage chunk) sizes instead, e.g. ((1, 2),).
             shards = _compact_chunk_sizes(zarr_array.write_chunk_sizes)
 
-        encoding.update(
-            {
-                "compressors": zarr_array.compressors,
-                "filters": zarr_array.filters,
-                "shards": shards,
-            }
-        )
+        outer_chunks = shards if shards is not None else chunks
+        preferred_chunks = dict(zip(dimensions, outer_chunks, strict=True))
+
+        encoding = {
+            "chunks": chunks,
+            "preferred_chunks": preferred_chunks,
+            "compressors": zarr_array.compressors,
+            "filters": zarr_array.filters,
+            "shards": shards,
+        }
+
+        if array_wrapper.dtype.kind == "T":
+            encoding["dtype"] = array_wrapper.dtype
+
         if self.zarr_group.metadata.zarr_format == 3:
             encoding.update({"serializer": zarr_array.serializer})
 
@@ -1057,7 +1065,9 @@ class ZarrStore(AbstractWritableDataStore):
         unlimited_dims=None,
     ):
         """
-        Top level method for putting data on this store, this method:
+        Put data on this store.
+
+        This top level method:
           - encodes variables/attributes
           - sets dimensions
           - sets variables
@@ -1262,6 +1272,8 @@ class ZarrStore(AbstractWritableDataStore):
         unlimited_dims=None,
     ):
         """
+        Set the variables on the data store.
+
         This provides a centralized method to set the variables on the data
         store.
 
@@ -1277,7 +1289,6 @@ class ZarrStore(AbstractWritableDataStore):
             List of dimension names that should be treated as unlimited
             dimensions.
         """
-
         existing_keys = self.array_keys()
         is_zarr_v3_format = self.zarr_group.metadata.zarr_format == 3
 
@@ -1814,6 +1825,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         storage_options=None,
         zarr_format=None,
+        use_zarr_fill_value_as_mask=None,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
@@ -1830,6 +1842,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidated=consolidated,
             storage_options=storage_options,
             zarr_format=zarr_format,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -1851,6 +1864,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=None,
         storage_options=None,
         zarr_format=None,
+        use_zarr_fill_value_as_mask=None,
     ) -> dict[str, Dataset]:
         filename_or_obj = _normalize_path(filename_or_obj)
 
@@ -1868,6 +1882,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidate_on_close=False,
             storage_options=storage_options,
             zarr_format=zarr_format,
+            use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
         )
 
         groups_dict = {}

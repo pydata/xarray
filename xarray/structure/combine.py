@@ -41,6 +41,8 @@ def _infer_tile_ids_from_nested_list[T](
     entry: NestedSequence[T], current_pos: tuple[int, ...]
 ) -> Iterator[tuple[tuple[int, ...], T]]:
     """
+    Iterate over a nested list of objects, yielding their positions and values.
+
     Given a list of lists (of lists...) of objects, returns an iterator
     which returns a tuple containing the index of each object in the nested
     list structure as the key, and the object. This can then be called by the
@@ -60,7 +62,6 @@ def _infer_tile_ids_from_nested_list[T](
     -------
     combined_tile_ids : dict[tuple(int, ...), obj]
     """
-
     for i, item in enumerate(entry):
         position = current_pos + (i,)
         if not isinstance(item, str) and isinstance(item, Sequence):
@@ -181,8 +182,9 @@ def _infer_concat_order_from_coords(datasets: list[Dataset] | list[DataTree]):
 
 def _check_dimension_depth_tile_ids(combined_tile_ids):
     """
-    Check all tuples are the same length, i.e. check that all lists are
-    nested to the same depth.
+    Check all tuples are the same length.
+
+    I.e. check that all lists are nested to the same depth.
     """
     tile_ids = combined_tile_ids.keys()
     nesting_depths = [len(tile_id) for tile_id in tile_ids]
@@ -222,8 +224,10 @@ def _combine_nd(
     combine_attrs: CombineAttrsOptions,
 ):
     """
-    Combines an N-dimensional structure of datasets into one by applying a
-    series of either concat and merge operations along each dimension.
+    Combine an N-dimensional structure of datasets into one.
+
+    This is done by applying a series of either concat and merge operations
+    along each dimension.
 
     No checks are performed on the consistency of the datasets, concat_dims or
     tile_IDs, because it is assumed that this has already been done.
@@ -243,7 +247,6 @@ def _combine_nd(
     -------
     combined_ds : xarray.Dataset | xarray.DataTree
     """
-
     example_tile_id = next(iter(combined_ids.keys()))
 
     n_dims = len(example_tile_id)
@@ -313,10 +316,10 @@ def _combine_1d(
     combine_attrs: CombineAttrsOptions,
 ):
     """
-    Applies either concat or merge to 1D list of datasets depending on value
-    of concat_dim
-    """
+    Apply either concat or merge to 1D list of datasets.
 
+    Which one is applied depends on the value of concat_dim.
+    """
     if concat_dim is not None:
         try:
             combined = concat(
@@ -474,8 +477,10 @@ def combine_nested(
     combine_attrs: CombineAttrsOptions = "drop",
 ) -> Dataset | DataTree:
     """
-    Explicitly combine an N-dimensional grid of datasets into one by using a
-    succession of concat and merge operations along each dimension of the grid.
+    Explicitly combine an N-dimensional grid of datasets into one.
+
+    This uses a succession of concat and merge operations along each dimension
+    of the grid.
 
     Does not sort the supplied datasets under any circumstances, so the
     datasets must be passed in the order you wish them to be concatenated. It
@@ -590,9 +595,13 @@ def combine_nested(
     -------
     combined : xarray.Dataset or xarray.DataTree
 
+    See Also
+    --------
+    concat
+    merge
+
     Examples
     --------
-
     A common task is collecting data from a parallelized simulation in which
     each process wrote out to a separate file. A domain which was decomposed
     into 4 parts, 2 each along both the x and y axes, requires organising the
@@ -676,11 +685,6 @@ def combine_nested(
     Data variables:
         temperature    (t) float64 80B -0.8878 -1.981 -0.3479 ... -0.4381 -1.253
         precipitation  (t) float64 80B 1.202 -0.3873 -0.3023 ... -0.8955 0.3869
-
-    See Also
-    --------
-    concat
-    merge
     """
     any_datasets = any(isinstance(obj, Dataset) for obj in iterate_nested(datasets))
     any_unnamed_arrays = any(
@@ -723,7 +727,7 @@ def groupby_defaultdict[T, K: Hashable](
     iter: list[T],
     key: Callable[[T], K],
 ) -> Iterator[tuple[K, Iterator[T]]]:
-    """replacement for itertools.groupby"""
+    """Group objects by key, as a replacement for itertools.groupby."""
     idx = defaultdict(list)
     for i, obj in enumerate(iter):
         idx[key(obj)].append(i)
@@ -741,8 +745,7 @@ def _combine_single_variable_hypercube(
     combine_attrs: CombineAttrsOptions,
 ):
     """
-    Attempt to combine a list of Datasets into a hypercube using their
-    coordinates.
+    Attempt to combine a list of Datasets into a hypercube using their coordinates.
 
     All provided Datasets must belong to a single variable, ie. must be
     assigned the same variable name. This precondition is not checked by this
@@ -803,9 +806,9 @@ def combine_by_coords(
     combine_attrs: CombineAttrsOptions = "no_conflicts",
 ) -> Dataset | DataArray:
     """
+    Attempt to auto-magically combine the given datasets (or data arrays) into one.
 
-    Attempt to auto-magically combine the given datasets (or data arrays)
-    into one by using dimension coordinates.
+    The combination uses dimension coordinates.
 
     This function attempts to combine a group of datasets along any number of
     dimensions into a single entity by inspecting coords and metadata and using
@@ -928,7 +931,6 @@ def combine_by_coords(
 
     Examples
     --------
-
     Combining two datasets using their common dimension coordinates. Notice
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.

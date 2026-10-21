@@ -1,4 +1,6 @@
 """
+Tutorial datasets and functions to load them.
+
 Useful for:
 
 * users learning xarray
@@ -180,8 +182,9 @@ def open_dataset(
 
 def load_dataset(*args, **kwargs) -> Dataset:
     """
-    Open, load into memory, and close a dataset from the online repository
-    (requires internet).
+    Open, load into memory, and close a dataset from the online repository.
+
+    Requires internet.
 
     If a local copy is found then always use that to avoid network traffic.
 
@@ -354,8 +357,9 @@ def open_datatree(
 
 def load_datatree(*args, **kwargs) -> DataTree:
     """
-    Open, load into memory (as a `DataTree`), and close a dataset from the online repository
-    (requires internet).
+    Open, load into memory (as a `DataTree`), and close a dataset from the repository.
+
+    The dataset is fetched from the online repository, which requires internet.
 
     If a local copy is found then always use that to avoid network traffic.
 

@@ -21,7 +21,14 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset, load_dataset, open_dataset, open_mfdataset
+from xarray import (
+    DataArray,
+    Dataset,
+    concat,
+    load_dataset,
+    open_dataset,
+    open_mfdataset,
+)
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.coders import CFTimedeltaCoder
 from xarray.coding.strings import check_vlen_dtype, create_vlen_dtype
@@ -276,7 +283,7 @@ class NetCDF3Only:
 
     @requires_scipy
     def test_dtype_coercion_error(self) -> None:
-        """Failing dtype coercion should lead to an error"""
+        """Failing dtype coercion should lead to an error."""
         for dtype, format in itertools.product(
             _nc3_dtype_coercions, self.netcdf3_formats
         ):
@@ -548,6 +555,17 @@ class DatasetIOBase:
         expected = Dataset({"x": ("t", ["ab", "cdef"])})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
+
+    # netCDF3 stores the strings as char arrays and warns that the width in
+    # char_dim_name no longer fits
+    @pytest.mark.filterwarnings("ignore:String dimension naming mismatch")
+    def test_roundtrip_longer_strings_after_concat(self) -> None:
+        # regression test for GH10968: the string width recorded in the encoding
+        # on read must not truncate longer values that are written later
+        with self.roundtrip(Dataset({"x": ("t", ["base"])})) as short:
+            combined = concat([short, Dataset({"x": ("t", ["base_case"])})], dim="t")
+            with self.roundtrip(combined) as actual:
+                assert_identical(combined, actual)
 
     def test_roundtrip_stringdtype_data(self) -> None:
         # GH11199
@@ -928,7 +946,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def test_ondisk_after_print(self) -> None:
-        """Make sure print does not load file into memory"""
+        """Make sure print does not load file into memory."""
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
             repr(on_disk)
@@ -1529,7 +1547,7 @@ class NetCDFBase(CFEncodedBase):
 
     @pytest.fixture
     def byte_attrs_dataset(self) -> dict[str, Any]:
-        """For testing issue #9407"""
+        """Create a dataset with byte attributes for testing issue #9407."""
         null_byte = b"\x00"
         other_bytes = bytes(range(1, 256))
         ds = Dataset({"x": 1}, coords={"x_coord": [1]})
@@ -2050,10 +2068,7 @@ class NetCDF4Base(NetCDFBase):
 
     @requires_netCDF4
     def test_encoding_enum__error_multiple_variable_with_changing_enum(self):
-        """
-        Given 2 variables, if they share the same enum type,
-        the 2 enum definition should be identical.
-        """
+        """Test that variables sharing an enum type need identical enum definitions."""
         with create_tmp_file() as tmp_file:
             cloud_type_dict = {"clear": 0, "cloudy": 1, "missing": 255}
             with nc4.Dataset(tmp_file, mode="w") as nc:

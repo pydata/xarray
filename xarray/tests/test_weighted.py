@@ -526,10 +526,10 @@ def test_weighted_std_bool():
 
 def expected_weighted(da, weights, dim, skipna, operation):
     """
-    Generate expected result using ``*`` and ``sum``. This is checked against
-    the result of da.weighted which uses ``dot``
-    """
+    Generate expected result using ``*`` and ``sum``.
 
+    This is checked against the result of da.weighted which uses ``dot``.
+    """
     weighted_sum = (da * weights).sum(dim=dim, skipna=skipna)
 
     if operation == "sum":
@@ -667,7 +667,6 @@ def test_weighted_operations_nonequal_coords(
     expected_value_at_weighted_quantile: float,
 ) -> None:
     """Check that weighted operations work with unequal coords.
-
 
     Parameters
     ----------

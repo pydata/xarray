@@ -109,7 +109,7 @@ def _h5netcdf_create_group(dataset, name):
 
 
 class H5NetCDFStore(WritableCFDataStore):
-    """Store for reading and writing data via h5netcdf"""
+    """Store for reading and writing data via h5netcdf."""
 
     __slots__ = (
         "_filename",

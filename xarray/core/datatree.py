@@ -341,6 +341,8 @@ class DatasetView(Dataset):
         close: Callable[[], None] | None = None,
     ) -> Dataset:
         """
+        Construct a new Dataset directly.
+
         Overriding this method (along with ._replace) and modifying it to return a Dataset object
         should hopefully ensure that the return type of any method on this object is a Dataset.
         """
@@ -370,10 +372,11 @@ class DatasetView(Dataset):
         inplace: bool = False,
     ) -> Dataset:
         """
+        Return a new Dataset with replaced attributes.
+
         Overriding this method (along with ._construct_direct) and modifying it to return a Dataset object
         should hopefully ensure that the return type of any method on this object is a Dataset.
         """
-
         if inplace:
             raise AttributeError("In-place mutation of the DatasetView is not allowed")
 
@@ -396,7 +399,7 @@ class DatasetView(Dataset):
         args: Iterable[Any] = (),
         **kwargs: Any,
     ) -> Dataset:
-        """Apply a function to each data variable in this dataset
+        """Apply a function to each data variable in this dataset.
 
         Parameters
         ----------
@@ -439,7 +442,6 @@ class DatasetView(Dataset):
             foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 16B 1.0 2.0
         """
-
         # Copied from xarray.Dataset so as not to call type(self), which causes problems (see https://github.com/xarray-contrib/datatree/issues/188).
         # TODO Refactor xarray upstream to avoid needing to overwrite this.
         if keep_attrs is None:
@@ -831,14 +833,14 @@ class DataTree(
     @override
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
-        """Places to look-up items for attribute-style access"""
+        """Places to look-up items for attribute-style access."""
         yield from self._item_sources
         yield self.attrs
 
     @override
     @property
     def _item_sources(self) -> Iterable[Mapping[Any, Any]]:
-        """Places to look-up items for key-completion"""
+        """Places to look-up items for key-completion."""
         yield self.data_vars
         yield FilteredMapping(keys=self._coord_variables, mapping=self.coords)
 
@@ -851,10 +853,10 @@ class DataTree(
     @override
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
-        See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
-        For the details.
-        """
 
+        See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        for the details.
+        """
         # TODO allow auto-completing relative string paths, e.g. `dt['path/to/../ <tab> node'`
         # Would require changes to ipython's autocompleter, see https://github.com/ipython/ipython/issues/12420
         # Instead for now we only list direct paths to all node in subtree explicitly
@@ -879,7 +881,9 @@ class DataTree(
         return list(items)
 
     def __contains__(self, key: object) -> bool:
-        """The 'in' operator will return true or false depending on whether
+        """Check whether 'key' is an array stored in the datatree or a child node.
+
+        The 'in' operator will return true or false depending on whether
         'key' is either an array stored in the datatree or a child node, or neither.
 
         String keys may be unix-like paths to a node or variable anywhere in the
@@ -920,7 +924,7 @@ class DataTree(
         return datatree_repr(self)
 
     def _repr_html_(self):
-        """Make html representation of datatree object"""
+        """Make html representation of datatree object."""
         if XR_OPTS["display_style"] == "text":
             return f"<pre>{escape(repr(self))}</pre>"
         return datatree_repr_html(self)
@@ -1029,7 +1033,6 @@ class DataTree(
         -------
         DataTree | DataArray
         """
-
         # Either:
         if utils.is_dict_like(key):
             # dict-like indexing
@@ -1168,8 +1171,9 @@ class DataTree(
         self, items: Mapping[Any, Any] | None = None, **items_kwargs: Any
     ) -> DataTree:
         """
-        Assign new data variables or child nodes to a DataTree, returning a new object
-        with all the original items in addition to the new ones.
+        Assign new data variables or child nodes to a DataTree.
+
+        Returns a new object with all the original items in addition to the new ones.
 
         Parameters
         ----------
@@ -1188,6 +1192,11 @@ class DataTree(
             A new DataTree with the new variables or children in addition to all the
             existing items.
 
+        See Also
+        --------
+        xarray.Dataset.assign
+        pandas.DataFrame.assign
+
         Notes
         -----
         Since ``kwargs`` is a dictionary, the order of your arguments may not
@@ -1195,11 +1204,6 @@ class DataTree(
         Assigning multiple items within the same ``assign`` is
         possible, but you cannot reference other variables created within the
         same ``assign`` call.
-
-        See Also
-        --------
-        xarray.Dataset.assign
-        pandas.DataFrame.assign
         """
         items = either_dict_or_kwargs(items, items_kwargs, "assign")
         dt = self.copy()
@@ -1322,7 +1326,6 @@ class DataTree(
 
         Examples
         --------
-
         Construct a tree from a dict of Dataset objects:
 
         >>> dt = DataTree.from_dict(
@@ -1538,18 +1541,18 @@ class DataTree(
 
     @property
     def coords(self) -> DataTreeCoordinates:
-        """Dictionary of xarray.DataArray objects corresponding to coordinate
-        variables
-        """
+        """Dictionary of DataArray objects corresponding to coordinate variables."""
         return DataTreeCoordinates(self)
 
     @property
     def data_vars(self) -> DataVariables:
-        """Dictionary of DataArray objects corresponding to data variables"""
+        """Dictionary of DataArray objects corresponding to data variables."""
         return DataVariables(self.to_dataset())
 
     def isomorphic(self, other: DataTree) -> bool:
         """
+        Check whether two DataTrees are isomorphic.
+
         Two DataTrees are considered isomorphic if the set of paths to their
         descendent nodes are the same.
 
@@ -1572,6 +1575,8 @@ class DataTree(
 
     def equals(self, other: DataTree) -> bool:
         """
+        Check whether two DataTrees are equal.
+
         Two DataTrees are equal if they have isomorphic node structures, with
         matching node names, and if they have matching variables and
         coordinates, all of which are equal.
@@ -1602,6 +1607,8 @@ class DataTree(
 
     def identical(self, other: DataTree) -> bool:
         """
+        Check whether two DataTrees are identical.
+
         Like equals, but also checks attributes on all datasets, variables and
         coordinates, and requires that any inherited coordinates at the tree
         root are also inherited on the other tree.
@@ -1682,7 +1689,6 @@ class DataTree(
 
         Examples
         --------
-
         >>> dt = DataTree.from_dict(
         ...     {
         ...         "/a/A": None,
@@ -1907,7 +1913,7 @@ class DataTree(
         *args: Any,
         **kwargs: Any,
     ) -> T:
-        """Apply ``func(self, *args, **kwargs)``
+        """Apply ``func(self, *args, **kwargs)``.
 
         This method replicates the pandas method of the same name.
 
@@ -2298,9 +2304,10 @@ class DataTree(
         indexers: Mapping[Any, Any],
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Self:
-        """Apply an indexing operation over the subtree, handling missing
-        dimensions and inherited coordinates gracefully by only applying
-        indexing at each node selectively.
+        """Apply an indexing operation over the subtree.
+
+        Missing dimensions and inherited coordinates are handled gracefully by only
+        applying indexing at each node selectively.
         """
         all_dims = self._get_all_dims()
         indexers = drop_dims_from_indexers(indexers, all_dims, missing_dims)
@@ -2334,8 +2341,7 @@ class DataTree(
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> Self:
-        """Returns a new data tree with each array indexed along the specified
-        dimension(s).
+        """Return a new data tree with each array indexed along the given dimension(s).
 
         This method selects values from each array using its `__getitem__`
         method, except this method does not require knowing the order of
@@ -2397,8 +2403,9 @@ class DataTree(
         drop: bool = False,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Returns a new data tree with each array indexed by tick labels
-        along the specified dimension(s).
+        """Return a new data tree with each array indexed by tick labels.
+
+        Indexing is performed along the specified dimension(s).
 
         In contrast to `DataTree.isel`, indexers for this method should use
         labels instead of integers.
@@ -2470,7 +2477,9 @@ class DataTree(
         return self._selective_indexing(apply_indexers, indexers)
 
     def load(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this datatree's data
+        """Trigger loading data into memory and return this datatree.
+
+        Manually trigger loading and/or computation of this datatree's data
         from disk or a remote source into memory and return this datatree.
         Unlike compute, the original datatree is modified and returned.
 
@@ -2525,7 +2534,9 @@ class DataTree(
         return self
 
     def compute(self, **kwargs) -> Self:
-        """Manually trigger loading and/or computation of this datatree's data
+        """Trigger loading data into memory and return a new datatree.
+
+        Manually trigger loading and/or computation of this datatree's data
         from disk or a remote source into memory and return a new datatree.
         Unlike load, the original datatree is left unaltered.
 
@@ -2552,7 +2563,7 @@ class DataTree(
         return new.load(**kwargs)
 
     def _persist_inplace(self, **kwargs) -> Self:
-        """Persist all chunked arrays in memory"""
+        """Persist all chunked arrays in memory."""
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
             path: {
@@ -2640,8 +2651,7 @@ class DataTree(
         from_array_kwargs=None,
         **chunks_kwargs: T_ChunkDimFreq,
     ) -> Self:
-        """Coerce all arrays in all groups in this tree into dask arrays with the given
-        chunks.
+        """Coerce all arrays in all groups into dask arrays with the given chunks.
 
         Non-dask arrays in this tree will be converted to dask arrays. Dask
         arrays will be rechunked to the given chunk sizes.

@@ -498,9 +498,10 @@ def line(
         When either col or row is given, returns a FacetGrid, otherwise
         a list of matplotlib Line3D objects.
 
-    See also
+    See Also
     --------
-    Use :py:func:`xarray.plot.lines` for efficient plotting of many lines.
+    :py:func:`xarray.plot.lines`
+        Efficient plotting of many lines.
     """
     # Handle facetgrids first
     if row or col:
@@ -762,7 +763,7 @@ def hist(
 
 
 def _plot1d(plotfunc):
-    """Decorator for common 1d plotting logic."""
+    """Decorate a 1d plotting function with common 1d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -1499,7 +1500,7 @@ def scatter(
 
 
 def _plot2d(plotfunc):
-    """Decorator for common 2d plotting logic."""
+    """Decorate a 2d plotting function with common 2d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -2025,7 +2026,6 @@ def imshow(
     The pixels are centered on the coordinates. For example, if the coordinate
     value is 3.2, then the pixels for those coordinates will be centered on 3.2.
     """
-
     if x.ndim != 1 or y.ndim != 1:
         raise ValueError(
             "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
@@ -2350,7 +2350,7 @@ def contourf(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> QuadContourSet:
     """
-    Filled contour plot of 2D DataArray.
+    Draw a filled contour plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.contourf`.
     """
@@ -2494,7 +2494,6 @@ def pcolormesh(
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.pcolormesh`.
     """
-
     # decide on a default for infer_intervals (GH781)
     x = np.asarray(x)
     if infer_intervals is None:

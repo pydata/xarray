@@ -538,8 +538,7 @@ class TestNestedCombine:
         assert_identical(expected, actual)
 
     def test_concat_name_symmetry(self):
-        """Inspired by the discussion on GH issue #2777"""
-
+        """Inspired by the discussion on GH issue #2777."""
         da1 = DataArray(name="a", data=[[0]], dims=["x", "y"])
         da2 = DataArray(name="b", data=[[1]], dims=["x", "y"])
         da3 = DataArray(name="a", data=[[2]], dims=["x", "y"])
@@ -956,7 +955,7 @@ class TestCombineDatasetsbyCoords:
     def test_combine_nested_combine_attrs_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        """check that combine_attrs is used on data variables and coords"""
+        """Check that combine_attrs is used on data variables and coords."""
         data1 = Dataset(
             {
                 "a": ("x", [1, 2], attrs1),
@@ -1028,7 +1027,7 @@ class TestCombineDatasetsbyCoords:
     def test_combine_by_coords_combine_attrs_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        """check that combine_attrs is used on data variables and coords"""
+        """Check that combine_attrs is used on data variables and coords."""
         data1 = Dataset(
             {"x": ("a", [0], attrs1), "y": ("a", [0], attrs1), "a": ("a", [0], attrs1)}
         )
