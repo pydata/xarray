@@ -2751,6 +2751,74 @@ def test_zarr_create_default_indexes(tmp_path, create_default_indexes) -> None:
             assert len(loaded_ds.xindexes) == 0
 
 
+def _write_encoded_times(store_path, values, units, zarr_format) -> None:
+    # "time" is an index coordinate (decoded at open), "valid_time" is not
+    # (decoded on load); both are stored with one value per chunk
+    encoded = {"units": units}
+    xr.Dataset(
+        {"valid_time": ("time", np.array(values), encoded)},
+        coords={"time": ("time", np.array(values), encoded)},
+    ).to_zarr(
+        store_path,
+        mode="w",
+        zarr_format=zarr_format,
+        encoding={"time": {"chunks": (1,)}, "valid_time": {"chunks": (1,)}},
+    )
+
+
+@requires_zarr
+@requires_dask
+@requires_cftime
+@parametrize_zarr_format
+@pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
+@pytest.mark.parametrize(
+    ("units", "values"),
+    [
+        ("hours since 2000-01-01", [0.0, 1.0, 2.0]),
+        # dates near the reference date need cftime, but these are in 2020
+        ("hours since 1-1-1 00:00:0.0", [17_700_000.0, 17_700_001.0, 17_700_002.0]),
+    ],
+)
+def test_zarr_infer_dtype_metadata_round_trip(
+    tmp_path, zarr_format, units, values
+) -> None:
+    store_path = tmp_path / "tmp.zarr"
+    _write_encoded_times(store_path, values, units, zarr_format)
+
+    with (
+        open_dataset(store_path, engine="zarr", chunks={}) as expected,
+        open_dataset(
+            store_path,
+            engine="zarr",
+            chunks={},
+            decode_times=CFDatetimeCoder(infer_dtype="metadata"),
+        ) as actual,
+    ):
+        assert actual.time.dtype == expected.time.dtype
+        assert actual.valid_time.dtype == expected.valid_time.dtype
+        assert_identical(actual.compute(), expected.compute())
+
+
+@requires_zarr
+@requires_dask
+@requires_cftime
+@parametrize_zarr_format
+@pytest.mark.filterwarnings("ignore:Unable to decode time axis")
+def test_zarr_infer_dtype_metadata_wrong_dtype_raises(tmp_path, zarr_format) -> None:
+    # dates in 2821, beyond datetime64[ns]: metadata infers datetime64[ns]
+    store_path = tmp_path / "tmp.zarr"
+    _write_encoded_times(store_path, [0, 300_000], "days since 2000-01-01", zarr_format)
+
+    with pytest.raises(ValueError, match="as inferred from metadata"):
+        # the index coordinate is decoded when the dataset is opened
+        open_dataset(
+            store_path,
+            engine="zarr",
+            chunks={},
+            decode_times=CFDatetimeCoder(infer_dtype="metadata"),
+        )
+
+
 @requires_zarr
 @pytest.mark.usefixtures("default_zarr_format")
 def test_raises_key_error_on_invalid_zarr_store(tmp_path):

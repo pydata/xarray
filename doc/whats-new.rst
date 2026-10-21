@@ -51,6 +51,13 @@ New Features
   variables of a section at once, and shows the expanded attributes and data
   more compactly and indented below their variable (:pull:`11284`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:class:`~xarray.coders.CFDatetimeCoder` accepts ``infer_dtype``. With
+  ``infer_dtype="metadata"`` the decoded dtype is inferred from ``units``,
+  ``calendar``, ``use_cftime`` and ``time_unit`` instead of reading the first
+  and last values of each time variable, which makes opening remote datasets
+  with many time variables much faster. The default ``infer_dtype="data"``
+  keeps the current behavior (:issue:`11303`, :pull:`11304`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 
 Breaking Changes
@@ -936,19 +943,6 @@ Breaking Changes
 Deprecations
 ~~~~~~~~~~~~
 
-
-Performance
-~~~~~~~~~~~
-
-- Add ``infer_dtype`` parameter to :py:class:`xarray.coders.CFDatetimeCoder`.
-  With ``infer_dtype="metadata"``, dtype inference uses only ``units``,
-  ``calendar``, ``use_cftime`` and ``time_unit`` — no data reads. This
-  significantly speeds up :py:func:`open_dataset` / :py:func:`open_datatree`
-  on remote-backed stores (zarr on S3, icechunk) with many time-encoded
-  variables. The default (``infer_dtype="data"``) preserves the current
-  behavior of reading the first and last values to verify decoding
-  (:issue:`11303`).
-  By `Alfonso Ladino <https://github.com/aladinor>`_.
 
 Bug Fixes
 ~~~~~~~~~
