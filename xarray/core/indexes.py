@@ -30,7 +30,9 @@ from xarray.core.utils import (
 )
 
 if TYPE_CHECKING:
-    from xarray.core.types import ErrorOptions, JoinOptions, Self
+    from typing import Self
+
+    from xarray.core.types import ErrorOptions, JoinOptions
     from xarray.core.variable import Variable
 
 
@@ -955,9 +957,7 @@ class PandasIndex(Index):
         return self._replace(index, dim=new_dim)
 
     @override
-    def _copy[T_PandasIndex: "PandasIndex"](
-        self: T_PandasIndex, deep: bool = True, memo: dict[int, Any] | None = None
-    ) -> T_PandasIndex:
+    def _copy(self, deep: bool = True, memo: dict[int, Any] | None = None) -> Self:
         if deep:
             # pandas is not using the memo
             index = self.index.copy(deep=True)

@@ -1078,9 +1078,7 @@ class NamedArray(
         # Return NamedArray to handle IndexVariable when data is nD
         return from_array(dims, data, attrs=self._attrs)
 
-    def _nonzero[T_NamedArrayInteger: _NamedArray[np.integer[Any], Any]](
-        self: T_NamedArrayInteger,
-    ) -> tuple[T_NamedArrayInteger, ...]:
+    def _nonzero(self) -> tuple[Self, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
@@ -1088,7 +1086,7 @@ class NamedArray(
         nonzeros = np.nonzero(cast("NDArray[np.integer[Any]]", self.data))
         _attrs = self.attrs
         return tuple(
-            cast("T_NamedArrayInteger", self._new((dim,), nz, _attrs))
+            cast("Self", self._new((dim,), nz, _attrs))
             for nz, dim in zip(nonzeros, self.dims, strict=True)
         )
 
