@@ -108,6 +108,68 @@ class ZarrBase(CFEncodedBase):
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
     version_kwargs: dict[str, Any] = {}
 
+    @skip_if_zarr_format_3("structured fill values require Zarr format 2")
+    @pytest.mark.parametrize("mask_and_scale", [True, False])
+    def test_roundtrip_structured_fill_value(self, mask_and_scale):
+        # GH10591: records, including fill records, must not be replaced by NaN.
+        dtype = np.dtype([("foo", "i4"), ("bar", "i4"), ("baz", "f2"), ("qux", "f2")])
+        fill_value = np.array((42, 1337, 3.14, 0.0), dtype=dtype)
+        data = np.zeros((4, 4), dtype=dtype)
+        data[0, 0] = fill_value
+        data[1, 1] = (11, 22, -33.0, 44.0)
+        ds = xr.Dataset({"metadata": (("x", "y"), data)})
+        ds.metadata.encoding["_FillValue"] = fill_value
+        open_kwargs = {"mask_and_scale": mask_and_scale}
+
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as actual:
+            assert actual.metadata.dtype == dtype
+            np.testing.assert_array_equal(actual.metadata.values, data)
+            np.testing.assert_array_equal(
+                actual.metadata.attrs["_FillValue"], fill_value
+            )
+            # The undecoded fill value must survive another write/read cycle.
+            with self.roundtrip(actual, open_kwargs=open_kwargs) as rewritten:
+                assert rewritten.metadata.dtype == dtype
+                np.testing.assert_array_equal(rewritten.metadata.values, data)
+                np.testing.assert_array_equal(
+                    rewritten.metadata.attrs["_FillValue"], fill_value
+                )
+
+    @skip_if_zarr_format_3("structured fill values require Zarr format 2")
+    def test_structured_fill_value_region(self):
+        dtype = np.dtype([("foo", "i4"), ("bar", "f2")])
+        fill_value = np.array((42, -1.0), dtype=dtype)
+        data = np.full((4, 4), fill_value, dtype=dtype)
+        ds = xr.Dataset(
+            {
+                "metadata": (("x", "y"), data),
+                "data": (("x", "y", "z"), np.zeros((4, 4, 2))),
+            }
+        )
+        ds.metadata.encoding = {"_FillValue": fill_value, "chunks": (2, 2)}
+        ds.data.encoding = {"_FillValue": -1.0, "chunks": (2, 2, 2)}
+        region = {"x": slice(0, 2), "y": slice(0, 2), "z": slice(0, 2)}
+        update = ds.isel(region).copy(deep=True)
+        update.metadata.values[:] = (11, 22.0)
+        update.data.values[:] = 100.0
+        expected = data.copy()
+        expected[:2, :2] = update.metadata.values
+        expected_float = np.zeros((4, 4, 2))
+        expected_float[:2, :2, :] = 100.0
+
+        with self.create_zarr_target() as target:
+            self.save(ds, target, write_empty_chunks=False)
+            self.save(
+                update, target, region=region, mode="r+", write_empty_chunks=False
+            )
+            with self.open(target) as actual:
+                assert actual.metadata.dtype == dtype
+                np.testing.assert_array_equal(actual.metadata.values, expected)
+                np.testing.assert_array_equal(actual.data.values, expected_float)
+                np.testing.assert_array_equal(
+                    actual.metadata.attrs["_FillValue"], fill_value
+                )
+
     @pytest.mark.parametrize("decoded_fn, encoded_fn", MASK_AND_SCALE_DATA)
     @pytest.mark.parametrize(
         "dtype",
