@@ -147,6 +147,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Encoding a string variable whose ``char_dim_name`` has characters after its
+  last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
+  not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).
+  By `Guillaume Marty <https://github.com/LemonCondor>`_.
 - Writing fixed-width strings no longer truncates values that are longer than the
   width stored in ``encoding["dtype"]``, e.g. after concatenating datasets read
   from files with strings of different lengths. A width-only difference in the
