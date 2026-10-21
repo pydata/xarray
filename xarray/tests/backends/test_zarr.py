@@ -1249,12 +1249,14 @@ class ZarrBase(CFEncodedBase):
 
     def test_cache_members(self) -> None:
         """
-        Ensure that if `ZarrStore` is created with `cache_members` set to `True`,
+        Ensure that `ZarrStore` caches its members if `cache_members` is `True`.
+
+        If `ZarrStore` is created with `cache_members` set to `True`,
         a `ZarrStore` only inspects the underlying zarr group once,
-        and that the results of that inspection are cached.
+        and the results of that inspection are cached.
 
         Otherwise, `ZarrStore.members` should inspect the underlying zarr group each time it is
-        invoked
+        invoked.
         """
         with self.create_zarr_target() as store_target:
             zstore_mut = backends.ZarrStore.open_group(
@@ -1793,7 +1795,7 @@ class TestZarrDictStore(ZarrBase):
         expected_err_msg,
         zarr_format,
     ):
-        """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
+        """Test that async load with a too old version of zarr raises a clear error."""
         original = create_test_data()
         with self.create_zarr_target() as store:
             original.to_zarr(store, consolidated=False, zarr_format=zarr_format)
@@ -1934,7 +1936,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         use_dask: bool,
     ) -> None:
         def assert_expected_files(expected: list[str], store: str) -> None:
-            """Convenience for comparing with actual files written"""
+            """Compare the expected files with the actual files written."""
             ls = []
             test_root = os.path.join(store, "test")
             for root, _, files in os.walk(test_root):
@@ -2391,7 +2393,9 @@ class TestZarrRectilinearChunksRead:
 
     @requires_dask
     def test_read_zero_length_dim(self, tmp_path) -> None:
-        """Zarr reports no chunk sizes at all along a zero-length dimension,
+        """Test reading a zero-length dimension.
+
+        Zarr reports no chunk sizes at all along a zero-length dimension,
         which must not be passed to dask as an empty tuple.
         """
         import zarr
@@ -2411,8 +2415,10 @@ class TestZarrRectilinearChunksRead:
             assert roundtrip["var"].data.chunks == ((0,), (5, 10, 5))
 
     def test_read_rectilinear_shards(self, tmp_path) -> None:
-        """Regular inner chunks with rectilinear shards. The regular chunks
-        must be reported as an int regardless of zarr-python version.
+        """Regular inner chunks with rectilinear shards.
+
+        The regular chunks must be reported as an int regardless of zarr-python
+        version.
         """
         import zarr
 
@@ -2438,8 +2444,9 @@ class TestZarrRectilinearChunksRead:
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
     def test_write_after_read_gives_helpful_error(self, tmp_path) -> None:
-        """Writing isn't supported yet; the error should say so, not just
-        "must be an int".
+        """Writing isn't supported yet; the error should say so.
+
+        The error should not just say "must be an int".
         """
         import zarr
 
@@ -2865,8 +2872,9 @@ class TestZarrRegionAuto:
 
     @requires_dask
     def test_zarr_region_chunk_partial(self):
-        """Check that writing to partial chunks with `region` fails, assuming
-        `safe_chunks=False`.
+        """Check that writing to partial chunks with `region` fails.
+
+        This assumes `safe_chunks=False`.
         """
         ds = (
             xr.DataArray(np.arange(120).reshape(4, 3, -1), dims=list("abc"))

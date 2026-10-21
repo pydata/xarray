@@ -113,7 +113,7 @@ class TreeNode:
             self._attach(new_parent, child_name)
 
     def _check_loop(self, new_parent: Self | None) -> None:
-        """Checks that assignment of this new parent will not create a cycle."""
+        """Check that assignment of this new parent will not create a cycle."""
         if new_parent is not None:
             if new_parent is self:
                 raise InvalidTreeError(
@@ -225,24 +225,24 @@ class TreeNode:
         return f"TreeNode(children={dict(self._children)})"
 
     def _pre_detach_children(self, children: Mapping[str, Self]) -> None:
-        """Method call before detaching `children`."""
+        """Run custom logic before detaching `children`."""
         pass
 
     def _post_detach_children(self, children: Mapping[str, Self]) -> None:
-        """Method call after detaching `children`."""
+        """Run custom logic after detaching `children`."""
         pass
 
     def _pre_attach_children(self, children: Mapping[str, Self]) -> None:
-        """Method call before attaching `children`."""
+        """Run custom logic before attaching `children`."""
         pass
 
     def _post_attach_children(self, children: Mapping[str, Self]) -> None:
-        """Method call after attaching `children`."""
+        """Run custom logic after attaching `children`."""
         pass
 
     def copy(self, *, inherit: bool = True, deep: bool = False) -> Self:
         """
-        Returns a copy of this subtree.
+        Return a copy of this subtree.
 
         Copies this node and all child nodes.
 
@@ -290,7 +290,7 @@ class TreeNode:
     def _copy_node(
         self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
     ) -> Self:
-        """Copy just one node of a tree"""
+        """Copy just one node of a tree."""
         new_empty_node = type(self)()
         return new_empty_node
 
@@ -352,7 +352,7 @@ class TreeNode:
 
     @property
     def root(self) -> Self:
-        """Root node of the tree"""
+        """Root node of the tree."""
         node = self
         while node.parent is not None:
             node = node.parent
@@ -503,19 +503,19 @@ class TreeNode:
         return len([node for node in self.root.subtree if node.level == self.level])
 
     def _pre_detach(self, parent: Self) -> None:
-        """Method call before detaching from `parent`."""
+        """Run custom logic before detaching from `parent`."""
         pass
 
     def _post_detach(self, parent: Self) -> None:
-        """Method call after detaching from `parent`."""
+        """Run custom logic after detaching from `parent`."""
         pass
 
     def _pre_attach(self, parent: Self, name: str) -> None:
-        """Method call before attaching to `parent`."""
+        """Run custom logic before attaching to `parent`."""
         pass
 
     def _post_attach(self, parent: Self, name: str) -> None:
-        """Method call after attaching to `parent`."""
+        """Run custom logic after attaching to `parent`."""
         pass
 
     def get(self, key: str, default: Self | None = None) -> Self | None:
@@ -534,7 +534,7 @@ class TreeNode:
 
     def _get_item(self, path: str | NodePath) -> Self | DataArray:
         """
-        Returns the object lying at the given path.
+        Return the object lying at the given path.
 
         Raises a KeyError if there is no object at the given path.
         """
@@ -660,7 +660,7 @@ class TreeNode:
             raise KeyError(key)
 
     def same_tree(self, other: Self) -> bool:
-        """True if other node is in the same tree as this node."""
+        """Return True if other node is in the same tree as this node."""
         return self.root is other.root
 
 
@@ -719,7 +719,7 @@ class NamedNode(TreeNode):
 
     @override
     def _post_attach(self, parent: Self, name: str) -> None:
-        """Ensures child has name attribute corresponding to key under which it has been stored."""
+        """Ensure child has a name attribute matching the key it is stored under."""
         _validate_name(name)  # is this check redundant?
         self._name = name
 
@@ -727,7 +727,7 @@ class NamedNode(TreeNode):
     def _copy_node(
         self, inherit: bool, deep: bool = False, memo: dict[int, Any] | None = None
     ) -> Self:
-        """Copy just one node of a tree"""
+        """Copy just one node of a tree."""
         new_node = super()._copy_node(inherit=inherit, deep=deep, memo=memo)
         new_node._name = self.name
         return new_node
@@ -783,7 +783,7 @@ class NamedNode(TreeNode):
         )
 
     def _path_to_ancestor(self, ancestor: Self) -> NodePath:
-        """Return the relative path from this node to the given ancestor node"""
+        """Return the relative path from this node to the given ancestor node."""
         if not self.same_tree(ancestor):
             raise NotFoundInTreeError(
                 "Cannot find relative path to ancestor because nodes do not lie within the same tree"

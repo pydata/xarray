@@ -26,7 +26,9 @@ from xarray.structure.alignment import broadcast
 
 
 def _get_func_args(func, param_names):
-    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    """Get the arguments of `func`.
+
+    Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
     they are provided by user.
     """
     func_args: Union[dict[str, Parameter], MappingProxyType[str, Parameter]]
@@ -53,6 +55,7 @@ def _get_func_args(func, param_names):
 
 def _initialize_curvefit_params(params, p0, bounds, func_args):
     """Set initial guess and bounds for curvefit.
+
     Priority: 1) passed args 2) func signature 3) scipy defaults
     """
 

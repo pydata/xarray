@@ -192,7 +192,9 @@ def d(request, use_dask, type) -> DataArray | Dataset:
 @pytest.fixture(scope="module")
 def create_test_datatree():
     """
-    Create a test datatree with this structure:
+    Create a test datatree.
+
+    The datatree has this structure:
 
     <xarray.DataTree>
     Group: /

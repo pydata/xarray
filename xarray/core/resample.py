@@ -20,8 +20,10 @@ from xarray.groupers import RESAMPLE_DIM
 
 
 class Resample(GroupBy[T_Xarray]):
-    """An object that extends the `GroupBy` object with additional logic
-    for handling specialized re-sampling operations.
+    """A `GroupBy` object with additional logic for re-sampling operations.
+
+    It extends the `GroupBy` object with additional logic for handling
+    specialized re-sampling operations.
 
     You should create a `Resample` object by using the `DataArray.resample` or
     `Dataset.resample` methods. The dimension along re-sampling
@@ -188,8 +190,9 @@ class Resample(GroupBy[T_Xarray]):
     def nearest(
         self, tolerance: float | Iterable[float] | str | None = None
     ) -> T_Xarray:
-        """Take new values from nearest original coordinate to up-sampled
-        frequency coordinates.
+        """Take new values from nearest original coordinate to up-sampled coordinates.
+
+        The up-sampled coordinates are at the new frequency.
 
         Parameters
         ----------
@@ -257,8 +260,9 @@ class Resample(GroupBy[T_Xarray]):
 class DataArrayResample(
     Resample["DataArray"], DataArrayGroupByBase, DataArrayResampleAggregations
 ):
-    """DataArrayGroupBy object specialized to time resampling operations over a
-    specified dimension
+    """DataArrayGroupBy object specialized to time resampling operations.
+
+    The resampling is done over a specified dimension.
     """
 
     @override
@@ -272,8 +276,9 @@ class DataArrayResample(
         shortcut: bool = True,
         **kwargs: Any,
     ) -> DataArray:
-        """Reduce the items in this group by applying `func` along the
-        pre-defined resampling dimension.
+        """Reduce the items in this group by applying `func` along the resampling dim.
+
+        The resampling dimension is pre-defined.
 
         Parameters
         ----------
@@ -313,8 +318,9 @@ class DataArrayResample(
         shortcut: bool | None = False,
         **kwargs: Any,
     ) -> DataArray:
-        """Apply a function to each array in the group and concatenate them
-        together into a new array.
+        """Apply a function to each array in the group and concatenate the results.
+
+        The results are concatenated together into a new array.
 
         `func` is called like `func(ar, *args, **kwargs)` for each array `ar`
         in this group.
@@ -372,7 +378,7 @@ class DataArrayResample(
     @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
-        Backward compatible implementation of ``map``
+        Backward compatible implementation of ``map``.
 
         See Also
         --------
@@ -386,8 +392,9 @@ class DataArrayResample(
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
     def asfreq(self) -> DataArray:
-        """Return values of original object at the new up-sampling frequency;
-        essentially a re-index with new times set to NaN.
+        """Return values of original object at the new up-sampling frequency.
+
+        This is essentially a re-index with new times set to NaN.
 
         Returns
         -------
@@ -400,7 +407,7 @@ class DataArrayResample(
 class DatasetResample(
     Resample["Dataset"], DatasetGroupByBase, DatasetResampleAggregations
 ):
-    """DatasetGroupBy object specialized to resampling a specified dimension"""
+    """DatasetGroupBy object specialized to resampling a specified dimension."""
 
     @override
     def map(
@@ -410,8 +417,10 @@ class DatasetResample(
         shortcut: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """Apply a function over each Dataset in the groups generated for
-        resampling and concatenate them together into a new Dataset.
+        """Apply a function over each Dataset in the groups and concatenate them.
+
+        The groups are generated for resampling and the results are concatenated
+        together into a new Dataset.
 
         `func` is called like `func(ds, *args, **kwargs)` for each dataset `ds`
         in this group.
@@ -457,7 +466,7 @@ class DatasetResample(
     @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
-        Backward compatible implementation of ``map``
+        Backward compatible implementation of ``map``.
 
         See Also
         --------
@@ -481,8 +490,9 @@ class DatasetResample(
         shortcut: bool = True,
         **kwargs: Any,
     ) -> Dataset:
-        """Reduce the items in this group by applying `func` along the
-        pre-defined resampling dimension.
+        """Reduce the items in this group by applying `func` along the resampling dim.
+
+        The resampling dimension is pre-defined.
 
         Parameters
         ----------
@@ -515,8 +525,9 @@ class DatasetResample(
         )
 
     def asfreq(self) -> Dataset:
-        """Return values of original object at the new up-sampling frequency;
-        essentially a re-index with new times set to NaN.
+        """Return values of original object at the new up-sampling frequency.
+
+        This is essentially a re-index with new times set to NaN.
 
         Returns
         -------

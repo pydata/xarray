@@ -118,12 +118,12 @@ def check_duck_array_typevar[DType: np.dtype[Any]](
 class NamedArraySubclassobjects:
     @pytest.fixture
     def target(self, data: np.ndarray[Any, Any]) -> Any:
-        """Fixture that needs to be overridden"""
+        """Fixture that needs to be overridden."""
         raise NotImplementedError
 
     @abstractmethod
     def cls(self, *args: Any, **kwargs: Any) -> Any:
-        """Method that needs to be overridden"""
+        """Create an instance of the class under test; needs to be overridden."""
         raise NotImplementedError
 
     @pytest.fixture
@@ -669,6 +669,7 @@ def test_fake_target_chunksize(
 ) -> None:
     """
     Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+
     - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
     As such, it will *double* the amount of memory a 4-byte dtype (like float32) would try to use,
     fooling it into actually using the correct amount of memory. For object dtypes, which are
@@ -687,6 +688,7 @@ def test_fake_target_chunksize(
 def test_fake_target_chunksize_cftime() -> None:
     """
     Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+
     - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
     - This is the same as the above test, but specifically for a CFTime array case - split for testing reasons
     """

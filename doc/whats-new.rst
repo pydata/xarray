@@ -430,6 +430,9 @@ Internal Changes
 - Lint docstrings with ruff's pydocstyle rules, including the order of the
   numpydoc sections, and fix the existing violations (:pull:`11763`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Check the style of docstring summaries with ruff (a single line in imperative
+  mood, ending with a period) and fix the existing violations (:pull:`11769`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:

@@ -196,10 +196,7 @@ class TestDataArray:
         assert actual.dtype == expected.dtype
 
     def test_struct_array_dims(self) -> None:
-        """
-        This test checks subtraction of two DataArrays for the case
-        when dimension is a structured array.
-        """
+        """Test subtraction of two DataArrays when a dimension is a structured array."""
         # GH837, GH861
         # checking array subtraction when dims are the same
         p_data = np.array(
@@ -4459,7 +4456,9 @@ class TestDataArray:
         ],
     )
     def test_copy_coords(self, deep, expected_orig) -> None:
-        """The test fails for the shallow copy, and apparently only on Windows
+        """Test that copying a DataArray copies its coords.
+
+        The test fails for the shallow copy, and apparently only on Windows
         for some reason. In windows coords seem to be immutable unless it's one
         dataarray deep copied from another.
         """
@@ -7748,8 +7747,10 @@ def test_subclass_slots() -> None:
 
 
 def test_weakref() -> None:
-    """Classes with __slots__ are incompatible with the weakref module unless they
-    explicitly state __weakref__ among their slots
+    """Test that DataArray supports weak references.
+
+    Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots.
     """
     from weakref import ref
 
@@ -7760,6 +7761,7 @@ def test_weakref() -> None:
 
 def test_delete_coords() -> None:
     """Make sure that deleting a coordinate doesn't corrupt the DataArray.
+
     See issue #3899.
 
     Also test that deleting succeeds and produces the expected output.
@@ -7784,7 +7786,7 @@ def test_delete_coords() -> None:
 
 
 def test_deepcopy_nested_attrs() -> None:
-    """Check attrs deep copy, see :issue:`2835`"""
+    """Check attrs deep copy, see :issue:`2835`."""
     da1 = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"), coords={"x": [10, 20]})
     da1.attrs["flat"] = "0"
     da1.attrs["nested"] = {"level1a": "1", "level1b": "1"}

@@ -376,6 +376,7 @@ def _build_and_get_enum(
 ) -> ncEnumType | h5EnumType:
     """
     Add or get the netCDF4 Enum based on the dtype in encoding.
+
     The return type should be ``netCDF4.EnumType``,
     but we avoid importing netCDF4 globally for performances.
     """

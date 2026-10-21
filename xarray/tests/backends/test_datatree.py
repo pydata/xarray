@@ -90,8 +90,10 @@ def assert_chunks_equal(
 
 @pytest.fixture(scope="module")
 def unaligned_datatree_nc(tmp_path_factory):
-    """Creates a test netCDF4 file with the following unaligned structure, writes it to a /tmp directory
-    and returns the file path of the netCDF4 file.
+    """Create a test netCDF4 file with an unaligned structure.
+
+    The file has the following structure, is written to a /tmp directory and
+    the file path of the netCDF4 file is returned.
 
     Group: /
     │   Dimensions:        (lat: 1, lon: 2)
@@ -141,7 +143,10 @@ def unaligned_datatree_zarr_factory(
     None,
     None,
 ]:
-    """Creates a zarr store with the following unaligned group hierarchy:
+    """Create a zarr store with an unaligned group hierarchy.
+
+    The store has the following unaligned group hierarchy:
+
     Group: /
     │   Dimensions:  (y: 3, x: 2)
     │   Dimensions without coordinates: y, x
@@ -495,8 +500,10 @@ class TestNetCDF4DatatreeIO(NetCDFIOBase):
     engine: T_DataTreeNetcdfEngine | None = "netcdf4"
 
     def test_open_groups_to_dict(self, tmpdir) -> None:
-        """Create an aligned netCDF4 with the following structure to test `open_groups`
-        and `DataTree.from_dict`.
+        """Test `open_groups` and `DataTree.from_dict` on an aligned netCDF4 file.
+
+        The file has the following structure:
+
         Group: /
         │   Dimensions:        (lat: 1, lon: 2)
         │   Dimensions without coordinates: lat, lon
@@ -1180,7 +1187,7 @@ class TestZarrDatatreeIO:
         "ignore:Failed to open Zarr store with consolidated metadata:RuntimeWarning"
     )
     def test_zarr_engine_recognised(self, tmpdir, zarr_format) -> None:
-        """Test that xarray can guess the zarr backend when the engine is not specified"""
+        """Test that xarray guesses the zarr backend when no engine is specified."""
         original_dt = DataTree.from_dict(
             {
                 "/": xr.Dataset(coords={"x": [1, 2, 3]}),

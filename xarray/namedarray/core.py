@@ -315,8 +315,9 @@ class NamedArray(
     Generic[ShapeType_co, DType_co, DimType_co],  # noqa: UP046
 ):
     """
-    A wrapper around duck arrays with named dimensions
-    and attributes which describe a single Array.
+    A wrapper around duck arrays with named dimensions and attributes.
+
+    Together, the data, dimensions and attributes describe a single Array.
     Numeric operations on this object implement array broadcasting and
     dimension alignment based on dimension names,
     rather than axis order.
@@ -496,7 +497,7 @@ class NamedArray(
         deep: bool = True,
         data: duckarray[ShapeType_co, DType_co] | None = None,
     ) -> Self:
-        """Returns a copy of this object.
+        """Return a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
         the new object. Dimensions, attributes and encodings are always copied.
@@ -663,9 +664,9 @@ class NamedArray(
     @property
     def data(self) -> duckarray[Any, DType_co]:
         """
-        The NamedArray's data as an array. The underlying array type
-        (e.g. dask, sparse, pint) is preserved.
+        The NamedArray's data as an array.
 
+        The underlying array type (e.g. dask, sparse, pint) is preserved.
         """
         return self._data
 
@@ -841,8 +842,9 @@ class NamedArray(
     @property
     def chunks(self) -> Chunks | None:
         """
-        Tuple of block lengths for this NamedArray's data, in order of dimensions, or None if
-        the underlying data is not a dask array.
+        Tuple of block lengths for this NamedArray's data, in order of dimensions.
+
+        None if the underlying data is not a dask array.
 
         See Also
         --------
@@ -982,7 +984,7 @@ class NamedArray(
         return self._replace(data=data_chunked)
 
     def to_numpy(self) -> np.ndarray[Any, Any]:
-        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        """Coerces wrapped data to numpy and returns a numpy.ndarray."""
         # TODO an entrypoint so array libraries can choose coercion method?
         return to_numpy(self._data)
 

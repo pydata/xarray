@@ -32,7 +32,7 @@
 
 
 def sliding_window(n, seq):
-    """A sequence of overlapping subsequences
+    """Return a sequence of overlapping subsequences.
 
     >>> list(sliding_window(2, [1, 2, 3, 4]))
     [(1, 2), (2, 3), (3, 4)]
