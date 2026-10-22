@@ -147,6 +147,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Comparing attributes containing nested dictionaries of NumPy arrays no longer
+  raises ``ValueError`` in :py:meth:`DataArray.identical`,
+  :py:meth:`Dataset.identical`, and :py:func:`~xarray.testing.assert_identical`,
+  and preserves attributes when merging with ``combine_attrs="drop_conflicts"``
+  or ``combine_attrs="no_conflicts"`` (:issue:`11777`).
+  By `Soham Mitra <https://github.com/SohamXYZDev>`_.
 - Encoding a string variable whose ``char_dim_name`` has characters after its
   last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
   not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).

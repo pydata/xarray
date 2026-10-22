@@ -84,6 +84,19 @@ class TestDictionaries:
         # Mixed: Python float NaN vs NumPy scalar NaN
         assert utils.equivalent(float("nan"), np.float64(np.nan))
         assert utils.equivalent(np.float64(np.nan), float("nan"))
+        # Nested dict containing numpy arrays (issue #11777)
+        assert utils.equivalent(
+            {"calibration": {"coeffs": np.array([1.0, 2.0])}},
+            {"calibration": {"coeffs": np.array([1.0, 2.0])}},
+        )
+        assert not utils.equivalent(
+            {"calibration": {"coeffs": np.array([1.0, 2.0])}},
+            {"calibration": {"coeffs": np.array([1.0, 3.0])}},
+        )
+        assert not utils.equivalent(
+            {"calibration": {"coeffs": np.array([1.0, 2.0])}},
+            {"calibration": {"other": np.array([1.0, 2.0])}},
+        )
 
     def test_safe(self):
         # should not raise exception:
@@ -123,6 +136,15 @@ class TestDictionaries:
         x["c"] = np.nan
         y["c"] = np.nan
         assert utils.dict_equiv(x, y)  # as intended, nan is nan
+        # Nested dict containing numpy arrays (issue #11777)
+        assert utils.dict_equiv(
+            {"calibration": {"coeffs": np.array([1.0, 2.0])}},
+            {"calibration": {"coeffs": np.array([1.0, 2.0])}},
+        )
+        assert not utils.dict_equiv(
+            {"calibration": {"coeffs": np.array([1.0, 2.0])}},
+            {"calibration": {"coeffs": np.array([1.0, 3.0])}},
+        )
         x["c"] = np.inf
         y["c"] = np.inf
         assert utils.dict_equiv(x, y)  # inf == inf
