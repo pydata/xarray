@@ -499,7 +499,15 @@ def test_errors(use_dask: bool) -> None:
         da = da.chunk()
 
     for method in ["spline"]:
-        with pytest.raises(ValueError), pytest.warns(PendingDeprecationWarning):
+        with (
+            pytest.raises(
+                ValueError, match="spline is not a vectorizeable interpolator"
+            ),
+            pytest.warns(
+                FutureWarning,
+                match="The 1d SplineInterpolator class is performing an incorrect calculation",
+            ),
+        ):
             da.interp(x=[0.5, 1.5], method=method)  # type: ignore[arg-type]
 
     # not sorted

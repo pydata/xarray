@@ -150,6 +150,10 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- The deprecated ``dims=`` (or ``dimensions=``) argument renamed to ``dim=``
+  and ``interpolate_na(method="spline")`` now emit a ``FutureWarning`` instead
+  of a ``PendingDeprecationWarning``, so these warnings are visible by default
+  (:issue:`11721`).
 - Passing any argument after ``bins`` positionally to
   :py:meth:`Dataset.groupby_bins` and :py:meth:`DataArray.groupby_bins` is
   deprecated. It was meant to be deprecated in v2024.07.0, but the warning never
