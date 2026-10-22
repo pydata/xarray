@@ -774,9 +774,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         attrs = self.obj.attrs if keep_attrs else {}
 
         return self._restore_input_chunks(
-            self.obj.__class__(
-                values, self.obj.coords, attrs=attrs, name=self.obj.name
-            )
+            self.obj.__class__(values, self.obj.coords, attrs=attrs, name=self.obj.name)
         )
 
     def _array_reduce(
