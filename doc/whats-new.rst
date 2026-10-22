@@ -51,6 +51,8 @@ New Features
   variables of a section at once, and shows the expanded attributes and data
   more compactly and indented below their variable (:pull:`11284`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 Breaking Changes
