@@ -261,6 +261,11 @@ class CachingFileManager(FileManager[T_File]):
 
         The file stays open until the context exits, even if it is evicted
         from the cache in the meantime.
+
+        Yields
+        ------
+        file
+            The acquired file.
         """
         with self._pinned():
             file, cached = self._acquire_with_cache_info(needs_lock)

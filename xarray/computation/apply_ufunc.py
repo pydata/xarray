@@ -54,7 +54,7 @@ def _first_of_type(args, kind):
 
 
 def _all_of_type(args, kind):
-    """Return all objects of type 'kind'"""
+    """Return all objects of type 'kind'."""
     return [arg for arg in args if isinstance(arg, kind)]
 
 
@@ -278,9 +278,7 @@ def apply_dataarray_vfunc(
     exclude_dims=frozenset(),
     keep_attrs="override",
 ) -> tuple[DataArray, ...] | DataArray:
-    """Apply a variable level function over DataArray, Variable and/or ndarray
-    objects.
-    """
+    """Apply a variable level function over DataArray, Variable or ndarray objects."""
     from xarray.core.dataarray import DataArray
 
     if len(args) > 1:
@@ -402,8 +400,7 @@ def _unpack_dict_tuples(
 
 
 def _check_core_dims(signature, variable_args, name):
-    """
-    Check if an arg has all the core dims required by the signature.
+    """Check if an arg has all the core dims required by the signature.
 
     Slightly awkward design, of returning the error message. But we want to
     give a detailed error message, which requires inspecting the variable in
@@ -435,8 +432,9 @@ def apply_dict_of_variables_vfunc(
     fill_value=None,
     on_missing_core_dim: MissingCoreDimOptions = "raise",
 ):
-    """Apply a variable level function over dicts of DataArray, DataArray,
-    Variable and ndarray objects.
+    """Apply a variable level function over dicts of variables.
+
+    The dicts can contain DataArray, Variable and ndarray objects.
     """
     args = tuple(_as_variables_or_variable(arg) for arg in args)
     names = join_dict_keys(args, how=join)
@@ -491,8 +489,10 @@ def apply_dataset_vfunc(
     keep_attrs="override",
     on_missing_core_dim: MissingCoreDimOptions = "raise",
 ) -> Dataset | tuple[Dataset, ...]:
-    """Apply a variable level function over Dataset, dict of DataArray,
-    DataArray, Variable and/or ndarray objects.
+    """Apply a variable level function over Dataset and other objects.
+
+    The other objects can be dicts of DataArray, DataArray, Variable and/or
+    ndarray objects.
     """
     from xarray.core.dataset import Dataset
 
@@ -569,8 +569,10 @@ def _iter_over_selections(obj, dim, values):
 
 
 def apply_groupby_func(func, *args):
-    """Apply a dataset or datarray level function over GroupBy, Dataset,
-    DataArray, Variable and/or ndarray objects.
+    """Apply a dataset or dataarray level function over GroupBy objects.
+
+    The arguments can be GroupBy, Dataset, DataArray, Variable and/or ndarray
+    objects.
     """
     from xarray.core.groupby import GroupBy, peek_at
 

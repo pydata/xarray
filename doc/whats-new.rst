@@ -155,6 +155,10 @@ Bug Fixes
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
+- Encoding a string variable whose ``char_dim_name`` has characters after its
+  last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
+  not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).
+  By `Guillaume Marty <https://github.com/LemonCondor>`_.
 - Writing fixed-width strings no longer truncates values that are longer than the
   width stored in ``encoding["dtype"]``, e.g. after concatenating datasets read
   from files with strings of different lengths. A width-only difference in the
@@ -320,6 +324,11 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- Fix the ``preferred_chunks`` encoding of sharded Zarr variables read with
+  :py:func:`open_zarr`: it now holds the shard (outer/storage chunk) sizes
+  instead of the inner chunk sizes, so the default dask chunks align with the
+  stored shards rather than splitting them (:issue:`11460`, :pull:`11464`).
+  By `Taus Møller <https://github.com/taus>`_.
 - Fix indexing with a 0-dimensional non-NumPy array, e.g. a CuPy array, which
   raised ``ValueError`` instead of dropping the indexed dimension (:issue:`8820`).
   By `Trinh Quoc Anh <https://github.com/tqa236>`_.
@@ -450,6 +459,9 @@ Internal Changes
 - Lint docstrings with ruff's pydocstyle rules, including the order of the
   numpydoc sections, and fix the existing violations (:pull:`11763`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Check the style of docstring summaries with ruff (a single line in imperative
+  mood, ending with a period) and fix the existing violations (:pull:`11769`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
@@ -546,6 +558,10 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 
+- Allow :py:class:`Dataset` variable selection with one-shot iterators, consuming
+  the iterator once instead of treating the iterator object as a variable name
+  (:pull:`11586`).
+  By `Ahmet Kamer <https://github.com/lowgame>`_.
 - Treat a full ``MultiIndex`` key with tuple-valued levels as scalar selection,
   so ``.sel`` no longer preserves a length-1 dimension for nested tuple keys
   that identify a single row (:issue:`11341`, :pull:`11348`).

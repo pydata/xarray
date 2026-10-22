@@ -33,7 +33,7 @@ from xarray.tests import (
 
 
 def assert_identical(a, b):
-    """A version of this function which accepts numpy arrays"""
+    """Assert two objects are identical, also accepting numpy arrays."""
     __tracebackhide__ = True
     from xarray.testing import assert_identical as assert_identical_
 

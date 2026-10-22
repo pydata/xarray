@@ -48,9 +48,9 @@ def _get_alpha(
 
 
 class RollingExp[T_DataWithCoords: DataWithCoords]:
-    """
-    Exponentially-weighted moving window object.
-    Similar to EWM in pandas
+    """Exponentially-weighted moving window object.
+
+    Similar to EWM in pandas.
 
     Parameters
     ----------
@@ -93,8 +93,7 @@ class RollingExp[T_DataWithCoords: DataWithCoords]:
         self.kwargs = kwargs
 
     def mean(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
-        """
-        Exponentially weighted moving average.
+        """Exponentially weighted moving average.
 
         Parameters
         ----------
@@ -130,8 +129,7 @@ class RollingExp[T_DataWithCoords: DataWithCoords]:
         ).transpose(*dim_order)
 
     def sum(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
-        """
-        Exponentially weighted moving sum.
+        """Exponentially weighted moving sum.
 
         Parameters
         ----------
@@ -167,8 +165,7 @@ class RollingExp[T_DataWithCoords: DataWithCoords]:
         ).transpose(*dim_order)
 
     def std(self) -> T_DataWithCoords:
-        """
-        Exponentially weighted moving standard deviation.
+        """Exponentially weighted moving standard deviation.
 
         `keep_attrs` is always True for this method. Drop attrs separately to remove attrs.
 
@@ -196,8 +193,7 @@ class RollingExp[T_DataWithCoords: DataWithCoords]:
         ).transpose(*dim_order)
 
     def var(self) -> T_DataWithCoords:
-        """
-        Exponentially weighted moving variance.
+        """Exponentially weighted moving variance.
 
         `keep_attrs` is always True for this method. Drop attrs separately to remove attrs.
 
@@ -224,8 +220,7 @@ class RollingExp[T_DataWithCoords: DataWithCoords]:
         ).transpose(*dim_order)
 
     def cov(self, other: T_DataWithCoords) -> T_DataWithCoords:
-        """
-        Exponentially weighted moving covariance.
+        """Exponentially weighted moving covariance.
 
         `keep_attrs` is always True for this method. Drop attrs separately to remove attrs.
 
@@ -253,8 +248,7 @@ class RollingExp[T_DataWithCoords: DataWithCoords]:
         ).transpose(*dim_order)
 
     def corr(self, other: T_DataWithCoords) -> T_DataWithCoords:
-        """
-        Exponentially weighted moving correlation.
+        """Exponentially weighted moving correlation.
 
         `keep_attrs` is always True for this method. Drop attrs separately to remove attrs.
 

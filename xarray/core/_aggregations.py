@@ -42,8 +42,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``count`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -121,8 +120,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``all`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -205,8 +203,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``any`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -290,8 +287,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``max`` (i.e., maximum) along some dimension(s).
+        """Reduce this DataTree's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -385,8 +381,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``min`` (i.e., minimum) along some dimension(s).
+        """Reduce this DataTree's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -480,8 +475,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``mean`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -580,8 +574,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``prod`` (i.e., product) along some dimension(s).
+        """Reduce this DataTree's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -696,8 +689,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``sum`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -812,8 +804,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
+        """Reduce this DataTree's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -925,8 +916,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``var`` (i.e., variance) along some dimension(s).
+        """Reduce this DataTree's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -1037,8 +1027,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``median`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -1136,8 +1125,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
+        """Reduce this DataTree's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -1246,8 +1234,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
+        """Reduce this DataTree's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -1382,8 +1369,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``count`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -1455,8 +1441,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``all`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -1528,8 +1513,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``any`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -1602,8 +1586,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
+        """Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -1690,8 +1673,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
+        """Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -1778,8 +1760,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``mean`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -1871,8 +1852,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
+        """Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -1979,8 +1959,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``sum`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -2087,8 +2066,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
+        """Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -2192,8 +2170,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
+        """Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -2296,8 +2273,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``median`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -2388,8 +2364,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -2491,8 +2466,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -2609,8 +2583,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``count`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -2676,8 +2649,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``all`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -2743,8 +2715,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``any`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -2811,8 +2782,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
+        """Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -2891,8 +2861,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
+        """Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -2971,8 +2940,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``mean`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -3056,8 +3024,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
+        """Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -3154,8 +3121,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``sum`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -3252,8 +3218,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
+        """Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -3347,8 +3312,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
+        """Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -3441,8 +3405,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``median`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -3525,8 +3488,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -3620,8 +3582,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -3748,8 +3709,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``count`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -3845,8 +3805,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``all`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -3942,8 +3901,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``any`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -4040,8 +3998,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
+        """Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -4155,8 +4112,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
+        """Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -4270,8 +4226,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``mean`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -4388,8 +4343,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
+        """Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -4524,8 +4478,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``sum`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -4660,8 +4613,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
+        """Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -4793,8 +4745,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
+        """Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -4925,8 +4876,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``median`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -5043,8 +4993,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -5168,8 +5117,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -5310,8 +5258,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``count`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -5407,8 +5354,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``all`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -5504,8 +5450,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``any`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -5602,8 +5547,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
+        """Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -5717,8 +5661,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
+        """Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -5832,8 +5775,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``mean`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -5950,8 +5892,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
+        """Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -6086,8 +6027,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``sum`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -6222,8 +6162,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
+        """Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -6355,8 +6294,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
+        """Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -6487,8 +6425,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``median`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -6605,8 +6542,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -6730,8 +6666,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -6872,8 +6807,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``count`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -6962,8 +6896,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``all`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -7052,8 +6985,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``any`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -7143,8 +7075,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
+        """Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -7249,8 +7180,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
+        """Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -7355,8 +7285,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``mean`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -7464,8 +7393,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
+        """Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -7589,8 +7517,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``sum`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -7714,8 +7641,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
+        """Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -7836,8 +7762,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
+        """Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -7957,8 +7882,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``median`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -8066,8 +7990,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -8182,8 +8105,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -8316,8 +8238,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``count`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -8406,8 +8327,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``all`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -8496,8 +8416,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``any`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -8587,8 +8506,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
+        """Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -8693,8 +8611,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
+        """Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -8799,8 +8716,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``mean`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -8908,8 +8824,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
+        """Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -9033,8 +8948,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``sum`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -9158,8 +9072,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
+        """Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -9280,8 +9193,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
+        """Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -9401,8 +9313,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``median`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -9510,8 +9421,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -9626,8 +9536,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------

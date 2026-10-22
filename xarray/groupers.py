@@ -1,7 +1,7 @@
-"""
-This module provides Grouper objects that encapsulate the
-"factorization" process - conversion of value we are grouping by
-to integer codes (one per group).
+"""Grouper objects for GroupBy operations.
+
+Grouper objects encapsulate the "factorization" process - conversion of the
+values we are grouping by to integer codes (one per group).
 """
 
 from __future__ import annotations
@@ -65,8 +65,9 @@ RESAMPLE_DIM = "__resample_dim__"
 
 
 def _datetime64_via_timestamp(unit: PDDatetimeUnitOptions, **kwargs) -> np.datetime64:
-    """Construct a numpy.datetime64 object through the pandas.Timestamp
-    constructor with a specific resolution.
+    """Construct a numpy.datetime64 object with a specific resolution.
+
+    The object is constructed through the pandas.Timestamp constructor.
     """
     # TODO: when pandas 3 is our minimum requirement we will no longer need to
     # convert to np.datetime64 values prior to passing to the DatetimeIndex
@@ -77,8 +78,8 @@ def _datetime64_via_timestamp(unit: PDDatetimeUnitOptions, **kwargs) -> np.datet
 
 @dataclass(init=False)
 class EncodedGroups:
-    """
-    Dataclass for storing intermediate values for GroupBy operation.
+    """Dataclass for storing intermediate values for GroupBy operation.
+
     Returned by the ``factorize`` method on Grouper objects.
 
     Attributes
@@ -156,8 +157,7 @@ class Grouper(ABC):
 
     @abstractmethod
     def factorize(self, group: T_Group) -> EncodedGroups:
-        """
-        Creates intermediates necessary for GroupBy.
+        """Create intermediates necessary for GroupBy.
 
         Parameters
         ----------
@@ -172,20 +172,18 @@ class Grouper(ABC):
 
     @abstractmethod
     def reset(self) -> Self:
-        """Creates a new version of this Grouper clearing any caches."""
+        """Create a new version of this Grouper clearing any caches."""
         pass
 
 
 class Resampler(Grouper):
-    """
-    Abstract base class for Grouper objects that allow specializing resampling-type GroupBy instructions.
+    """Abstract base class for Grouper objects that allow specializing resampling-type GroupBy instructions.
 
     Currently only used for TimeResampler, but could be used for SpaceResampler in the future.
     """
 
     def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
-        """
-        Compute chunk sizes for this resampler.
+        """Compute chunk sizes for this resampler.
 
         This method should be implemented by subclasses to provide appropriate
         chunking behavior for their specific resampling strategy.
@@ -207,8 +205,7 @@ class Resampler(Grouper):
 
 @dataclass
 class UniqueGrouper(Grouper):
-    """
-    Grouper object for grouping by a categorical variable.
+    """Grouper object for grouping by a categorical variable.
 
     Parameters
     ----------
@@ -343,8 +340,7 @@ class UniqueGrouper(Grouper):
 
 @dataclass
 class BinGrouper(Grouper):
-    """
-    Grouper object for binning numeric data.
+    """Grouper object for binning numeric data.
 
     Attributes
     ----------
@@ -475,8 +471,7 @@ class BinGrouper(Grouper):
 
 @dataclass(repr=False)
 class TimeResampler(Resampler):
-    """
-    Grouper object specialized to resampling the time coordinate.
+    """Grouper object specialized to resampling the time coordinate.
 
     Attributes
     ----------
@@ -602,18 +597,17 @@ class TimeResampler(Resampler):
 
     @override
     def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
-        """
-        Compute chunk sizes for this time resampler.
+        """Compute chunk sizes for this time resampler.
 
         This method is used during chunking operations to determine appropriate
         chunk sizes for the given variable when using this resampler.
 
         Parameters
         ----------
-        name : Hashable
-            The name of the dimension being chunked.
         variable : Variable
             The variable being chunked.
+        dim : Hashable
+            The name of the dimension being chunked.
 
         Returns
         -------
@@ -685,7 +679,8 @@ def unique_value_groups(
 
 
 def season_to_month_tuple(seasons: Sequence[str]) -> tuple[tuple[int, ...], ...]:
-    """
+    """Convert season strings to tuples of month numbers.
+
     >>> season_to_month_tuple(["DJF", "MAM", "JJA", "SON"])
     ((12, 1, 2), (3, 4, 5), (6, 7, 8), (9, 10, 11))
     >>> season_to_month_tuple(["DJFM", "MAMJ", "JJAS", "SOND"])
@@ -724,7 +719,7 @@ def inds_to_season_string(asints: tuple[tuple[int, ...], ...]) -> tuple[str, ...
 
 
 def is_sorted_periodic(lst):
-    """Used to verify that seasons provided to SeasonResampler are in order."""
+    """Verify that seasons provided to SeasonResampler are in order."""
     n = len(lst)
 
     # Find the wraparound point where the list decreases
@@ -761,9 +756,10 @@ class SeasonsGroup:
 
 
 def find_independent_seasons(seasons: Sequence[str]) -> Sequence[SeasonsGroup]:
-    """
-    Iterates though a list of seasons e.g. ["DJF", "FMA", ...],
-    and splits that into multiple sequences of non-overlapping seasons.
+    """Split a list of seasons into sequences of non-overlapping seasons.
+
+    Iterates through a list of seasons e.g. ["DJF", "FMA", ...], and splits that
+    into multiple sequences of non-overlapping seasons.
 
     >>> find_independent_seasons(
     ...     ["DJF", "FMA", "AMJ", "JJA", "ASO", "OND"]
@@ -1064,18 +1060,17 @@ class SeasonResampler(Resampler):
 
     @override
     def compute_chunks(self, variable: Variable, *, dim: Hashable) -> tuple[int, ...]:
-        """
-        Compute chunk sizes for this season resampler.
+        """Compute chunk sizes for this season resampler.
 
         This method is used during chunking operations to determine appropriate
         chunk sizes for the given variable when using this resampler.
 
         Parameters
         ----------
-        name : Hashable
-            The name of the dimension being chunked.
         variable : Variable
             The variable being chunked.
+        dim : Hashable
+            The name of the dimension being chunked.
 
         Returns
         -------

@@ -53,9 +53,10 @@ _BENCHMARK_PREFIXES = ("time_", "timeraw_", "mem_", "peakmem_", "track_")
 
 
 def skip_slow[T](obj: T) -> T:
-    """
-    Skip a slow or highly demanding benchmark, or all benchmarks of a class, if
-    the ``ASV_SKIP_SLOW`` environment variable is set to ``1`` (as in CI).
+    """Skip a slow or highly demanding benchmark, or all benchmarks of a class.
+
+    The benchmarks are skipped if the ``ASV_SKIP_SLOW`` environment variable is
+    set to ``1`` (as in CI).
 
     asv only looks for ``skip_benchmark`` on the benchmark methods themselves, so
     for a class the (possibly inherited) benchmark methods are wrapped on the
