@@ -27,7 +27,7 @@ from xarray.core.indexing import (
 )
 from xarray.core.options import OPTIONS, _get_boolean_with_default
 from xarray.core.treenode import group_subtrees
-from xarray.core.utils import is_duck_array
+from xarray.core.utils import equivalent, is_duck_array
 from xarray.namedarray.pycompat import array_type, to_duck_array
 
 if TYPE_CHECKING:
@@ -869,7 +869,7 @@ def _diff_mapping_repr(
         if is_duck_array(a) or is_duck_array(b):
             return array_equiv(a, b)
         else:
-            return a == b
+            return equivalent(a, b)
 
     def extra_items_repr(extra_keys, mapping, ab_side, kwargs):
         extra_repr = [

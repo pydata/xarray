@@ -260,6 +260,29 @@ class TestMergeFunction:
         assert "arr" not in actual.attrs  # Should drop due to conflict
         assert "other" in actual.attrs
 
+    def test_merge_attrs_nested_dict_numpy_arrays(self):
+        # issue #11777
+        arr = np.array([1.0, 2.0])
+        ds1 = xr.Dataset(attrs={"calibration": {"coeffs": arr}})
+        ds2 = xr.Dataset(attrs={"calibration": {"coeffs": arr.copy()}})
+        ds3 = xr.Dataset(attrs={"calibration": {"coeffs": np.array([1.0, 3.0])}})
+
+        # combine_attrs="drop_conflicts" keeps identical nested dict attributes
+        merged_drop = xr.merge([ds1, ds2], combine_attrs="drop_conflicts")
+        assert_identical(merged_drop, ds1)
+
+        # combine_attrs="drop_conflicts" drops conflicting nested dict attributes
+        merged_drop_diff = xr.merge([ds1, ds3], combine_attrs="drop_conflicts")
+        assert merged_drop_diff.attrs == {}
+
+        # combine_attrs="no_conflicts" keeps identical nested dict attributes
+        merged_no_conflicts = xr.merge([ds1, ds2], combine_attrs="no_conflicts")
+        assert_identical(merged_no_conflicts, ds1)
+
+        # combine_attrs="no_conflicts" raises MergeError on conflicting nested dict attributes
+        with pytest.raises(MergeError):
+            xr.merge([ds1, ds3], combine_attrs="no_conflicts")
+
     def test_merge_attrs_drop_conflicts_custom_eq_returns_array(self):
         """Test drop_conflicts with custom objects that return arrays from __eq__."""
 

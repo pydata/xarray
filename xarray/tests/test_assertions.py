@@ -596,3 +596,32 @@ class TestAssertIdenticalXindexes:
         assert not ds1.identical(ds2)
         with pytest.raises(AssertionError, match="Indexes only on the left"):
             xr.testing.assert_identical(ds1, ds2)
+
+
+def test_assert_identical_nested_dict_numpy_arrays() -> None:
+    # issue #11777
+    attrs1 = {"calibration": {"coeffs": np.array([1.0, 2.0])}}
+    attrs2 = {"calibration": {"coeffs": np.array([1.0, 2.0])}}
+    attrs3 = {"calibration": {"coeffs": np.array([1.0, 3.0])}}
+
+    da1 = xr.DataArray([1, 2], dims="x", attrs=attrs1)
+    da2 = xr.DataArray([1, 2], dims="x", attrs=attrs2)
+    da3 = xr.DataArray([1, 2], dims="x", attrs=attrs3)
+
+    assert da1.identical(da2)
+    assert not da1.identical(da3)
+
+    xr.testing.assert_identical(da1, da2)
+    with pytest.raises(AssertionError, match="Differing attributes"):
+        xr.testing.assert_identical(da1, da3)
+
+    ds1 = xr.Dataset(attrs=attrs1)
+    ds2 = xr.Dataset(attrs=attrs2)
+    ds3 = xr.Dataset(attrs=attrs3)
+
+    assert ds1.identical(ds2)
+    assert not ds1.identical(ds3)
+
+    xr.testing.assert_identical(ds1, ds2)
+    with pytest.raises(AssertionError, match="Differing attributes"):
+        xr.testing.assert_identical(ds1, ds3)

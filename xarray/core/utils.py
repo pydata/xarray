@@ -214,7 +214,8 @@ def equivalent[T](first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality).
 
     Uses array_equiv if either object is an ndarray. If both objects are lists,
-    equivalent is sequentially called on all the elements.
+    equivalent is sequentially called on all the elements. If both objects are
+    dicts, dict_equiv is called to compare the keys and values.
 
     Returns False for any comparison that doesn't return a boolean,
     making this function safer to use with objects that have non-standard
@@ -231,6 +232,9 @@ def equivalent[T](first: T, second: T) -> bool:
 
     if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)  # type: ignore[arg-type]
+
+    if isinstance(first, dict) and isinstance(second, dict):
+        return dict_equiv(first, second)
 
     # Check for NaN equivalence early (before equality comparison)
     # This handles both Python float NaN and NumPy scalar NaN (issue #10833)
