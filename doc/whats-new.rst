@@ -132,7 +132,7 @@ Breaking Changes
   ``scatter`` for :py:class:`DataArray` and :py:class:`Dataset`), deprecated
   since v2023.07.0, has been removed. Convert numbers to strings for a discrete
   hue, and use ``add_legend`` or ``add_colorbar`` to choose the guide
-  (:issue:`11721`).
+  (:issue:`11721`, :pull:`11787`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
