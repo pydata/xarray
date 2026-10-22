@@ -1739,8 +1739,8 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         DataArrayGroupBy.map
         """
         warnings.warn(
-            "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
-            PendingDeprecationWarning,
+            "GroupBy.apply is deprecated, use GroupBy.map instead.",
+            FutureWarning,
             stacklevel=2,
         )
         return self.map(func, shortcut=shortcut, args=args, **kwargs)
@@ -1919,8 +1919,8 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         DatasetGroupBy.map
         """
         warnings.warn(
-            "GroupBy.apply may be deprecated in the future. Using GroupBy.map is encouraged",
-            PendingDeprecationWarning,
+            "GroupBy.apply is deprecated, use GroupBy.map instead.",
+            FutureWarning,
             stacklevel=2,
         )
         return self.map(func, shortcut=shortcut, args=args, **kwargs)

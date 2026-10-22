@@ -383,8 +383,8 @@ class DataArrayResample(
         DataArrayResample.map
         """
         warnings.warn(
-            "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
-            PendingDeprecationWarning,
+            "Resample.apply is deprecated, use Resample.map instead.",
+            FutureWarning,
             stacklevel=2,
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
@@ -470,8 +470,8 @@ class DatasetResample(
         DataSetResample.map
         """
         warnings.warn(
-            "Resample.apply may be deprecated in the future. Using Resample.map is encouraged",
-            PendingDeprecationWarning,
+            "Resample.apply is deprecated, use Resample.map instead.",
+            FutureWarning,
             stacklevel=2,
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)

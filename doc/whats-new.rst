@@ -143,6 +143,13 @@ Deprecations
   :py:attr:`DataTree.lineage` warns once instead of twice (:issue:`11721`,
   :pull:`11724`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- :py:meth:`Dataset.apply`,
+  :py:meth:`core.groupby.DataArrayGroupBy.apply`,
+  :py:meth:`core.groupby.DatasetGroupBy.apply`,
+  :py:meth:`core.resample.DataArrayResample.apply` and
+  :py:meth:`core.resample.DatasetResample.apply` now emit a ``FutureWarning``
+  instead of ``PendingDeprecationWarning``. Use ``.map`` instead (:issue:`11721`).
+  By `Anjali Kashide <https://github.com/Anju522>`_.
 
 
 Bug Fixes
