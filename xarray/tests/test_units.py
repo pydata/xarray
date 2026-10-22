@@ -292,7 +292,7 @@ def merge_args(default_args, new_args):
 
 
 class method:
-    """wrapper class to help with passing methods via parametrize
+    """Wrapper class to help with passing methods via parametrize.
 
     This is works a bit similar to using `partial(Class.method, arg, kwarg)`
     """
@@ -348,7 +348,7 @@ class method:
 
 
 class function:
-    """wrapper class for numpy functions
+    """Wrapper class for numpy functions.
 
     Same as method, but the name is used for referencing numpy functions
     """

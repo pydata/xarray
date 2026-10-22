@@ -175,9 +175,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_identical(v._getitem_with_mask(indexer, fill_value=-1), indexer)
 
     def _assertIndexedLikeNDArray(self, variable, expected_value0, expected_dtype=None):
-        """Given a 1-dimensional variable, verify that the variable is indexed
-        like a numpy.ndarray.
-        """
+        """Verify that a 1-dimensional variable is indexed like a numpy.ndarray."""
         assert variable[0].shape == ()
         assert variable[0].ndim == 0
         assert variable[0].size == 1

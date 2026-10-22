@@ -32,6 +32,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     requires_dask,
+    requires_pandas_3,
     requires_pyarrow,
     requires_scipy_or_netCDF4,
 )
@@ -912,7 +913,7 @@ class TestConcatDataset:
     def test_concat_combine_attrs_kwarg_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        """Check that combine_attrs is used on data variables and coords"""
+        """Check that combine_attrs is used on data variables and coords."""
         ds1 = Dataset({"a": ("x", [0], attrs1)}, coords={"x": ("x", [0], attrs1)})
         ds2 = Dataset({"a": ("x", [0], attrs2)}, coords={"x": ("x", [1], attrs2)})
 
@@ -1519,6 +1520,20 @@ def test_concat_index_not_same_dim() -> None:
         match=r"Cannot concatenate along dimension 'x' indexes with dimensions.*",
     ):
         concat([ds1, ds2], dim="x")
+
+
+@requires_pandas_3
+@pytest.mark.parametrize("dtype", [None, pd.StringDtype()])
+@pytest.mark.parametrize("pandas_first", [False, True])
+def test_concat_pandas_index_string_dtype(dtype, pandas_first) -> None:
+    # GH11317
+    da = DataArray([0], dims=["dim_a"], coords={"dim_a": ["a"]})
+    db = DataArray([0], dims=["dim_b"], coords={"dim_b": ["b"]})
+    db2 = concat([db], pd.Index(["b"], name="dim_a", dtype=dtype))
+    objs = [db2, da] if pandas_first else [da, db2]
+    expected = ["b", "a"] if pandas_first else ["a", "b"]
+    result = concat(objs, dim="dim_a")
+    assert list(result["dim_a"].values) == expected
 
 
 class TestNewDefaults:

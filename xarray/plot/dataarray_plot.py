@@ -154,8 +154,7 @@ def _prepare_plot1d_data(
     plotfunc_name: str | None = None,
     _is_facetgrid: bool = False,
 ) -> dict[str, T_DataArray]:
-    """
-    Prepare data for usage with plt.scatter.
+    """Prepare data for usage with plt.scatter.
 
     Parameters
     ----------
@@ -251,8 +250,7 @@ def plot(
     subplot_kws: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> Any:
-    """
-    Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
+    """Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
 
     Calls xarray plotting function based on the dimensions of
     the squeezed DataArray.
@@ -442,8 +440,7 @@ def line(
     _labels: bool = True,
     **kwargs: Any,
 ) -> list[Line3D] | FacetGrid[T_DataArray]:
-    """
-    Line plot of DataArray values.
+    """Line plot of DataArray values.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.plot`.
 
@@ -632,8 +629,7 @@ def step(
     col: Hashable | None = None,
     **kwargs: Any,
 ) -> list[Line3D] | FacetGrid[DataArray]:
-    """
-    Step plot of DataArray values.
+    """Step plot of DataArray values.
 
     Similar to :py:func:`matplotlib:matplotlib.pyplot.step`.
 
@@ -701,8 +697,7 @@ def hist(
     ylim: tuple[float, float] | None = None,
     **kwargs: Any,
 ) -> tuple[np.ndarray, np.ndarray, BarContainer | Polygon]:
-    """
-    Histogram of DataArray.
+    """Histogram of DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
@@ -763,7 +758,7 @@ def hist(
 
 
 def _plot1d(plotfunc):
-    """Decorator for common 1d plotting logic."""
+    """Decorate a 1d plotting function with common 1d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -1291,8 +1286,7 @@ def lines(
     add_labels: bool | Iterable[bool] = True,
     **kwargs,
 ) -> LineCollection:
-    """
-    Line plot of DataArray values.
+    """Line plot of DataArray values.
 
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
     efficient plotting of many lines in a similar fashion to
@@ -1500,7 +1494,7 @@ def scatter(
 
 
 def _plot2d(plotfunc):
-    """Decorator for common 2d plotting logic."""
+    """Decorate a 2d plotting function with common 2d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -2000,8 +1994,7 @@ def imshow(
 def imshow(
     x: np.ndarray, y: np.ndarray, z: np.ma.core.MaskedArray, ax: Axes, **kwargs: Any
 ) -> AxesImage:
-    """
-    Image plot of 2D DataArray.
+    """Image plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.imshow`.
 
@@ -2216,8 +2209,7 @@ def contour(
 def contour(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> QuadContourSet:
-    """
-    Contour plot of 2D DataArray.
+    """Contour plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.contour`.
     """
@@ -2349,8 +2341,7 @@ def contourf(
 def contourf(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> QuadContourSet:
-    """
-    Filled contour plot of 2D DataArray.
+    """Draw a filled contour plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.contourf`.
     """
@@ -2489,8 +2480,7 @@ def pcolormesh(
     infer_intervals=None,
     **kwargs: Any,
 ) -> QuadMesh:
-    """
-    Pseudocolor plot of 2D DataArray.
+    """Pseudocolor plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.pcolormesh`.
     """
@@ -2665,8 +2655,7 @@ def surface(
 def surface(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> Poly3DCollection:
-    """
-    Surface plot of 2D DataArray.
+    """Surface plot of 2D DataArray.
 
     Wraps :py:meth:`matplotlib:mpl_toolkits.mplot3d.axes3d.Axes3D.plot_surface`.
     """

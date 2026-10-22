@@ -53,7 +53,7 @@ class DaskManager(ChunkManagerEntrypoint["DaskArray"]):
         dtype: DType | None = None,
         previous_chunks: NormalizedChunks | None = None,
     ) -> Any:
-        """Called by open_dataset"""
+        """Normalize the chunks for dask. Called by open_dataset."""
         from dask.array.core import normalize_chunks
 
         return normalize_chunks(

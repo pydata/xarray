@@ -76,7 +76,7 @@ _VALID_COMPAT = Frozen(
 
 
 class Context:
-    """object carrying the information of a call"""
+    """Object carrying the information of a call."""
 
     def __init__(self, func):
         self.func = func
@@ -195,8 +195,9 @@ def _assert_prioritized_valid(
     grouped: dict[Hashable, list[MergeElement]],
     prioritized: Mapping[Any, MergeElement],
 ) -> None:
-    """Make sure that elements given in prioritized will not corrupt any
-    index given in grouped.
+    """Make sure that elements given in prioritized will not corrupt any index.
+
+    The indexes checked are those given in grouped.
     """
     prioritized_names = set(prioritized)
     grouped_by_index: dict[int, list[Hashable]] = defaultdict(list)
@@ -634,7 +635,7 @@ def equivalent_attrs(a: Any, b: Any) -> bool:
 
 
 def merge_attrs(variable_attrs, combine_attrs, context=None):
-    """Combine attributes from different variables according to combine_attrs"""
+    """Combine attributes from different variables according to combine_attrs."""
     if not variable_attrs:
         # no attributes to merge
         return None
@@ -1228,7 +1229,7 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
 
 
 def merge_data_and_coords(data_vars: DataVars, coords) -> _MergeResult:
-    """Used in Dataset.__init__."""
+    """Merge data variables and coordinates (used in Dataset.__init__)."""
     from xarray.core.coordinates import Coordinates, create_coords_with_default_indexes
 
     if isinstance(coords, Coordinates):

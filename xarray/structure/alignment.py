@@ -47,8 +47,10 @@ def reindex_variables(
     fill_value: Any = dtypes.NA,
     sparse: bool = False,
 ) -> dict[Hashable, Variable]:
-    """Conform a dictionary of variables onto a new set of variables reindexed
-    with dimension positional indexers and possibly filled with missing values.
+    """Conform a dictionary of variables onto a new set of reindexed variables.
+
+    The variables are reindexed with dimension positional indexers and possibly
+    filled with missing values.
 
     Not public API.
 
@@ -141,8 +143,7 @@ IndexVarsToAlign = dict[MatchingIndexKey, dict[Hashable, Variable]]
 
 
 class Aligner[T_Alignable: Alignable]:
-    """Implements all the complex logic for the re-indexing and alignment of Xarray
-    objects.
+    """Implements all the complex logic for re-indexing and aligning Xarray objects.
 
     For internal use only, not public API.
     Usage:
@@ -337,8 +338,7 @@ class Aligner[T_Alignable: Alignable]:
         self.unindexed_dim_sizes = unindexed_dim_sizes
 
     def _need_reindex(self, dim, cmp_indexes) -> bool:
-        """Whether or not we need to reindex variables for a set of
-        matching indexes.
+        """Check whether we need to reindex variables for a set of matching indexes.
 
         We don't reindex when all matching indexes are equal for two reasons:
         - It's faster for the usual case (already aligned objects).
@@ -782,7 +782,8 @@ def align(
     exclude: str | Iterable[Hashable] = frozenset(),
     fill_value=dtypes.NA,
 ) -> tuple[T_Alignable, ...]:
-    """
+    """Align any number of Dataset and/or DataArray objects.
+
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
 
@@ -1255,8 +1256,7 @@ def broadcast(
 def broadcast(
     *args: T_Alignable, exclude: str | Iterable[Hashable] | None = None
 ) -> tuple[T_Alignable, ...]:
-    """Explicitly broadcast any number of DataArray or Dataset objects against
-    one another.
+    """Explicitly broadcast any number of DataArray or Dataset objects together.
 
     xarray objects automatically broadcast against each other in arithmetic
     operations, so this function should not be necessary for normal use.

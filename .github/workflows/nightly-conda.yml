@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   build-artifacts:
+    name: Build artifacts
     runs-on: ubuntu-latest
     if: github.repository == 'pydata/xarray'
 
@@ -21,7 +22,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           cache: false
           environments: build-package
@@ -36,6 +37,7 @@ jobs:
           path: dist
 
   upload:
+    name: Publish artifacts
     needs: build-artifacts
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
@@ -59,15 +61,12 @@ jobs:
           name: releases
           path: dist
 
-      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
         with:
           run-install: false
 
       - name: Upload packages
         id: upload
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           pixi upload prefix \
             -vvv \
@@ -79,16 +78,14 @@ jobs:
         if: failure()
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_WORKFLOW: ${{ github.workflow }}
           ISSUE_LABEL: "CI"
           ISSUE_TITLE: "Nightly conda build/upload failed"
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          GITHUB_RUN_URL: ${{ github.repository}}/actions/runs/${{ github.run_id }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository}}/actions/runs/${{ github.run_id }}
+          TEMPLATE: ".github/nightly-conda-failure-template.md"
         run: |
           # Read the template
-          template=$(cat .github/nightly-conda-failure-template.md)
+          template=$(cat "$TEMPLATE")
 
           # Replace placeholders
           issue_body="${template//\{\{WORKFLOW\}\}/$GITHUB_WORKFLOW}"
@@ -106,7 +103,7 @@ jobs:
           else
             echo "No existing open issue found, creating new one..."
             echo "$issue_body" | gh issue create \
-              --title $ISSUE_TITLE" \
+              --title "$ISSUE_TITLE" \
               --body-file - \
               --label "$ISSUE_LABEL"
             echo "Created new issue"

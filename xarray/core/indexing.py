@@ -141,7 +141,7 @@ def group_indexers_by_index(
     indexers: Mapping[Any, Any],
     options: Mapping[str, Any],
 ) -> list[tuple[Index, dict[Any, Any]]]:
-    """Returns a list of unique indexes and their corresponding indexers."""
+    """Return a list of unique indexes and their corresponding indexers."""
     # import here instead of at top to guard against circular imports
     from xarray.core.indexes import PandasIndex
 
@@ -193,9 +193,9 @@ def map_index_queries(
     tolerance: int | float | Iterable[int | float] | None = None,
     **indexers_kwargs: Any,
 ) -> IndexSelResult:
-    """Execute index queries from a DataArray / Dataset and label-based indexers
-    and return the (merged) query results.
+    """Execute index queries and return the (merged) query results.
 
+    The queries are built from a DataArray / Dataset and label-based indexers.
     """
     from xarray.core.dataarray import DataArray
 
@@ -232,7 +232,9 @@ def map_index_queries(
 
 
 def expanded_indexer(key, ndim):
-    """Given a key for indexing an ndarray, return an equivalent key which is a
+    """Expand a key for indexing an ndarray to a tuple of length ndim.
+
+    Given a key for indexing an ndarray, return an equivalent key which is a
     tuple with length equal to the number of dimensions.
 
     The expansion is done by replacing all `Ellipsis` items with the right
@@ -262,9 +264,9 @@ def expanded_indexer(key, ndim):
 
 
 def normalize_slice(sl: slice, size: int) -> slice:
-    """
-    Ensure that given slice only contains positive start and stop values
-    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])
+    """Ensure that given slice only contains positive start and stop values.
+
+    Stop can be -1 for full-size slices with negative steps, e.g. [-10::-1].
 
     Examples
     --------
@@ -280,8 +282,7 @@ def normalize_slice(sl: slice, size: int) -> slice:
 
 
 def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integer]]:
-    """
-    Expand slice to an array containing only positive integers.
+    """Expand slice to an array containing only positive integers.
 
     Examples
     --------
@@ -295,9 +296,11 @@ def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integ
 
 
 def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
-    """Given a slice and the size of the dimension to which it will be applied,
+    """Index a slice with another slice.
+
+    Given a slice and the size of the dimension to which it will be applied,
     index it with another slice to return a new slice equivalent to applying
-    the slices sequentially
+    the slices sequentially.
     """
     old_slice = slice(*old_slice.indices(size))
 
@@ -326,8 +329,7 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
 def normalize_array(
     array: np.ndarray[Any, np.dtype[np.integer]], size: int
 ) -> np.ndarray[Any, np.dtype[np.integer]]:
-    """
-    Ensure that the given array only contains positive values.
+    """Ensure that the given array only contains positive values.
 
     Examples
     --------
@@ -347,9 +349,11 @@ def slice_slice_by_array(
     array: np.ndarray[Any, np.dtype[np.integer]],
     size: int,
 ) -> np.ndarray[Any, np.dtype[np.integer]]:
-    """Given a slice and the size of the dimension to which it will be applied,
+    """Index a slice with an array.
+
+    Given a slice and the size of the dimension to which it will be applied,
     index it with an array to return a new array equivalent to applying
-    the slices sequentially
+    the slices sequentially.
 
     Examples
     --------
@@ -669,7 +673,11 @@ class IndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     @override
     async def async_get_duck_array(self):
-        """These classes are applied to in-memory arrays, so specific async support isn't needed."""
+        """Return the duck array without specific async support.
+
+        These classes are applied to in-memory arrays, so specific async support
+        isn't needed.
+        """
         return self.get_duck_array()
 
 
@@ -711,7 +719,8 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("_shape", "array", "key")
 
     def __init__(self, array: Any, key: ExplicitIndexer | None = None):
-        """
+        """Initialize a lazily indexed array.
+
         Parameters
         ----------
         array : array_like
@@ -832,7 +841,8 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "key")
 
     def __init__(self, array: duckarray[Any, Any], key: ExplicitIndexer):
-        """
+        """Initialize a lazily vectorized indexed array.
+
         Parameters
         ----------
         array : array_like
@@ -1034,7 +1044,8 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
 
 
 def as_indexable(array):
-    """
+    """Wrap an array in an ExplicitlyIndexed subclass.
+
     This function always returns an ExplicitlyIndexed subclass,
     so that the vectorized indexing is always possible with the returned
     object.
@@ -1248,8 +1259,9 @@ def decompose_indexer(
 
 
 def _decompose_slice(key: slice, size: int) -> tuple[slice, slice]:
-    """Convert a slice to successive two slices. The first slice always has
-    a positive step.
+    """Convert a slice to successive two slices.
+
+    The first slice always has a positive step.
 
     >>> _decompose_slice(slice(2, 98, 2), 99)
     (slice(2, 98, 2), slice(None, None, None))
@@ -1280,9 +1292,9 @@ def _decompose_vectorized_indexer(
     shape: Shape,
     indexing_support: IndexingSupport,
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
-    """
-    Decompose vectorized indexer to the successive two indexers, where the
-    first indexer will be used to index backend arrays, while the second one
+    """Decompose vectorized indexer to the successive two indexers.
+
+    The first indexer will be used to index backend arrays, while the second one
     is used to index loaded on-memory np.ndarray.
 
     Parameters
@@ -1362,9 +1374,9 @@ def _decompose_outer_indexer(
     shape: Shape,
     indexing_support: IndexingSupport,
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
-    """
-    Decompose outer indexer to the successive two indexers, where the
-    first indexer will be used to index backend arrays, while the second one
+    """Decompose outer indexer to the successive two indexers.
+
+    The first indexer will be used to index backend arrays, while the second one
     is used to index the loaded on-memory np.ndarray.
 
     Parameters
@@ -1532,8 +1544,10 @@ def _check_bounds(indices: Any, size: int):
 
 
 def _arrayize_outer_indexer(indexer: OuterIndexer, shape) -> OuterIndexer:
-    """Return a similar oindex with after replacing slices by arrays and
-    negative indices by their corresponding positive indices.
+    """Return a similar oindex with slices and negative indices replaced.
+
+    Slices are replaced by arrays and negative indices by their corresponding
+    positive indices.
 
     Also check if array indices are within bounds.
 
@@ -1555,7 +1569,7 @@ def _arrayize_outer_indexer(indexer: OuterIndexer, shape) -> OuterIndexer:
 def _arrayize_vectorized_indexer(
     indexer: VectorizedIndexer, shape: Shape
 ) -> VectorizedIndexer:
-    """Return an identical vindex but slices are replaced by arrays"""
+    """Return an identical vindex but slices are replaced by arrays."""
     slices = [v for v in indexer.tuple if isinstance(v, slice)]
     if len(slices) == 0:
         return indexer
@@ -1719,8 +1733,10 @@ def posify_mask_indexer(indexer: ExplicitIndexer) -> ExplicitIndexer:
 
 
 def is_fancy_indexer(indexer: Any) -> bool:
-    """Return False if indexer is an int, slice, a 1-dimensional list, or a 0 or
-    1-dimensional ndarray; in all other cases return True
+    """Check whether indexer is a fancy indexer.
+
+    Return False if indexer is an int, slice, a 1-dimensional list, or a 0 or
+    1-dimensional ndarray; in all other cases return True.
     """
     if isinstance(indexer, int | slice) and not isinstance(indexer, bool):
         return False
@@ -1887,7 +1903,9 @@ class DaskIndexingAdapter(IndexingAdapter):
     __slots__ = ("array",)
 
     def __init__(self, array):
-        """This adapter is created in Variable.__getitem__ in
+        """Initialize the adapter.
+
+        This adapter is created in Variable.__getitem__ in
         Variable._broadcast_indexes.
         """
         self.array = array

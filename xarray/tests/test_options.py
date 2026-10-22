@@ -237,7 +237,7 @@ class TestAttrRetention:
     [("left"), ("exact")],
 )
 def test_get_options_retention(set_value):
-    """Test to check if get_options will return changes made by set_options"""
+    """Test to check if get_options will return changes made by set_options."""
     with xarray.set_options(arithmetic_join=set_value):
         get_options = xarray.get_options()
         assert get_options["arithmetic_join"] == set_value

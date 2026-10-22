@@ -270,14 +270,15 @@ class AbstractArray(Generic[DimType_co]):  # noqa: UP046
 
 
 class AttrAccessMixin:
-    """Mixin class that allows getting keys with attribute access"""
+    """Mixin class that allows getting keys with attribute access."""
 
     __slots__ = ()
 
     def __init_subclass__(cls, **kwargs):
-        """Verify that all subclasses explicitly define ``__slots__``. If they don't,
-        raise error in the core xarray module and a FutureWarning in third-party
-        extensions.
+        """Verify that all subclasses explicitly define ``__slots__``.
+
+        If they don't, raise error in the core xarray module and a FutureWarning in
+        third-party extensions.
         """
         if not hasattr(object.__new__(cls), "__dict__"):
             pass
@@ -294,12 +295,12 @@ class AttrAccessMixin:
 
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
-        """Places to look-up items for attribute-style access"""
+        """Places to look-up items for attribute-style access."""
         yield from ()
 
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
-        """Places to look-up items for key-autocompletion"""
+        """Places to look-up items for key-autocompletion."""
         yield from ()
 
     def __getattr__(self, name: str) -> Any:
@@ -319,7 +320,10 @@ class AttrAccessMixin:
     # runtime before every single assignment. All of this is just temporary until the
     # FutureWarning can be changed into a hard crash.
     def _setattr_dict(self, name: str, value: Any) -> None:
-        """Deprecated third party subclass (see ``__init_subclass__`` above)"""
+        """Set an attribute on a deprecated third party subclass.
+
+        See ``__init_subclass__`` above.
+        """
         object.__setattr__(self, name, value)
         if name in self.__dict__:
             # Custom, non-slotted attr, or improperly assigned variable?
@@ -332,7 +336,9 @@ class AttrAccessMixin:
             )
 
     def __setattr__(self, name: str, value: Any) -> None:
-        """Objects with ``__slots__`` raise AttributeError if you try setting an
+        """Set an attribute, improving the error message for undeclared attributes.
+
+        Objects with ``__slots__`` raise AttributeError if you try setting an
         undeclared attribute. This is desirable, but the error message could use some
         improvement.
         """
@@ -349,8 +355,9 @@ class AttrAccessMixin:
             ) from e
 
     def __dir__(self) -> list[str]:
-        """Provide method name lookup and completion. Only provide 'public'
-        methods.
+        """Provide method name lookup and completion.
+
+        Only provide 'public' methods.
         """
         extra_attrs = {
             item
@@ -362,8 +369,9 @@ class AttrAccessMixin:
 
     def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
+
         See https://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
-        For the details.
+        for the details.
         """
         items = {
             item
@@ -375,7 +383,7 @@ class AttrAccessMixin:
 
 
 class TreeAttrAccessMixin(AttrAccessMixin):
-    """Mixin class that allows getting keys with attribute access"""
+    """Mixin class that allows getting keys with attribute access."""
 
     # TODO: Ensure ipython tab completion can include both child datatrees and
     # variables from Dataset objects on relevant nodes.
@@ -384,8 +392,10 @@ class TreeAttrAccessMixin(AttrAccessMixin):
 
     @override
     def __init_subclass__(cls, **kwargs):
-        """This method overrides the check from ``AttrAccessMixin`` that ensures
-        ``__dict__`` is absent in a class, with ``__slots__`` used instead.
+        """Override the ``__slots__`` check from ``AttrAccessMixin``.
+
+        The check from ``AttrAccessMixin`` ensures ``__dict__`` is absent in a class,
+        with ``__slots__`` used instead.
         ``DataTree`` has some dynamically defined attributes in addition to those
         defined in ``__slots__``. (GH9068)
         """
@@ -473,8 +483,8 @@ class DataWithCoords(AttrAccessMixin):
         *,
         keep_attrs: bool | None = None,
     ) -> Self:
-        """
-        Return an array whose values are limited to ``[min, max]``.
+        """Return an array whose values are limited to ``[min, max]``.
+
         At least one of max or min must be given.
 
         Parameters
@@ -510,7 +520,7 @@ class DataWithCoords(AttrAccessMixin):
         )
 
     def get_index(self, key: Hashable) -> pd.Index:
-        """Get an index for a dimension, with fall-back to a default RangeIndex"""
+        """Get an index for a dimension, with fall-back to a default RangeIndex."""
         if key not in self.dims:
             raise KeyError(key)
 
@@ -748,8 +758,7 @@ class DataWithCoords(AttrAccessMixin):
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> T:
-        """
-        Apply ``func(self, *args, **kwargs)``
+        """Apply ``func(self, *args, **kwargs)``.
 
         This method replicates the pandas method of the same name.
 
@@ -884,9 +893,9 @@ class DataWithCoords(AttrAccessMixin):
         window_type: str = "span",
         **window_kwargs,
     ) -> RollingExp[T_DataWithCoords]:
-        """
-        Exponentially-weighted moving window.
-        Similar to EWM in pandas
+        """Exponentially-weighted moving window.
+
+        Similar to EWM in pandas.
 
         Requires the optional Numbagg dependency.
 
@@ -933,7 +942,7 @@ class DataWithCoords(AttrAccessMixin):
         restore_coord_dims: bool | None,
         **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> T_Resample:
-        """Returns a Resample object for performing resampling operations.
+        """Return a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. The resampled
         dimension must be a datetime-like coordinate. If any intervals
@@ -1365,7 +1374,7 @@ class DataWithCoords(AttrAccessMixin):
         )
 
     def isin(self, test_elements: Any) -> Self:
-        """Tests each value in the array for whether it is in test elements.
+        """Test each value in the array for whether it is in test elements.
 
         Parameters
         ----------
@@ -1426,8 +1435,8 @@ class DataWithCoords(AttrAccessMixin):
         copy=None,
         keep_attrs=True,
     ) -> Self:
-        """
-        Copy of the xarray object, with data cast to a specified type.
+        """Return a copy of the xarray object, with data cast to a specified type.
+
         Leaves coordinate dtype unchanged.
 
         Parameters
@@ -1572,8 +1581,7 @@ def full_like(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
-    """
-    Return a new object with the same shape and type as a given object.
+    """Return a new object with the same shape and type as a given object.
 
     Returned object will be chunked if if the given object is chunked, or if chunks or chunked_array_type are specified.
 
@@ -1758,7 +1766,7 @@ def _full_like_variable(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Variable:
-    """Inner function of full_like, where other must be a variable"""
+    """Inner function of full_like, where other must be a variable."""
     from xarray.core.variable import Variable
 
     if fill_value is dtypes.NA:
@@ -1856,8 +1864,9 @@ def zeros_like(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
-    """Return a new object of zeros with the same shape and
-    type as a given dataarray or dataset.
+    """Return a new object of zeros with the same shape and type as a given object.
+
+    The object can be a DataArray, Dataset or Variable.
 
     Parameters
     ----------
@@ -1993,8 +2002,9 @@ def ones_like(
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
 ) -> Dataset | DataArray | Variable:
-    """Return a new object of ones with the same shape and
-    type as a given dataarray or dataset.
+    """Return a new object of ones with the same shape and type as a given object.
+
+    The object can be a DataArray, Dataset or Variable.
 
     Parameters
     ----------
@@ -2076,7 +2086,7 @@ def get_chunksizes(
 
 
 def is_np_datetime_like(dtype: DTypeLike | None) -> bool:
-    """Check if a dtype is a subclass of the numpy datetime types"""
+    """Check if a dtype is a subclass of the numpy datetime types."""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
@@ -2086,7 +2096,7 @@ def is_np_timedelta_like(dtype: DTypeLike | None) -> bool:
 
 
 def _contains_cftime_datetimes(array: Any) -> bool:
-    """Check if an array inside a Variable contains cftime.datetime objects"""
+    """Check if an array inside a Variable contains cftime.datetime objects."""
     if cftime is None:
         return False
 
@@ -2101,13 +2111,14 @@ def _contains_cftime_datetimes(array: Any) -> bool:
 
 
 def contains_cftime_datetimes(var: T_Variable) -> bool:
-    """Check if an xarray.Variable contains cftime.datetime objects"""
+    """Check if an xarray.Variable contains cftime.datetime objects."""
     return _contains_cftime_datetimes(var._data)
 
 
 def _contains_datetime_like_objects(var: T_Variable) -> bool:
-    """Check if a variable contains datetime like objects (either
-    np.datetime64, np.timedelta64, or cftime.datetime)
+    """Check if a variable contains datetime like objects.
+
+    These are np.datetime64, np.timedelta64, or cftime.datetime objects.
     """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
 

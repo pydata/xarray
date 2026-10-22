@@ -128,15 +128,17 @@ def validate_char_dim_name(strlen, encoding, name) -> str:
     if (char_dim_name := encoding.pop("char_dim_name", None)) is not None:
         # 1 - extract all characters up to last number sequence
         # 2 - extract last number sequence
-        match = re.search(r"^(.*?)(\d+)(?!.*\d)", char_dim_name)
+        # 3 - extract the remaining characters after it
+        match = re.search(r"^(.*?)(\d+)(\D*)$", char_dim_name)
         if match:
-            new_dim_name = match.group(1)
-            if int(match.group(2)) != strlen:
+            prefix, length, suffix = match.groups()
+            new_dim_name = f"{prefix}{strlen}{suffix}"
+            if int(length) != strlen:
                 emit_user_level_warning(
-                    f"String dimension naming mismatch on variable {name!r}. {char_dim_name!r} provided by encoding, but data has length of '{strlen}'. Using '{new_dim_name}{strlen}' instead of {char_dim_name!r} to prevent possible naming clash.\n"
+                    f"String dimension naming mismatch on variable {name!r}. {char_dim_name!r} provided by encoding, but data has length of '{strlen}'. Using {new_dim_name!r} instead of {char_dim_name!r} to prevent possible naming clash.\n"
                     "To silence this warning either remove 'char_dim_name' from encoding or provide a fitting name."
                 )
-            char_dim_name = f"{new_dim_name}{strlen}"
+            char_dim_name = new_dim_name
         elif (
             original_shape := encoding.get("original_shape", [-1])[-1]
         ) != -1 and original_shape != strlen:
@@ -246,8 +248,10 @@ def _numpy_char_to_bytes(arr):
 
 
 class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Wrapper around array-like objects to create a new indexable object where
-    values, when accessed, are automatically stacked along the last dimension.
+    """Wrapper that stacks character arrays along the last dimension.
+
+    Wraps array-like objects to create a new indexable object where values, when
+    accessed, are automatically stacked along the last dimension.
 
     >>> indexer = indexing.BasicIndexer((slice(None),))
     >>> np.array(StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer])
@@ -255,7 +259,8 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """
 
     def __init__(self, array):
-        """
+        """Initialize the wrapper.
+
         Parameters
         ----------
         array : array-like
