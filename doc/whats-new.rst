@@ -148,7 +148,7 @@ Deprecations
   :py:meth:`core.groupby.DatasetGroupBy.apply`,
   :py:meth:`core.resample.DataArrayResample.apply` and
   :py:meth:`core.resample.DatasetResample.apply` now emit a ``FutureWarning``
-  instead of ``PendingDeprecationWarning``. Use ``.map`` instead (:issue:`11721`, 
+  instead of ``PendingDeprecationWarning``. Use ``.map`` instead (:issue:`11721`,
   :pull:`11784`).
   By `Anjali Kashide <https://github.com/Anju522>`_.
 
