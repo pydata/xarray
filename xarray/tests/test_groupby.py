@@ -276,7 +276,9 @@ def test_ds_groupby_map_func_args() -> None:
 
 @pytest.mark.parametrize("use_da", [True, False])
 def test_groupby_apply_deprecated(use_da: bool) -> None:
-    obj = xr.DataArray([1.0, 2.0, 3.0, 4.0], [("x", [1, 1, 2, 2])])
+    obj: xr.DataArray | xr.Dataset = xr.DataArray(
+        [1.0, 2.0, 3.0, 4.0], [("x", [1, 1, 2, 2])]
+    )
     if not use_da:
         obj = obj.to_dataset(name="foo")
 
@@ -289,7 +291,7 @@ def test_groupby_apply_deprecated(use_da: bool) -> None:
 @pytest.mark.parametrize("use_da", [True, False])
 def test_resample_apply_deprecated(use_da: bool) -> None:
     times = pd.date_range("2000-01-01", freq="6h", periods=8)
-    obj = xr.DataArray(np.arange(8.0), [("time", times)])
+    obj: xr.DataArray | xr.Dataset = xr.DataArray(np.arange(8.0), [("time", times)])
     if not use_da:
         obj = obj.to_dataset(name="foo")
 
