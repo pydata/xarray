@@ -5690,6 +5690,17 @@ class Dataset(
         See Also
         --------
         Dataset.stack
+
+        Notes
+        -----
+        The order of the new dimension coordinates follows the levels of the
+        ``MultiIndex``. A ``MultiIndex`` created by pandas (e.g. when converting
+        a ``pd.DataFrame`` or ``pd.Series`` with a ``MultiIndex``) usually has
+        sorted levels, so the resulting coordinates will be sorted. A
+        ``MultiIndex`` created by
+        :py:meth:`Dataset.stack` preserves the original order. Use
+        :py:meth:`Dataset.sel` after unstacking to select a specific order if
+        needed.
         """
         if dim is None:
             dims = list(self.dims)

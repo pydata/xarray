@@ -2902,6 +2902,23 @@ class TestDataArray:
         actual = stacked.sel(z=slice((x[0], "b"), (x[1], "a")))
         assert_identical(actual, stacked.isel(z=slice(1, 3)))
 
+    def test_unstack_coords_follow_multiindex_levels(self) -> None:
+        # pandas sorts MultiIndex levels, xarray's stack keeps the original order
+        arrays: list[np.ndarray] = [np.array(["c", "a", "b"]), np.array([1, 0, 0])]
+        midx = pd.MultiIndex.from_arrays(arrays, names=["x", "y"])
+        s = pd.Series([10, 20, 30], index=midx)
+        unstacked = DataArray(s, dims="z").unstack("z")
+        assert unstacked["x"].values.tolist() == ["a", "b", "c"]
+        assert unstacked["y"].values.tolist() == [0, 1]
+
+        orig = DataArray(
+            np.arange(6).reshape(3, 2),
+            coords={"x": ["c", "a", "b"], "y": [1, 0]},
+            dims=["x", "y"],
+        )
+        roundtripped = orig.stack(z=["x", "y"]).unstack("z")
+        assert_identical(orig, roundtripped)
+
     def test_unstack_pandas_consistency(self) -> None:
         df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
         s = df.set_index(["x", "y"])["foo"]
