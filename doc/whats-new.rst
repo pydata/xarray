@@ -61,9 +61,15 @@ New Features
   variables of a section at once, and shows the expanded attributes and data
   more compactly and indented below their variable (:pull:`11284`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:class:`~xarray.coders.CFDatetimeCoder` accepts ``infer_dtype``. With
+  ``infer_dtype="metadata"`` the decoded dtype is inferred from ``units``,
+  ``calendar``, ``use_cftime`` and ``time_unit`` instead of reading the first
+  and last values of each time variable, which makes opening remote datasets
+  with many time variables much faster. The default ``infer_dtype="data"``
+  keeps the current behavior (:issue:`11303`, :pull:`11304`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
