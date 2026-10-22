@@ -13,6 +13,11 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:func:`apply_ufunc` accepts dimension names for ``vectorize``, e.g.
+  ``vectorize=["time"]``, to only loop over these broadcast dimensions and pass
+  all other broadcast dimensions to ``func`` in bulk. This is much faster than
+  ``vectorize=True`` if ``func`` can broadcast its inputs, for numpy and dask
+  arrays alike (:pull:`11681`).
 - :py:class:`~xarray.Variable` is now generic in the types of its shape, dtype
   and dimension names, like :py:class:`~xarray.NamedArray`: it is defined as
   ``class Variable(NamedArray[ShapeType_co, DType_co, DimType_co])``, so static
@@ -147,6 +152,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
+  ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
+  coordinates (:pull:`11681`).
 - Encoding a string variable whose ``char_dim_name`` has characters after its
   last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
   not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).
@@ -349,6 +357,12 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
+  docstring. The ``apply_ufunc`` example notebook was removed in favor of the
+  `apply_ufunc interpolation tutorial
+  <https://tutorial.xarray.dev/advanced/apply_ufunc/example-interp.html>`_
+  (:pull:`11681`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Add hidden intersphinx inventory entries for methods, properties and
   attributes at the path where they are defined, e.g.
   ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
@@ -398,6 +412,12 @@ Performance
   ones instead of sorting them. This avoids copying the data before
   interpolating (:issue:`9758`, :pull:`11658`).
   By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+- Fix a performance regression in :py:meth:`Dataset.interp` and
+  :py:meth:`DataArray.interp` when the new coordinates vary along a dimension
+  of the interpolated object, e.g. ``da.interp(z=new_z)`` where ``new_z`` has a
+  dimension ``t`` of ``da``. The interpolation now only loops over the
+  dimensions the new coordinates depend on, for numpy and dask arrays alike
+  (:issue:`10683`, :pull:`11681`).
 - :py:meth:`Dataset.unstack` and :py:meth:`DataArray.unstack` reshape the data
   instead of copying it when the MultiIndex contains every combination of its
   levels in order, e.g. after :py:meth:`Dataset.stack`. The unstacked data is
@@ -6575,7 +6595,7 @@ Documentation
 - Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
   ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Add new :doc:`example notebook <examples/apply_ufunc_vectorize_1d>` example notebook demonstrating
+- Add new ``apply_ufunc_vectorize_1d`` example notebook demonstrating
   vectorization of a 1D function using :py:func:`apply_ufunc` , dask and numba.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added example for :py:func:`~xarray.map_blocks`. (:pull:`3667`)
