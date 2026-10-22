@@ -20,8 +20,7 @@ from xarray.util._report import (
 
 
 def get_sys_info():
-    """Returns system information as a dict"""
-
+    """Return system information as a dict."""
     blob = []
 
     # get full commit hash

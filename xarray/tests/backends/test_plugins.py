@@ -433,8 +433,7 @@ def test_show_backends() -> None:
 @requires_netCDF4
 @requires_zarr
 def test_remote_url_backend_auto_detection() -> None:
-    """
-    Test that remote URLs are correctly selected by the backend resolution system.
+    """Test that remote URLs are correctly selected by the backend resolution system.
 
     This tests the fix for issue where netCDF4, h5netcdf, and pydap backends were
     claiming ALL remote URLs, preventing remote Zarr stores from being

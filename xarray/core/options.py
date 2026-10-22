@@ -183,8 +183,7 @@ def _get_keep_attrs(default: bool) -> bool:
 
 
 class set_options:
-    """
-    Set options for xarray in a controlled context.
+    """Set options for xarray in a controlled context.
 
     Parameters
     ----------
@@ -447,8 +446,7 @@ class set_options:
 
 
 def get_options():
-    """
-    Get options for xarray.
+    """Get options for xarray.
 
     See Also
     --------

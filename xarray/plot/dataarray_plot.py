@@ -11,6 +11,7 @@ import pandas as pd
 from xarray.core.utils import attempt_import
 from xarray.plot.facetgrid import _easy_facetgrid
 from xarray.plot.utils import (
+    _CYCLE_PROPS,
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_colorbar,
@@ -18,6 +19,7 @@ from xarray.plot.utils import (
     _assert_valid_xy,
     _determine_guide,
     _ensure_plottable,
+    _group_hue_values,
     _guess_coords_to_plot,
     _infer_interval_breaks,
     _infer_xy_labels,
@@ -152,8 +154,7 @@ def _prepare_plot1d_data(
     plotfunc_name: str | None = None,
     _is_facetgrid: bool = False,
 ) -> dict[str, T_DataArray]:
-    """
-    Prepare data for usage with plt.scatter.
+    """Prepare data for usage with plt.scatter.
 
     Parameters
     ----------
@@ -249,8 +250,7 @@ def plot(
     subplot_kws: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> Any:
-    """
-    Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
+    """Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
 
     Calls xarray plotting function based on the dimensions of
     the squeezed DataArray.
@@ -440,8 +440,7 @@ def line(
     _labels: bool = True,
     **kwargs: Any,
 ) -> list[Line3D] | FacetGrid[T_DataArray]:
-    """
-    Line plot of DataArray values.
+    """Line plot of DataArray values.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.plot`.
 
@@ -496,9 +495,10 @@ def line(
         When either col or row is given, returns a FacetGrid, otherwise
         a list of matplotlib Line3D objects.
 
-    See also
+    See Also
     --------
-    Use :py:func:`xarray.plot.lines` for efficient plotting of many lines.
+    :py:func:`xarray.plot.lines`
+        Efficient plotting of many lines.
     """
     # Handle facetgrids first
     if row or col:
@@ -538,6 +538,22 @@ def line(
 
     primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
+    # ax.plot draws each column of a 2D array with the next style from the
+    # axes' property cycle, so duplicate hue values get distinct styles.
+    # Restyle so lines sharing a hue value share a style: the k-th hue value
+    # (in order of first appearance) takes the style of the k-th line, which
+    # inherits whatever property cycle the axes carries.
+    if hueplt is not None:
+        hue_values = hueplt.to_numpy()
+        hue_codes, hue_first = _group_hue_values(hue_values)
+        if len(hue_first) < len(primitive):
+            styles = [
+                {prop: getattr(line2d, f"get_{prop}")() for prop in _CYCLE_PROPS}
+                for line2d in primitive
+            ]
+            for line2d, code in zip(primitive, hue_codes, strict=True):
+                line2d.set(**styles[code])
+
     if _labels:
         if xlabel is not None:
             ax.set_xlabel(xlabel)
@@ -549,7 +565,12 @@ def line(
 
     if darray.ndim == 2 and add_legend:
         assert hueplt is not None
-        ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
+        # One legend entry per hue value, keyed to the first line drawn with it.
+        ax.legend(
+            handles=[primitive[i] for i in hue_first],
+            labels=list(hue_values[hue_first]),
+            title=hue_label,
+        )
 
     if isinstance(xplt.dtype, np.dtype) and np.issubdtype(xplt.dtype, np.datetime64):  # type: ignore[redundant-expr]
         _set_concise_date(ax, axis="x")
@@ -608,8 +629,7 @@ def step(
     col: Hashable | None = None,
     **kwargs: Any,
 ) -> list[Line3D] | FacetGrid[DataArray]:
-    """
-    Step plot of DataArray values.
+    """Step plot of DataArray values.
 
     Similar to :py:func:`matplotlib:matplotlib.pyplot.step`.
 
@@ -677,8 +697,7 @@ def hist(
     ylim: tuple[float, float] | None = None,
     **kwargs: Any,
 ) -> tuple[np.ndarray, np.ndarray, BarContainer | Polygon]:
-    """
-    Histogram of DataArray.
+    """Histogram of DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
@@ -739,7 +758,7 @@ def hist(
 
 
 def _plot1d(plotfunc):
-    """Decorator for common 1d plotting logic."""
+    """Decorate a 1d plotting function with common 1d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -1267,8 +1286,7 @@ def lines(
     add_labels: bool | Iterable[bool] = True,
     **kwargs,
 ) -> LineCollection:
-    """
-    Line plot of DataArray values.
+    """Line plot of DataArray values.
 
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
     efficient plotting of many lines in a similar fashion to
@@ -1476,7 +1494,7 @@ def scatter(
 
 
 def _plot2d(plotfunc):
-    """Decorator for common 2d plotting logic."""
+    """Decorate a 2d plotting function with common 2d plotting logic."""
     commondoc = """
 Parameters
 ----------
@@ -1976,8 +1994,7 @@ def imshow(
 def imshow(
     x: np.ndarray, y: np.ndarray, z: np.ma.core.MaskedArray, ax: Axes, **kwargs: Any
 ) -> AxesImage:
-    """
-    Image plot of 2D DataArray.
+    """Image plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.imshow`.
 
@@ -2002,7 +2019,6 @@ def imshow(
     The pixels are centered on the coordinates. For example, if the coordinate
     value is 3.2, then the pixels for those coordinates will be centered on 3.2.
     """
-
     if x.ndim != 1 or y.ndim != 1:
         raise ValueError(
             "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
@@ -2193,8 +2209,7 @@ def contour(
 def contour(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> QuadContourSet:
-    """
-    Contour plot of 2D DataArray.
+    """Contour plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.contour`.
     """
@@ -2326,8 +2341,7 @@ def contourf(
 def contourf(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> QuadContourSet:
-    """
-    Filled contour plot of 2D DataArray.
+    """Draw a filled contour plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.contourf`.
     """
@@ -2466,12 +2480,10 @@ def pcolormesh(
     infer_intervals=None,
     **kwargs: Any,
 ) -> QuadMesh:
-    """
-    Pseudocolor plot of 2D DataArray.
+    """Pseudocolor plot of 2D DataArray.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.pcolormesh`.
     """
-
     # decide on a default for infer_intervals (GH781)
     x = np.asarray(x)
     if infer_intervals is None:
@@ -2643,8 +2655,7 @@ def surface(
 def surface(
     x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
 ) -> Poly3DCollection:
-    """
-    Surface plot of 2D DataArray.
+    """Surface plot of 2D DataArray.
 
     Wraps :py:meth:`matplotlib:mpl_toolkits.mplot3d.axes3d.Axes3D.plot_surface`.
     """

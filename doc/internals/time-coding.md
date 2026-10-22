@@ -1,5 +1,7 @@
 ---
 file_format: mystnb
+mystnb:
+  execution_in_temp: true
 kernelspec:
   name: python3
 ---
@@ -463,20 +465,6 @@ datetimes1_filename = "test-datetimes1.nc"
 ```
 
 ```{code-cell}
-:tags: [remove-input]
-
-# Ensure the file is located in a unique temporary directory
-# so that it doesn't conflict with parallel builds of the
-# documentation.
-
-import tempfile
-import os.path
-
-tempdir = tempfile.TemporaryDirectory()
-datetimes1_filename = os.path.join(tempdir.name, datetimes1_filename)
-```
-
-```{code-cell}
 attrs = {"units": "hours since 2000-01-01"}
 ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
 ds.to_netcdf(datetimes1_filename)
@@ -499,12 +487,6 @@ datetimes2_filename = "test-datetimes2.nc"
 ```
 
 ```{code-cell}
-:tags: [remove-input]
-
-datetimes2_filename = os.path.join(tempdir.name, datetimes2_filename)
-```
-
-```{code-cell}
 attrs = {"units": "milliseconds since 2000-01-01"}
 ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
 ds.to_netcdf(datetimes2_filename)
@@ -522,12 +504,6 @@ Similar logic applies for decoding timedelta values. The default resolution is
 
 ```{code-cell}
 timedeltas1_filename = "test-timedeltas1.nc"
-```
-
-```{code-cell}
-:tags: [remove-input]
-
-timedeltas1_filename = os.path.join(tempdir.name, timedeltas1_filename)
 ```
 
 ```{code-cell}
@@ -567,12 +543,6 @@ timedeltas2_filename = "test-timedeltas2.nc"
 ```
 
 ```{code-cell}
-:tags: [remove-input]
-
-timedeltas2_filename = os.path.join(tempdir.name, timedeltas2_filename)
-```
-
-```{code-cell}
 attrs = {"units": "milliseconds"}
 ds = xr.Dataset({"time": ("time", [0, 1, 2, 3], attrs)})
 ds.to_netcdf(timedeltas2_filename)
@@ -594,13 +564,6 @@ xr.open_dataset(timedeltas2_filename, decode_timedelta=False)
 ```{note}
 Note that in the future the default value of `decode_timedelta` will be
 `False` rather than `None`.
-```
-
-```{code-cell}
-:tags: [remove-input]
-
-# Cleanup
-tempdir.cleanup()
 ```
 
 [calendar]: https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html#calendar

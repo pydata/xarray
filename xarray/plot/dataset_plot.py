@@ -656,8 +656,7 @@ F = TypeVar("F", bound=Callable)
 
 
 def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
-    """
-    Add a common docstring by reusing the DataArray one.
+    """Add a common docstring by reusing the DataArray one.
 
     TODO: Reduce code duplication.
 
@@ -672,7 +671,6 @@ def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
     dataarray_plotfunc : Callable
         Function that returns a finished plot primitive.
     """
-
     # Build on the original docstring
     da_doc = dataarray_plotfunc.__doc__
     if da_doc is None:
@@ -1085,8 +1083,7 @@ def lines(
     levels: ArrayLike | None = None,
     **kwargs: Any,
 ) -> LineCollection | FacetGrid[DataArray]:
-    """
-    Line plot Dataset data variables against each other.
+    """Line plot Dataset data variables against each other.
 
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection` which allows
     efficient plotting of many lines in a similar fashion to

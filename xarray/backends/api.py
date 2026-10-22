@@ -125,7 +125,7 @@ def _protect_datatree_variables_inplace(tree: DataTree, cache: bool) -> None:
 
 
 def _finalize_store(writes, store):
-    """Finalize this store by explicitly syncing and closing"""
+    """Finalize this store by explicitly syncing and closing."""
     del writes  # ensure writing is done first
     store.close()
 
@@ -142,8 +142,7 @@ def _multi_file_closer(closers):
 
 
 def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
-    """Open, load into memory, and close a Dataset from a file or file-like
-    object.
+    """Open, load into memory, and close a Dataset from a file or file-like object.
 
     This is a thin wrapper around :py:meth:`~xarray.open_dataset`. It differs
     from `open_dataset` in that it loads the Dataset into memory, closes the
@@ -168,8 +167,9 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
 
 
 def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArray:
-    """Open, load into memory, and close a DataArray from a file or file-like
-    object containing a single data variable.
+    """Open, load into memory, and close a DataArray from a file or file-like object.
+
+    The file must contain a single data variable.
 
     This is a thin wrapper around :py:meth:`~xarray.open_dataarray`. It differs
     from `open_dataarray` in that it loads the Dataset into memory, closes the
@@ -194,8 +194,7 @@ def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArra
 
 
 def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
-    """Open, load into memory, and close a DataTree from a file or file-like
-    object.
+    """Open, load into memory, and close a DataTree from a file or file-like object.
 
     This is a thin wrapper around :py:meth:`~xarray.open_datatree`. It differs
     from `open_datatree` in that it loads the DataTree into memory, closes the
@@ -395,7 +394,7 @@ def open_dataset(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
@@ -579,6 +578,10 @@ def open_dataset(
     dataset : Dataset
         The newly created dataset.
 
+    See Also
+    --------
+    open_mfdataset
+
     Notes
     -----
     For files with multiple groups, ``open_dataset`` reads only the selected
@@ -591,12 +594,7 @@ def open_dataset(
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
-
-    See Also
-    --------
-    open_mfdataset
     """
-
     if cache is None:
         cache = chunks is None
 
@@ -651,7 +649,7 @@ def open_dataarray(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -670,8 +668,7 @@ def open_dataarray(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
-    """Open a DataArray from a file or file-like object containing a single
-    data variable.
+    """Open a DataArray from a file or file-like object with a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
     multiple variables are present then a ValueError is raised.
@@ -824,6 +821,10 @@ def open_dataarray(
 
         See engine open function for kwargs accepted by each specific engine.
 
+    See Also
+    --------
+    open_dataset
+
     Notes
     -----
     This is designed to be fully compatible with `DataArray.to_netcdf`. Saving
@@ -832,12 +833,7 @@ def open_dataarray(
 
     All parameters are passed directly to `xarray.open_dataset`. See that
     documentation for further details.
-
-    See Also
-    --------
-    open_dataset
     """
-
     dataset = open_dataset(
         filename_or_obj,
         decode_cf=decode_cf,
@@ -890,7 +886,7 @@ def open_datatree(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
@@ -911,8 +907,7 @@ def open_datatree(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataTree:
-    """
-    Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
+    """Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
 
     Parameters
     ----------
@@ -1071,17 +1066,17 @@ def open_datatree(
     tree : DataTree
         The newly created datatree.
 
+    See Also
+    --------
+    xarray.open_groups
+    xarray.open_dataset
+
     Notes
     -----
     ``open_datatree`` opens the file with read-only access. When you modify
     values of a DataTree, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
-
-    See Also
-    --------
-    xarray.open_groups
-    xarray.open_dataset
     """
     if cache is None:
         cache = chunks is None
@@ -1139,7 +1134,7 @@ def open_groups(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
@@ -1160,8 +1155,7 @@ def open_groups(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> dict[str, Dataset]:
-    """
-    Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
+    """Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
 
     Useful for an HDF file ("netcdf4" or "h5netcdf") containing many groups that are not alignable with their parents
     and cannot be opened directly with ``open_datatree``. It is encouraged to use this function to inspect your data,
@@ -1323,18 +1317,18 @@ def open_groups(
     groups : dict of str to xarray.Dataset
         The groups as Dataset objects
 
+    See Also
+    --------
+    xarray.open_datatree
+    xarray.open_dataset
+    xarray.DataTree.from_dict
+
     Notes
     -----
     ``open_groups`` opens the file with read-only access. When you modify
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
-
-    See Also
-    --------
-    xarray.open_datatree
-    xarray.open_dataset
-    xarray.DataTree.from_dict
     """
     if cache is None:
         cache = chunks is None
@@ -1414,7 +1408,7 @@ def open_mfdataset(
     paths: (
         str | os.PathLike | ReadBuffer | NestedSequence[str | os.PathLike | ReadBuffer]
     ),
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     concat_dim: (
         str
         | DataArray
@@ -1583,6 +1577,12 @@ def open_mfdataset(
     -------
     xarray.Dataset
 
+    See Also
+    --------
+    combine_by_coords
+    combine_nested
+    open_dataset
+
     Notes
     -----
     ``open_mfdataset`` opens files with read-only access. When you modify values
@@ -1590,11 +1590,11 @@ def open_mfdataset(
     are manipulating in xarray is modified: the original file on disk is never
     touched.
 
-    See Also
-    --------
-    combine_by_coords
-    combine_nested
-    open_dataset
+    References
+    ----------
+
+    .. [1] https://docs.xarray.dev/en/stable/dask.html
+    .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
 
     Examples
     --------
@@ -1618,12 +1618,6 @@ def open_mfdataset(
     >>> ds = xr.open_mfdataset(
     ...     "file.nc", drop_variables=["varname_1", "varname_2"]  # any list of vars
     ... )  # doctest: +SKIP
-
-    References
-    ----------
-
-    .. [1] https://docs.xarray.dev/en/stable/dask.html
-    .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
     """
     paths = _find_absolute_paths(paths, engine=engine, **kwargs)
 

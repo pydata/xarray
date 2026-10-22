@@ -109,7 +109,7 @@ def _h5netcdf_create_group(dataset, name):
 
 
 class H5NetCDFStore(WritableCFDataStore):
-    """Store for reading and writing data via h5netcdf"""
+    """Store for reading and writing data via h5netcdf."""
 
     __slots__ = (
         "_filename",
@@ -496,8 +496,7 @@ def _normalize_filename_or_obj(
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the h5netcdf package.
+    """Backend for netCDF files based on the h5netcdf package.
 
     It can open ".nc", ".nc4", ".cdf" files but will only be
     selected as the default if the "netcdf4" engine is not available.

@@ -192,9 +192,7 @@ def create_test_stacked_array() -> tuple[DataArray, DataArray]:
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
-    """
-    Store that does not allow any data access.
-    """
+    """Store that does not allow any data access."""
 
     def __init__(self):
         super().__init__()
@@ -217,7 +215,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 
 
 class DuckBackendArrayWrapper(backends.common.BackendArray):
-    """Mimic a BackendArray wrapper around DuckArrayWrapper"""
+    """Mimic a BackendArray wrapper around DuckArrayWrapper."""
 
     def __init__(self, array):
         self.array = DuckArrayWrapper(array)
@@ -232,9 +230,9 @@ class DuckBackendArrayWrapper(backends.common.BackendArray):
 
 
 class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
-    """
-    Store that returns a duck array, not convertible to numpy array,
-    on read. Modeled after nVIDIA's kvikio.
+    """Store that returns a duck array, not convertible to numpy array, on read.
+
+    Modeled after nVIDIA's kvikio.
     """
 
     def __init__(self):
@@ -1242,6 +1240,11 @@ class TestDataset:
         with pytest.raises(ValueError):
             ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
 
+    def test_chunk_none_raises(self) -> None:
+        data = create_test_data()
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            data.chunk(None)  # type: ignore[arg-type]
+
     @requires_dask
     def test_chunk(self) -> None:
         data = create_test_data()
@@ -1611,7 +1614,7 @@ class TestDataset:
         assert_identical(actual, expected)
 
     def test_isel_dataarray(self) -> None:
-        """Test for indexing by DataArray"""
+        """Test for indexing by DataArray."""
         data = create_test_data()
         # indexing with DataArray with same-name coordinates.
         indexing_da = DataArray(
@@ -3333,9 +3336,12 @@ class TestDataset:
         ],
     )
     def test_copy_coords(self, deep, expected_orig) -> None:
-        """The test fails for the shallow copy, and apparently only on Windows
+        """Test how modifying the coords of a deep or shallow copy affects the original.
+
+        The test fails for the shallow copy, and apparently only on Windows
         for some reason. In windows coords seem to be immutable unless it's one
-        dataset deep copied from another."""
+        dataset deep copied from another.
+        """
         ds = xr.DataArray(
             np.ones([2, 2, 2]),
             coords={"a": [1, 2], "b": ["x", "y"], "c": [0, 1]},
@@ -4603,6 +4609,23 @@ class TestDataset:
         actual3 = data[dict(dim1=0)]
         expected3 = data.isel(dim1=0)
         assert_identical(expected3, actual3)
+
+    def test_getitem_iterator(self) -> None:
+        data = create_test_data()
+        keys = iter(["var1", "var2"])
+
+        actual = data[keys]
+
+        expected = data[["var1", "var2"]]
+        assert_identical(expected, actual)
+
+    def test_setitem_iterator(self) -> None:
+        actual = Dataset({"a": 0, "b": 0})
+
+        actual[iter(["a", "b"])] = [1, 2]
+
+        expected = Dataset({"a": 1, "b": 2})
+        assert_identical(expected, actual)
 
     def test_getitem_hashable(self) -> None:
         data = create_test_data()
@@ -6683,24 +6706,6 @@ class TestDataset:
         assert_identical(result.var2, ds.var2.quantile(q, method=method))
         assert_identical(result.var3, ds.var3.quantile(q, method=method))
 
-    @pytest.mark.filterwarnings(
-        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-    )
-    @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    def test_quantile_interpolation_deprecated(self, method) -> None:
-        ds = create_test_data(seed=123)
-        q = [0.25, 0.5, 0.75]
-
-        with pytest.warns(
-            FutureWarning,
-            match="`interpolation` argument to quantile was renamed to `method`",
-        ):
-            ds.quantile(q, interpolation=method)
-
-        with warnings.catch_warnings(record=True):
-            with pytest.raises(TypeError, match="interpolation and method keywords"):
-                ds.quantile(q, method=method, interpolation=method)
-
     @requires_bottleneck
     def test_rank(self) -> None:
         ds = create_test_data(seed=1234)
@@ -7927,7 +7932,6 @@ class TestDataset:
     )
     def test_query(self, use_dask: bool, engine, parser) -> None:
         """Test querying a dataset."""
-
         # setup test data
         np.random.seed(42)
         a = np.arange(0, 10, 1)
@@ -8514,8 +8518,10 @@ def test_subclass_slots() -> None:
 
 
 def test_weakref() -> None:
-    """Classes with __slots__ are incompatible with the weakref module unless they
-    explicitly state __weakref__ among their slots
+    """Test that a Dataset can be weakly referenced.
+
+    Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots.
     """
     from weakref import ref
 
@@ -8675,8 +8681,7 @@ class TestNumpyCoercion:
 
 
 def test_string_keys_typing() -> None:
-    """Tests that string keys to `variables` are permitted by mypy"""
-
+    """Tests that string keys to `variables` are permitted by mypy."""
     da = xr.DataArray(np.arange(10), dims=["x"])
     ds = xr.Dataset(dict(x=da))
     mapping = {"y": da}

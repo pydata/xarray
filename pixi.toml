@@ -2,7 +2,7 @@
 preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults", "https://prefix.dev/keewis-oss"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
-requires-pixi = ">=0.63.2,!=0.68.0"
+requires-pixi = ">=0.82.1"
 
 [package]
 name = "xarray"
@@ -67,6 +67,8 @@ iris = "*"        # depends on dask
 
 [feature.accel.dependencies]
 flox = "*"
+# TODO: remove once https://github.com/xarray-contrib/flox/issues/520 is fixed
+numpy_groupies = "<0.14"
 bottleneck = "*"
 numexpr = "*"
 pyarrow = "*"
@@ -116,6 +118,7 @@ cftime = "1.6.*"
 dask-core = "2025.9.*"
 distributed = "2025.9.*"
 flox = "0.10.*"
+numpy_groupies = "0.11.*"
 # h5netcdf 1.8.0 introduced a few compatibility features with netcdf4
 # https://github.com/pydata/xarray/issues/10657#issuecomment-3711095986
 h5netcdf = "1.8.*"
@@ -335,6 +338,14 @@ rst-to-myst = { version = "*", extras = ["sphinx"] }
 [feature.tools.tasks]
 rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
 
+[feature.build-wheels.dependencies]
+python-build = "*"
+python = "3.14.*"
+twine = "*"
+
+[feature.build-wheels.tasks]
+build-wheels = { cmd = "python -m build .", cwd = "." }
+
 [feature.build-package.dependencies]
 vcs_versioning = "*"
 cytoolz = "*"
@@ -530,3 +541,4 @@ build-package = { features = [
   "release",
 ], no-default-feature = true }
 test-nightly = { features = ["nightly"], no-default-feature = true }
+build-wheels = { features = ["build-wheels"], no-default-feature = true }
