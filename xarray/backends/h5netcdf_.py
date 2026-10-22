@@ -297,8 +297,8 @@ class H5NetCDFStore(WritableCFDataStore):
                 },
             )
         else:
-            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-            if vlen_dtype is str:
+            string_info = h5py.check_string_dtype(var.dtype)
+            if string_info is not None and string_info.length is None:
                 encoding["dtype"] = str
             else:
                 # xarray doesn't support writing arbitrary vlen dtypes yet, so
@@ -496,8 +496,7 @@ def _normalize_filename_or_obj(
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the h5netcdf package.
+    """Backend for netCDF files based on the h5netcdf package.
 
     It can open ".nc", ".nc4", ".cdf" files but will only be
     selected as the default if the "netcdf4" engine is not available.

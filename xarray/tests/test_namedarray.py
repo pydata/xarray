@@ -667,8 +667,7 @@ def test_fake_target_chunksize(
     expected_chunksize_faked: int,
     expected_dtype: DTypeLike,
 ) -> None:
-    """
-    Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+    """Check that `fake_target_chunksize` returns the expected chunksize and dtype.
 
     - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
     As such, it will *double* the amount of memory a 4-byte dtype (like float32) would try to use,
@@ -686,8 +685,7 @@ def test_fake_target_chunksize(
 
 @requires_cftime
 def test_fake_target_chunksize_cftime() -> None:
-    """
-    Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+    """Check that `fake_target_chunksize` returns the expected chunksize and dtype.
 
     - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
     - This is the same as the above test, but specifically for a CFTime array case - split for testing reasons

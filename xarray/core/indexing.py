@@ -264,8 +264,7 @@ def expanded_indexer(key, ndim):
 
 
 def normalize_slice(sl: slice, size: int) -> slice:
-    """
-    Ensure that given slice only contains positive start and stop values.
+    """Ensure that given slice only contains positive start and stop values.
 
     Stop can be -1 for full-size slices with negative steps, e.g. [-10::-1].
 
@@ -283,8 +282,7 @@ def normalize_slice(sl: slice, size: int) -> slice:
 
 
 def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integer]]:
-    """
-    Expand slice to an array containing only positive integers.
+    """Expand slice to an array containing only positive integers.
 
     Examples
     --------
@@ -331,8 +329,7 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
 def normalize_array(
     array: np.ndarray[Any, np.dtype[np.integer]], size: int
 ) -> np.ndarray[Any, np.dtype[np.integer]]:
-    """
-    Ensure that the given array only contains positive values.
+    """Ensure that the given array only contains positive values.
 
     Examples
     --------
@@ -722,8 +719,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("_shape", "array", "key")
 
     def __init__(self, array: Any, key: ExplicitIndexer | None = None):
-        """
-        Initialize a lazily indexed array.
+        """Initialize a lazily indexed array.
 
         Parameters
         ----------
@@ -845,8 +841,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "key")
 
     def __init__(self, array: duckarray[Any, Any], key: ExplicitIndexer):
-        """
-        Initialize a lazily vectorized indexed array.
+        """Initialize a lazily vectorized indexed array.
 
         Parameters
         ----------
@@ -1049,8 +1044,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
 
 
 def as_indexable(array):
-    """
-    Wrap an array in an ExplicitlyIndexed subclass.
+    """Wrap an array in an ExplicitlyIndexed subclass.
 
     This function always returns an ExplicitlyIndexed subclass,
     so that the vectorized indexing is always possible with the returned
@@ -1298,8 +1292,7 @@ def _decompose_vectorized_indexer(
     shape: Shape,
     indexing_support: IndexingSupport,
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
-    """
-    Decompose vectorized indexer to the successive two indexers.
+    """Decompose vectorized indexer to the successive two indexers.
 
     The first indexer will be used to index backend arrays, while the second one
     is used to index loaded on-memory np.ndarray.
@@ -1381,8 +1374,7 @@ def _decompose_outer_indexer(
     shape: Shape,
     indexing_support: IndexingSupport,
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
-    """
-    Decompose outer indexer to the successive two indexers.
+    """Decompose outer indexer to the successive two indexers.
 
     The first indexer will be used to index backend arrays, while the second one
     is used to index the loaded on-memory np.ndarray.

@@ -230,8 +230,7 @@ class DuckBackendArrayWrapper(backends.common.BackendArray):
 
 
 class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
-    """
-    Store that returns a duck array, not convertible to numpy array, on read.
+    """Store that returns a duck array, not convertible to numpy array, on read.
 
     Modeled after nVIDIA's kvikio.
     """
@@ -4610,6 +4609,23 @@ class TestDataset:
         actual3 = data[dict(dim1=0)]
         expected3 = data.isel(dim1=0)
         assert_identical(expected3, actual3)
+
+    def test_getitem_iterator(self) -> None:
+        data = create_test_data()
+        keys = iter(["var1", "var2"])
+
+        actual = data[keys]
+
+        expected = data[["var1", "var2"]]
+        assert_identical(expected, actual)
+
+    def test_setitem_iterator(self) -> None:
+        actual = Dataset({"a": 0, "b": 0})
+
+        actual[iter(["a", "b"])] = [1, 2]
+
+        expected = Dataset({"a": 1, "b": 2})
+        assert_identical(expected, actual)
 
     def test_getitem_hashable(self) -> None:
         data = create_test_data()

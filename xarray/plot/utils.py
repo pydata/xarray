@@ -174,8 +174,7 @@ def _determine_cmap_params(
     norm=None,
     _is_facetgrid=False,
 ):
-    """
-    Use some heuristics to set good defaults for colorbar and range.
+    """Use some heuristics to set good defaults for colorbar and range.
 
     Parameters
     ----------
@@ -337,8 +336,7 @@ def _infer_xy_labels_3d(
     y: Hashable | None,
     rgb: Hashable | None,
 ) -> tuple[Hashable, Hashable]:
-    """
-    Determine x and y labels for showing RGB images.
+    """Determine x and y labels for showing RGB images.
 
     Attempts to infer which dimension is RGB/RGBA by size and order of dims.
 
@@ -401,8 +399,7 @@ def _infer_xy_labels(
     imshow: bool = False,
     rgb: Hashable | None = None,
 ) -> tuple[Hashable, Hashable]:
-    """
-    Determine x and y labels. For use in _plot2d.
+    """Determine x and y labels. For use in _plot2d.
 
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
@@ -575,8 +572,7 @@ def _interval_to_bound_points(array: Sequence[pd.Interval]) -> np.ndarray:
 def _interval_to_double_bound_points(
     xarray: Iterable[pd.Interval], yarray: Iterable
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Deal with an xarray consisting of pd.Intervals for step plots.
+    """Deal with an xarray consisting of pd.Intervals for step plots.
 
     Each interval is replaced with both boundaries. I.e. the length of xarray
     doubles. yarray is modified so it matches the new shape of xarray.
@@ -597,8 +593,7 @@ def _interval_to_double_bound_points(
 def _resolve_intervals_1dplot(
     xval: np.ndarray, yval: np.ndarray, kwargs: dict
 ) -> tuple[np.ndarray, np.ndarray, str, str, dict]:
-    """
-    Replace pd.Interval values of x and/or y coordinate arrays for 1d plots.
+    """Replace pd.Interval values of x and/or y coordinate arrays for 1d plots.
 
     The values of x and/or y coordinate arrays containing pd.Interval are
     replaced with their mid-points or - for step plots - double points which
@@ -642,8 +637,7 @@ def _resolve_intervals_1dplot(
 
 
 def _resolve_intervals_2dplot(val, func_name):
-    """
-    Replace pd.Interval values of a coordinate array for 2d plots.
+    """Replace pd.Interval values of a coordinate array for 2d plots.
 
     The values of a coordinate array containing pd.Interval are replaced with
     their mid-points or - for pcolormesh - boundaries which increases length
@@ -678,8 +672,7 @@ def _valid_numpy_subdtype(x, numpy_types):
 
 
 def _ensure_plottable(*args) -> None:
-    """
-    Raise an exception if anything in args can't be plotted on an axis.
+    """Raise an exception if anything in args can't be plotted on an axis.
 
     The axis plotting is done by matplotlib.
     """
@@ -826,8 +819,7 @@ def _update_axes(
 
 
 def _is_monotonic(coord, axis=0):
-    """
-    Check whether a coordinate is monotonic along an axis.
+    """Check whether a coordinate is monotonic along an axis.
 
     Examples
     --------
@@ -852,8 +844,7 @@ def _is_monotonic(coord, axis=0):
 
 
 def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
-    """
-    Infer the interval breaks of a coordinate.
+    """Infer the interval breaks of a coordinate.
 
     Examples
     --------
@@ -914,8 +905,7 @@ def _process_cmap_cbar_kwargs(
     _is_facetgrid=False,
     **kwargs,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """
-    Process the colormap and colorbar keyword arguments.
+    """Process the colormap and colorbar keyword arguments.
 
     Parameters
     ----------
@@ -989,8 +979,7 @@ def _get_nice_quiver_magnitude(u, v):
 def legend_elements(
     self, prop="colors", num="auto", fmt=None, func=lambda x: x, **kwargs
 ):
-    """
-    Create legend handles and labels for a PathCollection.
+    """Create legend handles and labels for a PathCollection.
 
     Each legend handle is a `.Line2D` representing the Path that was drawn,
     and each label is a string what each Path represents.
@@ -1369,8 +1358,7 @@ def _parse_size(
 
 
 class _Normalize(Sequence):
-    """
-    Normalize numerical or categorical values to numerical values.
+    """Normalize numerical or categorical values to numerical values.
 
     The class includes helper methods that simplifies transforming to
     and from normalized values.
@@ -1440,8 +1428,7 @@ class _Normalize(Sequence):
 
     @property
     def data_is_numeric(self) -> bool:
-        """
-        Check if data is numeric.
+        """Check if data is numeric.
 
         Examples
         --------
@@ -1495,8 +1482,7 @@ class _Normalize(Sequence):
     def _indexes_centered(self, x: DataArray) -> DataArray: ...
 
     def _indexes_centered(self, x: np.ndarray | DataArray) -> np.ndarray | DataArray:
-        """
-        Offset indexes to make sure being in the center of self.levels.
+        """Offset indexes to make sure being in the center of self.levels.
 
         ["a", "b", "c"] -> [1, 3, 5]
         """
@@ -1504,8 +1490,7 @@ class _Normalize(Sequence):
 
     @property
     def values(self) -> DataArray | None:
-        """
-        Return a normalized number array for the unique levels.
+        """Return a normalized number array for the unique levels.
 
         Examples
         --------
@@ -1551,8 +1536,7 @@ class _Normalize(Sequence):
 
     @property
     def _values_unique(self) -> np.ndarray | None:
-        """
-        Return unique values.
+        """Return unique values.
 
         Examples
         --------
@@ -1583,8 +1567,7 @@ class _Normalize(Sequence):
 
     @property
     def ticks(self) -> np.ndarray | None:
-        """
-        Return ticks for plt.colorbar if the data is not numeric.
+        """Return ticks for plt.colorbar if the data is not numeric.
 
         Examples
         --------
@@ -1602,8 +1585,7 @@ class _Normalize(Sequence):
 
     @property
     def levels(self) -> np.ndarray:
-        """
-        Return discrete levels that will evenly bound self.values.
+        """Return discrete levels that will evenly bound self.values.
 
         ["a", "b", "c"] -> [0, 2, 4, 6]
 
@@ -1633,8 +1615,7 @@ class _Normalize(Sequence):
 
     @property
     def format(self) -> FuncFormatter:
-        """
-        Return a FuncFormatter that maps self.values elements to original values.
+        """Return a FuncFormatter that maps self.values elements to original values.
 
         The elements are mapped back to the original value as a string. Useful
         with plt.colorbar.
@@ -1661,8 +1642,7 @@ class _Normalize(Sequence):
 
     @property
     def func(self) -> Callable[[Any, Any | None], Any]:
-        """
-        Return a lambda function that maps self.values elements to original values.
+        """Return a lambda function that maps self.values elements to original values.
 
         The elements are mapped back to the original value as a numpy array.
         Useful with ax.legend_elements.
@@ -1771,8 +1751,7 @@ def _guess_coords_to_plot(
     # TODO: Can this be normalized, plt.cbook.normalize_kwargs?
     ignore_guess_kwargs: tuple[tuple[str, ...], ...] = ((),),
 ) -> MutableMapping[str, Hashable]:
-    """
-    Guess what coords to plot if some of the values in coords_to_plot are None.
+    """Guess what coords to plot if some of the values in coords_to_plot are None.
 
     This happens when the user has not defined all available ways of visualizing
     the data.
@@ -1921,8 +1900,7 @@ def _line(
     drawstyle: DrawStyleType = "default",
     **kwargs,
 ) -> LineCollection | Line3DCollection:
-    """
-    ax.scatter-like wrapper for LineCollection.
+    """ax.scatter-like wrapper for LineCollection.
 
     This function helps the handling of datetimes since Linecollection doesn't
     support it directly, just like PatchCollection doesn't either.
@@ -2106,8 +2084,7 @@ def _line(
 
 
 def _set_concise_date(ax: Axes, axis: Literal["x", "y", "z"] = "x") -> None:
-    """
-    Use ConciseDateFormatter for the tick labels of an axis.
+    """Use ConciseDateFormatter for the tick labels of an axis.
 
     ConciseDateFormatter is meant to improve the
     strings chosen for the ticklabels, and to minimize the

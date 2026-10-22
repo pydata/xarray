@@ -907,8 +907,7 @@ def open_datatree(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataTree:
-    """
-    Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
+    """Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
 
     Parameters
     ----------
@@ -1156,8 +1155,7 @@ def open_groups(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> dict[str, Dataset]:
-    """
-    Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
+    """Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
 
     Useful for an HDF file ("netcdf4" or "h5netcdf") containing many groups that are not alignable with their parents
     and cannot be opened directly with ``open_datatree``. It is encouraged to use this function to inspect your data,

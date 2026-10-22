@@ -110,6 +110,11 @@ def unaligned_datatree_nc(tmp_path_factory):
                 Dimensions without coordinates: lat, lon
                 Data variables:
                     subgroup1_var  (lat, lon) float64 32B ...
+
+    Yields
+    ------
+    str
+        Path of the netCDF4 file.
     """
     filepath = tmp_path_factory.mktemp("data") / "unaligned_subgroups.nc"
     with nc4.Dataset(filepath, "w", format="NETCDF4") as root_group:
@@ -169,6 +174,12 @@ def unaligned_datatree_zarr_factory(
             Data variables:
                 a        (y) int64 16B ...
                 b        (x) float64 16B ...
+
+    Yields
+    ------
+    callable
+        Function that creates the zarr store for a given ``zarr_format`` and
+        returns its path.
     """
 
     def _unaligned_datatree_zarr(zarr_format: Literal[2, 3]) -> Path:

@@ -958,12 +958,13 @@ def _generate_linear_date_range_with_freq(start, end, periods, freq):
         End of range
     periods : int, or None
         Number of elements in the sequence
-    freq: str
+    freq : str
         Step size between cftime.datetime objects. Not None.
 
-    Returns
-    -------
-    A generator object of cftime.datetime objects
+    Yields
+    ------
+    cftime.datetime
+        The dates of the range.
     """
     offset = to_offset(freq)
 

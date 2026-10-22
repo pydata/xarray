@@ -162,8 +162,7 @@ def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping
 def subset_dataset_to_block(
     graph: dict, gname: str, dataset: Dataset, input_chunk_bounds, chunk_index
 ):
-    """
-    Create a task that subsets an xarray dataset to a block determined by chunk_index.
+    """Create a task that subsets an xarray dataset to a block determined by chunk_index.
 
     Block extents are determined by input_chunk_bounds.
     Also subtasks that subset the constituent variables of a dataset.
@@ -342,8 +341,7 @@ def map_blocks(
         expected: ExpectedDict,
         expected_indexes: dict[Hashable, Index],
     ):
-        """
-        Call the user function `func` on a block and check the result.
+        """Call the user function `func` on a block and check the result.
 
         Wrapper function that receives datasets in args; converts to dataarrays when necessary;
         passes these to the user function `func` and checks returned objects for expected shapes/sizes/etc.

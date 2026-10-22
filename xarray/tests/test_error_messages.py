@@ -1,5 +1,4 @@
-"""
-Test the quality & friendliness of error messages that are raised by xarray.
+"""Test the quality & friendliness of error messages that are raised by xarray.
 
 This file is currently separate from the standard tests, which are more
 focused on the functions working (though we could consider integrating them.).

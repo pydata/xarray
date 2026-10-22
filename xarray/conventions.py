@@ -76,8 +76,7 @@ def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
 def encode_cf_variable(
     var: Variable, needs_copy: bool = True, name: T_Name = None, coders=None
 ) -> Variable:
-    """
-    Convert a Variable into a Variable which follows the CF conventions.
+    """Convert a Variable into a Variable which follows the CF conventions.
 
     In particular:
 
@@ -122,8 +121,7 @@ def decode_cf_variable(
     use_cftime: bool | None = None,
     decode_timedelta: bool | CFTimedeltaCoder | None = None,
 ) -> Variable:
-    """
-    Decode a variable which may hold CF encoded information.
+    """Decode a variable which may hold CF encoded information.
 
     This includes variables that have been masked and scaled, which
     hold CF style time variables (this is almost always the case if
@@ -360,8 +358,7 @@ def decode_cf_variables(
     | Mapping[str, bool | CFTimedeltaCoder]
     | None = None,
 ) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
-    """
-    Decode several CF encoded variables.
+    """Decode several CF encoded variables.
 
     See: decode_cf_variable
     """
@@ -604,8 +601,7 @@ def cf_decoder(
     mask_and_scale: bool = True,
     decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
 ) -> tuple[T_Variables, T_Attrs]:
-    """
-    Decode a set of CF encoded variables and attributes.
+    """Decode a set of CF encoded variables and attributes.
 
     Parameters
     ----------
@@ -761,8 +757,7 @@ def encode_dataset_coordinates(dataset: Dataset):
 
 
 def cf_encoder(variables: T_Variables, attributes: T_Attrs):
-    """
-    Encode a set of CF encoded variables and attributes.
+    """Encode a set of CF encoded variables and attributes.
 
     Takes a dicts of variables and attributes and encodes them
     to conform to CF conventions as much as possible.

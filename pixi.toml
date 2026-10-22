@@ -338,6 +338,14 @@ rst-to-myst = { version = "*", extras = ["sphinx"] }
 [feature.tools.tasks]
 rst2myst = { cmd = "rst2myst", description = "Convert rst to myst markdown" }
 
+[feature.build-wheels.dependencies]
+python-build = "*"
+python = "3.14.*"
+twine = "*"
+
+[feature.build-wheels.tasks]
+build-wheels = { cmd = "python -m build .", cwd = "." }
+
 [feature.build-package.dependencies]
 vcs_versioning = "*"
 cytoolz = "*"
@@ -533,3 +541,4 @@ build-package = { features = [
   "release",
 ], no-default-feature = true }
 test-nightly = { features = ["nightly"], no-default-feature = true }
+build-wheels = { features = ["build-wheels"], no-default-feature = true }

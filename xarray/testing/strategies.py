@@ -48,8 +48,7 @@ class ArrayStrategyFn(Protocol[T_DuckArray]):
 
 
 def supported_dtypes() -> st.SearchStrategy[np.dtype]:
-    """
-    Generate only those numpy dtypes which xarray can handle.
+    """Generate only those numpy dtypes which xarray can handle.
 
     Use instead of hypothesis.extra.numpy.scalar_dtypes in order to exclude weirder dtypes such as unicode, byte_string, array, or nested dtypes.
     Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.  Checks only native endianness.
@@ -74,8 +73,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
 
 
 def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
-    """
-    Generate dtypes supported by pandas indexes.
+    """Generate dtypes supported by pandas indexes.
 
     Restrict datetime64 and timedelta64 to ns frequency till Xarray relaxes that.
     """
@@ -92,8 +90,7 @@ def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
 
 
 def datetimes() -> st.SearchStrategy:
-    """
-    Generate datetime objects, including both standard library and cftime datetimes.
+    """Generate datetime objects, including both standard library and cftime datetimes.
 
     Returns standard library datetime.datetime objects, and if cftime is available,
     also includes cftime datetime objects from various calendars.
@@ -117,8 +114,7 @@ _readable_characters = st.characters(
 
 
 def names() -> st.SearchStrategy[str]:
-    """
-    Generate arbitrary string names for dimensions / variables.
+    """Generate arbitrary string names for dimensions / variables.
 
     Requires the hypothesis package to be installed.
 
@@ -139,8 +135,7 @@ def dimension_names(
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
-    """
-    Generate an arbitrary list of valid dimension names.
+    """Generate an arbitrary list of valid dimension names.
 
     Requires the hypothesis package to be installed.
 
@@ -172,8 +167,7 @@ def dimension_sizes(
     min_side: int = 1,
     max_side: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, int]]:
-    """
-    Generate an arbitrary mapping from dimension names to lengths.
+    """Generate an arbitrary mapping from dimension names to lengths.
 
     Requires the hypothesis package to be installed.
 
@@ -230,8 +224,7 @@ simple_attrs = st.dictionaries(_attr_keys, _attr_values)
 
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
-    """
-    Generate arbitrary valid attributes dictionaries for xarray objects.
+    """Generate arbitrary valid attributes dictionaries for xarray objects.
 
     The generated dictionaries can potentially be recursive.
 
@@ -260,8 +253,7 @@ def variables(
     dtype: st.SearchStrategy[np.dtype] | None = None,
     attrs: st.SearchStrategy[Mapping] = ATTRS,
 ) -> xr.Variable:
-    """
-    Generate arbitrary xarray.Variable objects.
+    """Generate arbitrary xarray.Variable objects.
 
     Follows the basic signature of the xarray.Variable constructor, but allows passing alternative strategies to
     generate either numpy-like array data or dimensions. Also allows specifying the shape or dtype of the wrapped array
@@ -445,8 +437,7 @@ def unique_subset_of(
     min_size: int = 0,
     max_size: int | None = None,
 ) -> Sequence[Hashable] | Mapping[Hashable, Any]:
-    """
-    Return a strategy which generates a unique subset of the given objects.
+    """Return a strategy which generates a unique subset of the given objects.
 
     Each entry in the output subset will be unique (if input was a sequence) or have a unique key (if it was a mapping).
 
@@ -504,8 +495,7 @@ def unique_subset_of(
 
 @st.composite
 def cftime_datetimes(draw: st.DrawFn):
-    """
-    Generate cftime datetime objects across various calendars.
+    """Generate cftime datetime objects across various calendars.
 
     This strategy generates cftime datetime objects from all available
     cftime calendars with dates ranging from year -99999 to 99999.

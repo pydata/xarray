@@ -217,7 +217,7 @@ def _is_numpy_subdtype(dtype, kind) -> bool:
 
 
 def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
-    """Compatibility wrapper for isdtype() from the array API standard.
+    """Check the kind of a dtype, like ``isdtype`` from the array API standard.
 
     Unlike xp.isdtype(), kind must be a string.
     """
@@ -271,8 +271,7 @@ def should_promote_to_object(
     ],
     xp,
 ) -> bool:
-    """
-    Test whether the given arrays and dtypes should be promoted to object.
+    """Test whether the given arrays and dtypes should be promoted to object.
 
     Test whether the given arrays_and_dtypes, when evaluated individually, match the
     type promotion rules found in PROMOTE_TO_OBJECT.

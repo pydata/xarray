@@ -209,8 +209,7 @@ class FillValueCoder:
 
 
 def encode_zarr_attr_value(value):
-    """
-    Encode an attribute value as something that can be serialized as json.
+    """Encode an attribute value as something that can be serialized as json.
 
     Many xarray datasets / variables have numpy arrays and values. This
     function handles encoding / decoding of such items.
@@ -347,8 +346,7 @@ def _rectilinear_encoding_error(key: str, value, name) -> TypeError:
 
 
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
-    """
-    Determine the zarr chunks for a variable.
+    """Determine the zarr chunks for a variable.
 
     Given encoding chunks (possibly None or []) and variable chunks
     (possibly None or []).
@@ -511,8 +509,7 @@ def extract_zarr_variable_encoding(
     *,
     zarr_format: ZarrFormat,
 ):
-    """
-    Extract zarr encoding dictionary from xarray Variable.
+    """Extract zarr encoding dictionary from xarray Variable.
 
     Parameters
     ----------
@@ -591,8 +588,7 @@ def extract_zarr_variable_encoding(
 def encode_zarr_variable(
     var, needs_copy=True, name=None, *, zarr_format: ZarrFormat | None = None
 ):
-    """
-    Convert a Variable into another Variable which follows the CF conventions.
+    """Convert a Variable into another Variable which follows the CF conventions.
 
     In particular:
 
@@ -905,8 +901,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     @property
     def members(self) -> dict[str, ZarrArray | ZarrGroup]:
-        """
-        Model the arrays and groups contained in self.zarr_group as a dict.
+        """Model the arrays and groups contained in self.zarr_group as a dict.
 
         If `self._cache_members` is true, the dict is cached. Otherwise, it is
         retrieved from storage.
@@ -1064,8 +1059,7 @@ class ZarrStore(AbstractWritableDataStore):
         writer=None,
         unlimited_dims=None,
     ):
-        """
-        Put data on this store.
+        """Put data on this store.
 
         This top level method:
           - encodes variables/attributes
@@ -1271,8 +1265,7 @@ class ZarrStore(AbstractWritableDataStore):
         writer,
         unlimited_dims=None,
     ):
-        """
-        Set the variables on the data store.
+        """Set the variables on the data store.
 
         This provides a centralized method to set the variables on the data
         store.
@@ -1733,8 +1726,7 @@ def open_zarr(
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for ".zarr" files based on the zarr package.
+    """Backend for ".zarr" files based on the zarr package.
 
     For more information about the underlying library, visit:
     https://zarr.readthedocs.io/en/stable

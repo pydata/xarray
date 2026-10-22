@@ -22,8 +22,7 @@ from xarray.tests import requires_dask
 
 
 class DummyChunkedArray(np.ndarray):
-    """
-    Mock-up of a chunked array class.
+    """Mock-up of a chunked array class.
 
     Adds a (non-functional) .chunks attribute by following this example in the numpy docs
     https://numpy.org/doc/stable/user/basics.subclassing.html#simple-example-adding-an-extra-attribute-to-ndarray
@@ -138,8 +137,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
 
 @pytest.fixture
 def register_dummy_chunkmanager(monkeypatch):
-    """
-    Mock the registering of an additional ChunkManagerEntrypoint.
+    """Mock the registering of an additional ChunkManagerEntrypoint.
 
     This preserves the presence of the existing DaskManager, so a test that relies on this and DaskManager both being
     returned from list_chunkmanagers() at once would still work.

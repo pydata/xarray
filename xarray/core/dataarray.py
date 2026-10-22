@@ -832,8 +832,7 @@ class DataArray(
 
     @property
     def dtype(self) -> np.dtype:
-        """
-        Data-type of the array’s elements.
+        """Data-type of the array’s elements.
 
         See Also
         --------
@@ -844,8 +843,7 @@ class DataArray(
 
     @property
     def shape(self) -> tuple[int, ...]:
-        """
-        Tuple of array dimensions.
+        """Tuple of array dimensions.
 
         See Also
         --------
@@ -855,8 +853,7 @@ class DataArray(
 
     @property
     def size(self) -> int:
-        """
-        Number of elements in the array.
+        """Number of elements in the array.
 
         Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
 
@@ -868,8 +865,7 @@ class DataArray(
 
     @property
     def nbytes(self) -> int:
-        """
-        Total bytes consumed by the elements of this DataArray's data.
+        """Total bytes consumed by the elements of this DataArray's data.
 
         If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
@@ -878,8 +874,7 @@ class DataArray(
 
     @property
     def ndim(self) -> int:
-        """
-        Number of array dimensions.
+        """Number of array dimensions.
 
         See Also
         --------
@@ -892,8 +887,7 @@ class DataArray(
 
     @property
     def data(self) -> Any:
-        """
-        The DataArray's data as an array.
+        """The DataArray's data as an array.
 
         The underlying array type (e.g. dask, sparse, pint) is preserved.
 
@@ -911,8 +905,7 @@ class DataArray(
 
     @property
     def values(self) -> np.ndarray:
-        """
-        The array's data converted to numpy.ndarray.
+        """The array's data converted to numpy.ndarray.
 
         This will attempt to convert the array naively using np.array(),
         which will raise an error if the array type does not support
@@ -929,8 +922,7 @@ class DataArray(
         self.variable.values = value
 
     def to_numpy(self) -> np.ndarray:
-        """
-        Coerces wrapped data to numpy and returns a numpy.ndarray.
+        """Coerces wrapped data to numpy and returns a numpy.ndarray.
 
         See Also
         --------
@@ -942,8 +934,7 @@ class DataArray(
         return self.variable.to_numpy()
 
     def as_numpy(self) -> Self:
-        """
-        Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
+        """Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
 
         See Also
         --------
@@ -1504,8 +1495,7 @@ class DataArray(
 
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...] | None:
-        """
-        Tuple of block lengths for this dataarray's data, in order of dimensions.
+        """Tuple of block lengths for this dataarray's data, in order of dimensions.
 
         None if the underlying data is not a dask array.
 
@@ -1519,8 +1509,7 @@ class DataArray(
 
     @property
     def chunksizes(self) -> Mapping[Any, tuple[int, ...]]:
-        """
-        Mapping from dimension names to block lengths for this dataarray's data.
+        """Mapping from dimension names to block lengths for this dataarray's data.
 
         If this dataarray does not contain chunked arrays, the mapping will be empty.
 
@@ -2124,8 +2113,7 @@ class DataArray(
         copy: bool = True,
         fill_value=dtypes.NA,
     ) -> Self:
-        """
-        Conform this object onto the indexes of another object.
+        """Conform this object onto the indexes of another object.
 
         Only indexes which the objects share are considered. Missing values are
         filled with ``fill_value``. The default fill value is NaN.
@@ -2404,8 +2392,7 @@ class DataArray(
         kwargs: Mapping[str, Any] | None = None,
         **coords_kwargs: Any,
     ) -> Self:
-        """
-        Interpolate a DataArray onto new coordinates.
+        """Interpolate a DataArray onto new coordinates.
 
         Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
         utilizing either NumPy or SciPy interpolation routines.
@@ -3063,8 +3050,7 @@ class DataArray(
         index_cls: type[Index] = PandasMultiIndex,
         **dim_kwargs: Sequence[Hashable | EllipsisType],
     ) -> Self:
-        """
-        Stack any number of existing dimensions into a single new dimension.
+        """Stack any number of existing dimensions into a single new dimension.
 
         New dimensions will be added at the end, and the corresponding
         coordinate variables will be combined into a MultiIndex.
@@ -3136,8 +3122,7 @@ class DataArray(
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
     ) -> Self:
-        """
-        Unstack existing dimensions corresponding to MultiIndexes.
+        """Unstack existing dimensions corresponding to MultiIndexes.
 
         The dimensions are unstacked into multiple new dimensions.
 
@@ -3164,6 +3149,16 @@ class DataArray(
         See Also
         --------
         DataArray.stack
+
+        Notes
+        -----
+        The order of the new dimension coordinates follows the levels of the
+        ``MultiIndex``. A ``MultiIndex`` created by pandas (e.g. when converting
+        a ``pd.Series`` with a ``MultiIndex``) usually has sorted levels, so the
+        resulting coordinates will be sorted. A ``MultiIndex`` created by
+        :py:meth:`DataArray.stack` preserves the original order. Use
+        :py:meth:`DataArray.sel` after unstacking to select a specific order if
+        needed.
 
         Examples
         --------
@@ -4663,8 +4658,7 @@ class DataArray(
     def to_dict(
         self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
-        """
-        Convert this xarray.DataArray into a dictionary.
+        """Convert this xarray.DataArray into a dictionary.
 
         The dictionary follows xarray naming conventions.
 
@@ -5098,8 +5092,7 @@ class DataArray(
     plot = utils.UncachedAccessor(DataArrayPlotAccessor)
 
     def _title_for_slice(self, truncate: int = 50) -> str:
-        """
-        Create a title for the plot of a slice.
+        """Create a title for the plot of a slice.
 
         If the dataarray has 1 dimensional coordinates or comes from a slice
         we can show that info in the title.
@@ -5280,8 +5273,7 @@ class DataArray(
 
     @property
     def real(self) -> Self:
-        """
-        The real part of the array.
+        """The real part of the array.
 
         See Also
         --------
@@ -5291,8 +5283,7 @@ class DataArray(
 
     @property
     def imag(self) -> Self:
-        """
-        The imaginary part of the array.
+        """The imaginary part of the array.
 
         See Also
         --------
@@ -5806,8 +5797,7 @@ class DataArray(
         kwargs: Mapping[str, Any] | None = None,
         template: DataArray | Dataset | None = None,
     ) -> T_Xarray:
-        """
-        Apply a function to each block of this DataArray.
+        """Apply a function to each block of this DataArray.
 
         .. warning::
             This method is experimental and its signature may change.
@@ -5917,8 +5907,7 @@ class DataArray(
         full: bool = False,
         cov: bool | Literal["unscaled"] = False,
     ) -> Dataset:
-        """
-        Least squares polynomial fit.
+        """Least squares polynomial fit.
 
         This replicates the behaviour of `numpy.polyfit` but differs by skipping
         invalid values when `skipna = True`.
@@ -6755,8 +6744,7 @@ class DataArray(
         errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
     ) -> Dataset:
-        """
-        Curve fitting optimization for arbitrary functions.
+        """Curve fitting optimization for arbitrary functions.
 
         Wraps :py:func:`scipy.optimize.curve_fit` with :py:func:`~xarray.apply_ufunc`.
 
@@ -7393,8 +7381,7 @@ class DataArray(
         )
 
     def weighted(self, weights: DataArray) -> DataArrayWeighted:
-        """
-        Weighted DataArray operations.
+        """Weighted DataArray operations.
 
         Parameters
         ----------
@@ -7433,8 +7420,7 @@ class DataArray(
         center: bool | Mapping[Any, bool] = False,
         **window_kwargs: int,
     ) -> DataArrayRolling:
-        """
-        Return a rolling window object for DataArrays.
+        """Return a rolling window object for DataArrays.
 
         Parameters
         ----------
@@ -7506,8 +7492,7 @@ class DataArray(
         dim: str | Iterable[Hashable],
         min_periods: int = 1,
     ) -> DataArrayRolling:
-        """
-        Return an accumulating object for DataArrays.
+        """Return an accumulating object for DataArrays.
 
         Parameters
         ----------
@@ -7584,8 +7569,7 @@ class DataArray(
         coord_func: str | Callable | Mapping[Any, str | Callable] = "mean",
         **window_kwargs: int,
     ) -> DataArrayCoarsen:
-        """
-        Coarsen object for DataArrays.
+        """Coarsen object for DataArrays.
 
         Parameters
         ----------
@@ -7944,8 +7928,7 @@ class DataArray(
     str = utils.UncachedAccessor(StringAccessor["DataArray"])
 
     def drop_attrs(self, *, deep: bool = True) -> Self:
-        """
-        Remove all attributes from the DataArray.
+        """Remove all attributes from the DataArray.
 
         Parameters
         ----------

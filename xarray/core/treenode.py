@@ -46,8 +46,7 @@ class NodePath(PurePosixPath):
 
 
 class TreeNode:
-    """
-    Base class representing a node of a tree, with methods for traversing and altering the tree.
+    """Base class representing a node of a tree, with methods for traversing and altering the tree.
 
     This class stores no data, it has only parents and children attributes, and various methods.
 
@@ -241,8 +240,7 @@ class TreeNode:
         pass
 
     def copy(self, *, inherit: bool = True, deep: bool = False) -> Self:
-        """
-        Return a copy of this subtree.
+        """Return a copy of this subtree.
 
         Copies this node and all child nodes.
 
@@ -365,8 +363,7 @@ class TreeNode:
 
     @property
     def is_leaf(self) -> bool:
-        """
-        Whether this node is a leaf node.
+        """Whether this node is a leaf node.
 
         Leaf nodes are defined as nodes which have no children.
         """
@@ -374,8 +371,7 @@ class TreeNode:
 
     @property
     def leaves(self) -> tuple[Self, ...]:
-        """
-        All leaf nodes.
+        """All leaf nodes.
 
         Leaf nodes are defined as nodes which have no children.
         """
@@ -395,10 +391,14 @@ class TreeNode:
 
     @property
     def subtree(self) -> Iterator[Self]:
-        """
-        Iterate over all nodes in this tree, including both self and all descendants.
+        """Iterate over all nodes in this tree, including both self and all descendants.
 
         Iterates breadth-first.
+
+        Yields
+        ------
+        node : TreeNode
+            The nodes of the subtree, starting with this node.
 
         See Also
         --------
@@ -415,10 +415,16 @@ class TreeNode:
 
     @property
     def subtree_with_keys(self) -> Iterator[tuple[str, Self]]:
-        """
-        Iterate over relative paths and node pairs for all nodes in this tree.
+        """Iterate over relative paths and node pairs for all nodes in this tree.
 
         Iterates breadth-first.
+
+        Yields
+        ------
+        path : str
+            Path of the node, relative to this node.
+        node : TreeNode
+            The node.
 
         See Also
         --------
@@ -434,8 +440,7 @@ class TreeNode:
 
     @property
     def descendants(self) -> tuple[Self, ...]:
-        """
-        Child nodes and all their child nodes.
+        """Child nodes and all their child nodes.
 
         Returned in depth-first order.
 
@@ -449,8 +454,7 @@ class TreeNode:
 
     @property
     def level(self) -> int:
-        """
-        Level of this node.
+        """Level of this node.
 
         Level means number of parent nodes above this node before reaching the root.
         The root node is at level 0.
@@ -468,8 +472,7 @@ class TreeNode:
 
     @property
     def depth(self) -> int:
-        """
-        Maximum level of this tree.
+        """Maximum level of this tree.
 
         Measured from the root, which has a depth of 0.
 
@@ -486,8 +489,7 @@ class TreeNode:
 
     @property
     def width(self) -> int:
-        """
-        Number of nodes at this level in the tree.
+        """Number of nodes at this level in the tree.
 
         Includes number of immediate siblings, but also "cousins" in other branches and so-on.
 
@@ -519,8 +521,7 @@ class TreeNode:
         pass
 
     def get(self, key: str, default: Self | None = None) -> Self | None:
-        """
-        Return the child node with the specified key.
+        """Return the child node with the specified key.
 
         Only looks for the node within the immediate children of this node,
         not in other nodes of the tree.
@@ -533,8 +534,7 @@ class TreeNode:
     # TODO `._walk` method to be called by both `_get_item` and `_set_item`
 
     def _get_item(self, path: str | NodePath) -> Self | DataArray:
-        """
-        Return the object lying at the given path.
+        """Return the object lying at the given path.
 
         Raises a KeyError if there is no object at the given path.
         """
@@ -567,8 +567,7 @@ class TreeNode:
         return current_node
 
     def _set(self, key: str, val: Any) -> None:
-        """
-        Set the child node with the specified key to value.
+        """Set the child node with the specified key to value.
 
         Counterpart to the public .get method, and also only works on the immediate node, not other nodes in the tree.
         """
@@ -582,8 +581,7 @@ class TreeNode:
         new_nodes_along_path: bool = False,
         allow_overwrite: bool = True,
     ) -> None:
-        """
-        Set a new item in the tree, overwriting anything already present at that path.
+        """Set a new item in the tree, overwriting anything already present at that path.
 
         The given value either forms a new node of the tree or overwrites an
         existing item at that location.
@@ -673,8 +671,7 @@ def _validate_name(name: str | None) -> None:
 
 
 class NamedNode(TreeNode):
-    """
-    A TreeNode which knows its own name.
+    """A TreeNode which knows its own name.
 
     Implements path-like relationships to other nodes in its tree.
     """
@@ -744,8 +741,7 @@ class NamedNode(TreeNode):
             return "/" + "/".join(names)  # type: ignore[arg-type]
 
     def relative_to(self, other: Self) -> str:
-        """
-        Compute the relative path from this node to node `other`.
+        """Compute the relative path from this node to node `other`.
 
         If other is not in this tree, or it's otherwise impossible, raise a ValueError.
         """
@@ -765,8 +761,7 @@ class NamedNode(TreeNode):
             )
 
     def find_common_ancestor(self, other: Self) -> Self:
-        """
-        Find the first common ancestor of two nodes in the same tree.
+        """Find the first common ancestor of two nodes in the same tree.
 
         Raise ValueError if they are not in the same tree.
         """

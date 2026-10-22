@@ -67,8 +67,7 @@ class Resample(GroupBy[T_Xarray]):
 
     @override
     def shuffle_to_chunks(self, chunks: T_Chunks | None = None):
-        """
-        Sort or "shuffle" the underlying object.
+        """Sort or "shuffle" the underlying object.
 
         "Shuffle" means the object is sorted so that all group members occur sequentially,
         in the same chunk. Multiple groups may occur in the same chunk.
@@ -377,8 +376,7 @@ class DataArrayResample(
 
     @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
-        """
-        Backward compatible implementation of ``map``.
+        """Backward compatible implementation of ``map``.
 
         See Also
         --------
@@ -465,8 +463,7 @@ class DatasetResample(
 
     @override
     def apply(self, func, args=(), shortcut=None, **kwargs):
-        """
-        Backward compatible implementation of ``map``.
+        """Backward compatible implementation of ``map``.
 
         See Also
         --------
