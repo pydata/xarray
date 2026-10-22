@@ -1,8 +1,11 @@
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
+from xarray.core.types import InterpOptions
 
 from . import randn, requires_dask
 
@@ -91,3 +94,32 @@ class InterpolationVectorizedDask(InterpolationVectorized):
         requires_dask()
         super().setup(**kwargs)
         self.da = self.da.chunk({"t": 25, "r": 25})
+
+
+class InterpolationDaskChunkedCoords:
+    # scipy casts integer data to float, which copies the whole block unless
+    # it is localized to the range of the (chunked) destination coordinates
+    def setup(self, *args: Any, **kwargs: Any) -> None:
+        requires_dask()
+        import dask.array
+
+        ny, nx = 16, 2_000_000
+        chunks = (8, nx)  # 122 MiB blocks, generated lazily
+        self.data = {
+            "int": dask.array.random.randint(0, 100, (ny, nx), chunks=chunks),
+            "float": dask.array.random.random((ny, nx), chunks=chunks),
+        }
+        self.x = np.arange(nx)
+        self.new_x = xr.DataArray(
+            dask.array.linspace(1000, 1500, 400, chunks=100), dims="z"
+        )
+
+    @parameterize({"method": ["linear", "nearest"], "dtype": ["int", "float"]})
+    def peakmem_interpolation_chunked_coords(
+        self, method: InterpOptions, dtype: str
+    ) -> None:
+        import dask
+
+        da = xr.DataArray(self.data[dtype], dims=("y", "x"), coords={"x": self.x})
+        with dask.config.set(scheduler="synchronous"):
+            da.interp(x=self.new_x, method=method).compute()

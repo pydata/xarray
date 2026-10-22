@@ -698,12 +698,19 @@ def interpolate_variable(
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    if kwargs.get("method") in ["linear", "nearest"]:
+    localize = kwargs.get("method") in ["linear", "nearest"]
+    if localize:
         # simple speed up for the local interpolation
         var, indexes_coords = _localize(var, dict(indexes_coords))
 
     in_coords, result_coords = _floatize_x(
         *(list(_) for _ in zip(*indexes_coords.values(), strict=True))
+    )
+    # `_localize` skips chunked destination coordinates, so localize each block
+    # instead: scipy casts integer data to float, which would otherwise copy
+    # the whole block
+    localize_blocks = localize and any(
+        is_chunked_array(coord._data) for coord in result_coords
     )
 
     # input coordinates along which we are interpolation are core dimensions
@@ -767,6 +774,7 @@ def interpolate_variable(
             # on the method and the coordinate dtypes, so cast the result to
             # the dtype we promise dask
             dtype=dtype,
+            localize=localize_blocks,
         ),
         # TODO: deprecate and have the user rechunk themselves
         dask_gufunc_kwargs=dict(output_sizes=output_sizes, allow_rechunk=True),
@@ -801,9 +809,10 @@ def _interpnd(
     data: np.ndarray,
     *coords: np.ndarray,
     interp_func: Interpolator | InterpCallable,
-    interp_kwargs,
+    interp_kwargs: dict[str, Any],
     result_coord_core_dims: list[tuple[Hashable, ...]],
     dtype: np.dtype,
+    localize: bool = False,
 ) -> np.ndarray:
     """
     Core nD array interpolation routine.
@@ -838,6 +847,13 @@ def _interpnd(
         )
     )
     var = Variable([f"dim_{dim}" for dim in range(ndim)], data, fastpath=True)
+
+    if localize:
+        indexes_coords = {
+            _x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x, strict=True)
+        }
+        var, indexes_coords = _localize(var, indexes_coords)
+        x, new_x = (list(_) for _ in zip(*indexes_coords.values(), strict=True))
 
     if len(x) == 1:
         # TODO: narrow interp_func to interpolator here
