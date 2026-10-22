@@ -1540,7 +1540,7 @@ def test_date_range_like_errors():
         date_range_like(da, "noleap")
 
 
-def as_timedelta_not_implemented_error():
+def test_as_timedelta_not_implemented_error():
     tick = Tick()
     with pytest.raises(NotImplementedError):
         tick.as_timedelta()
