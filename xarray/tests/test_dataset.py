@@ -3667,6 +3667,13 @@ class TestDataset:
         assert isinstance(actual.variables["x"], Variable)
         assert actual.xindexes["y"].equals(expected.xindexes["y"])
 
+    def test_to_array_deprecated(self) -> None:
+        ds = Dataset({"a": 1, "b": ("x", [1, 2, 3])}, coords={"c": 42})
+        expected = ds.to_dataarray("abc", name="foo")
+        with pytest.warns(FutureWarning, match=r"Dataset\.to_array is deprecated"):
+            actual = ds.to_array("abc", name="foo")
+        assert_identical(expected, actual)
+
     def test_expand_dims_error(self) -> None:
         original = Dataset(
             {
