@@ -42,6 +42,16 @@ New Features
   type defaults to ``Hashable``, so a bare ``Variable`` annotation means
   ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add :py:func:`~xarray.show_backends` to print the available IO backends,
+  including those of other packages, and in which order they are tried
+  (:issue:`6577`, :pull:`11700`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_ and
+  `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:func:`~xarray.show_versions` displays formatted tables in Jupyter
+  notebooks and gained a ``markdown`` option to print markdown that can be pasted
+  as is into GitHub issues. Package versions are read from the
+  package metadata, so the packages are no longer imported (:pull:`11700`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - The ``in`` operator on :py:class:`DataTree` now accepts the same unix-like
   paths as indexing, so ``key in tree`` is ``True`` exactly when ``tree[key]``
   succeeds, e.g. ``"group/subgroup" in tree`` or ``"/group/var" in tree``.
@@ -149,6 +159,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Results of the string accessor methods ``strip``, ``pad``, ``center``,
+  ``ljust``, ``rjust``, ``zfill`` and ``replace`` on dask arrays are no longer
+  truncated to a single character, and ``repeat`` no longer fails on dask arrays
+  (:pull:`11746`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Encoding a string variable whose ``char_dim_name`` has characters after its
   last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
   not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).
@@ -347,6 +362,11 @@ Bug Fixes
   ``.astype(np.float32)`` a no-op. Interpolating float data now always keeps its
   dtype, also without dask (:issue:`10325`, :pull:`11741`).
   By `Vladimir Saraikin <https://github.com/vsaraikin>`_.
+- Fix :py:func:`concat` failing with ``TypeError: Cannot interpret
+  '<StringDtype...>' as a data type`` when a ``pandas.Index`` with a
+  ``StringDtype`` is used as the new concat dimension and another input has a
+  numpy string-dtype coord (:issue:`11317`, :pull:`11322`).
+  By `Sai Asish Y <https://github.com/SAY-5>`_.
 
 
 Documentation
@@ -383,6 +403,14 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- The string accessor uses the vectorized functions of ``np.strings`` for
+  ``len``, ``startswith``, ``endswith``, ``find``, ``rfind``, ``index``,
+  ``rindex``, ``strip``, ``lstrip``, ``rstrip``, ``pad``, ``center``,
+  ``ljust``, ``rjust``, ``zfill``, ``repeat``, the ``is*`` methods and
+  ``contains`` and ``replace`` with ``regex=False`` and case-sensitive matching,
+  which makes them 5-80 times faster for arrays with a string dtype
+  (:pull:`11746`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up rolling reductions of dask arrays without bottleneck, e.g. ``sum``,
   ``mean`` and ``count``, by about 7x with about 12x fewer tasks for a window of 20.
   Counting the values in each window no longer splits the chunks of the other
