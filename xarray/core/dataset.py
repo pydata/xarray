@@ -7155,10 +7155,9 @@ class Dataset(
         --------
         Dataset.map
         """
-        warnings.warn(
+        emit_user_level_warning(
             "Dataset.apply is deprecated, use Dataset.map instead.",
             FutureWarning,
-            stacklevel=2,
         )
         return self.map(func, keep_attrs, args, **kwargs)
 

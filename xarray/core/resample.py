@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any, Literal, override
 
@@ -10,6 +9,7 @@ from xarray.core._aggregations import (
 )
 from xarray.core.groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
 from xarray.core.types import Dims, InterpOptions, T_Xarray
+from xarray.core.utils import emit_user_level_warning
 
 if TYPE_CHECKING:
     from xarray.core.dataarray import DataArray
@@ -382,10 +382,9 @@ class DataArrayResample(
         --------
         DataArrayResample.map
         """
-        warnings.warn(
+        emit_user_level_warning(
             "Resample.apply is deprecated, use Resample.map instead.",
             FutureWarning,
-            stacklevel=2,
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
@@ -469,10 +468,9 @@ class DatasetResample(
         --------
         DataSetResample.map
         """
-        warnings.warn(
+        emit_user_level_warning(
             "Resample.apply is deprecated, use Resample.map instead.",
             FutureWarning,
-            stacklevel=2,
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
