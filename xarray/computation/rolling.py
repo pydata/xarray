@@ -272,9 +272,37 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
         keep_attrs = self._get_keep_attrs(keep_attrs)
         rolling_count = self._counts(keep_attrs=keep_attrs)
         enough_periods = rolling_count >= self.min_periods
-        return rolling_count.where(enough_periods)
+        return self._restore_input_chunks(rolling_count.where(enough_periods))
 
     count.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="count")
+
+    def _restore_input_chunks(self, obj: T_Xarray) -> T_Xarray:
+        """Rechunk the rolled dimensions back to the input chunks.
+
+        Padding the array and building the sliding windows changes the chunk
+        structure along the rolled dimensions: ``pad`` appends its padding as
+        separate chunks, and dask's ``sliding_window_view`` rechunks so that
+        every window chunk is complete. Rechunking the result back to the
+        input chunks keeps the output chunk structure predictable, which
+        downstream operations that use a rolled dimension as a core dimension
+        rely on (GH #11689).
+        """
+        obj_chunksizes = self.obj.chunksizes  # empty when not chunked
+        chunks = {}
+        for dim in self.dim:
+            dim_chunks = obj_chunksizes.get(dim)
+            if (
+                dim_chunks is None
+                # a strided construct changes the length of the dimension
+                or obj.sizes[dim] != self.obj.sizes[dim]
+                # NaN marks unknown chunks, which cannot be rechunked to
+                or any(size != size for size in dim_chunks)
+            ):
+                continue
+            chunks[dim] = dim_chunks
+        if not chunks:
+            return obj
+        return obj.chunk(chunks)
 
     def _mapping_to_list(
         self,
@@ -623,7 +651,7 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         # Find valid windows based on count.
         counts = self._counts(keep_attrs=False)
-        return result.where(counts >= self.min_periods)
+        return self._restore_input_chunks(result.where(counts >= self.min_periods))
 
     @override
     def _counts(self, keep_attrs: bool | None) -> DataArray:
@@ -745,8 +773,10 @@ class DataArrayRolling(Rolling["DataArray"]):
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return self.obj.__class__(
-            values, self.obj.coords, attrs=attrs, name=self.obj.name
+        return self._restore_input_chunks(
+            self.obj.__class__(
+                values, self.obj.coords, attrs=attrs, name=self.obj.name
+            )
         )
 
     def _array_reduce(
