@@ -221,9 +221,9 @@ Depending on the internal resolution Timestamps can be represented in the range:
 
 ```{code-cell}
 for unit in ["s", "ms", "us", "ns"]:
-    print(
-        f"unit: {unit!r} time range ({pd.Timestamp(int64_min, unit=unit)}, {pd.Timestamp(int64_max, unit=unit)})"
-    )
+    start = pd.Timestamp(np.datetime64(int64_min, unit))
+    end = pd.Timestamp(np.datetime64(int64_max, unit))
+    print(f"unit: {unit!r} time range ({start}, {end})")
 ```
 
 Since relaxing the resolution, this enhances the range to several hundreds of thousands of centuries with microsecond representation. `NaT` will be at `np.iinfo("int64").min` for all of the different representations.
