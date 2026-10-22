@@ -296,7 +296,7 @@ class Rolling[T_Xarray: (DataArray, Dataset)]:
                 # a strided construct changes the length of the dimension
                 or obj.sizes[dim] != self.obj.sizes[dim]
                 # NaN marks unknown chunks, which cannot be rechunked to
-                or any(size != size for size in dim_chunks)
+                or any(math.isnan(size) for size in dim_chunks)
             ):
                 continue
             chunks[dim] = dim_chunks
