@@ -157,6 +157,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Results of the string accessor methods ``strip``, ``pad``, ``center``,
+  ``ljust``, ``rjust``, ``zfill`` and ``replace`` on dask arrays are no longer
+  truncated to a single character, and ``repeat`` no longer fails on dask arrays
+  (:pull:`11746`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Encoding a string variable whose ``char_dim_name`` has characters after its
   last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
   not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).
@@ -396,6 +401,14 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- The string accessor uses the vectorized functions of ``np.strings`` for
+  ``len``, ``startswith``, ``endswith``, ``find``, ``rfind``, ``index``,
+  ``rindex``, ``strip``, ``lstrip``, ``rstrip``, ``pad``, ``center``,
+  ``ljust``, ``rjust``, ``zfill``, ``repeat``, the ``is*`` methods and
+  ``contains`` and ``replace`` with ``regex=False`` and case-sensitive matching,
+  which makes them 5-80 times faster for arrays with a string dtype
+  (:pull:`11746`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up rolling reductions of dask arrays without bottleneck, e.g. ``sum``,
   ``mean`` and ``count``, by about 7x with about 12x fewer tasks for a window of 20.
   Counting the values in each window no longer splits the chunks of the other
