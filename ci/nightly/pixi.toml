@@ -124,7 +124,7 @@ mypy = { cmd = "mypy --install-types --non-interactive --cobertura-xml-report my
 
 [environments]
 test-nightly = { features = [
-  "py314",
+  "py315",
   "nightly",
   "test",
   # Deliberately no "typing": type stubs cap numpy<2.5 and would displace the
@@ -138,7 +138,7 @@ test-nightly = { features = [
 # wheel); every other dependency still comes from the nightly wheels / git, so
 # this catches typing breakage from upstream development versions.
 mypy-upstream = { features = [
-  "py314",
+  "py315",
   "nightly",
   "test",
   "typing",
