@@ -6,9 +6,11 @@ import subprocess
 import sys
 from contextlib import suppress
 from textwrap import dedent, indent
+import docutils.nodes
 import packaging.version
 import sphinx_autosummary_accessors
 import yaml
+from myst_nb.core.render import MimeData, NbElementRenderer
 from sphinx.application import Sphinx
 from sphinx.ext.autodoc import (
     AttributeDocumenter,
@@ -86,6 +88,25 @@ copybutton_prompt_is_regexp = True
 nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
 # RTD does not publish the .err.log report, so print tracebacks in the build log
 nb_execution_show_tb = True
+# show matplotlib figures with a dark mode version, see _dark_mode_figures.py
+_dark_mode_figures = pathlib.Path(__file__).with_name("_dark_mode_figures.py")
+os.environ["PYTHONSTARTUP"] = str(_dark_mode_figures)
+
+_render_image = NbElementRenderer.render_image
+
+
+def _render_image_with_classes(
+    self: NbElementRenderer, data: MimeData
+) -> list[docutils.nodes.Element]:
+    """Also apply the ``classes`` of the output metadata, which myst-nb ignores."""
+    image_nodes = _render_image(self, data)
+    classes = data.output_metadata.get(data.mime_type, {}).get("classes", "")
+    for node in image_nodes:
+        node["classes"] += classes.split()
+    return image_nodes
+
+
+NbElementRenderer.render_image = _render_image_with_classes  # type: ignore[method-assign]
 
 # AutoDoc configuration
 autosummary_generate = True
