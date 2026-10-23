@@ -1486,6 +1486,10 @@ New features
 
 Bug fixes
 ~~~~~~~~~
+- Fix CuPy indexers with pandas-backed coordinates, basic and label-based
+  assignment to CuPy arrays, and scalar truth conversion while preserving
+  pandas extension-array behavior (:issue:`11739`, :pull:`11797`).
+  By `Huashuo Lei <https://github.com/wpyaoxueros>`_.
 - Fix error raised when writing scalar variables to Zarr with ``region={}``
   (:pull:`10796`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
