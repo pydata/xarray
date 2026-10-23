@@ -317,30 +317,6 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         self._finalized = False
 
     @property
-    def axes(self) -> np.ndarray:
-        warnings.warn(
-            (
-                "self.axes is deprecated since 2022.11 in order to align with "
-                "matplotlibs plt.subplots, use self.axs instead."
-            ),
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.axs
-
-    @axes.setter
-    def axes(self, axs: np.ndarray) -> None:
-        warnings.warn(
-            (
-                "self.axes is deprecated since 2022.11 in order to align with "
-                "matplotlibs plt.subplots, use self.axs instead."
-            ),
-            FutureWarning,
-            stacklevel=2,
-        )
-        self.axs = axs
-
-    @property
     def _left_axes(self) -> np.ndarray:
         return self.axs[:, 0]
 
