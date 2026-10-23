@@ -20,8 +20,8 @@ coveralls = "*"
 [feature.test.tasks]
 test = { cmd = "pytest", description = "Run the test suite with pytest." }
 
-[feature.py315.dependencies]
-python = "3.15.*"
+[feature.py314.dependencies]
+python = "3.14.*"
 
 # TODO: Remove `target.unix` restriction once pandas nightly has win-64 wheels again.
 # Without this, `pixi lock` fails because it can't solve the nightly feature for win-64,
@@ -124,7 +124,7 @@ mypy = { cmd = "mypy --install-types --non-interactive --cobertura-xml-report my
 
 [environments]
 test-nightly = { features = [
-  "py315",
+  "py314",
   "nightly",
   "test",
   # Deliberately no "typing": type stubs cap numpy<2.5 and would displace the
@@ -138,7 +138,7 @@ test-nightly = { features = [
 # wheel); every other dependency still comes from the nightly wheels / git, so
 # this catches typing breakage from upstream development versions.
 mypy-upstream = { features = [
-  "py315",
+  "py314",
   "nightly",
   "test",
   "typing",
