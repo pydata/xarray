@@ -2090,16 +2090,31 @@ class PandasIndexingAdapter(IndexingAdapter):
     def _index_get(
         self, indexer: ExplicitIndexer, func_name: str
     ) -> PandasIndexingAdapter | np.ndarray:
-        key = indexer.tuple
+        key: Any = indexer.tuple
 
         if len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             (key,) = key
 
+        cupy_array_type = array_type("cupy")
+        if isinstance(key, cupy_array_type):
+            key = to_numpy(key)
+        elif isinstance(key, tuple):
+            key = tuple(
+                to_numpy(item) if isinstance(item, cupy_array_type) else item
+                for item in key
+            )
+
         # if multidimensional key, convert the index to numpy array and index the latter
         if getattr(key, "ndim", 0) > 1:
             indexable = NumpyIndexingAdapter(np.asarray(self))
+            indexer = type(indexer)(
+                tuple(
+                    to_numpy(item) if isinstance(item, cupy_array_type) else item
+                    for item in indexer.tuple
+                )
+            )
             return getattr(indexable, func_name)(indexer)
 
         # otherwise index the pandas index then re-wrap or convert the result
