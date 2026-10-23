@@ -858,9 +858,12 @@ def test_extract_multi_string_dtypes(string_dtype, compiled) -> None:
     value = xr.DataArray(
         np.array(["alpha_1234", "beta", "!"], dtype=string_dtype), dims="X"
     )
-    pattern = r"([a-z]+)(?:_(\d+))?"
-    if compiled:
-        pattern = re.compile(pattern.encode() if string_dtype == "S" else pattern)
+    pattern_str = r"([a-z]+)(?:_(\d+))?"
+    pattern = (
+        re.compile(pattern_str.encode() if string_dtype == "S" else pattern_str)
+        if compiled
+        else pattern_str
+    )
     expected = xr.DataArray(
         np.array([["alpha", "1234"], ["beta", ""], ["", ""]], dtype=string_dtype),
         dims=["X", "group"],
