@@ -187,7 +187,7 @@ generate-ops-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success!
 ] }
 
 [feature.doc.dependencies]
-python = "3.14.*"
+python = "3.15.*"
 cartopy_offlinedata = "*"          # Natural Earth data, avoids downloads (and timeouts) while executing notebooks
 kerchunk = "*"
 ipykernel = "*"
