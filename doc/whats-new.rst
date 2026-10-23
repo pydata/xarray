@@ -406,9 +406,9 @@ Documentation
   (:issue:`10832`, :pull:`11156`).
   By `dolliecoder <https://github.com/dolliecoder>`_ and
   `Michael Niklas <https://github.com/headtr1ck>`_.
-- Restore the old URLs of the tutorials, FAQ, "how do I", help diagram and
-  ecosystem pages, which were moved without redirects (:issue:`11790`,
-  :pull:`11794`).
+- Restore the old URLs of documentation pages that were moved without a
+  redirect, e.g. the tutorials, FAQ and "how do I" pages, and check in CI that
+  moved or removed pages get a redirect (:issue:`11790`, :pull:`11794`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
