@@ -407,7 +407,7 @@ Documentation
   By `dolliecoder <https://github.com/dolliecoder>`_ and
   `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix the time coding docs for pandas 3.1, which now gives microsecond
-  resolution for numeric input with any ``unit``.
+  resolution for numeric input with any ``unit`` (:pull:`11796`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
