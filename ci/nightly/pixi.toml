@@ -20,8 +20,8 @@ coveralls = "*"
 [feature.test.tasks]
 test = { cmd = "pytest", description = "Run the test suite with pytest." }
 
-[feature.py314.dependencies]
-python = "3.14.*"
+[feature.py315.dependencies]
+python = "3.15.*"
 
 # TODO: Remove `target.unix` restriction once pandas nightly has win-64 wheels again.
 # Without this, `pixi lock` fails because it can't solve the nightly feature for win-64,
