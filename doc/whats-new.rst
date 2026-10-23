@@ -161,6 +161,11 @@ Deprecations
   :py:attr:`DataTree.lineage` warns once instead of twice (:issue:`11721`,
   :pull:`11724`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- :py:meth:`Dataset.to_array` is deprecated in favor of :py:meth:`Dataset.to_dataarray`
+  but it did not emit any warning previously, now it emits a ``FutureWarning``
+  (:issue:`11721`, :pull:`11788`).
+  By `Soutrik Das <https://github.com/SoutrikDas>`_.
+
 
 
 Bug Fixes
