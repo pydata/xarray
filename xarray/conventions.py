@@ -163,7 +163,8 @@ def decode_cf_variable(
         .. deprecated:: 2025.01.1
            Please pass a :py:class:`coders.CFDatetimeCoder` instance initialized with ``use_cftime`` to the ``decode_times`` kwarg instead.
     decode_timedelta : None, bool, or CFTimedeltaCoder
-        Decode cf timedeltas ("hours") to np.timedelta64.
+        Decode cf timedeltas ("hours") to np.timedelta64. If None, the
+        behavior follows ``decode_times`` (see :py:func:`decode_cf`).
 
     Returns
     -------
@@ -548,9 +549,14 @@ def decode_cf(
         coordinates with time units in
         {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same behavior as decode_times. The
-        resolution of the decoded timedeltas can be configured with the
-        ``time_unit`` argument in the :py:class:`CFTimedeltaCoder` passed.
+        If None (default), the behavior follows ``decode_times``: timedeltas
+        are decoded only when ``decode_times`` is truthy and the variable
+        attributes contain both a timedelta ``units`` attribute and an
+        ``np.timedelta64`` ``dtype`` attribute; variables encoded with a
+        ``units`` attribute only are not decoded unless
+        ``decode_timedelta=True`` is passed. The resolution of the decoded
+        timedeltas can be configured with the ``time_unit`` argument in the
+        :py:class:`CFTimedeltaCoder` passed.
 
     Returns
     -------
