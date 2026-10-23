@@ -295,6 +295,25 @@ filled.interp(x=[0.5, 1.5, 2.5], method="cubic")
 For the details of {py:meth}`~xarray.DataArray.interpolate_na`,
 see {ref}`Missing values <missing_values>`.
 
+(interp.dask)=
+
+## Interpolating Dask arrays
+
+{py:meth}`~xarray.DataArray.interp` works lazily on {ref}`Dask arrays <dask>`.
+Each task needs the full extent of the dimensions being interpolated along,
+so the chunks along these dimensions are merged into a single chunk.
+
+With `method="linear"` or `"nearest"`, the data is first subset to the range
+of the new coordinates, so only the chunks that are needed are read. This
+requires the new coordinates to be in memory: if they are chunked, xarray does
+not compute them in advance, so all chunks along the interpolated dimensions
+are read and merged. If the new coordinates are cheap to compute, loading them
+first can reduce the memory use considerably:
+
+```python
+da.interp(x=new_x.compute())
+```
+
 ## Example
 
 Let's see how {py:meth}`~xarray.DataArray.interp` works on real data.

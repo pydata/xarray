@@ -2436,6 +2436,12 @@ class DataArray(
         - When interpolating along multiple dimensions with methods `linear` and `nearest`,
             the process attempts to decompose the interpolation into independent interpolations
             along one dimension at a time.
+        - For Dask arrays, the chunks along the interpolated dimensions are merged
+            into a single chunk. With methods `linear` and `nearest`, the data is
+            first subset to the range of the new coordinates, so only the chunks that
+            are needed are read. This only happens if the new coordinates are in
+            memory, so load chunked new coordinates first (e.g. with ``.compute()``)
+            if they are cheap to compute. See :ref:`interp.dask`.
         - The specific interpolation method and dimensionality determine which
             interpolant is used:
 

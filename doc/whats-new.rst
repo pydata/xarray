@@ -377,6 +377,11 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Document how :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` handle
+  chunks of Dask arrays, and that loading chunked new coordinates first can
+  reduce the memory use for ``method="linear"`` and ``"nearest"``
+  (:pull:`11786`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Add hidden intersphinx inventory entries for methods, properties and
   attributes at the path where they are defined, e.g.
   ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
