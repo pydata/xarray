@@ -29,6 +29,7 @@ from xarray.core.utils import (
     is_duck_array,
     is_scalar,
 )
+from xarray.namedarray.pycompat import to_numpy
 
 if TYPE_CHECKING:
     from xarray.core.types import ErrorOptions, JoinOptions, Self
@@ -839,8 +840,6 @@ class PandasIndex(Index):
             return self
 
         if is_duck_array(indxr) and not isinstance(indxr, np.ndarray):
-            from xarray.namedarray.pycompat import to_numpy
-
             indxr = to_numpy(cast("duckarray[Any, Any]", indxr))
 
         return self._replace(self.index[indxr])  # type: ignore[index,unused-ignore]
