@@ -414,6 +414,9 @@ dask-core = "<0.0a0"
 [feature.nightly.dependencies]
 python = "*"
 
+[feature.py315.dependencies]
+python = "3.15.*"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -463,6 +466,17 @@ test-py312 = { features = [
   "backends",
   "accel",
   "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
+
+test-py315 = { features = [
+  "py315",
+  "test",
+  "backends",
+  "accel",
+  # "numba",
   "dask",
   "viz",
   "extras",
