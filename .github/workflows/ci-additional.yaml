@@ -449,46 +449,32 @@ jobs:
       # Every page ever added to doc/ must still exist or be redirected in
       # rediraffe_redirects in doc/conf.py, so that links to old URLs keep working.
       - name: Check that moved or removed doc pages are redirected
-        shell: python3 {0}
+        shell: bash
         run: |
-          import ast, subprocess, sys
-          from pathlib import PurePosixPath
-
-          # Pages that were removed on purpose and have no successor in the docs.
-          REMOVED_PAGES = {
-              "getting-started",  # xray v0.1 docs
-              "tutorial",  # xray v0.1 docs
-              "team",  # moved to https://xarray.dev/team (GH7061)
-              "sphinxext/ipython_sphinxext/README",  # vendored sphinx extension
+          # Page names: paths below doc/ without suffix, skipping _build, _static, ...
+          pages() {
+            grep -E '\.(rst|md|ipynb)$' | grep -vE '/[_.]' |
+              sed -E 's#^doc/##; s#\.(rst|md|ipynb)$##' | sort -u
           }
-
-          def git(*args):
-              return subprocess.check_output(["git", *args], text=True).splitlines()
-
-          def page_names(paths):
-              names = set()
-              for path in map(PurePosixPath, paths):
-                  rel = path.relative_to("doc")
-                  if path.suffix in {".rst", ".md", ".ipynb"} and not any(
-                      part.startswith(("_", ".")) for part in rel.parts
-                  ):
-                      names.add(str(rel.with_suffix("")))
-              return names
-
-          conf = ast.parse(open("doc/conf.py").read())
-          redirects = next(
-              ast.literal_eval(node.value)
-              for node in conf.body
-              if isinstance(node, ast.Assign)
-              and getattr(node.targets[0], "id", None) == "rediraffe_redirects"
+          # Pages that were removed on purpose and have no successor in the docs.
+          removed_pages=(
+            getting-started                    # xray v0.1 docs
+            tutorial                           # xray v0.1 docs
+            team                               # moved to https://xarray.dev/team (GH7061)
+            sphinxext/ipython_sphinxext/README # vendored sphinx extension
           )
-          ever = page_names(git("log", "--format=", "--name-only", "--no-renames", "--diff-filter=A", "--", "doc"))
-          current = page_names(git("ls-files", "--", "doc"))
-          missing = ever - current - page_names(f"doc/{name}" for name in redirects) - REMOVED_PAGES
-          if missing:
-              print("These doc pages were removed or moved without a redirect in doc/conf.py:")
-              print("\n".join(f"  doc/{name}" for name in sorted(missing)))
-              sys.exit(1)
+          ever=$(git log --format= --name-only --no-renames --diff-filter=A -- doc | pages)
+          known=$({
+            git ls-files doc
+            sed -n '/^rediraffe_redirects = {/,/^}/s#^ *"\([^"]*\)":.*#doc/\1#p' doc/conf.py
+            printf 'doc/%s.rst\n' "${removed_pages[@]}"
+          } | pages)
+          missing=$(comm -23 <(echo "$ever") <(echo "$known"))
+          if [ -n "$missing" ]; then
+            echo "These doc pages were removed or moved without a redirect in doc/conf.py:"
+            echo "$missing"
+            exit 1
+          fi
 
   zizmor:
     name: GHA Security Analysis using Zizmor
