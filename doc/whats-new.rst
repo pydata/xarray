@@ -165,6 +165,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
+  variables (:issue:`6449`).
+  By `Liang, Jingyi <https://github.com/LJimmy007>`_.
 - Results of the string accessor methods ``strip``, ``pad``, ``center``,
   ``ljust``, ``rjust``, ``zfill`` and ``replace`` on dask arrays are no longer
   truncated to a single character, and ``repeat`` no longer fails on dask arrays
