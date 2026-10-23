@@ -407,7 +407,8 @@ Documentation
   By `dolliecoder <https://github.com/dolliecoder>`_ and
   `Michael Niklas <https://github.com/headtr1ck>`_.
 - Restore the old URLs of the tutorials, FAQ, "how do I", help diagram and
-  ecosystem pages, which were moved without redirects (:issue:`11790`).
+  ecosystem pages, which were moved without redirects (:issue:`11790`,
+  :pull:`11794`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
