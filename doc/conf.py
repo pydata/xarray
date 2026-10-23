@@ -9,12 +9,15 @@ from textwrap import dedent, indent
 import packaging.version
 import sphinx_autosummary_accessors
 import yaml
+from docutils import nodes
 from sphinx.application import Sphinx
 from sphinx.ext.autodoc import (
     AttributeDocumenter,
     MethodDocumenter,
     PropertyDocumenter,
 )
+from sphinx.transforms import SphinxTransform
+from sphinx.transforms.post_transforms import SphinxPostTransform
 from sphinx.util import logging
 
 import xarray
@@ -556,7 +559,78 @@ class CanonicalAttributeDocumenter(_CanonicalMemberMixin, AttributeDocumenter):
         return None
 
 
+class DarkModeImages(SphinxTransform):
+    """Show ``name-dark.ext`` instead of ``name.ext`` in dark mode, if it exists.
+
+    Each such image (with its link and figure, if any) is followed by a copy
+    pointing to the dark file, and the two are tagged with the pydata-sphinx-theme
+    ``only-light`` / ``only-dark`` classes. Images that already have one of these classes
+    or ``dark-light`` are left alone.
+    """
+
+    default_priority = 400
+    themed_classes = {"only-light", "only-dark", "dark-light"}
+
+    def apply(self, **kwargs) -> None:
+        for image in list(self.document.findall(nodes.image)):
+            uri = image["uri"]
+            # duplicate the enclosing link and figure too, which can only hold one image
+            node = image
+            while isinstance(node.parent, nodes.reference | nodes.figure):
+                node = node.parent
+            if "://" in uri or self.themed_classes & {*image["classes"], *node["classes"]}:
+                continue
+            path = pathlib.PurePosixPath(uri)
+            dark_uri = str(path.with_stem(f"{path.stem}-dark"))
+            _, dark_path = self.env.relfn2path(dark_uri, self.env.docname)
+            if not os.path.isfile(dark_path):
+                continue
+            dark = node.deepcopy()
+            dark_image = next(iter(dark.findall(nodes.image)))
+            dark_image["uri"] = dark_uri
+            # the theme styles img elements by class, so tag the wrappers and the image
+            for light_node, dark_node in {(node, dark), (image, dark_image)}:
+                light_node["classes"].append("only-light")
+                dark_node["classes"].append("only-dark")
+            if not node["ids"]:
+                node.parent.insert(node.parent.index(node) + 1, dark)
+                continue
+            # A labelled image or figure (e.g. :name:) is wrapped, so that links to the
+            # label still have a visible target in both modes. The label stays on the
+            # light copy until DarkModeImageAnchors, as Sphinx takes the link text and
+            # figure number from it. Without ids the copy does not get its own number.
+            dark["ids"] = []
+            wrapper = nodes.container(classes=["dark-mode-pair"])
+            node.parent.replace(node, wrapper)
+            wrapper += [node, dark]
+
+
+class DarkModeImageAnchors(SphinxPostTransform):
+    """Move the label ids of a DarkModeImages pair from the light copy to its wrapper.
+
+    Both copies get derived ids instead, sharing the figure number of the original.
+    """
+
+    default_priority = 900
+
+    def run(self, **kwargs) -> None:
+        docname = self.env.path2doc(self.document["source"])
+        fignumbers = self.env.toc_fignumbers.get(docname, {})
+        for wrapper in self.document.findall(nodes.container):
+            if "dark-mode-pair" not in wrapper["classes"]:
+                continue
+            light, dark = wrapper.children
+            ids = wrapper["ids"] = light["ids"]
+            light["ids"] = [f"{id_}-light" for id_ in ids]
+            dark["ids"] = [f"{id_}-dark" for id_ in ids]
+            for numbers in fignumbers.values():
+                if ids[0] in numbers:
+                    numbers[light["ids"][0]] = numbers[dark["ids"][0]] = numbers[ids[0]]
+
+
 def setup(app: Sphinx):
+    app.add_transform(DarkModeImages)
+    app.add_post_transform(DarkModeImageAnchors)
     app.connect("html-page-context", html_page_context)
     # run after sphinx.ext.intersphinx loaded the inventories (priority 500)
     app.connect("builder-inited", check_intersphinx_inventories, priority=900)
