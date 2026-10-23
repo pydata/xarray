@@ -430,8 +430,8 @@ test-py313 = { features = [
   "viz",
   "extras",
 ] }
-test-py314-no-numba = { features = [
-  "py314",
+test-py315-no-numba = { features = [
+  "py315",
   "test",
   "backends",
   "accel",
@@ -439,7 +439,7 @@ test-py314-no-numba = { features = [
   "viz",
   "extras",
 ] }
-test-py314-no-dask = { features = [
+test-py315-no-dask = { features = [
   "py314",
   "nodask",
   "test",
@@ -476,7 +476,7 @@ test-py315 = { features = [
   "test",
   "backends",
   "accel",
-  # "numba",
+  "numba",
   "dask",
   "viz",
   "extras",
@@ -495,8 +495,8 @@ test-py312-with-typing = { features = [
   "typing-stubs",
 ] }
 
-test-py314-with-typing = { features = [
-  "py314",
+test-py315-with-typing = { features = [
+  "py315",
   "test",
   "backends",
   "accel",
