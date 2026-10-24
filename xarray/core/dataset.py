@@ -10025,9 +10025,12 @@ class Dataset(
                 msg = f"expr for dim {dim} must be a string to be evaluated, {type(expr)} given"
                 raise ValueError(msg)
 
-        # evaluate the queries to create the indexers
+        # Include coords so pandas considers the resolvers nonempty even when
+        # there are no data variables.
         indexers = {
-            dim: pd.eval(expr, resolvers=[self], parser=parser, engine=engine)
+            dim: pd.eval(
+                expr, resolvers=[self, self.coords], parser=parser, engine=engine
+            )
             for dim, expr in queries.items()
         }
 
