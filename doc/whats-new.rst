@@ -176,7 +176,7 @@ Bug Fixes
 ~~~~~~~~~
 - :py:func:`open_dataset` can detect local Zarr directories on Windows without
   raising ``PermissionError`` while checking file-based backends. Permission
-  errors for ordinary files still propagate (:issue:`11799`).
+  errors for ordinary files still propagate (:issue:`11799`, :pull:`11802`).
   By `Gabriel Demetrios Lafis <https://github.com/galafis>`_.
 
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
