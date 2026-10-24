@@ -397,6 +397,12 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Clarified that :py:meth:`DataArray.item` and :py:meth:`Variable.item` are not
+  implemented for lazy (e.g. dask) arrays, both in the method docstring and in the
+  raised error message, which now suggests loading the data into memory first
+  (:issue:`7916`).
+  By `imam <https://github.com/imam2004i>`_.
+
 - Add hidden intersphinx inventory entries for methods, properties and
   attributes at the path where they are defined, e.g.
   ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
