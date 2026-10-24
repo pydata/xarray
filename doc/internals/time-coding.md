@@ -212,9 +212,9 @@ except Exception as err:
 
 {py:class}`pandas.Timestamp` is used within xarray to wrap strings of CF encoding reference times and datetime.datetime.
 
-When arguments are numeric (not strings) "unit" can be anything from `'Y'`, `'W'`, `'D'`, `'h'`, `'m'`, `'s'`, `'ms'`, `'us'` or `'ns'`, though the returned resolution will be `"ns"`.
+When arguments are numeric (not strings) "unit" can be anything from `'Y'`, `'W'`, `'D'`, `'h'`, `'m'`, `'s'`, `'ms'`, `'us'` or `'ns'`. It only defines how the number is interpreted: since pandas 3.1 the returned resolution is `'us'`, or `'ns'` if the input needs nanosecond precision.
 
-In normal operation {py:class}`pandas.Timestamp` holds the timestamp in the provided resolution, but only one of `'s'`, `'ms'`, `'us'`, `'ns'`. Lower resolution input is automatically converted to `'s'`, higher resolution input is truncated to `'ns'`.
+{py:class}`pandas.Timestamp` holds the timestamp in one of `'s'`, `'ms'`, `'us'`, `'ns'`. Created from a {py:class}`numpy.datetime64` it keeps that resolution, lower resolution input is converted to `'s'`, higher resolution input is truncated to `'ns'`.
 
 The same conversion rules apply here as for {py:func}`pandas.to_timedelta` (see [to_timedelta]).
 Depending on the internal resolution Timestamps can be represented in the range:
@@ -222,7 +222,7 @@ Depending on the internal resolution Timestamps can be represented in the range:
 ```{code-cell}
 for unit in ["s", "ms", "us", "ns"]:
     print(
-        f"unit: {unit!r} time range ({pd.Timestamp(int64_min, unit=unit)}, {pd.Timestamp(int64_max, unit=unit)})"
+        f"unit: {unit!r} time range ({pd.Timestamp(np.datetime64(int64_min, unit))}, {pd.Timestamp(np.datetime64(int64_max, unit))})"
     )
 ```
 

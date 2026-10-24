@@ -161,6 +161,11 @@ Deprecations
   :py:attr:`DataTree.lineage` warns once instead of twice (:issue:`11721`,
   :pull:`11724`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- :py:meth:`Dataset.to_array` is deprecated in favor of :py:meth:`Dataset.to_dataarray`
+  but it did not emit any warning previously, now it emits a ``FutureWarning``
+  (:issue:`11721`, :pull:`11788`).
+  By `Soutrik Das <https://github.com/SoutrikDas>`_.
+
 
 
 Bug Fixes
@@ -409,6 +414,9 @@ Documentation
   (:issue:`10832`, :pull:`11156`).
   By `dolliecoder <https://github.com/dolliecoder>`_ and
   `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix the time coding docs for pandas 3.1, which now gives microsecond
+  resolution for numeric input with any ``unit`` (:pull:`11796`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
 ~~~~~~~~~~~
