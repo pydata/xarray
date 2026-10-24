@@ -777,7 +777,7 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     return magic_number
 
 
-def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
+def try_read_magic_number_from_path(pathlike: Any, count: int = 8) -> bytes | None:
     if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
         path = os.fspath(pathlike)
         try:
