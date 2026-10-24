@@ -152,7 +152,7 @@ Breaking Changes
   and ``streamplot`` plot methods of :py:class:`Dataset`, now raises a
   ``TypeError``. It has been deprecated since v2022.11.0. Pass them as keyword
   arguments instead. Matplotlib format strings like ``da.plot.line("o-")`` are
-  not affected (:issue:`11721`).
+  not affected (:issue:`11721`, :pull:`11804`).
   By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
