@@ -3566,6 +3566,38 @@ class Dataset(
         DataArray.reindex_like
         align
 
+        Examples
+        --------
+        Reindex time-series observations to the time index of another dataset.
+        Values for new index labels are filled with ``NaN`` by default:
+
+        >>> observations = xr.Dataset(
+        ...     {"temperature": ("time", [18.0, 21.0])},
+        ...     coords={"time": [0, 2]},
+        ... )
+        >>> observations
+        <xarray.Dataset> Size: 32B
+        Dimensions:      (time: 2)
+        Coordinates:
+          * time         (time) int64 16B 0 2
+        Data variables:
+            temperature  (time) float64 16B 18.0 21.0
+        >>> target = xr.Dataset(coords={"time": [0, 1, 2]})
+        >>> target
+        <xarray.Dataset> Size: 24B
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) int64 24B 0 1 2
+        Data variables:
+            *empty*
+        >>> observations.reindex_like(target)
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) float64 24B 18.0 nan 21.0
+
         """
         return alignment.reindex_like(
             self,
