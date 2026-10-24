@@ -7316,6 +7316,10 @@ class Dataset(
         self, dim: Hashable = "variable", name: Hashable | None = None
     ) -> DataArray:
         """Convert this dataset into a DataArray (deprecated, use to_dataarray)."""
+        emit_user_level_warning(
+            "Dataset.to_array is deprecated, use Dataset.to_dataarray instead.",
+            FutureWarning,
+        )
         return self.to_dataarray(dim=dim, name=name)
 
     def _normalize_dim_order(
@@ -10021,9 +10025,12 @@ class Dataset(
                 msg = f"expr for dim {dim} must be a string to be evaluated, {type(expr)} given"
                 raise ValueError(msg)
 
-        # evaluate the queries to create the indexers
+        # Include coords so pandas considers the resolvers nonempty even when
+        # there are no data variables.
         indexers = {
-            dim: pd.eval(expr, resolvers=[self], parser=parser, engine=engine)
+            dim: pd.eval(
+                expr, resolvers=[self, self.coords], parser=parser, engine=engine
+            )
             for dim, expr in queries.items()
         }
 
