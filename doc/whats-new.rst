@@ -160,6 +160,13 @@ Breaking Changes
 - ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
   :py:class:`Variable`, deprecated since v2023.10.0, has been removed. Use
   ``drop_encoding`` instead (:issue:`11721`, :pull:`11805`).
+- Passing ``x``, ``y`` and the other plot arguments positionally to the
+  ``scatter``, ``lines``, ``imshow``, ``contour``, ``contourf``, ``pcolormesh``
+  and ``surface`` plot methods of :py:class:`DataArray`, and to the ``quiver``
+  and ``streamplot`` plot methods of :py:class:`Dataset`, now raises a
+  ``TypeError``. It has been deprecated since v2022.11.0. Pass them as keyword
+  arguments instead. Matplotlib format strings like ``da.plot.line("o-")`` are
+  not affected (:issue:`11721`).
   By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 

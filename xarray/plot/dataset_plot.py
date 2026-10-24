@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import inspect
-import warnings
 from collections.abc import Callable, Hashable, Iterable
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
@@ -195,27 +194,9 @@ levels : int or array-like, optional
         **kwargs: Any,
     ) -> Any:
         if args:
-            # TODO: Deprecated since 2022.10:
-            msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
-            assert x is None
-            x = args[0]
-            if len(args) > 1:
-                assert y is None
-                y = args[1]
-            if len(args) > 2:
-                assert u is None
-                u = args[2]
-            if len(args) > 3:
-                assert v is None
-                v = args[3]
-            if len(args) > 4:
-                assert hue is None
-                hue = args[4]
-            if len(args) > 5:
-                raise ValueError(msg)
-            else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
-            del msg
+            raise TypeError(
+                "Using positional arguments is not supported for plot methods, use keyword arguments instead."
+            )
         del args
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
