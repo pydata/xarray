@@ -6851,11 +6851,11 @@ class TestDataset:
         result = ds.map(modify_attr, keep_attrs=False)
         assert result["test"].attrs == {"original": "modified", "extra": "added"}
 
-    def test_apply_pending_deprecated_map(self) -> None:
+    def test_apply_deprecated_map(self) -> None:
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(FutureWarning, match=r"Dataset\.apply is deprecated"):
             # data.apply keeps all attrs by default
             assert_identical(data.apply(np.mean), data.mean())
 
