@@ -925,6 +925,12 @@ artist :
         else:
             plt = attempt_import("matplotlib.pyplot")
 
+        if args:
+            raise TypeError(
+                "Using positional arguments is not supported for plot methods, use keyword arguments instead."
+            )
+        del args
+
         if subplot_kws is None:
             subplot_kws = dict()
 
@@ -944,32 +950,6 @@ artist :
         if darray.ndim == 0 or darray.size == 0:
             # TypeError to be consistent with pandas
             raise TypeError("No numeric data to plot.")
-
-        # The allargs dict passed to _easy_facetgrid above contains args
-        if args == ():
-            args = kwargs.pop("args", ())
-
-        if args:
-            assert "args" not in kwargs
-            # TODO: Deprecated since 2022.10:
-            msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
-            assert x is None
-            x = args[0]
-            if len(args) > 1:
-                assert y is None
-                y = args[1]
-            if len(args) > 2:
-                assert z is None
-                z = args[2]
-            if len(args) > 3:
-                assert hue is None
-                hue = args[3]
-            if len(args) > 4:
-                raise ValueError(msg)
-            else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
-            del msg
-        del args
 
         if hue_style is not None:
             # TODO: Not used since 2022.10. Deprecated since 2023.07.
@@ -1663,18 +1643,9 @@ artist :
         # All 2d plots in xarray share this function signature.
 
         if args:
-            # TODO: Deprecated since 2022.10:
-            msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
-            assert x is None
-            x = args[0]
-            if len(args) > 1:
-                assert y is None
-                y = args[1]
-            if len(args) > 2:
-                raise ValueError(msg)
-            else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
-            del msg
+            raise TypeError(
+                "Using positional arguments is not supported for plot methods, use keyword arguments instead."
+            )
         del args
 
         # Decide on a default for the colorbar before facetgrids

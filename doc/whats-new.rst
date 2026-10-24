@@ -146,6 +146,14 @@ Breaking Changes
   deprecated since v0.16.1, have been removed. Pass them in
   ``dask_gufunc_kwargs`` instead (:issue:`11721`, :pull:`11755`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- Passing ``x``, ``y`` and the other plot arguments positionally to the
+  ``scatter``, ``lines``, ``imshow``, ``contour``, ``contourf``, ``pcolormesh``
+  and ``surface`` plot methods of :py:class:`DataArray`, and to the ``quiver``
+  and ``streamplot`` plot methods of :py:class:`Dataset`, now raises a
+  ``TypeError``. It has been deprecated since v2022.11.0. Pass them as keyword
+  arguments instead. Matplotlib format strings like ``da.plot.line("o-")`` are
+  not affected (:issue:`11721`, :pull:`11804`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
 Deprecations

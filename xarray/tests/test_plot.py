@@ -905,13 +905,11 @@ class TestPlot1D(PlotTestCase):
         title = plt.gca().get_title()
         assert "d = [10.009]" == title
 
-    def test_warns_for_few_positional_args(self) -> None:
-        with pytest.warns(FutureWarning, match="Using positional arguments"):
+    def test_raises_for_positional_args(self) -> None:
+        with pytest.raises(TypeError, match="Using positional arguments"):
             self.darray.plot.scatter("period")
-
-    def test_raises_for_too_many_positional_args(self) -> None:
-        with pytest.raises(ValueError, match="Using positional arguments"):
-            self.darray.plot.scatter("period", "foo", "bar", "blue", {})
+        with pytest.raises(TypeError, match="Using positional arguments"):
+            self.darray.plot.scatter("period", col="period")
 
 
 class TestPlotStep(PlotTestCase):
@@ -1830,18 +1828,16 @@ class Common2dMixin:
         with pytest.raises(ValueError):
             self.darray.plot(norm=norm, vmax=2)  # type: ignore[call-arg]
 
-    def test_plot_warns_for_2_positional_args(self) -> None:
+    def test_plot_raises_for_positional_args(self) -> None:
         da = xr.DataArray(
             np.random.randn(2, 6, 6),
             dims=("time", "x", "y"),
             coords={"x": np.arange(6), "y": np.arange(6)},
         )
-        with pytest.warns(FutureWarning, match="Using positional arguments"):
+        with pytest.raises(TypeError, match="Using positional arguments"):
             self.plotfunc(da, "x", "y", col="time")
-
-    def test_plot_raises_too_many_for_positional_args(self) -> None:
-        with pytest.raises(ValueError, match="Using positional arguments"):
-            self.plotmethod("x", "y", (12, 4))
+        with pytest.raises(TypeError, match="Using positional arguments"):
+            self.plotmethod("x")
 
 
 @pytest.mark.slow
@@ -2797,6 +2793,10 @@ class TestDatasetQuiverPlots(PlotTestCase):
         ds.v.attrs["units"] = "vunits"
         ds["mag"] = np.hypot(ds.u, ds.v)
         self.ds = ds
+
+    def test_quiver_raises_for_positional_args(self) -> None:
+        with pytest.raises(TypeError, match="Using positional arguments"):
+            self.ds.isel(row=0, col=0).plot.quiver("x", "y", "u", "v")
 
     def test_quiver(self) -> None:
         with figure_context():
