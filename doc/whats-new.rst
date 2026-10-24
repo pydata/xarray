@@ -177,6 +177,11 @@ Deprecations
   but it did not emit any warning previously, now it emits a ``FutureWarning``
   (:issue:`11721`, :pull:`11788`).
   By `Soutrik Das <https://github.com/SoutrikDas>`_.
+- :py:attr:`DataTree.ds`, a soft-deprecated alias of :py:attr:`DataTree.dataset`,
+  and setting the ``display_expand_groups`` option of :py:func:`set_options`,
+  which has no effect since v2026.01.0, now emit a ``FutureWarning``
+  (:issue:`11721`, :pull:`11803`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
 
