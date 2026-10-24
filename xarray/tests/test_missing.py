@@ -143,7 +143,10 @@ def test_scipy_methods_function(method) -> None:
     # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
     if method == "spline":
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(
+            FutureWarning,
+            match="The 1d SplineInterpolator class is performing an incorrect calculation",
+        ):
             actual = da.interpolate_na(method=method, dim="time")
     else:
         actual = da.interpolate_na(method=method, dim="time")
