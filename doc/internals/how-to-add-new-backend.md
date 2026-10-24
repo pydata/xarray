@@ -277,48 +277,37 @@ configurations), with:
 
 You can declare the entrypoint in your project configuration like so:
 
-```{eval-rst}
-.. tab:: pyproject.toml
-
-   .. code:: toml
-
-      [project.entry-points."xarray.backends"]
-      my_engine = "my_package.my_module:MyBackendEntrypoint"
+````{tab} pyproject.toml
+```toml
+[project.entry-points."xarray.backends"]
+my_engine = "my_package.my_module:MyBackendEntrypoint"
 ```
+````
 
-```{eval-rst}
-.. tab:: pyproject.toml [Poetry]
-
-   .. code-block:: toml
-
-       [tool.poetry.plugins."xarray.backends"]
-       my_engine = "my_package.my_module:MyBackendEntrypoint"
+````{tab} pyproject.toml [Poetry]
+```toml
+[tool.poetry.plugins."xarray.backends"]
+my_engine = "my_package.my_module:MyBackendEntrypoint"
 ```
+````
 
-```{eval-rst}
-.. tab:: setup.cfg
-
-   .. code-block:: cfg
-
-       [options.entry_points]
-       xarray.backends =
-           my_engine = my_package.my_module:MyBackendEntrypoint
+````{tab} setup.cfg
+```cfg
+[options.entry_points]
+xarray.backends =
+    my_engine = my_package.my_module:MyBackendEntrypoint
 ```
+````
 
-```{eval-rst}
-.. tab:: setup.py
-
-   .. code-block::
-
-       setuptools.setup(
-           entry_points={
-               "xarray.backends": [
-                   "my_engine=my_package.my_module:MyBackendEntrypoint"
-               ],
-           },
-       )
-
+````{tab} setup.py
+```python
+setuptools.setup(
+    entry_points={
+        "xarray.backends": ["my_engine=my_package.my_module:MyBackendEntrypoint"],
+    },
+)
 ```
+````
 
 See the [Python Packaging User Guide](https://packaging.python.org/specifications/entry-points/#data-model) for more
 information on entrypoints and details of the syntax.
@@ -463,7 +452,7 @@ array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
 ```python
 # shall support integers
-backend_array._raw_indexing_method(1, 1)
+backend_array._raw_indexing_method((1, 1))
 ```
 
 ```
@@ -472,7 +461,7 @@ backend_array._raw_indexing_method(1, 1)
 
 ```python
 # shall support slices
-backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+backend_array._raw_indexing_method((slice(0, 3), slice(2, 4)))
 ```
 
 ```
@@ -486,7 +475,7 @@ support also lists of integers. The outer indexing is equivalent to
 combining multiple input list with `itertools.product()`:
 
 ```python
-backend_array._raw_indexing_method([0, 1], [0, 1, 2])
+backend_array._raw_indexing_method(([0, 1], [0, 1, 2]))
 ```
 
 ```
@@ -495,7 +484,7 @@ array([[0, 1, 2], [4, 5, 6]])
 
 ```python
 # shall support integers
-backend_array._raw_indexing_method(1, 1)
+backend_array._raw_indexing_method((1, 1))
 ```
 
 ```

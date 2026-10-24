@@ -44,7 +44,6 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_type,
     has_netCDF4,
-    has_numpy_2,
     has_scipy,
     requires_aiobotocore,
     requires_cftime,
@@ -146,7 +145,6 @@ def test_get_default_netcdf_write_engine() -> None:
 @requires_h5netcdf
 def test_default_engine_h5netcdf(monkeypatch):
     """Test the default netcdf engine when h5netcdf is the only importable module."""
-
     monkeypatch.delitem(sys.modules, "netCDF4", raising=False)
     monkeypatch.delitem(sys.modules, "scipy", raising=False)
     monkeypatch.setattr(sys, "meta_path", [])
@@ -372,7 +370,6 @@ class TestPreferredChunks:
     @pytest.mark.parametrize("create_default_indexes", [True, False])
     def test_default_indexes_passthrough(self, create_default_indexes):
         """Allow creating indexes in the backend."""
-
         initial = xr.Dataset(
             {"a": (["x", "y"], [[1, 2, 3], [4, 5, 6]])},
             coords={"x": ("x", [0, 1]), "y": ("y", list("abc"))},
@@ -576,9 +573,7 @@ def test_open_mfdataset_can_open_path_objects() -> None:
 @requires_netCDF4
 @requires_dask
 def test_open_mfdataset_list_attr() -> None:
-    """
-    Case when an attribute of type list differs across the multiple files
-    """
+    """Case when an attribute of type list differs across the multiple files."""
     with create_tmp_files(2) as nfiles:
         for i in range(2):
             with nc4.Dataset(nfiles[i], "w") as f:
@@ -768,9 +763,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                             assert ds.attrs == expected
 
     def test_open_mfdataset_dataset_attr_by_coords(self) -> None:
-        """
-        Case when an attribute differs across the multiple files
-        """
+        """Case when an attribute differs across the multiple files."""
         with self.setup_files_and_datasets() as (files, [_ds1, _ds2]):
             # Give the files an inconsistent attribute
             for i, f in enumerate(files):
@@ -784,9 +777,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                     assert ds.test_dataset_attr == 10
 
     def test_open_mfdataset_dataarray_attr_by_coords(self) -> None:
-        """
-        Case when an attribute of a member DataArray differs across the multiple files
-        """
+        """Case when an attribute of a member DataArray differs across the files."""
         with self.setup_files_and_datasets(new_combine_kwargs=True) as (
             files,
             [_ds1, _ds2],
@@ -1483,8 +1474,7 @@ class TestDask(DatasetIOBase):
 
     @requires_cftime
     def test_open_dataset_cftime_autochunk(self) -> None:
-        """Create a dataset with cftime datetime objects and
-        ensure that auto-chunking works correctly."""
+        """Test that auto-chunking works correctly with cftime datetime objects."""
         import cftime
 
         original = xr.Dataset(
@@ -1921,9 +1911,7 @@ def test_use_cftime_true(calendar, units_year) -> None:
 
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-@pytest.mark.xfail(
-    has_numpy_2, reason="https://github.com/pandas-dev/pandas/issues/56996"
-)
+@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/56996")
 def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
     x = [0, 1]
     time = [0, 720]

@@ -23,10 +23,10 @@ from numpy import (
     take,
     unravel_index,  # noqa: F401
 )
+from numpy.lib.array_utils import normalize_axis_index
 
 from xarray.compat import dask_array_compat, dask_array_ops
 from xarray.compat.array_api_compat import get_array_namespace
-from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import dtypes, nputils
 from xarray.core.extension_array import (
     PandasExtensionArray,
@@ -41,17 +41,6 @@ from xarray.core.utils import (
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import array_type, is_chunked_array
-
-# remove once numpy 2.0 is the oldest supported version
-if module_available("numpy", minversion="2.0.0.dev0"):
-    from numpy.lib.array_utils import (  # type: ignore[import-not-found,unused-ignore]
-        normalize_axis_index,
-    )
-else:
-    from numpy.core.multiarray import (  # type: ignore[attr-defined,no-redef,unused-ignore]
-        normalize_axis_index,
-    )
-
 
 dask_available = module_available("dask")
 
@@ -168,7 +157,7 @@ around: Callable = round
 
 
 def isna(data: Any) -> bool:
-    """Checks if data is literally np.nan or pd.NA.
+    """Check if data is literally np.nan or pd.NA.
 
     Parameters
     ----------
@@ -192,7 +181,7 @@ def isnull(data):
         # note: must check timedelta64 before integers, because currently
         # timedelta64 inherits from np.integer
         return isnat(data)
-    elif HAS_STRING_DTYPE and isinstance(scalar_type, np.dtypes.StringDType):
+    elif isinstance(scalar_type, np.dtypes.StringDType):
         # na is settable, but it defaults to an empty string
         na_object = getattr(scalar_type, "na_object", "")
         if isna(na_object):
@@ -332,10 +321,11 @@ def broadcast_to(array, shape):
 
 def lazy_array_equiv(arr1, arr2):
     """Like array_equal, but doesn't actually compare values.
+
     Returns True when arr1, arr2 identical or their dask tokens are equal.
     Returns False when shapes are not equal.
-    Returns None when equality cannot determined: one or both of arr1, arr2 are numpy arrays;
-    or their dask tokens are not equal
+    Returns None when equality cannot be determined: one or both of arr1, arr2 are
+    numpy arrays; or their dask tokens are not equal.
     """
     if arr1 is arr2:
         return True
@@ -355,7 +345,7 @@ def lazy_array_equiv(arr1, arr2):
 
 
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
-    """Like np.allclose, but also allows values to be NaN in both arrays"""
+    """Like np.allclose, but also allows values to be NaN in both arrays."""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
 
@@ -371,7 +361,7 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
 
 
 def array_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in both arrays"""
+    """Like np.array_equal, but also allows values to be NaN in both arrays."""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
     lazy_equiv = lazy_array_equiv(arr1, arr2)
@@ -385,9 +375,7 @@ def array_equiv(arr1, arr2):
 
 
 def array_notnull_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in either or both
-    arrays
-    """
+    """Like np.array_equal, but also allows NaN values in either or both arrays."""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
     lazy_equiv = lazy_array_equiv(arr1, arr2)
@@ -401,7 +389,7 @@ def array_notnull_equiv(arr1, arr2):
 
 
 def count(data, axis=None):
-    """Count the number of non-NA in this array along the given axis or axes"""
+    """Count the number of non-NA in this array along the given axis or axes."""
     xp = get_array_namespace(data)
     return xp.sum(xp.logical_not(isnull(data)), axis=axis)
 
@@ -417,7 +405,7 @@ def sum_where(data, axis=None, dtype=None, where=None):
 
 
 def where(condition, x, y):
-    """Three argument where() with better dtype promotion rules."""
+    """Choose elements from ``x`` or ``y`` with better dtype promotion rules."""
     xp = get_array_namespace(condition, x, y)
 
     dtype = xp.bool_ if hasattr(xp, "bool_") else xp.bool
@@ -455,7 +443,7 @@ def clip(data, min=None, max=None):
 
 
 def concatenate(arrays, axis=0):
-    """concatenate() with better dtype promotion rules."""
+    """Concatenate arrays with better dtype promotion rules."""
     # TODO: `concat` is the xp compliant name, but fallback to concatenate for
     # older numpy and for cupy
     xp = get_array_namespace(*arrays)
@@ -466,7 +454,7 @@ def concatenate(arrays, axis=0):
 
 
 def stack(arrays, axis=0):
-    """stack() with better dtype promotion rules."""
+    """Stack arrays with better dtype promotion rules."""
     xp = get_array_namespace(arrays[0])
     return xp.stack(as_shared_dtype(arrays, xp=xp), axis=axis)
 
@@ -642,7 +630,9 @@ def _datetime_nanreduce(array, func):
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to numerical values.
+
     Convert the datetime array to a timedelta relative to an offset.
+
     Parameters
     ----------
     array : array-like
@@ -655,10 +645,12 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         conversions are not allowed due to non-linear relationships between units.
     dtype : dtype
         Output dtype.
+
     Returns
     -------
     array
         Numerical representation of datetime object relative to an offset.
+
     Notes
     -----
     Some datetime unit conversions won't work, for example from days to years, even
@@ -780,8 +772,7 @@ def py_timedelta_to_float(array, datetime_unit):
 
 
 def mean(array, axis=None, skipna=None, **kwargs):
-    """inhouse mean that can handle np.datetime64 or cftime.datetime
-    dtypes"""
+    """Inhouse mean that can handle np.datetime64 or cftime.datetime dtypes."""
     from xarray.core.common import _contains_cftime_datetimes
 
     array = asarray(array)
@@ -847,7 +838,7 @@ def cumsum(array, axis=None, **kwargs):
 
 
 def first(values, axis, skipna=None):
-    """Return the first non-NA elements in this array along the given axis"""
+    """Return the first non-NA elements in this array along the given axis."""
     if (skipna or skipna is None) and not (
         dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
     ):
@@ -861,7 +852,7 @@ def first(values, axis, skipna=None):
 
 
 def last(values, axis, skipna=None):
-    """Return the last non-NA elements in this array along the given axis"""
+    """Return the last non-NA elements in this array along the given axis."""
     if (skipna or skipna is None) and not (
         dtypes.isdtype(values.dtype, "signed integer") or dtypes.is_string(values.dtype)
     ):
@@ -888,10 +879,7 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
 
 
 def _push(array, n: int | None = None, axis: int = -1):
-    """
-    Use either bottleneck or numbagg depending on options & what's available
-    """
-
+    """Use either bottleneck or numbagg depending on options & what's available."""
     if not OPTIONS["use_bottleneck"] and not OPTIONS["use_numbagg"]:
         raise RuntimeError(
             "ffill & bfill requires bottleneck or numbagg to be enabled."

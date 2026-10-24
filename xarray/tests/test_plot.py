@@ -57,8 +57,7 @@ with contextlib.suppress(ImportError):
 
 @contextlib.contextmanager
 def figure_context(*args, **kwargs):
-    """context manager which autocloses a figure (even if the test failed)"""
-
+    """Context manager which autocloses a figure (even if the test failed)."""
     try:
         yield None
     finally:
@@ -67,7 +66,7 @@ def figure_context(*args, **kwargs):
 
 @pytest.fixture(autouse=True)
 def test_all_figures_closed():
-    """meta-test to ensure all figures are closed at the end of a test
+    """meta-test to ensure all figures are closed at the end of a test.
 
     Notes:  Scope is kept to module (only invoke this function once per test
     module) else tests cannot be run in parallel (locally). Disadvantage: only
@@ -86,9 +85,7 @@ def test_all_figures_closed():
 @pytest.mark.flaky
 @pytest.mark.skip(reason="maybe flaky")
 def text_in_fig() -> set[str]:
-    """
-    Return the set of all text in the figure
-    """
+    """Return the set of all text in the figure."""
     return {t.get_text() for t in plt.gcf().findobj(mpl.text.Text)}
 
 
@@ -98,17 +95,13 @@ def find_possible_colorbars() -> list[mpl.collections.QuadMesh]:
 
 
 def substring_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
-    """
-    Return True if a substring is found anywhere in an axes
-    """
+    """Return True if a substring is found anywhere in an axes."""
     alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     return any(substring in txt for txt in alltxt)
 
 
 def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
-    """
-    Return True if a substring is not found anywhere in an axes
-    """
+    """Return True if a substring is not found anywhere in an axes."""
     alltxt: set[str] = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     check = [(substring not in txt) for txt in alltxt]
     return all(check)
@@ -117,10 +110,7 @@ def substring_not_in_axes(substring: str, ax: mpl.axes.Axes) -> bool:
 def property_in_axes_text(
     property, property_str, target_txt, ax: mpl.axes.Axes
 ) -> bool:
-    """
-    Return True if the specified text in an axes
-    has the property assigned to property_str
-    """
+    """Return True if the target text in an axes has `property` set to property_str."""
     alltxt: list[mpl.text.Text] = ax.findobj(mpl.text.Text)
     return all(
         plt.getp(t, property) == property_str
@@ -130,8 +120,7 @@ def property_in_axes_text(
 
 
 def easy_array(shape: tuple[int, ...], start: float = 0, stop: float = 1) -> np.ndarray:
-    """
-    Make an array with desired shape using np.linspace
+    """Make an array with desired shape using np.linspace.
 
     shape is a tuple like (2, 3)
     """
@@ -366,6 +355,80 @@ class TestPlot(PlotTestCase):
         assert legend is not None
         assert legend.get_title().get_text() == "dim_1"
 
+    def test_2d_line_duplicate_hue_shares_color(self) -> None:
+        # GH10998: lines sharing a hue value must share a color, and the
+        # legend must carry one entry per hue value, matching scatter.
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "a", "b", "b"], "x": [0, 1, 2]},
+        )
+        lines = da.plot.line(hue="category", x="x")
+        colors = [line.get_color() for line in lines]
+        assert colors[0] == colors[1]
+        assert colors[2] == colors[3]
+        assert colors[0] != colors[2]
+
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert [t.get_text() for t in legend.get_texts()] == ["a", "b"]
+
+    def test_2d_line_unique_hue_palette_unchanged(self) -> None:
+        # With unique hue values the recoloring must be a no-op: each line
+        # keeps the color the axes' property cycle assigned it.
+        da = xr.DataArray(
+            np.arange(9).reshape(3, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "b", "c"], "x": [0, 1, 2]},
+        )
+        prop_cycle = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
+        lines = da.plot.line(hue="category", x="x")
+        assert [line.get_color() for line in lines] == prop_cycle[:3]
+
+    def test_2d_line_duplicate_hue_respects_user_color(self) -> None:
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "a", "b", "b"], "x": [0, 1, 2]},
+        )
+        lines = da.plot.line(hue="category", x="x", color="green")
+        assert all(line.get_color() == "green" for line in lines)
+
+    @pytest.mark.parametrize(
+        "category",
+        [
+            [1.0, np.nan, np.nan, 2.0],
+            [1.0, np.nan, 3.0, 2.0],
+            pd.to_datetime(["2020", "NaT", "2021", "NaT"]),
+        ],
+    )
+    def test_2d_line_missing_hue_values(self, category: Any) -> None:
+        # Missing hue values must not raise and are grouped as one hue value.
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": category, "x": [0, 1, 2]},
+        )
+        lines = da.plot.line(hue="category", x="x")
+        legend = plt.gca().get_legend()
+        assert legend is not None
+        assert len(legend.get_texts()) == len(pd.unique(np.asarray(category)))
+        assert len({line.get_color() for line in lines}) == len(legend.get_texts())
+
+    def test_2d_line_duplicate_hue_shares_cycled_style(self) -> None:
+        # Properties other than color in the property cycle are grouped too.
+        da = xr.DataArray(
+            np.arange(12).reshape(4, 3),
+            dims=("category", "x"),
+            coords={"category": ["a", "a", "b", "b"], "x": [0, 1, 2]},
+        )
+        plt.gca().set_prop_cycle(
+            color=["r", "g", "b", "k"], linestyle=["-", "--", ":", "-."]
+        )
+        lines = da.plot.line(hue="category", x="x")
+        assert [line.get_linestyle() for line in lines] == ["-", "-", "--", "--"]
+        assert [line.get_color() for line in lines] == ["r", "r", "g", "g"]
+
     def test_2d_coords_line_plot(self) -> None:
         lon, lat = np.meshgrid(np.linspace(-20, 20, 5), np.linspace(0, 30, 4))
         lon += lat / 10
@@ -560,9 +623,7 @@ class TestPlot(PlotTestCase):
             _infer_interval_breaks(np.array([0, 2, 1]), check_monotonic=True)
 
     def test__infer_interval_breaks_logscale(self) -> None:
-        """
-        Check if interval breaks are defined in the logspace if scale="log"
-        """
+        """Check if interval breaks are defined in the logspace if ``scale="log"``."""
         # Check for 1d arrays
         x = np.logspace(-4, 3, 8)
         expected_interval_breaks = 10 ** np.linspace(-4.5, 3.5, 9)
@@ -580,9 +641,7 @@ class TestPlot(PlotTestCase):
         np.testing.assert_allclose(x2d, expected_interval_breaks)
 
     def test__infer_interval_breaks_logscale_invalid_coords(self) -> None:
-        """
-        Check error is raised when passing non-positive coordinates with logscale
-        """
+        """Check error is raised when passing non-positive coordinates with logscale."""
         # Check if error is raised after a zero value in the array
         x = np.linspace(0, 5, 6)
         with pytest.raises(ValueError):
@@ -1287,8 +1346,7 @@ class TestDiscreteColorMap:
 
 
 class Common2dMixin:
-    """
-    Common tests for 2d plotting go here.
+    """Common tests for 2d plotting go here.
 
     These tests assume that a staticmethod for `self.plotfunc` exists.
     Should have the same name as the method.
@@ -1957,9 +2015,7 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
 
 
 class TestPcolormeshLogscale(PlotTestCase):
-    """
-    Test pcolormesh axes when x and y are in logscale
-    """
+    """Test pcolormesh axes when x and y are in logscale."""
 
     plotfunc = staticmethod(xplt.pcolormesh)
 
@@ -1978,8 +2034,7 @@ class TestPcolormeshLogscale(PlotTestCase):
         self.darray = da
 
     def test_interval_breaks_logspace(self) -> None:
-        """
-        Check if the outer vertices of the pcolormesh are the expected values
+        """Check if the outer vertices of the pcolormesh are the expected values.
 
         Checks bugfix for #5333
         """
@@ -2341,6 +2396,27 @@ class TestFacetGrid(PlotTestCase):
         assert cbar.vmin == 0
         assert hasattr(cbar, "vmax")
         assert cbar.vmax == 3
+
+    def test_legend_deduplicates_line_hue(self) -> None:
+        # GH10998: faceting with ``col`` must keep the same hue/color mapping
+        # and a single legend entry per hue value.
+        da = xr.DataArray(
+            np.arange(24).reshape(2, 4, 3),
+            dims=("facet", "category", "x"),
+            coords={
+                "facet": ["f1", "f2"],
+                "category": ["a", "a", "b", "b"],
+                "x": [0, 1, 2],
+            },
+        )
+        g = da.plot.line(hue="category", col="facet")
+        for ax in g.axs.flat:
+            colors = [line.get_color() for line in ax.get_lines()]
+            assert colors[0] == colors[1]
+            assert colors[2] == colors[3]
+            assert colors[0] != colors[2]
+        assert g.figlegend is not None
+        assert [t.get_text() for t in g.figlegend.get_texts()] == ["a", "b"]
 
     @pytest.mark.slow
     def test_empty_cell(self) -> None:
@@ -3094,9 +3170,7 @@ class TestDatasetScatterPlots(PlotTestCase):
 class TestDatetimePlot(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self) -> None:
-        """
-        Create a DataArray with a time-axis that contains datetime objects.
-        """
+        """Create a DataArray with a time-axis that contains datetime objects."""
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
         times = pd.date_range(start="2017-01-01", freq="MS", periods=12)
@@ -3152,10 +3226,7 @@ class TestDatetimePlot(PlotTestCase):
 class TestCFDatetimePlot(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self) -> None:
-        """
-        Create a DataArray with a time-axis that contains cftime.datetime
-        objects.
-        """
+        """Create a DataArray with a time-axis that contains cftime.datetime objects."""
         # case for 1d array
         data = np.random.rand(4, 12)
         time = xr.date_range(
@@ -3181,10 +3252,7 @@ class TestCFDatetimePlot(PlotTestCase):
 class TestNcAxisNotInstalled(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self) -> None:
-        """
-        Create a DataArray with a time-axis that contains cftime.datetime
-        objects.
-        """
+        """Create a DataArray with a time-axis that contains cftime.datetime objects."""
         month = np.arange(1, 13, 1)
         data = np.sin(2 * np.pi * month / 12.0)
         darray = DataArray(data, dims=["time"])
@@ -3203,9 +3271,7 @@ class TestNcAxisNotInstalled(PlotTestCase):
 class TestAxesKwargs:
     @pytest.fixture(params=[1, 2, 3])
     def data_array(self, request) -> DataArray:
-        """
-        Return a simple DataArray
-        """
+        """Return a simple DataArray."""
         dims = request.param
         if dims == 1:
             return DataArray(easy_array((10,)))
@@ -3218,9 +3284,7 @@ class TestAxesKwargs:
 
     @pytest.fixture(params=[1, 2])
     def data_array_logspaced(self, request) -> DataArray:
-        """
-        Return a simple DataArray with logspaced coordinates
-        """
+        """Return a simple DataArray with logspaced coordinates."""
         dims = request.param
         if dims == 1:
             return DataArray(

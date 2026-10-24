@@ -130,8 +130,7 @@ def _infer_coords_and_dims(
     ),
     dims: str | Iterable[Hashable] | None,
 ) -> tuple[Mapping[Hashable, Any], tuple[Hashable, ...]]:
-    """All the logic for creating a new DataArray"""
-
+    """Infer the coordinates and dimensions for creating a new DataArray."""
     if (
         coords is not None
         and not utils.is_dict_like(coords)
@@ -265,7 +264,7 @@ _THIS_ARRAY = ReprObject("<this-array>")
 
 
 class _NumpyEncoder(json.JSONEncoder):
-    """Encode numpy value in Arrow schema metadata"""
+    """Encode numpy value in Arrow schema metadata."""
 
     def default(self, obj: Any) -> Any:
         if isinstance(obj, np.integer):
@@ -280,7 +279,7 @@ class _NumpyEncoder(json.JSONEncoder):
 
 
 class DataArray(
-    AbstractArray,
+    AbstractArray[Hashable],
     DataWithCoords,
     DataArrayArithmetic,
     DataArrayAggregations,
@@ -605,8 +604,10 @@ class DataArray(
         name: Hashable,
         indexes: dict[Hashable, Index],
     ) -> Self:
-        """Shortcut around __init__ for internal use when we want to skip
-        costly validation
+        """Construct a new DataArray, skipping costly validation.
+
+        Shortcut around __init__ for internal use when we want to skip
+        costly validation.
         """
         obj = object.__new__(cls)
         obj._variable = variable
@@ -715,7 +716,7 @@ class DataArray(
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
-        """splits dataarray along dimension 'dim'"""
+        """Split dataarray along dimension 'dim'."""
 
         def subset(dim, label):
             array = self.loc[{dim: label}]
@@ -831,8 +832,7 @@ class DataArray(
 
     @property
     def dtype(self) -> np.dtype:
-        """
-        Data-type of the array’s elements.
+        """Data-type of the array’s elements.
 
         See Also
         --------
@@ -843,8 +843,7 @@ class DataArray(
 
     @property
     def shape(self) -> tuple[int, ...]:
-        """
-        Tuple of array dimensions.
+        """Tuple of array dimensions.
 
         See Also
         --------
@@ -854,8 +853,7 @@ class DataArray(
 
     @property
     def size(self) -> int:
-        """
-        Number of elements in the array.
+        """Number of elements in the array.
 
         Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
 
@@ -867,8 +865,7 @@ class DataArray(
 
     @property
     def nbytes(self) -> int:
-        """
-        Total bytes consumed by the elements of this DataArray's data.
+        """Total bytes consumed by the elements of this DataArray's data.
 
         If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
@@ -877,8 +874,7 @@ class DataArray(
 
     @property
     def ndim(self) -> int:
-        """
-        Number of array dimensions.
+        """Number of array dimensions.
 
         See Also
         --------
@@ -891,9 +887,9 @@ class DataArray(
 
     @property
     def data(self) -> Any:
-        """
-        The DataArray's data as an array. The underlying array type
-        (e.g. dask, sparse, pint) is preserved.
+        """The DataArray's data as an array.
+
+        The underlying array type (e.g. dask, sparse, pint) is preserved.
 
         See Also
         --------
@@ -909,8 +905,7 @@ class DataArray(
 
     @property
     def values(self) -> np.ndarray:
-        """
-        The array's data converted to numpy.ndarray.
+        """The array's data converted to numpy.ndarray.
 
         This will attempt to convert the array naively using np.array(),
         which will raise an error if the array type does not support
@@ -927,8 +922,7 @@ class DataArray(
         self.variable.values = value
 
     def to_numpy(self) -> np.ndarray:
-        """
-        Coerces wrapped data to numpy and returns a numpy.ndarray.
+        """Coerces wrapped data to numpy and returns a numpy.ndarray.
 
         See Also
         --------
@@ -940,8 +934,7 @@ class DataArray(
         return self.variable.to_numpy()
 
     def as_numpy(self) -> Self:
-        """
-        Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
+        """Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
 
         See Also
         --------
@@ -961,8 +954,9 @@ class DataArray(
         return self.variable._to_index()
 
     def to_index(self) -> pd.Index:
-        """Convert this variable to a pandas.Index. Only possible for 1D
-        arrays.
+        """Convert this variable to a pandas.Index.
+
+        Only possible for 1D arrays.
         """
         return self.variable.to_index()
 
@@ -1037,14 +1031,14 @@ class DataArray(
     @override
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
-        """Places to look-up items for attribute-style access"""
+        """Places to look-up items for attribute-style access."""
         yield from self._item_sources
         yield self.attrs
 
     @override
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
-        """Places to look-up items for key-completion"""
+        """Places to look-up items for key-completion."""
         yield FilteredMapping(keys=self._coords, mapping=self.coords)
 
         # virtual coordinates
@@ -1069,8 +1063,7 @@ class DataArray(
 
     @property
     def encoding(self) -> dict[Any, Any]:
-        """Dictionary of format-specific settings for how this array should be
-        serialized."""
+        """Dictionary of format-specific settings for serializing this array."""
         return self.variable.encoding
 
     @encoding.setter
@@ -1078,15 +1071,14 @@ class DataArray(
         self.variable.encoding = dict(value)
 
     def reset_encoding(self) -> Self:
-        warnings.warn(
-            "reset_encoding is deprecated since 2023.11, use `drop_encoding` instead",
-            stacklevel=2,
+        utils.emit_user_level_warning(
+            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
+            FutureWarning,
         )
         return self.drop_encoding()
 
     def drop_encoding(self) -> Self:
-        """Return a new DataArray without encoding on the array or any attached
-        coords."""
+        """Return a new DataArray without encoding on the array or any coords."""
         ds = self._to_temp_dataset().drop_encoding()
         return self._from_temp_dataset(ds)
 
@@ -1106,15 +1098,17 @@ class DataArray(
 
     @property
     def xindexes(self) -> Indexes[Index]:
-        """Mapping of :py:class:`~xarray.indexes.Index` objects
-        used for label based indexing.
+        """Mapping of :py:class:`~xarray.indexes.Index` objects for label indexing.
+
+        The indexes are used for label based indexing.
         """
         return Indexes(self._indexes, {k: self._coords[k] for k in self._indexes})
 
     @property
     def coords(self) -> DataArrayCoordinates:
-        """Mapping of :py:class:`~xarray.DataArray` objects corresponding to
-        coordinate variables.
+        """Mapping of :py:class:`~xarray.DataArray` objects for coordinates.
+
+        Each object corresponds to a coordinate variable.
 
         See Also
         --------
@@ -1377,7 +1371,7 @@ class DataArray(
         return new.load(**kwargs)
 
     def persist(self, **kwargs) -> Self:
-        """Trigger computation in constituent dask arrays
+        """Trigger computation in constituent dask arrays.
 
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
@@ -1402,7 +1396,7 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def copy(self, deep: bool = True, data: Any = None) -> Self:
-        """Returns a copy of this array.
+        """Return a copy of this array.
 
         If `deep=True`, a deep copy is made of the data array.
         Otherwise, a shallow copy is made, and the returned data array's
@@ -1426,6 +1420,10 @@ class DataArray(
         copy : DataArray
             New object with dimensions, attributes, coordinates, name,
             encoding, and optionally data copied from original.
+
+        See Also
+        --------
+        pandas.DataFrame.copy
 
         Examples
         --------
@@ -1464,10 +1462,6 @@ class DataArray(
         array([7, 2, 3])
         Coordinates:
           * x        (x) <U1 12B 'a' 'b' 'c'
-
-        See Also
-        --------
-        pandas.DataFrame.copy
         """
         return self._copy(deep=deep, data=data)
 
@@ -1501,9 +1495,9 @@ class DataArray(
 
     @property
     def chunks(self) -> tuple[tuple[int, ...], ...] | None:
-        """
-        Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
-        the underlying data is not a dask array.
+        """Tuple of block lengths for this dataarray's data, in order of dimensions.
+
+        None if the underlying data is not a dask array.
 
         See Also
         --------
@@ -1515,8 +1509,7 @@ class DataArray(
 
     @property
     def chunksizes(self) -> Mapping[Any, tuple[int, ...]]:
-        """
-        Mapping from dimension names to block lengths for this dataarray's data.
+        """Mapping from dimension names to block lengths for this dataarray's data.
 
         If this dataarray does not contain chunked arrays, the mapping will be empty.
 
@@ -1546,7 +1539,7 @@ class DataArray(
         from_array_kwargs=None,
         **chunks_kwargs: T_ChunkDimFreq,
     ) -> Self:
-        """Coerce this array's data into a dask arrays with the given chunks.
+        """Coerce this array's data into a dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
         array. If it's a dask array, it will be rechunked to the given chunk
@@ -1599,13 +1592,7 @@ class DataArray(
         """
         chunk_mapping: T_ChunksFreq
         if chunks is None:
-            warnings.warn(
-                "None value for 'chunks' is deprecated. "
-                "It will raise an error in the future. Use instead '{}'",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            chunk_mapping = {}
+            raise TypeError("chunks=None is not supported. Use chunks={} instead.")
 
         if isinstance(chunks, float | str | int):
             # ignoring type; unclear why it won't accept a Literal into the value.
@@ -1643,8 +1630,7 @@ class DataArray(
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by selecting indexes
-        along the specified dimension(s).
+        """Return a new DataArray selecting indexes along the specified dimension(s).
 
         Parameters
         ----------
@@ -1673,9 +1659,11 @@ class DataArray(
 
         See Also
         --------
-        :func:`Dataset.isel <Dataset.isel>`
-        :func:`DataArray.sel <DataArray.sel>`
+        Dataset.isel
+        DataArray.sel
 
+        Notes
+        -----
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
 
@@ -1702,7 +1690,6 @@ class DataArray(
         array([ 0,  6, 12, 18, 24])
         Dimensions without coordinates: points
         """
-
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
 
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
@@ -1741,8 +1728,7 @@ class DataArray(
         drop: bool = False,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by selecting index
-        labels along the specified dimension(s).
+        """Return a new DataArray selecting index labels along the given dimension(s).
 
         In contrast to `DataArray.isel`, indexers for this method should use
         labels instead of integers.
@@ -1811,9 +1797,11 @@ class DataArray(
 
         See Also
         --------
-        :func:`Dataset.sel <Dataset.sel>`
-        :func:`DataArray.isel <DataArray.isel>`
+        Dataset.sel
+        DataArray.isel
 
+        Notes
+        -----
         :doc:`xarray-tutorial:intermediate/indexing/indexing`
             Tutorial material on indexing with Xarray objects
 
@@ -1859,7 +1847,7 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def _shuffle(
-        self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks
+        self, dim: Hashable, *, indices: GroupIndices, chunks: T_Chunks | None
     ) -> Self:
         ds = self._to_temp_dataset()._shuffle(dim=dim, indices=indices, chunks=chunks)
         return self._from_temp_dataset(ds)
@@ -1869,8 +1857,9 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the first `n`
-        values along the specified dimension(s). Default `n` = 5
+        """Return a new DataArray with the first `n` values along given dimension(s).
+
+        Default `n` = 5.
 
         See Also
         --------
@@ -1912,8 +1901,9 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by the last `n`
-        values along the specified dimension(s). Default `n` = 5
+        """Return a new DataArray with the last `n` values along given dimension(s).
+
+        Default `n` = 5.
 
         See Also
         --------
@@ -1959,8 +1949,13 @@ class DataArray(
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Return a new DataArray whose data is given by each `n` value
-        along the specified dimension(s).
+        """Return a new DataArray with each `n`-th value along the given dimension(s).
+
+        See Also
+        --------
+        Dataset.thin
+        DataArray.head
+        DataArray.tail
 
         Examples
         --------
@@ -1994,12 +1989,6 @@ class DataArray(
         Coordinates:
           * x        (x) int64 8B 0
           * y        (y) int64 24B 0 5 10
-
-        See Also
-        --------
-        Dataset.thin
-        DataArray.head
-        DataArray.tail
         """
         ds = self._to_temp_dataset().thin(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
@@ -2091,8 +2080,7 @@ class DataArray(
         exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
     ) -> Self:
-        """Callback called from ``Aligner`` to create a new reindexed DataArray."""
-
+        """Create a new reindexed DataArray (callback called from ``Aligner``)."""
         if isinstance(fill_value, dict):
             fill_value = fill_value.copy()
             sentinel = object()
@@ -2125,10 +2113,10 @@ class DataArray(
         copy: bool = True,
         fill_value=dtypes.NA,
     ) -> Self:
-        """
-        Conform this object onto the indexes of another object, for indexes which the
-        objects share. Missing values are filled with ``fill_value``. The default fill
-        value is NaN.
+        """Conform this object onto the indexes of another object.
+
+        Only indexes which the objects share are considered. Missing values are
+        filled with ``fill_value``. The default fill value is NaN.
 
         Parameters
         ----------
@@ -2171,6 +2159,12 @@ class DataArray(
         reindexed : DataArray
             Another dataset array, with this array's data but coordinates from
             the other object.
+
+        See Also
+        --------
+        DataArray.reindex
+        DataArray.broadcast_like
+        align
 
         Examples
         --------
@@ -2286,12 +2280,6 @@ class DataArray(
         Coordinates:
           * y        (y) int64 24B 70 80 90
             x        int64 8B 20
-
-        See Also
-        --------
-        DataArray.reindex
-        DataArray.broadcast_like
-        align
         """
         return alignment.reindex_like(
             self,
@@ -2312,8 +2300,10 @@ class DataArray(
         fill_value=dtypes.NA,
         **indexers_kwargs: Any,
     ) -> Self:
-        """Conform this object onto the indexes of another object, filling in
-        missing values with ``fill_value``. The default fill value is NaN.
+        """Conform this object onto a new set of indexes.
+
+        Missing values are filled in with ``fill_value``. The default fill value
+        is NaN.
 
         Parameters
         ----------
@@ -2359,6 +2349,11 @@ class DataArray(
             Another dataset array, with this array's data but replaced
             coordinates.
 
+        See Also
+        --------
+        DataArray.reindex_like
+        align
+
         Examples
         --------
         Reverse latitude:
@@ -2378,11 +2373,6 @@ class DataArray(
         array([3, 2, 1, 0])
         Coordinates:
           * lat      (lat) int64 32B 87 88 89 90
-
-        See Also
-        --------
-        DataArray.reindex_like
-        align
         """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
@@ -2402,8 +2392,7 @@ class DataArray(
         kwargs: Mapping[str, Any] | None = None,
         **coords_kwargs: Any,
     ) -> Self:
-        """
-        Interpolate a DataArray onto new coordinates.
+        """Interpolate a DataArray onto new coordinates.
 
         Performs univariate or multivariate interpolation of a Dataset onto new coordinates,
         utilizing either NumPy or SciPy interpolation routines.
@@ -2437,6 +2426,10 @@ class DataArray(
         interpolated : DataArray
             New dataarray on the new coordinates.
 
+        See Also
+        --------
+        :mod:`scipy.interpolate`
+
         Notes
         -----
         - SciPy is required for certain interpolation methods.
@@ -2466,10 +2459,6 @@ class DataArray(
             4. **Interpolation along multiple dimensions of multi-dimensional data**
                 - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
                     "cubic", "quintic", "pchip"}.
-
-        See Also
-        --------
-        :mod:`scipy.interpolate`
 
         :doc:`xarray-tutorial:fundamentals/02.2_manipulating_dimensions`
             Tutorial material on manipulating data resolution using :py:func:`~xarray.DataArray.interp`
@@ -2562,8 +2551,9 @@ class DataArray(
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
     ) -> Self:
-        """Interpolate this object onto the coordinates of another object,
-        filling out of range values with NaN.
+        """Interpolate this object onto the coordinates of another object.
+
+        Out of range values are filled with NaN.
 
         Parameters
         ----------
@@ -2587,6 +2577,12 @@ class DataArray(
         interpolated : DataArray
             Another dataarray by interpolating this dataarray's data along the
             coordinates of the other object.
+
+        See Also
+        --------
+        :func:`DataArray.interp`
+        :func:`DataArray.reindex_like`
+        :mod:`scipy.interpolate`
 
         Notes
         -----
@@ -2619,12 +2615,6 @@ class DataArray(
             4. **Interpolation along multiple dimensions of multi-dimensional data**
                 - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
                     "cubic", "quintic", "pchip"}.
-
-        See Also
-        --------
-        :func:`DataArray.interp`
-        :func:`DataArray.reindex_like`
-        :mod:`scipy.interpolate`
 
         Examples
         --------
@@ -2682,7 +2672,6 @@ class DataArray(
           * x        (x) int64 32B 10 20 30 40
           * y        (y) int64 24B 70 80 90
         """
-
         if self.dtype.kind not in "uifcMm":
             raise TypeError(
                 f"interp only works for a numeric type array. Given {self.dtype}."
@@ -2697,7 +2686,7 @@ class DataArray(
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> Self:
-        """Returns a new DataArray with renamed coordinates, dimensions or a new name.
+        """Return a DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
         ----------
@@ -2741,7 +2730,7 @@ class DataArray(
         dims_dict: Mapping[Any, Hashable] | None = None,
         **dims_kwargs,
     ) -> Self:
-        """Returns a new DataArray with swapped dimensions.
+        """Return a new DataArray with swapped dimensions.
 
         Parameters
         ----------
@@ -2756,6 +2745,11 @@ class DataArray(
         -------
         swapped : DataArray
             DataArray with swapped dimensions.
+
+        See Also
+        --------
+        DataArray.rename
+        Dataset.swap_dims
 
         Examples
         --------
@@ -2785,11 +2779,6 @@ class DataArray(
             x        (z) <U1 8B 'a' 'b'
             y        (z) int64 16B 0 1
         Dimensions without coordinates: z
-
-        See Also
-        --------
-        DataArray.rename
-        Dataset.swap_dims
         """
         dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         ds = self._to_temp_dataset().swap_dims(dims_dict)
@@ -2802,9 +2791,10 @@ class DataArray(
         create_index_for_new_dim: bool = True,
         **dim_kwargs: Any,
     ) -> Self:
-        """Return a new object with an additional axis (or axes) inserted at
-        the corresponding position in the array shape. The new object is a
-        view into the underlying array, not a copy.
+        """Return a new object with an additional axis (or axes) inserted.
+
+        The axes are inserted at the corresponding position in the array shape.
+        The new object is a view into the underlying array, not a copy.
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
@@ -2903,8 +2893,7 @@ class DataArray(
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
     ) -> Self:
-        """Set DataArray (multi-)indexes using one or more existing
-        coordinates.
+        """Set DataArray (multi-)indexes using one or more existing coordinates.
 
         This legacy method is limited to pandas (multi-)indexes and
         1-dimensional "dimension" coordinates. See
@@ -2929,6 +2918,11 @@ class DataArray(
         obj : DataArray
             Another DataArray, with this data but replaced coordinates.
 
+        See Also
+        --------
+        DataArray.reset_index
+        DataArray.set_xindex
+
         Examples
         --------
         >>> arr = xr.DataArray(
@@ -2951,11 +2945,6 @@ class DataArray(
         Coordinates:
           * x        (x) int64 16B 3 4
           * y        (y) int64 24B 0 1 2
-
-        See Also
-        --------
-        DataArray.reset_index
-        DataArray.set_xindex
         """
         ds = self._to_temp_dataset().set_index(indexes, append=append, **indexes_kwargs)
         return self._from_temp_dataset(ds)
@@ -3003,8 +2992,9 @@ class DataArray(
         index_cls: type[Index] | None = None,
         **options,
     ) -> Self:
-        """Set a new, Xarray-compatible index from one or more existing
-        coordinate(s). Existing index(es) on the coord(s) will be replaced.
+        """Set a new, Xarray-compatible index from one or more existing coordinate(s).
+
+        Existing index(es) on the coord(s) will be replaced.
 
         Parameters
         ----------
@@ -3060,8 +3050,7 @@ class DataArray(
         index_cls: type[Index] = PandasMultiIndex,
         **dim_kwargs: Sequence[Hashable | EllipsisType],
     ) -> Self:
-        """
-        Stack any number of existing dimensions into a single new dimension.
+        """Stack any number of existing dimensions into a single new dimension.
 
         New dimensions will be added at the end, and the corresponding
         coordinate variables will be combined into a MultiIndex.
@@ -3091,6 +3080,10 @@ class DataArray(
         stacked : DataArray
             DataArray with stacked data.
 
+        See Also
+        --------
+        DataArray.unstack
+
         Examples
         --------
         >>> arr = xr.DataArray(
@@ -3113,10 +3106,6 @@ class DataArray(
                     ('b', 1),
                     ('b', 2)],
                    name='z')
-
-        See Also
-        --------
-        DataArray.unstack
         """
         ds = self._to_temp_dataset().stack(
             dim,
@@ -3133,9 +3122,9 @@ class DataArray(
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
     ) -> Self:
-        """
-        Unstack existing dimensions corresponding to MultiIndexes into
-        multiple new dimensions.
+        """Unstack existing dimensions corresponding to MultiIndexes.
+
+        The dimensions are unstacked into multiple new dimensions.
 
         New dimensions will be added at the end.
 
@@ -3156,6 +3145,20 @@ class DataArray(
         -------
         unstacked : DataArray
             Array with unstacked data.
+
+        See Also
+        --------
+        DataArray.stack
+
+        Notes
+        -----
+        The order of the new dimension coordinates follows the levels of the
+        ``MultiIndex``. A ``MultiIndex`` created by pandas (e.g. when converting
+        a ``pd.Series`` with a ``MultiIndex``) usually has sorted levels, so the
+        resulting coordinates will be sorted. A ``MultiIndex`` created by
+        :py:meth:`DataArray.stack` preserves the original order. Use
+        :py:meth:`DataArray.sel` after unstacking to select a specific order if
+        needed.
 
         Examples
         --------
@@ -3182,17 +3185,12 @@ class DataArray(
         >>> roundtripped = stacked.unstack()
         >>> arr.identical(roundtripped)
         True
-
-        See Also
-        --------
-        DataArray.stack
         """
         ds = self._to_temp_dataset().unstack(dim, fill_value=fill_value, sparse=sparse)
         return self._from_temp_dataset(ds)
 
     def to_unstacked_dataset(self, dim: Hashable, level: int | Hashable = 0) -> Dataset:
-        """Unstack DataArray expanding to Dataset along a given level of a
-        stacked coordinate.
+        """Unstack DataArray to a Dataset along a level of a stacked coordinate.
 
         This is the inverse operation of Dataset.to_stacked_array.
 
@@ -3207,6 +3205,10 @@ class DataArray(
         Returns
         -------
         unstacked: Dataset
+
+        See Also
+        --------
+        Dataset.to_stacked_array
 
         Examples
         --------
@@ -3234,10 +3236,6 @@ class DataArray(
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
         >>> data.identical(roundtripped)
         True
-
-        See Also
-        --------
-        Dataset.to_stacked_array
         """
         idx = self._indexes[dim].to_pandas_index()
         if not isinstance(idx, pd.MultiIndex):
@@ -3283,16 +3281,16 @@ class DataArray(
         transposed : DataArray
             The returned DataArray's array is transposed.
 
+        See Also
+        --------
+        numpy.transpose
+        Dataset.transpose
+
         Notes
         -----
         This operation returns a view of this array's data. It is
         lazy for dask-backed DataArrays but not for numpy-backed DataArrays
         -- the data will be fully loaded.
-
-        See Also
-        --------
-        numpy.transpose
-        Dataset.transpose
         """
         if dim:
             dim = tuple(infix_dims(dim, self.dims, missing_dims))
@@ -3316,7 +3314,7 @@ class DataArray(
         *,
         errors: ErrorOptions = "raise",
     ) -> Self:
-        """Returns an array with dropped variables.
+        """Return an array with dropped variables.
 
         Parameters
         ----------
@@ -3419,7 +3417,7 @@ class DataArray(
         errors: ErrorOptions = "raise",
         **labels_kwargs,
     ) -> Self:
-        """Backward compatible method based on `drop_vars` and `drop_sel`
+        """Backward compatible method based on `drop_vars` and `drop_sel`.
 
         Using either `drop_vars` or `drop_sel` is encouraged
 
@@ -3557,8 +3555,7 @@ class DataArray(
         how: Literal["any", "all"] = "any",
         thresh: int | None = None,
     ) -> Self:
-        """Returns a new array with dropped labels for missing values along
-        the provided dimension.
+        """Return a new array with dropped labels for missing values along a dimension.
 
         Parameters
         ----------
@@ -3813,7 +3810,7 @@ class DataArray(
         )
 
     def ffill(self, dim: Hashable, limit: int | None = None) -> Self:
-        """Fill NaN values by propagating values forward
+        """Fill NaN values by propagating values forward.
 
         *Requires bottleneck.*
 
@@ -3897,7 +3894,7 @@ class DataArray(
         return ffill(self, dim, limit=limit)
 
     def bfill(self, dim: Hashable, limit: int | None = None) -> Self:
-        """Fill NaN values by propagating values backward
+        """Fill NaN values by propagating values backward.
 
         *Requires bottleneck.*
 
@@ -4042,7 +4039,6 @@ class DataArray(
             DataArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
         """
-
         var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims, **kwargs)
         return self._replace_maybe_drop_dims(var)
 
@@ -4188,7 +4184,7 @@ class DataArray(
         return pd.Series(self.values.reshape(-1), index=index, name=self.name)
 
     def to_masked_array(self, copy: bool = True) -> np.ma.MaskedArray:
-        """Convert this array into a numpy.ma.MaskedArray
+        """Convert this array into a numpy.ma.MaskedArray.
 
         Parameters
         ----------
@@ -4356,6 +4352,10 @@ class DataArray(
             * ``dask.delayed.Delayed`` if compute is False
             * None otherwise
 
+        See Also
+        --------
+        Dataset.to_netcdf
+
         Notes
         -----
         Only xarray.Dataset objects can be written to netCDF files, so
@@ -4366,10 +4366,6 @@ class DataArray(
 
         [netCDF4 backend only] netCDF4 enums are decoded into the
         dataarray dtype metadata.
-
-        See Also
-        --------
-        Dataset.to_netcdf
         """
         from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
         from xarray.backends.writers import to_netcdf
@@ -4461,7 +4457,7 @@ class DataArray(
         write_empty_chunks: bool | None = None,
         chunkmanager_store_kwargs: dict[str, Any] | None = None,
     ) -> ZarrStore | Delayed:
-        """Write DataArray contents to a Zarr store
+        """Write DataArray contents to a Zarr store.
 
         Zarr chunks are determined in the following way:
 
@@ -4596,9 +4592,11 @@ class DataArray(
             * ``dask.delayed.Delayed`` if compute is False
             * ZarrStore otherwise
 
-        References
-        ----------
-        https://zarr.readthedocs.io/
+        See Also
+        --------
+        Dataset.to_zarr
+        :ref:`io.zarr`
+            The I/O user guide, with more details and examples.
 
         Notes
         -----
@@ -4620,11 +4618,9 @@ class DataArray(
             to mask the data if requested using ``mask_and_scale=True``. See this `Github issue <https://github.com/pydata/xarray/issues/5475>`_
             for more.
 
-        See Also
-        --------
-        Dataset.to_zarr
-        :ref:`io.zarr`
-            The I/O user guide, with more details and examples.
+        References
+        ----------
+        https://zarr.readthedocs.io/
         """
         from xarray.backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
         from xarray.backends.writers import to_zarr
@@ -4662,9 +4658,9 @@ class DataArray(
     def to_dict(
         self, data: bool | Literal["list", "array"] = "list", encoding: bool = False
     ) -> dict[str, Any]:
-        """
-        Convert this xarray.DataArray into a dictionary following xarray
-        naming conventions.
+        """Convert this xarray.DataArray into a dictionary.
+
+        The dictionary follows xarray naming conventions.
 
         Converts all variables and attributes to native Python objects.
         Useful for converting to json. To avoid datetime incompatibility
@@ -4702,7 +4698,7 @@ class DataArray(
 
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> Self:
-        """Convert a dictionary into an xarray.DataArray
+        """Convert a dictionary into an xarray.DataArray.
 
         Parameters
         ----------
@@ -4801,21 +4797,23 @@ class DataArray(
         return result
 
     def to_iris(self) -> iris_Cube:
-        """Convert this array into an iris.cube.Cube"""
+        """Convert this array into an iris.cube.Cube."""
         from xarray.convert import to_iris
 
         return to_iris(self)
 
     @classmethod
     def from_iris(cls, cube: iris_Cube) -> Self:
-        """Convert an iris.cube.Cube into an xarray.DataArray"""
+        """Convert an iris.cube.Cube into an xarray.DataArray."""
         from xarray.convert import from_iris
 
         return from_iris(cube)
 
     def _all_compat(self, other: Self, compat_str: str) -> bool:
-        """Helper function for equals, broadcast_equals, and identical"""
+        """Compare with another DataArray using the given compat method.
 
+        Helper function for equals, broadcast_equals, and identical.
+        """
         # For identical, also compare indexes
         if compat_str == "identical":
             from xarray.core.indexes import indexes_identical
@@ -4831,7 +4829,9 @@ class DataArray(
         )
 
     def broadcast_equals(self, other: Self) -> bool:
-        """Two DataArrays are broadcast equal if they are equal after
+        """Check whether two DataArrays are broadcast equal.
+
+        Two DataArrays are broadcast equal if they are equal after
         broadcasting them against each other such that they have the same
         dimensions.
 
@@ -4880,8 +4880,10 @@ class DataArray(
             return False
 
     def equals(self, other: Self) -> bool:
-        """True if two DataArrays have the same dimensions, coordinates and
-        values; otherwise False.
+        """Check whether two DataArrays are equal.
+
+        Two DataArrays are equal if they have the same dimensions, coordinates
+        and values.
 
         DataArrays can still be equal (like pandas objects) if they have NaN
         values in the same locations.
@@ -4942,8 +4944,10 @@ class DataArray(
             return False
 
     def identical(self, other: Self) -> bool:
-        """Like equals, but also checks the array name, attributes,
-        attributes on all coordinates, and indexes.
+        """Check whether two DataArrays are identical.
+
+        Like equals, but also checks the array name, attributes, attributes on
+        all coordinates, and indexes.
 
         Parameters
         ----------
@@ -5088,9 +5092,10 @@ class DataArray(
     plot = utils.UncachedAccessor(DataArrayPlotAccessor)
 
     def _title_for_slice(self, truncate: int = 50) -> str:
-        """
+        """Create a title for the plot of a slice.
+
         If the dataarray has 1 dimensional coordinates or comes from a slice
-        we can show that info in the title
+        we can show that info in the title.
 
         Parameters
         ----------
@@ -5141,6 +5146,10 @@ class DataArray(
         difference : DataArray
             The n-th order finite difference of this object.
 
+        See Also
+        --------
+        DataArray.differentiate
+
         Notes
         -----
         `n` matches numpy's behavior and is different from pandas' first argument named
@@ -5159,10 +5168,6 @@ class DataArray(
         array([ 1, -1])
         Coordinates:
           * x        (x) int64 16B 3 4
-
-        See Also
-        --------
-        DataArray.differentiate
         """
         ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
         return self._from_temp_dataset(ds)
@@ -5268,8 +5273,7 @@ class DataArray(
 
     @property
     def real(self) -> Self:
-        """
-        The real part of the array.
+        """The real part of the array.
 
         See Also
         --------
@@ -5279,8 +5283,7 @@ class DataArray(
 
     @property
     def imag(self) -> Self:
-        """
-        The imaginary part of the array.
+        """The imaginary part of the array.
 
         See Also
         --------
@@ -5447,7 +5450,6 @@ class DataArray(
         method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QuantileMethods | None = None,
     ) -> Self:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5509,6 +5511,12 @@ class DataArray(
         --------
         numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
 
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5540,21 +5548,13 @@ class DataArray(
         Coordinates:
           * quantile  (quantile) float64 24B 0.0 0.5 1.0
           * y         (y) float64 32B 1.0 1.5 2.0 2.5
-
-        References
-        ----------
-        .. [1] R. J. Hyndman and Y. Fan,
-           "Sample quantiles in statistical packages,"
-           The American Statistician, 50(4), pp. 361-365, 1996
         """
-
         ds = self._to_temp_dataset().quantile(
             q,
             dim=dim,
             keep_attrs=keep_attrs,
             method=method,
             skipna=skipna,
-            interpolation=interpolation,
         )
         return self._from_temp_dataset(ds)
 
@@ -5599,7 +5599,6 @@ class DataArray(
         array([1., 2., 3.])
         Dimensions without coordinates: x
         """
-
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
@@ -5609,8 +5608,7 @@ class DataArray(
         edge_order: Literal[1, 2] = 1,
         datetime_unit: DatetimeUnitOptions = None,
     ) -> Self:
-        """Differentiate the array with the second order accurate central
-        differences.
+        """Differentiate the array with the second order accurate central differences.
 
         .. note::
             This feature is limited to simple cartesian geometry, i.e. coord
@@ -5637,7 +5635,6 @@ class DataArray(
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     np.arange(12).reshape(4, 3),
         ...     dims=["x", "y"],
@@ -5696,7 +5693,6 @@ class DataArray(
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     np.arange(12).reshape(4, 3),
         ...     dims=["x", "y"],
@@ -5753,7 +5749,6 @@ class DataArray(
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     np.arange(12).reshape(4, 3),
         ...     dims=["x", "y"],
@@ -5793,7 +5788,6 @@ class DataArray(
         --------
         dask.array.core.unify_chunks
         """
-
         return unify_chunks(self)[0]
 
     def map_blocks(
@@ -5803,8 +5797,7 @@ class DataArray(
         kwargs: Mapping[str, Any] | None = None,
         template: DataArray | Dataset | None = None,
     ) -> T_Xarray:
-        """
-        Apply a function to each block of this DataArray.
+        """Apply a function to each block of this DataArray.
 
         .. warning::
             This method is experimental and its signature may change.
@@ -5840,6 +5833,12 @@ class DataArray(
         A single DataArray or Dataset with dask backend, reassembled from the outputs of the
         function.
 
+        See Also
+        --------
+        dask.array.map_blocks
+        xarray.apply_ufunc
+        xarray.Dataset.map_blocks
+
         Notes
         -----
         This function is designed for when ``func`` needs to manipulate a whole xarray object
@@ -5848,12 +5847,6 @@ class DataArray(
 
         If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
-
-        See Also
-        --------
-        :func:`dask.array.map_blocks <dask.array.map_blocks>`
-        :func:`xarray.apply_ufunc <xarray.apply_ufunc>`
-        :func:`xarray.Dataset.map_blocks <xarray.Dataset.map_blocks>`
 
         :doc:`xarray-tutorial:advanced/map_blocks/map_blocks`
             Advanced Tutorial on map_blocks with dask
@@ -5914,8 +5907,7 @@ class DataArray(
         full: bool = False,
         cov: bool | Literal["unscaled"] = False,
     ) -> Dataset:
-        """
-        Least squares polynomial fit.
+        """Least squares polynomial fit.
 
         This replicates the behaviour of `numpy.polyfit` but differs by skipping
         invalid values when `skipna = True`.
@@ -6137,49 +6129,89 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
-    def idxmin(
+    @overload
+    def idxmin(  # type: ignore[overload-overlap]
         self,
-        dim: Hashable | None = None,
+        dim: str,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the minimum value along a dimension.
+    ) -> Self: ...
+
+    @overload
+    def idxmin(
+        self,
+        dim: Sequence[Hashable] | EllipsisType,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
+    @overload
+    def idxmin(
+        self,
+        dim: None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]: ...
+
+    def idxmin(
+        self,
+        dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the minimum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to minimum
         values along that dimension.
+
+        If a sequence of dimensions or ``...`` is passed to ``dim``, the
+        minimum is taken over all of them and a dict of `DataArray` objects,
+        one for each dimension, is returned instead, like
+        :py:meth:`~DataArray.argmin`. The result can be passed to
+        :py:meth:`~DataArray.sel`.
 
         In comparison to :py:meth:`~DataArray.argmin`, this returns the
         coordinate label while :py:meth:`~DataArray.argmin` returns the index.
 
         Parameters
         ----------
-        dim : str, optional
-            Dimension over which to apply `idxmin`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : Hashable, sequence of Hashable or ..., optional
+            Dimension(s) over which to apply `idxmin`. ``...`` means all
+            dimensions. If not given, the only dimension of a 1D array is used,
+            and all dimensions of an array with 2 or more dimensions.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the minimum like in
+            :py:func:`numpy.argmin`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
         keep_attrs : bool or None, optional
-            If True, the attributes (``attrs``) will be copied from the
-            original object to the new one. If False, the new object
-            will be returned without attributes.
+            If True, the attributes (``attrs``) of the coordinate are copied to
+            the result. If False, the result is returned without attributes.
 
         Returns
         -------
-        reduced : DataArray
+        reduced : DataArray or dict of DataArray
             New `DataArray` object with `idxmin` applied to its data and the
-            indicated dimension removed.
+            indicated dimension removed, or a dict of them mapping each
+            dimension to its coordinate labels if ``dim`` is a sequence or
+            ``...``.
 
         See Also
         --------
@@ -6224,6 +6256,10 @@ class DataArray(
         array([16.,  0.,  4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmin(dim=["y", "x"])
+        {'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(0), 'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.)}
         """
         return computation._calc_idxminmax(
             array=self,
@@ -6234,49 +6270,89 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
-    def idxmax(
+    @overload
+    def idxmax(  # type: ignore[overload-overlap]
         self,
-        dim: Hashable = None,
+        dim: str,
         *,
         skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool | None = None,
-    ) -> Self:
-        """Return the coordinate label of the maximum value along a dimension.
+    ) -> Self: ...
+
+    @overload
+    def idxmax(
+        self,
+        dim: Sequence[Hashable] | EllipsisType,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> dict[Hashable, Self]: ...
+
+    @overload
+    def idxmax(
+        self,
+        dim: None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]: ...
+
+    def idxmax(
+        self,
+        dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
+        *,
+        skipna: bool | None = None,
+        fill_value: Any = dtypes.NA,
+        keep_attrs: bool | None = None,
+    ) -> Self | dict[Hashable, Self]:
+        """Return the coordinate label of the maximum value along one or more dimensions.
 
         Returns a new `DataArray` named after the dimension with the values of
         the coordinate labels along that dimension corresponding to maximum
         values along that dimension.
+
+        If a sequence of dimensions or ``...`` is passed to ``dim``, the
+        maximum is taken over all of them and a dict of `DataArray` objects,
+        one for each dimension, is returned instead, like
+        :py:meth:`~DataArray.argmax`. The result can be passed to
+        :py:meth:`~DataArray.sel`.
 
         In comparison to :py:meth:`~DataArray.argmax`, this returns the
         coordinate label while :py:meth:`~DataArray.argmax` returns the index.
 
         Parameters
         ----------
-        dim : Hashable, optional
-            Dimension over which to apply `idxmax`.  This is optional for 1D
-            arrays, but required for arrays with 2 or more dimensions.
+        dim : Hashable, sequence of Hashable or ..., optional
+            Dimension(s) over which to apply `idxmax`. ``...`` means all
+            dimensions. If not given, the only dimension of a 1D array is used,
+            and all dimensions of an array with 2 or more dimensions.
         skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
+            If False, NaN is treated as the maximum like in
+            :py:func:`numpy.argmax`, so the label of the first NaN is returned.
         fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
         keep_attrs : bool or None, optional
-            If True, the attributes (``attrs``) will be copied from the
-            original object to the new one. If False, the new object
-            will be returned without attributes.
+            If True, the attributes (``attrs``) of the coordinate are copied to
+            the result. If False, the result is returned without attributes.
 
         Returns
         -------
-        reduced : DataArray
+        reduced : DataArray or dict of DataArray
             New `DataArray` object with `idxmax` applied to its data and the
-            indicated dimension removed.
+            indicated dimension removed, or a dict of them mapping each
+            dimension to its coordinate labels if ``dim`` is a sequence or
+            ``...``.
 
         See Also
         --------
@@ -6321,6 +6397,10 @@ class DataArray(
         array([0., 4., 4.])
         Coordinates:
           * y        (y) int64 24B -1 0 1
+        >>> array.idxmax(dim=["y", "x"])
+        {'y': <xarray.DataArray 'y' ()> Size: 8B
+        array(-1), 'x': <xarray.DataArray 'x' ()> Size: 8B
+        array(0.)}
         """
         return computation._calc_idxminmax(
             array=self,
@@ -6581,9 +6661,10 @@ class DataArray(
         missing_dims: ErrorOptionsWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> DataArray:
-        """Return a new data array indexed along the specified
-        dimension(s), where the indexers are given as strings containing
-        Python expressions to be evaluated against the values in the array.
+        """Return a new data array indexed along the specified dimension(s).
+
+        The indexers are given as strings containing Python expressions to be
+        evaluated against the values in the array.
 
         Parameters
         ----------
@@ -6641,7 +6722,6 @@ class DataArray(
         array([3, 4])
         Dimensions without coordinates: x
         """
-
         ds = self._to_dataset_whole(shallow_copy=True)
         ds = ds.query(
             queries=queries,
@@ -6664,8 +6744,7 @@ class DataArray(
         errors: ErrorOptions = "raise",
         kwargs: dict[str, Any] | None = None,
     ) -> Dataset:
-        """
-        Curve fitting optimization for arbitrary functions.
+        """Curve fitting optimization for arbitrary functions.
 
         Wraps :py:func:`scipy.optimize.curve_fit` with :py:func:`~xarray.apply_ufunc`.
 
@@ -6710,7 +6789,7 @@ class DataArray(
             If 'raise', any errors from the `scipy.optimize_curve_fit` optimization will
             raise an exception. If 'ignore', the coefficients and covariances for the
             coordinates where the fitting failed will be NaN.
-        **kwargs : optional
+        kwargs : dict[str, Any], optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
@@ -6722,6 +6801,14 @@ class DataArray(
                 The coefficients of the best fit.
             [var]_curvefit_covariance
                 The covariance matrix of the coefficient estimates.
+
+        See Also
+        --------
+        DataArray.polyfit
+        scipy.optimize.curve_fit
+        xarray.DataArray.xlm.modelfit
+            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
+            with more curve fitting functionality.
 
         Examples
         --------
@@ -6802,14 +6889,6 @@ class DataArray(
         Coordinates:
           * x        (x) int64 24B 0 1 2
             param    <U13 52B 'amplitude'
-
-        See Also
-        --------
-        DataArray.polyfit
-        scipy.optimize.curve_fit
-        xarray.DataArray.xlm.modelfit
-            External method from `xarray-lmfit <https://xarray-lmfit.readthedocs.io/>`_
-            with more curve fitting functionality.
         """
         # For DataArray, use the original implementation by converting to a dataset first
         return self._to_temp_dataset().curvefit(
@@ -6830,7 +6909,7 @@ class DataArray(
         *,
         keep: Literal["first", "last", False] = "first",
     ) -> Self:
-        """Returns a new DataArray with duplicate dimension values removed.
+        """Return a new DataArray with duplicate dimension values removed.
 
         Parameters
         ----------
@@ -7058,7 +7137,6 @@ class DataArray(
         """
         return interp_calendar(self, target, dim=dim)
 
-    @_deprecate_positional_args("v2024.07.0")
     def groupby(
         self,
         group: GroupInput = None,
@@ -7068,7 +7146,7 @@ class DataArray(
         eagerly_compute_group: Literal[False] | None = None,
         **groupers: Grouper,
     ) -> DataArrayGroupBy:
-        """Returns a DataArrayGroupBy object for performing grouped operations.
+        """Return a DataArrayGroupBy object for performing grouped operations.
 
         Parameters
         ----------
@@ -7093,6 +7171,27 @@ class DataArray(
         grouped : DataArrayGroupBy
             A `DataArrayGroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
+
+        See Also
+        --------
+        :ref:`groupby`
+            Users guide explanation of how to group and bin data.
+
+        pandas.DataFrame.groupby
+        DataArray.groupby_bins
+        Dataset.groupby
+        core.groupby.DataArrayGroupBy
+        DataArray.coarsen
+        Dataset.resample
+        DataArray.resample
+
+        Notes
+        -----
+        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
+
+        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
+            Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
 
         Examples
         --------
@@ -7169,26 +7268,6 @@ class DataArray(
           * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
           * letters  (letters) object 16B 'a' 'b'
         Dimensions without coordinates: y
-
-
-        See Also
-        --------
-        :ref:`groupby`
-            Users guide explanation of how to group and bin data.
-
-        :doc:`xarray-tutorial:intermediate/computation/01-high-level-computation-patterns`
-            Tutorial on :py:func:`~xarray.DataArray.Groupby` for windowed computation
-
-        :doc:`xarray-tutorial:fundamentals/03.2_groupby_with_xarray`
-            Tutorial on :py:func:`~xarray.DataArray.Groupby` demonstrating reductions, transformation and comparison with :py:func:`~xarray.DataArray.resample`
-
-        :external:py:meth:`pandas.DataFrame.groupby <pandas.DataFrame.groupby>`
-        :func:`DataArray.groupby_bins <DataArray.groupby_bins>`
-        :func:`Dataset.groupby <Dataset.groupby>`
-        :func:`core.groupby.DataArrayGroupBy <core.groupby.DataArrayGroupBy>`
-        :func:`DataArray.coarsen <DataArray.coarsen>`
-        :func:`Dataset.resample <Dataset.resample>`
-        :func:`DataArray.resample <DataArray.resample>`
         """
         from xarray.core.groupby import (
             DataArrayGroupBy,
@@ -7202,11 +7281,12 @@ class DataArray(
         )
         return DataArrayGroupBy(self, rgroupers, restore_coord_dims=restore_coord_dims)
 
-    @_deprecate_positional_args("v2024.07.0")
+    @_deprecate_positional_args("v2026.10.0")
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
         bins: Bins,
+        *,
         right: bool = True,
         labels: ArrayLike | Literal[False] | None = None,
         precision: int = 3,
@@ -7216,7 +7296,7 @@ class DataArray(
         duplicates: Literal["raise", "drop"] = "raise",
         eagerly_compute_group: Literal[False] | None = None,
     ) -> DataArrayGroupBy:
-        """Returns a DataArrayGroupBy object for performing grouped operations.
+        """Return a DataArrayGroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
         first by applying `pandas.cut` [1]_ to `group`.
@@ -7301,8 +7381,7 @@ class DataArray(
         )
 
     def weighted(self, weights: DataArray) -> DataArrayWeighted:
-        """
-        Weighted DataArray operations.
+        """Weighted DataArray operations.
 
         Parameters
         ----------
@@ -7311,25 +7390,24 @@ class DataArray(
             Each value in the data contributes to the reduction operation
             according to its associated weight.
 
-        Notes
-        -----
-        ``weights`` must be a DataArray and cannot contain missing values.
-        Missing values can be replaced by ``weights.fillna(0)``.
-
         Returns
         -------
         computation.weighted.DataArrayWeighted
 
         See Also
         --------
-        :func:`Dataset.weighted <Dataset.weighted>`
+        Dataset.weighted
 
         :ref:`compute.weighted`
             User guide on weighted array reduction using :py:func:`~xarray.DataArray.weighted`
 
+        Notes
+        -----
+        ``weights`` must be a DataArray and cannot contain missing values.
+        Missing values can be replaced by ``weights.fillna(0)``.
+
         :doc:`xarray-tutorial:fundamentals/03.4_weighted`
             Tutorial on Weighted Reduction using :py:func:`~xarray.DataArray.weighted`
-
         """
         from xarray.computation.weighted import DataArrayWeighted
 
@@ -7342,8 +7420,7 @@ class DataArray(
         center: bool | Mapping[Any, bool] = False,
         **window_kwargs: int,
     ) -> DataArrayRolling:
-        """
-        Rolling window object for DataArrays.
+        """Return a rolling window object for DataArrays.
 
         Parameters
         ----------
@@ -7363,6 +7440,12 @@ class DataArray(
 
         Returns
         -------
+        computation.rolling.DataArrayRolling
+
+        See Also
+        --------
+        DataArray.cumulative
+        Dataset.rolling
         computation.rolling.DataArrayRolling
 
         Examples
@@ -7398,12 +7481,6 @@ class DataArray(
         array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
         Coordinates:
           * time     (time) datetime64[us] 80B 2000-01-15 2000-02-15 ... 2000-10-15
-
-        See Also
-        --------
-        DataArray.cumulative
-        Dataset.rolling
-        computation.rolling.DataArrayRolling
         """
         from xarray.computation.rolling import DataArrayRolling
 
@@ -7415,8 +7492,7 @@ class DataArray(
         dim: str | Iterable[Hashable],
         min_periods: int = 1,
     ) -> DataArrayRolling:
-        """
-        Accumulating object for DataArrays.
+        """Return an accumulating object for DataArrays.
 
         Parameters
         ----------
@@ -7429,6 +7505,12 @@ class DataArray(
 
         Returns
         -------
+        computation.rolling.DataArrayRolling
+
+        See Also
+        --------
+        DataArray.rolling
+        Dataset.cumulative
         computation.rolling.DataArrayRolling
 
         Examples
@@ -7458,12 +7540,6 @@ class DataArray(
         array([ 0.,  1.,  3.,  6., 10., 15., 21., 28., 36., 45., 55., 66.])
         Coordinates:
           * time     (time) datetime64[us] 96B 1999-12-15 2000-01-15 ... 2000-11-15
-
-        See Also
-        --------
-        DataArray.rolling
-        Dataset.cumulative
-        computation.rolling.DataArrayRolling
         """
         from xarray.computation.rolling import DataArrayRolling
 
@@ -7493,8 +7569,7 @@ class DataArray(
         coord_func: str | Callable | Mapping[Any, str | Callable] = "mean",
         **window_kwargs: int,
     ) -> DataArrayCoarsen:
-        """
-        Coarsen object for DataArrays.
+        """Coarsen object for DataArrays.
 
         Parameters
         ----------
@@ -7512,6 +7587,22 @@ class DataArray(
         Returns
         -------
         computation.rolling.DataArrayCoarsen
+
+        See Also
+        --------
+        computation.rolling.DataArrayCoarsen
+        Dataset.coarsen
+
+        :ref:`reshape.coarsen`
+            User guide describing :py:func:`~xarray.DataArray.coarsen`
+
+        :ref:`compute.coarsen`
+            User guide on block aggregation :py:func:`~xarray.DataArray.coarsen`
+
+        Notes
+        -----
+        :doc:`xarray-tutorial:fundamentals/03.3_windowed`
+            Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
 
         Examples
         --------
@@ -7603,21 +7694,6 @@ class DataArray(
         Coordinates:
           * time     (time) datetime64[us] 968B 1999-12-16 1999-12-19 ... 2000-12-10
         >>>
-
-        See Also
-        --------
-        :class:`computation.rolling.DataArrayCoarsen <computation.rolling.DataArrayCoarsen>`
-        :func:`Dataset.coarsen <Dataset.coarsen>`
-
-        :ref:`reshape.coarsen`
-            User guide describing :py:func:`~xarray.DataArray.coarsen`
-
-        :ref:`compute.coarsen`
-            User guide on block aggregation :py:func:`~xarray.DataArray.coarsen`
-
-        :doc:`xarray-tutorial:fundamentals/03.3_windowed`
-            Tutorial on windowed computation using :py:func:`~xarray.DataArray.coarsen`
-
         """
         from xarray.computation.rolling import DataArrayCoarsen
 
@@ -7630,7 +7706,6 @@ class DataArray(
             coord_func=coord_func,
         )
 
-    @_deprecate_positional_args("v2024.07.0")
     def resample(
         self,
         indexer: Mapping[Hashable, ResampleCompatible | Resampler] | None = None,
@@ -7643,7 +7718,7 @@ class DataArray(
         restore_coord_dims: bool | None = None,
         **indexer_kwargs: ResampleCompatible | Resampler,
     ) -> DataArrayResample:
-        """Returns a Resample object for performing resampling operations.
+        """Return a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. The resampled
         dimension must be a datetime-like coordinate. If any intervals
@@ -7684,6 +7759,16 @@ class DataArray(
         -------
         resampled : core.resample.DataArrayResample
             This object resampled.
+
+        See Also
+        --------
+        Dataset.resample
+        pandas.Series.resample
+        pandas.DataFrame.resample
+
+        References
+        ----------
+        .. [1] https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
 
         Examples
         --------
@@ -7758,16 +7843,6 @@ class DataArray(
                nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, 11., 11.])
         Coordinates:
           * time     (time) datetime64[us] 3kB 1999-12-15 1999-12-16 ... 2000-11-15
-
-        See Also
-        --------
-        Dataset.resample
-        pandas.Series.resample
-        pandas.DataFrame.resample
-
-        References
-        ----------
-        .. [1] https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
         """
         from xarray.core.resample import DataArrayResample
 
@@ -7853,8 +7928,7 @@ class DataArray(
     str = utils.UncachedAccessor(StringAccessor["DataArray"])
 
     def drop_attrs(self, *, deep: bool = True) -> Self:
-        """
-        Removes all attributes from the DataArray.
+        """Remove all attributes from the DataArray.
 
         Parameters
         ----------

@@ -14,9 +14,7 @@ from typing import TYPE_CHECKING, Any, cast, overload, override
 import numpy as np
 import pandas as pd
 from numpy.typing import DTypeLike
-from packaging.version import Version
 
-from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core import duck_array_ops
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.nputils import NumpyVIndexAdapter
@@ -47,7 +45,7 @@ if TYPE_CHECKING:
     from xarray.core.indexes import Index
     from xarray.core.types import Self
     from xarray.core.variable import Variable
-    from xarray.namedarray._typing import _Shape, duckarray
+    from xarray.namedarray._typing import Shape, duckarray
     from xarray.namedarray.parallelcompat import ChunkManagerEntrypoint
 
 BasicIndexerType = int | np.integer | slice
@@ -143,7 +141,7 @@ def group_indexers_by_index(
     indexers: Mapping[Any, Any],
     options: Mapping[str, Any],
 ) -> list[tuple[Index, dict[Any, Any]]]:
-    """Returns a list of unique indexes and their corresponding indexers."""
+    """Return a list of unique indexes and their corresponding indexers."""
     # import here instead of at top to guard against circular imports
     from xarray.core.indexes import PandasIndex
 
@@ -195,9 +193,9 @@ def map_index_queries(
     tolerance: int | float | Iterable[int | float] | None = None,
     **indexers_kwargs: Any,
 ) -> IndexSelResult:
-    """Execute index queries from a DataArray / Dataset and label-based indexers
-    and return the (merged) query results.
+    """Execute index queries and return the (merged) query results.
 
+    The queries are built from a DataArray / Dataset and label-based indexers.
     """
     from xarray.core.dataarray import DataArray
 
@@ -234,7 +232,9 @@ def map_index_queries(
 
 
 def expanded_indexer(key, ndim):
-    """Given a key for indexing an ndarray, return an equivalent key which is a
+    """Expand a key for indexing an ndarray to a tuple of length ndim.
+
+    Given a key for indexing an ndarray, return an equivalent key which is a
     tuple with length equal to the number of dimensions.
 
     The expansion is done by replacing all `Ellipsis` items with the right
@@ -264,9 +264,9 @@ def expanded_indexer(key, ndim):
 
 
 def normalize_slice(sl: slice, size: int) -> slice:
-    """
-    Ensure that given slice only contains positive start and stop values
-    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])
+    """Ensure that given slice only contains positive start and stop values.
+
+    Stop can be -1 for full-size slices with negative steps, e.g. [-10::-1].
 
     Examples
     --------
@@ -282,8 +282,7 @@ def normalize_slice(sl: slice, size: int) -> slice:
 
 
 def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integer]]:
-    """
-    Expand slice to an array containing only positive integers.
+    """Expand slice to an array containing only positive integers.
 
     Examples
     --------
@@ -297,9 +296,11 @@ def _expand_slice(slice_: slice, size: int) -> np.ndarray[Any, np.dtype[np.integ
 
 
 def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
-    """Given a slice and the size of the dimension to which it will be applied,
+    """Index a slice with another slice.
+
+    Given a slice and the size of the dimension to which it will be applied,
     index it with another slice to return a new slice equivalent to applying
-    the slices sequentially
+    the slices sequentially.
     """
     old_slice = slice(*old_slice.indices(size))
 
@@ -328,8 +329,7 @@ def slice_slice(old_slice: slice, applied_slice: slice, size: int) -> slice:
 def normalize_array(
     array: np.ndarray[Any, np.dtype[np.integer]], size: int
 ) -> np.ndarray[Any, np.dtype[np.integer]]:
-    """
-    Ensure that the given array only contains positive values.
+    """Ensure that the given array only contains positive values.
 
     Examples
     --------
@@ -349,9 +349,11 @@ def slice_slice_by_array(
     array: np.ndarray[Any, np.dtype[np.integer]],
     size: int,
 ) -> np.ndarray[Any, np.dtype[np.integer]]:
-    """Given a slice and the size of the dimension to which it will be applied,
+    """Index a slice with an array.
+
+    Given a slice and the size of the dimension to which it will be applied,
     index it with an array to return a new array equivalent to applying
-    the slices sequentially
+    the slices sequentially.
 
     Examples
     --------
@@ -605,10 +607,7 @@ class ExplicitlyIndexed:
         self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
         # Leave casting to an array up to the underlying array type.
-        if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
-        else:
-            return np.asarray(self.get_duck_array(), dtype=dtype)
+        return np.asarray(self.get_duck_array(), dtype=dtype, copy=copy)
 
     def get_duck_array(self):
         return self.array
@@ -674,7 +673,11 @@ class IndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     @override
     async def async_get_duck_array(self):
-        """These classes are applied to in-memory arrays, so specific async support isn't needed."""
+        """Return the duck array without specific async support.
+
+        These classes are applied to in-memory arrays, so specific async support
+        isn't needed.
+        """
         return self.get_duck_array()
 
 
@@ -690,11 +693,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     def __array__(
         self, dtype: DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
-        if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype, copy=copy)
-
-        else:
-            return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype)
+        return np.asarray(to_numpy(self.get_duck_array()), dtype=dtype, copy=copy)
 
     def get_duck_array(self):
         return self.array.get_duck_array()
@@ -720,7 +719,8 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("_shape", "array", "key")
 
     def __init__(self, array: Any, key: ExplicitIndexer | None = None):
-        """
+        """Initialize a lazily indexed array.
+
         Parameters
         ----------
         array : array_like
@@ -740,7 +740,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = as_indexable(array)
         self.key = key
 
-        shape: _Shape = ()
+        shape: Shape = ()
         for size, k in zip(self.array.shape, self.key.tuple, strict=True):
             if isinstance(k, slice):
                 shape += (len(range(*k.indices(size))),)
@@ -765,7 +765,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     @override
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> Shape:
         return self._shape
 
     @override
@@ -841,7 +841,8 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "key")
 
     def __init__(self, array: duckarray[Any, Any], key: ExplicitIndexer):
-        """
+        """Initialize a lazily vectorized indexed array.
+
         Parameters
         ----------
         array : array_like
@@ -856,7 +857,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
     @override
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> Shape:
         return np.broadcast(*self.key.tuple).shape
 
     @override
@@ -1043,7 +1044,8 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
 
 
 def as_indexable(array):
-    """
+    """Wrap an array in an ExplicitlyIndexed subclass.
+
     This function always returns an ExplicitlyIndexed subclass,
     so that the vectorized indexing is always possible with the returned
     object.
@@ -1065,7 +1067,7 @@ def as_indexable(array):
 
 
 def _outer_to_vectorized_indexer(
-    indexer: BasicIndexer | OuterIndexer, shape: _Shape
+    indexer: BasicIndexer | OuterIndexer, shape: Shape
 ) -> VectorizedIndexer:
     """Convert an OuterIndexer into a vectorized indexer.
 
@@ -1085,12 +1087,22 @@ def _outer_to_vectorized_indexer(
     """
     key = indexer.tuple
 
-    n_dim = len([k for k in key if not isinstance(k, integer_types)])
+    # 0d duck arrays (e.g. dask, cupy) are treated like integers
+    n_dim = len(
+        [
+            k
+            for k in key
+            if not isinstance(k, integer_types) and getattr(k, "ndim", None) != 0
+        ]
+    )
     i_dim = 0
     new_key = []
     for k, size in zip(key, shape, strict=True):
         if isinstance(k, integer_types):
             new_key.append(np.array(k).reshape((1,) * n_dim))
+        elif getattr(k, "ndim", None) == 0:
+            # 0d duck array: reshape without converting to numpy
+            new_key.append(k.reshape((1,) * n_dim))
         else:  # np.ndarray or slice
             if isinstance(k, slice):
                 k = np.arange(*k.indices(size))
@@ -1101,7 +1113,7 @@ def _outer_to_vectorized_indexer(
     return VectorizedIndexer(tuple(new_key))
 
 
-def _outer_to_numpy_indexer(indexer: BasicIndexer | OuterIndexer, shape: _Shape):
+def _outer_to_numpy_indexer(indexer: BasicIndexer | OuterIndexer, shape: Shape):
     """Convert an OuterIndexer into an indexer for NumPy.
 
     Parameters
@@ -1125,7 +1137,7 @@ def _outer_to_numpy_indexer(indexer: BasicIndexer | OuterIndexer, shape: _Shape)
         return _outer_to_vectorized_indexer(indexer, shape).tuple
 
 
-def _combine_indexers(old_key, shape: _Shape, new_key) -> VectorizedIndexer:
+def _combine_indexers(old_key, shape: Shape, new_key) -> VectorizedIndexer:
     """Combine two indexers.
 
     Parameters
@@ -1167,7 +1179,7 @@ class IndexingSupport(enum.Enum):
 
 def explicit_indexing_adapter(
     key: ExplicitIndexer,
-    shape: _Shape,
+    shape: Shape,
     indexing_support: IndexingSupport,
     raw_indexing_method: Callable[..., Any],
 ) -> Any:
@@ -1203,7 +1215,7 @@ def explicit_indexing_adapter(
 
 async def async_explicit_indexing_adapter(
     key: ExplicitIndexer,
-    shape: _Shape,
+    shape: Shape,
     indexing_support: IndexingSupport,
     raw_indexing_method: Callable[..., Any],
 ) -> Any:
@@ -1237,7 +1249,7 @@ def set_with_indexer(indexable, indexer: ExplicitIndexer, value: Any) -> None:
 
 
 def decompose_indexer(
-    indexer: ExplicitIndexer, shape: _Shape, indexing_support: IndexingSupport
+    indexer: ExplicitIndexer, shape: Shape, indexing_support: IndexingSupport
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
@@ -1247,8 +1259,9 @@ def decompose_indexer(
 
 
 def _decompose_slice(key: slice, size: int) -> tuple[slice, slice]:
-    """convert a slice to successive two slices. The first slice always has
-    a positive step.
+    """Convert a slice to successive two slices.
+
+    The first slice always has a positive step.
 
     >>> _decompose_slice(slice(2, 98, 2), 99)
     (slice(2, 98, 2), slice(None, None, None))
@@ -1276,12 +1289,12 @@ def _decompose_slice(key: slice, size: int) -> tuple[slice, slice]:
 
 def _decompose_vectorized_indexer(
     indexer: VectorizedIndexer,
-    shape: _Shape,
+    shape: Shape,
     indexing_support: IndexingSupport,
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
-    """
-    Decompose vectorized indexer to the successive two indexers, where the
-    first indexer will be used to index backend arrays, while the second one
+    """Decompose vectorized indexer to the successive two indexers.
+
+    The first indexer will be used to index backend arrays, while the second one
     is used to index loaded on-memory np.ndarray.
 
     Parameters
@@ -1358,12 +1371,12 @@ def _decompose_vectorized_indexer(
 
 def _decompose_outer_indexer(
     indexer: BasicIndexer | OuterIndexer,
-    shape: _Shape,
+    shape: Shape,
     indexing_support: IndexingSupport,
 ) -> tuple[ExplicitIndexer, ExplicitIndexer]:
-    """
-    Decompose outer indexer to the successive two indexers, where the
-    first indexer will be used to index backend arrays, while the second one
+    """Decompose outer indexer to the successive two indexers.
+
+    The first indexer will be used to index backend arrays, while the second one
     is used to index the loaded on-memory np.ndarray.
 
     Parameters
@@ -1531,8 +1544,10 @@ def _check_bounds(indices: Any, size: int):
 
 
 def _arrayize_outer_indexer(indexer: OuterIndexer, shape) -> OuterIndexer:
-    """Return a similar oindex with after replacing slices by arrays and
-    negative indices by their corresponding positive indices.
+    """Return a similar oindex with slices and negative indices replaced.
+
+    Slices are replaced by arrays and negative indices by their corresponding
+    positive indices.
 
     Also check if array indices are within bounds.
 
@@ -1552,9 +1567,9 @@ def _arrayize_outer_indexer(indexer: OuterIndexer, shape) -> OuterIndexer:
 
 
 def _arrayize_vectorized_indexer(
-    indexer: VectorizedIndexer, shape: _Shape
+    indexer: VectorizedIndexer, shape: Shape
 ) -> VectorizedIndexer:
-    """Return an identical vindex but slices are replaced by arrays"""
+    """Return an identical vindex but slices are replaced by arrays."""
     slices = [v for v in indexer.tuple if isinstance(v, slice)]
     if len(slices) == 0:
         return indexer
@@ -1577,7 +1592,6 @@ def _chunked_array_with_chunks_hint(
     array, chunks, chunkmanager: ChunkManagerEntrypoint[Any]
 ):
     """Create a chunked array using the chunks hint for dimensions of size > 1."""
-
     if len(chunks) < array.ndim:
         raise ValueError("not enough chunks in hint")
     new_chunks = []
@@ -1616,7 +1630,7 @@ def _masked_result_drop_slice(key, data: duckarray[Any, Any] | None = None):
 
 
 def create_mask(
-    indexer: ExplicitIndexer, shape: _Shape, data: duckarray[Any, Any] | None = None
+    indexer: ExplicitIndexer, shape: Shape, data: duckarray[Any, Any] | None = None
 ):
     """Create a mask for indexing with a fill-value.
 
@@ -1719,8 +1733,10 @@ def posify_mask_indexer(indexer: ExplicitIndexer) -> ExplicitIndexer:
 
 
 def is_fancy_indexer(indexer: Any) -> bool:
-    """Return False if indexer is an int, slice, a 1-dimensional list, or a 0 or
-    1-dimensional ndarray; in all other cases return True
+    """Check whether indexer is a fancy indexer.
+
+    Return False if indexer is an int, slice, a 1-dimensional list, or a 0 or
+    1-dimensional ndarray; in all other cases return True.
     """
     if isinstance(indexer, int | slice) and not isinstance(indexer, bool):
         return False
@@ -1887,7 +1903,9 @@ class DaskIndexingAdapter(IndexingAdapter):
     __slots__ = ("array",)
 
     def __init__(self, array):
-        """This adapter is created in Variable.__getitem__ in
+        """Initialize the adapter.
+
+        This adapter is created in Variable.__getitem__ in
         Variable._broadcast_indexes.
         """
         self.array = array
@@ -1987,7 +2005,7 @@ class PandasIndexingAdapter(IndexingAdapter):
                 self._dtype = get_valid_numpy_dtype(array)
         elif is_allowed_extension_array_dtype(dtype):
             self._dtype = cast(pd.api.extensions.ExtensionDtype, dtype)
-        elif HAS_STRING_DTYPE and isinstance(dtype, pd.StringDtype):
+        elif isinstance(dtype, pd.StringDtype):
             self._dtype = np.dtypes.StringDType(na_object=dtype.na_value)
         else:
             self._dtype = np.dtype(cast(DTypeLike, dtype))
@@ -2028,10 +2046,7 @@ class PandasIndexingAdapter(IndexingAdapter):
                 # this might not be public API
                 array = array.astype("object")
 
-        if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(array.values, dtype=dtype, copy=copy)
-        else:
-            return np.asarray(array.values, dtype=dtype)
+        return np.asarray(array.values, dtype=dtype, copy=copy)
 
     @override
     def get_duck_array(self) -> np.ndarray | PandasExtensionArray:
@@ -2046,7 +2061,7 @@ class PandasIndexingAdapter(IndexingAdapter):
 
     @override
     @property
-    def shape(self) -> _Shape:
+    def shape(self) -> Shape:
         return (len(self.array),)
 
     def _convert_scalar(self, item) -> np.ndarray:
@@ -2285,7 +2300,11 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
         dim_positions = dict(zip(self._dims, positions, strict=False))
 
         result = self._transform.forward(dim_positions)
-        return np.asarray(result[self._coord_name])
+        res = np.asarray(result[self._coord_name])
+        squeeze_axes = tuple(
+            ax for ax, idxr in enumerate(indexer.tuple) if isinstance(idxr, int)
+        )
+        return res.squeeze(squeeze_axes) if squeeze_axes else res
 
     @override
     def _oindex_set(self, indexer: OuterIndexer, value: Any) -> None:
@@ -2323,11 +2342,7 @@ class CoordinateTransformIndexingAdapter(IndexingAdapter):
         self._check_and_raise_if_non_basic_indexer(indexer)
 
         # also works with basic indexing
-        res = self._oindex_get(OuterIndexer(indexer.tuple))
-        squeeze_axes = tuple(
-            ax for ax, idxr in enumerate(indexer.tuple) if isinstance(idxr, int)
-        )
-        return res.squeeze(squeeze_axes) if squeeze_axes else res
+        return self._oindex_get(OuterIndexer(indexer.tuple))
 
     def __setitem__(self, indexer: ExplicitIndexer, value: Any) -> None:
         raise TypeError(
