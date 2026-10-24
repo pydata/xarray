@@ -65,6 +65,30 @@ def test_dask() -> None:
     assert_equal(result, expected)
 
 
+@requires_dask
+@pytest.mark.parametrize(
+    "func",
+    [
+        pytest.param(lambda s: s.strip(), id="strip"),
+        pytest.param(lambda s: s.rstrip(" c"), id="rstrip"),
+        pytest.param(lambda s: s.center(9, "*"), id="center"),
+        pytest.param(lambda s: s.zfill(6), id="zfill"),
+        pytest.param(lambda s: s.replace("b", "BB", regex=False), id="replace"),
+        pytest.param(lambda s: s.repeat(2), id="repeat"),
+        pytest.param(lambda s: s.find("b", 1), id="find"),
+        pytest.param(lambda s: s.contains("b", regex=False), id="contains"),
+    ],
+)
+def test_dask_string_results(dtype, func: Callable) -> None:
+    # results used to be truncated to a single character with dask
+    values = xr.DataArray(["  abc ", "Hello World", "ab", ""], dims="x").astype(dtype)
+
+    expected = func(values.str)
+    result = func(values.chunk(x=2).str).compute()
+
+    assert_equal(result, expected)
+
+
 def test_count(dtype) -> None:
     values = xr.DataArray(["foo", "foofoo", "foooofooofommmfoo"]).astype(dtype)
     pat_str = dtype(r"f[o]+")
@@ -2012,8 +2036,7 @@ def test_index(dtype) -> None:
     assert_equal(result_0, expected)
     assert_equal(result_1, expected)
 
-    matchtype = "subsection" if dtype == np.bytes_ else "substring"
-    with pytest.raises(ValueError, match=f"{matchtype} not found"):
+    with pytest.raises(ValueError, match="substring not found"):
         s.str.index("DE")
 
 

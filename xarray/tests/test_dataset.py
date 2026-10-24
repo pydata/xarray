@@ -37,7 +37,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.types import ArrayLike
+from xarray.core.types import ArrayLike, QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.groupers import SeasonResampler, TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
@@ -3666,6 +3666,13 @@ class TestDataset:
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
         assert actual.xindexes["y"].equals(expected.xindexes["y"])
+
+    def test_to_array_deprecated(self) -> None:
+        ds = Dataset({"a": 1, "b": ("x", [1, 2, 3])}, coords={"c": 42})
+        expected = ds.to_dataarray("abc", name="foo")
+        with pytest.warns(FutureWarning, match=r"Dataset\.to_array is deprecated"):
+            actual = ds.to_array("abc", name="foo")
+        assert_identical(expected, actual)
 
     def test_expand_dims_error(self) -> None:
         original = Dataset(
@@ -7926,11 +7933,18 @@ class TestDataset:
         assert not data.astype(float, keep_attrs=False).attrs
         assert not data.astype(float, keep_attrs=False).var1.attrs
 
+    @pytest.mark.parametrize("coords_only", [False, True])
     @pytest.mark.parametrize("parser", ["pandas", "python"])
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
     )
-    def test_query(self, use_dask: bool, engine, parser) -> None:
+    def test_query(
+        self,
+        use_dask: bool,
+        engine: QueryEngineOptions,
+        parser: QueryParserOptions,
+        coords_only: bool,
+    ) -> None:
         """Test querying a dataset."""
         # setup test data
         np.random.seed(42)
@@ -7984,6 +7998,9 @@ class TestDataset:
                     "f2": (("x", "y", "z"), f),
                 },
             )
+
+        if coords_only:
+            ds = ds.set_coords(list(ds.data_vars))
 
         # query single dim, single variable
         with raise_if_dask_computes():
@@ -8076,6 +8093,17 @@ class TestDataset:
                 )
             expect = ds.isel(dict(x=(a > 5), y=(c < 0.5), z=(d == "bar")))
             assert_identical(expect, actual)
+
+        # query a dimension without a coordinate
+        with raise_if_dask_computes():
+            actual = ds.query(x="x > 5", engine=engine, parser=parser)
+        assert_identical(ds.isel(x=slice(6, None)), actual)
+
+        # query a dimension coordinate
+        ds = ds.assign_coords(x=a + 10)
+        with raise_if_dask_computes():
+            actual = ds.query(x="x > 15", engine=engine, parser=parser)
+        assert_identical(ds.isel(x=slice(6, None)), actual)
 
         # test error handling
         with pytest.raises(ValueError):
