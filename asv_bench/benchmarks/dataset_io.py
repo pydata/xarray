@@ -5,10 +5,11 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
 
-from . import _skip_slow, parameterized, randint, randn, requires_dask
+from . import randint, randn, requires_dask, skip_slow
 
 try:
     import dask
@@ -18,14 +19,11 @@ except ImportError:
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
-_ENGINES = tuple(xr.backends.list_engines().keys() - {"store"})
+_ENGINES = tuple(sorted(xr.backends.list_engines().keys() - {"store"}))
 
 
 class IOSingleNetCDF:
-    """
-    A few examples that benchmark reading/writing a single netCDF file with
-    xarray
-    """
+    """Benchmark reading/writing a single netCDF file with xarray."""
 
     timeout = 300.0
     repeat = 1
@@ -93,12 +91,11 @@ class IOSingleNetCDF:
         }
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOWriteSingleNetCDF3(IOSingleNetCDF):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         self.format = "NETCDF3_64BIT"
         self.make_ds()
 
@@ -109,12 +106,11 @@ class IOWriteSingleNetCDF3(IOSingleNetCDF):
         self.ds.to_netcdf("test_scipy_write.nc", engine="scipy", format=self.format)
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOReadSingleNetCDF4(IOSingleNetCDF):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         self.make_ds()
 
         self.filepath = "test_single_file.nc4.nc"
@@ -133,12 +129,11 @@ class IOReadSingleNetCDF4(IOSingleNetCDF):
         ds = ds.isel(**self.vinds).load()
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOReadSingleNetCDF3(IOReadSingleNetCDF4):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         self.make_ds()
 
         self.filepath = "test_single_file.nc3.nc"
@@ -157,12 +152,11 @@ class IOReadSingleNetCDF3(IOReadSingleNetCDF4):
         ds = ds.isel(**self.vinds).load()
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         requires_dask()
 
         self.make_ds()
@@ -200,12 +194,11 @@ class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
             ).load()
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         requires_dask()
 
         self.make_ds()
@@ -236,10 +229,7 @@ class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
 
 
 class IOMultipleNetCDF:
-    """
-    A few examples that benchmark reading/writing multiple netCDF files with
-    xarray
-    """
+    """Benchmark reading/writing multiple netCDF files with xarray."""
 
     timeout = 300.0
     repeat = 1
@@ -308,12 +298,11 @@ class IOMultipleNetCDF:
             self.filenames_list.append(f"test_netcdf_{i}.nc")
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOWriteMultipleNetCDF3(IOMultipleNetCDF):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         self.make_ds()
         self.format = "NETCDF3_64BIT"
 
@@ -328,12 +317,11 @@ class IOWriteMultipleNetCDF3(IOMultipleNetCDF):
         )
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOReadMultipleNetCDF4(IOMultipleNetCDF):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         requires_dask()
 
         self.make_ds()
@@ -347,12 +335,11 @@ class IOReadMultipleNetCDF4(IOMultipleNetCDF):
         xr.open_mfdataset(self.filenames_list, engine="netcdf4")
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOReadMultipleNetCDF3(IOReadMultipleNetCDF4):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         requires_dask()
 
         self.make_ds()
@@ -366,12 +353,11 @@ class IOReadMultipleNetCDF3(IOReadMultipleNetCDF4):
         xr.open_mfdataset(self.filenames_list, engine="scipy")
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         requires_dask()
 
         self.make_ds()
@@ -423,12 +409,11 @@ class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
             )
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         requires_dask()
 
         self.make_ds()
@@ -469,10 +454,7 @@ def create_delayed_write():
 
 
 class IONestedDataTree:
-    """
-    A few examples that benchmark reading/writing a heavily nested netCDF datatree with
-    xarray
-    """
+    """Benchmark reading/writing a heavily nested netCDF datatree with xarray."""
 
     timeout = 300.0
     repeat = 1
@@ -557,12 +539,11 @@ class IONestedDataTree:
         self.dtree = xr.DataTree.from_dict(dtree)
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOReadDataTreeNetCDF4(IONestedDataTree):
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         requires_dask()
 
         self.make_datatree()
@@ -578,16 +559,15 @@ class IOReadDataTreeNetCDF4(IONestedDataTree):
         xr.open_datatree(self.filepath, engine="netcdf4")
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOWriteNetCDFDask:
     timeout = 60
     repeat = 1
     number = 5
 
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         requires_dask()
 
         self.write = create_delayed_write()
@@ -596,12 +576,11 @@ class IOWriteNetCDFDask:
         self.write.compute()
 
 
+# TODO: Lazily skipped in CI as it is very demanding and slow.
+# Improve times and remove errors.
+@skip_slow
 class IOWriteNetCDFDaskDistributed:
     def setup(self):
-        # TODO: Lazily skipped in CI as it is very demanding and slow.
-        # Improve times and remove errors.
-        _skip_slow()
-
         requires_dask()
 
         try:
@@ -632,16 +611,16 @@ class IOReadSingleFile(IOSingleNetCDF):
             self.ds.to_netcdf(filepaths[engine], engine=engine)
         return filepaths
 
-    @parameterized(["engine", "chunks"], (_ENGINES, [None, {}]))
+    @parameterize({"engine": _ENGINES, "chunks": [None, {}]})
     def time_read_dataset(self, filepaths, engine, chunks):
         xr.open_dataset(filepaths[engine], engine=engine, chunks=chunks)
 
 
 class IOReadCustomEngine:
     def setup(self, *args, **kwargs):
-        """
-        The custom backend does the bare minimum to be considered a lazy backend. But
-        the data in it is still in memory so slow file reading shouldn't affect the
+        """Set up a custom backend that does the bare minimum to be considered lazy.
+
+        The data in it is still in memory so slow file reading shouldn't affect the
         results.
         """
         requires_dask()
@@ -692,8 +671,7 @@ class IOReadCustomEngine:
                 return cls(manager, mode=mode, lock=locker, autoclose=autoclose)
 
             def load(self) -> tuple:
-                """
-                Load a bunch of test data quickly.
+                """Load a bunch of test data quickly.
 
                 Normally this method would've opened a file and parsed it.
                 """
@@ -750,10 +728,10 @@ class IOReadCustomEngine:
 
         self.engine = PerformanceBackend
 
-    @parameterized(["chunks"], ([None, {}, {"time": 10}]))
+    @parameterize({"chunks": [None, {}, {"time": 10}]})
     def time_open_dataset(self, chunks):
-        """
-        Time how fast xr.open_dataset is without the slow data reading part.
+        """Time how fast xr.open_dataset is without the slow data reading part.
+
         Test with and without dask.
         """
         xr.open_dataset(None, engine=self.engine, chunks=chunks)

@@ -27,6 +27,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Determine the baseline
+        id: baseline
+        # Compare against the first parent of the test merge commit, i.e. the base
+        # branch this PR was merged into. `pull_request.base.sha` can lag behind it,
+        # which attributes changes on the base branch to the PR.
+        run: echo "sha=$(git rev-parse "${GITHUB_SHA}^1")" >> "$GITHUB_OUTPUT"
+
       - name: Set up conda environment
         uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
         with:
@@ -51,15 +58,16 @@ jobs:
           ASV_FACTOR: 1.5
           ASV_SKIP_SLOW: 1
           GITHUB_LABEL: ${{ github.event.pull_request.base.label }}
+          BASE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
           set -x
           # ID this runner
           asv machine --yes
-          echo "Baseline:  ${{ github.event.pull_request.base.sha }} ($GITHUB_LABEL)"
+          echo "Baseline:  ${BASE_SHA} ($GITHUB_LABEL)"
           echo "Contender: ${GITHUB_SHA} ($PR_HEAD_LABEL)"
           # Run benchmarks for current commit against base
           ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
-          asv continuous $ASV_OPTIONS ${{ github.event.pull_request.base.sha }} ${GITHUB_SHA} \
+          asv continuous $ASV_OPTIONS ${BASE_SHA} ${GITHUB_SHA} \
               | sed "/Traceback \|failed$\|PERFORMANCE DECREASED/ s/^/::error::/" \
               | tee benchmarks.log
           # Report and export results for subsequent steps
@@ -74,7 +82,7 @@ jobs:
         shell: bash -l {0}
         env:
           ASV_FACTOR: 1.5
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ steps.baseline.outputs.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -118,14 +126,17 @@ jobs:
             echo "## $title"
             echo
             if [ $status -eq 0 ] && [ -n "$changes" ]; then
-              # replace asv's markers by something more fun
+              # replace asv's markers by something more fun, and separate the tables
+              # of the different groups by a blank line: with --only-changed, asv
+              # prints them right after each other, which markdown renders as one table
               sed -E \
                 -e 's/^\| - +\|/| 🚀 |/' \
                 -e 's/^\| \+ +\|/| 🐌 |/' \
                 -e 's/^\| ! +\|/| 💥 |/' \
                 -e 's/^\| \* +\|/| 🩹 |/' \
                 -e 's/^\| x +\|/| 🤷 |/' \
-                <<< "$compare"
+                <<< "$compare" \
+                | awk '/^\| Change / && NR > 1 { print "" } { print }'
               echo
               echo "🚀 better · 🐌 worse · 💥 now failing · 🩹 fixed · 🤷 not comparable"
               echo
@@ -136,7 +147,7 @@ jobs:
           cat comment/comment.md
         working-directory: ${{ env.ASV_DIR }}
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always() && github.event_name == 'pull_request'
         with:
           name: asv-benchmark-comment
@@ -148,7 +159,7 @@ jobs:
           cp benchmarks/README_CI.md benchmarks.log .asv/results/
         working-directory: ${{ env.ASV_DIR }}
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: asv-benchmark-results-${{ runner.os }}

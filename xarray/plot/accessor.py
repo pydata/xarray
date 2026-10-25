@@ -28,9 +28,9 @@ if TYPE_CHECKING:
 
 
 class DataArrayPlotAccessor:
-    """
-    Enables use of xarray.plot functions as attributes on a DataArray.
-    For example, DataArray.plot.imshow
+    """Enables use of xarray.plot functions as attributes on a DataArray.
+
+    For example, DataArray.plot.imshow.
     """
 
     _da: DataArray
@@ -1030,9 +1030,9 @@ class DataArrayPlotAccessor:
 
 
 class DatasetPlotAccessor:
-    """
-    Enables use of xarray.plot functions as attributes on a Dataset.
-    For example, Dataset.plot.scatter
+    """Enables use of xarray.plot functions as attributes on a Dataset.
+
+    For example, Dataset.plot.scatter.
     """
 
     _ds: Dataset

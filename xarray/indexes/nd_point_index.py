@@ -20,15 +20,18 @@ if TYPE_CHECKING:
 
 
 class TreeAdapter(abc.ABC):
-    """Lightweight adapter abstract class for plugging in 3rd-party structures
-    like :py:class:`scipy.spatial.KDTree` or :py:class:`sklearn.neighbors.KDTree`
-    into :py:class:`~xarray.indexes.NDPointIndex`.
+    """Lightweight adapter abstract class for plugging in 3rd-party structures.
+
+    Structures like :py:class:`scipy.spatial.KDTree` or
+    :py:class:`sklearn.neighbors.KDTree` can be plugged into
+    :py:class:`~xarray.indexes.NDPointIndex`.
 
     """
 
     @abc.abstractmethod
     def __init__(self, points: np.ndarray, *, options: Mapping[str, Any]):
-        """
+        """Build the tree structure from the given points.
+
         Parameters
         ----------
         points : ndarray of shape (n_points, n_coordinates)
@@ -95,8 +98,10 @@ class ScipyKDTreeAdapter(TreeAdapter):
 
 
 def get_points(coords: Iterable[Variable | Any]) -> np.ndarray:
-    """Re-arrange data from a sequence of xarray coordinate variables or
-    labels into a 2-d array of shape (n_points, n_coordinates).
+    """Re-arrange coordinate data into a 2-d array of points.
+
+    Data from a sequence of xarray coordinate variables or labels is
+    re-arranged into a 2-d array of shape (n_points, n_coordinates).
 
     """
     data = [c.values if isinstance(c, Variable | DataArray) else c for c in coords]
@@ -309,8 +314,9 @@ class NDPointIndex[T_TreeAdapter: TreeAdapter](Index):
         label_dims: tuple[Hashable, ...],
         label_shape: tuple[int, ...],
     ) -> dict[Hashable, Variable]:
-        """Returns dimension indexers based on the query results (indices) and
-        the original label dimensions and shape.
+        """Return dimension indexers based on the query results (indices).
+
+        The indexers also depend on the original label dimensions and shape.
 
         1. Unravel the flat indices returned from the query
         2. Reshape the unraveled indices according to indexers shapes

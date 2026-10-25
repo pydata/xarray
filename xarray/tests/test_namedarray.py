@@ -19,7 +19,7 @@ from xarray.namedarray._typing import (
     _default,
 )
 from xarray.namedarray.core import NamedArray, from_array
-from xarray.namedarray.utils import fake_target_chunksize
+from xarray.namedarray.utils import fake_target_chunksize, module_available
 from xarray.tests import requires_array_api_strict, requires_cftime
 
 if TYPE_CHECKING:
@@ -118,12 +118,12 @@ def check_duck_array_typevar[DType: np.dtype[Any]](
 class NamedArraySubclassobjects:
     @pytest.fixture
     def target(self, data: np.ndarray[Any, Any]) -> Any:
-        """Fixture that needs to be overridden"""
+        """Fixture that needs to be overridden."""
         raise NotImplementedError
 
     @abstractmethod
     def cls(self, *args: Any, **kwargs: Any) -> Any:
-        """Method that needs to be overridden"""
+        """Create an instance of the class under test; needs to be overridden."""
         raise NotImplementedError
 
     @pytest.fixture
@@ -667,8 +667,8 @@ def test_fake_target_chunksize(
     expected_chunksize_faked: int,
     expected_dtype: DTypeLike,
 ) -> None:
-    """
-    Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+    """Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+
     - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
     As such, it will *double* the amount of memory a 4-byte dtype (like float32) would try to use,
     fooling it into actually using the correct amount of memory. For object dtypes, which are
@@ -685,8 +685,8 @@ def test_fake_target_chunksize(
 
 @requires_cftime
 def test_fake_target_chunksize_cftime() -> None:
-    """
-    Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+    """Check that `fake_target_chunksize` returns the expected chunksize and dtype.
+
     - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
     - This is the same as the above test, but specifically for a CFTime array case - split for testing reasons
     """
@@ -708,3 +708,19 @@ def test_fake_target_chunksize_cftime() -> None:
     # sys.getsizeof of the object array is smaller on 32-bit platforms
     assert faked_chunksize == (73 if sys.maxsize > 2**32 else 146)
     assert dtype == np.float64
+
+
+def test_module_available_version_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """module_available should return False gracefully when metadata.version returns None."""
+    monkeypatch.setattr("importlib.metadata.version", lambda name: None)
+    # module_available is cached, don't use or leave results with the patched version
+    module_available.cache_clear()
+    try:
+        assert module_available("packaging", minversion="1.0.0") is False
+    finally:
+        module_available.cache_clear()
+
+
+def test_module_available_valid() -> None:
+    """module_available should return True for an installed module with version check."""
+    assert module_available("packaging", minversion="0.0.1") is True

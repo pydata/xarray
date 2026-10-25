@@ -48,8 +48,7 @@ class ArrayStrategyFn(Protocol[T_DuckArray]):
 
 
 def supported_dtypes() -> st.SearchStrategy[np.dtype]:
-    """
-    Generates only those numpy dtypes which xarray can handle.
+    """Generate only those numpy dtypes which xarray can handle.
 
     Use instead of hypothesis.extra.numpy.scalar_dtypes in order to exclude weirder dtypes such as unicode, byte_string, array, or nested dtypes.
     Also excludes datetimes, which dodges bugs with pandas non-nanosecond datetime overflows.  Checks only native endianness.
@@ -58,7 +57,7 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     # TODO should this be exposed publicly?
     # We should at least decide what the set of numpy dtypes that xarray officially supports is.
@@ -74,8 +73,8 @@ def supported_dtypes() -> st.SearchStrategy[np.dtype]:
 
 
 def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
-    """
-    Dtypes supported by pandas indexes.
+    """Generate dtypes supported by pandas indexes.
+
     Restrict datetime64 and timedelta64 to ns frequency till Xarray relaxes that.
     """
     return (
@@ -91,8 +90,7 @@ def pandas_index_dtypes() -> st.SearchStrategy[np.dtype]:
 
 
 def datetimes() -> st.SearchStrategy:
-    """
-    Generates datetime objects including both standard library datetimes and cftime datetimes.
+    """Generate datetime objects, including both standard library and cftime datetimes.
 
     Returns standard library datetime.datetime objects, and if cftime is available,
     also includes cftime datetime objects from various calendars.
@@ -101,7 +99,7 @@ def datetimes() -> st.SearchStrategy:
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     strategy = st.datetimes()
     if module_available("cftime"):
@@ -116,14 +114,13 @@ _readable_characters = st.characters(
 
 
 def names() -> st.SearchStrategy[str]:
-    """
-    Generates arbitrary string names for dimensions / variables.
+    """Generate arbitrary string names for dimensions / variables.
 
     Requires the hypothesis package to be installed.
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     return st.text(
         _readable_characters,
@@ -138,8 +135,7 @@ def dimension_names(
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[list[Hashable]]:
-    """
-    Generates an arbitrary list of valid dimension names.
+    """Generate an arbitrary list of valid dimension names.
 
     Requires the hypothesis package to be installed.
 
@@ -171,8 +167,7 @@ def dimension_sizes(
     min_side: int = 1,
     max_side: int | None = None,
 ) -> st.SearchStrategy[Mapping[Hashable, int]]:
-    """
-    Generates an arbitrary mapping from dimension names to lengths.
+    """Generate an arbitrary mapping from dimension names to lengths.
 
     Requires the hypothesis package to be installed.
 
@@ -196,9 +191,8 @@ def dimension_sizes(
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
-
     if max_side is None:
         max_side = min_side + 3
 
@@ -230,8 +224,7 @@ simple_attrs = st.dictionaries(_attr_keys, _attr_values)
 
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
-    """
-    Generates arbitrary valid attributes dictionaries for xarray objects.
+    """Generate arbitrary valid attributes dictionaries for xarray objects.
 
     The generated dictionaries can potentially be recursive.
 
@@ -239,7 +232,7 @@ def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     return st.recursive(
         st.dictionaries(_attr_keys, _attr_values),
@@ -260,8 +253,7 @@ def variables(
     dtype: st.SearchStrategy[np.dtype] | None = None,
     attrs: st.SearchStrategy[Mapping] = ATTRS,
 ) -> xr.Variable:
-    """
-    Generates arbitrary xarray.Variable objects.
+    """Generate arbitrary xarray.Variable objects.
 
     Follows the basic signature of the xarray.Variable constructor, but allows passing alternative strategies to
     generate either numpy-like array data or dimensions. Also allows specifying the shape or dtype of the wrapped array
@@ -300,6 +292,10 @@ def variables(
         If a custom array_strategy_fn returns a strategy which generates an example array inconsistent with the shape
         & dtype input passed to it.
 
+    See Also
+    --------
+    :ref:`testing.hypothesis`
+
     Examples
     --------
     Generate completely arbitrary Variable objects backed by a numpy array:
@@ -336,11 +332,7 @@ def variables(
     <xarray.Variable (a: 2, b: 1)>
     array([[-1.00000000e+007+3.40282347e+038j],
            [-2.75034266e-225+2.22507386e-311j]])
-
-    See Also
-    --------
-    :ref:`testing.hypothesis`_
-    """
+    """  # noqa: D406, D407, D410, D411, D420  # https://github.com/astral-sh/ruff/issues/29512
     if dtype is None:
         dtype = supported_dtypes()
 
@@ -445,8 +437,7 @@ def unique_subset_of(
     min_size: int = 0,
     max_size: int | None = None,
 ) -> Sequence[Hashable] | Mapping[Hashable, Any]:
-    """
-    Return a strategy which generates a unique subset of the given objects.
+    """Return a strategy which generates a unique subset of the given objects.
 
     Each entry in the output subset will be unique (if input was a sequence) or have a unique key (if it was a mapping).
 
@@ -467,16 +458,16 @@ def unique_subset_of(
     unique_subset_strategy
         Strategy generating subset of the input.
 
+    See Also
+    --------
+    :ref:`testing.hypothesis`
+
     Examples
     --------
     >>> unique_subset_of({"x": 2, "y": 3}).example()  # doctest: +SKIP
     {'y': 3}
     >>> unique_subset_of(["x", "y"]).example()  # doctest: +SKIP
     ['x']
-
-    See Also
-    --------
-    :ref:`testing.hypothesis`_
     """
     if not isinstance(objs, Iterable):
         raise TypeError(
@@ -504,8 +495,7 @@ def unique_subset_of(
 
 @st.composite
 def cftime_datetimes(draw: st.DrawFn):
-    """
-    Generates cftime datetime objects across various calendars.
+    """Generate cftime datetime objects across various calendars.
 
     This strategy generates cftime datetime objects from all available
     cftime calendars with dates ranging from year -99999 to 99999.
@@ -519,7 +509,7 @@ def cftime_datetimes(draw: st.DrawFn):
 
     See Also
     --------
-    :ref:`testing.hypothesis`_
+    :ref:`testing.hypothesis`
     """
     from xarray.tests import _all_cftime_date_types
 
