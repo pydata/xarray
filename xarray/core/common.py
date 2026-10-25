@@ -1425,6 +1425,59 @@ class DataWithCoords(AttrAccessMixin):
             dask="allowed",
         )
 
+    def replace_values(self, to_replace: Any, value: Any) -> Self:
+        """Replace each value in ``to_replace`` with the matching ``value``.
+
+        Parameters
+        ----------
+        to_replace : scalar or 1D array_like
+            Values to replace. NaN matches missing values.
+        value : scalar or 1D array_like
+            Replacement values, either one for all or one per value in ``to_replace``.
+
+        Returns
+        -------
+        replaced : same type as caller
+            The dtype is promoted to hold ``value``.
+
+        See Also
+        --------
+        Dataset.fillna
+        DataArray.fillna
+        pandas.Series.replace
+
+        Examples
+        --------
+        >>> array = xr.DataArray([0, 1, 2, 3, 4], dims="x")
+        >>> array.replace_values([1, 3], [10, 30])
+        <xarray.DataArray (x: 5)> Size: 40B
+        array([ 0, 10,  2, 30,  4])
+        Dimensions without coordinates: x
+        """
+        from xarray.computation.apply_ufunc import apply_ufunc
+
+        to_replace = np.atleast_1d(to_replace)
+        if to_replace.ndim != 1:
+            raise ValueError(
+                f"to_replace must be a scalar or 1D, got {to_replace.ndim} dimensions"
+            )
+        if not is_scalar(value):
+            value = np.asarray(value)
+            if value.shape != to_replace.shape:
+                raise ValueError(
+                    "value must be a scalar or have the same length as to_replace, "
+                    f"got shapes {value.shape} and {to_replace.shape}"
+                )
+        if np.unique(to_replace).size != to_replace.size:
+            raise ValueError("to_replace must not contain duplicates")
+
+        return apply_ufunc(
+            duck_array_ops.replace_values,
+            self,
+            kwargs=dict(to_replace=to_replace, value=value),
+            dask="parallelized",
+        )
+
     def astype(
         self,
         dtype,

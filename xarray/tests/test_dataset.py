@@ -8185,6 +8185,24 @@ def test_isin_dataset() -> None:
         ds.isin(ds)
 
 
+def test_replace_values(use_dask: bool) -> None:
+    ds = Dataset(
+        data_vars={"a": ("x", [0, 1, 2]), "b": ("x", [1.0, np.nan, 3.0])},
+        coords={"x": [1, 2, 3]},
+        attrs={"title": "test"},
+    )
+    if use_dask:
+        ds = ds.chunk()
+    expected = Dataset(
+        data_vars={"a": ("x", [0, 10, 2]), "b": ("x", [10.0, np.nan, 30.0])},
+        coords={"x": [1, 2, 3]},
+        attrs={"title": "test"},
+    )
+
+    actual = ds.replace_values([1, 3], [10, 30])
+    assert_identical(actual, expected)
+
+
 @pytest.mark.parametrize(
     "unaligned_coords",
     (
