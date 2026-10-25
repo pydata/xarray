@@ -12,7 +12,9 @@ Adding a new backend for read support to Xarray does not require
 one to integrate any code in Xarray; all you need to do is:
 
 - Create a class that inherits from Xarray {py:class}`~xarray.backends.BackendEntrypoint`
-  and implements the method `open_dataset` see {ref}`rst-backend-entrypoint`
+  and implements the appropriate read method: `open_dataset` for individual
+  datasets, or the optional `open_datatree` and `open_groups_as_dict` methods
+  for hierarchical data. See {ref}`rst-backend-entrypoint`.
 - Declare this class as an external plugin in your project configuration, see {ref}`rst-backend-registration`
 
 If you also want to support lazy loading and dask see {ref}`rst-lazy-loading`.
