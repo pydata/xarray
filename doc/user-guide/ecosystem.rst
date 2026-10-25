@@ -16,7 +16,8 @@ Geosciences
 - `argopy <https://github.com/euroargodev/argopy>`_: xarray-based Argo data access, manipulation and visualisation for standard users as well as Argo experts.
 - `cf_xarray <https://cf-xarray.readthedocs.io/en/latest/>`_: Provides an accessor (DataArray.cf or Dataset.cf) that allows you to interpret Climate and Forecast metadata convention attributes present on xarray objects.
 - `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
-- `geocube <https://corteva.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
+- `geocube <https://vylor.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
+- `GeoUtils <https://geoutils.readthedocs.io>`_: Raster and vector operations for geospatial analysis, built on rasterio and geopandas.
 - `GeoWombat <https://github.com/jgrss/geowombat>`_: Utilities for analysis of remotely sensed and gridded raster data at scale (easily tame Landsat, Sentinel, Quickbird, and PlanetScope).
 - `grib2io <https://github.com/NOAA-MDL/grib2io>`_: Utility to work with GRIB2 files including an xarray backend, DASK support for parallel reading in open_mfdataset, lazy loading of data, editing of GRIB2 attributes and GRIB2IO DataArray attrs, and spatial interpolation and reprojection of GRIB2 messages and GRIB2IO Datasets/DataArrays for both grid to grid and grid to stations.
 - `gsw-xarray <https://github.com/DocOtak/gsw-xarray>`_: a wrapper around `gsw <https://teos-10.github.io/GSW-Python>`_ that adds CF compliant attributes when possible, units, name.
@@ -35,11 +36,12 @@ Geosciences
 - `pyinterp <https://pangeo-pyinterp.readthedocs.io/en/latest/>`_: Python 3 package for interpolating geo-referenced data used in the field of geosciences.
 - `pyXpcm <https://pyxpcm.readthedocs.io>`_: xarray-based Profile Classification Modelling (PCM), mostly for ocean data.
 - `Regionmask <https://regionmask.readthedocs.io/>`_: plotting and creation of masks of spatial regions
-- `rioxarray <https://corteva.github.io/rioxarray>`_: geospatial xarray extension powered by rasterio
+- `rioxarray <https://vylor.github.io/rioxarray>`_: geospatial xarray extension powered by rasterio
 - `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
 - `SatPy <https://satpy.readthedocs.io/>`_ : Library for reading and manipulating meteorological remote sensing data and writing it to various image and data file formats.
 - `SARXarray <https://tudelftgeodesy.github.io/sarxarray/>`_: xarray extension for reading and processing large Synthetic Aperture Radar (SAR) data stacks.
 - `shxarray <https://shxarray.wobbly.earth/>`_: Convert, filter,and map geodesy related spherical harmonic representations of gravity and terrestrial water storage through an xarray extension.
+- `spharmgrid <https://spharmgrid.readthedocs.io/>`_: Spherical harmonic tools for atmospheric science, including scalar and vector filtering, regridding, differential operators, and kinematics. Built on `DUCC <https://gitlab.mpcdf.mpg.de/mtr/ducc>`_, implementing most of `NCL <https://www.ncl.ucar.edu/>`_'s high-level spherical harmonic operations.
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
 - `TOAD <https://github.com/tipmip-methods/toad/>`_: TOAD (Tipping and Other Abrupt events Detector) detects and clusters abrupt shifts in gridded Earth system data and operates directly on xarray datasets.
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
@@ -86,6 +88,7 @@ Extend xarray capabilities
 - `xarray-dataclasses <https://github.com/astropenguin/xarray-dataclasses>`_: xarray extension for typed DataArray and Dataset creation.
 - `xarray_einstats <https://xarray-einstats.readthedocs.io>`_: Statistics, linear algebra and einops for xarray
 - `xarray_extras <https://github.com/crusaderky/xarray_extras>`_: Advanced algorithms for xarray objects (e.g. integrations/interpolations).
+- `xarray-mongodb <https://xarray-mongodb.readthedocs.io/en/latest/>`_: Store xarray objects on MongoDB.
 - `xeofs <https://github.com/nicrie/xeofs>`_: PCA/EOF analysis and related techniques, integrated with xarray and Dask for efficient handling of large-scale data.
 - `xpublish <https://xpublish.readthedocs.io/>`_: Publish Xarray Datasets via a Zarr compatible REST API.
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.

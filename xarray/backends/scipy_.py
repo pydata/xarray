@@ -4,7 +4,7 @@ import gzip
 import io
 import os
 from collections.abc import Iterable, Mapping
-from typing import IO, TYPE_CHECKING, Any, Literal, TypeVar, overload
+from typing import IO, TYPE_CHECKING, Any, ClassVar, Literal, overload, override
 
 import numpy as np
 
@@ -31,7 +31,6 @@ from xarray.core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
-    module_available,
     try_read_magic_number_from_file_or_path,
 )
 from xarray.core.variable import Variable
@@ -44,31 +43,35 @@ if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
     from xarray.core.types import ReadBuffer
 
-T = TypeVar("T")
-K = TypeVar("K")
-V = TypeVar("V")
-
-HAS_NUMPY_2_0 = module_available("numpy", minversion="2.0.0.dev0")
-
 
 @overload
 def _decode_string(s: bytes) -> str: ...
 
 
 @overload
-def _decode_string(s: T) -> T: ...
+def _decode_string[T](s: T) -> T: ...
 
 
-def _decode_string(s: bytes | T) -> str | T:
+def _decode_string[T](s: bytes | T) -> str | T:
     if isinstance(s, bytes):
         return s.decode("utf-8", "replace")
     return s
 
 
-def _decode_attrs(d: Mapping[K, V]) -> dict[K, V]:
+def _force_native_endianness_attr(value: Any) -> Any:
+    # scipy returns numeric attribute arrays in netCDF3's big-endian byte order
+    if isinstance(value, np.ndarray) and not value.dtype.isnative:
+        value = value.astype(value.dtype.newbyteorder("="))
+    return value
+
+
+def _decode_attrs[K, V](d: Mapping[K, V]) -> dict[K, V]:
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
-    return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}
+    return {
+        k: _force_native_endianness_attr(v if k == "_FillValue" else _decode_string(v))
+        for (k, v) in d.items()
+    }
 
 
 class ScipyArrayWrapper(BackendArray):
@@ -89,25 +92,32 @@ class ScipyArrayWrapper(BackendArray):
         return ds.variables[self.variable_name]
 
     def _getitem(self, key):
-        with self.datastore.lock:
-            data = self.get_variable(needs_lock=False).data
-            return data[key]
+        with (
+            self.datastore.lock,
+            self.datastore._manager.acquire_context(needs_lock=False) as ds,
+        ):
+            source = ds.variables[self.variable_name].data
+            data = indexing.NumpyIndexingAdapter(source).oindex[
+                indexing.OuterIndexer(key)
+            ]
+            # Copy data if it is a view into a mmapped file. This makes things
+            # consistent with the netCDF4 library by ensuring we can safely read
+            # arrays even after closing associated files. Copy while the file is
+            # pinned, so that another thread evicting it from the file cache
+            # cannot close it while a view into its memory map is still alive.
+            # Advanced indexing already returns a copy, so skip copying twice.
+            if ds.use_mmap and np.may_share_memory(data, source):
+                data = np.array(data, copy=True)
+            # Unpinning may close the file, so drop our view into the memory
+            # map before leaving this block.
+            del source
+            return data
 
     def __getitem__(self, key):
         data = indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR, self._getitem
         )
-        # Copy data if the source file is mmapped. This makes things consistent
-        # with the netCDF4 library by ensuring we can safely read arrays even
-        # after closing associated files.
-        copy: bool | None = self.datastore.ds.use_mmap
-
-        # adapt handling of copy-kwarg to numpy 2.0
-        # see https://github.com/numpy/numpy/issues/25916
-        # and https://github.com/numpy/numpy/pull/25922
-        copy = None if HAS_NUMPY_2_0 and copy is False else copy
-
-        return np.array(data, dtype=self.dtype, copy=copy)
+        return np.asarray(data, dtype=self.dtype)
 
     def __setitem__(self, key, value):
         with self.datastore.lock:
@@ -127,11 +137,18 @@ class ScipyArrayWrapper(BackendArray):
 # TODO: Remove this after upstreaming the fixes to scipy.
 class _PickleWorkaround:
     flush_only_netcdf_file: type[scipy.io.netcdf_file]
+    _initialized: ClassVar[bool] = False
 
     @classmethod
     def add_cls(cls, new_class: type[Any]) -> None:
-        setattr(cls, new_class.__name__, new_class)
-        new_class.__qualname__ = cls.__qualname__ + "." + new_class.__name__
+        # Only set the class once to ensure pickling stability.
+        # Each call to _open_scipy_netcdf creates a new class, but we only need
+        # the first one. Subsequent calls would overwrite the class definition,
+        # breaking pickle's class-identity check for instances created earlier.
+        if not cls._initialized:
+            setattr(cls, new_class.__name__, new_class)
+            new_class.__qualname__ = cls.__qualname__ + "." + new_class.__name__
+            cls._initialized = True
 
 
 def _open_scipy_netcdf(
@@ -288,22 +305,27 @@ class ScipyDataStore(WritableCFDataStore):
             _decode_attrs(var._attributes),  # type: ignore[attr-defined]  # using private attribute
         )
 
+    @override
     def get_variables(self) -> Frozen[str, Variable]:
         return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 
+    @override
     def get_attrs(self) -> Frozen[str, Any]:
         return Frozen(_decode_attrs(self.ds._attributes))  # type: ignore[attr-defined]  # using private attribute
 
+    @override
     def get_dimensions(self) -> Frozen[str, int | None]:
         return Frozen(self.ds.dimensions)
 
+    @override
     def get_encoding(self) -> dict[Literal["unlimited_dims"], set[str]]:
         return {
             "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
         }
 
+    @override
     def set_dimension(self, name: str, length: int, is_unlimited: bool = False) -> None:
         if name in self.ds.dimensions:
             raise ValueError(
@@ -316,15 +338,18 @@ class ScipyDataStore(WritableCFDataStore):
         if not is_valid_nc3_name(key):
             raise ValueError("Not a valid attribute name")
 
+    @override
     def set_attribute(self, key: str, value: Any) -> None:
         self._validate_attr_key(key)
         value = encode_nc3_attr_value(value)
         setattr(self.ds, key, value)
 
+    @override
     def encode_variable(self, variable: Variable, name: str | None = None) -> Variable:
         variable = encode_nc3_variable(variable, name=name)
         return variable
 
+    @override
     def prepare_variable(
         self,
         name: str,
@@ -356,9 +381,11 @@ class ScipyDataStore(WritableCFDataStore):
 
         return target, data
 
+    @override
     def sync(self) -> None:
         self.ds.sync()
 
+    @override
     def close(self) -> None:
         self._manager.close()
 
@@ -373,8 +400,7 @@ def _normalize_filename_or_obj(
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the scipy package.
+    """Backend for netCDF files based on the scipy package.
 
     It can open ".nc", ".cdf", and "nc..gz" files but will only be
     selected as the default if the "netcdf4" and "h5netcdf" engines are
@@ -396,6 +422,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
     description = "Open netCDF files (.nc, .cdf and .nc.gz) using scipy in Xarray"
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.ScipyBackendEntrypoint.html"
 
+    @override
     def guess_can_open(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -423,6 +450,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
 
         return False
 
+    @override
     def open_dataset(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -446,7 +474,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         )
 
         store_entrypoint = StoreBackendEntrypoint()
-        with close_on_error(store):
+        with close_on_error(store), store._manager.acquire_context():
             ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,

@@ -8,7 +8,7 @@ import pytest
 
 from xarray import set_options
 from xarray.core.types import T_Chunks, T_DuckArray, T_NormalizedChunks
-from xarray.namedarray._typing import _Chunks
+from xarray.namedarray._typing import Chunks
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import (
     KNOWN_CHUNKMANAGERS,
@@ -22,8 +22,7 @@ from xarray.tests import requires_dask
 
 
 class DummyChunkedArray(np.ndarray):
-    """
-    Mock-up of a chunked array class.
+    """Mock-up of a chunked array class.
 
     Adds a (non-functional) .chunks attribute by following this example in the numpy docs
     https://numpy.org/doc/stable/user/basics.subclassing.html#simple-example-adding-an-extra-attribute-to-ndarray
@@ -56,14 +55,22 @@ class DummyChunkedArray(np.ndarray):
         return copied
 
 
+class OtherDummyChunkedArray(np.ndarray):
+    """A second, unrelated chunked array type handled by the same chunk manager."""
+
+    @property
+    def chunks(self) -> T_NormalizedChunks:
+        return tuple((size,) for size in self.shape)
+
+
 class DummyChunkManager(ChunkManagerEntrypoint):
-    """Mock-up of ChunkManager class for DummyChunkedArray"""
+    """Mock-up of ChunkManager class for DummyChunkedArray."""
 
     def __init__(self):
         self.array_cls = DummyChunkedArray
 
     def is_chunked_array(self, data: Any) -> bool:
-        return isinstance(data, DummyChunkedArray)
+        return isinstance(data, DummyChunkedArray | OtherDummyChunkedArray)
 
     def chunks(self, data: DummyChunkedArray) -> T_NormalizedChunks:
         return data.chunks
@@ -81,7 +88,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
         return normalize_chunks(chunks, shape, limit, dtype, previous_chunks)
 
     def from_array(
-        self, data: T_DuckArray | np.typing.ArrayLike, chunks: _Chunks, **kwargs
+        self, data: T_DuckArray | np.typing.ArrayLike, chunks: Chunks, **kwargs
     ) -> DummyChunkedArray:
         from dask import array as da
 
@@ -130,8 +137,7 @@ class DummyChunkManager(ChunkManagerEntrypoint):
 
 @pytest.fixture
 def register_dummy_chunkmanager(monkeypatch):
-    """
-    Mocks the registering of an additional ChunkManagerEntrypoint.
+    """Mock the registering of an additional ChunkManagerEntrypoint.
 
     This preserves the presence of the existing DaskManager, so a test that relies on this and DaskManager both being
     returned from list_chunkmanagers() at once would still work.
@@ -250,6 +256,15 @@ class TestGetChunkedArrayType:
 
         chunk_manager = get_chunked_array_type(dask_arr)
         assert isinstance(chunk_manager, DaskManager)
+
+    def test_detect_several_array_types_from_one_chunkmanager(
+        self, register_dummy_chunkmanager
+    ) -> None:
+        dummy_arr = DummyChunkedArray([1, 2, 3])
+        other_arr = OtherDummyChunkedArray([1, 2, 3])
+
+        chunk_manager = get_chunked_array_type(dummy_arr, other_arr)
+        assert isinstance(chunk_manager, DummyChunkManager)
 
     @requires_dask
     def test_raise_on_mixed_array_types(self, register_dummy_chunkmanager) -> None:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, get_args
 
@@ -30,7 +29,6 @@ if TYPE_CHECKING:
         "display_expand_groups",
         "display_expand_indexes",
         "display_default_indexes",
-        "enable_cftimeindex",
         "file_cache_maxsize",
         "keep_attrs",
         "netcdf_engine_order",
@@ -64,7 +62,6 @@ if TYPE_CHECKING:
         display_expand_groups: Literal["default"] | bool
         display_expand_indexes: Literal["default"] | bool
         display_default_indexes: Literal["default"] | bool
-        enable_cftimeindex: bool
         file_cache_maxsize: int
         keep_attrs: Literal["default"] | bool
         netcdf_engine_order: Sequence[Literal["netcdf4", "h5netcdf", "scipy"]]
@@ -98,12 +95,11 @@ OPTIONS: T_Options = {
     "display_expand_groups": "default",
     "display_expand_indexes": "default",
     "display_default_indexes": False,
-    "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
     "netcdf_engine_order": ("netcdf4", "h5netcdf", "scipy"),
     "warn_for_unclosed_files": False,
-    "use_bottleneck": True,
+    "use_bottleneck": False,
     "use_flox": True,
     "use_new_combine_kwarg_defaults": False,
     "use_numbagg": True,
@@ -138,7 +134,6 @@ _VALIDATORS = {
     "display_expand_data": lambda choice: choice in [True, False, "default"],
     "display_expand_indexes": lambda choice: choice in [True, False, "default"],
     "display_default_indexes": lambda choice: choice in [True, False, "default"],
-    "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "netcdf_engine_order": lambda engines: set(engines) <= _NETCDF_ENGINES,
@@ -165,17 +160,7 @@ def _set_file_cache_maxsize(value) -> None:
     FILE_CACHE.maxsize = value
 
 
-def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
-    warnings.warn(
-        "The enable_cftimeindex option is now a no-op "
-        "and will be removed in a future version of xarray.",
-        FutureWarning,
-        stacklevel=2,
-    )
-
-
 _SETTERS = {
-    "enable_cftimeindex": _warn_on_setting_enable_cftimeindex,
     "file_cache_maxsize": _set_file_cache_maxsize,
 }
 
@@ -198,42 +183,145 @@ def _get_keep_attrs(default: bool) -> bool:
 
 
 class set_options:
-    """
-    Set options for xarray in a controlled context.
+    """Set options for xarray in a controlled context.
 
     Parameters
     ----------
     arithmetic_broadcast : bool, default: True
         Whether to perform automatic broadcasting in binary operations.
-    arithmetic_compat: {"identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"}, default: "minimal"
+
+    arithmetic_compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"}, default: "minimal"
         How to compare non-index coordinates of the same name for potential
         conflicts when performing binary operations. (For the alignment of index
         coordinates in binary operations, see `arithmetic_join`.)
 
-        - "identical": all values, dimensions and attributes of the coordinates
+        Allowed values are:
+
+        - ``"identical"``: all values, dimensions and attributes of the coordinates
           must be the same.
-        - "equals": all values and dimensions of the coordinates must be the
+        - ``"equals"``: all values and dimensions of the coordinates must be the
           same.
-        - "broadcast_equals": all values of the coordinates must be equal after
+        - ``"broadcast_equals"``: all values of the coordinates must be equal after
           broadcasting to ensure common dimensions.
-        - "no_conflicts": only values which are not null in both coordinates
+        - ``"no_conflicts"``: only values which are not null in both coordinates
           must be equal. The returned coordinate then contains the combination
           of all non-null values.
-        - "override": skip comparing and take the coordinates from the first
+        - ``"override"``: skip comparing and take the coordinates from the first
           operand.
-        - "minimal": drop conflicting coordinates.
-    arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
-        DataArray/Dataset index alignment in binary operations:
+        - ``"minimal"``: drop conflicting coordinates.
 
-        - "outer": use the union of object indexes
-        - "inner": use the intersection of object indexes
-        - "left": use indexes from the first object with each dimension
-        - "right": use indexes from the last object with each dimension
-        - "exact": instead of aligning, raise `ValueError` when indexes to be
+    arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
+        DataArray/Dataset index alignment in binary operations.
+
+        Allowed values are:
+
+        - ``"outer"``: use the union of object indexes
+        - ``"inner"``: use the intersection of object indexes
+        - ``"left"``: use indexes from the first object with each dimension
+        - ``"right"``: use indexes from the last object with each dimension
+        - ``"exact"``: instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
+
     chunk_manager : str, default: "dask"
         Chunk manager to use for chunked array computations when multiple
         options are installed.
+
+    cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
+        Colormap to use for divergent data plots. If string, must be a
+        matplotlib built-in colormap. Can also be a Colormap object
+        (e.g. ``mpl.colormaps["magma"]``).
+
+    cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
+        Colormap to use for non-divergent data plots. If string, must be a
+        matplotlib built-in colormap. Can also be a Colormap object
+        (e.g. ``mpl.colormaps["magma"]``).
+
+    display_default_indexes : {"default", True, False}, default: False
+        Whether to show default indexes, i.e. ``PandasIndex`` and
+        ``PandasMultiIndex``, in the indexes section of the repr of
+        ``DataArray``, ``Dataset`` and ``DataTree`` objects. ``"default"`` hides
+        them, like ``False``.
+
+    display_expand_attrs : {"default", True, False}, default: "default"
+        Whether to expand the attributes section for display of
+        ``DataArray`` or ``Dataset`` objects.
+
+        Allowed values are:
+
+        * ``True`` : always expand attrs
+        * ``False`` : always collapse attrs
+        * ``"default"`` : expand unless over a pre-defined limit
+
+    display_expand_coords : {"default", True, False}, default: "default"
+        Whether to expand the coordinates section for display of
+        ``DataArray`` or ``Dataset`` objects.
+
+        Allowed values are:
+
+        * ``True`` : always expand coordinates
+        * ``False`` : always collapse coordinates
+        * ``"default"`` : expand unless over a pre-defined limit
+
+    display_expand_data : {"default", True, False}, default: "default"
+        Whether to expand the data section for display of ``DataArray``
+        objects.
+
+        Allowed values are:
+
+        * ``True`` : always expand data
+        * ``False`` : always collapse data
+        * ``"default"`` : expand unless over a pre-defined limit
+
+    display_expand_data_vars : {"default", True, False}, default: "default"
+        Whether to expand the data variables section for display of
+        ``Dataset`` objects.
+
+        Allowed values are:
+
+        * ``True`` : always expand data variables
+        * ``False`` : always collapse data variables
+        * ``"default"`` : expand unless over a pre-defined limit
+
+    display_expand_groups : {"default", True, False}, default: "default"
+        Has no effect since the HTML repr of ``DataTree`` was reworked in
+        v2026.01.0. Use ``display_max_children`` and
+        ``display_max_html_elements`` to limit the displayed groups instead.
+
+    display_expand_indexes : {"default", True, False}, default: "default"
+        Whether to expand the indexes section for display of
+        ``DataArray`` or ``Dataset`` objects.
+
+        Allowed values are:
+
+        * ``True`` : always expand indexes
+        * ``False`` : always collapse indexes
+        * ``"default"`` : expand unless over a pre-defined limit
+          (always collapse for HTML style)
+
+    display_max_children : int, default: 12
+        Maximum number of children to display for each node in a DataTree.
+
+    display_max_html_elements : int, default: 300
+        Maximum number of HTML elements to include in DataTree HTML displays.
+        Additional items are truncated.
+
+    display_max_rows : int, default: 12
+        Maximum display rows.
+
+    display_max_items : int, default: 20
+        Maximum number of items to display for a DataTree before collapsing
+        child nodes, across all levels.
+
+    display_values_threshold : int, default: 200
+        Total number of array elements which trigger summarization rather
+        than full repr for variable data views (NumPy arrays).
+
+    display_style : {"text", "html"}, default: "html"
+        Display style to use in Jupyter for xarray objects.
+
+    display_width : int, default: 80
+        Maximum display width for ``repr`` on xarray objects.
+
     facetgrid_figsize : {"computed", "rcparams"} or tuple of float, default: "computed"
         How :class:`~xarray.plot.FacetGrid` determines figure size when
         ``figsize`` is not explicitly passed:
@@ -243,91 +331,39 @@ class set_options:
         * ``"rcparams"`` : use ``matplotlib.rcParams['figure.figsize']`` as the
           total figure size.
         * ``(width, height)`` : use a fixed figure size (in inches).
-    cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
-        Colormap to use for divergent data plots. If string, must be
-        matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.colormaps["magma"])
-    cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
-        Colormap to use for nondivergent data plots. If string, must be
-        matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.colormaps["magma"])
-    display_expand_attrs : {"default", True, False}
-        Whether to expand the attributes section for display of
-        ``DataArray`` or ``Dataset`` objects. Can be
 
-        * ``True`` : to always expand attrs
-        * ``False`` : to always collapse attrs
-        * ``default`` : to expand unless over a pre-defined limit
-    display_expand_coords : {"default", True, False}
-        Whether to expand the coordinates section for display of
-        ``DataArray`` or ``Dataset`` objects. Can be
-
-        * ``True`` : to always expand coordinates
-        * ``False`` : to always collapse coordinates
-        * ``default`` : to expand unless over a pre-defined limit
-    display_expand_data : {"default", True, False}
-        Whether to expand the data section for display of ``DataArray``
-        objects. Can be
-
-        * ``True`` : to always expand data
-        * ``False`` : to always collapse data
-        * ``default`` : to expand unless over a pre-defined limit
-    display_expand_data_vars : {"default", True, False}
-        Whether to expand the data variables section for display of
-        ``Dataset`` objects. Can be
-
-        * ``True`` : to always expand data variables
-        * ``False`` : to always collapse data variables
-        * ``default`` : to expand unless over a pre-defined limit
-    display_expand_indexes : {"default", True, False}
-        Whether to expand the indexes section for display of
-        ``DataArray`` or ``Dataset``. Can be
-
-        * ``True`` : to always expand indexes
-        * ``False`` : to always collapse indexes
-        * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
-    display_max_children : int, default: 12
-        Maximum number of children to display for each node in a DataTree.
-    display_max_html_elements : int, default: 300
-        Maximum number of HTML elements to include in DataTree HTML displays.
-        Additional items are truncated.
-    display_max_rows : int, default: 12
-        Maximum display rows.
-    display_max_items : int, default 20
-        Maximum number of items to display for a DataTree before collapsing
-        child nodes, across all levels.
-    display_values_threshold : int, default: 200
-        Total number of array elements which trigger summarization rather
-        than full repr for variable data views (numpy arrays).
-    display_style : {"text", "html"}, default: "html"
-        Display style to use in jupyter for xarray objects.
-    display_width : int, default: 80
-        Maximum display width for ``repr`` on xarray objects.
     file_cache_maxsize : int, default: 128
-        Maximum number of open files to hold in xarray's
-        global least-recently-usage cached. This should be smaller than
-        your system's per-process file descriptor limit, e.g.,
-        ``ulimit -n`` on Linux.
-    keep_attrs : {"default", True, False}
-        Whether to keep attributes on xarray Datasets/dataarrays after
-        operations. Can be
+        Maximum number of open files to hold in xarray's global
+        least-recently-used cache. This should be smaller than your system's
+        per-process file descriptor limit (e.g., ``ulimit -n`` on Linux).
 
-        * ``True`` : to always keep attrs
-        * ``False`` : to always discard attrs
-        * ``default`` : to use original logic that attrs should only
-          be kept in unambiguous circumstances
-    netcdf_engine_order : sequence, default ['netcdf4', 'h5netcdf', 'scipy']
+    keep_attrs : {"default", True, False}, default: "default"
+        Whether to keep attributes on xarray Datasets/DataArrays after
+        operations.
+
+        Allowed values are:
+
+        * ``True`` : always keep attrs
+        * ``False`` : always discard attrs
+        * ``"default"`` : keep attrs only in unambiguous circumstances
+
+    netcdf_engine_order : sequence of {"netcdf4", "h5netcdf", "scipy"}
         Preference order of backend engines to use when reading or writing
         netCDF files with ``open_dataset()`` and ``to_netcdf()`` if ``engine``
-        is not explicitly specified. May be any permutation or subset of
-        ``['netcdf4', 'h5netcdf', 'scipy']``.
-    use_bottleneck : bool, default: True
+        is not explicitly specified. May be any permutation or subset of the
+        allowed values.
+
+        Default is ``("netcdf4", "h5netcdf", "scipy")``.
+
+    use_bottleneck : bool, default: False
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.
+
     use_flox : bool, default: True
-        Whether to use ``numpy_groupies`` and `flox`` to
-        accelerate groupby and resampling reductions.
-    use_new_combine_kwarg_defaults : bool, default False
+        Whether to use ``numpy_groupies`` and ``flox`` to accelerate
+        groupby and resampling reductions.
+
+    use_new_combine_kwarg_defaults : bool, default: False
         Whether to use new kwarg default values for combine functions:
         :py:func:`~xarray.concat`, :py:func:`~xarray.merge`,
         :py:func:`~xarray.open_mfdataset`. New values are:
@@ -336,14 +372,17 @@ class set_options:
         * ``coords``: "minimal"
         * ``compat``: "override"
         * ``join``: "exact"
+
     use_numbagg : bool, default: True
         Whether to use ``numbagg`` to accelerate reductions.
         Takes precedence over ``use_bottleneck`` when both are True.
+
     use_opt_einsum : bool, default: True
         Whether to use ``opt_einsum`` to accelerate dot products.
+
     warn_for_unclosed_files : bool, default: False
-        Whether or not to issue a warning when unclosed files are
-        deallocated. This is mostly useful for debugging.
+        Whether or not to issue a warning when unclosed files are deallocated.
+        This is mostly useful for debugging.
 
     Examples
     --------
@@ -407,8 +446,7 @@ class set_options:
 
 
 def get_options():
-    """
-    Get options for xarray.
+    """Get options for xarray.
 
     See Also
     --------

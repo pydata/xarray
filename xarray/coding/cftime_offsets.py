@@ -1,4 +1,4 @@
-"""Time offset classes for use with cftime.datetime objects"""
+"""Time offset classes for use with cftime.datetime objects."""
 
 # The offset classes and mechanisms for generating time ranges defined in
 # this module were copied/adapted from those defined in pandas.  See in
@@ -47,7 +47,7 @@ import warnings
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar, get_args
+from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar, get_args, override
 
 import numpy as np
 import pandas as pd
@@ -167,8 +167,11 @@ class BaseCFTimeOffset:
         return NotImplemented
 
     def onOffset(self, date) -> bool:
-        """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        """Check if the given date is in the set of possible dates of this offset.
+
+        The possible dates are those created using a length-one version of this
+        offset class.
+        """
         test_date = (self + date) - self
         return date == test_date
 
@@ -213,6 +216,7 @@ class Tick(BaseCFTimeOffset):
             return Microsecond(self.n * 1000)
         raise ValueError("Could not convert to integer offset at any resolution")
 
+    @override
     def __mul__(self, other: int | float) -> Tick:
         if not isinstance(other, int | float):
             return NotImplemented
@@ -234,8 +238,10 @@ class Tick(BaseCFTimeOffset):
 
 
 def _get_day_of_month(other, day_option: DayOption) -> int:
-    """Find the day in `other`'s month that satisfies a BaseCFTimeOffset's
-    onOffset policy, as described by the `day_option` argument.
+    """Find the day in `other`'s month that satisfies the onOffset policy.
+
+    The onOffset policy of a BaseCFTimeOffset is described by the `day_option`
+    argument.
 
     Parameters
     ----------
@@ -249,7 +255,6 @@ def _get_day_of_month(other, day_option: DayOption) -> int:
     day_of_month : int
 
     """
-
     if day_option == "start":
         return 1
     elif day_option == "end":
@@ -262,8 +267,10 @@ def _get_day_of_month(other, day_option: DayOption) -> int:
 
 
 def _adjust_n_months(other_day, n, reference_day):
-    """Adjust the number of times a monthly offset is applied based
-    on the day of a given date, and the reference day provided.
+    """Adjust the number of times a monthly offset is applied.
+
+    The adjustment is based on the day of a given date, and the reference day
+    provided.
     """
     if n > 0 and other_day < reference_day:
         n = n - 1
@@ -273,8 +280,10 @@ def _adjust_n_months(other_day, n, reference_day):
 
 
 def _adjust_n_years(other, n, month, reference_day):
-    """Adjust the number of times an annual offset is applied based on
-    another date, and the reference day provided"""
+    """Adjust the number of times an annual offset is applied.
+
+    The adjustment is based on another date, and the reference day provided.
+    """
     if n > 0:
         if other.month < month or (other.month == month and other.day < reference_day):
             n -= 1
@@ -318,8 +327,9 @@ def _shift_month(date, months, day_option: DayOption = "start"):
 def roll_qtrday(
     other, n: int, month: int, day_option: DayOption, modby: int = 3
 ) -> int:
-    """Possibly increment or decrement the number of periods to shift
-    based on rollforward/rollbackward conventions.
+    """Possibly increment or decrement the number of periods to shift.
+
+    The adjustment is based on rollforward/rollbackward conventions.
 
     Parameters
     ----------
@@ -339,7 +349,6 @@ def roll_qtrday(
     --------
     _get_day_of_month : Find the day in a month provided an offset.
     """
-
     months_since = other.month % modby - month % modby
 
     if n > 0:
@@ -377,26 +386,36 @@ def _validate_month(month: int | None, default_month: int) -> int:
 class MonthBegin(BaseCFTimeOffset):
     _freq = "MS"
 
+    @override
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, 1)
         return _shift_month(other, n, "start")
 
+    @override
     def onOffset(self, date) -> bool:
-        """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        """Check if the given date is in the set of possible dates of this offset.
+
+        The possible dates are those created using a length-one version of this
+        offset class.
+        """
         return date.day == 1
 
 
 class MonthEnd(BaseCFTimeOffset):
     _freq = "ME"
 
+    @override
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, other.daysinmonth)
         return _shift_month(other, n, "end")
 
+    @override
     def onOffset(self, date) -> bool:
-        """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        """Check if the given date is in the set of possible dates of this offset.
+
+        The possible dates are those created using a length-one version of this
+        offset class.
+        """
         return date.day == date.daysinmonth
 
 
@@ -417,7 +436,7 @@ _MONTH_ABBREVIATIONS = {
 
 
 class QuarterOffset(BaseCFTimeOffset):
-    """Quarter representation copied off of pandas/tseries/offsets.py"""
+    """Quarter representation copied off of pandas/tseries/offsets.py."""
 
     _default_month: ClassVar[int]
     month: int
@@ -426,6 +445,7 @@ class QuarterOffset(BaseCFTimeOffset):
         BaseCFTimeOffset.__init__(self, n)
         self.month = _validate_month(month, self._default_month)
 
+    @override
     def __apply__(self, other):
         # months_since: find the calendar quarter containing other.month,
         # e.g. if other.month == 8, the calendar quarter is [Jul, Aug, Sep].
@@ -439,12 +459,17 @@ class QuarterOffset(BaseCFTimeOffset):
         months = qtrs * 3 - months_since
         return _shift_month(other, months, self._day_option)
 
+    @override
     def onOffset(self, date) -> bool:
-        """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        """Check if the given date is in the set of possible dates of this offset.
+
+        The possible dates are those created using a length-one version of this
+        offset class.
+        """
         mod_month = (date.month - self.month) % 3
         return mod_month == 0 and date.day == self._get_offset_day(date)
 
+    @override
     def __sub__(self, other: Self) -> Self:
         if TYPE_CHECKING:
             import cftime
@@ -457,14 +482,17 @@ class QuarterOffset(BaseCFTimeOffset):
             return type(self)(self.n - other.n, month=self.month)
         return NotImplemented
 
+    @override
     def __mul__(self, other):
         if isinstance(other, float):
             return NotImplemented
         return type(self)(n=other * self.n, month=self.month)
 
+    @override
     def rule_code(self) -> str:
         return f"{self._freq}-{_MONTH_ABBREVIATIONS[self.month]}"
 
+    @override
     def __str__(self):
         return f"<{type(self).__name__}: n={self.n}, month={self.month}>"
 
@@ -479,15 +507,17 @@ class QuarterBegin(QuarterOffset):
     _freq = "QS"
     _day_option = "start"
 
+    @override
     def rollforward(self, date):
-        """Roll date forward to nearest start of quarter"""
+        """Roll date forward to nearest start of quarter."""
         if self.onOffset(date):
             return date
         else:
             return date + QuarterBegin(month=self.month)
 
+    @override
     def rollback(self, date):
-        """Roll date backward to nearest start of quarter"""
+        """Roll date backward to nearest start of quarter."""
         if self.onOffset(date):
             return date
         else:
@@ -504,15 +534,17 @@ class QuarterEnd(QuarterOffset):
     _freq = "QE"
     _day_option = "end"
 
+    @override
     def rollforward(self, date):
-        """Roll date forward to nearest end of quarter"""
+        """Roll date forward to nearest end of quarter."""
         if self.onOffset(date):
             return date
         else:
             return date + QuarterEnd(month=self.month)
 
+    @override
     def rollback(self, date):
-        """Roll date backward to nearest end of quarter"""
+        """Roll date backward to nearest end of quarter."""
         if self.onOffset(date):
             return date
         else:
@@ -527,12 +559,14 @@ class YearOffset(BaseCFTimeOffset):
         BaseCFTimeOffset.__init__(self, n)
         self.month = _validate_month(month, self._default_month)
 
+    @override
     def __apply__(self, other):
         reference_day = _get_day_of_month(other, self._day_option)
         years = _adjust_n_years(other, self.n, self.month, reference_day)
         months = years * 12 + (self.month - other.month)
         return _shift_month(other, months, self._day_option)
 
+    @override
     def __sub__(self, other):
         if TYPE_CHECKING:
             import cftime
@@ -546,14 +580,17 @@ class YearOffset(BaseCFTimeOffset):
         else:
             return NotImplemented
 
+    @override
     def __mul__(self, other):
         if isinstance(other, float):
             return NotImplemented
         return type(self)(n=other * self.n, month=self.month)
 
+    @override
     def rule_code(self) -> str:
         return f"{self._freq}-{_MONTH_ABBREVIATIONS[self.month]}"
 
+    @override
     def __str__(self) -> str:
         return f"<{type(self).__name__}: n={self.n}, month={self.month}>"
 
@@ -563,20 +600,26 @@ class YearBegin(YearOffset):
     _day_option = "start"
     _default_month = 1
 
+    @override
     def onOffset(self, date) -> bool:
-        """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        """Check if the given date is in the set of possible dates of this offset.
+
+        The possible dates are those created using a length-one version of this
+        offset class.
+        """
         return date.day == 1 and date.month == self.month
 
+    @override
     def rollforward(self, date):
-        """Roll date forward to nearest start of year"""
+        """Roll date forward to nearest start of year."""
         if self.onOffset(date):
             return date
         else:
             return date + YearBegin(month=self.month)
 
+    @override
     def rollback(self, date):
-        """Roll date backward to nearest start of year"""
+        """Roll date backward to nearest start of year."""
         if self.onOffset(date):
             return date
         else:
@@ -588,20 +631,26 @@ class YearEnd(YearOffset):
     _day_option = "end"
     _default_month = 12
 
+    @override
     def onOffset(self, date) -> bool:
-        """Check if the given date is in the set of possible dates created
-        using a length-one version of this offset class."""
+        """Check if the given date is in the set of possible dates of this offset.
+
+        The possible dates are those created using a length-one version of this
+        offset class.
+        """
         return date.day == date.daysinmonth and date.month == self.month
 
+    @override
     def rollforward(self, date):
-        """Roll date forward to nearest end of year"""
+        """Roll date forward to nearest end of year."""
         if self.onOffset(date):
             return date
         else:
             return date + YearEnd(month=self.month)
 
+    @override
     def rollback(self, date):
-        """Roll date backward to nearest end of year"""
+        """Roll date backward to nearest end of year."""
         if self.onOffset(date):
             return date
         else:
@@ -609,16 +658,18 @@ class YearEnd(YearOffset):
 
 
 class Day(BaseCFTimeOffset):
-    """Day offset following definition in pandas/_libs/tslibs/offsets.pyx"""
+    """Day offset following definition in pandas/_libs/tslibs/offsets.pyx."""
 
     _freq = "D"
 
+    @override
     def __apply__(self, other):
         if isinstance(other, Day):
             return Day(self.n + other.n)
         else:
             return other + timedelta(days=self.n)
 
+    @override
     def onOffset(self, date) -> bool:
         return True
 
@@ -626,9 +677,11 @@ class Day(BaseCFTimeOffset):
 class Hour(Tick):
     _freq = "h"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(hours=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -636,9 +689,11 @@ class Hour(Tick):
 class Minute(Tick):
     _freq = "min"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(minutes=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -646,9 +701,11 @@ class Minute(Tick):
 class Second(Tick):
     _freq = "s"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(seconds=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -656,9 +713,11 @@ class Second(Tick):
 class Millisecond(Tick):
     _freq = "ms"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(milliseconds=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -666,9 +725,11 @@ class Millisecond(Tick):
 class Microsecond(Tick):
     _freq = "us"
 
+    @override
     def as_timedelta(self) -> timedelta:
         return timedelta(microseconds=self.n)
 
+    @override
     def __apply__(self, other):
         return other + self.as_timedelta()
 
@@ -771,16 +832,15 @@ def _emit_freq_deprecation_warning(deprecated_freq):
 
 
 def to_offset(
-    freq: BaseCFTimeOffset | str | timedelta | pd.Timedelta | pd.DateOffset,
+    freq: BaseCFTimeOffset | str | timedelta | pd.Timedelta | pd.offsets.BaseOffset,
     warn: bool = True,
 ) -> BaseCFTimeOffset:
-    """Convert a frequency string to the appropriate subclass of
-    BaseCFTimeOffset."""
+    """Convert a frequency string to the appropriate subclass of BaseCFTimeOffset."""
     if isinstance(freq, BaseCFTimeOffset):
         return freq
     if isinstance(freq, timedelta | pd.Timedelta):
         return delta_to_tick(freq)
-    if isinstance(freq, pd.DateOffset):
+    if isinstance(freq, pd.offsets.BaseOffset):
         freq = freq.freqstr
 
     match = re.match(_PATTERN, freq)
@@ -797,7 +857,10 @@ def to_offset(
 
 
 def delta_to_tick(delta: timedelta | pd.Timedelta) -> Tick:
-    """Adapted from pandas.tslib.delta_to_tick"""
+    """Convert a timedelta to a Tick object.
+
+    Adapted from pandas.tslib.delta_to_tick.
+    """
     if isinstance(delta, pd.Timedelta) and delta.nanoseconds != 0:
         # pandas.Timedelta has nanoseconds, but these are not supported
         raise ValueError(
@@ -852,7 +915,7 @@ def normalize_date(date):
 
 
 def _get_normalized_cfdate(date, calendar, normalize):
-    """convert to cf datetime and round down to midnight if normalize."""
+    """Convert to cf datetime and round down to midnight if normalize."""
     if date is None:
         return date
 
@@ -862,8 +925,11 @@ def _get_normalized_cfdate(date, calendar, normalize):
 
 
 def _generate_linear_date_range(start, end, periods):
-    """Generate an equally-spaced sequence of cftime.datetime objects between
-    and including two dates (whose length equals the number of periods)."""
+    """Generate an equally-spaced sequence of cftime.datetime objects.
+
+    The sequence lies between and includes two dates, and its length equals the
+    number of periods.
+    """
     if TYPE_CHECKING:
         import cftime
     else:
@@ -879,8 +945,7 @@ def _generate_linear_date_range(start, end, periods):
 
 
 def _generate_linear_date_range_with_freq(start, end, periods, freq):
-    """Generate a regular range of cftime.datetime objects with a
-    given frequency.
+    """Generate a regular range of cftime.datetime objects with a given frequency.
 
     Adapted from pandas.tseries.offsets.generate_range (now at
     pandas.core.arrays.datetimes._generate_range).
@@ -893,12 +958,13 @@ def _generate_linear_date_range_with_freq(start, end, periods, freq):
         End of range
     periods : int, or None
         Number of elements in the sequence
-    freq: str
+    freq : str
         Step size between cftime.datetime objects. Not None.
 
-    Returns
-    -------
-    A generator object of cftime.datetime objects
+    Yields
+    ------
+    cftime.datetime
+        The dates of the range.
     """
     offset = to_offset(freq)
 
@@ -951,7 +1017,7 @@ def cftime_range(
 ) -> CFTimeIndex:
     """Return a fixed frequency CFTimeIndex.
 
-    .. deprecated:: 2025.02.0
+    .. deprecated:: 2025.03.0
         Use :py:func:`~xarray.date_range` with ``use_cftime=True`` instead.
 
     Parameters
@@ -978,6 +1044,10 @@ def cftime_range(
     Returns
     -------
     CFTimeIndex
+
+    See Also
+    --------
+    pandas.date_range
 
     Notes
     -----
@@ -1118,10 +1188,6 @@ def cftime_range(
     <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
     for more examples of the behavior of ``date_range`` with each of the
     parameters.
-
-    See Also
-    --------
-    pandas.date_range
     """
     emit_user_level_warning(
         "cftime_range() is deprecated, please use xarray.date_range(..., use_cftime=True) instead.",
@@ -1273,6 +1339,12 @@ def date_range(
     -------
     CFTimeIndex or pd.DatetimeIndex
 
+    See Also
+    --------
+    pandas.date_range
+    cftime_range
+    date_range_like
+
     Notes
     -----
     When ``use_cftime=True``, or a calendar other than "standard", "gregorian",
@@ -1413,12 +1485,6 @@ def date_range(
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
                 dtype='object', length=6, calendar='noleap', freq='2MS')
-
-    See Also
-    --------
-    pandas.date_range
-    cftime_range
-    date_range_like
     """
     if tz is not None:
         use_cftime = False
@@ -1459,8 +1525,9 @@ def date_range(
 
 
 def date_range_like(source, calendar, use_cftime=None):
-    """Generate a datetime array with the same frequency, start and end as
-    another one, but in a different calendar.
+    """Generate a datetime array like another one, but in a different calendar.
+
+    The generated array has the same frequency, start and end as `source`.
 
     Parameters
     ----------

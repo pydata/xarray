@@ -4,6 +4,7 @@ from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -31,6 +32,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     requires_dask,
+    requires_pandas_3,
     requires_pyarrow,
     requires_scipy_or_netCDF4,
 )
@@ -39,6 +41,35 @@ from xarray.tests.test_dataset import create_test_data
 
 if TYPE_CHECKING:
     from xarray.core.types import CombineAttrsOptions, JoinOptions
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize(
+    "operation", ["concat_array", "concat_dataset", "to_dataarray"]
+)
+def test_broadcast_mixed_dtypes_view(reverse, operation):
+    a = DataArray(np.ones((2, 3)), dims=("x", "y"), name="v")
+    b = DataArray(np.ones(3, dtype=np.int64), dims="y", name="v")
+    arrays = [b, a] if reverse else [a, b]
+    numpy_func = "concat" if hasattr(np, "concat") else "concatenate"
+    if operation == "to_dataarray":
+        numpy_func = "stack"
+    with patch.object(np, numpy_func, wraps=getattr(np, numpy_func)) as join:
+        if operation == "to_dataarray":
+            result = Dataset(dict(zip(["a", "b"], arrays, strict=True))).to_dataarray()
+        elif operation == "concat_dataset":
+            result = concat([array.to_dataset() for array in arrays], dim="y")["v"]
+        else:
+            result = concat(arrays, dim="y")
+    assert_array_equal(result, 1)
+
+    # NumPy allocates the output; its broadcast input should still be a view
+    # backed by the small, already-cast array (GH10928).
+    broadcasted = join.call_args.args[0][0 if reverse else 1]
+    assert broadcasted.dtype == np.float64
+    assert broadcasted.size == a.size
+    assert broadcasted.base is not None
+    assert broadcasted.base.shape == b.shape
 
 
 # helper method to create multiple tests datasets to concat
@@ -882,7 +913,7 @@ class TestConcatDataset:
     def test_concat_combine_attrs_kwarg_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        """check that combine_attrs is used on data variables and coords"""
+        """Check that combine_attrs is used on data variables and coords."""
         ds1 = Dataset({"a": ("x", [0], attrs1)}, coords={"x": ("x", [0], attrs1)})
         ds2 = Dataset({"a": ("x", [0], attrs2)}, coords={"x": ("x", [1], attrs2)})
 
@@ -1491,6 +1522,20 @@ def test_concat_index_not_same_dim() -> None:
         concat([ds1, ds2], dim="x")
 
 
+@requires_pandas_3
+@pytest.mark.parametrize("dtype", [None, pd.StringDtype()])
+@pytest.mark.parametrize("pandas_first", [False, True])
+def test_concat_pandas_index_string_dtype(dtype, pandas_first) -> None:
+    # GH11317
+    da = DataArray([0], dims=["dim_a"], coords={"dim_a": ["a"]})
+    db = DataArray([0], dims=["dim_b"], coords={"dim_b": ["b"]})
+    db2 = concat([db], pd.Index(["b"], name="dim_a", dtype=dtype))
+    objs = [db2, da] if pandas_first else [da, db2]
+    expected = ["b", "a"] if pandas_first else ["a", "b"]
+    result = concat(objs, dim="dim_a")
+    assert list(result["dim_a"].values) == expected
+
+
 class TestNewDefaults:
     def test_concat_second_empty_with_scalar_data_var_only_on_first(self) -> None:
         ds1 = Dataset(data_vars={"a": ("y", [0.1]), "b": 0.1}, coords={"x": 0.1})
@@ -1507,7 +1552,7 @@ class TestNewDefaults:
                 actual = concat(
                     [ds1, ds2], dim="y", coords="different", data_vars="different"
                 )
-                assert_identical(actual, expected)
+            assert_identical(actual, expected)
         with set_options(use_new_combine_kwarg_defaults=True):
             with pytest.raises(ValueError, match="might be related to new default"):
                 concat([ds1, ds2], dim="y", coords="different", data_vars="different")
@@ -1577,7 +1622,7 @@ class TestNewDefaults:
                 match="will change from coords='different' to coords='minimal'",
             ):
                 old = concat(objs, "x")
-                assert_identical(old, expected)
+            assert_identical(old, expected)
         with set_options(use_new_combine_kwarg_defaults=True):
             new = concat(objs, "x")
             with pytest.raises(AssertionError):

@@ -1,5 +1,7 @@
-"""
-This module contains various lazy array classes which can be wrapped and manipulated by xarray objects but will raise on data access.
+"""Lazy array classes for testing.
+
+These array classes can be wrapped and manipulated by xarray objects but will raise
+on data access.
 """
 
 from collections.abc import Callable, Iterable
@@ -53,13 +55,21 @@ class IndexableArray(InaccessibleArray):
 
 class DuckArrayWrapper(utils.NDArrayMixin):
     """Array-like that prevents casting to array.
-    Modeled after cupy."""
+
+    Modeled after cupy.
+    """
 
     def __init__(self, array: np.ndarray):
         self.array = array
 
     def __getitem__(self, key):
         return type(self)(self.array[key])
+
+    def astype(self, dtype: np.typing.DTypeLike, copy: bool = True) -> Self:
+        return type(self)(self.array.astype(dtype, copy=copy))
+
+    def reshape(self, shape: tuple[int, ...]) -> Self:
+        return type(self)(self.array.reshape(shape))
 
     def to_numpy(self) -> np.ndarray:
         """Allow explicit conversions to numpy in `to_numpy`, but disallow np.asarray etc."""
@@ -114,7 +124,10 @@ def stack(
 
 @implements(np.result_type)
 def result_type(*arrays_and_dtypes) -> np.dtype:
-    """Called by xarray to ensure all arguments to concat have the same dtype."""
+    """Return the common dtype of all arguments, raising if they differ.
+
+    Called by xarray to ensure all arguments to concat have the same dtype.
+    """
     first_dtype, *other_dtypes = (np.dtype(obj) for obj in arrays_and_dtypes)
     for other_dtype in other_dtypes:
         if other_dtype != first_dtype:
@@ -126,8 +139,10 @@ def result_type(*arrays_and_dtypes) -> np.dtype:
 def broadcast_to(
     x: "ConcatenatableArray", /, shape: tuple[int, ...]
 ) -> "ConcatenatableArray":
-    """
-    Broadcasts an array to a specified shape, by either manipulating chunk keys or copying chunk manifest entries.
+    """Broadcast an array to a specified shape.
+
+    Broadcasting is done by either manipulating chunk keys or copying chunk manifest
+    entries.
     """
     if not isinstance(x, ConcatenatableArray):
         raise TypeError
@@ -140,9 +155,7 @@ def broadcast_to(
 def full_like(
     x: "ConcatenatableArray", /, fill_value, **kwargs
 ) -> "ConcatenatableArray":
-    """
-    Broadcasts an array to a specified shape, by either manipulating chunk keys or copying chunk manifest entries.
-    """
+    """Return a new array with the same shape as x, filled with fill_value."""
     if not isinstance(x, ConcatenatableArray):
         raise TypeError
     return ConcatenatableArray(np.full(x.shape, fill_value=fill_value, **kwargs))
@@ -184,7 +197,10 @@ class ConcatenatableArray:
         raise UnexpectedDataAccess("Tried accessing data")
 
     def __getitem__(self, key) -> Self:
-        """Some cases of concat require supporting expanding dims by dimensions of size 1"""
+        """Index the array, supporting expansion by dimensions of size 1.
+
+        Some cases of concat require supporting expanding dims by dimensions of size 1.
+        """
         # see https://data-apis.org/array-api/2022.12/API_specification/indexing.html#multi-axis-indexing
         arr = self._array
         for axis, indexer_1d in enumerate(key):
@@ -215,7 +231,10 @@ class ConcatenatableArray:
         return NotImplemented
 
     def astype(self, dtype: np.dtype, /, *, copy: bool = True) -> Self:
-        """Needed because xarray will call this even when it's a no-op"""
+        """Cast the array to dtype.
+
+        Needed because xarray will call this even when it's a no-op.
+        """
         if dtype != self.dtype:
             raise NotImplementedError()
         else:
