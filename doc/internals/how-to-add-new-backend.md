@@ -30,7 +30,9 @@ with {py:class}`~xarray.backends.list_engines()`.
 Your `BackendEntrypoint` sub-class is the primary interface with Xarray, and
 it should implement the following attributes and methods:
 
-- the `open_dataset` method (mandatory)
+- the `open_dataset` method (mandatory for dataset-reading backends)
+- the `open_datatree` method (optional, for hierarchical data)
+- the `open_groups_as_dict` method (optional, for hierarchical data)
 - the `open_dataset_parameters` attribute (optional)
 - the `guess_can_open` method (optional)
 - the `description` attribute (optional)
@@ -143,6 +145,32 @@ parameter or explicitly using the syntax `**kwargs`.
 If you don't want to support the lazy loading, then the
 {py:class}`~xarray.Dataset` shall contain values as a {py:class}`numpy.ndarray`
 and your work is almost done.
+
+(rst-open-datatree)=
+
+### Hierarchical data: open_datatree and open_groups_as_dict
+
+Backends for hierarchical formats can optionally implement one or both of
+{py:meth}`~xarray.backends.BackendEntrypoint.open_datatree` and
+{py:meth}`~xarray.backends.BackendEntrypoint.open_groups_as_dict`.
+Backends that only support individual datasets do **not** need to implement
+either method. A backend supporting groups should set
+`supports_groups = True` on its `BackendEntrypoint` subclass.
+
+- `open_datatree(filename_or_obj, *, drop_variables=None)` is used by
+  {py:func}`xarray.open_datatree` and returns a {py:class}`~xarray.DataTree`.
+  This supports opening a hierarchy as one tree.
+- `open_groups_as_dict(filename_or_obj, *, drop_variables=None)` is used by
+  {py:func}`xarray.open_groups` and returns a mapping from group paths to
+  {py:class}`~xarray.Dataset` objects. This lets callers access all groups
+  without requiring them to satisfy the constraints of a single
+  {py:class}`~xarray.DataTree`.
+
+Both methods accept the same `filename_or_obj` argument as `open_dataset`.
+Their implementation is format-specific; neither method is required for all
+backends, and implementing one does not automatically require the other.
+See the {py:class}`~xarray.backends.BackendEntrypoint` API reference for
+their signatures.
 
 (rst-open-dataset-parameters)=
 
