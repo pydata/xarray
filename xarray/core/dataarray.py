@@ -2440,8 +2440,8 @@ class DataArray(
             into a single chunk. With methods `linear` and `nearest`, the data is
             first subset to the range of the new coordinates, so only the chunks that
             are needed are read. This only happens if the new coordinates are in
-            memory, so load chunked new coordinates first (e.g. with ``.compute()``)
-            if they are cheap to compute. See :ref:`interp.dask`.
+            memory, so loading chunked new coordinates first (e.g. with ``.compute()``)
+            can reduce the memory use considerably if they are cheap to compute.
         - The specific interpolation method and dimensionality determine which
             interpolant is used:
 
