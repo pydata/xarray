@@ -3242,7 +3242,7 @@ class DataArray(
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 
         level_number = idx._get_level_number(level)  # type: ignore[attr-defined]
-        variables = idx.levels[level_number]
+        variables = idx.remove_unused_levels().levels[level_number]
         variable_dim = idx.names[level_number]
 
         # pull variables out of datarray
