@@ -442,6 +442,9 @@ Documentation
   (:issue:`10832`, :pull:`11156`).
   By `dolliecoder <https://github.com/dolliecoder>`_ and
   `Michael Niklas <https://github.com/headtr1ck>`_.
+- Restore the old URLs of documentation pages that were moved without a
+  redirect, e.g. the tutorials, FAQ and "how do I" pages, and check in CI that
+  moved or removed pages get a redirect (:issue:`11790`, :pull:`11794`).
 - Fix the time coding docs for pandas 3.1, which now gives microsecond
   resolution for numeric input with any ``unit`` (:pull:`11796`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
