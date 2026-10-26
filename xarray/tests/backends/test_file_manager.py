@@ -16,6 +16,7 @@ from xarray.backends.file_manager import (
     SharedReadFileManager,
     _close_unless_pinned,
 )
+from xarray.backends.locks import CombinedLock, SerializableLock
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options
 from xarray.tests import assert_no_warnings, requires_h5netcdf, requires_netCDF4
@@ -215,6 +216,19 @@ def test_shared_read_file_manager_pickle() -> None:
         manager.close()
         assert not restored.acquire().closed
     finally:
+        restored.close()
+
+
+def test_shared_read_file_manager_pickle_combined_lock() -> None:
+    lock = CombinedLock(
+        [SerializableLock("shared-read-a"), SerializableLock("shared-read-b")]
+    )
+    manager = SharedReadFileManager(open, __file__, lock=lock)
+    restored = pickle.loads(pickle.dumps(manager))
+    try:
+        assert manager.acquire() is restored.acquire()
+    finally:
+        manager.close()
         restored.close()
 
 

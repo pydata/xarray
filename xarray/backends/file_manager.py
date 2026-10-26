@@ -8,7 +8,7 @@ from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMappin
 from contextlib import AbstractContextManager, contextmanager, nullcontext, suppress
 from typing import Any, Literal, TypeVar, cast, override
 
-from xarray.backends.locks import acquire
+from xarray.backends.locks import CombinedLock, _lock_key, acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
@@ -424,8 +424,15 @@ class SharedReadFileManager(FileManager[T_File]):
         self._kwargs = {} if kwargs is None else dict(kwargs)
         self._requested_lock = lock
         self._lock = _SHARED_READ_FILES_LOCK if lock is None or lock is False else lock
+        # CombinedLock objects are copied by pickle, but their member tokens
+        # still identify the same locks in a worker process.
+        lock_key = (
+            tuple(_lock_key(member) for member in self._lock.locks)
+            if isinstance(self._lock, CombinedLock)
+            else _lock_key(self._lock)
+        )
         self._key = _HashedSequence(
-            (opener, args, tuple(sorted(self._kwargs.items())), self._lock)
+            (opener, args, tuple(sorted(self._kwargs.items())), lock_key)
         )
         self._manager: CachingFileManager[T_File] | None = None
         self._join()
