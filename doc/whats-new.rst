@@ -407,6 +407,11 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Document how :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` handle
+  chunks of Dask arrays, and that loading chunked new coordinates first can
+  reduce the memory use for ``method="linear"`` and ``"nearest"``
+  (:pull:`11786`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Clarified that :py:meth:`DataArray.item` and :py:meth:`Variable.item` are not
   implemented for lazy (e.g. dask) arrays, both in the method docstring and in the
   raised error message, which now suggests loading the data into memory first
