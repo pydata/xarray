@@ -95,7 +95,7 @@ def _maybe_chunk(
             }
 
         if isinstance(chunkmanager, DaskManager) or any(
-            v is chunkmanager and k == "dask" for k, v in list_chunkmanagers.items()
+            v is chunkmanager and k == "dask" for k, v in list_chunkmanagers().items()
         ):
             if not just_use_token:
                 from dask.base import tokenize
