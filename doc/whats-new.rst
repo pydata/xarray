@@ -517,6 +517,9 @@ Internal Changes
 - Check the style of docstring summaries with ruff (a single line in imperative
   mood, ending with a period) and fix the existing violations (:pull:`11769`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add an asv benchmark for opening a zarr :py:class:`DataTree` from a store with
+  object storage latency (:pull:`XXXXX`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
 .. _whats-new.2026.09.0:
