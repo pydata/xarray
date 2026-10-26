@@ -518,7 +518,7 @@ Internal Changes
   mood, ending with a period) and fix the existing violations (:pull:`11769`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Add an asv benchmark for opening a zarr :py:class:`DataTree` from a store with
-  object storage latency (:pull:`XXXXX`).
+  object storage latency (:pull:`11810`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
