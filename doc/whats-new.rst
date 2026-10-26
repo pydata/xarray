@@ -146,6 +146,10 @@ Breaking Changes
   deprecated since v0.16.1, have been removed. Pass them in
   ``dask_gufunc_kwargs`` instead (:issue:`11721`, :pull:`11755`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
+  :py:class:`Variable`, deprecated since v2023.10.0, has been removed. Use
+  ``drop_encoding`` instead (:issue:`11721`, :pull:`11805`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
 Deprecations
