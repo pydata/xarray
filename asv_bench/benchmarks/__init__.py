@@ -15,6 +15,13 @@ def requires_dask():
         raise NotImplementedError() from err
 
 
+def requires_zarr():
+    try:
+        import zarr  # noqa: F401
+    except ImportError as err:
+        raise NotImplementedError() from err
+
+
 def requires_sparse():
     try:
         import sparse  # noqa: F401

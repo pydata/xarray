@@ -146,6 +146,16 @@ Breaking Changes
   deprecated since v0.16.1, have been removed. Pass them in
   ``dask_gufunc_kwargs`` instead (:issue:`11721`, :pull:`11755`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- The ``hue_style`` argument of the 1D plot functions (``lines`` and
+  ``scatter`` for :py:class:`DataArray` and :py:class:`Dataset`), deprecated
+  since v2023.07.0, has been removed. Convert numbers to strings for a discrete
+  hue, and use ``add_legend`` or ``add_colorbar`` to choose the guide
+  (:issue:`11721`, :pull:`11787`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
+- ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
+  :py:class:`Variable`, deprecated since v2023.10.0, has been removed. Use
+  ``drop_encoding`` instead (:issue:`11721`, :pull:`11805`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
 Deprecations
@@ -432,6 +442,9 @@ Documentation
   (:issue:`10832`, :pull:`11156`).
   By `dolliecoder <https://github.com/dolliecoder>`_ and
   `Michael Niklas <https://github.com/headtr1ck>`_.
+- Restore the old URLs of documentation pages that were moved without a
+  redirect, e.g. the tutorials, FAQ and "how do I" pages, and check in CI that
+  moved or removed pages get a redirect (:issue:`11790`, :pull:`11794`).
 - Fix the time coding docs for pandas 3.1, which now gives microsecond
   resolution for numeric input with any ``unit`` (:pull:`11796`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
@@ -514,6 +527,9 @@ Internal Changes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Check the style of docstring summaries with ruff (a single line in imperative
   mood, ending with a period) and fix the existing violations (:pull:`11769`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add an asv benchmark for opening a zarr :py:class:`DataTree` from a store with
+  object storage latency (:pull:`11810`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
