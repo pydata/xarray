@@ -568,7 +568,7 @@ class IOReadDataTreeZarrLatency:
     by the number of reads that are made one after the other.
     """
 
-    params = [[10, 50], [0.0, 0.01]]
+    params = [[10, 35], [0.0, 0.01]]
     param_names = ["n_groups", "latency"]
     repeat = 3
     number = 1
