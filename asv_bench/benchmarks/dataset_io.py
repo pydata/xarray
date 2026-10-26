@@ -21,7 +21,10 @@ except ImportError:
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
-_ENGINES = tuple(sorted(xr.backends.list_engines().keys() - {"store"}))
+# the installed engines that can write netCDF files
+_ENGINES = tuple(
+    sorted(xr.backends.list_engines().keys() & {"h5netcdf", "netcdf4", "scipy"})
+)
 
 
 class IOSingleNetCDF:
