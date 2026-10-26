@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Callable, Hashable
 from datetime import datetime, timedelta
 from functools import partial
-from typing import TYPE_CHECKING, Union, cast, override
+from typing import TYPE_CHECKING, Literal, Union, cast, override
 
 import numpy as np
 import pandas as pd
@@ -336,21 +336,13 @@ def _unpack_time_units_and_ref_date_cftime(units: str, calendar: str):
     return time_units, ref_date
 
 
-def _decode_cf_datetime_dtype(
-    data,
+def _decoded_dtype(
+    example_value: np.ndarray,
     units: str,
     calendar: str | None,
     use_cftime: bool | None,
-    time_unit: PDDatetimeUnitOptions = "ns",
+    time_unit: PDDatetimeUnitOptions,
 ) -> np.dtype:
-    # Verify that at least the first and last date can be decoded
-    # successfully. Otherwise, tracebacks end up swallowed by
-    # Dataset.__repr__ when users try to view their lazily decoded array.
-    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
-    example_value = np.concatenate(
-        [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
-    )
-
     try:
         result = decode_cf_datetime(
             example_value, units, calendar, use_cftime, time_unit
@@ -369,6 +361,68 @@ def _decode_cf_datetime_dtype(
         dtype = getattr(result, "dtype", np.dtype("object"))
 
     return dtype
+
+
+def _decode_cf_datetime_dtype(
+    data,
+    units: str,
+    calendar: str | None,
+    use_cftime: bool | None,
+    time_unit: PDDatetimeUnitOptions = "ns",
+) -> np.dtype:
+    # Verify that at least the first and last date can be decoded
+    # successfully. Otherwise, tracebacks end up swallowed by
+    # Dataset.__repr__ when users try to view their lazily decoded array.
+    values = indexing.ImplicitToExplicitIndexingAdapter(indexing.as_indexable(data))
+    example_value = np.concatenate(
+        [to_numpy(first_n_items(values, 1)), to_numpy(last_item(values))]
+    )
+    return _decoded_dtype(example_value, units, calendar, use_cftime, time_unit)
+
+
+def _decode_cf_datetime_dtype_from_metadata(
+    units: str,
+    calendar: str | None,
+    use_cftime: bool | None,
+    time_unit: PDDatetimeUnitOptions,
+) -> np.dtype | None:
+    """Infer the decoded dtype from a synthetic ``[0, 1]``, or None if unsure."""
+    try:
+        with warnings.catch_warnings():
+            # this warning would describe the synthetic values, not the data
+            warnings.filterwarnings(
+                "ignore", "Unable to decode time axis", SerializationWarning
+            )
+            dtype = _decoded_dtype(
+                np.array([0, 1]), units, calendar, use_cftime, time_unit
+            )
+    except ValueError:
+        # e.g. "days since 2262-04-11": the synthetic dates overflow although
+        # the stored ones may not
+        return None
+    if (
+        dtype == np.dtype("object")
+        and use_cftime is None
+        and (calendar is None or _is_standard_calendar(calendar))
+    ):
+        # The reference date cannot be represented as datetime64 (e.g.
+        # "hours since 1-1-1"), so dates near it say nothing about the stored
+        # dates, which may well be in 2020.
+        return None
+    return dtype
+
+
+def _decode_cf_datetime_as(num_dates, *, dtype: np.dtype, **kwargs) -> np.ndarray:
+    """decode_cf_datetime, raising if the result does not have ``dtype``."""
+    result = decode_cf_datetime(num_dates, **kwargs)
+    if result.dtype != dtype:
+        raise ValueError(
+            f"time values with units {kwargs['units']!r} decode to "
+            f"{result.dtype}, not to {dtype} as inferred from metadata. Open "
+            "the dataset with decode_times=CFDatetimeCoder(infer_dtype='data'), "
+            "or set use_cftime or time_unit to match the stored values."
+        )
+    return result
 
 
 def _decode_datetime_with_cftime(
@@ -1381,15 +1435,49 @@ class CFDatetimeCoder(VariableCoder):
         May not be supported by all the backends.
     time_unit : PDDatetimeUnitOptions
           Target resolution when decoding dates. Defaults to "ns".
+    infer_dtype : {"data", "metadata"}, default: "data"
+        How to infer the dtype of the decoded variable:
+
+        - ``"data"`` (default): read the first and last values from the
+          store to verify they decode successfully. Preserves
+          backwards-compatible behavior, including the auto-fallback to
+          ``cftime.datetime`` for values outside the
+          ``np.datetime64[ns]`` range.
+        - ``"metadata"``: infer the dtype from ``units``, ``calendar``,
+          ``use_cftime`` and ``time_unit`` alone, assuming the stored dates
+          lie near the reference date in ``units``. Nothing is read from
+          the store, which speeds up opening remote stores with many
+          time-encoded variables. The first and last values are read, as
+          with ``"data"``, only when metadata cannot tell: when, with
+          ``use_cftime=None`` and a standard calendar, dates near the
+          reference date need ``cftime`` (e.g. ``"hours since 1-1-1"`` or a
+          reference date before 1582-10-15), or when decoding dates near
+          the reference date fails.
+
+          The stored values are checked when they are decoded instead, and a
+          ``ValueError`` is raised then if they need a different dtype than
+          inferred. This happens for dates outside the
+          ``np.datetime64[time_unit]`` range (pass ``use_cftime=True`` or a
+          coarser ``time_unit`` such as ``"s"``) and for floating point
+          values with fractions finer than ``units``, e.g. ``0.5`` with
+          ``"seconds since ..."`` (pass a ``time_unit`` fine enough to
+          represent them). Index coordinates are decoded when the dataset
+          is opened, other variables when they are loaded.
     """
 
     def __init__(
         self,
         use_cftime: bool | None = None,
         time_unit: PDDatetimeUnitOptions = "ns",
+        infer_dtype: Literal["data", "metadata"] = "data",
     ) -> None:
+        if infer_dtype not in ("data", "metadata"):
+            raise ValueError(
+                f"infer_dtype must be 'data' or 'metadata', got {infer_dtype!r}"
+            )
         self.use_cftime = use_cftime
         self.time_unit = time_unit
+        self.infer_dtype = infer_dtype
 
     @override
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
@@ -1424,11 +1512,22 @@ class CFDatetimeCoder(VariableCoder):
 
             units = pop_to(attrs, encoding, "units")
             calendar = pop_to(attrs, encoding, "calendar")
-            dtype = _decode_cf_datetime_dtype(
-                data, units, calendar, self.use_cftime, self.time_unit
-            )
+            dtype = None
+            if self.infer_dtype == "metadata":
+                dtype = _decode_cf_datetime_dtype_from_metadata(
+                    units, calendar, self.use_cftime, self.time_unit
+                )
+            if dtype is None:
+                dtype = _decode_cf_datetime_dtype(
+                    data, units, calendar, self.use_cftime, self.time_unit
+                )
+                decode = decode_cf_datetime
+            else:
+                # nothing was read, so check every decoded chunk against the
+                # inferred dtype instead of letting it be cast silently
+                decode = partial(_decode_cf_datetime_as, dtype=dtype)
             transform = partial(
-                decode_cf_datetime,
+                decode,
                 units=units,
                 calendar=calendar,
                 use_cftime=self.use_cftime,

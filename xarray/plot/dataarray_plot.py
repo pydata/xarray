@@ -52,7 +52,6 @@ if TYPE_CHECKING:
     from xarray.core.types import (
         AspectOptions,
         ExtendOptions,
-        HueStyleOptions,
         ScaleOptions,
         T_DataArray,
     )
@@ -886,7 +885,6 @@ artist :
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         row: Hashable | None = None,
@@ -970,19 +968,6 @@ artist :
                 warnings.warn(msg, FutureWarning, stacklevel=2)
             del msg
         del args
-
-        if hue_style is not None:
-            # TODO: Not used since 2022.10. Deprecated since 2023.07.
-            warnings.warn(
-                (
-                    "hue_style is no longer used for plot1d plots "
-                    "and the argument will eventually be removed. "
-                    "Convert numbers to string for a discrete hue "
-                    "and use add_legend or add_colorbar to control which guide to display."
-                ),
-                FutureWarning,
-                stacklevel=2,
-            )
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
@@ -1163,7 +1148,6 @@ def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1204,7 +1188,6 @@ def lines(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1245,7 +1228,6 @@ def lines(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1333,7 +1315,6 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1374,7 +1355,6 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1415,7 +1395,6 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,

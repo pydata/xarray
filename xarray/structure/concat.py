@@ -363,6 +363,11 @@ def _calc_concat_dim_index(
         else:
             (dim,) = dim_or_data.dims
         coord_dtype = getattr(dim_or_data, "dtype", None)
+        if isinstance(coord_dtype, pd.StringDtype):
+            # pandas 3 gives a string pd.Index a StringDtype, which is not a
+            # dtype PandasIndex would pick for itself, so map it to the numpy
+            # string dtype the same way PandasIndexingAdapter does (GH#11317)
+            coord_dtype = np.dtypes.StringDType(na_object=coord_dtype.na_value)
         index = PandasIndex(dim_or_data, dim, coord_dtype=coord_dtype)
 
     return dim, index

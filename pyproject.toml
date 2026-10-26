@@ -9,6 +9,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -151,6 +152,7 @@ module = [
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
+  "IPython.*",
   "iris.*",
   "mpl_toolkits.*",
   "nc_time_axis.*",
