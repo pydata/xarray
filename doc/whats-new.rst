@@ -192,6 +192,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:func:`align` with ``join="override"`` now preserves each object's
+  coordinate attributes and encoding instead of inheriting metadata from the
+  first object (:issue:`6860`).
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
   variables (:issue:`6449`).
   By `Liang, Jingyi <https://github.com/LJimmy007>`_.

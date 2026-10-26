@@ -541,13 +541,17 @@ class Aligner[T_Alignable: Alignable]:
             new_indexes = {}
             new_variables = {}
             matching_indexes = self.objects_matching_indexes[i + 1]
+            matching_index_vars = self.objects_matching_index_vars[i + 1]
 
             for key, aligned_idx in self.aligned_indexes.items():
                 obj_idx = matching_indexes.get(key)
                 if obj_idx is not None:
                     for name, var in self.aligned_index_vars[key].items():
+                        original_var = matching_index_vars[key][name]
                         new_indexes[name] = aligned_idx
                         new_variables[name] = var.copy(deep=self.copy)
+                        new_variables[name].attrs = original_var.attrs
+                        new_variables[name].encoding = original_var.encoding
 
             objects[i + 1] = obj._overwrite_indexes(new_indexes, new_variables)
 
