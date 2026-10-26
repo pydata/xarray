@@ -573,7 +573,9 @@ class IOReadDataTreeZarrLatency:
 
     params = [[10, 35], [0.0, 0.01]]
     param_names = ["n_groups", "latency"]
-    repeat = 3
+    # One sample per process. With repeat = 3 (6 samples per commit), asv's
+    # Mann-Whitney test can never be significant, so no change was reported.
+    repeat = 1
     number = 1
     warmup_time = 0.0
 
