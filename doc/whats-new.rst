@@ -146,10 +146,24 @@ Breaking Changes
   deprecated since v0.16.1, have been removed. Pass them in
   ``dask_gufunc_kwargs`` instead (:issue:`11721`, :pull:`11755`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- The ``hue_style`` argument of the 1D plot functions (``lines`` and
+  ``scatter`` for :py:class:`DataArray` and :py:class:`Dataset`), deprecated
+  since v2023.07.0, has been removed. Convert numbers to strings for a discrete
+  hue, and use ``add_legend`` or ``add_colorbar`` to choose the guide
+  (:issue:`11721`, :pull:`11787`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
+- ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
+  :py:class:`Variable`, deprecated since v2023.10.0, has been removed. Use
+  ``drop_encoding`` instead (:issue:`11721`, :pull:`11805`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
 Deprecations
 ~~~~~~~~~~~~
+- The deprecated ``dims=`` (or ``dimensions=``) argument renamed to ``dim=``
+  and ``interpolate_na(method="spline")`` now emit a ``FutureWarning`` instead
+  of a ``PendingDeprecationWarning``, so these warnings are visible by default
+  (:issue:`11721`).
 - Passing any argument after ``bins`` positionally to
   :py:meth:`Dataset.groupby_bins` and :py:meth:`DataArray.groupby_bins` is
   deprecated. It was meant to be deprecated in v2024.07.0, but the warning never
@@ -161,10 +175,26 @@ Deprecations
   :py:attr:`DataTree.lineage` warns once instead of twice (:issue:`11721`,
   :pull:`11724`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- :py:meth:`Dataset.apply`,
+  :py:meth:`core.groupby.DataArrayGroupBy.apply`,
+  :py:meth:`core.groupby.DatasetGroupBy.apply`,
+  :py:meth:`core.resample.DataArrayResample.apply` and
+  :py:meth:`core.resample.DatasetResample.apply` now emit a ``FutureWarning``
+  instead of ``PendingDeprecationWarning``. Use ``.map`` instead (:issue:`11721`,
+  :pull:`11784`).
+  By `Anjali Kashide <https://github.com/Anju522>`_.
+- :py:meth:`Dataset.to_array` is deprecated in favor of :py:meth:`Dataset.to_dataarray`
+  but it did not emit any warning previously, now it emits a ``FutureWarning``
+  (:issue:`11721`, :pull:`11788`).
+  By `Soutrik Das <https://github.com/SoutrikDas>`_.
+
 
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
+  variables (:issue:`6449`).
+  By `Liang, Jingyi <https://github.com/LJimmy007>`_.
 - Results of the string accessor methods ``strip``, ``pad``, ``center``,
   ``ljust``, ``rjust``, ``zfill`` and ``replace`` on dask arrays are no longer
   truncated to a single character, and ``repeat`` no longer fails on dask arrays
@@ -377,6 +407,12 @@ Bug Fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Clarified that :py:meth:`DataArray.item` and :py:meth:`Variable.item` are not
+  implemented for lazy (e.g. dask) arrays, both in the method docstring and in the
+  raised error message, which now suggests loading the data into memory first
+  (:issue:`7916`).
+  By `imam <https://github.com/imam2004i>`_.
+
 - Add hidden intersphinx inventory entries for methods, properties and
   attributes at the path where they are defined, e.g.
   ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
@@ -409,6 +445,8 @@ Documentation
 - Restore the old URLs of documentation pages that were moved without a
   redirect, e.g. the tutorials, FAQ and "how do I" pages, and check in CI that
   moved or removed pages get a redirect (:issue:`11790`, :pull:`11794`).
+- Fix the time coding docs for pandas 3.1, which now gives microsecond
+  resolution for numeric input with any ``unit`` (:pull:`11796`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
