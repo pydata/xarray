@@ -157,7 +157,10 @@ Backends for hierarchical formats can optionally implement one or both of
 {py:meth}`~xarray.backends.BackendEntrypoint.open_groups_as_dict`.
 Backends that only support individual datasets do **not** need to implement
 either method. A backend supporting groups should set
-`supports_groups = True` on its `BackendEntrypoint` subclass.
+`supports_groups = True` on its `BackendEntrypoint` subclass. This also lets
+`xarray.open_datatree` and `xarray.open_groups` discover the backend when
+selecting an engine automatically; without this flag, users must pass
+`engine=` explicitly to use its group-reading methods.
 
 - `open_datatree(filename_or_obj, *, drop_variables=None)` is used by
   {py:func}`xarray.open_datatree` and returns a {py:class}`~xarray.DataTree`.
@@ -171,8 +174,11 @@ either method. A backend supporting groups should set
 Both methods accept the same `filename_or_obj` argument as `open_dataset`.
 Their implementation is format-specific; neither method is required for all
 backends, and implementing one does not automatically require the other.
-See the {py:class}`~xarray.backends.BackendEntrypoint` API reference for
-their signatures.
+For formats supporting both methods, one option is to implement
+`open_groups_as_dict` and construct a tree from the returned datasets with
+{py:meth}`xarray.DataTree.from_dict`, as done by the netCDF4 and h5netcdf
+backends. See the {py:class}`~xarray.backends.BackendEntrypoint` API reference
+for the method signatures.
 
 (rst-open-dataset-parameters)=
 
