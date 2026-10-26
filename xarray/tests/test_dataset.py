@@ -2757,18 +2757,34 @@ class TestDataset:
         assert expected_b.x.dtype == actual_b.x.dtype
 
     @pytest.mark.parametrize("join", ["left", "override"])
-    def test_align_index_var_attrs(self, join) -> None:
-        # regression test https://github.com/pydata/xarray/issues/6852
-        # aligning two objects should have no side effect on their index variable
-        # metadata.
+    @pytest.mark.parametrize("as_dataset", [False, True])
+    def test_align_index_var_attrs(
+        self, join: Literal["left", "override"], as_dataset: bool
+    ) -> None:
+        # Regression tests for GH6852 and GH6860:
+        # Aligning objects should have no side effect on their index variable
+        # metadata, and each result should retain its own metadata.
 
-        ds = Dataset(coords={"x": ("x", [1, 2, 3], {"units": "m"})})
-        ds_noattr = Dataset(coords={"x": ("x", [1, 2, 3])})
+        first = DataArray([1, 2], dims="x", coords={"x": [1.04, 2.06]}, name="a")
+        first.x.attrs = {"units": "m"}
+        first.x.encoding = {"dtype": "int16", "scale_factor": 0.1}
+        second = first.copy(deep=True)
+        second.x.attrs = {"units": "km"}
+        second.x.encoding = {"dtype": "float64"}
+        empty = first.copy(deep=True)
+        empty.x.attrs = {}
+        empty.x.encoding = {}
+        objects = [first, second, empty]
+        inputs = [obj.to_dataset() for obj in objects] if as_dataset else objects
+        originals = [obj.copy(deep=True) for obj in inputs]
 
-        xr.align(ds_noattr, ds, join=join)
+        results = xr.align(*inputs, join=join)
 
-        assert ds.x.attrs == {"units": "m"}
-        assert ds_noattr.x.attrs == {}
+        for original, source, result in zip(originals, inputs, results, strict=True):
+            assert_identical(source, original)
+            assert source.x.encoding == original.x.encoding
+            assert_identical(result, original)
+            assert result.x.encoding == original.x.encoding
 
     def test_align_scalar_index(self) -> None:
         # ensure that indexes associated with scalar coordinates are not ignored
