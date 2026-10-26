@@ -258,6 +258,35 @@ def test_shared_read_file_manager_autoclose(warn_for_unclosed_files: bool) -> No
     file.close.assert_called_once_with()
 
 
+def test_shared_read_file_manager_close_while_locked() -> None:
+    file = mock.Mock()
+    lock = threading.Lock()
+    manager = SharedReadFileManager(mock.Mock(return_value=file), "filename", lock=lock)
+    manager.acquire()
+
+    with lock:
+        manager.close(needs_lock=False)
+
+    file.close.assert_called_once_with()
+
+
+def test_shared_read_file_manager_autoclose_while_locked() -> None:
+    file = mock.Mock()
+    lock = threading.Lock()
+    manager = SharedReadFileManager(mock.Mock(return_value=file), "filename", lock=lock)
+    manager.acquire()
+
+    lock.acquire()
+    with set_options(warn_for_unclosed_files=False):
+        del manager
+        gc.collect()
+
+    file.close.assert_not_called()
+    lock.release()
+    _wait_for_close_threads()
+    file.close.assert_called_once_with()
+
+
 @requires_h5netcdf
 def test_h5netcdf_read_only_groups_share_file(tmp_path: Path) -> None:
     import h5netcdf

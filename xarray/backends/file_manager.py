@@ -5,7 +5,7 @@ import threading
 import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMapping
-from contextlib import AbstractContextManager, contextmanager, suppress
+from contextlib import AbstractContextManager, contextmanager, nullcontext, suppress
 from typing import Any, Literal, TypeVar, cast, override
 
 from xarray.backends.locks import acquire
@@ -461,7 +461,7 @@ class SharedReadFileManager(FileManager[T_File]):
 
     @override
     def close(self, needs_lock: bool = True) -> None:
-        with self._lock:
+        with self._lock if needs_lock else nullcontext():
             with _SHARED_READ_FILES_LOCK:
                 manager = getattr(self, "_manager", None)
                 if manager is None:
@@ -471,25 +471,35 @@ class SharedReadFileManager(FileManager[T_File]):
                 assert manager is current
                 if count == 1:
                     del _SHARED_READ_FILES[self._key]
-                    manager.close(needs_lock)
                 else:
                     _SHARED_READ_FILES[self._key] = (manager, count - 1)
+            if count == 1:
+                manager.close(needs_lock=False)
 
     def __del__(self) -> None:
         if hasattr(self, "_lock"):
             manager = getattr(self, "_manager", None)
-            if (
-                manager is not None
-                and OPTIONS["warn_for_unclosed_files"]
-                and manager._key in manager._cache
-            ):
+            if manager is None:
+                return
+            if OPTIONS["warn_for_unclosed_files"] and manager._key in manager._cache:
                 warnings.warn(
                     "deallocating SharedReadFileManager without closing its file. "
                     "This may indicate a bug.",
                     RuntimeWarning,
                     stacklevel=2,
                 )
-            self.close()
+            if acquire(self._lock, blocking=False):
+                try:
+                    self.close(needs_lock=False)
+                finally:
+                    self._lock.release()
+            else:
+                # Garbage collection can run while a thread holds this lock.
+                # Closing there would deadlock, so wait in a separate thread.
+                with suppress(RuntimeError):
+                    threading.Thread(
+                        target=self.close, name="xarray-close-file", daemon=True
+                    ).start()
 
     def __getstate__(self) -> tuple[Any, ...]:
         return self._opener, self._args, self._kwargs, self._requested_lock
