@@ -214,8 +214,7 @@ def shape_and_chunks(
     min_size: int = 1,
     max_size: int = 900,
 ) -> tuple[tuple[int, ...], tuple[int, ...]]:
-    """
-    Generate a shape tuple and corresponding chunks tuple.
+    """Generate a shape tuple and corresponding chunks tuple.
 
     Each element in the chunks tuple is smaller than or equal to the
     corresponding element in the shape tuple.

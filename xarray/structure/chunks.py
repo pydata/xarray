@@ -94,7 +94,9 @@ def _maybe_chunk(
                 dim: chunk_shape[i] for i, dim in enumerate(var.dims) if dim in chunks
             }
 
-        if isinstance(chunkmanager, DaskManager) or any(v is chunkmanager and k == "dask" for k, v in list_chunkmanagers.items()):
+        if isinstance(chunkmanager, DaskManager) or any(
+            v is chunkmanager and k == "dask" for k, v in list_chunkmanagers.items()
+        ):
             if not just_use_token:
                 from dask.base import tokenize
 

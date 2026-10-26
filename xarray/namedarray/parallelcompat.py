@@ -877,7 +877,7 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
             # 2. the chunk covers the entire array
 
             num_chunks = np.zeros_like(shape, dtype=float)
-            np.divide(shape, max_chunks, out=num_chunks, where=(max_chunks != 0)) 
+            np.divide(shape, max_chunks, out=num_chunks, where=(max_chunks != 0))
             num_chunks = num_chunks * auto_dims
             chunk_bytes = np.prod(max_chunks) * typesize
 
