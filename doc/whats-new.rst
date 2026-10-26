@@ -183,7 +183,9 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 - :py:meth:`DataArray.to_unstacked_dataset` no longer raises ``KeyError`` for
-  unused variable labels left in the stacked index after selecting features.
+  unused variable labels left in the stacked index after selecting features
+  (:pull:`11808`).
+  By `Aryan R. Ganjoo <https://github.com/AryanRG>`_.
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
   variables (:issue:`6449`).
   By `Liang, Jingyi <https://github.com/LJimmy007>`_.
