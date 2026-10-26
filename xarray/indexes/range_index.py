@@ -1,6 +1,6 @@
 import math
 from collections.abc import Hashable, Mapping
-from typing import Any
+from typing import Any, override
 
 import numpy as np
 import pandas as pd
@@ -14,8 +14,9 @@ from xarray.core.variable import Variable
 
 
 class RangeCoordinateTransform(CoordinateTransform):
-    """1-dimensional coordinate transform representing a simple bounded interval
-    with evenly spaced, floating-point values.
+    """1-dimensional coordinate transform representing a simple bounded interval.
+
+    The interval has evenly spaced, floating-point values.
     """
 
     start: float
@@ -32,6 +33,7 @@ class RangeCoordinateTransform(CoordinateTransform):
         coord_name: Hashable,
         dim: str,
         dtype: Any = None,
+        step: float | None = None,
     ):
         if dtype is None:
             dtype = np.dtype(np.float64)
@@ -40,7 +42,7 @@ class RangeCoordinateTransform(CoordinateTransform):
 
         self.start = start
         self.stop = stop
-        self._step = None  # Will be calculated by property
+        self._step = step
 
     @property
     def coord_name(self) -> Hashable:
@@ -64,16 +66,19 @@ class RangeCoordinateTransform(CoordinateTransform):
             # For empty arrays, default to 1.0
             return 1.0
 
+    @override
     def forward(self, dim_positions: dict[str, Any]) -> dict[Hashable, Any]:
         positions = dim_positions[self.dim]
         labels = self.start + positions * self.step
         return {self.coord_name: labels}
 
+    @override
     def reverse(self, coord_labels: dict[Hashable, Any]) -> dict[str, Any]:
         labels = coord_labels[self.coord_name]
         positions = (labels - self.start) / self.step
         return {self.dim: positions}
 
+    @override
     def equals(
         self,
         other: CoordinateTransform,
@@ -121,26 +126,29 @@ class RangeCoordinateTransform(CoordinateTransform):
         new_range = range(self.size)[sl]
         new_size = len(new_range)
 
+        # A slice scales the spacing by its own step, e.g. ``[::2]`` doubles it.
+        # Preserve the exact resulting step instead of letting it be re-derived
+        # from ``(stop - start) / size``, which would be wrong whenever the
+        # spacing does not evenly divide the interval. See GH11325.
+        new_step = self.step * new_range.step
         new_start = self.start + new_range.start * self.step
-        new_stop = self.start + new_range.stop * self.step
+        new_stop = new_start + new_size * new_step
 
-        result = type(self)(
+        return type(self)(
             new_start,
             new_stop,
             new_size,
             self.coord_name,
             self.dim,
             dtype=self.dtype,
+            step=new_step,
         )
-        if new_size == 0:
-            # For empty slices, preserve step from parent
-            result._step = self.step
-        return result
 
 
 class RangeIndex(CoordinateTransformIndex):
-    """Xarray index implementing a simple bounded 1-dimension interval with
-    evenly spaced, monotonic floating-point values.
+    """Xarray index implementing a simple bounded 1-dimension interval.
+
+    The interval has evenly spaced, monotonic floating-point values.
 
     This index is memory-saving, i.e., the values of its associated coordinate
     variable are not materialized in memory.
@@ -161,6 +169,7 @@ class RangeIndex(CoordinateTransformIndex):
     def __init__(self, transform: RangeCoordinateTransform):
         super().__init__(transform)
 
+    @override
     def equals(
         self,
         other: "Index",
@@ -276,10 +285,15 @@ class RangeIndex(CoordinateTransformIndex):
         if coord_name is None:
             coord_name = dim
 
-        size = math.ceil((stop - start) / step)
+        size = max(0, math.ceil((stop - start) / step))
 
+        # Snap ``stop`` to ``start + size * step`` and keep the exact ``step`` so
+        # that the materialized values match ``numpy.arange`` even when ``step``
+        # does not evenly divide ``stop - start``. See GH11325.
+        stop = start + size * step
+        # Snap `stop` to `start + size * step`
         transform = RangeCoordinateTransform(
-            start, stop, size, coord_name, dim, dtype=dtype
+            start, stop, size, coord_name, dim, dtype=dtype, step=step
         )
 
         return cls(transform)
@@ -296,8 +310,7 @@ class RangeIndex(CoordinateTransformIndex):
         dim: str,
         dtype: Any = None,
     ) -> "RangeIndex":
-        """Create a new RangeIndex from given start / stop values and number of
-        values.
+        """Create a new RangeIndex from given start / stop values and number of values.
 
         Parameters
         ----------
@@ -336,10 +349,13 @@ class RangeIndex(CoordinateTransformIndex):
             x        RangeIndex (start=0, stop=1.25, step=0.25)
 
         """
+        if num < 0:
+            raise ValueError(f"Number of samples, {num}, must be non-negative.")
+
         if coord_name is None:
             coord_name = dim
 
-        if endpoint:
+        if endpoint and num > 1:
             stop += (stop - start) / (num - 1)
 
         transform = RangeCoordinateTransform(
@@ -349,6 +365,7 @@ class RangeIndex(CoordinateTransformIndex):
         return cls(transform)
 
     @classmethod
+    @override
     def from_variables(
         cls,
         variables: Mapping[Any, Variable],
@@ -388,6 +405,7 @@ class RangeIndex(CoordinateTransformIndex):
     def size(self) -> int:
         return self.transform.dim_size[self.dim]
 
+    @override
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Index | None:
@@ -410,6 +428,7 @@ class RangeIndex(CoordinateTransformIndex):
             pd_index = pd.Index(values, name=self.coord_name)
             return PandasIndex(pd_index, new_dim, coord_dtype=values.dtype)
 
+    @override
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
@@ -458,10 +477,12 @@ class RangeIndex(CoordinateTransformIndex):
 
         return result
 
+    @override
     def to_pandas_index(self) -> pd.Index:
         values = self.transform.generate_coords()
         return pd.Index(values[self.dim])
 
+    @override
     def _repr_inline_(self, max_width) -> str:
         params_fmt = (
             f"start={self.start:.3g}, stop={self.stop:.3g}, step={self.step:.3g}"

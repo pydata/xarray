@@ -1,0 +1,74 @@
+# Posts the results of `benchmarks.yml` as a comment on the PR. This needs a separate
+# workflow, because `pull_request` runs from forks cannot write to the PR.
+# See https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+
+name: Benchmark comment
+
+on:
+  # we can ignore zizmor in this case, because `benchmarks.yml` is run on `pull_request` not `pull_request_target`. Only this job gets pull-requests: write; nothing from the PR is executed.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows: ["Benchmark"]
+    types:
+      - completed
+
+permissions: {}
+
+jobs:
+  comment:
+    name: Post benchmark results
+    runs-on: ubuntu-latest
+    if: >-
+      github.repository == 'pydata/xarray'
+      && github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion != 'skipped'
+      && github.event.workflow_run.conclusion != 'cancelled'
+
+    permissions:
+      actions: read
+      pull-requests: write
+
+    steps:
+      - name: Download the comment
+        id: download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACTS_URL: ${{ github.event.workflow_run.artifacts_url }}
+        run: |
+          url=$(gh api "$ARTIFACTS_URL" -q '.artifacts[] | select(.name == "asv-benchmark-comment") | .archive_download_url')
+          if [ -z "$url" ]; then
+            echo "No benchmark comment found, the benchmarks did not run."
+            exit 0
+          fi
+          gh api "$url" > comment.zip
+          unzip -d comment comment.zip
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Post or update the comment
+        if: steps.download.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          # the artifact was written by the PR's own workflow, so we cannot trust it:
+          # only comment on the PR whose head commit was benchmarked
+          pr=$(cat comment/pr_number)
+          if ! [[ "$pr" =~ ^[0-9]+$ ]]; then
+            echo "::error::Invalid PR number: $pr"
+            exit 1
+          fi
+          if [ "$(gh api "repos/$REPO/pulls/$pr" -q .head.sha)" != "$HEAD_SHA" ]; then
+            echo "::error::PR $pr does not belong to commit $HEAD_SHA"
+            exit 1
+          fi
+
+          # update the previous benchmark comment instead of adding a new one
+          marker="<!-- asv-benchmark-comment -->"
+          comment_id=$(gh api --paginate "repos/$REPO/issues/$pr/comments" \
+            -q ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id" \
+            | head -n 1)
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$comment_id" -F body=@comment/comment.md
+          else
+            gh api --method POST "repos/$REPO/issues/$pr/comments" -F body=@comment/comment.md
+          fi

@@ -1,4 +1,4 @@
-"""Testing functions exposed to the user API"""
+"""Testing functions exposed to the user API."""
 
 import functools
 import warnings
@@ -54,7 +54,8 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
 
 @ensure_warnings
 def assert_isomorphic(a: DataTree, b: DataTree):
-    """
+    """Assert that two DataTrees are isomorphic.
+
     Two DataTrees are considered isomorphic if the set of paths to their
     descendent nodes are the same.
 
@@ -86,23 +87,32 @@ def assert_isomorphic(a: DataTree, b: DataTree):
 
 
 def maybe_transpose_dims(a, b, check_dim_order: bool):
-    """Helper for assert_equal/allclose/identical"""
+    """Transpose dimensions for assert_equal/allclose/identical if needed.
 
+    Returns (a, b) tuple with dimensions transposed to canonical order if needed.
+    """
     __tracebackhide__ = True
+
+    if check_dim_order:
+        return a, b
 
     def _maybe_transpose_dims(a, b):
         if not isinstance(a, Variable | DataArray | Dataset):
-            return b
-        if set(a.dims) == set(b.dims):
-            # Ensure transpose won't fail if a dimension is missing
-            # If this is the case, the difference will be caught by the caller
-            return b.transpose(*a.dims)
-        return b
+            return a, b
 
-    if check_dim_order:
-        return b
+        # Find common dimensions and transpose both to canonical order
+        common_dims = set(a.dims) & set(b.dims)
+        if common_dims:
+            # Use order from the intersection, with ellipsis for any unique dims
+            canonical_order = list(common_dims) + [...]
+            # For Datasets, we need to transpose both to the same order
+            # For Variable/DataArray, we could just transpose b, but for consistency
+            # and simplicity we transpose both
+            return a.transpose(*canonical_order), b.transpose(*canonical_order)
+        return a, b
 
     if isinstance(a, DataTree):
+        # map_over_datasets supports tuple returns and unpacks them automatically
         return map_over_datasets(_maybe_transpose_dims, a, b)
 
     return _maybe_transpose_dims(a, b)
@@ -110,8 +120,7 @@ def maybe_transpose_dims(a, b, check_dim_order: bool):
 
 @ensure_warnings
 def assert_equal(a, b, check_dim_order: bool = True):
-    """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
-    objects.
+    """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray objects.
 
     Raises an AssertionError if two objects are not equal. This will match
     data values, dimensions and coordinates, but not names or attributes
@@ -140,7 +149,7 @@ def assert_equal(a, b, check_dim_order: bool = True):
     assert type(a) is type(b) or (
         isinstance(a, Coordinates) and isinstance(b, Coordinates)
     )
-    b = maybe_transpose_dims(a, b, check_dim_order)
+    a, b = maybe_transpose_dims(a, b, check_dim_order)
     if isinstance(a, Variable | DataArray):
         assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
     elif isinstance(a, Dataset):
@@ -155,8 +164,7 @@ def assert_equal(a, b, check_dim_order: bool = True):
 
 @ensure_warnings
 def assert_identical(a, b):
-    """Like :py:func:`xarray.testing.assert_equal`, but also matches the
-    objects' names and attributes.
+    """Like :py:func:`xarray.testing.assert_equal`, but also matches names/attributes.
 
     Raises an AssertionError if two objects are not identical.
 
@@ -228,7 +236,7 @@ def assert_allclose(
     """
     __tracebackhide__ = True
     assert type(a) is type(b)
-    b = maybe_transpose_dims(a, b, check_dim_order)
+    a, b = maybe_transpose_dims(a, b, check_dim_order)
 
     equiv = functools.partial(
         _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
@@ -310,7 +318,7 @@ def assert_duckarray_allclose(
 
 @ensure_warnings
 def assert_duckarray_equal(x, y, err_msg="", verbose=True):
-    """Like `np.testing.assert_array_equal`, but for duckarrays"""
+    """Like `np.testing.assert_array_equal`, but for duckarrays."""
     __tracebackhide__ = True
 
     if not utils.is_duck_array(x) and not utils.is_scalar(x):
@@ -329,8 +337,7 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
 
 
 def assert_chunks_equal(a, b):
-    """
-    Assert that chunksizes along chunked dimensions are equal.
+    """Assert that chunksizes along chunked dimensions are equal.
 
     Parameters
     ----------
@@ -339,7 +346,6 @@ def assert_chunks_equal(a, b):
     b : xarray.Dataset or xarray.DataArray
         The second object to compare.
     """
-
     if isinstance(a, DataArray) != isinstance(b, DataArray):
         raise TypeError("a and b have mismatched types")
 

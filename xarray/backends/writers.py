@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import io
 import os
-from collections.abc import Callable, Hashable, Iterable, Mapping, MutableMapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from io import IOBase
 from itertools import starmap
 from numbers import Number
@@ -79,7 +79,7 @@ def get_writable_netcdf_store(
 
 
 def _validate_dataset_names(dataset: Dataset) -> None:
-    """DataArray.name and Dataset keys must be a string or None"""
+    """Check that DataArray.name and Dataset keys are a string or None."""
 
     def check_name(name: Hashable):
         if isinstance(name, str):
@@ -101,7 +101,9 @@ def _validate_dataset_names(dataset: Dataset) -> None:
 
 
 def _validate_attrs(dataset, engine, invalid_netcdf=False):
-    """`attrs` must have a string key and a value which is either: a number,
+    """Validate the attributes of a dataset and its variables.
+
+    `attrs` must have a string key and a value which is either: a number,
     a string, an ndarray, a list/tuple of numbers/strings, or a numpy.bool_.
 
     Notes
@@ -109,7 +111,6 @@ def _validate_attrs(dataset, engine, invalid_netcdf=False):
     A numpy.bool_ is only allowed when using the h5netcdf engine with
     `invalid_netcdf=True`.
     """
-
     valid_types = (str, Number, np.ndarray, np.number, list, tuple, bytes)
     if invalid_netcdf and engine == "h5netcdf":
         valid_types += (np.bool_,)
@@ -167,7 +168,6 @@ def get_default_netcdf_write_engine(
     format: T_NetcdfTypes | None,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
     """Return the default netCDF library to use for writing a netCDF file."""
-
     module_names = {
         "netcdf4": "netCDF4",
         "scipy": "scipy",
@@ -386,8 +386,7 @@ def to_netcdf(
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | memoryview | Delayed | None:
-    """This function creates an appropriate datastore for writing a dataset to
-    disk as a netCDF file
+    """Create an appropriate datastore for writing a dataset to disk as netCDF.
 
     See `Dataset.to_netcdf` for full API docs.
 
@@ -429,7 +428,11 @@ def to_netcdf(
         auto_complex=auto_complex,
     )
     if group is not None:
-        store = store.get_child_store(group)
+        try:
+            store = store.get_child_store(group)
+        except Exception:
+            store.close()
+            raise
 
     writer = ArrayWriter()
 
@@ -634,9 +637,7 @@ def save_mfdataset(
 def get_writable_zarr_store(
     store: ZarrStoreLike | None = None,
     *,
-    chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
-    synchronizer=None,
     group: str | None = None,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
@@ -644,16 +645,13 @@ def get_writable_zarr_store(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     zarr_format: int | None = None,
     write_empty_chunks: bool | None = None,
 ) -> backends.ZarrStore:
     """Create a store for writing to Zarr."""
     from xarray.backends.zarr import _choose_default_mode, _get_mappers
 
-    kwargs, mapper, chunk_mapper = _get_mappers(
-        storage_options=storage_options, store=store, chunk_store=chunk_store
-    )
+    kwargs, mapper = _get_mappers(storage_options=storage_options, store=store)
     mode = _choose_default_mode(mode=mode, append_dim=append_dim, region=region)
 
     if mode == "r+":
@@ -666,16 +664,13 @@ def get_writable_zarr_store(
     return backends.ZarrStore.open_group(
         store=mapper,
         mode=mode,
-        synchronizer=synchronizer,
         group=group,
         consolidated=already_consolidated,
         consolidate_on_close=consolidate_on_close,
-        chunk_store=chunk_mapper,
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
         align_chunks=align_chunks,
-        zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty=write_empty_chunks,
         **kwargs,
@@ -687,9 +682,7 @@ def get_writable_zarr_store(
 def to_zarr(
     dataset: Dataset,
     store: ZarrStoreLike | None = None,
-    chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
-    synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
     *,
@@ -700,7 +693,6 @@ def to_zarr(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore: ...
@@ -711,9 +703,7 @@ def to_zarr(
 def to_zarr(
     dataset: Dataset,
     store: ZarrStoreLike | None = None,
-    chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
-    synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
     *,
@@ -724,7 +714,6 @@ def to_zarr(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> Delayed: ...
@@ -733,9 +722,7 @@ def to_zarr(
 def to_zarr(
     dataset: Dataset,
     store: ZarrStoreLike | None = None,
-    chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: ZarrWriteModes | None = None,
-    synchronizer=None,
     group: str | None = None,
     encoding: Mapping | None = None,
     *,
@@ -746,23 +733,19 @@ def to_zarr(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     zarr_format: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore | Delayed:
-    """This function creates an appropriate datastore for writing a dataset to
-    a zarr ztore
+    """Create an appropriate datastore for writing a dataset to a zarr store.
 
     See `Dataset.to_zarr` for full API docs.
     """
-
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
 
-    # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
-    # TODO: delete when min dask>=2023.12.1
-    # https://github.com/dask/dask/pull/10506
+    # Load empty arrays, otherwise the zero-sized dask chunks become zero-sized
+    # zarr chunks, which zarr rejects (Issue #5741)
     for v in dataset.variables.values():
         if v.size == 0:
             v.load()
@@ -772,9 +755,7 @@ def to_zarr(
 
     zstore = get_writable_zarr_store(
         store,
-        chunk_store=chunk_store,
         mode=mode,
-        synchronizer=synchronizer,
         group=group,
         consolidated=consolidated,
         append_dim=append_dim,
@@ -782,7 +763,6 @@ def to_zarr(
         safe_chunks=safe_chunks,
         align_chunks=align_chunks,
         storage_options=storage_options,
-        zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty_chunks=write_empty_chunks,
     )
@@ -821,9 +801,8 @@ def _datatree_to_netcdf(
     compute: bool = True,
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
-) -> None | memoryview | Delayed:
-    """Implementation of `DataTree.to_netcdf`."""
-
+) -> memoryview | Delayed | None:
+    """Implement `DataTree.to_netcdf`."""
     if format not in [None, *get_args(T_DataTreeNetcdfTypes)]:
         raise ValueError("DataTree.to_netcdf only supports the NETCDF4 format")
 
@@ -930,11 +909,9 @@ def _datatree_to_zarr(
     store: ZarrStoreLike,
     mode: ZarrWriteModes = "w-",
     encoding: Mapping[str, Any] | None = None,
-    synchronizer=None,
     group: str | None = None,
     write_inherited_coords: bool = False,
     *,
-    chunk_store: MutableMapping | str | PathLike | None = None,
     compute: bool = True,
     consolidated: bool | None = None,
     append_dim: Hashable | None = None,
@@ -942,13 +919,11 @@ def _datatree_to_zarr(
     safe_chunks: bool = True,
     align_chunks: bool = False,
     storage_options: dict[str, str] | None = None,
-    zarr_version: int | None = None,
     zarr_format: int | None = None,
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> ZarrStore | Delayed:
-    """Implementation of `DataTree.to_zarr`."""
-
+    """Implement `DataTree.to_zarr`."""
     if group is not None:
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"
@@ -972,9 +947,7 @@ def _datatree_to_zarr(
 
     root_store = get_writable_zarr_store(
         store,
-        chunk_store=chunk_store,
         mode=mode,
-        synchronizer=synchronizer,
         group=group,
         consolidated=consolidated,
         append_dim=append_dim,
@@ -982,7 +955,6 @@ def _datatree_to_zarr(
         safe_chunks=safe_chunks,
         align_chunks=align_chunks,
         storage_options=storage_options,
-        zarr_version=zarr_version,
         zarr_format=zarr_format,
         write_empty_chunks=write_empty_chunks,
     )
@@ -1021,7 +993,7 @@ def _datatree_to_zarr(
 
 
 def _get_netcdf_autoclose(dataset: Dataset, engine: T_NetcdfEngine) -> bool:
-    """Should we close files after each write operations?"""
+    """Determine whether to close files after each write operation."""
     scheduler = get_dask_scheduler()
     have_chunks = any(v.chunks is not None for v in dataset.variables.values())
 

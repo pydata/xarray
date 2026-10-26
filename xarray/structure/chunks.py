@@ -1,19 +1,18 @@
-"""
-Functions for handling chunked arrays.
-"""
+"""Functions for handling chunked arrays."""
 
 from __future__ import annotations
 
 import itertools
 from collections.abc import Hashable, Mapping
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from xarray.core import utils
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
     get_chunked_array_type,
+    list_chunkmanagers,
 )
 
 if TYPE_CHECKING:
@@ -63,7 +62,7 @@ def _get_breaks_cached(
 def _maybe_chunk(
     name: Hashable,
     var: Variable,
-    chunks: Mapping[Any, T_ChunkDim] | None,
+    chunks: Mapping[Any, T_ChunkDim],
     chunkmanager: ChunkManagerEntrypoint,
     token=None,
     lock=None,
@@ -75,8 +74,7 @@ def _maybe_chunk(
 ) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
-    if chunks is not None:
-        chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
+    chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
     if var.ndim:
         if (
@@ -96,7 +94,7 @@ def _maybe_chunk(
                 dim: chunk_shape[i] for i, dim in enumerate(var.dims) if dim in chunks
             }
 
-        if isinstance(chunkmanager, DaskManager):
+        if isinstance(chunkmanager, DaskManager) or any(v is chunkmanager and k == "dask" for k, v in list_chunkmanagers.items()):
             if not just_use_token:
                 from dask.base import tokenize
 
@@ -128,21 +126,22 @@ def _maybe_chunk(
         return var
 
 
-_T = TypeVar("_T", bound=Union["Dataset", "DataArray"])
-_U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
-_V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
+@overload
+def unify_chunks[T: Dataset | DataArray](obj: T, /) -> tuple[T]: ...
 
 
 @overload
-def unify_chunks(obj: _T, /) -> tuple[_T]: ...
+def unify_chunks[T: Dataset | DataArray, U: Dataset | DataArray](
+    obj1: T, obj2: U, /
+) -> tuple[T, U]: ...
 
 
 @overload
-def unify_chunks(obj1: _T, obj2: _U, /) -> tuple[_T, _U]: ...
-
-
-@overload
-def unify_chunks(obj1: _T, obj2: _U, obj3: _V, /) -> tuple[_T, _U, _V]: ...
+def unify_chunks[
+    T: Dataset | DataArray,
+    U: Dataset | DataArray,
+    V: Dataset | DataArray,
+](obj1: T, obj2: U, obj3: V, /) -> tuple[T, U, V]: ...
 
 
 @overload
@@ -150,7 +149,8 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
 
 
 def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
-    """
+    """Unify the chunk sizes of any number of Dataset and/or DataArray objects.
+
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.
 

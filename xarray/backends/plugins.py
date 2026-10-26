@@ -6,12 +6,14 @@ import itertools
 import os
 import warnings
 from collections.abc import Callable
+from html import escape
 from importlib.metadata import entry_points
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TextIO
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.options import OPTIONS
 from xarray.core.utils import is_remote_uri, module_available
+from xarray.util._report import package_version, show_report
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoint, EntryPoints
@@ -115,8 +117,7 @@ def build_engines(entrypoints: EntryPoints) -> dict[str, BackendEntrypoint]:
 
 @functools.lru_cache(maxsize=1)
 def list_engines() -> dict[str, BackendEntrypoint]:
-    """
-    Return a dictionary of available engines and their BackendEntrypoint objects.
+    """Return a dictionary of available engines and their BackendEntrypoint objects.
 
     Returns
     -------
@@ -132,8 +133,85 @@ def list_engines() -> dict[str, BackendEntrypoint]:
 
 
 def refresh_engines() -> None:
-    """Refreshes the backend engines based on installed packages."""
+    """Refresh the backend engines based on installed packages."""
     list_engines.cache_clear()
+
+
+def _engine_sources() -> dict[str, tuple[str, str | None]]:
+    """Map each engine name to its providing package and version."""
+    sources: dict[str, tuple[str, str | None]] = dict.fromkeys(
+        BACKEND_ENTRYPOINTS, ("xarray", None)
+    )
+    for ep in entry_points(group="xarray.backends"):
+        if ep.dist is not None:
+            sources[ep.name] = (ep.dist.name, ep.dist.version)
+        else:
+            sources[ep.name] = (ep.module.partition(".")[0], None)
+    return sources
+
+
+def show_backends(file: TextIO | None = None, markdown: bool = False) -> None:
+    """Print the available backends (engines) and information about them.
+
+    The backends are listed in the order in which they are tried when opening
+    a file without specifying the ``engine``.
+    Use :py:func:`xarray.backends.list_engines` to get the backend objects.
+    In Jupyter notebooks the backends are displayed formatted.
+
+    Parameters
+    ----------
+    file : file-like, optional
+        print to the given file-like object. Defaults to sys.stdout.
+    markdown : bool, default: False
+        print a markdown list wrapped in a ``<details>`` block, which can be
+        pasted as is into a GitHub issue.
+    """
+    engines = list_engines()
+    sources = _engine_sources()
+
+    text_lines = []
+    md_lines = []
+    html_items = []
+    for name, backend in engines.items():
+        package, version = sources.get(name, ("unknown", None))
+        summary = f"from {package}"
+        if version is not None:
+            summary += f" {version}"
+        details = []
+        if package == "xarray" and name in BACKEND_ENTRYPOINTS:
+            dependency = BACKEND_ENTRYPOINTS[name][0]
+            if dependency is not None:
+                details.append(f"using {dependency} {package_version(dependency)}")
+        if backend.supports_groups:
+            details.append("supports groups")
+        if details:
+            summary += f" ({', '.join(details)})"
+        cls_name = type(backend).__name__
+        text_lines.append(f"{name}: {cls_name} {summary}")
+        md_lines.append(f"- **{name}**: `{cls_name}` {summary}")
+
+        extra = []
+        html_extra = []
+        if backend.description:
+            description = " ".join(backend.description.split())
+            extra.append(description)
+            html_extra.append(escape(description))
+        if backend.url:
+            extra.append(backend.url)
+            url = escape(backend.url)
+            html_extra.append(f'<a href="{url}" target="_blank">{url}</a>')
+        text_lines.extend(f"    {line}" for line in extra)
+        md_lines.extend(f"  - {line}" for line in extra)
+        html_items.append(
+            f"<li><strong>{escape(name)}</strong>: <code>{escape(cls_name)}</code> "
+            f"{escape(summary)}<ul>{''.join(f'<li>{x}</li>' for x in html_extra)}</ul></li>"
+        )
+
+    empty = "No backends available."
+    text = "\n".join(text_lines) or empty
+    md = "\n".join(md_lines) or empty
+    html = f"<ul>{''.join(html_items)}</ul>" if html_items else f"<p>{empty}</p>"
+    show_report("AVAILABLE BACKENDS", text, md, html, file=file, as_markdown=markdown)
 
 
 def guess_engine(
@@ -213,6 +291,12 @@ def guess_engine(
         store_spec_str = str(store_spec)
         if not is_remote_uri(store_spec_str) and not os.path.exists(store_spec_str):
             raise FileNotFoundError(f"No such file: '{store_spec_str}'")
+
+    if isinstance(store_spec, list | tuple):
+        raise ValueError(
+            f"open_dataset opens a single file, but got a {type(store_spec).__name__}. "
+            "Use open_mfdataset to open multiple files as a single dataset."
+        )
 
     raise ValueError(error_msg)
 
