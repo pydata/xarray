@@ -3,19 +3,22 @@ from __future__ import annotations
 import gc
 import pickle
 import threading
+from pathlib import Path
 from unittest import mock
 
 import pytest
 
+from xarray import open_dataset
 from xarray.backends import file_manager
 from xarray.backends.file_manager import (
     CachingFileManager,
     PickleableFileManager,
+    SharedReadFileManager,
     _close_unless_pinned,
 )
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options
-from xarray.tests import assert_no_warnings
+from xarray.tests import assert_no_warnings, requires_h5netcdf, requires_netCDF4
 
 
 @pytest.fixture(params=[1, 2, 3, None])
@@ -182,6 +185,147 @@ def test_file_manager_cache_repeated_open() -> None:
         gc.collect()
 
     assert not cache
+
+
+def test_shared_read_file_manager_lifetime() -> None:
+    file = mock.Mock()
+    opener = mock.Mock(return_value=file)
+    first = SharedReadFileManager(opener, "filename")
+    second = SharedReadFileManager(opener, "filename")
+
+    assert first.acquire() is second.acquire()
+    opener.assert_called_once_with("filename", mode="r")
+    first.close()
+    file.close.assert_not_called()
+    assert second.acquire() is file
+    second.close()
+    file.close.assert_called_once_with()
+
+    third = SharedReadFileManager(opener, "filename")
+    third.acquire()
+    assert opener.call_count == 2
+    third.close()
+
+
+def test_shared_read_file_manager_pickle() -> None:
+    manager = SharedReadFileManager(open, __file__)
+    restored = pickle.loads(pickle.dumps(manager))
+    try:
+        assert manager.acquire() is restored.acquire()
+        manager.close()
+        assert not restored.acquire().closed
+    finally:
+        restored.close()
+
+
+def test_shared_read_file_manager_reopen() -> None:
+    opener = mock.Mock(side_effect=[mock.Mock(), mock.Mock()])
+    manager = SharedReadFileManager(opener, "filename")
+    first = manager.acquire()
+    manager.close()
+    second = manager.acquire()
+    assert first is not second
+    manager.close()
+
+
+def test_shared_read_file_manager_distinct_options() -> None:
+    opener = mock.Mock(side_effect=[mock.Mock(), mock.Mock()])
+    first = SharedReadFileManager(opener, "filename", kwargs={"option": 1})
+    second = SharedReadFileManager(opener, "filename", kwargs={"option": 2})
+    try:
+        assert first.acquire() is not second.acquire()
+        assert opener.call_count == 2
+    finally:
+        first.close()
+        second.close()
+
+
+@pytest.mark.parametrize("warn_for_unclosed_files", [True, False])
+def test_shared_read_file_manager_autoclose(warn_for_unclosed_files: bool) -> None:
+    file = mock.Mock()
+    manager = SharedReadFileManager(mock.Mock(return_value=file), "filename")
+    manager.acquire()
+
+    ctx = (
+        pytest.warns(RuntimeWarning, match="deallocating SharedReadFileManager")
+        if warn_for_unclosed_files
+        else assert_no_warnings()
+    )
+    with set_options(warn_for_unclosed_files=warn_for_unclosed_files), ctx:
+        del manager
+        gc.collect()
+
+    file.close.assert_called_once_with()
+
+
+@requires_h5netcdf
+def test_h5netcdf_read_only_groups_share_file(tmp_path: Path) -> None:
+    import h5netcdf
+
+    path = tmp_path / "groups.nc"
+    with h5netcdf.File(path, "w") as file:
+        for name in ("a", "b"):
+            group = file.create_group(name)
+            group.dimensions["x"] = 1
+            group.create_variable("value", ("x",), data=[1])
+
+    first = open_dataset(path, group="a", engine="h5netcdf")
+    second = open_dataset(path, group="b", engine="h5netcdf")
+    try:
+        assert len(file_manager.FILE_CACHE) == 1
+        first.close()
+        assert len(file_manager.FILE_CACHE) == 1
+        assert second["value"].values.tolist() == [1]
+    finally:
+        first.close()
+        second.close()
+    assert len(file_manager.FILE_CACHE) == 0
+
+    with h5netcdf.File(path, "a") as file:
+        file["b/value"][:] = [2]
+    with open_dataset(path, group="b", engine="h5netcdf") as reopened:
+        assert reopened["value"].values.tolist() == [2]
+
+
+@requires_netCDF4
+def test_netcdf4_hdf5_read_only_groups_share_file(tmp_path: Path) -> None:
+    import netCDF4
+
+    path = tmp_path / "groups.nc"
+    with netCDF4.Dataset(path, "w") as file:
+        for name in ("a", "b"):
+            group = file.createGroup(name)
+            group.createDimension("x", 1)
+            group.createVariable("value", "i4", ("x",))[:] = [1]
+
+    first = open_dataset(path, group="a", engine="netcdf4")
+    second = open_dataset(path, group="b", engine="netcdf4")
+    try:
+        assert len(file_manager.FILE_CACHE) == 1
+        first.close()
+        assert second["value"].values.tolist() == [1]
+    finally:
+        first.close()
+        second.close()
+    assert len(file_manager.FILE_CACHE) == 0
+
+
+@requires_netCDF4
+def test_netcdf4_netcdf3_still_opens_separately(tmp_path: Path) -> None:
+    import netCDF4
+
+    path = tmp_path / "classic.nc"
+    with netCDF4.Dataset(path, "w", format="NETCDF3_CLASSIC") as file:
+        file.createDimension("x", 1)
+        file.createVariable("value", "i4", ("x",))[:] = [1]
+
+    first = open_dataset(path, engine="netcdf4")
+    second = open_dataset(path, engine="netcdf4")
+    try:
+        assert len(file_manager.FILE_CACHE) == 2
+    finally:
+        first.close()
+        second.close()
 
 
 def test_file_manager_cache_with_pickle(tmpdir) -> None:

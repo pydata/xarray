@@ -28,6 +28,7 @@ from xarray.backends.file_manager import (
     CachingFileManager,
     DummyFileManager,
     PickleableFileManager,
+    SharedReadFileManager,
 )
 from xarray.backends.locks import (
     HDF5_LOCK,
@@ -563,9 +564,22 @@ class NetCDF4DataStore(WritableCFDataStore):
                 lock=lock,
             )
         else:
-            manager = CachingFileManager(
-                netCDF4.Dataset, filename, mode=mode, kwargs=kwargs, lock=lock
+            # netCDF3 must keep fresh opens, while read-only HDF5 handles can be
+            # shared until the last dataset using them is closed.
+            is_hdf5 = (
+                mode == "r"
+                and isinstance(filename, str)
+                and not is_remote_uri(filename)
+                and try_read_magic_number_from_path(filename) == b"\x89HDF\r\n\x1a\n"
             )
+            if is_hdf5 and lock is NETCDF4_PYTHON_LOCK and not diskless:
+                manager = SharedReadFileManager(
+                    netCDF4.Dataset, filename, kwargs=kwargs, lock=lock
+                )
+            else:
+                manager = CachingFileManager(
+                    netCDF4.Dataset, filename, mode=mode, kwargs=kwargs, lock=lock
+                )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _metadata_lock(self) -> AbstractContextManager[Any]:

@@ -47,6 +47,11 @@ T_File = TypeVar("T_File", bound=Closable)
 
 REF_COUNTS: dict[Any, int] = {}
 
+# Read-only HDF5 datasets can share a file while it is in use. Keep this
+# separate from FILE_CACHE so a later open still sees a fresh file.
+_SHARED_READ_FILES: dict[Any, tuple[CachingFileManager[Any], int]] = {}
+_SHARED_READ_FILES_LOCK = threading.RLock()
+
 _OMIT_MODE = utils.ReprObject("<omitted>")
 
 
@@ -402,6 +407,96 @@ class CachingFileManager(FileManager[T_File]):
             f"{type(self).__name__}({self._opener!r}, {args_string}, "
             f"kwargs={self._kwargs}, manager_id={self._manager_id!r})"
         )
+
+
+class SharedReadFileManager(FileManager[T_File]):
+    """Share a read-only file until the last manager using it closes."""
+
+    def __init__(
+        self,
+        opener: Callable[..., T_File],
+        *args: Any,
+        kwargs: Mapping[str, Any] | None = None,
+        lock: Lock | Literal[False] | None = None,
+    ) -> None:
+        self._opener = opener
+        self._args = args
+        self._kwargs = {} if kwargs is None else dict(kwargs)
+        self._requested_lock = lock
+        self._lock = _SHARED_READ_FILES_LOCK if lock is None or lock is False else lock
+        self._key = _HashedSequence(
+            (opener, args, tuple(sorted(self._kwargs.items())), self._lock)
+        )
+        self._manager: CachingFileManager[T_File] | None = None
+        self._join()
+
+    def _join(self) -> CachingFileManager[T_File]:
+        with self._lock:
+            with _SHARED_READ_FILES_LOCK:
+                if self._manager is None:
+                    try:
+                        manager, count = _SHARED_READ_FILES[self._key]
+                    except KeyError:
+                        manager = CachingFileManager(
+                            self._opener,
+                            *self._args,
+                            mode="r",
+                            kwargs=self._kwargs,
+                            lock=self._lock,
+                        )
+                        count = 0
+                    _SHARED_READ_FILES[self._key] = (manager, count + 1)
+                    self._manager = manager
+                return self._manager
+
+    @override
+    def acquire(self, needs_lock: bool = True) -> T_File:
+        return self._join().acquire(needs_lock)
+
+    @contextmanager
+    @override
+    def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
+        with self._join().acquire_context(needs_lock) as file:
+            yield file
+
+    @override
+    def close(self, needs_lock: bool = True) -> None:
+        with self._lock:
+            with _SHARED_READ_FILES_LOCK:
+                manager = getattr(self, "_manager", None)
+                if manager is None:
+                    return
+                self._manager = None
+                current, count = _SHARED_READ_FILES[self._key]
+                assert manager is current
+                if count == 1:
+                    del _SHARED_READ_FILES[self._key]
+                    manager.close(needs_lock)
+                else:
+                    _SHARED_READ_FILES[self._key] = (manager, count - 1)
+
+    def __del__(self) -> None:
+        if hasattr(self, "_lock"):
+            manager = getattr(self, "_manager", None)
+            if (
+                manager is not None
+                and OPTIONS["warn_for_unclosed_files"]
+                and manager._key in manager._cache
+            ):
+                warnings.warn(
+                    "deallocating SharedReadFileManager without closing its file. "
+                    "This may indicate a bug.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+            self.close()
+
+    def __getstate__(self) -> tuple[Any, ...]:
+        return self._opener, self._args, self._kwargs, self._requested_lock
+
+    def __setstate__(self, state: tuple[Any, ...]) -> None:
+        opener, args, kwargs, lock = state
+        SharedReadFileManager.__init__(self, opener, *args, kwargs=kwargs, lock=lock)
 
 
 class _RefCounter:
