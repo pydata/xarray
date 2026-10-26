@@ -33,6 +33,12 @@ jobs:
           cutoff=$(date "+%s" -d "$now - $PERIOD")
           echo "n-recent-commits=$(git rev-list --max-age="$cutoff" HEAD | wc -l)" >> $GITHUB_OUTPUT
 
+      - name: Report
+        env:
+          RECENT_COMMITS: ${{ steps.check-recent-commits.outputs.n-recent-commits }}
+        run: |
+          echo "Recent commits found: $RECENT_COMMITS"
+
   build-artifacts:
     name: Build artifacts
     needs: check-recent-commits
