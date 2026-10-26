@@ -239,6 +239,10 @@ def shape_and_chunks(
         - shape is a tuple of positive integers
         - chunks is a tuple where each element is an integer <= corresponding shape element
 
+    See Also
+    --------
+    :ref:`testing.hypothesis`_
+
     Examples
     --------
     >>> shape_and_chunks().example()  # doctest: +SKIP
@@ -247,10 +251,6 @@ def shape_and_chunks(
     ((10, 7), (10, 3))
     >>> shape_and_chunks(min_dims=2, max_dims=3).example()  # doctest: +SKIP
     ((4, 6, 2), (2, 3, 1))
-
-    See Also
-    --------
-    :ref:`testing.hypothesis`_
     """
     # Generate the shape tuple
     ndim = draw(st.integers(min_value=min_dims, max_value=max_dims))

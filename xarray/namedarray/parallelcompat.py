@@ -783,8 +783,7 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         typesize: int,
         previous_chunks: tuple[int, ...] | NormalizedChunks,
     ) -> tuple[T_ChunkDim, ...]:
-        """Quickly determine optimal chunks close to target size but never splitting
-        previous_chunks.
+        """Determine optimal chunks close to target size without splitting previous_chunks.
 
         This takes in a chunks argument potentially containing ``"auto"`` for several
         dimensions. This function replaces ``"auto"`` with concrete dimension sizes that
@@ -793,6 +792,21 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         by some factor to get close to the byte target, while never splitting
         ``previous_chunks``. If chunks are non-uniform along a particular dimension
         then that dimension will always use exactly ``previous_chunks``.
+
+        Parameters
+        ----------
+        chunks: tuple[int | str | tuple[int], ...]
+            A tuple of either dimensions or tuples of explicit chunk dimensions
+            Some entries should be "auto".
+        shape: tuple[int]
+            The shape of the array
+        target: int
+            The target size of the chunk in bytes.
+        typesize: int
+            The size, in bytes, of each element of the chunk.
+        previous_chunks: tuple[int | tuple[int], ...]
+            Size of chunks being preserved. Expressed as a tuple of ints or tuple
+            of tuple of ints.
 
         Examples
         --------
@@ -822,21 +836,6 @@ class ChunkManagerEntrypoint[T_ChunkedArray: ChunkedArrayMixinProtocol](ABC):
         ...     previous_chunks=((128,) * 10, (128, 256, 256, 512), (1,) * 20),
         ... )
         (256, (128, 256, 256, 512), 1)
-
-        Parameters
-        ----------
-        chunks: tuple[int | str | tuple[int], ...]
-            A tuple of either dimensions or tuples of explicit chunk dimensions
-            Some entries should be "auto".
-        shape: tuple[int]
-            The shape of the array
-        target: int
-            The target size of the chunk in bytes.
-        typesize: int
-            The size, in bytes, of each element of the chunk.
-        previous_chunks: tuple[int | tuple[int], ...]
-            Size of chunks being preserved. Expressed as a tuple of ints or tuple
-            of tuple of ints.
         """
         new_chunks = [*previous_chunks]
         auto_dims = [c == "auto" for c in chunks]
