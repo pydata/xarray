@@ -152,6 +152,10 @@ Breaking Changes
   hue, and use ``add_legend`` or ``add_colorbar`` to choose the guide
   (:issue:`11721`, :pull:`11787`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- ``reset_encoding`` of :py:class:`Dataset`, :py:class:`DataArray` and
+  :py:class:`Variable`, deprecated since v2023.10.0, has been removed. Use
+  ``drop_encoding`` instead (:issue:`11721`, :pull:`11805`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
 Deprecations
