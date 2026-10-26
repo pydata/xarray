@@ -5690,6 +5690,17 @@ class Dataset(
         See Also
         --------
         Dataset.stack
+
+        Notes
+        -----
+        The order of the new dimension coordinates follows the levels of the
+        ``MultiIndex``. A ``MultiIndex`` created by pandas (e.g. when converting
+        a ``pd.DataFrame`` or ``pd.Series`` with a ``MultiIndex``) usually has
+        sorted levels, so the resulting coordinates will be sorted. A
+        ``MultiIndex`` created by
+        :py:meth:`Dataset.stack` preserves the original order. Use
+        :py:meth:`Dataset.sel` after unstacking to select a specific order if
+        needed.
         """
         if dim is None:
             dims = list(self.dims)
@@ -7144,10 +7155,9 @@ class Dataset(
         --------
         Dataset.map
         """
-        warnings.warn(
-            "Dataset.apply may be deprecated in the future. Using Dataset.map is encouraged",
-            PendingDeprecationWarning,
-            stacklevel=2,
+        emit_user_level_warning(
+            "Dataset.apply is deprecated, use Dataset.map instead.",
+            FutureWarning,
         )
         return self.map(func, keep_attrs, args, **kwargs)
 
@@ -7305,6 +7315,10 @@ class Dataset(
         self, dim: Hashable = "variable", name: Hashable | None = None
     ) -> DataArray:
         """Convert this dataset into a DataArray (deprecated, use to_dataarray)."""
+        emit_user_level_warning(
+            "Dataset.to_array is deprecated, use Dataset.to_dataarray instead.",
+            FutureWarning,
+        )
         return self.to_dataarray(dim=dim, name=name)
 
     def _normalize_dim_order(
@@ -10010,9 +10024,12 @@ class Dataset(
                 msg = f"expr for dim {dim} must be a string to be evaluated, {type(expr)} given"
                 raise ValueError(msg)
 
-        # evaluate the queries to create the indexers
+        # Include coords so pandas considers the resolvers nonempty even when
+        # there are no data variables.
         indexers = {
-            dim: pd.eval(expr, resolvers=[self], parser=parser, engine=engine)
+            dim: pd.eval(
+                expr, resolvers=[self, self.coords], parser=parser, engine=engine
+            )
             for dim, expr in queries.items()
         }
 

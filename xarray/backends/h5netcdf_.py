@@ -297,8 +297,8 @@ class H5NetCDFStore(WritableCFDataStore):
                 },
             )
         else:
-            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-            if vlen_dtype is str:
+            string_info = h5py.check_string_dtype(var.dtype)
+            if string_info is not None and string_info.length is None:
                 encoding["dtype"] = str
             else:
                 # xarray doesn't support writing arbitrary vlen dtypes yet, so

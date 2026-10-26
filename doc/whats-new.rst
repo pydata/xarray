@@ -42,6 +42,16 @@ New Features
   type defaults to ``Hashable``, so a bare ``Variable`` annotation means
   ``Variable[Hashable]`` and keeps its previous meaning (:pull:`11677`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add :py:func:`~xarray.show_backends` to print the available IO backends,
+  including those of other packages, and in which order they are tried
+  (:issue:`6577`, :pull:`11700`).
+  By `Nick Hodgskin <https://github.com/VeckoTheGecko>`_ and
+  `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:func:`~xarray.show_versions` displays formatted tables in Jupyter
+  notebooks and gained a ``markdown`` option to print markdown that can be pasted
+  as is into GitHub issues. Package versions are read from the
+  package metadata, so the packages are no longer imported (:pull:`11700`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - The ``in`` operator on :py:class:`DataTree` now accepts the same unix-like
   paths as indexing, so ``key in tree`` is ``True`` exactly when ``tree[key]``
   succeeds, e.g. ``"group/subgroup" in tree`` or ``"/group/var" in tree``.
@@ -51,7 +61,15 @@ New Features
   variables of a section at once, and shows the expanded attributes and data
   more compactly and indented below their variable (:pull:`11284`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
-
+- :py:class:`~xarray.coders.CFDatetimeCoder` accepts ``infer_dtype``. With
+  ``infer_dtype="metadata"`` the decoded dtype is inferred from ``units``,
+  ``calendar``, ``use_cftime`` and ``time_unit`` instead of reading the first
+  and last values of each time variable, which makes opening remote datasets
+  with many time variables much faster. The default ``infer_dtype="data"``
+  keeps the current behavior (:issue:`11303`, :pull:`11304`).
+  By `Alfonso Ladino <https://github.com/aladinor>`_.
+- Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -138,6 +156,10 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- The deprecated ``dims=`` (or ``dimensions=``) argument renamed to ``dim=``
+  and ``interpolate_na(method="spline")`` now emit a ``FutureWarning`` instead
+  of a ``PendingDeprecationWarning``, so these warnings are visible by default
+  (:issue:`11721`).
 - Passing any argument after ``bins`` positionally to
   :py:meth:`Dataset.groupby_bins` and :py:meth:`DataArray.groupby_bins` is
   deprecated. It was meant to be deprecated in v2024.07.0, but the warning never
@@ -149,10 +171,31 @@ Deprecations
   :py:attr:`DataTree.lineage` warns once instead of twice (:issue:`11721`,
   :pull:`11724`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
+- :py:meth:`Dataset.apply`,
+  :py:meth:`core.groupby.DataArrayGroupBy.apply`,
+  :py:meth:`core.groupby.DatasetGroupBy.apply`,
+  :py:meth:`core.resample.DataArrayResample.apply` and
+  :py:meth:`core.resample.DatasetResample.apply` now emit a ``FutureWarning``
+  instead of ``PendingDeprecationWarning``. Use ``.map`` instead (:issue:`11721`,
+  :pull:`11784`).
+  By `Anjali Kashide <https://github.com/Anju522>`_.
+- :py:meth:`Dataset.to_array` is deprecated in favor of :py:meth:`Dataset.to_dataarray`
+  but it did not emit any warning previously, now it emits a ``FutureWarning``
+  (:issue:`11721`, :pull:`11788`).
+  By `Soutrik Das <https://github.com/SoutrikDas>`_.
+
 
 
 Bug Fixes
 ~~~~~~~~~
+- :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
+  variables (:issue:`6449`).
+  By `Liang, Jingyi <https://github.com/LJimmy007>`_.
+- Results of the string accessor methods ``strip``, ``pad``, ``center``,
+  ``ljust``, ``rjust``, ``zfill`` and ``replace`` on dask arrays are no longer
+  truncated to a single character, and ``repeat`` no longer fails on dask arrays
+  (:pull:`11746`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Encoding a string variable whose ``char_dim_name`` has characters after its
   last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
   not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).
@@ -351,10 +394,21 @@ Bug Fixes
   ``.astype(np.float32)`` a no-op. Interpolating float data now always keeps its
   dtype, also without dask (:issue:`10325`, :pull:`11741`).
   By `Vladimir Saraikin <https://github.com/vsaraikin>`_.
+- Fix :py:func:`concat` failing with ``TypeError: Cannot interpret
+  '<StringDtype...>' as a data type`` when a ``pandas.Index`` with a
+  ``StringDtype`` is used as the new concat dimension and another input has a
+  numpy string-dtype coord (:issue:`11317`, :pull:`11322`).
+  By `Sai Asish Y <https://github.com/SAY-5>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
+- Clarified that :py:meth:`DataArray.item` and :py:meth:`Variable.item` are not
+  implemented for lazy (e.g. dask) arrays, both in the method docstring and in the
+  raised error message, which now suggests loading the data into memory first
+  (:issue:`7916`).
+  By `imam <https://github.com/imam2004i>`_.
+
 - Add hidden intersphinx inventory entries for methods, properties and
   attributes at the path where they are defined, e.g.
   ``xarray.core.dataarray.DataArray.sel``. This lets tools such as
@@ -384,9 +438,20 @@ Documentation
   (:issue:`10832`, :pull:`11156`).
   By `dolliecoder <https://github.com/dolliecoder>`_ and
   `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix the time coding docs for pandas 3.1, which now gives microsecond
+  resolution for numeric input with any ``unit`` (:pull:`11796`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
 ~~~~~~~~~~~
+- The string accessor uses the vectorized functions of ``np.strings`` for
+  ``len``, ``startswith``, ``endswith``, ``find``, ``rfind``, ``index``,
+  ``rindex``, ``strip``, ``lstrip``, ``rstrip``, ``pad``, ``center``,
+  ``ljust``, ``rjust``, ``zfill``, ``repeat``, the ``is*`` methods and
+  ``contains`` and ``replace`` with ``regex=False`` and case-sensitive matching,
+  which makes them 5-80 times faster for arrays with a string dtype
+  (:pull:`11746`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Speed up rolling reductions of dask arrays without bottleneck, e.g. ``sum``,
   ``mean`` and ``count``, by about 7x with about 12x fewer tasks for a window of 20.
   Counting the values in each window no longer splits the chunks of the other
