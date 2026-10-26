@@ -571,15 +571,15 @@ class IOReadDataTreeZarrLatency:
     by the number of reads that are made one after the other.
     """
 
-    params = [[10, 35], [0.0, 0.01]]
-    param_names = ["n_groups", "latency"]
+    params = [[0.0, 0.01]]
+    param_names = ["latency"]
     # One sample per process. With repeat = 3 (6 samples per commit), asv's
     # Mann-Whitney test can never be significant, so no change was reported.
     repeat = 1
     number = 1
     warmup_time = 0.0
 
-    def setup(self, n_groups: int, latency: float) -> None:
+    def setup(self, latency: float) -> None:
         requires_zarr()
         import zarr
 
@@ -592,13 +592,14 @@ class IOReadDataTreeZarrLatency:
             {"foo": (("x", "y"), randn((10, 10)))},
             coords={"x": np.arange(10), "y": np.arange(10)},
         )
-        tree = xr.DataTree.from_dict({f"group_{i}/sub": ds for i in range(n_groups)})
+        # 71 groups: the root and 35 groups with one subgroup each
+        tree = xr.DataTree.from_dict({f"group_{i}/sub": ds for i in range(35)})
         store = zarr.storage.MemoryStore()
         # without consolidated metadata, every group is listed and read separately
         tree.to_zarr(store, consolidated=False)
         self.store = LatencyStore(store)
 
-    def time_open_datatree(self, n_groups: int, latency: float) -> None:
+    def time_open_datatree(self, latency: float) -> None:
         xr.open_datatree(self.store, engine="zarr", consolidated=False)
 
 
