@@ -168,6 +168,8 @@ class AbstractArray(Generic[DimType_co]):  # noqa: UP046
     def __bool__(self: Any) -> bool:
         data = self.data
         if isinstance(data, pd.api.extensions.ExtensionArray):
+            # bool(pd.array([False])) is True because it falls back to len().
+            # Convert to preserve NumPy's scalar and ambiguous truth semantics.
             return bool(self.values)
         return bool(data)
 

@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core import indexing
 
 cp = pytest.importorskip("cupy")
 
@@ -173,3 +174,9 @@ def test_cupy_idxminmax_skipna(method: str, expected: int) -> None:
     result = getattr(da, method)(skipna=True)
 
     assert result.item() == expected
+
+
+def test_cupy_assignment_preserves_shape_error() -> None:
+    adapter = indexing.as_indexable(cp.zeros(2))
+    with pytest.raises(ValueError, match="operands could not be broadcast"):
+        adapter[indexing.BasicIndexer((slice(None),))] = cp.arange(3)

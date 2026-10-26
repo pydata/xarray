@@ -1,6 +1,8 @@
+import warnings
+
 import pytest
 
-from xarray.util.deprecation_helpers import _deprecate_positional_args
+from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 
 def test_deprecate_positional_args_warns_for_function():
@@ -138,3 +140,37 @@ def test_deprecate_positional_args_warns_for_class():
             @_deprecate_positional_args("v0.1")
             def __init__(self, a, *, b, c=3, **kwargs):
                 pass
+
+
+@pytest.mark.parametrize("old_name", ["dims", "dimensions"])
+def test_deprecate_dims_warns_and_forwards(old_name: str) -> None:
+    def func(*, dim: str, value: int) -> tuple[str, int]:
+        return dim, value
+
+    wrapped = (
+        deprecate_dims(func)
+        if old_name == "dims"
+        else deprecate_dims(func, old_name=old_name)
+    )
+    with pytest.warns(
+        FutureWarning, match=f"The `{old_name}` argument has been renamed to `dim`"
+    ):
+        result = wrapped(**{old_name: "x"}, value=42)
+    assert result == ("x", 42)
+
+
+@pytest.mark.parametrize("old_name", ["dims", "dimensions"])
+def test_deprecate_dims_canonical_dim_is_quiet(old_name: str) -> None:
+    def func(*, dim: str, value: int) -> tuple[str, int]:
+        return dim, value
+
+    wrapped = (
+        deprecate_dims(func)
+        if old_name == "dims"
+        else deprecate_dims(func, old_name=old_name)
+    )
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always")
+        result = wrapped(dim="x", value=42)
+    assert result == ("x", 42)
+    assert not recorded

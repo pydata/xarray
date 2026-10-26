@@ -1791,7 +1791,7 @@ class NumpyIndexingAdapter(IndexingAdapter):
             array[key] = value
         except ValueError as exc:
             # More informative exception if read-only view
-            if not array.flags.writeable and not array.flags.owndata:
+            if not getattr(array.flags, "writeable", True) and not array.flags.owndata:
                 raise ValueError(
                     "Assignment destination is a view.  "
                     "Do you want to .copy() array first?"
@@ -2090,6 +2090,12 @@ class PandasIndexingAdapter(IndexingAdapter):
     def _index_get(
         self, indexer: ExplicitIndexer, func_name: str
     ) -> PandasIndexingAdapter | np.ndarray:
+        indexer = type(indexer)(
+            tuple(
+                to_numpy(k) if is_duck_array(k) and not isinstance(k, np.ndarray) else k
+                for k in indexer.tuple
+            )
+        )
         key: Any = indexer.tuple
 
         if len(key) == 1:
@@ -2097,24 +2103,9 @@ class PandasIndexingAdapter(IndexingAdapter):
             # objects don't like tuples)
             (key,) = key
 
-        cupy_array_type = array_type("cupy")
-        if isinstance(key, cupy_array_type):
-            key = to_numpy(key)
-        elif isinstance(key, tuple):
-            key = tuple(
-                to_numpy(item) if isinstance(item, cupy_array_type) else item
-                for item in key
-            )
-
         # if multidimensional key, convert the index to numpy array and index the latter
         if getattr(key, "ndim", 0) > 1:
             indexable = NumpyIndexingAdapter(np.asarray(self))
-            indexer = type(indexer)(
-                tuple(
-                    to_numpy(item) if isinstance(item, cupy_array_type) else item
-                    for item in indexer.tuple
-                )
-            )
             return getattr(indexable, func_name)(indexer)
 
         # otherwise index the pandas index then re-wrap or convert the result
