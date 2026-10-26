@@ -71,6 +71,7 @@ jobs:
           pixi upload prefix \
             -vvv \
             -c scientific-python/scientific-python-nightly \
+            --skip-existing \
             --generate-attestation \
             dist/xarray-*.conda
 
