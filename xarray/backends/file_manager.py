@@ -5,10 +5,10 @@ import threading
 import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMapping
-from contextlib import AbstractContextManager, contextmanager, nullcontext, suppress
+from contextlib import AbstractContextManager, contextmanager, suppress
 from typing import Any, Literal, TypeVar, cast, override
 
-from xarray.backends.locks import CombinedLock, _lock_key, acquire
+from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
 from xarray.core.options import OPTIONS
@@ -47,10 +47,8 @@ T_File = TypeVar("T_File", bound=Closable)
 
 REF_COUNTS: dict[Any, int] = {}
 
-# Read-only HDF5 datasets can share a file while it is in use. Keep this
-# separate from FILE_CACHE so a later open still sees a fresh file.
-_SHARED_READ_FILES: dict[Any, tuple[CachingFileManager[Any], int]] = {}
-_SHARED_READ_FILES_LOCK = threading.RLock()
+# Number of unclosed managers using each shared cache entry.
+_SHARED_COUNTS: dict[Any, int] = {}
 
 _OMIT_MODE = utils.ReprObject("<omitted>")
 
@@ -80,8 +78,9 @@ def _close_when_unlocked[T: Closable](
     """
     with lock:
         # a new manager for the same file, e.g. unpickled, may use it by now
-        if key not in ref_counts:
-            _close_cached_file(cache, key)
+        with _PIN_LOCK:
+            if key not in ref_counts:
+                _close_cached_file(cache, key)
 
 
 class FileManager[T_File: Closable]:
@@ -150,6 +149,7 @@ class CachingFileManager(FileManager[T_File]):
         cache: MutableMapping[Any, T_File] | None = None,
         manager_id: Hashable | None = None,
         ref_counts: dict[Any, int] | None = None,
+        share: bool = False,
     ):
         """Initialize a CachingFileManager.
 
@@ -189,6 +189,11 @@ class CachingFileManager(FileManager[T_File]):
         ref_counts : dict, optional
             Optional dict to use for keeping track the number of references to
             the same file.
+        share : bool, optional
+            Share a cached file with other managers using the same opener and
+            arguments until the last manager closes. Shared managers must use
+            the same lock. Only use for read-only files where sharing a live
+            handle is safe.
         """
         self._opener = opener
         self._args = args
@@ -197,7 +202,7 @@ class CachingFileManager(FileManager[T_File]):
 
         if lock is None or lock is False:
             self._use_default_lock = True
-            self._lock: Lock = threading.Lock()
+            self._lock: Lock = _PIN_LOCK if share else threading.Lock()
         else:
             self._use_default_lock = False
             self._lock = lock
@@ -207,10 +212,13 @@ class CachingFileManager(FileManager[T_File]):
             cache = cast(MutableMapping[Any, T_File], FILE_CACHE)
         self._cache: MutableMapping[Any, T_File] = cache
         if manager_id is None:
-            # Each call to CachingFileManager should separately open files.
-            manager_id = str(uuid.uuid4())
+            # Shared managers use the same cache entry; other managers open
+            # separate files, including after a previous manager closes.
+            manager_id = "shared" if share else str(uuid.uuid4())
         self._manager_id = manager_id
         self._key = self._make_key()
+        self._share = share
+        self._joined = False
 
         # ref_counts[self._key] stores the number of CachingFileManager objects
         # in memory referencing this same file. We use this to know if we can
@@ -219,6 +227,28 @@ class CachingFileManager(FileManager[T_File]):
             ref_counts = REF_COUNTS
         self._ref_counter = _RefCounter(ref_counts)
         self._ref_counter.increment(self._key)
+        self._join()
+
+    def _join(self) -> None:
+        """Count this manager as a user of its shared file until it closes."""
+        if self._share:
+            with _PIN_LOCK:
+                if not self._joined:
+                    _SHARED_COUNTS[self._key] = _SHARED_COUNTS.get(self._key, 0) + 1
+                    self._joined = True
+
+    def _leave(self) -> bool:
+        """Stop using the shared file; return whether it may be closed."""
+        if not self._share:
+            return True
+        with _PIN_LOCK:
+            if not self._joined:
+                return False
+            self._joined = False
+            count = _SHARED_COUNTS.pop(self._key) - 1
+            if count:
+                _SHARED_COUNTS[self._key] = count
+            return not count
 
     def _make_key(self) -> _HashedSequence:
         """Make a key for caching files in the LRU cache."""
@@ -302,6 +332,7 @@ class CachingFileManager(FileManager[T_File]):
     def _acquire_with_cache_info(self, needs_lock: bool = True) -> tuple[T_File, bool]:
         """Acquire a file, returning the file and whether it was cached."""
         with self._optional_lock(needs_lock):
+            self._join()
             try:
                 file = self._cache[self._key]
             except KeyError:
@@ -331,7 +362,9 @@ class CachingFileManager(FileManager[T_File]):
         # TODO: remove needs_lock if/when we have a reentrant lock in
         # dask.distributed: https://github.com/dask/dask/issues/3832
         with self._optional_lock(needs_lock):
-            _close_cached_file(self._cache, self._key)
+            with _PIN_LOCK:
+                if self._leave():
+                    _close_cached_file(self._cache, self._key)
 
     def __del__(self) -> None:
         # If we're the only CachingFileManger referencing an unclosed file,
@@ -343,10 +376,16 @@ class CachingFileManager(FileManager[T_File]):
         # closing the original file.
         ref_count = self._ref_counter.decrement(self._key)
 
-        if not ref_count and self._key in self._cache:
+        can_close = self._leave() if self._share else not ref_count
+        if can_close and self._key in self._cache:
             if acquire(self._lock, blocking=False):
                 try:
-                    self.close(needs_lock=False)
+                    if self._share:
+                        with _PIN_LOCK:
+                            if self._key not in _SHARED_COUNTS:
+                                _close_cached_file(self._cache, self._key)
+                    else:
+                        self.close(needs_lock=False)
                 finally:
                     self._lock.release()
             else:
@@ -364,7 +403,9 @@ class CachingFileManager(FileManager[T_File]):
                             self._cache,
                             self._key,
                             self._lock,
-                            self._ref_counter._counts,
+                            _SHARED_COUNTS
+                            if self._share
+                            else self._ref_counter._counts,
                         ),
                         name="xarray-close-file",
                         daemon=True,
@@ -390,13 +431,20 @@ class CachingFileManager(FileManager[T_File]):
             self._kwargs,
             lock,
             self._manager_id,
+            self._share,
         )
 
     def __setstate__(self, state) -> None:
         """Restore from a pickle."""
-        opener, args, mode, kwargs, lock, manager_id = state
+        opener, args, mode, kwargs, lock, manager_id, share = state
         self.__init__(  # type: ignore[misc]
-            opener, *args, mode=mode, kwargs=kwargs, lock=lock, manager_id=manager_id
+            opener,
+            *args,
+            mode=mode,
+            kwargs=kwargs,
+            lock=lock,
+            manager_id=manager_id,
+            share=share,
         )
 
     def __repr__(self) -> str:
@@ -407,113 +455,6 @@ class CachingFileManager(FileManager[T_File]):
             f"{type(self).__name__}({self._opener!r}, {args_string}, "
             f"kwargs={self._kwargs}, manager_id={self._manager_id!r})"
         )
-
-
-class SharedReadFileManager(FileManager[T_File]):
-    """Share a read-only file until the last manager using it closes."""
-
-    def __init__(
-        self,
-        opener: Callable[..., T_File],
-        *args: Any,
-        kwargs: Mapping[str, Any] | None = None,
-        lock: Lock | Literal[False] | None = None,
-    ) -> None:
-        self._opener = opener
-        self._args = args
-        self._kwargs = {} if kwargs is None else dict(kwargs)
-        self._requested_lock = lock
-        self._lock = _SHARED_READ_FILES_LOCK if lock is None or lock is False else lock
-        # CombinedLock objects are copied by pickle, but their member tokens
-        # still identify the same locks in a worker process.
-        lock_key = (
-            tuple(_lock_key(member) for member in self._lock.locks)
-            if isinstance(self._lock, CombinedLock)
-            else _lock_key(self._lock)
-        )
-        self._key = _HashedSequence(
-            (opener, args, tuple(sorted(self._kwargs.items())), lock_key)
-        )
-        self._manager: CachingFileManager[T_File] | None = None
-        self._join()
-
-    def _join(self) -> CachingFileManager[T_File]:
-        with self._lock:
-            with _SHARED_READ_FILES_LOCK:
-                if self._manager is None:
-                    try:
-                        manager, count = _SHARED_READ_FILES[self._key]
-                    except KeyError:
-                        manager = CachingFileManager(
-                            self._opener,
-                            *self._args,
-                            mode="r",
-                            kwargs=self._kwargs,
-                            lock=self._lock,
-                        )
-                        count = 0
-                    _SHARED_READ_FILES[self._key] = (manager, count + 1)
-                    self._manager = manager
-                return self._manager
-
-    @override
-    def acquire(self, needs_lock: bool = True) -> T_File:
-        return self._join().acquire(needs_lock)
-
-    @contextmanager
-    @override
-    def acquire_context(self, needs_lock: bool = True) -> Iterator[T_File]:
-        with self._join().acquire_context(needs_lock) as file:
-            yield file
-
-    @override
-    def close(self, needs_lock: bool = True) -> None:
-        with self._lock if needs_lock else nullcontext():
-            with _SHARED_READ_FILES_LOCK:
-                manager = getattr(self, "_manager", None)
-                if manager is None:
-                    return
-                self._manager = None
-                current, count = _SHARED_READ_FILES[self._key]
-                assert manager is current
-                if count == 1:
-                    del _SHARED_READ_FILES[self._key]
-                else:
-                    _SHARED_READ_FILES[self._key] = (manager, count - 1)
-            if count == 1:
-                manager.close(needs_lock=False)
-
-    def __del__(self) -> None:
-        if hasattr(self, "_lock"):
-            manager = getattr(self, "_manager", None)
-            if manager is None:
-                return
-            if OPTIONS["warn_for_unclosed_files"] and manager._key in manager._cache:
-                warnings.warn(
-                    "deallocating SharedReadFileManager without closing its file. "
-                    "This may indicate a bug.",
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
-            if acquire(self._lock, blocking=False):
-                try:
-                    self.close(needs_lock=False)
-                finally:
-                    self._lock.release()
-            else:
-                # Garbage collection can run while a thread holds this lock.
-                # Closing there would deadlock, so wait in a separate thread.
-                with suppress(RuntimeError):
-                    threading.Thread(
-                        target=self.close, name="xarray-close-file", daemon=True
-                    ).start()
-
-    def __getstate__(self) -> tuple[Any, ...]:
-        return self._opener, self._args, self._kwargs, self._requested_lock
-
-    def __setstate__(self, state: tuple[Any, ...]) -> None:
-        opener, args, kwargs, lock = state
-        SharedReadFileManager.__init__(self, opener, *args, kwargs=kwargs, lock=lock)
 
 
 class _RefCounter:

@@ -26,7 +26,6 @@ from xarray.backends.file_manager import (
     DummyFileManager,
     FileManager,
     PickleableFileManager,
-    SharedReadFileManager,
 )
 from xarray.backends.locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from xarray.backends.netcdf3 import encode_nc3_attr_value, encode_nc3_variable
@@ -254,9 +253,15 @@ class H5NetCDFStore(WritableCFDataStore):
 
         manager: FileManager[Any]
         if isinstance(filename, str) and not is_remote_uri(filename):
-            if mode == "r":
-                manager = SharedReadFileManager(
-                    h5netcdf.File, filename, kwargs=kwargs, lock=HDF5_LOCK
+            if mode == "r" and lock is HDF5_LOCK:
+                # Shared handles use the same HDF5 lock as reads.
+                manager = CachingFileManager(
+                    h5netcdf.File,
+                    filename,
+                    mode=mode,
+                    kwargs=kwargs,
+                    lock=HDF5_LOCK,
+                    share=True,
                 )
             else:
                 manager = CachingFileManager(

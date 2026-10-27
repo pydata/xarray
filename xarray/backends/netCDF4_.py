@@ -28,7 +28,6 @@ from xarray.backends.file_manager import (
     CachingFileManager,
     DummyFileManager,
     PickleableFileManager,
-    SharedReadFileManager,
 )
 from xarray.backends.locks import (
     HDF5_LOCK,
@@ -573,8 +572,13 @@ class NetCDF4DataStore(WritableCFDataStore):
                 and try_read_magic_number_from_path(filename) == b"\x89HDF\r\n\x1a\n"
             )
             if is_hdf5 and lock is NETCDF4_PYTHON_LOCK and not diskless:
-                manager = SharedReadFileManager(
-                    netCDF4.Dataset, filename, kwargs=kwargs, lock=lock
+                manager = CachingFileManager(
+                    netCDF4.Dataset,
+                    filename,
+                    mode=mode,
+                    kwargs=kwargs,
+                    lock=lock,
+                    share=True,
                 )
             else:
                 manager = CachingFileManager(

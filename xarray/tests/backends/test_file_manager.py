@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import gc
+import os
 import pickle
+import shutil
 import threading
 from pathlib import Path
 from unittest import mock
@@ -13,7 +15,6 @@ from xarray.backends import file_manager
 from xarray.backends.file_manager import (
     CachingFileManager,
     PickleableFileManager,
-    SharedReadFileManager,
     _close_unless_pinned,
 )
 from xarray.backends.locks import CombinedLock, SerializableLock
@@ -191,8 +192,8 @@ def test_file_manager_cache_repeated_open() -> None:
 def test_shared_read_file_manager_lifetime() -> None:
     file = mock.Mock()
     opener = mock.Mock(return_value=file)
-    first = SharedReadFileManager(opener, "filename")
-    second = SharedReadFileManager(opener, "filename")
+    first = CachingFileManager(opener, "filename", mode="r", share=True)
+    second = CachingFileManager(opener, "filename", mode="r", share=True)
 
     assert first.acquire() is second.acquire()
     opener.assert_called_once_with("filename", mode="r")
@@ -202,14 +203,14 @@ def test_shared_read_file_manager_lifetime() -> None:
     second.close()
     file.close.assert_called_once_with()
 
-    third = SharedReadFileManager(opener, "filename")
+    third = CachingFileManager(opener, "filename", mode="r", share=True)
     third.acquire()
     assert opener.call_count == 2
     third.close()
 
 
 def test_shared_read_file_manager_pickle() -> None:
-    manager = SharedReadFileManager(open, __file__)
+    manager = CachingFileManager(open, __file__, mode="r", share=True)
     restored = pickle.loads(pickle.dumps(manager))
     try:
         assert manager.acquire() is restored.acquire()
@@ -223,7 +224,7 @@ def test_shared_read_file_manager_pickle_combined_lock() -> None:
     lock = CombinedLock(
         [SerializableLock("shared-read-a"), SerializableLock("shared-read-b")]
     )
-    manager = SharedReadFileManager(open, __file__, lock=lock)
+    manager = CachingFileManager(open, __file__, mode="r", share=True, lock=lock)
     restored = pickle.loads(pickle.dumps(manager))
     try:
         assert manager.acquire() is restored.acquire()
@@ -234,7 +235,7 @@ def test_shared_read_file_manager_pickle_combined_lock() -> None:
 
 def test_shared_read_file_manager_reopen() -> None:
     opener = mock.Mock(side_effect=[mock.Mock(), mock.Mock()])
-    manager = SharedReadFileManager(opener, "filename")
+    manager = CachingFileManager(opener, "filename", mode="r", share=True)
     first = manager.acquire()
     manager.close()
     second = manager.acquire()
@@ -244,8 +245,12 @@ def test_shared_read_file_manager_reopen() -> None:
 
 def test_shared_read_file_manager_distinct_options() -> None:
     opener = mock.Mock(side_effect=[mock.Mock(), mock.Mock()])
-    first = SharedReadFileManager(opener, "filename", kwargs={"option": 1})
-    second = SharedReadFileManager(opener, "filename", kwargs={"option": 2})
+    first = CachingFileManager(
+        opener, "filename", mode="r", share=True, kwargs={"option": 1}
+    )
+    second = CachingFileManager(
+        opener, "filename", mode="r", share=True, kwargs={"option": 2}
+    )
     try:
         assert first.acquire() is not second.acquire()
         assert opener.call_count == 2
@@ -257,11 +262,13 @@ def test_shared_read_file_manager_distinct_options() -> None:
 @pytest.mark.parametrize("warn_for_unclosed_files", [True, False])
 def test_shared_read_file_manager_autoclose(warn_for_unclosed_files: bool) -> None:
     file = mock.Mock()
-    manager = SharedReadFileManager(mock.Mock(return_value=file), "filename")
+    manager = CachingFileManager(
+        mock.Mock(return_value=file), "filename", mode="r", share=True
+    )
     manager.acquire()
 
     ctx = (
-        pytest.warns(RuntimeWarning, match="deallocating SharedReadFileManager")
+        pytest.warns(RuntimeWarning, match="deallocating CachingFileManager")
         if warn_for_unclosed_files
         else assert_no_warnings()
     )
@@ -275,7 +282,9 @@ def test_shared_read_file_manager_autoclose(warn_for_unclosed_files: bool) -> No
 def test_shared_read_file_manager_close_while_locked() -> None:
     file = mock.Mock()
     lock = threading.Lock()
-    manager = SharedReadFileManager(mock.Mock(return_value=file), "filename", lock=lock)
+    manager = CachingFileManager(
+        mock.Mock(return_value=file), "filename", mode="r", share=True, lock=lock
+    )
     manager.acquire()
 
     with lock:
@@ -287,7 +296,9 @@ def test_shared_read_file_manager_close_while_locked() -> None:
 def test_shared_read_file_manager_autoclose_while_locked() -> None:
     file = mock.Mock()
     lock = threading.Lock()
-    manager = SharedReadFileManager(mock.Mock(return_value=file), "filename", lock=lock)
+    manager = CachingFileManager(
+        mock.Mock(return_value=file), "filename", mode="r", share=True, lock=lock
+    )
     manager.acquire()
 
     lock.acquire()
@@ -330,6 +341,23 @@ def test_h5netcdf_read_only_groups_share_file(tmp_path: Path) -> None:
         assert reopened["value"].values.tolist() == [2]
 
 
+@requires_h5netcdf
+def test_h5netcdf_custom_lock_does_not_share_file(tmp_path: Path) -> None:
+    import h5netcdf
+
+    path = tmp_path / "data.nc"
+    with h5netcdf.File(path, "w") as file:
+        file.create_variable("a", (), data=1)
+
+    first = open_dataset(path, engine="h5netcdf", lock=threading.Lock())
+    second = open_dataset(path, engine="h5netcdf", lock=threading.Lock())
+    try:
+        assert len(file_manager.FILE_CACHE) == 2
+    finally:
+        first.close()
+        second.close()
+
+
 @requires_netCDF4
 def test_netcdf4_hdf5_read_only_groups_share_file(tmp_path: Path) -> None:
     import netCDF4
@@ -369,6 +397,39 @@ def test_netcdf4_netcdf3_still_opens_separately(tmp_path: Path) -> None:
     finally:
         first.close()
         second.close()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Windows cannot overwrite open files")
+@requires_h5netcdf
+@pytest.mark.parametrize(
+    "engine", ["h5netcdf", pytest.param("netcdf4", marks=requires_netCDF4)]
+)
+def test_shared_hdf5_refreshes_after_all_datasets_close(
+    tmp_path: Path, engine: str
+) -> None:
+    import h5netcdf
+
+    path = tmp_path / "data.nc"
+    replacement = tmp_path / "replacement.nc"
+    with h5netcdf.File(path, "w") as file:
+        file.create_variable("a", (), data=1)
+    with h5netcdf.File(replacement, "w") as file:
+        file.create_variable("a", (), data=1)
+        file.create_variable("b", (), data=2)
+
+    first = open_dataset(path, engine=engine)
+    try:
+        shutil.copyfile(replacement, path)
+        second = open_dataset(path, engine=engine)
+        try:
+            assert "b" not in second
+        finally:
+            second.close()
+    finally:
+        first.close()
+
+    with open_dataset(path, engine=engine) as reopened:
+        assert "b" in reopened
 
 
 def test_file_manager_cache_with_pickle(tmpdir) -> None:
