@@ -161,6 +161,11 @@ Breaking Changes
   :py:class:`Variable`, deprecated since v2023.10.0, has been removed. Use
   ``drop_encoding`` instead (:issue:`11721`, :pull:`11805`).
   By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
+- Subclasses of :py:class:`DataArray`, :py:class:`Dataset` and other xarray
+  objects defined outside xarray must now explicitly define ``__slots__``.
+  Defining one without ``__slots__`` raises an ``AttributeError`` instead of
+  the ``FutureWarning`` emitted since v0.13.0 (:issue:`11721`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Deprecations

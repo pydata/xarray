@@ -7750,12 +7750,7 @@ def test_no_dict() -> None:
 
 
 def test_subclass_slots() -> None:
-    """Test that DataArray subclasses must explicitly define ``__slots__``.
-
-    .. note::
-       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
-       defined outside of the xarray package.
-    """
+    """Test that DataArray subclasses must explicitly define ``__slots__``."""
     with pytest.raises(AttributeError) as e:
 
         class MyArray(DataArray):
