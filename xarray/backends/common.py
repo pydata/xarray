@@ -743,10 +743,10 @@ class BackendEntrypoint:
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
     - ``open_datatree`` method: it shall implement reading from file, variables
-      decoding and it returns an instance of :py:class:`~datatree.DataTree`.
+      decoding and it returns an instance of :py:class:`~xarray.DataTree`.
       It shall take in input at least ``filename_or_obj`` argument. The
-      implementation of this method is not mandatory.  For more details see
-      <reference to open_datatree documentation>.
+      implementation of this method is not mandatory. For more details see
+      :ref:`rst-open-datatree`.
 
     Attributes
     ----------

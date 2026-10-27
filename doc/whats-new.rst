@@ -187,6 +187,11 @@ Deprecations
   but it did not emit any warning previously, now it emits a ``FutureWarning``
   (:issue:`11721`, :pull:`11788`).
   By `Soutrik Das <https://github.com/SoutrikDas>`_.
+- :py:attr:`DataTree.ds`, a soft-deprecated alias of :py:attr:`DataTree.dataset`,
+  and setting the ``display_expand_groups`` option of :py:func:`set_options`,
+  which has no effect since v2026.01.0, now emit a ``FutureWarning``
+  (:issue:`11721`, :pull:`11803`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
 
@@ -196,6 +201,10 @@ Bug Fixes
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
   By `Huashuo Lei <https://github.com/wpyaoxueros>`_.
+- :py:meth:`DataArray.to_unstacked_dataset` no longer raises ``KeyError`` for
+  unused variable labels left in the stacked index after selecting features
+  (:pull:`11808`).
+  By `Aryan R. Ganjoo <https://github.com/AryanRG>`_.
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
   variables (:issue:`6449`).
   By `Liang, Jingyi <https://github.com/LJimmy007>`_.
