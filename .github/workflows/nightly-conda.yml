@@ -36,8 +36,9 @@ jobs:
       - name: Report
         env:
           RECENT_COMMITS: ${{ steps.check-recent-commits.outputs.n-recent-commits }}
+          RECENT_COMMITS_FOUND: ${{ steps.check-recent-commits.outputs.n-recent-commits > 0 }}
         run: |
-          echo "Recent commits found: $RECENT_COMMITS"
+          echo "Recent commits found: $RECENT_COMMITS (condition: ${RECENT_COMMITS_FOUND})"
 
   build-artifacts:
     name: Build artifacts
