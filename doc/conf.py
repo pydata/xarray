@@ -338,6 +338,7 @@ rediraffe_redirects = {
     "quick-overview.rst": "getting-started-guide/quick-overview.rst",
     "contributing.rst": "contribute/contributing.rst",
     "developers-meeting.rst": "contribute/developers-meeting.rst",
+    "examples/apply_ufunc_vectorize_1d.ipynb": "gallery.rst",
 }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
