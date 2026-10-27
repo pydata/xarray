@@ -2835,6 +2835,58 @@ def test_raises_key_error_on_invalid_zarr_store(tmp_path):
 
 @requires_zarr
 @pytest.mark.usefixtures("default_zarr_format")
+@pytest.mark.parametrize(
+    ("decode_times", "decode_timedelta", "expected_dtype"),
+    [
+        (True, None, np.dtype("int64")),
+        (False, None, np.dtype("int64")),
+        (True, False, np.dtype("int64")),
+        (True, True, np.dtype("timedelta64[ns]")),
+    ],
+)
+def test_decode_timedelta_units_only(
+    tmp_path, decode_times, decode_timedelta, expected_dtype
+) -> None:
+    """Pins the default ``decode_timedelta=None`` behavior for units-only stores.
+
+    Since #11173, ``None`` only decodes variables whose attributes contain both
+    a timedelta ``units`` attribute and a ``dtype`` attribute, regardless of
+    ``decode_times``, even though the docstrings said the value of
+    ``decode_times`` is assumed. See https://github.com/pydata/xarray/issues/11507.
+    """
+    # weatherbench2-style store (issue #11507): integer data with a timedelta
+    # units attribute and no dtype attribute. fill_value=None keeps zarr from
+    # exposing a zero fill value, which CFMaskCoder would otherwise use to mask
+    # the data to NaN (int64 -> float64) and muddy the dtype assertions.
+    root = zarr.open_group(tmp_path / "units_only_timedelta.zarr", mode="w")
+    is_v3_format = root.metadata.zarr_format == 3
+    if is_v3_format:
+        arr = root.create_array(
+            "prediction_timedelta",
+            data=np.array([6, 12, 24], dtype="int64"),
+            fill_value=None,
+            dimension_names=("prediction_timedelta",),
+        )
+    else:
+        arr = root.create_array(
+            "prediction_timedelta",
+            data=np.array([6, 12, 24], dtype="int64"),
+            fill_value=None,
+        )
+        arr.attrs["_ARRAY_DIMENSIONS"] = ["prediction_timedelta"]
+    arr.attrs["units"] = "hours"
+
+    ds = xr.open_zarr(
+        tmp_path / "units_only_timedelta.zarr",
+        consolidated=False,
+        decode_times=decode_times,
+        decode_timedelta=decode_timedelta,
+    )
+    assert ds.prediction_timedelta.dtype == expected_dtype
+
+
+@requires_zarr
+@pytest.mark.usefixtures("default_zarr_format")
 class TestZarrRegionAuto:
     """These are separated out since we should not need to test this logic with every store."""
 
