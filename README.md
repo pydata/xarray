@@ -4,10 +4,10 @@
 [![Powered by Pixi](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json)](https://pixi.sh)
 [![CI](https://github.com/pydata/xarray/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/pydata/xarray/actions/workflows/ci.yaml?query=branch%3Amain)
 [![Code coverage](https://codecov.io/gh/pydata/xarray/branch/main/graph/badge.svg?flag=unittests)](https://codecov.io/gh/pydata/xarray)
-[![Docs](https://readthedocs.org/projects/xray/badge/?version=latest)](https://docs.xarray.dev/)
+[![Docs](https://img.shields.io/readthedocs/xray/latest)](https://docs.xarray.dev/)
 [![Benchmarked with asv](https://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat)](https://asv-runner.github.io/asv-collection/xarray/)
-[![Formatted with black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
-[![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 [![Available on pypi](https://img.shields.io/pypi/v/xarray.svg)](https://pypi.python.org/pypi/xarray/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/xarray)](https://pypistats.org/packages/xarray)
 [![Conda - Downloads](https://img.shields.io/conda/dn/anaconda/xarray?label=conda%7Cdownloads)](https://anaconda.org/anaconda/xarray)
@@ -130,11 +130,11 @@ Xarray bundles portions of pandas, NumPy and Seaborn, all of which are
 available under a "3-clause BSD" license:
 
 - pandas: `setup.py`, `xarray/util/print_versions.py`
-- NumPy: `xarray/core/npcompat.py`
-- Seaborn: `_determine_cmap_params` in `xarray/core/plot/utils.py`
+- NumPy: `xarray/compat/npcompat.py`
+- Seaborn: `_determine_cmap_params` in `xarray/plot/utils.py`
 
 Xarray also bundles portions of CPython, which is available under the
-"Python Software Foundation License" in `xarray/core/pycompat.py`.
+"Python Software Foundation License" in `xarray/namedarray/pycompat.py`.
 
 Xarray uses icons from the icomoon package (free version), which is
 available under the "CC BY 4.0" license.

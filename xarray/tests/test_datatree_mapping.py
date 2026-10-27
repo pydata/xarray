@@ -44,7 +44,7 @@ class TestMapOverSubTree:
 
     def test_single_tree_arg_plus_arg(self, create_test_datatree):
         dt = create_test_datatree()
-        expected = create_test_datatree(modify=lambda ds: (10.0 * ds))
+        expected = create_test_datatree(modify=lambda ds: 10.0 * ds)
         result_tree = map_over_datasets(lambda x, y: x * y, dt, 10.0)
         assert_equal(result_tree, expected)
 
@@ -53,7 +53,7 @@ class TestMapOverSubTree:
 
     def test_single_tree_arg_plus_kwarg(self, create_test_datatree):
         dt = create_test_datatree()
-        expected = create_test_datatree(modify=lambda ds: (10.0 * ds))
+        expected = create_test_datatree(modify=lambda ds: 10.0 * ds)
 
         def multiply_by_kwarg(ds, **kwargs):
             ds = ds * kwargs.pop("multiplier")
@@ -247,7 +247,7 @@ class TestMutableOperations:
         )
 
         def fast_forward(ds: xr.Dataset, years: float) -> xr.Dataset:
-            """Add some years to the age, but by altering the given dataset"""
+            """Add some years to the age, but by altering the given dataset."""
             ds["age"] = ds["age"] + years
             return ds
 

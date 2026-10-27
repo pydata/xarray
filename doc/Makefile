@@ -2,9 +2,9 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS      =
+SPHINXOPTS      = -T -W --keep-going -j auto
 SPHINXBUILD     = sphinx-build
-SPHINXATUOBUILD = sphinx-autobuild
+SPHINXAUTOBUILD = sphinx-autobuild
 PAPER           =
 BUILDDIR        = _build
 
@@ -25,7 +25,7 @@ help:
 	@echo "  singlehtml to make a single large HTML file"
 	@echo "  pickle     to make pickle files"
 	@echo "  json       to make JSON files"
-	@echo "  htmlhelp   to make HTML files and a HTML help project"
+	@echo "  htmlhelp   to make HTML files and an HTML help project"
 	@echo "  qthelp     to make HTML files and a qthelp project"
 	@echo "  applehelp  to make an Apple Help Book"
 	@echo "  devhelp    to make HTML files and a Devhelp project"
@@ -52,6 +52,7 @@ clean:
 	rm -rf $(BUILDDIR)/*
 	rm -rf generated/*
 	rm -rf auto_gallery/
+	rm -rf jupyter_execute/
 
 .PHONY: html
 html:
@@ -68,8 +69,8 @@ rtdhtml:
 
 .PHONY: livehtml
 livehtml:
-	# @echo "$(SPHINXATUOBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html"
-	$(SPHINXATUOBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	# @echo "$(SPHINXAUTOBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html"
+	$(SPHINXAUTOBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
 .PHONY: dirhtml
 dirhtml:

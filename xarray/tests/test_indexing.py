@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Dataset, Variable
+from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
 from xarray.core.types import T_Xarray
@@ -16,8 +16,12 @@ from xarray.tests import (
     ReturnItem,
     assert_array_equal,
     assert_identical,
+    dask_array_api,
+    dask_array_type,
+    has_dask,
     raise_if_dask_computes,
     requires_dask,
+    requires_pandas_3,
 )
 from xarray.tests.arrays import DuckArrayWrapper
 
@@ -109,14 +113,31 @@ class TestIndexers:
                 assert indexers == {"y": 0}
         assert len(grouped_indexers) == 3
 
-        with pytest.raises(KeyError, match=r"no index found for coordinate 'y2'"):
-            indexing.group_indexers_by_index(data, {"y2": 2.0}, {})
         with pytest.raises(
             KeyError, match=r"'w' is not a valid dimension or coordinate"
         ):
             indexing.group_indexers_by_index(data, {"w": "a"}, {})
         with pytest.raises(ValueError, match=r"cannot supply.*"):
             indexing.group_indexers_by_index(data, {"z": 1}, {"method": "nearest"})
+
+    def test_group_indexers_by_index_creates_index_for_unindexed_coord(self) -> None:
+        # Test that selecting on a coordinate without an index creates a PandasIndex on the fly
+        data = DataArray(
+            np.zeros((2, 3)), coords={"x": [0, 1], "y": [10, 20, 30]}, dims=("x", "y")
+        )
+        data.coords["y2"] = ("y", [2.0, 3.0, 4.0])
+
+        # y2 is a coordinate but has no index
+        assert "y2" in data.coords
+        assert "y2" not in data.xindexes
+
+        # group_indexers_by_index should create a PandasIndex on the fly
+        grouped_indexers = indexing.group_indexers_by_index(data, {"y2": 3.0}, {})
+
+        assert len(grouped_indexers) == 1
+        idx, indexers = grouped_indexers[0]
+        assert isinstance(idx, PandasIndex)
+        assert indexers == {"y2": 3.0}
 
     def test_map_index_queries(self) -> None:
         def create_sel_results(
@@ -282,10 +303,11 @@ class TestLazyArray:
             (-1, 3, 2),
             (slice(None), 4, slice(0, 4, 1)),
             (slice(1, -3), 7, slice(1, 4, 1)),
+            (slice(None, None, -1), 8, slice(7, None, -1)),
             (np.array([-1, 3, -2]), 5, np.array([4, 3, 3])),
         ),
     )
-    def normalize_indexer(self, indexer, size, expected):
+    def test_normalize_indexer(self, indexer, size, expected):
         actual = indexing.normalize_indexer(indexer, size)
 
         if isinstance(expected, np.ndarray):
@@ -515,6 +537,7 @@ class TestLazyArray:
         x = indexing.NumpyIndexingAdapter(original)
         lazy = indexing.LazilyIndexedArray(x)
 
+        indexer: indexing.ExplicitIndexer
         if indexer_class is indexing.BasicIndexer:
             indexer = indexer_class(key)
             lazy[indexer] = value
@@ -866,6 +889,52 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support) -> None:
         np.testing.assert_array_equal(expected, array)
 
 
+@pytest.mark.parametrize("shape", [(10, 5), (10, 5, 8)])
+@pytest.mark.parametrize("empty_axis", ["first", "last"])
+@pytest.mark.parametrize(
+    "indexing_support",
+    [
+        indexing.IndexingSupport.BASIC,
+        indexing.IndexingSupport.OUTER,
+        indexing.IndexingSupport.OUTER_1VECTOR,
+        indexing.IndexingSupport.VECTORIZED,
+    ],
+)
+def test_decompose_indexer_empty_ndarray(shape, empty_axis, indexing_support) -> None:
+    # An empty indexer array must be decomposable for backends that do not
+    # support full vectorized indexing. The empty array is turned into an empty
+    # slice, which keeps the dimension, so the in-memory indexer needs a
+    # matching entry for it.
+    # See https://github.com/pydata/xarray/issues/11625
+    # and https://github.com/pydata/xarray/issues/9075
+    data = np.random.randn(*shape)
+    key = [np.arange(s)[::-1] for s in shape]
+    key[0 if empty_axis == "first" else -1] = np.array([], dtype=np.int64)
+    indexer = indexing.OuterIndexer(tuple(key))
+
+    expected = indexing.NumpyIndexingAdapter(data).oindex[indexer]
+    backend_ind, np_ind = indexing.decompose_indexer(indexer, shape, indexing_support)
+    indexing_adapter = indexing.NumpyIndexingAdapter(data)
+
+    if isinstance(backend_ind, indexing.VectorizedIndexer):
+        array = indexing_adapter.vindex[backend_ind]
+    elif isinstance(backend_ind, indexing.OuterIndexer):
+        array = indexing_adapter.oindex[backend_ind]
+    else:
+        array = indexing_adapter[backend_ind]
+
+    if len(np_ind.tuple) > 0:
+        array_indexing_adapter = indexing.NumpyIndexingAdapter(array)
+        if isinstance(np_ind, indexing.VectorizedIndexer):
+            array = array_indexing_adapter.vindex[np_ind]
+        elif isinstance(np_ind, indexing.OuterIndexer):
+            array = array_indexing_adapter.oindex[np_ind]
+        else:
+            array = array_indexing_adapter[np_ind]
+
+    assert_array_equal(expected, array)
+
+
 def test_implicit_indexing_adapter() -> None:
     array = np.arange(10, dtype=np.int64)
     implicit = indexing.ImplicitToExplicitIndexingAdapter(
@@ -881,6 +950,14 @@ def test_implicit_indexing_adapter_copy_on_write() -> None:
         indexing.CopyOnWriteArray(array)
     )
     assert isinstance(implicit[:], indexing.ImplicitToExplicitIndexingAdapter)
+
+
+def test_implicit_indexing_adapter_duck_array() -> None:
+    array = DuckArrayWrapper(array=np.arange(10))
+    implicit = indexing.ImplicitToExplicitIndexingAdapter(
+        indexing.ArrayApiIndexingAdapter(array), indexing.BasicIndexer
+    )
+    np.testing.assert_array_equal(np.asarray(implicit), np.arange(10))
 
 
 def test_outer_indexer_consistency_with_broadcast_indexes_vectorized() -> None:
@@ -920,6 +997,20 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized() -> None:
         np.testing.assert_array_equal(actual_data, expected_data)
 
 
+def test_outer_to_vectorized_indexer_0d_duck_array() -> None:
+    # GH8820: a 0d non-numpy duck array should be treated like an integer
+    original = np.arange(24).reshape(4, 6)
+    outer_index = indexing.OuterIndexer(
+        (DuckArrayWrapper(np.array(2)), np.array([0, 2]))  # type: ignore[arg-type]
+    )
+    actual = indexing._outer_to_vectorized_indexer(outer_index, original.shape)
+    assert isinstance(actual.tuple[0], DuckArrayWrapper)
+    key = tuple(
+        k.to_numpy() if isinstance(k, DuckArrayWrapper) else k for k in actual.tuple
+    )
+    np.testing.assert_array_equal(original[key], original[2, [0, 2]])
+
+
 def test_create_mask_outer_indexer() -> None:
     indexer = indexing.OuterIndexer((np.array([0, -1, 2]),))
     expected = np.array([False, True, False])
@@ -956,8 +1047,9 @@ def test_create_mask_basic_indexer() -> None:
     np.testing.assert_array_equal(False, actual)
 
 
+@requires_dask
 def test_create_mask_dask() -> None:
-    da = pytest.importorskip("dask.array")
+    da = dask_array_api
 
     indexer = indexing.OuterIndexer((1, slice(2), np.array([0, -1, 2])))
     expected = np.array(2 * [[False, True, False]])
@@ -974,7 +1066,7 @@ def test_create_mask_dask() -> None:
     actual = indexing.create_mask(
         indexer_vec, (5, 2), da.empty((3, 2), chunks=((3,), (2,)))
     )
-    assert isinstance(actual, da.Array)
+    assert isinstance(actual, dask_array_type)
     np.testing.assert_array_equal(expected, actual)
 
     with pytest.raises(ValueError):
@@ -1022,11 +1114,10 @@ class ArrayWithNamespaceAndArrayFunction:
 
 
 def as_dask_array(arr, chunks):
-    try:
-        import dask.array as da
-    except ImportError:
+    if not has_dask:
         return None
 
+    da = dask_array_api
     return da.from_array(arr, chunks=chunks)
 
 
@@ -1086,30 +1177,30 @@ def test_indexing_1d_object_array() -> None:
 
 @requires_dask
 def test_indexing_dask_array() -> None:
-    import dask.array
+    da = dask_array_api
 
-    da = DataArray(
+    data = DataArray(
         np.ones(10 * 3 * 3).reshape((10, 3, 3)),
         dims=("time", "x", "y"),
     ).chunk(dict(time=-1, x=1, y=1))
     with raise_if_dask_computes():
-        actual = da.isel(time=dask.array.from_array([9], chunks=(1,)))
-    expected = da.isel(time=[9])
+        actual = data.isel(time=da.from_array([9], chunks=(1,)))
+    expected = data.isel(time=[9])
     assert_identical(actual, expected)
 
 
 @requires_dask
 def test_indexing_dask_array_scalar() -> None:
     # GH4276
-    import dask.array
+    da = dask_array_api
 
-    a = dask.array.from_array(np.linspace(0.0, 1.0))
-    da = DataArray(a, dims="x")
-    x_selector = da.argmax(dim=...)
+    a = da.from_array(np.linspace(0.0, 1.0))
+    data = DataArray(a, dims="x")
+    x_selector = data.argmax(dim=...)
     assert not isinstance(x_selector, DataArray)
     with raise_if_dask_computes():
-        actual = da.isel(x_selector)
-    expected = da.isel(x=-1)
+        actual = data.isel(x_selector)
+    expected = data.isel(x=-1)
     assert_identical(actual, expected)
 
 
@@ -1147,7 +1238,7 @@ def test_vectorized_indexing_dask_array() -> None:
 @requires_dask
 def test_advanced_indexing_dask_array() -> None:
     # GH4663
-    import dask.array as da
+    da = dask_array_api
 
     ds = Dataset(
         dict(
@@ -1166,7 +1257,7 @@ def test_advanced_indexing_dask_array() -> None:
 
 
 def test_backend_indexing_non_numpy() -> None:
-    """This model indexing of a Zarr store that reads to GPU memory."""
+    """Model indexing of a Zarr store that reads to GPU memory."""
     array = DuckArrayWrapper(np.array([1, 2, 3]))
     indexed = indexing.explicit_indexing_adapter(
         indexing.BasicIndexer((slice(1),)),
@@ -1175,3 +1266,10 @@ def test_backend_indexing_non_numpy() -> None:
         raw_indexing_method=array.__getitem__,
     )
     np.testing.assert_array_equal(indexed.array, np.array([1]))
+
+
+@requires_pandas_3
+def test_pandas_StringDtype_index_coerces_to_numpy() -> None:
+    da = DataArray([0, 1], coords={"x": ["x1", "x2"]})
+    actual = concat([da, da], dim=pd.Index(["y1", "y2"], name="y"))
+    assert isinstance(actual["y"].dtype, np.dtypes.StringDType)

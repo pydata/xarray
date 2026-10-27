@@ -3,11 +3,10 @@ from __future__ import annotations
 import copy
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, cast
+from typing import TYPE_CHECKING, cast, override
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 from pandas.api.extensions import ExtensionArray, ExtensionDtype
 from pandas.api.types import is_scalar as pd_is_scalar
 
@@ -104,19 +103,24 @@ def as_extension_array(
             [array_or_scalar], dtype=dtype
         )
     else:
-        return array_or_scalar.astype(dtype, copy=copy)  # type: ignore[union-attr]
+        # pandas-stubs is overly strict about astype's dtype parameter and return type;
+        # ExtensionArray.astype accepts ExtensionDtype and returns ExtensionArray
+        return array_or_scalar.astype(dtype, copy=copy)  # type: ignore[union-attr,return-value,arg-type]
 
 
 @implements(np.result_type)
 def __extension_duck_array__result_type(
-    *arrays_and_dtypes: list[
-        np.typing.ArrayLike | np.typing.DTypeLike | ExtensionDtype | ExtensionArray
-    ],
+    *arrays_and_dtypes: np.typing.ArrayLike
+    | np.typing.DTypeLike
+    | ExtensionDtype
+    | ExtensionArray,
 ) -> DtypeObj:
     extension_arrays_and_dtypes: list[ExtensionDtype | ExtensionArray] = [
         cast(ExtensionDtype | ExtensionArray, x)
         for x in arrays_and_dtypes
-        if is_allowed_extension_array(x) or is_allowed_extension_array_dtype(x)
+        if is_allowed_extension_array(x)
+        # strings are scalar values here; pandas would interpret them as dtype names
+        or (not isinstance(x, str | bytes) and is_allowed_extension_array_dtype(x))
     ]
     if not extension_arrays_and_dtypes:
         return NotImplemented
@@ -134,7 +138,7 @@ def __extension_duck_array__result_type(
     other_stuff = [
         x
         for x in arrays_and_dtypes
-        if not is_allowed_extension_array_dtype(x) and not is_scalar(x)
+        if not is_scalar(x) and not is_allowed_extension_array_dtype(x)
     ]
     # We implement one special case: when possible, preserve Categoricals (avoid promoting
     # to object) by merging the categories of all given Categoricals + scalars + NA.
@@ -192,10 +196,11 @@ def __extension_duck_array__where(
     # pd.where won't broadcast 0-dim arrays across a scalar-like series; scalar y's must be preserved
     if hasattr(y, "shape") and len(y.shape) == 1 and y.shape[0] == 1:
         y = y[0]  # type: ignore[index]
-    return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[arg-type]
+    # pandas-stubs has strict overloads for Series.where that don't cover all valid arg types
+    return cast(T_ExtensionArray, pd.Series(x).where(condition, y).array)  # type: ignore[call-overload]
 
 
-def _replace_duck(args, replacer: Callable[[PandasExtensionArray], list]) -> list:
+def _replace_duck(args, replacer: Callable[[PandasExtensionArray], Any]) -> list:
     args_as_list = list(args)
     for index, value in enumerate(args_as_list):
         if isinstance(value, PandasExtensionArray):
@@ -232,7 +237,9 @@ def __extension_duck_array__reshape(
 
 
 @dataclass(frozen=True)
-class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
+class PandasExtensionArray[T_ExtensionArray: pd.api.extensions.ExtensionArray](
+    NDArrayMixin
+):
     """NEP-18 compliant wrapper for pandas extension arrays.
 
     Parameters
@@ -268,6 +275,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return ufunc(*inputs, **kwargs)
 
+    @override
     def __getitem__(self, key) -> PandasExtensionArray[T_ExtensionArray]:
         if (
             isinstance(key, tuple) and len(key) == 1
@@ -283,6 +291,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __setitem__(self, key, val):
         self.array[key] = val
 
+    @override
     def __len__(self):
         return len(self.array)
 
@@ -294,6 +303,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __ne__(self, other):
         return ~(self == other)
 
+    @override
     @property
     def ndim(self) -> int:
         return 1
@@ -301,10 +311,7 @@ class PandasExtensionArray(NDArrayMixin, Generic[T_ExtensionArray]):
     def __array__(
         self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
-        if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(self.array, dtype=dtype, copy=copy)
-        else:
-            return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array, dtype=dtype, copy=copy)
 
     def __getattr__(self, attr: str) -> Any:
         #  with __deepcopy__ or __copy__, the object is first constructed and then the sub-objects are attached (see https://docs.python.org/3/library/copy.html)

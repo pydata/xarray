@@ -1,5 +1,4 @@
-"""
-Functions for applying functions that act on arrays to xarray's labeled data.
+"""Functions for applying functions that act on arrays to xarray's labeled data.
 
 NOTE: This module is currently large and contains various computational functionality.
 The long-term plan is to break it down into more focused submodules.
@@ -9,10 +8,8 @@ from __future__ import annotations
 
 import functools
 from collections import Counter
-from collections.abc import (
-    Callable,
-    Hashable,
-)
+from collections.abc import Callable, Hashable, Sequence
+from types import EllipsisType
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
@@ -23,10 +20,7 @@ from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import (
-    is_scalar,
-    parse_dims_as_set,
-)
+from xarray.core.utils import is_scalar, parse_dims_as_set
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -50,8 +44,7 @@ def cov(
     ddof: int = 1,
     weights: T_DataArray | None = None,
 ) -> T_DataArray:
-    """
-    Compute covariance between two DataArray objects along a shared dimension.
+    """Compute covariance between two DataArray objects along a shared dimension.
 
     Parameters
     ----------
@@ -94,7 +87,7 @@ def cov(
            [3.2, 0.6, 1.8]])
     Coordinates:
       * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> da_b = DataArray(
     ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -110,7 +103,7 @@ def cov(
            [ 3.2,  0.6,  1.8]])
     Coordinates:
       * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> xr.cov(da_a, da_b)
     <xarray.DataArray ()> Size: 8B
     array(-3.53055556)
@@ -135,7 +128,7 @@ def cov(
     <xarray.DataArray (time: 3)> Size: 24B
     array([-4.69346939, -4.49632653, -3.37959184])
     Coordinates:
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
@@ -155,9 +148,9 @@ def corr(
     dim: Dims = None,
     weights: T_DataArray | None = None,
 ) -> T_DataArray:
-    """
-    Compute the Pearson correlation coefficient between
-    two DataArray objects along a shared dimension.
+    """Compute the Pearson correlation coefficient between two DataArray objects.
+
+    The correlation is computed along a shared dimension.
 
     Parameters
     ----------
@@ -197,7 +190,7 @@ def corr(
            [3.2, 0.6, 1.8]])
     Coordinates:
       * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> da_b = DataArray(
     ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -213,7 +206,7 @@ def corr(
            [ 3.2,  0.6,  1.8]])
     Coordinates:
       * space    (space) <U2 24B 'IA' 'IL' 'IN'
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     >>> xr.corr(da_a, da_b)
     <xarray.DataArray ()> Size: 8B
     array(-0.57087777)
@@ -238,7 +231,7 @@ def corr(
     <xarray.DataArray (time: 3)> Size: 24B
     array([-0.50240504, -0.83215028, -0.99057446])
     Coordinates:
-      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+      * time     (time) datetime64[us] 24B 2000-01-01 2000-01-02 2000-01-03
     """
     from xarray.core.dataarray import DataArray
 
@@ -260,8 +253,9 @@ def _cov_corr(
     ddof: int = 0,
     method: Literal["cov", "corr"] | None = None,
 ) -> T_DataArray:
-    """
-    Internal method for xr.cov() and xr.corr() so only have to
+    """Compute the covariance or correlation of two arrays.
+
+    Internal method for xr.cov() and xr.corr() so we only have to
     sanitize the input arrays once and we don't repeat code.
     """
     # 1. Broadcast the two arrays
@@ -296,10 +290,7 @@ def _cov_corr(
         # Adjust covariance for degrees of freedom
         valid_count = valid_values.sum(dim)
         adjust = valid_count / (valid_count - ddof)
-        # I think the cast is required because of `T_DataArray` + `T_Xarray` (would be
-        # the same with `T_DatasetOrArray`)
-        # https://github.com/pydata/xarray/pull/8384#issuecomment-1784228026
-        return cast(T_DataArray, cov * adjust)
+        return cov * adjust
 
     else:
         # Compute std and corr
@@ -316,8 +307,7 @@ def _cov_corr(
 def cross(
     a: DataArray | Variable, b: DataArray | Variable, *, dim: Hashable
 ) -> DataArray | Variable:
-    """
-    Compute the cross product of two (arrays of) vectors.
+    """Compute the cross product of two (arrays of) vectors.
 
     The cross product of `a` and `b` in :math:`R^3` is a vector
     perpendicular to both `a` and `b`. The vectors in `a` and `b` are
@@ -335,6 +325,10 @@ def cross(
     dim : hashable
         The dimension along which the cross product will be computed.
         Must be available in both vectors.
+
+    See Also
+    --------
+    numpy.cross : Corresponding numpy function
 
     Examples
     --------
@@ -402,12 +396,7 @@ def cross(
         x        (dim_0) int64 8B -3
         y        (dim_0) int64 8B 6
         z        (dim_0) int64 8B -3
-
-    See Also
-    --------
-    numpy.cross : Corresponding numpy function
     """
-
     if dim not in a.dims:
         raise ValueError(f"Dimension {dim!r} not on a")
     elif dim not in b.dims:
@@ -486,8 +475,10 @@ def dot(
     dim: Dims = None,
     **kwargs: Any,
 ):
-    """Generalized dot product for xarray objects. Like ``np.einsum``, but
-    provides a simpler interface based on array dimension names.
+    """Generalized dot product for xarray objects.
+
+    Like ``np.einsum``, but provides a simpler interface based on array
+    dimension names.
 
     Parameters
     ----------
@@ -514,6 +505,14 @@ def dot(
     -----
     We recommend installing the optional ``opt_einsum`` package, or alternatively passing ``optimize=True``,
     which is passed through to ``np.einsum``, and works for most array backends.
+
+    **Coordinate Handling**
+
+    Like all xarray operations, ``dot`` automatically aligns array coordinates.
+    Coordinates are aligned by their **values**, not their order. By default, xarray uses
+    an inner join, so only overlapping coordinate values are included. With the default
+    ``arithmetic_join="inner"``, ``dot(a, b)`` is mathematically equivalent to ``(a * b).sum()``
+    over the specified dimensions. See :ref:`math-automatic-alignment` for more details.
 
     Examples
     --------
@@ -572,6 +571,37 @@ def dot(
     >>> xr.dot(da_a, da_b, dim=...)
     <xarray.DataArray ()> Size: 8B
     array(235)
+
+    **Coordinate alignment examples:**
+
+    Coordinates are aligned by their values, not their order:
+
+    >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+    >>> y = xr.DataArray([2, 20], coords=[("foo", ["b", "a"])])
+    >>> xr.dot(x, y)
+    <xarray.DataArray ()> Size: 8B
+    array(40)
+
+    Non-overlapping coordinates are excluded from the computation:
+
+    >>> x = xr.DataArray([1, 10], coords=[("foo", ["a", "b"])])
+    >>> y = xr.DataArray([2, 30], coords=[("foo", ["b", "c"])])
+    >>> xr.dot(x, y)  # only 'b' overlaps: 10 * 2 = 20
+    <xarray.DataArray ()> Size: 8B
+    array(20)
+
+    Dimensions not involved in the dot product keep their coordinates:
+
+    >>> x = xr.DataArray(
+    ...     [[1, 2], [3, 4]],
+    ...     coords=[("time", [0, 1]), ("space", ["IA", "IL"])],
+    ... )
+    >>> y = xr.DataArray([10, 20], coords=[("space", ["IA", "IL"])])
+    >>> xr.dot(x, y, dim="space")  # time coordinates are preserved
+    <xarray.DataArray (time: 2)> Size: 16B
+    array([ 50, 110])
+    Coordinates:
+      * time     (time) int64 16B 0 1
     """
     from xarray.core.dataarray import DataArray
 
@@ -656,14 +686,25 @@ def where(cond, x, y, keep_attrs=None):
         values to choose from where `cond` is True
     y : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is False
-    keep_attrs : bool or str or callable, optional
-        How to treat attrs. If True, keep the attrs of `x`.
+    keep_attrs : bool or {"drop", "identical", "no_conflicts", "drop_conflicts", "override"} or callable, optional
+
+        - 'override' or True (default): skip comparing and copy attrs from `x` to the result.
+        - 'drop' or False: empty attrs on returned xarray object.
+        - 'identical': all attrs must be the same on every object.
+        - 'no_conflicts': attrs from all objects are combined, any that have the same name must also have the same value.
+        - 'drop_conflicts': attrs from all objects are combined, any that have the same name but different values are dropped.
 
     Returns
     -------
     Dataset, DataArray, Variable or array
         In priority order: Dataset, DataArray, Variable or array, whichever
         type appears as an input argument.
+
+    See Also
+    --------
+    numpy.where : corresponding numpy function
+    Dataset.where, DataArray.where :
+        equivalent methods
 
     Examples
     --------
@@ -672,18 +713,42 @@ def where(cond, x, y, keep_attrs=None):
     ...     dims=["lat"],
     ...     coords={"lat": np.arange(10)},
     ...     name="sst",
+    ...     attrs={"standard_name": "sea_surface_temperature"},
     ... )
     >>> x
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
       * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
 
     >>> xr.where(x < 0.5, x, x * 100)
     <xarray.DataArray 'sst' (lat: 10)> Size: 80B
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
       * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
+
+    If `x` is a scalar then by default there are no attrs on the result
+
+    >>> xr.where(x < 0.5, 1, 0)
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
+    array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+    Coordinates:
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+
+    If `x` is a scalar (and therefore has no attrs), preserve the
+    attrs on `cond` by using `keep_attrs="drop_conflicts"`
+
+    >>> xr.where(x < 0.5, 1, 0, keep_attrs="drop_conflicts")
+    <xarray.DataArray 'sst' (lat: 10)> Size: 80B
+    array([1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+    Coordinates:
+      * lat      (lat) int64 80B 0 1 2 3 4 5 6 7 8 9
+    Attributes:
+        standard_name:  sea_surface_temperature
 
     >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
@@ -716,12 +781,6 @@ def where(cond, x, y, keep_attrs=None):
     array([[1, 2],
            [0, 0]])
     Dimensions without coordinates: x, y
-
-    See Also
-    --------
-    numpy.where : corresponding numpy function
-    Dataset.where, DataArray.where :
-        equivalent methods
     """
     from xarray.core.dataset import Dataset
 
@@ -746,7 +805,7 @@ def where(cond, x, y, keep_attrs=None):
     # be consistent with the `where` method of `DataArray` and `Dataset`
     # rebuild the attrs from x at each level of the output, which could be
     # Dataset, DataArray, or Variable, and also handle coords
-    if keep_attrs is True and hasattr(result, "attrs"):
+    if keep_attrs in (True, "override") and hasattr(result, "attrs"):
         if isinstance(y, Dataset) and not isinstance(x, Dataset):
             # handle special case where x gets promoted to Dataset
             result.attrs = {}
@@ -801,7 +860,7 @@ def polyval(
     coeffs: Dataset | DataArray,
     degree_dim: Hashable = "degree",
 ) -> Dataset | DataArray:
-    """Evaluate a polynomial at specific values
+    """Evaluate a polynomial at specific values.
 
     Parameters
     ----------
@@ -832,7 +891,6 @@ def polyval(
     ...
     Dimensions without coordinates: x
     """
-
     if degree_dim not in coeffs._indexes:
         raise ValueError(
             f"Dimension `{degree_dim}` should be a coordinate variable with labels."
@@ -858,7 +916,7 @@ def polyval(
 
 
 def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
-    """Converts all datetime64 variables to float64
+    """Convert all datetime64 variables to float64.
 
     Parameters
     ----------
@@ -889,8 +947,9 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
                 data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns"),
             )
         elif x.dtype.kind == "m":
-            # timedeltas
-            return duck_array_ops.astype(x, dtype=float)
+            # timedeltas: a plain astype(float) maps NaT to a large sentinel value
+            # (e.g. -1.8e19) instead of NaN, so mask those positions back to NaN.
+            return duck_array_ops.astype(x, dtype=float).where(x.notnull())
         return x
 
     if isinstance(data, Dataset):
@@ -903,7 +962,7 @@ def _calc_idxminmax(
     *,
     array,
     func: Callable,
-    dim: Hashable | None = None,
+    dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
     skipna: bool | None = None,
     fill_value: Any = dtypes.NA,
     keep_attrs: bool | None = None,
@@ -913,23 +972,30 @@ def _calc_idxminmax(
     if not array.ndim:
         raise ValueError("This function does not apply for scalars")
 
-    if dim is not None:
+    if dim is Ellipsis:
+        dim = array.dims
+    elif dim is not None:
         pass  # Use the dim if available
     elif array.ndim == 1:
         # it is okay to guess the dim if there is only 1
         dim = array.dims[0]
     else:
-        # The dim is not specified and ambiguous.  Don't guess.
-        raise ValueError("Must supply 'dim' argument for multidimensional arrays")
+        # like the future behavior of argmin/argmax without dim, use all dims
+        dim = array.dims
 
-    if dim not in array.dims:
-        raise KeyError(
-            f"Dimension {dim!r} not found in array dimensions {array.dims!r}"
-        )
-    if dim not in array.coords:
-        raise KeyError(
-            f"Dimension {dim!r} is not one of the coordinates {tuple(array.coords.keys())}"
-        )
+    # like argmin/argmax, a sequence of dims (other than a str) returns a dict
+    single_dim = not isinstance(dim, Sequence) or isinstance(dim, str)
+    dims = [dim] if single_dim else list(cast(Sequence[Hashable], dim))
+
+    for _dim in dims:
+        if _dim not in array.dims:
+            raise KeyError(
+                f"Dimension {_dim!r} not found in array dimensions {array.dims!r}"
+            )
+        if _dim not in array.coords:
+            raise KeyError(
+                f"Dimension {_dim!r} is not one of the coordinates {tuple(array.coords.keys())}"
+            )
 
     # These are dtypes with NaN values argmin and argmax can handle
     na_dtypes = "cfO"
@@ -939,27 +1005,39 @@ def _calc_idxminmax(
         allna = array.isnull().all(dim)
         array = array.where(~allna, 0)
 
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=True)
+
     # This will run argmin or argmax.
-    index = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
+    index = func(array, dim=dim, axis=None, keep_attrs=False, skipna=skipna)
+    # Force dictionary format in case of single dim so that we can iterate over it in for loop below
+    if single_dim:
+        index = {dim: index}
 
-    # Handle chunked arrays (e.g. dask).
-    coord = array[dim]._variable.to_base_variable()
-    if is_chunked_array(array.data):
-        chunkmanager = get_chunked_array_type(array.data)
-        coord_array = chunkmanager.from_array(
-            array[dim].data, chunks=((array.sizes[dim],),)
-        )
-        coord = coord.copy(data=coord_array)
-    else:
-        coord = coord.copy(data=to_like_array(array[dim].data, array.data))
+    res = {}
+    for _dim in dims:
+        _da_idx = index[_dim]
+        # Handle chunked arrays (e.g. dask).
+        coord = array[_dim]._variable.to_base_variable()
+        if is_chunked_array(array.data):
+            chunkmanager = get_chunked_array_type(array.data)
+            coord_array = chunkmanager.from_array(
+                array[_dim].data, chunks=((array.sizes[_dim],),)
+            )
+            coord = coord.copy(data=coord_array)
+        else:
+            coord = coord.copy(data=to_like_array(array[_dim].data, array.data))
 
-    res = index._replace(coord[(index.variable,)]).rename(dim)
+        _res = _da_idx._replace(coord[(_da_idx.variable,)]).rename(_dim)
+        if skipna or (skipna is None and array.dtype.kind in na_dtypes):
+            # Put the NaN values back in after removing them.
+            # We attempt to preserve dtype where we can.
+            if is_chunked_array(allna.data) or allna.any():
+                _res = _res.where(~allna, fill_value)
+        # the result are labels of the coordinate, so keep its attributes
+        _res.attrs = dict(coord.attrs) if keep_attrs else {}
+        res[_dim] = _res
 
-    if skipna or (skipna is None and array.dtype.kind in na_dtypes):
-        # Put the NaN values back in after removing them
-        res = res.where(~allna, fill_value)
-
-    # Copy attributes from argmin/argmax, if any
-    res.attrs = index.attrs
-
+    if single_dim:
+        return res[dim]
     return res

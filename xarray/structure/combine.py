@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 import pandas as pd
 
@@ -31,19 +31,17 @@ if TYPE_CHECKING:
     )
 
 
-T = TypeVar("T")
-
-
-def _infer_concat_order_from_positions(
+def _infer_concat_order_from_positions[T](
     datasets: NestedSequence[T],
 ) -> dict[tuple[int, ...], T]:
     return dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
 
-def _infer_tile_ids_from_nested_list(
+def _infer_tile_ids_from_nested_list[T](
     entry: NestedSequence[T], current_pos: tuple[int, ...]
 ) -> Iterator[tuple[tuple[int, ...], T]]:
-    """
+    """Iterate over a nested list of objects, yielding their positions and values.
+
     Given a list of lists (of lists...) of objects, returns an iterator
     which returns a tuple containing the index of each object in the nested
     list structure as the key, and the object. This can then be called by the
@@ -58,17 +56,22 @@ def _infer_tile_ids_from_nested_list(
     entry : list[list[obj, obj, ...], ...]
         List of lists of arbitrary depth, containing objects in the order
         they are to be concatenated.
+    current_pos : tuple of int
+        Position of ``entry`` in the outer nested list.
 
-    Returns
-    -------
-    combined_tile_ids : dict[tuple(int, ...), obj]
+    Yields
+    ------
+    tile_id : tuple of int
+        Position of the object in the nested list.
+    obj
+        The object.
     """
-
-    if not isinstance(entry, str) and isinstance(entry, Sequence):
-        for i, item in enumerate(entry):
-            yield from _infer_tile_ids_from_nested_list(item, current_pos + (i,))
-    else:
-        yield current_pos, cast(T, entry)
+    for i, item in enumerate(entry):
+        position = current_pos + (i,)
+        if not isinstance(item, str) and isinstance(item, Sequence):
+            yield from _infer_tile_ids_from_nested_list(item, position)
+        else:
+            yield position, cast(T, item)
 
 
 def _ensure_same_types(series, dim):
@@ -182,9 +185,9 @@ def _infer_concat_order_from_coords(datasets: list[Dataset] | list[DataTree]):
 
 
 def _check_dimension_depth_tile_ids(combined_tile_ids):
-    """
-    Check all tuples are the same length, i.e. check that all lists are
-    nested to the same depth.
+    """Check all tuples are the same length.
+
+    I.e. check that all lists are nested to the same depth.
     """
     tile_ids = combined_tile_ids.keys()
     nesting_depths = [len(tile_id) for tile_id in tile_ids]
@@ -223,9 +226,10 @@ def _combine_nd(
     join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
 ):
-    """
-    Combines an N-dimensional structure of datasets into one by applying a
-    series of either concat and merge operations along each dimension.
+    """Combine an N-dimensional structure of datasets into one.
+
+    This is done by applying a series of either concat and merge operations
+    along each dimension.
 
     No checks are performed on the consistency of the datasets, concat_dims or
     tile_IDs, because it is assumed that this has already been done.
@@ -245,7 +249,6 @@ def _combine_nd(
     -------
     combined_ds : xarray.Dataset | xarray.DataTree
     """
-
     example_tile_id = next(iter(combined_ids.keys()))
 
     n_dims = len(example_tile_id)
@@ -314,11 +317,10 @@ def _combine_1d(
     join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
 ):
-    """
-    Applies either concat or merge to 1D list of datasets depending on value
-    of concat_dim
-    """
+    """Apply either concat or merge to 1D list of datasets.
 
+    Which one is applied depends on the value of concat_dim.
+    """
     if concat_dim is not None:
         try:
             combined = concat(
@@ -356,7 +358,7 @@ def _combine_1d(
                 "If you are intending to concatenate datasets, please specify the concatenation dimension explicitly. "
                 "Using merge to concatenate is quite inefficient."
             )
-            raise e
+            raise
 
     return combined
 
@@ -410,15 +412,15 @@ def _nested_combine(
 # Define types for arbitrarily-nested list of lists.
 # Mypy doesn't seem to handle overloads properly with recursive types, so we
 # explicitly expand the first handful of levels of recursion.
-DatasetLike: TypeAlias = DataArray | Dataset
-DatasetHyperCube: TypeAlias = (
+type DatasetLike = DataArray | Dataset
+type DatasetHyperCube = (
     DatasetLike
     | Sequence[DatasetLike]
     | Sequence[Sequence[DatasetLike]]
     | Sequence[Sequence[Sequence[DatasetLike]]]
     | Sequence[Sequence[Sequence[Sequence[DatasetLike]]]]
 )
-DataTreeHyperCube: TypeAlias = (
+type DataTreeHyperCube = (
     DataTree
     | Sequence[DataTree]
     | Sequence[Sequence[DataTree]]
@@ -475,9 +477,10 @@ def combine_nested(
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "drop",
 ) -> Dataset | DataTree:
-    """
-    Explicitly combine an N-dimensional grid of datasets into one by using a
-    succession of concat and merge operations along each dimension of the grid.
+    """Explicitly combine an N-dimensional grid of datasets into one.
+
+    This uses a succession of concat and merge operations along each dimension
+    of the grid.
 
     Does not sort the supplied datasets under any circumstances, so the
     datasets must be passed in the order you wish them to be concatenated. It
@@ -509,7 +512,7 @@ def combine_nested(
         Must be the same length as the depth of the list passed to
         ``datasets``.
     compat : {"identical", "equals", "broadcast_equals", \
-              "no_conflicts", "override"}, optional
+              "no_conflicts", "override"}, default: "no_conflicts"
         String indicating how to compare variables of the same name for
         potential merge conflicts:
 
@@ -522,7 +525,7 @@ def combine_nested(
           must be equal. The returned dataset then contains the combination
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
-    data_vars : {"minimal", "different", "all" or list of str}, optional
+    data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
             appears are included.
@@ -532,15 +535,16 @@ def combine_nested(
             load the data payload of data variables into memory if they are not
             already loaded.
           * "all": All data variables will be concatenated.
-          * None: Means ``"all"`` if ``dim`` is not present in any of the ``objs``,
-            and ``"minimal"`` if ``dim`` is present in any of ``objs``.
-          * list of dims: The listed data variables will be concatenated, in
+          * None: Means ``"all"`` if ``concat_dim`` is not present in any of
+            the ``objs``, and ``"minimal"`` if ``concat_dim`` is present
+            in any of ``objs``.
+          * list of str: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
 
-    coords : {"minimal", "different", "all" or list of str}, optional
+    coords : {"minimal", "different", "all"} or list of str, default: "different"
         These coordinate variables will be concatenated together:
-          * "minimal": Only coordinates in which the dimension already appears
-            are included. If concatenating over a dimension _not_
+          * "minimal": Only coordinates in which the dimension already
+            appears are included. If concatenating over a dimension _not_
             present in any of the objects, then all data variables will
             be concatenated along that new dimension.
           * "different": Coordinates which are not equal (ignoring attributes)
@@ -550,14 +554,14 @@ def combine_nested(
             loaded.
           * "all": All coordinate variables will be concatenated, except
             those corresponding to other dimensions.
-          * list of Hashable: The listed coordinate variables will be concatenated,
+          * list of str: The listed coordinate variables will be concatenated,
             in addition to the "minimal" coordinates.
 
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
         refer to its values.
-    join : {"outer", "inner", "left", "right", "exact"}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, default: "outer"
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
 
@@ -591,9 +595,13 @@ def combine_nested(
     -------
     combined : xarray.Dataset or xarray.DataTree
 
+    See Also
+    --------
+    concat
+    merge
+
     Examples
     --------
-
     A common task is collecting data from a parallelized simulation in which
     each process wrote out to a separate file. A domain which was decomposed
     into 4 parts, 2 each along both the x and y axes, requires organising the
@@ -677,11 +685,6 @@ def combine_nested(
     Data variables:
         temperature    (t) float64 80B -0.8878 -1.981 -0.3479 ... -0.4381 -1.253
         precipitation  (t) float64 80B 1.202 -0.3873 -0.3023 ... -0.8955 0.3869
-
-    See also
-    --------
-    concat
-    merge
     """
     any_datasets = any(isinstance(obj, Dataset) for obj in iterate_nested(datasets))
     any_unnamed_arrays = any(
@@ -720,14 +723,11 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-K = TypeVar("K", bound=Hashable)
-
-
-def groupby_defaultdict(
+def groupby_defaultdict[T, K: Hashable](
     iter: list[T],
     key: Callable[[T], K],
 ) -> Iterator[tuple[K, Iterator[T]]]:
-    """replacement for itertools.groupby"""
+    """Group objects by key, as a replacement for itertools.groupby."""
     idx = defaultdict(list)
     for i, obj in enumerate(iter):
         idx[key(obj)].append(i)
@@ -744,9 +744,7 @@ def _combine_single_variable_hypercube(
     join: JoinOptions | CombineKwargDefault,
     combine_attrs: CombineAttrsOptions,
 ):
-    """
-    Attempt to combine a list of Datasets into a hypercube using their
-    coordinates.
+    """Attempt to combine a list of Datasets into a hypercube using their coordinates.
 
     All provided Datasets must belong to a single variable, ie. must be
     assigned the same variable name. This precondition is not checked by this
@@ -798,18 +796,17 @@ def combine_by_coords(
     data_objects: Iterable[Dataset | DataArray] = [],
     compat: CompatOptions | CombineKwargDefault = _COMPAT_DEFAULT,
     data_vars: Literal["all", "minimal", "different"]
-    | None
     | list[str]
-    | CombineKwargDefault = _DATA_VARS_DEFAULT,
+    | CombineKwargDefault
+    | None = _DATA_VARS_DEFAULT,
     coords: str | CombineKwargDefault = _COORDS_DEFAULT,
     fill_value: object = dtypes.NA,
     join: JoinOptions | CombineKwargDefault = _JOIN_DEFAULT,
     combine_attrs: CombineAttrsOptions = "no_conflicts",
 ) -> Dataset | DataArray:
-    """
+    """Attempt to auto-magically combine the given datasets (or data arrays) into one.
 
-    Attempt to auto-magically combine the given datasets (or data arrays)
-    into one by using dimension coordinates.
+    The combination uses dimension coordinates.
 
     This function attempts to combine a group of datasets along any number of
     dimensions into a single entity by inspecting coords and metadata and using
@@ -836,7 +833,8 @@ def combine_by_coords(
     data_objects : Iterable of Datasets or DataArrays
         Data objects to combine.
 
-    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, \
+             default: "no_conflicts"
         String indicating how to compare variables of the same name for
         potential conflicts:
 
@@ -850,7 +848,7 @@ def combine_by_coords(
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
 
-    data_vars : {"minimal", "different", "all" or list of str}, optional
+    data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
 
         - "minimal": Only data variables in which the dimension already
@@ -861,18 +859,33 @@ def combine_by_coords(
           load the data payload of data variables into memory if they are not
           already loaded.
         - "all": All data variables will be concatenated.
+        - None: Means ``"all"`` if ``concat_dim`` is not present in any of
+          the ``objs``, and ``"minimal"`` if ``concat_dim`` is present
+          in any of ``objs``.
         - list of str: The listed data variables will be concatenated, in
           addition to the "minimal" data variables.
+    coords : {"minimal", "different", "all"} or list of str, default: "different"
+        These coordinate variables will be concatenated together:
 
-        If objects are DataArrays, `data_vars` must be "all".
-    coords : {"minimal", "different", "all"} or list of str, optional
-        As per the "data_vars" kwarg, but for coordinate variables.
+        - "minimal": Only coordinates in which the dimension already
+          appears are included. If concatenating over a dimension _not_
+          present in any of the objects, then all data variables will
+          be concatenated along that new dimension.
+        - "different": Coordinates which are not equal (ignoring attributes)
+          across all datasets are also concatenated (as well as all for which
+          dimension already appears). Beware: this option may load the data
+          payload of coordinate variables into memory if they are not already
+          loaded.
+        - "all": All coordinate variables will be concatenated, except
+          those corresponding to other dimensions.
+        - list of str: The listed coordinate variables will be concatenated,
+          in addition to the "minimal" coordinates.
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
         refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
-    join : {"outer", "inner", "left", "right", "exact"}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, default: "outer"
         String indicating how to combine differing indexes in objects
 
         - "outer": use the union of object indexes
@@ -908,7 +921,7 @@ def combine_by_coords(
         Will return a Dataset unless all the inputs are unnamed DataArrays, in which case a
         DataArray will be returned.
 
-    See also
+    See Also
     --------
     concat
     merge
@@ -916,7 +929,6 @@ def combine_by_coords(
 
     Examples
     --------
-
     Combining two datasets using their common dimension coordinates. Notice
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.
@@ -1057,6 +1069,8 @@ def combine_by_coords(
     Finally, if you attempt to combine a mix of unnamed DataArrays with either named
     DataArrays or Datasets, a ValueError will be raised (as this is an ambiguous operation).
     """
+    data_objects = list(data_objects)
+
     if any(isinstance(data_object, DataTree) for data_object in data_objects):
         raise NotImplementedError(
             "combine_by_coords() does not yet support DataTree objects."

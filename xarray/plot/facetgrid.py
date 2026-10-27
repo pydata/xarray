@@ -4,7 +4,7 @@ import functools
 import itertools
 import warnings
 from collections.abc import Callable, Hashable, Iterable, MutableMapping
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import numpy as np
 
@@ -16,6 +16,7 @@ from xarray.plot.utils import (
     _add_legend,
     _determine_guide,
     _get_nice_quiver_magnitude,
+    _group_hue_values,
     _guess_coords_to_plot,
     _infer_xy_labels,
     _Normalize,
@@ -34,6 +35,7 @@ if TYPE_CHECKING:
     from matplotlib.text import Annotation
 
     from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
 
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
@@ -44,9 +46,7 @@ _NTICKS = 5
 
 
 def _nicetitle(coord, value, maxchar, template):
-    """
-    Put coord, value in template and truncate at maxchar
-    """
+    """Put coord, value in template and truncate at maxchar."""
     prettyvalue = format_item(value, quote_strings=False)
     title = template.format(coord=coord, value=prettyvalue)
 
@@ -56,14 +56,38 @@ def _nicetitle(coord, value, maxchar, template):
     return title
 
 
+def _auto_grid(
+    nfacet: int, figsize: tuple[float, ...] | None, aspect: float
+) -> tuple[int, int]:
+
+    # Try to align the grid to the figsize. If figsize is unknown it gets
+    # computed from the grid, so lets keep it as square as possible
+    faspect = 1 if figsize is None else figsize[0] / figsize[1]
+
+    # Only wrap if > 3 images
+    if nfacet <= 3:
+        return nfacet, 1
+
+    # Geometric ideal case
+    ncol = int(np.ceil(np.sqrt(nfacet * faspect / aspect)))
+    ncol = max(1, min(ncol, nfacet))
+    nrow = int(np.ceil(nfacet / ncol))
+
+    # Reduce columns as long as we don't need more rows
+    # This eliminates empty slots in the last row if aspect < 1
+    while ncol > 1 and (ncol - 1) * nrow >= nfacet:
+        ncol -= 1
+
+    return ncol, nrow
+
+
 T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
 
 
-class FacetGrid(Generic[T_DataArrayOrSet]):
-    """
-    Initialize the Matplotlib figure and FacetGrid object.
+class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
+    """Initialize the Matplotlib figure and FacetGrid object.
 
-    The :class:`FacetGrid` is an object that links a xarray DataArray to
+    The :class:`FacetGrid` is an object that links an xarray DataArray to
     a Matplotlib figure with a particular structure.
 
     In particular, :class:`FacetGrid` is used to draw plots with multiple
@@ -88,6 +112,8 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
     axs : ndarray of matplotlib.axes.Axes
         Array containing axes in corresponding position, as returned from
         :py:func:`matplotlib.pyplot.subplots`.
+    axes : ndarray of matplotlib.axes.Axes
+        Alias of ``axs``, which is the preferred name.
     col_labels : list of matplotlib.text.Annotation
         Column titles.
     row_labels : list of matplotlib.text.Annotation
@@ -114,7 +140,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
     _row_var: Hashable | None
     _ncol: int
     _col_var: Hashable | None
-    _col_wrap: int | None
+    _col_wrap: int | Literal["auto"] | None
     row_labels: list[Annotation | None]
     col_labels: list[Annotation | None]
     _x_var: None
@@ -129,7 +155,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         data: T_DataArrayOrSet,
         col: Hashable | None = None,
         row: Hashable | None = None,
-        col_wrap: int | None = None,
+        col_wrap: int | Literal["auto"] | None = None,
         sharex: bool = True,
         sharey: bool = True,
         figsize: Iterable[float] | None = None,
@@ -137,20 +163,22 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         size: float = 3,
         subplot_kws: dict[str, Any] | None = None,
     ) -> None:
-        """
+        """Initialize the FacetGrid.
+
         Parameters
         ----------
         data : DataArray or Dataset
             DataArray or Dataset to be plotted.
-        row, col : str
+        row, col : hashable or None, optional
             Dimension names that define subsets of the data, which will be drawn
             on separate facets in the grid.
-        col_wrap : int, optional
-            "Wrap" the grid the for the column variable after this number of columns,
+        col_wrap : int, None or "auto", optional
+            "Wrap" the grid for the column variable after this number of columns,
             adding rows if ``col_wrap`` is less than the number of facets.
-        sharex : bool, optional
+            If "auto" align the grid to the figsize or keep it as square as possible.
+        sharex : bool, default: True
             If true, the facets will share *x* axes.
-        sharey : bool, optional
+        sharey : bool, default: True
             If true, the facets will share *y* axes.
         figsize : Iterable of float or None, optional
             A tuple (width, height) of the figure in inches.
@@ -163,9 +191,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         subplot_kws : dict, optional
             Dictionary of keyword arguments for Matplotlib subplots
             (:py:func:`matplotlib.pyplot.subplots`).
-
         """
-
         import matplotlib.pyplot as plt
 
         # Handle corner case of nonunique coordinates
@@ -195,25 +221,40 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         else:
             raise ValueError("Pass a coordinate name as an argument for row or col")
 
+        # Resolve figsize from global option before computing grid shape,
+        # so that downstream heuristics (e.g. col_wrap="auto") can use it.
+        if figsize is None:
+            from xarray.core.options import OPTIONS
+
+            facetgrid_figsize = OPTIONS["facetgrid_figsize"]
+            if isinstance(facetgrid_figsize, tuple):
+                figsize = facetgrid_figsize
+            elif facetgrid_figsize == "rcparams":
+                import matplotlib as mpl
+
+                figsize = tuple(mpl.rcParams["figure.figsize"])
+        else:
+            # exhaust generators
+            figsize = tuple(figsize)
+
         # Compute grid shape
         if single_group:
             nfacet = len(data[single_group])
-            if col:
-                # idea - could add heuristic for nice shapes like 3x4
-                ncol = nfacet
-            if row:
-                ncol = 1
-            if col_wrap is not None:
-                # Overrides previous settings
+            if col_wrap == "auto":
+                ncol, nrow = _auto_grid(nfacet, figsize, aspect)
+            elif col_wrap is None:
+                ncol = nfacet if col else 1
+                nrow = int(np.ceil(nfacet / ncol))
+            else:
                 ncol = col_wrap
-            nrow = int(np.ceil(nfacet / ncol))
+                nrow = int(np.ceil(nfacet / ncol))
 
         # Set the subplot kwargs
         subplot_kws = {} if subplot_kws is None else subplot_kws
 
         if figsize is None:
-            # Calculate the base figure size with extra horizontal space for a
-            # colorbar
+            # Calculate the base figure size with extra horizontal space
+            # for a colorbar
             cbar_space = 1
             figsize = (ncol * size * aspect + cbar_space, nrow * size)
 
@@ -279,26 +320,11 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
 
     @property
     def axes(self) -> np.ndarray:
-        warnings.warn(
-            (
-                "self.axes is deprecated since 2022.11 in order to align with "
-                "matplotlibs plt.subplots, use self.axs instead."
-            ),
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        """Alias of :py:attr:`axs`, which is the preferred name."""
         return self.axs
 
     @axes.setter
     def axes(self, axs: np.ndarray) -> None:
-        warnings.warn(
-            (
-                "self.axes is deprecated since 2022.11 in order to align with "
-                "matplotlibs plt.subplots, use self.axs instead."
-            ),
-            DeprecationWarning,
-            stacklevel=2,
-        )
         self.axs = axs
 
     @property
@@ -316,8 +342,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         y: Hashable | None,
         **kwargs: Any,
     ) -> T_FacetGrid:
-        """
-        Apply a plotting function to a 2d facet's subset of the data.
+        """Apply a plotting function to a 2d facet's subset of the data.
 
         This is more convenient and less general than ``FacetGrid.map``
 
@@ -336,7 +361,6 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         self : FacetGrid object
 
         """
-
         if kwargs.get("cbar_ax") is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
@@ -399,8 +423,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         linewidth: Hashable | None = None,
         **kwargs: Any,
     ) -> T_FacetGrid:
-        """
-        Apply a plotting function to a 1d facet's subset of the data.
+        """Apply a plotting function to a 1d facet's subset of the data.
 
         This is more convenient and less general than ``FacetGrid.map``
 
@@ -486,7 +509,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         func_kwargs["add_title"] = False
 
         add_labels_ = np.zeros(self.axs.shape + (3,), dtype=bool)
-        if kwargs.get("z") is not None:
+        if coords_to_plot["z"] is not None:
             # 3d plots looks better with all labels. 3d plots can't sharex either so it
             # is easy to get lost while rotating the plots:
             add_labels_[:] = True
@@ -499,10 +522,10 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         # Set up the lists of names for the row and column facet variables:
         if self._single_group:
             full = tuple(
-                {self._single_group: x}
-                for x in range(self.data[self._single_group].size)
+                {self._single_group: v}
+                for v in range(self.data[self._single_group].size)
             )
-            empty = tuple(None for x in range(self._nrow * self._ncol - len(full)))
+            empty = (None,) * (self._nrow * self._ncol - len(full))
             name_d = full + empty
         else:
             rowcols = itertools.product(
@@ -525,8 +548,8 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
                 subset = self.data.isel(d)
                 mappable = func(
                     subset,
-                    x=x,
-                    y=y,
+                    x=coords_to_plot["x"],
+                    z=coords_to_plot["z"],
                     ax=ax,
                     hue=hue,
                     _size=size_,
@@ -728,9 +751,19 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             self.figlegend = _add_legend(**kwargs)
         else:
             assert self._hue_var is not None
+            handles: Any = self._mappables[-1]
+            labels = list(self._hue_var.to_numpy())
+            # DataArray.plot.line draws one line per position along the hue
+            # coordinate, so repeated hue values would otherwise appear
+            # multiple times in the legend (GH10998). Keep the first handle
+            # drawn for each hue value, matching the non-faceted line legend.
+            if isinstance(handles, list) and len(handles) == len(labels):
+                _, hue_first = _group_hue_values(self._hue_var.to_numpy())
+                handles = [handles[i] for i in hue_first]
+                labels = [labels[i] for i in hue_first]
             self.figlegend = self.fig.legend(
-                handles=self._mappables[-1],
-                labels=list(self._hue_var.to_numpy()),
+                handles=handles,
+                labels=labels,
                 title=label if label is not None else label_from_attrs(self._hue_var),
                 loc=kwargs.pop("loc", "center right"),
                 **kwargs,
@@ -774,8 +807,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         # self._adjust_fig_for_guide(self.quiverkey.text)
 
     def _get_largest_lims(self) -> dict[str, tuple[float, float]]:
-        """
-        Get largest limits in the facetgrid.
+        """Get largest limits in the facetgrid.
 
         Returns
         -------
@@ -812,8 +844,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         y: tuple[float, float] | None = None,
         z: tuple[float, float] | None = None,
     ) -> None:
-        """
-        Set the same limits for all the subplots in the facetgrid.
+        """Set the same limits for all the subplots in the facetgrid.
 
         Parameters
         ----------
@@ -881,8 +912,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         size=None,
         **kwargs,
     ) -> None:
-        """
-        Draw titles either above each facet or on the grid margins.
+        """Draw titles either above each facet or on the grid margins.
 
         Parameters
         ----------
@@ -892,10 +922,6 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             Truncate titles at maxchar
         **kwargs : keyword args
             additional arguments to matplotlib.text
-
-        Returns
-        -------
-        self: FacetGrid object
 
         """
         import matplotlib as mpl
@@ -949,8 +975,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
         max_yticks: int = _NTICKS,
         fontsize: str | int = _FONTSIZE,
     ) -> None:
-        """
-        Set and control tick behavior.
+        """Set and control tick behavior.
 
         Parameters
         ----------
@@ -958,10 +983,6 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
             Maximum number of labeled ticks to plot on x, y axes
         fontsize : string or int
             Font size as used by matplotlib text
-
-        Returns
-        -------
-        self : FacetGrid object
 
         """
         from matplotlib.ticker import MaxNLocator
@@ -981,8 +1002,7 @@ class FacetGrid(Generic[T_DataArrayOrSet]):
     def map(
         self: T_FacetGrid, func: Callable, *args: Hashable, **kwargs: Any
     ) -> T_FacetGrid:
-        """
-        Apply a plotting function to each facet's subset of the data.
+        """Apply a plotting function to each facet's subset of the data.
 
         Parameters
         ----------
@@ -1039,8 +1059,7 @@ def _easy_facetgrid(
     figsize: Iterable[float] | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArrayOrSet]:
-    """
-    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
+    """Call xarray.plot.FacetGrid from 2d plotting methods.
 
     kwargs are the arguments to 2d plotting method
     """

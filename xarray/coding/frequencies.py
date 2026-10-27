@@ -1,4 +1,4 @@
-"""FrequencyInferer analog for cftime.datetime objects"""
+"""FrequencyInferer analog for cftime.datetime objects."""
 
 # The infer_freq method and the _CFTimeFrequencyInferer
 # subclass defined here were copied and adapted for
@@ -44,8 +44,9 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
-from xarray.coding.cftime_offsets import _MONTH_ABBREVIATIONS, _legacy_to_new_freq
+from xarray.coding.cftime_offsets import _MONTH_ABBREVIATIONS
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.common import _contains_datetime_like_objects
 from xarray.core.dtypes import _is_numpy_subdtype
@@ -59,8 +60,7 @@ _ONE_DAY = 24 * _ONE_HOUR
 
 
 def infer_freq(index):
-    """
-    Infer the most likely frequency given the input index.
+    """Infer the most likely frequency given the input index.
 
     Parameters
     ----------
@@ -115,7 +115,11 @@ def infer_freq(index):
         inferer = _CFTimeFrequencyInferer(index)
         return inferer.get_freq()
 
-    return _legacy_to_new_freq(pd.infer_freq(index))
+    if Version(pd.__version__) >= Version("3.1.0.dev0"):
+        with pd.option_context({"future.infer_freq_returns_offset": False}):
+            return pd.infer_freq(index)
+    else:
+        return pd.infer_freq(index)
 
 
 class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
@@ -135,7 +139,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         self._month_deltas = None
 
     def get_freq(self):
-        """Find the appropriate frequency string to describe the inferred frequency of self.index
+        """Find the frequency string describing the inferred frequency of self.index.
 
         Adapted from `pandas.tsseries.frequencies._FrequencyInferer.get_freq` for CFTimeIndexes.
 
@@ -240,17 +244,17 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
 
 
 def _unique_deltas(arr):
-    """Sorted unique deltas of numpy array"""
+    """Return the sorted unique deltas of a numpy array."""
     return np.sort(np.unique(np.diff(arr)))
 
 
 def _is_multiple(us, mult: int):
-    """Whether us is a multiple of mult"""
+    """Return whether us is a multiple of mult."""
     return us % mult == 0
 
 
 def _maybe_add_count(base: str, count: float):
-    """If count is greater than 1, add it to the base offset string"""
+    """Add count to the base offset string if it is not 1."""
     if count != 1:
         assert count == int(count)
         count = int(count)

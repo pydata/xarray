@@ -1,4 +1,4 @@
-"""DatetimeIndex analog for cftime.datetime objects"""
+"""DatetimeIndex analog for cftime.datetime objects."""
 
 # The pandas.Index subclass defined here was copied and adapted for
 # use with cftime.datetime objects based on the source code defining
@@ -79,10 +79,10 @@ except AttributeError:
 
 
 def _parsed_string_to_bounds(date_type, resolution, parsed):
-    """Generalization of
-    pandas.tseries.index.DatetimeIndex._parsed_string_to_bounds
-    for use with non-standard calendars and cftime.datetime
-    objects.
+    """Compute the bounds of a parsed partial date string.
+
+    Generalization of pandas.tseries.index.DatetimeIndex._parsed_string_to_bounds
+    for use with non-standard calendars and cftime.datetime objects.
     """
     if resolution == "year":
         return (
@@ -123,12 +123,22 @@ def _parsed_string_to_bounds(date_type, resolution, parsed):
 
 
 def get_date_field(datetimes, field):
-    """Adapted from pandas.tslib.get_date_field"""
+    """Get a date field from an array of datetimes.
+
+    Adapted from pandas.tslib.get_date_field.
+    """
     return np.array([getattr(date, field) for date in datetimes], dtype=np.int64)
 
 
-def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
-    """Adapted from pandas.tseries.index._field_accessor"""
+def _field_accessor(
+    name: str,
+    docstring: str | None = None,
+    min_cftime_version: str = "0.0",
+):
+    """Create a property that accesses a date field.
+
+    Adapted from pandas.tseries.index._field_accessor.
+    """
 
     def f(self, min_cftime_version=min_cftime_version):
         if TYPE_CHECKING:
@@ -223,7 +233,7 @@ def format_attrs(index, separator=", "):
 
 
 class CFTimeIndex(pd.Index):
-    """Custom Index for working with CF calendars and dates
+    """Custom Index for working with CF calendars and dates.
 
     All elements of a CFTimeIndex must be cftime.datetime objects.
 
@@ -249,9 +259,21 @@ class CFTimeIndex(pd.Index):
     second = _field_accessor("second", "The seconds of the datetime")
     microsecond = _field_accessor("microsecond", "The microseconds of the datetime")
     dayofyear = _field_accessor(
+        "dayofyr",
+        "The ordinal day of year of the datetime",
+        "1.0.2.1",
+    )
+    dayofweek = _field_accessor(
+        "dayofwk",
+        "The day of week of the datetime",
+        "1.0.2.1",
+    )
+    day_of_year = _field_accessor(
         "dayofyr", "The ordinal day of year of the datetime", "1.0.2.1"
     )
-    dayofweek = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
+    day_of_week = _field_accessor(
+        "dayofwk", "The day of week of the datetime", "1.0.2.1"
+    )
     days_in_month = _field_accessor(
         "daysinmonth", "The number of days in the month of the datetime", "1.1.0.0"
     )
@@ -269,9 +291,7 @@ class CFTimeIndex(pd.Index):
         return result
 
     def __repr__(self):
-        """
-        Return a string representation for this object.
-        """
+        """Return a string representation for this object."""
         klass_name = type(self).__name__
         display_width = OPTIONS["display_width"]
         offset = len(klass_name) + 2
@@ -310,8 +330,9 @@ class CFTimeIndex(pd.Index):
         return full_repr_str
 
     def _partial_date_slice(self, resolution, parsed):
-        """Adapted from
-        pandas.tseries.index.DatetimeIndex._partial_date_slice
+        """Select a slice of the index for a partial date.
+
+        Adapted from pandas.tseries.index.DatetimeIndex._partial_date_slice.
 
         Note that when using a CFTimeIndex, if a partial-date selection
         returns a single element, it will never be converted to a scalar
@@ -340,7 +361,7 @@ class CFTimeIndex(pd.Index):
         <xarray.DataArray ()> Size: 8B
         array(1)
         Coordinates:
-            time     datetime64[ns] 8B 2001-01-01
+            time     datetime64[us] 8B 2001-01-01
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[pd.Timestamp(2001, 1, 1, 1), pd.Timestamp(2001, 2, 1)]],
@@ -350,7 +371,7 @@ class CFTimeIndex(pd.Index):
         <xarray.DataArray (time: 1)> Size: 8B
         array([1])
         Coordinates:
-          * time     (time) datetime64[ns] 8B 2001-01-01T01:00:00
+          * time     (time) datetime64[us] 8B 2001-01-01T01:00:00
         """
         start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
 
@@ -374,7 +395,10 @@ class CFTimeIndex(pd.Index):
         return np.flatnonzero(lhs_mask & rhs_mask)
 
     def _get_string_slice(self, key):
-        """Adapted from pandas.tseries.index.DatetimeIndex._get_string_slice"""
+        """Get a slice of the index for a date string.
+
+        Adapted from pandas.tseries.index.DatetimeIndex._get_string_slice.
+        """
         parsed, resolution = _parse_iso8601(self.date_type, key)
         try:
             loc = self._partial_date_slice(resolution, parsed)
@@ -383,7 +407,10 @@ class CFTimeIndex(pd.Index):
         return loc
 
     def _get_nearest_indexer(self, target, limit, tolerance):
-        """Adapted from pandas.Index._get_nearest_indexer"""
+        """Get the indexer for the nearest index labels.
+
+        Adapted from pandas.Index._get_nearest_indexer.
+        """
         left_indexer = self.get_indexer(target, "pad", limit=limit)
         right_indexer = self.get_indexer(target, "backfill", limit=limit)
         left_distances = abs(self.values[left_indexer] - target.values)
@@ -400,7 +427,10 @@ class CFTimeIndex(pd.Index):
         return indexer
 
     def _filter_indexer_tolerance(self, target, indexer, tolerance):
-        """Adapted from pandas.Index._filter_indexer_tolerance"""
+        """Filter the indexer by tolerance.
+
+        Adapted from pandas.Index._filter_indexer_tolerance.
+        """
         if isinstance(target, pd.Index):
             distance = abs(self.values[indexer] - target.values)
         else:
@@ -409,15 +439,19 @@ class CFTimeIndex(pd.Index):
         return indexer
 
     def get_loc(self, key):
-        """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
+        """Get the location for a label.
+
+        Adapted from pandas.tseries.index.DatetimeIndex.get_loc.
+        """
         if isinstance(key, str):
             return self._get_string_slice(key)
         else:
             return super().get_loc(key)
 
     def _maybe_cast_slice_bound(self, label, side):
-        """Adapted from
-        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound
+        """Cast a slice bound to a datetime if it is a string.
+
+        Adapted from pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound.
         """
         if not isinstance(label, str):
             return label
@@ -431,7 +465,10 @@ class CFTimeIndex(pd.Index):
     # TODO: Add ability to use integer range outside of iloc?
     # e.g. series[1:5].
     def get_value(self, series, key):
-        """Adapted from pandas.tseries.index.DatetimeIndex.get_value"""
+        """Get a value from a series for a label.
+
+        Adapted from pandas.tseries.index.DatetimeIndex.get_value.
+        """
         if np.asarray(key).dtype == np.dtype(bool):
             return series.iloc[key]
         elif isinstance(key, slice):
@@ -440,8 +477,10 @@ class CFTimeIndex(pd.Index):
             return series.iloc[self.get_loc(key)]
 
     def __contains__(self, key: Any) -> bool:
-        """Adapted from
-        pandas.tseries.base.DatetimeIndexOpsMixin.__contains__"""
+        """Check whether a key is contained in the index.
+
+        Adapted from pandas.tseries.base.DatetimeIndexOpsMixin.__contains__.
+        """
         try:
             result = self.get_loc(key)
             return (
@@ -453,7 +492,10 @@ class CFTimeIndex(pd.Index):
             return False
 
     def contains(self, key: Any) -> bool:
-        """Needed for .loc based partial-string indexing"""
+        """Check whether a key is contained in the index.
+
+        Needed for .loc based partial-string indexing.
+        """
         return self.__contains__(key)
 
     def shift(  # type: ignore[override,unused-ignore]
@@ -514,12 +556,14 @@ class CFTimeIndex(pd.Index):
             f"'freq' must be of type str or datetime.timedelta, got {type(freq)}."
         )
 
-    def __add__(self, other) -> Self:
+    # pandas-stubs defines many overloads for Index.__add__/__radd__ with specific
+    # return types, but CFTimeIndex legitimately returns Self for all cases
+    def __add__(self, other) -> Self:  # type: ignore[override]
         if isinstance(other, pd.TimedeltaIndex):
             other = other.to_pytimedelta()
         return type(self)(np.array(self) + other)
 
-    def __radd__(self, other) -> Self:
+    def __radd__(self, other) -> Self:  # type: ignore[override]
         if isinstance(other, pd.TimedeltaIndex):
             other = other.to_pytimedelta()
         return type(self)(other + np.array(self))
@@ -595,7 +639,6 @@ class CFTimeIndex(pd.Index):
         >>> times.to_datetimeindex(time_unit="ns")
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
-
         if not self._data.size:
             return pd.DatetimeIndex([])
 
@@ -636,11 +679,11 @@ class CFTimeIndex(pd.Index):
         return pd.DatetimeIndex(nptimes)
 
     def strftime(self, date_format):
-        """
-        Return an Index of formatted strings specified by date_format, which
-        supports the same string format as the python standard library. Details
-        of the string format can be found in `python string format doc
-        <https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior>`__
+        """Return an Index of formatted strings specified by date_format.
+
+        The format supports the same string format as the python standard library.
+        Details of the string format can be found in `python string format doc
+        <https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior>`__.
 
         Parameters
         ----------
@@ -665,7 +708,7 @@ class CFTimeIndex(pd.Index):
         Index(['January 01, 2000, 12:00:00 AM', 'March 01, 2000, 12:00:00 AM',
                'May 01, 2000, 12:00:00 AM', 'July 01, 2000, 12:00:00 AM',
                'September 01, 2000, 12:00:00 AM'],
-              dtype='object')
+              dtype='str')
         """
         return pd.Index([date.strftime(date_format) for date in self._data])
 
@@ -853,17 +896,26 @@ def _total_microseconds(delta):
 
 
 def _floor_int(values, unit):
-    """Copied from pandas."""
+    """Round integer values down to a multiple of unit.
+
+    Copied from pandas.
+    """
     return values - np.remainder(values, unit)
 
 
 def _ceil_int(values, unit):
-    """Copied from pandas."""
+    """Round integer values up to a multiple of unit.
+
+    Copied from pandas.
+    """
     return values + np.remainder(-values, unit)
 
 
 def _round_to_nearest_half_even(values, unit):
-    """Copied from pandas."""
+    """Round integer values to the nearest multiple of unit, ties to even.
+
+    Copied from pandas.
+    """
     if unit % 2:
         return _ceil_int(values - unit // 2, unit)
     quotient, remainder = np.divmod(values, unit)

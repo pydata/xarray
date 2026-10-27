@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from xarray.core import duck_array_ops
@@ -13,6 +13,7 @@ from xarray.core.types import Dims, Self
 from xarray.core.utils import contains_only_chunked_or_numpy, module_available
 
 if TYPE_CHECKING:
+    from xarray.core.coordinates import DatasetCoordinates
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -41,8 +42,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``count`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -92,7 +92,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -104,13 +104,14 @@ class DataTreeAggregations:
             Data variables:
                 foo      int64 8B 5
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.count,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def all(
         self,
@@ -119,8 +120,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``all`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -175,7 +175,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) bool 6B True True True True True False
@@ -187,13 +187,14 @@ class DataTreeAggregations:
             Data variables:
                 foo      bool 1B False
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_all,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def any(
         self,
@@ -202,8 +203,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``any`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -258,7 +258,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) bool 6B True True True True True False
@@ -270,13 +270,14 @@ class DataTreeAggregations:
             Data variables:
                 foo      bool 1B True
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_any,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def max(
         self,
@@ -286,8 +287,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``max`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -342,7 +342,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -363,7 +363,7 @@ class DataTreeAggregations:
             Data variables:
                 foo      float64 8B nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.max,
             dim=dim,
             skipna=skipna,
@@ -371,6 +371,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def min(
         self,
@@ -380,8 +381,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``min`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -436,7 +436,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -457,7 +457,7 @@ class DataTreeAggregations:
             Data variables:
                 foo      float64 8B nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.min,
             dim=dim,
             skipna=skipna,
@@ -465,6 +465,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def mean(
         self,
@@ -474,8 +475,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``mean`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -513,7 +513,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -534,7 +534,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -555,7 +555,7 @@ class DataTreeAggregations:
             Data variables:
                 foo      float64 8B nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.mean,
             dim=dim,
             skipna=skipna,
@@ -563,6 +563,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def prod(
         self,
@@ -573,8 +574,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``prod`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -618,7 +618,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -639,7 +639,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -669,7 +669,7 @@ class DataTreeAggregations:
             Data variables:
                 foo      float64 8B 0.0
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.prod,
             dim=dim,
             skipna=skipna,
@@ -678,6 +678,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def sum(
         self,
@@ -688,8 +689,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``sum`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -733,7 +733,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -754,7 +754,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -784,7 +784,7 @@ class DataTreeAggregations:
             Data variables:
                 foo      float64 8B 8.0
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.sum,
             dim=dim,
             skipna=skipna,
@@ -793,6 +793,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def std(
         self,
@@ -803,8 +804,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``std`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -845,7 +845,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -866,7 +866,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -896,7 +896,7 @@ class DataTreeAggregations:
             Data variables:
                 foo      float64 8B 1.14
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
@@ -905,6 +905,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def var(
         self,
@@ -915,8 +916,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``var`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -957,7 +957,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -978,7 +978,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -1008,7 +1008,7 @@ class DataTreeAggregations:
             Data variables:
                 foo      float64 8B 1.3
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
@@ -1017,6 +1017,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def median(
         self,
@@ -1026,8 +1027,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``median`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -1065,7 +1065,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1086,7 +1086,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -1107,7 +1107,7 @@ class DataTreeAggregations:
             Data variables:
                 foo      float64 8B nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -1115,6 +1115,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -1124,8 +1125,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``cumsum`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -1164,7 +1164,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -1189,7 +1189,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -1198,7 +1198,9 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
+            Coordinates:
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 3.0 6.0 6.0 8.0 8.0
 
@@ -1208,11 +1210,13 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
+            Coordinates:
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 3.0 6.0 6.0 8.0 nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -1220,6 +1224,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumprod(
         self,
@@ -1229,8 +1234,7 @@ class DataTreeAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataTree's data by applying ``cumprod`` along some dimension(s).
+        """Reduce this DataTree's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -1269,7 +1273,7 @@ class DataTreeAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -1294,7 +1298,7 @@ class DataTreeAggregations:
         Group: /
             Dimensions:  (time: 6)
             Coordinates:
-              * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
                 labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -1303,7 +1307,9 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
+            Coordinates:
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 6.0 0.0 0.0 0.0
 
@@ -1313,11 +1319,13 @@ class DataTreeAggregations:
         <xarray.DataTree>
         Group: /
             Dimensions:  (time: 6)
-            Dimensions without coordinates: time
+            Coordinates:
+              * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+                labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
             Data variables:
                 foo      (time) float64 48B 1.0 2.0 6.0 0.0 0.0 nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -1325,6 +1333,7 @@ class DataTreeAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
 
 class DatasetAggregations:
@@ -1342,6 +1351,17 @@ class DatasetAggregations:
     ) -> Self:
         raise NotImplementedError()
 
+    @property
+    def coords(self) -> DatasetCoordinates:
+        raise NotImplementedError()
+
+    def assign_coords(
+        self,
+        coords: Mapping | None = None,
+        **coords_kwargs: Any,
+    ) -> Self:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
@@ -1349,8 +1369,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``count`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -1395,7 +1414,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -1406,13 +1425,14 @@ class DatasetAggregations:
         Data variables:
             da       int64 8B 5
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.count,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def all(
         self,
@@ -1421,8 +1441,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``all`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -1467,7 +1486,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) bool 6B True True True True True False
@@ -1478,13 +1497,14 @@ class DatasetAggregations:
         Data variables:
             da       bool 1B False
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_all,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def any(
         self,
@@ -1493,8 +1513,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``any`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -1539,7 +1558,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) bool 6B True True True True True False
@@ -1550,13 +1569,14 @@ class DatasetAggregations:
         Data variables:
             da       bool 1B True
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_any,
             dim=dim,
             numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def max(
         self,
@@ -1566,8 +1586,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -1617,7 +1636,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -1636,7 +1655,7 @@ class DatasetAggregations:
         Data variables:
             da       float64 8B nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.max,
             dim=dim,
             skipna=skipna,
@@ -1644,6 +1663,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def min(
         self,
@@ -1653,8 +1673,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -1704,7 +1723,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -1723,7 +1742,7 @@ class DatasetAggregations:
         Data variables:
             da       float64 8B nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.min,
             dim=dim,
             skipna=skipna,
@@ -1731,6 +1750,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def mean(
         self,
@@ -1740,8 +1760,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``mean`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -1776,6 +1795,10 @@ class DatasetAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1791,7 +1814,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -1810,7 +1833,7 @@ class DatasetAggregations:
         Data variables:
             da       float64 8B nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.mean,
             dim=dim,
             skipna=skipna,
@@ -1818,6 +1841,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def prod(
         self,
@@ -1828,8 +1852,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -1872,7 +1895,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1889,7 +1912,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -1916,7 +1939,7 @@ class DatasetAggregations:
         Data variables:
             da       float64 8B 0.0
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.prod,
             dim=dim,
             skipna=skipna,
@@ -1925,6 +1948,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def sum(
         self,
@@ -1935,8 +1959,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``sum`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -1979,7 +2002,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -1996,7 +2019,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -2023,7 +2046,7 @@ class DatasetAggregations:
         Data variables:
             da       float64 8B 8.0
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.sum,
             dim=dim,
             skipna=skipna,
@@ -2032,6 +2055,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def std(
         self,
@@ -2042,8 +2066,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -2083,7 +2106,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2100,7 +2123,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -2127,7 +2150,7 @@ class DatasetAggregations:
         Data variables:
             da       float64 8B 1.14
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
@@ -2136,6 +2159,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def var(
         self,
@@ -2146,8 +2170,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -2187,7 +2210,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2204,7 +2227,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -2231,7 +2254,7 @@ class DatasetAggregations:
         Data variables:
             da       float64 8B 1.3
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
@@ -2240,6 +2263,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def median(
         self,
@@ -2249,8 +2273,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``median`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -2287,7 +2310,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -2304,7 +2327,7 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -2323,7 +2346,7 @@ class DatasetAggregations:
         Data variables:
             da       float64 8B nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
@@ -2331,6 +2354,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -2340,8 +2364,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -2379,7 +2402,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -2400,28 +2423,32 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.cumsum()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 3.0 6.0 6.0 8.0 8.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.cumsum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 3.0 6.0 6.0 8.0 nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
@@ -2429,6 +2456,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self.coords)
 
     def cumprod(
         self,
@@ -2438,8 +2466,7 @@ class DatasetAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -2477,7 +2504,7 @@ class DatasetAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -2498,28 +2525,32 @@ class DatasetAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.cumprod()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 0.0 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.cumprod(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 0.0 nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -2527,6 +2558,7 @@ class DatasetAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self.coords)
 
 
 class DataArrayAggregations:
@@ -2551,8 +2583,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``count`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -2596,19 +2627,20 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.count()
         <xarray.DataArray ()> Size: 8B
         array(5)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.count,
             dim=dim,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def all(
         self,
@@ -2617,8 +2649,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``all`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -2662,19 +2693,20 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.all()
         <xarray.DataArray ()> Size: 1B
         array(False)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_all,
             dim=dim,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def any(
         self,
@@ -2683,8 +2715,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``any`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -2728,19 +2759,20 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.any()
         <xarray.DataArray ()> Size: 1B
         array(True)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.array_any,
             dim=dim,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def max(
         self,
@@ -2750,8 +2782,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -2800,7 +2831,7 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.max()
@@ -2813,13 +2844,14 @@ class DataArrayAggregations:
         <xarray.DataArray ()> Size: 8B
         array(nan)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.max,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def min(
         self,
@@ -2829,8 +2861,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -2879,7 +2910,7 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.min()
@@ -2892,13 +2923,14 @@ class DataArrayAggregations:
         <xarray.DataArray ()> Size: 8B
         array(nan)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.min,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def mean(
         self,
@@ -2908,8 +2940,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``mean`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -2944,6 +2975,10 @@ class DataArrayAggregations:
         :ref:`agg`
             User guide on reduction or aggregation operations.
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2958,7 +2993,7 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.mean()
@@ -2971,13 +3006,14 @@ class DataArrayAggregations:
         <xarray.DataArray ()> Size: 8B
         array(nan)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.mean,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def prod(
         self,
@@ -2988,8 +3024,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -3032,7 +3067,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3048,7 +3083,7 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.prod()
@@ -3067,7 +3102,7 @@ class DataArrayAggregations:
         <xarray.DataArray ()> Size: 8B
         array(0.)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.prod,
             dim=dim,
             skipna=skipna,
@@ -3075,6 +3110,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def sum(
         self,
@@ -3085,8 +3121,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``sum`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -3129,7 +3164,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3145,7 +3180,7 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.sum()
@@ -3164,7 +3199,7 @@ class DataArrayAggregations:
         <xarray.DataArray ()> Size: 8B
         array(8.)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.sum,
             dim=dim,
             skipna=skipna,
@@ -3172,6 +3207,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def std(
         self,
@@ -3182,8 +3218,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -3223,7 +3258,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3239,7 +3274,7 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.std()
@@ -3258,7 +3293,7 @@ class DataArrayAggregations:
         <xarray.DataArray ()> Size: 8B
         array(1.14017543)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
@@ -3266,6 +3301,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def var(
         self,
@@ -3276,8 +3312,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -3317,7 +3352,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3333,7 +3368,7 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.var()
@@ -3352,7 +3387,7 @@ class DataArrayAggregations:
         <xarray.DataArray ()> Size: 8B
         array(1.3)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
@@ -3360,6 +3395,7 @@ class DataArrayAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def median(
         self,
@@ -3369,8 +3405,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``median`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -3407,7 +3442,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -3423,7 +3458,7 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.median()
@@ -3436,13 +3471,14 @@ class DataArrayAggregations:
         <xarray.DataArray ()> Size: 8B
         array(nan)
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.median,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumsum(
         self,
@@ -3452,8 +3488,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -3491,7 +3526,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -3511,14 +3546,14 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.cumsum()
         <xarray.DataArray (time: 6)> Size: 48B
         array([1., 3., 6., 6., 8., 8.])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         Use ``skipna`` to control whether NaNs are ignored.
@@ -3527,16 +3562,17 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  3.,  6.,  6.,  8., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
     def cumprod(
         self,
@@ -3546,8 +3582,7 @@ class DataArrayAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -3585,7 +3620,7 @@ class DataArrayAggregations:
 
         Notes
         -----
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -3605,14 +3640,14 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.cumprod()
         <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 6., 0., 0., 0.])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         Use ``skipna`` to control whether NaNs are ignored.
@@ -3621,16 +3656,17 @@ class DataArrayAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  6.,  0.,  0., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out
 
 
 class DatasetGroupByAggregations:
@@ -3655,6 +3691,17 @@ class DatasetGroupByAggregations:
     ) -> Dataset:
         raise NotImplementedError()
 
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
@@ -3662,8 +3709,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``count`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -3716,7 +3762,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -3743,13 +3789,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -3758,8 +3805,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``all`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -3812,7 +3858,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) bool 6B True True True True True False
@@ -3839,13 +3885,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -3854,8 +3901,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``any`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -3908,7 +3954,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) bool 6B True True True True True False
@@ -3935,13 +3981,14 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -3951,8 +3998,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -4010,7 +4056,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -4048,7 +4094,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -4056,6 +4102,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -4065,8 +4112,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -4124,7 +4170,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -4162,7 +4208,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -4170,6 +4216,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -4179,8 +4226,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``mean`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -4223,6 +4269,8 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4238,7 +4286,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -4276,7 +4324,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -4284,6 +4332,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -4294,8 +4343,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -4344,7 +4392,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4361,7 +4409,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -4410,7 +4458,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -4419,6 +4467,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -4429,8 +4478,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``sum`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -4479,7 +4527,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4496,7 +4544,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -4545,7 +4593,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -4554,6 +4602,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -4564,8 +4613,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -4611,7 +4659,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4628,7 +4676,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -4677,7 +4725,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -4686,6 +4734,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -4696,8 +4745,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -4743,7 +4791,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4760,7 +4808,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -4809,7 +4857,7 @@ class DatasetGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -4818,6 +4866,7 @@ class DatasetGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -4827,8 +4876,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``median`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -4871,7 +4919,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -4888,7 +4936,7 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -4911,14 +4959,31 @@ class DatasetGroupByAggregations:
         Data variables:
             da       (labels) float64 24B nan 2.0 1.5
         """
-        return self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            kwargs.setdefault("method", "blockwise")
+            return self._flox_reduce(
+                func="median",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out
 
     def cumsum(
         self,
@@ -4928,8 +4993,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -4973,7 +5037,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -4994,35 +5058,56 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").cumsum()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").cumsum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 3.0 4.0 nan
         """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumsum",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumsum,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -5032,8 +5117,7 @@ class DatasetGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -5077,7 +5161,7 @@ class DatasetGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -5098,28 +5182,32 @@ class DatasetGroupByAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.groupby("labels").cumprod()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").cumprod(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 4.0 nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -5127,6 +5215,7 @@ class DatasetGroupByAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
 
 class DatasetResampleAggregations:
@@ -5151,6 +5240,17 @@ class DatasetResampleAggregations:
     ) -> Dataset:
         raise NotImplementedError()
 
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
@@ -5158,8 +5258,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``count`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -5212,7 +5311,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -5221,7 +5320,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) int64 24B 1 3 1
         """
@@ -5239,13 +5338,14 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -5254,8 +5354,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``all`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -5308,7 +5407,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) bool 6B True True True True True False
@@ -5317,7 +5416,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 27B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) bool 3B True True False
         """
@@ -5335,13 +5434,14 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -5350,8 +5450,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``any`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -5404,7 +5503,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 78B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) bool 6B True True True True True False
@@ -5413,7 +5512,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 27B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) bool 3B True True True
         """
@@ -5431,13 +5530,14 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 numeric_only=False,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -5447,8 +5547,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``max`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -5506,7 +5605,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -5515,7 +5614,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 3.0 2.0
 
@@ -5525,7 +5624,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 3.0 nan
         """
@@ -5544,7 +5643,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
@@ -5552,6 +5651,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -5561,8 +5661,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``min`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -5620,7 +5719,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -5629,7 +5728,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 0.0 2.0
 
@@ -5639,7 +5738,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 0.0 nan
         """
@@ -5658,7 +5757,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
@@ -5666,6 +5765,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -5675,8 +5775,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``mean`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -5719,6 +5818,8 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5734,7 +5835,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -5743,7 +5844,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 1.667 2.0
 
@@ -5753,7 +5854,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 1.667 nan
         """
@@ -5772,7 +5873,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
@@ -5780,6 +5881,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -5790,8 +5892,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -5840,7 +5941,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -5857,7 +5958,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -5866,7 +5967,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 0.0 2.0
 
@@ -5876,7 +5977,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 0.0 nan
 
@@ -5886,7 +5987,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B nan 0.0 nan
         """
@@ -5906,7 +6007,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -5915,6 +6016,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -5925,8 +6027,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``sum`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -5975,7 +6076,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -5992,7 +6093,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -6001,7 +6102,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 5.0 2.0
 
@@ -6011,7 +6112,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 5.0 nan
 
@@ -6021,7 +6122,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B nan 5.0 nan
         """
@@ -6041,7 +6142,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -6050,6 +6151,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -6060,8 +6162,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``std`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -6107,7 +6208,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6124,7 +6225,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -6133,7 +6234,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 0.0 1.247 0.0
 
@@ -6143,7 +6244,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 0.0 1.247 nan
 
@@ -6153,7 +6254,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B nan 1.528 nan
         """
@@ -6173,7 +6274,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -6182,6 +6283,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -6192,8 +6294,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``var`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -6239,7 +6340,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6256,7 +6357,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -6265,7 +6366,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 0.0 1.556 0.0
 
@@ -6275,7 +6376,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 0.0 1.556 nan
 
@@ -6285,7 +6386,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B nan 2.333 nan
         """
@@ -6305,7 +6406,7 @@ class DatasetResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -6314,6 +6415,7 @@ class DatasetResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -6323,8 +6425,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``median`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -6367,7 +6468,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -6384,7 +6485,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
@@ -6393,7 +6494,7 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 2.0 2.0
 
@@ -6403,18 +6504,35 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 48B
         Dimensions:  (time: 3)
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 24B 1.0 2.0 nan
         """
-        return self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            kwargs.setdefault("method", "blockwise")
+            return self._flox_reduce(
+                func="median",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out
 
     def cumsum(
         self,
@@ -6424,8 +6542,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumsum`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -6469,7 +6586,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -6490,35 +6607,56 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").cumsum()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 5.0 5.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").cumsum(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 5.0 5.0 2.0 nan
         """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumsum",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumsum,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -6528,8 +6666,7 @@ class DatasetResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """
-        Reduce this Dataset's data by applying ``cumprod`` along some dimension(s).
+        """Reduce this Dataset's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -6573,7 +6710,7 @@ class DatasetResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -6594,28 +6731,32 @@ class DatasetResampleAggregations:
         <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 3.0 0.0 2.0 nan
 
         >>> ds.resample(time="3ME").cumprod()
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3ME").cumprod(skipna=False)
-        <xarray.Dataset> Size: 48B
+        <xarray.Dataset> Size: 120B
         Dimensions:  (time: 6)
-        Dimensions without coordinates: time
+        Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         Data variables:
             da       (time) float64 48B 1.0 2.0 6.0 0.0 2.0 nan
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
@@ -6623,6 +6764,7 @@ class DatasetResampleAggregations:
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
 
 class DataArrayGroupByAggregations:
@@ -6647,6 +6789,17 @@ class DataArrayGroupByAggregations:
     ) -> DataArray:
         raise NotImplementedError()
 
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
@@ -6654,8 +6807,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``count`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -6707,7 +6859,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").count()
@@ -6729,12 +6881,13 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -6743,8 +6896,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``all`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -6796,7 +6948,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").all()
@@ -6818,12 +6970,13 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -6832,8 +6985,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``any`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -6885,7 +7037,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").any()
@@ -6907,12 +7059,13 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -6922,8 +7075,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -6980,7 +7132,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").max()
@@ -7011,13 +7163,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -7027,8 +7180,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -7085,7 +7237,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").min()
@@ -7116,13 +7268,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -7132,8 +7285,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``mean`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -7176,6 +7328,8 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -7190,7 +7344,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").mean()
@@ -7221,13 +7375,14 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -7238,8 +7393,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -7288,7 +7442,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7304,7 +7458,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").prod()
@@ -7344,7 +7498,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -7352,6 +7506,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -7362,8 +7517,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``sum`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -7412,7 +7566,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7428,7 +7582,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").sum()
@@ -7468,7 +7622,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -7476,6 +7630,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -7486,8 +7641,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -7533,7 +7687,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7549,7 +7703,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").std()
@@ -7589,7 +7743,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -7597,6 +7751,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -7607,8 +7762,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -7654,7 +7808,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7670,7 +7824,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").var()
@@ -7710,7 +7864,7 @@ class DataArrayGroupByAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -7718,6 +7872,7 @@ class DataArrayGroupByAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -7727,8 +7882,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``median`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -7771,7 +7925,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -7787,7 +7941,7 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").median()
@@ -7804,13 +7958,29 @@ class DataArrayGroupByAggregations:
         Coordinates:
           * labels   (labels) object 24B 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            kwargs.setdefault("method", "blockwise")
+            return self._flox_reduce(
+                func="median",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out
 
     def cumsum(
         self,
@@ -7820,8 +7990,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -7865,7 +8034,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -7885,14 +8054,14 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").cumsum()
         <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 3., 3., 4., 1.])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         Use ``skipna`` to control whether NaNs are ignored.
@@ -7901,16 +8070,32 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  3.,  4., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumsum",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumsum,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -7920,8 +8105,7 @@ class DataArrayGroupByAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -7965,7 +8149,7 @@ class DataArrayGroupByAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -7985,14 +8169,14 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").cumprod()
         <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 3., 0., 4., 1.])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         Use ``skipna`` to control whether NaNs are ignored.
@@ -8001,16 +8185,17 @@ class DataArrayGroupByAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  4., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
 
 
 class DataArrayResampleAggregations:
@@ -8035,6 +8220,17 @@ class DataArrayResampleAggregations:
     ) -> DataArray:
         raise NotImplementedError()
 
+    def _flox_scan(
+        self,
+        dim: Dims,
+        *,
+        func: str,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
+        raise NotImplementedError()
+
     def count(
         self,
         dim: Dims = None,
@@ -8042,8 +8238,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``count`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -8095,14 +8290,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").count()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1, 3, 1])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -8117,12 +8312,13 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.count,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def all(
         self,
@@ -8131,8 +8327,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``all`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -8184,14 +8379,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").all()
         <xarray.DataArray (time: 3)> Size: 3B
         array([ True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -8206,12 +8401,13 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_all,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def any(
         self,
@@ -8220,8 +8416,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``any`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -8273,14 +8468,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 6B
         array([ True,  True,  True,  True,  True, False])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").any()
         <xarray.DataArray (time: 3)> Size: 3B
         array([ True,  True,  True])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -8295,12 +8490,13 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.array_any,
                 dim=dim,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def max(
         self,
@@ -8310,8 +8506,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``max`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``max`` (i.e., maximum) along some dimension(s).
 
         Parameters
         ----------
@@ -8368,14 +8563,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").max()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1., 3., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8383,7 +8578,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  3., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -8399,13 +8594,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.max,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def min(
         self,
@@ -8415,8 +8611,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``min`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``min`` (i.e., minimum) along some dimension(s).
 
         Parameters
         ----------
@@ -8473,14 +8668,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").min()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1., 0., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8488,7 +8683,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  0., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -8504,13 +8699,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.min,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def mean(
         self,
@@ -8520,8 +8716,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``mean`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -8564,6 +8759,8 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -8578,14 +8775,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").mean()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1.        , 1.66666667, 2.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8593,7 +8790,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([1.        , 1.66666667,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -8609,13 +8806,14 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.mean,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def prod(
         self,
@@ -8626,8 +8824,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``prod`` (i.e., product) along some dimension(s).
 
         Parameters
         ----------
@@ -8676,7 +8873,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -8692,14 +8889,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").prod()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1., 0., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8707,7 +8904,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  0., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
@@ -8715,7 +8912,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([nan,  0., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -8732,7 +8929,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.prod,
                 dim=dim,
                 skipna=skipna,
@@ -8740,6 +8937,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def sum(
         self,
@@ -8750,8 +8948,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``sum`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -8800,7 +8997,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -8816,14 +9013,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").sum()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1., 5., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8831,7 +9028,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  5., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
@@ -8839,7 +9036,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([nan,  5., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -8856,7 +9053,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.sum,
                 dim=dim,
                 skipna=skipna,
@@ -8864,6 +9061,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def std(
         self,
@@ -8874,8 +9072,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``std`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``std`` (i.e., standard deviation) along some dimension(s).
 
         Parameters
         ----------
@@ -8921,7 +9118,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -8937,14 +9134,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").std()
         <xarray.DataArray (time: 3)> Size: 24B
         array([0.        , 1.24721913, 0.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -8952,7 +9149,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([0.        , 1.24721913,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``ddof=1`` for an unbiased estimate.
 
@@ -8960,7 +9157,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([       nan, 1.52752523,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -8977,7 +9174,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.std,
                 dim=dim,
                 skipna=skipna,
@@ -8985,6 +9182,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def var(
         self,
@@ -8995,8 +9193,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``var`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``var`` (i.e., variance) along some dimension(s).
 
         Parameters
         ----------
@@ -9042,7 +9239,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9058,14 +9255,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").var()
         <xarray.DataArray (time: 3)> Size: 24B
         array([0.        , 1.55555556, 0.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -9073,7 +9270,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([0.        , 1.55555556,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``ddof=1`` for an unbiased estimate.
 
@@ -9081,7 +9278,7 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([       nan, 2.33333333,        nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
         if (
             flox_available
@@ -9098,7 +9295,7 @@ class DataArrayResampleAggregations:
                 **kwargs,
             )
         else:
-            return self.reduce(
+            out = self.reduce(
                 duck_array_ops.var,
                 dim=dim,
                 skipna=skipna,
@@ -9106,6 +9303,7 @@ class DataArrayResampleAggregations:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
+            return out
 
     def median(
         self,
@@ -9115,8 +9313,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``median`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -9159,7 +9356,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Examples
         --------
@@ -9175,14 +9372,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").median()
         <xarray.DataArray (time: 3)> Size: 24B
         array([1., 2., 2.])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -9190,15 +9387,31 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 3)> Size: 24B
         array([ 1.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 24B 2001-01-31 2001-04-30 2001-07-31
+          * time     (time) datetime64[us] 24B 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            kwargs.setdefault("method", "blockwise")
+            return self._flox_reduce(
+                func="median",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out
 
     def cumsum(
         self,
@@ -9208,8 +9421,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumsum`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumsum`` (i.e., cumulative sum) along some dimension(s).
 
         Parameters
         ----------
@@ -9253,7 +9465,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -9273,15 +9485,15 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").cumsum()
         <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 5., 5., 2., 2.])
         Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -9289,16 +9501,32 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  5.,  5.,  2., nan])
         Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
         """
-        return self.reduce(
-            duck_array_ops.cumsum,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if (
+            flox_available
+            and OPTIONS["use_flox"]
+            and module_available("flox", minversion="0.10.5")
+            and contains_only_chunked_or_numpy(self._obj)
+        ):
+            return self._flox_scan(
+                func="cumsum",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            out = self.reduce(
+                duck_array_ops.cumsum,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+            return out.assign_coords(self._obj.coords)
 
     def cumprod(
         self,
@@ -9308,8 +9536,7 @@ class DataArrayResampleAggregations:
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
-        """
-        Reduce this DataArray's data by applying ``cumprod`` along some dimension(s).
+        """Reduce this DataArray's data by applying ``cumprod`` (i.e., cumulative product) along some dimension(s).
 
         Parameters
         ----------
@@ -9353,7 +9580,7 @@ class DataArrayResampleAggregations:
         Pass flox-specific keyword arguments in ``**kwargs``.
         See the `flox documentation <https://flox.readthedocs.io>`_ for more.
 
-        Non-numeric variables will be removed prior to reducing.
+        Non-numeric variables will be removed prior to reducing. datetime64 and timedelta64 dtypes are treated as numeric for aggregation operations.
 
         Note that the methods on the ``cumulative`` method are more performant (with numbagg installed)
         and better supported. ``cumsum`` and ``cumprod`` may be deprecated
@@ -9373,15 +9600,15 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  3.,  0.,  2., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 48B 2001-01-31 2001-02-28 ... 2001-06-30
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3ME").cumprod()
         <xarray.DataArray (time: 6)> Size: 48B
         array([1., 2., 6., 0., 2., 2.])
         Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -9389,13 +9616,14 @@ class DataArrayResampleAggregations:
         <xarray.DataArray (time: 6)> Size: 48B
         array([ 1.,  2.,  6.,  0.,  2., nan])
         Coordinates:
+          * time     (time) datetime64[us] 48B 2001-01-31 2001-02-28 ... 2001-06-30
             labels   (time) <U1 24B 'a' 'b' 'c' 'c' 'b' 'a'
-        Dimensions without coordinates: time
         """
-        return self.reduce(
+        out = self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
+        return out.assign_coords(self._obj.coords)
