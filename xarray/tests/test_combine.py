@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import datetime
 import re
 from itertools import product
 
 import numpy as np
+import pandas as pd
 import pytest
+import pytz
 
 from xarray import (
     DataArray,
@@ -535,8 +538,7 @@ class TestNestedCombine:
         assert_identical(expected, actual)
 
     def test_concat_name_symmetry(self):
-        """Inspired by the discussion on GH issue #2777"""
-
+        """Inspired by the discussion on GH issue #2777."""
         da1 = DataArray(name="a", data=[[0]], dims=["x", "y"])
         da2 = DataArray(name="b", data=[[1]], dims=["x", "y"])
         da3 = DataArray(name="a", data=[[2]], dims=["x", "y"])
@@ -953,7 +955,7 @@ class TestCombineDatasetsbyCoords:
     def test_combine_nested_combine_attrs_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        """check that combine_attrs is used on data variables and coords"""
+        """Check that combine_attrs is used on data variables and coords."""
         data1 = Dataset(
             {
                 "a": ("x", [1, 2], attrs1),
@@ -1025,7 +1027,7 @@ class TestCombineDatasetsbyCoords:
     def test_combine_by_coords_combine_attrs_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        """check that combine_attrs is used on data variables and coords"""
+        """Check that combine_attrs is used on data variables and coords."""
         data1 = Dataset(
             {"x": ("a", [0], attrs1), "y": ("a", [0], attrs1), "a": ("a", [0], attrs1)}
         )
@@ -1154,6 +1156,22 @@ class TestCombineDatasetsbyCoords:
 
         actual = combine_by_coords([x2, x1], compat="override")
         assert_equal(actual["a"], x2["a"])
+
+    def test_combine_by_coords_extension_array(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/11235
+        arrs = []
+        expected_vals = []
+        for i in range(2):
+            t = datetime.datetime(2026, 3, 1, hour=i).astimezone(pytz.timezone("UTC"))
+            expected_vals += [t]
+            da = DataArray().expand_dims(
+                time=[t],
+                dummy=[i],
+            )
+            arrs.append(da)
+        expected = pd.array(expected_vals)
+        result = combine_by_coords(arrs, join="outer")
+        pd.testing.assert_extension_array_equal(result["time"].data, expected)
 
 
 class TestCombineMixedObjectsbyCoords:

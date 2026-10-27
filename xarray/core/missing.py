@@ -7,7 +7,7 @@ from collections import ChainMap
 from collections.abc import Callable, Generator, Hashable, Sequence
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, TypeVar, get_args
+from typing import TYPE_CHECKING, Any, TypeVar, get_args, override
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,7 @@ from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.core import utils
 from xarray.core.common import _contains_datetime_like_objects, ones_like
 from xarray.core.duck_array_ops import (
+    astype,
     datetime_to_numeric,
     push,
     ravel,
@@ -48,11 +49,10 @@ if TYPE_CHECKING:
 def _get_nan_block_lengths(
     obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
 ):
-    """
-    Return an object where each NaN element in 'obj' is replaced by the
-    length of the gap the element is in.
-    """
+    """Return an object where each NaN element in 'obj' is replaced by its gap length.
 
+    The gap length is the length of the gap the element is in.
+    """
     # make variable so that we get broadcasting for free
     index = Variable([dim], index)
 
@@ -75,7 +75,7 @@ def _get_nan_block_lengths(
 
 
 class BaseInterpolator:
-    """Generic interpolator class for normalizing interpolation methods"""
+    """Generic interpolator class for normalizing interpolation methods."""
 
     cons_kwargs: dict[str, Any]
     call_kwargs: dict[str, Any]
@@ -123,6 +123,7 @@ class NumpyInterpolator(BaseInterpolator):
         else:
             raise ValueError(f"{fill_value} is not a valid fill_value")
 
+    @override
     def __call__(self, x):
         return self.f(
             x,
@@ -135,7 +136,7 @@ class NumpyInterpolator(BaseInterpolator):
 
 
 class ScipyInterpolator(BaseInterpolator):
-    """Interpolate a 1-D function using Scipy interp1d
+    """Interpolate a 1-D function using Scipy interp1d.
 
     See Also
     --------
@@ -231,7 +232,7 @@ class SplineInterpolator(BaseInterpolator):
 
 
 def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
-    """Wrapper for datasets"""
+    """Apply ``func`` to all data variables of a dataset that have ``dim``."""
     ds = type(self)(coords=self.coords, attrs=self.attrs)
 
     for name, var in self.data_vars.items():
@@ -271,7 +272,6 @@ def get_clean_interp_index(
     If indexing is along the time dimension, datetime coordinates are converted
     to time deltas with respect to 1970-01-01.
     """
-
     # Question: If use_coordinate is a string, what role does `dim` play?
     from xarray.coding.cftimeindex import CFTimeIndex
 
@@ -407,7 +407,7 @@ def interp_na(
 
 
 def func_interpolate_na(interpolator, y, x, **kwargs):
-    """helper function to apply interpolation along 1 dimension"""
+    """Apply interpolation along 1 dimension."""
     # reversed arguments are so that attrs are preserved from da, not index
     # it would be nice if this wasn't necessary, works around:
     # "ValueError: assignment destination is read-only" in assignment below
@@ -427,7 +427,7 @@ def func_interpolate_na(interpolator, y, x, **kwargs):
 
 
 def _bfill(arr, n=None, axis=-1):
-    """inverse of ffill"""
+    """Backfill along an axis (inverse of ffill)."""
     arr = np.flip(arr, axis=axis)
 
     # fill
@@ -438,8 +438,7 @@ def _bfill(arr, n=None, axis=-1):
 
 
 def ffill(arr, dim=None, limit=None):
-    """forward fill missing values"""
-
+    """Forward fill missing values."""
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -456,8 +455,7 @@ def ffill(arr, dim=None, limit=None):
 
 
 def bfill(arr, dim=None, limit=None):
-    """backfill missing values"""
-
+    """Backfill missing values."""
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -486,9 +484,9 @@ def _import_interpolant(interpolant, method):
 def _get_interpolator(
     method: InterpOptions, vectorizeable_only: bool = False, **kwargs
 ):
-    """helper function to select the appropriate interpolator class
+    """Select the appropriate interpolator class.
 
-    returns interpolator class and keyword arguments for the class
+    Returns interpolator class and keyword arguments for the class.
     """
     interp_class: Interpolator
     interp1d_methods = get_args(Interp1dOptions)
@@ -523,7 +521,7 @@ def _get_interpolator(
             utils.emit_user_level_warning(
                 "The 1d SplineInterpolator class is performing an incorrect calculation and "
                 "is being deprecated. Please use `method=polynomial` for 1D Spline Interpolation.",
-                PendingDeprecationWarning,
+                FutureWarning,
             )
             if vectorizeable_only:
                 raise ValueError(f"{method} is not a vectorizeable interpolator. ")
@@ -544,9 +542,9 @@ def _get_interpolator(
 
 
 def _get_interpolator_nd(method, **kwargs):
-    """helper function to select the appropriate interpolator class
+    """Select the appropriate interpolator class.
 
-    returns interpolator class and keyword arguments for the class
+    Returns interpolator class and keyword arguments for the class.
     """
     valid_methods = tuple(get_args(InterpnOptions))
     if method in valid_methods:
@@ -563,8 +561,7 @@ def _get_interpolator_nd(method, **kwargs):
 
 
 def _get_valid_fill_mask(arr, dim, limit):
-    """helper function to determine values that can be filled when limit is not
-    None"""
+    """Determine values that can be filled when limit is not None."""
     kw = {dim: limit + 1}
     # we explicitly use construct method to avoid copy.
     new_dim = utils.get_temp_dimname(arr.dims, "_window")
@@ -576,13 +573,14 @@ def _get_valid_fill_mask(arr, dim, limit):
     ) <= limit
 
 
-def _localize(obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
+def _localize[T](obj: T, indexes_coords: SourceDest) -> tuple[T, SourceDest]:
     """Speed up for linear and nearest neighbor method.
-    Only consider a subspace that is needed for the interpolation
+
+    Only consider a subspace that is needed for the interpolation.
     """
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
-        if is_chunked_array(new_x._data):
+        if is_chunked_array(new_x._data) or new_x.size == 0:
             continue
         new_x_loaded = new_x.data
         minval = np.nanmin(new_x_loaded)
@@ -598,6 +596,7 @@ def _floatize_x(
     x: list[Variable], new_x: list[Variable]
 ) -> tuple[list[Variable], list[Variable]]:
     """Make x and new_x float.
+
     This is particularly useful for datetime dtype.
     """
     for i in range(len(x)):
@@ -619,7 +618,7 @@ def interp(
     method: InterpOptions,
     **kwargs,
 ) -> Variable:
-    """Make an interpolation of Variable
+    """Make an interpolation of Variable.
 
     Parameters
     ----------
@@ -690,7 +689,7 @@ def interpolate_variable(
     method: InterpOptions,
     kwargs: dict[str, Any],
 ) -> Variable:
-    """core routine that returns the interpolated variable."""
+    """Core routine that returns the interpolated variable."""
     if not indexes_coords:
         return var.copy()
 
@@ -699,7 +698,20 @@ def interpolate_variable(
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    in_coords, result_coords = zip(*(v for v in indexes_coords.values()), strict=True)
+    localize = kwargs.get("method") in ["linear", "nearest"]
+    if localize:
+        # simple speed up for the local interpolation
+        var, indexes_coords = _localize(var, dict(indexes_coords))
+
+    in_coords, result_coords = _floatize_x(
+        *(list(_) for _ in zip(*indexes_coords.values(), strict=True))
+    )
+    # `_localize` skips chunked destination coordinates, so localize each block
+    # instead: scipy casts integer data to float, which would otherwise copy
+    # the whole block
+    localize_blocks = localize and any(
+        is_chunked_array(coord._data) for coord in result_coords
+    )
 
     # input coordinates along which we are interpolation are core dimensions
     # the corresponding output coordinates may or may not have the same name,
@@ -718,7 +730,10 @@ def interpolate_variable(
     # we are explicitly interpolating. These are the dimensions along which we vectorize.
     # `q` is the only input core dimensions, and changes size (disappears)
     # so it is in exclude_dims.
-    vectorize_dims = (result_dims - all_in_core_dims) & set(var.dims)
+    # ordered like var.dims, since it also determines the loop order
+    vectorize_dims = [
+        d for d in var.dims if d in result_dims and d not in all_in_core_dims
+    ]
 
     # remove any output broadcast dimensions from the list of core dimensions
     output_core_dims = tuple(d for d in result_dims if d not in vectorize_dims)
@@ -736,7 +751,7 @@ def interpolate_variable(
     output_sizes = {k: result_sizes[k] for k in output_core_dims}
 
     # scipy.interpolate.interp1d always forces to float.
-    dtype = float if not issubclass(var.dtype.type, np.inexact) else var.dtype
+    dtype = np.dtype(float) if not issubclass(var.dtype.type, np.inexact) else var.dtype
     result = apply_ufunc(
         _interpnd,
         var,
@@ -755,11 +770,18 @@ def interpolate_variable(
             # This would be unnecessary if we could tell apply_ufunc
             # to insert size-1 broadcast dimensions
             result_coord_core_dims=input_core_dims[-len(result_coords) :],
+            # the interpolators may upcast, e.g. float32 to float64 depending
+            # on the method and the coordinate dtypes, so cast the result to
+            # the dtype we promise dask
+            dtype=dtype,
+            localize=localize_blocks,
         ),
         # TODO: deprecate and have the user rechunk themselves
         dask_gufunc_kwargs=dict(output_sizes=output_sizes, allow_rechunk=True),
         output_dtypes=[dtype],
-        vectorize=bool(vectorize_dims),
+        # only loop over the dimensions along which the destination coordinates vary,
+        # vectorize=True would also loop over all other broadcast dimensions (GH10683)
+        vectorize=vectorize_dims,
         keep_attrs=True,
     )
     return result
@@ -787,65 +809,83 @@ def _interpnd(
     data: np.ndarray,
     *coords: np.ndarray,
     interp_func: Interpolator | InterpCallable,
-    interp_kwargs,
+    interp_kwargs: dict[str, Any],
     result_coord_core_dims: list[tuple[Hashable, ...]],
+    dtype: np.dtype,
+    localize: bool = False,
 ) -> np.ndarray:
-    """
-    Core nD array interpolation routine.
+    """Core nD array interpolation routine.
+
     The first half arrays in `coords` are original coordinates,
     the other half are destination coordinates.
+
+    `data` has the loop dimensions first, followed by the dimensions we
+    interpolate along. ``apply_ufunc`` only loops over the loop dimensions along
+    which the destination coordinates vary, e.g. ``t`` for
+    ``da[t, r, z].interp(z=target[t])``, so the destination coordinates have
+    size 1 along all remaining loop dimensions.
     """
     n_x = len(coords) // 2
     ndim = data.ndim
     nconst = ndim - n_x
 
-    # Convert everything to Variables, since that makes applying
-    # `_localize` and `_floatize_x` much easier
-    x = [
+    # Convert everything to Variables, since that makes broadcasting the
+    # destination coordinates much easier
+    x: list[Variable] = [
         Variable([f"dim_{nconst + dim}"], _x, fastpath=True)
         for dim, _x in enumerate(coords[:n_x])
     ]
     new_x = list(
         broadcast_variables(
             *(
-                Variable(dims, _x, fastpath=True)
+                # drop the size-1 loop dimensions
+                Variable(
+                    dims, reshape(_x, _x.shape[_x.ndim - len(dims) :]), fastpath=True
+                )
                 for dims, _x in zip(result_coord_core_dims, coords[n_x:], strict=True)
             )
         )
     )
     var = Variable([f"dim_{dim}" for dim in range(ndim)], data, fastpath=True)
 
-    if interp_kwargs.get("method") in ["linear", "nearest"]:
+    if localize:
         indexes_coords = {
             _x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x, strict=True)
         }
-        # simple speed up for the local interpolation
         var, indexes_coords = _localize(var, indexes_coords)
-        x, new_x = tuple(
-            list(_)
-            for _ in zip(*(indexes_coords[d] for d in indexes_coords), strict=True)
-        )
-
-    x_list, new_x_list = _floatize_x(x, new_x)
+        x, new_x = (list(_) for _ in zip(*indexes_coords.values(), strict=True))
 
     if len(x) == 1:
         # TODO: narrow interp_func to interpolator here
-        return _interp1d(var, x_list, new_x_list, interp_func, interp_kwargs)  # type: ignore[arg-type]
+        return astype(
+            _interp1d(var, x, new_x, interp_func, interp_kwargs),  # type: ignore[arg-type]
+            dtype,
+            copy=False,
+        )
 
     # move the interpolation axes to the start position
     data = transpose(var._data, range(-len(x), var.ndim - len(x)))
 
     # stack new_x to 1 vector, with reshape
-    xi = stack([ravel(x1.data) for x1 in new_x_list], axis=-1)
-    rslt: np.ndarray = interp_func(x_list, data, xi, **interp_kwargs)  # type: ignore[assignment]
+    xi = stack([ravel(x1.data) for x1 in new_x], axis=-1)
+    rslt: np.ndarray = interp_func(x, data, xi, **interp_kwargs)  # type: ignore[assignment]
     # move back the interpolation axes to the last position
     rslt = transpose(rslt, range(-rslt.ndim + 1, 1))
-    return reshape(rslt, rslt.shape[:-1] + new_x[0].shape)
+    rslt = reshape(rslt, rslt.shape[:-1] + new_x[0].shape)
+    return astype(rslt, dtype, copy=False)
 
 
 def decompose_interp(indexes_coords: SourceDest) -> Generator[SourceDest, None]:
-    """Decompose the interpolation into a succession of independent interpolation keeping the order"""
+    """Decompose the interpolation into a succession of independent interpolations.
 
+    The order of the interpolations is kept.
+
+    Yields
+    ------
+    dict
+        The source and destination coordinates of each independent
+        interpolation.
+    """
     dest_dims = [
         dest[1].dims if dest[1].ndim > 0 else (dim,)
         for dim, dest in indexes_coords.items()

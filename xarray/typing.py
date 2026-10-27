@@ -1,6 +1,4 @@
-"""
-Public typing utilities for use by external libraries.
-"""
+"""Public typing utilities for use by external libraries."""
 
 from xarray.computation.rolling import (
     DataArrayCoarsen,

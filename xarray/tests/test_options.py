@@ -32,12 +32,12 @@ def test_arithmetic_join() -> None:
         assert OPTIONS["arithmetic_join"] == "exact"
 
 
-def test_enable_cftimeindex() -> None:
-    with pytest.raises(ValueError):
-        xarray.set_options(enable_cftimeindex=None)
-    with pytest.warns(FutureWarning, match="no-op"):
-        with xarray.set_options(enable_cftimeindex=True):
-            assert OPTIONS["enable_cftimeindex"]
+def test_display_expand_groups_deprecated() -> None:
+    with pytest.warns(FutureWarning, match="display_expand_groups") as record:
+        with xarray.set_options(display_expand_groups=False):
+            assert OPTIONS["display_expand_groups"] is False
+    assert len(record) == 1
+    assert OPTIONS["display_expand_groups"] == "default"
 
 
 def test_file_cache_maxsize() -> None:
@@ -82,6 +82,21 @@ def test_netcdf_engine_order() -> None:
     ):
         xarray.set_options(netcdf_engine_order=["invalid"])
     assert OPTIONS["netcdf_engine_order"] == original
+
+
+def test_facetgrid_figsize() -> None:
+    with pytest.raises(ValueError):
+        xarray.set_options(facetgrid_figsize="invalid")
+    with pytest.raises(ValueError):
+        xarray.set_options(facetgrid_figsize=(1.0,))
+    with pytest.raises(ValueError):
+        xarray.set_options(facetgrid_figsize=(1.0, 2.0, 3.0))
+    with xarray.set_options(facetgrid_figsize="rcparams"):
+        assert OPTIONS["facetgrid_figsize"] == "rcparams"
+    with xarray.set_options(facetgrid_figsize="computed"):
+        assert OPTIONS["facetgrid_figsize"] == "computed"
+    with xarray.set_options(facetgrid_figsize=(12.0, 8.0)):
+        assert OPTIONS["facetgrid_figsize"] == (12.0, 8.0)
 
 
 def test_display_style() -> None:
@@ -230,7 +245,7 @@ class TestAttrRetention:
     [("left"), ("exact")],
 )
 def test_get_options_retention(set_value):
-    """Test to check if get_options will return changes made by set_options"""
+    """Test to check if get_options will return changes made by set_options."""
     with xarray.set_options(arithmetic_join=set_value):
         get_options = xarray.get_options()
         assert get_options["arithmetic_join"] == set_value
