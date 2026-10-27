@@ -158,8 +158,10 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     --------
     >>> da1 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(x=1)
     >>> da2 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(y=1)
-    >>> da1.chunks, da2.chunks
-    (((1, 1), (3,)), ((2,), (1, 1, 1)))
+    >>> da1.chunks
+    ((1, 1), (3,))
+    >>> da2.chunks
+    ((2,), (1, 1, 1))
 
     Afterwards, both have the same chunks:
 
