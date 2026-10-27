@@ -156,18 +156,18 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
 
     Examples
     --------
-    >>> import numpy as np  # doctest: +SKIP
-    >>> da1 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(
-    ...     {"x": 1}
-    ... )  # doctest: +SKIP
-    >>> da2 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(
-    ...     {"y": 1}
-    ... )  # doctest: +SKIP
-    >>> da1, da2 = xr.unify_chunks(da1, da2)  # doctest: +SKIP
-    >>> da1.chunks  # doctest: +SKIP
-    ((1, 1), (3,))
-    >>> da2.chunks  # doctest: +SKIP
-    ((1, 1), (3,))
+    >>> da1 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(x=1)
+    >>> da2 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(y=1)
+    >>> da1.chunks, da2.chunks
+    (((1, 1), (3,)), ((2,), (1, 1, 1)))
+
+    Afterwards, both have the same chunks:
+
+    >>> da1, da2 = xr.unify_chunks(da1, da2)
+    >>> da1.chunks
+    ((1, 1), (1, 1, 1))
+    >>> da2.chunks
+    ((1, 1), (1, 1, 1))
     """
     from xarray.core.dataarray import DataArray
 

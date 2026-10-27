@@ -883,12 +883,13 @@ def polyval(
 
     Examples
     --------
-    >>> import numpy as np
+    Evaluate the polynomial ``1 + 2 * x + 3 * x**2``:
+
     >>> x = xr.DataArray(np.arange(5), dims="x")
     >>> coeffs = xr.DataArray([1, 2, 3], dims="degree", coords={"degree": [0, 1, 2]})
     >>> xr.polyval(x, coeffs)
-    <xarray.DataArray (x: 5)> ...
-    ...
+    <xarray.DataArray (x: 5)> Size: 40B
+    array([ 1,  6, 17, 34, 57])
     Dimensions without coordinates: x
     """
     if degree_dim not in coeffs._indexes:

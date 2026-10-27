@@ -558,23 +558,26 @@ def decode_cf(
 
     See Also
     --------
-    encode_dataset_coordinates
-    decode_cf_variable
+    open_dataset
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> ds = xr.Dataset({"temp": (("time",), np.arange(5))})
-    >>> ds["time"] = pd.date_range("2000-01-01", periods=5)
-    >>> decoded = xr.conventions.decode_cf(ds)
+    Decode times and apply the scale factor of a dataset with CF attributes:
+
+    >>> ds = xr.Dataset(
+    ...     {"temp": ("time", [10, 11, 12], {"scale_factor": 0.5})},
+    ...     coords={"time": ("time", [0, 1, 2], {"units": "days since 2000-01-01"})},
+    ... )
+    >>> decoded = xr.decode_cf(ds)
     >>> decoded
-    <xarray.Dataset> ...
-    Dimensions:  (time: 5)
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 3)
     Coordinates:
-      * time     (time) ...
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     Data variables:
-        temp     (time) ...
+        temp     (time) float64 24B ...
+    >>> decoded["temp"].values
+    array([5. , 5.5, 6. ])
     """
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset

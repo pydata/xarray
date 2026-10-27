@@ -6373,21 +6373,24 @@ class Dataset(
         ...     coords={"x": [0, 1], "y": [0, 1]},
         ... )
         >>> ds
-        <xarray.Dataset> ...
+        <xarray.Dataset> Size: 80B
         Dimensions:  (x: 2, y: 2)
         Coordinates:
-          * x        (x) ...
-          * y        (y) ...
+          * x        (x) int64 16B 0 1
+          * y        (y) int64 16B 0 1
         Data variables:
-            a        (x, y) ...
-            b        (x) ...
+            a        (x, y) int64 32B 1 2 3 4
+            b        (x) int64 16B 5 6
+
+        Drop ``y`` and the variables that use it:
+
         >>> ds.drop_dims("y")
-        <xarray.Dataset> ...
+        <xarray.Dataset> Size: 32B
         Dimensions:  (x: 2)
         Coordinates:
-          * x        (x) ...
+          * x        (x) int64 16B 0 1
         Data variables:
-            b        (x) ...
+            b        (x) int64 16B 5 6
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')

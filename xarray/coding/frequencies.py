@@ -86,7 +86,6 @@ def infer_freq(index):
 
     Examples
     --------
-    >>> import pandas as pd
     >>> times = pd.date_range("2000-01-01", periods=5, freq="D")
     >>> xr.infer_freq(times)
     'D'

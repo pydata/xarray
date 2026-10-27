@@ -161,22 +161,17 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
 
     Examples
     --------
-    >>> import numpy as np
-    >>> ds = xr.Dataset({"a": (("x",), np.arange(3))})
-    >>> ds.to_netcdf("example_load_ds.nc")
+    >>> ds = xr.Dataset({"a": ("x", [1, 2, 3])})
+    >>> ds.to_netcdf("example.nc")
 
-    >>> ds_loaded = xr.load_dataset("example_load_ds.nc")
-    >>> ds_loaded
-    <xarray.Dataset> ...
+    The data is loaded into memory and the file is closed again:
+
+    >>> xr.load_dataset("example.nc")
+    <xarray.Dataset> Size: 24B
     Dimensions:  (x: 3)
     Dimensions without coordinates: x
     Data variables:
-        a        (x) ...
-
-    Clean up the example file:
-    >>> ds_loaded.close()
-    >>> import os
-    >>> os.remove("example_load_ds.nc")
+        a        (x) int64 24B 1 2 3
     """
     if "cache" in kwargs:
         raise TypeError("cache has no effect in this context")
@@ -207,20 +202,15 @@ def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArra
 
     Examples
     --------
-    >>> import numpy as np
-    >>> da = xr.DataArray(np.arange(3), dims="x", name="a")
-    >>> da.to_netcdf("example_load_da.nc")
+    >>> da = xr.DataArray([1, 2, 3], dims="x", name="a")
+    >>> da.to_netcdf("example.nc")
 
-    >>> da_loaded = xr.load_dataarray("example_load_da.nc")
-    >>> da_loaded
-    <xarray.DataArray 'a' (x: 3)> ...
-    ...
+    The data is loaded into memory and the file is closed again:
+
+    >>> xr.load_dataarray("example.nc")
+    <xarray.DataArray 'a' (x: 3)> Size: 24B
+    array([1, 2, 3])
     Dimensions without coordinates: x
-
-    Clean up the example file:
-    >>> da_loaded.close()
-    >>> import os
-    >>> os.remove("example_load_da.nc")
     """
     if "cache" in kwargs:
         raise TypeError("cache has no effect in this context")
@@ -635,30 +625,27 @@ def open_dataset(
 
     Examples
     --------
-    Open a dataset from a netCDF file. First, we create a dummy file for this example:
+    Open a dataset from a netCDF file. First, we create a file for this example:
 
-    >>> import numpy as np
-    >>> ds = xr.Dataset({"a": (("x",), np.arange(3))})
+    >>> ds = xr.Dataset({"a": ("x", [1, 2, 3])})
     >>> ds.to_netcdf("example.nc")
+
+    The data is only loaded from the file when it is needed:
 
     >>> ds_disk = xr.open_dataset("example.nc")
     >>> ds_disk
-    <xarray.Dataset> ...
+    <xarray.Dataset> Size: 24B
     Dimensions:  (x: 3)
     Dimensions without coordinates: x
     Data variables:
-        a        (x) ...
+        a        (x) int64 24B ...
+    >>> ds_disk.close()
 
     Open a dataset from a remote OPeNDAP URL:
 
     >>> ds = xr.open_dataset(
-    ...     "http://www.esrl.noaa.gov/psd/thredds/dodsC/Datasets/ncep.reanalysis.dailyavgs/surface/air.sig995.1948.nc"
+    ...     "https://psl.noaa.gov/thredds/dodsC/Datasets/ncep.reanalysis.dailyavgs/surface/air.sig995.1948.nc"
     ... )  # doctest: +SKIP
-
-    Clean up the example file:
-    >>> ds_disk.close()
-    >>> import os
-    >>> os.remove("example.nc")
     """
     if cache is None:
         cache = chunks is None
@@ -902,22 +889,19 @@ def open_dataarray(
 
     Examples
     --------
-    Open a DataArray from a netCDF file. First, we create a dummy file:
+    Open a DataArray from a netCDF file. First, we create a file for this example:
 
-    >>> import numpy as np
-    >>> da = xr.DataArray(np.arange(3), dims="x", name="a")
-    >>> da.to_netcdf("example_da.nc")
+    >>> da = xr.DataArray([1, 2, 3], dims="x", name="a")
+    >>> da.to_netcdf("example.nc")
 
-    >>> da_disk = xr.open_dataarray("example_da.nc")
+    The data is only loaded from the file when it is needed:
+
+    >>> da_disk = xr.open_dataarray("example.nc")
     >>> da_disk
-    <xarray.DataArray 'a' (x: 3)> ...
-    ...
+    <xarray.DataArray 'a' (x: 3)> Size: 24B
+    [3 values with dtype=int64]
     Dimensions without coordinates: x
-
-    Clean up the example file:
     >>> da_disk.close()
-    >>> import os
-    >>> os.remove("example_da.nc")
     """
     dataset = open_dataset(
         filename_or_obj,
@@ -1417,28 +1401,28 @@ def open_groups(
 
     Examples
     --------
-    Open groups from a netCDF file as a dictionary of Datasets. First, create a file with groups:
+    Open groups from a netCDF file as a dictionary of Datasets. First, create a
+    file with groups:
 
-    >>> import numpy as np
-    >>> ds1 = xr.Dataset({"a": (("x",), np.arange(3))})
-    >>> ds2 = xr.Dataset({"b": (("y",), np.arange(2))})
-    >>> ds1.to_netcdf("example_groups.nc", group="group1", mode="w")  # doctest: +SKIP
-    >>> ds2.to_netcdf("example_groups.nc", group="group2", mode="a")  # doctest: +SKIP
+    >>> ds1 = xr.Dataset({"a": ("x", [1, 2, 3])})
+    >>> ds2 = xr.Dataset({"b": ("y", [4, 5])})
+    >>> ds1.to_netcdf("example.nc", group="group1", mode="w")
+    >>> ds2.to_netcdf("example.nc", group="group2", mode="a")
 
-    >>> groups = xr.open_groups("example_groups.nc")  # doctest: +SKIP
-    >>> sorted(groups.keys())  # doctest: +SKIP
-    ['group1', 'group2']
-    >>> groups["group1"]  # doctest: +SKIP
-    <xarray.Dataset>
+    The dictionary includes the root group:
+
+    >>> groups = xr.open_groups("example.nc")
+    >>> sorted(groups)
+    ['/', '/group1', '/group2']
+    >>> groups["/group1"]
+    <xarray.Dataset> Size: 24B
     Dimensions:  (x: 3)
     Dimensions without coordinates: x
     Data variables:
-        a        (x) ...
-
-    Clean up the example file:
-    >>> groups.close()  # doctest: +SKIP
-    >>> import os  # doctest: +SKIP
-    >>> os.remove("example_groups.nc")  # doctest: +SKIP
+        a        (x) int64 24B ...
+    >>> for ds in groups.values():
+    ...     ds.close()
+    ...
     """
     if cache is None:
         cache = chunks is None
@@ -1708,24 +1692,21 @@ def open_mfdataset(
 
     Examples
     --------
-    >>> import numpy as np
-    >>> ds1 = xr.Dataset({"a": (("x",), np.arange(3))}, coords={"x": [0, 1, 2]})
-    >>> ds2 = xr.Dataset({"a": (("x",), np.arange(3))}, coords={"x": [3, 4, 5]})
-    >>> ds1.to_netcdf("example_mf_1.nc")  # doctest: +SKIP
-    >>> ds2.to_netcdf("example_mf_2.nc")  # doctest: +SKIP
-    >>> ds = xr.open_mfdataset(
-    ...     ["example_mf_1.nc", "example_mf_2.nc"], combine="by_coords"
-    ... )  # doctest: +SKIP
-    >>> ds  # doctest: +SKIP
-    <xarray.Dataset> ...
+    Combine two files along their coordinate ``x``:
+
+    >>> ds1 = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"x": [0, 1, 2]})
+    >>> ds2 = xr.Dataset({"a": ("x", [4, 5, 6])}, coords={"x": [3, 4, 5]})
+    >>> ds1.to_netcdf("example_1.nc")
+    >>> ds2.to_netcdf("example_2.nc")
+    >>> ds = xr.open_mfdataset(["example_1.nc", "example_2.nc"], combine="by_coords")
+    >>> ds
+    <xarray.Dataset> Size: 96B
     Dimensions:  (x: 6)
     Coordinates:
-      * x        (x) ...
+      * x        (x) int64 48B 0 1 2 3 4 5
     Data variables:
-        a        (x) ...
-    >>> import os  # doctest: +SKIP
-    >>> os.remove("example_mf_1.nc")  # doctest: +SKIP
-    >>> os.remove("example_mf_2.nc")  # doctest: +SKIP
+        a        (x) int64 48B dask.array<chunksize=(3,), meta=np.ndarray>
+    >>> ds.close()
 
     A user might want to pass additional arguments into ``preprocess`` when
     applying some operation to many individual files that are being opened. One route
