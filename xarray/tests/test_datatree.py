@@ -11,13 +11,14 @@ import pytest
 import xarray as xr
 from xarray import DataArray, Dataset
 from xarray.core.coordinates import DataTreeCoordinates
-from xarray.core.datatree import DataTree
+from xarray.core.datatree import DatasetView, DataTree
 from xarray.core.treenode import NotFoundInTreeError
 from xarray.testing import assert_equal, assert_identical
 from xarray.tests import (
     assert_array_equal,
     create_test_data,
     requires_dask,
+    requires_numbagg_or_bottleneck,
     source_ndarray,
 )
 
@@ -1228,6 +1229,42 @@ class TestDatasetView:
         result = xr.map_over_datasets(func, dt)
         expected = dt.mean()
         xr.testing.assert_identical(result, expected)
+
+    @pytest.mark.parametrize(
+        "func",
+        [
+            pytest.param(lambda ds: ds.interpolate_na("x"), id="interpolate_na"),
+            pytest.param(
+                lambda ds: ds.ffill("x"),
+                id="ffill",
+                marks=requires_numbagg_or_bottleneck,
+            ),
+            pytest.param(
+                lambda ds: ds.bfill("x"),
+                id="bfill",
+                marks=requires_numbagg_or_bottleneck,
+            ),
+            pytest.param(lambda ds: ds.polyfit("x", 1), id="polyfit"),
+            pytest.param(
+                lambda ds: ds.curvefit("x", lambda x, a: a * x), id="curvefit"
+            ),
+            pytest.param(lambda ds: ds + {"a": 1}, id="add_dict"),
+            pytest.param(lambda ds: ds.map(np.abs), id="map"),
+        ],
+    )
+    def test_methods_using_type_self(self, func: Callable) -> None:
+        # GH11813: these methods build their result with type(self)(...)
+        ds = xr.Dataset({"a": ("x", [1.0, np.nan, 3.0])}, coords={"x": [0, 1, 2]})
+        dt = DataTree(dataset=ds)
+
+        result = func(dt.dataset)
+        assert type(result) is xr.Dataset
+        xr.testing.assert_identical(result, func(ds))
+
+    def test_init_returns_dataset(self) -> None:
+        result = DatasetView({"a": ("x", [1, 2])})
+        assert type(result) is xr.Dataset
+        xr.testing.assert_identical(result, xr.Dataset({"a": ("x", [1, 2])}))
 
 
 class TestAccess:
