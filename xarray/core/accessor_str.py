@@ -1468,6 +1468,8 @@ class StringAccessor[T_DataArray: DataArray]:
         Strings in the array are padded with '0' characters on the
         left of the string to reach a total string length  `width`. Strings
         in the array with length greater or equal to `width` are unchanged.
+        Like :meth:`str.zfill`, a leading sign (``+`` or ``-``) stays at the
+        start of the string and the '0' characters are inserted after it.
 
         If `width` is array-like, it is broadcast against the array and applied
         elementwise.
@@ -1482,7 +1484,10 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         filled : same type as values
         """
-        return self.rjust(width, fillchar="0")
+        # np.strings requires integer widths
+        width = width.astype(int) if hasattr(width, "astype") else int(width)
+        func = self._method("zfill")
+        return self._apply(func=func, np_func=np.strings.zfill, func_args=(width,))
 
     def contains(
         self,
