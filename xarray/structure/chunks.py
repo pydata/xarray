@@ -1,13 +1,11 @@
-"""
-Functions for handling chunked arrays.
-"""
+"""Functions for handling chunked arrays."""
 
 from __future__ import annotations
 
 import itertools
 from collections.abc import Hashable, Mapping
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from xarray.core import utils
 from xarray.core.variable import Variable
@@ -15,6 +13,7 @@ from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
     get_chunked_array_type,
     guess_chunkmanager,
+    list_chunkmanagers,
 )
 
 if TYPE_CHECKING:
@@ -64,7 +63,7 @@ def _get_breaks_cached(
 def _maybe_chunk(
     name: Hashable,
     var: Variable,
-    chunks: Mapping[Any, T_ChunkDim] | None,
+    chunks: Mapping[Any, T_ChunkDim],
     token=None,
     lock=None,
     name_prefix: str = "xarray-",
@@ -72,25 +71,31 @@ def _maybe_chunk(
     inline_array: bool = False,
     chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
+    just_use_token=False,
 ) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
-    if chunks is not None:
-        chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
+    chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
     if var.ndim:
         chunked_array_type = guess_chunkmanager(
             chunked_array_type
         )  # coerce string to ChunkManagerEntrypoint type
-        if isinstance(chunked_array_type, DaskManager):
-            from dask.base import tokenize
+        is_dask_chunkmanager = isinstance(chunked_array_type, DaskManager) or any(
+            name == "dask" and manager is chunked_array_type
+            for name, manager in list_chunkmanagers().items()
+        )
+        if is_dask_chunkmanager:
+            if not just_use_token:
+                from dask.base import tokenize
 
-            # when rechunking by different amounts, make sure dask names change
-            # by providing chunks as an input to tokenize.
-            # subtle bugs result otherwise. see GH3350
-            # we use str() for speed, and use the name for the final array name on the next line
-            token2 = tokenize(token or var._data, str(chunks))
-            name2 = f"{name_prefix}{name}-{token2}"
+                # when rechunking by different amounts, make sure dask names change
+                # by providing chunks as an input to tokenize.
+                # subtle bugs result otherwise. see GH3350
+                # we use str() for speed, and use the name for the final array name on the next line
+                token = tokenize(token or var._data, str(chunks))
+
+            name2 = f"{name_prefix}{name}-{token}"
 
             from_array_kwargs = utils.consolidate_dask_from_array_kwargs(
                 from_array_kwargs,
@@ -112,21 +117,22 @@ def _maybe_chunk(
         return var
 
 
-_T = TypeVar("_T", bound=Union["Dataset", "DataArray"])
-_U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
-_V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
+@overload
+def unify_chunks[T: Dataset | DataArray](obj: T, /) -> tuple[T]: ...
 
 
 @overload
-def unify_chunks(obj: _T, /) -> tuple[_T]: ...
+def unify_chunks[T: Dataset | DataArray, U: Dataset | DataArray](
+    obj1: T, obj2: U, /
+) -> tuple[T, U]: ...
 
 
 @overload
-def unify_chunks(obj1: _T, obj2: _U, /) -> tuple[_T, _U]: ...
-
-
-@overload
-def unify_chunks(obj1: _T, obj2: _U, obj3: _V, /) -> tuple[_T, _U, _V]: ...
+def unify_chunks[
+    T: Dataset | DataArray,
+    U: Dataset | DataArray,
+    V: Dataset | DataArray,
+](obj1: T, obj2: U, obj3: V, /) -> tuple[T, U, V]: ...
 
 
 @overload
@@ -134,7 +140,8 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
 
 
 def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
-    """
+    """Unify the chunk sizes of any number of Dataset and/or DataArray objects.
+
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.
 

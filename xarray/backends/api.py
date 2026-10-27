@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 from collections.abc import (
     Callable,
@@ -12,7 +13,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
-    TypeVar,
     Union,
     cast,
 )
@@ -34,7 +34,7 @@ from xarray.core.treenode import group_subtrees
 from xarray.core.types import ReadBuffer
 from xarray.core.utils import emit_user_level_warning, is_remote_uri
 from xarray.namedarray.daskmanager import DaskManager
-from xarray.namedarray.parallelcompat import guess_chunkmanager
+from xarray.namedarray.parallelcompat import guess_chunkmanager, list_chunkmanagers
 from xarray.namedarray.utils import _get_chunk
 from xarray.structure.chunks import _maybe_chunk
 from xarray.structure.combine import (
@@ -102,7 +102,8 @@ def _get_mtime(filename_or_obj):
         path = None
 
     if path and not is_remote_uri(path):
-        mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
+        with contextlib.suppress(OSError):
+            mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
 
     return mtime
 
@@ -124,7 +125,7 @@ def _protect_datatree_variables_inplace(tree: DataTree, cache: bool) -> None:
 
 
 def _finalize_store(writes, store):
-    """Finalize this store by explicitly syncing and closing"""
+    """Finalize this store by explicitly syncing and closing."""
     del writes  # ensure writing is done first
     store.close()
 
@@ -141,8 +142,7 @@ def _multi_file_closer(closers):
 
 
 def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
-    """Open, load into memory, and close a Dataset from a file or file-like
-    object.
+    """Open, load into memory, and close a Dataset from a file or file-like object.
 
     This is a thin wrapper around :py:meth:`~xarray.open_dataset`. It differs
     from `open_dataset` in that it loads the Dataset into memory, closes the
@@ -167,8 +167,9 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
 
 
 def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArray:
-    """Open, load into memory, and close a DataArray from a file or file-like
-    object containing a single data variable.
+    """Open, load into memory, and close a DataArray from a file or file-like object.
+
+    The file must contain a single data variable.
 
     This is a thin wrapper around :py:meth:`~xarray.open_dataarray`. It differs
     from `open_dataarray` in that it loads the Dataset into memory, closes the
@@ -193,8 +194,7 @@ def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArra
 
 
 def load_datatree(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataTree:
-    """Open, load into memory, and close a DataTree from a file or file-like
-    object.
+    """Open, load into memory, and close a DataTree from a file or file-like object.
 
     This is a thin wrapper around :py:meth:`~xarray.open_datatree`. It differs
     from `open_datatree` in that it loads the DataTree into memory, closes the
@@ -232,7 +232,11 @@ def _chunk_ds(
     chunkmanager = guess_chunkmanager(chunked_array_type)
 
     # TODO refactor to move this dask-specific logic inside the DaskManager class
-    if isinstance(chunkmanager, DaskManager):
+    is_dask_chunkmanager = isinstance(chunkmanager, DaskManager) or any(
+        name == "dask" and manager is chunkmanager
+        for name, manager in list_chunkmanagers().items()
+    )
+    if is_dask_chunkmanager:
         from dask.base import tokenize
 
         mtime = _get_mtime(filename_or_obj)
@@ -265,6 +269,7 @@ def _chunk_ds(
             inline_array=inline_array,
             chunked_array_type=chunkmanager,
             from_array_kwargs=from_array_kwargs.copy(),
+            just_use_token=True,
         )
     return backend_ds._replace(variables)
 
@@ -389,7 +394,7 @@ def open_dataset(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
@@ -435,7 +440,7 @@ def open_dataset(
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays or when large arrays are sliced before computation.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -536,7 +541,7 @@ def open_dataset(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -558,6 +563,14 @@ def open_dataset(
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy".
 
+          .. warning::
+             A custom lock replaces the default locks, which also protect
+             libraries that are not thread-safe, like netCDF-C and HDF5. It
+             must therefore prevent concurrent access to those libraries as
+             well. Also, "netcdf4" only reads metadata while holding the lock if
+             the lock is reentrant, like the default locks. Opening files from
+             several threads with a non-reentrant lock can therefore crash.
+
         See engine open function for kwargs accepted by each specific engine.
 
     Returns
@@ -565,18 +578,23 @@ def open_dataset(
     dataset : Dataset
         The newly created dataset.
 
+    See Also
+    --------
+    open_mfdataset
+
     Notes
     -----
+    For files with multiple groups, ``open_dataset`` reads only the selected
+    group (the root group by default). Use ``open_datatree`` to load the groups
+    into a tree, or ``open_groups`` to load each group into a dictionary. To
+    open one non-root group with ``open_dataset``, pass its path with the
+    ``group`` keyword argument.
+
     ``open_dataset`` opens the file with read-only access. When you modify
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
-
-    See Also
-    --------
-    open_mfdataset
     """
-
     if cache is None:
         cache = chunks is None
 
@@ -631,7 +649,7 @@ def open_dataarray(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -650,8 +668,7 @@ def open_dataarray(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
-    """Open a DataArray from a file or file-like object containing a single
-    data variable.
+    """Open a DataArray from a file or file-like object with a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
     multiple variables are present then a ValueError is raised.
@@ -679,7 +696,7 @@ def open_dataarray(
         - ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -772,7 +789,7 @@ def open_dataarray(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce the underlying data array to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -794,7 +811,19 @@ def open_dataarray(
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy".
 
+          .. warning::
+             A custom lock replaces the default locks, which also protect
+             libraries that are not thread-safe, like netCDF-C and HDF5. It
+             must therefore prevent concurrent access to those libraries as
+             well. Also, "netcdf4" only reads metadata while holding the lock if
+             the lock is reentrant, like the default locks. Opening files from
+             several threads with a non-reentrant lock can therefore crash.
+
         See engine open function for kwargs accepted by each specific engine.
+
+    See Also
+    --------
+    open_dataset
 
     Notes
     -----
@@ -804,12 +833,7 @@ def open_dataarray(
 
     All parameters are passed directly to `xarray.open_dataset`. See that
     documentation for further details.
-
-    See also
-    --------
-    open_dataset
     """
-
     dataset = open_dataset(
         filename_or_obj,
         decode_cf=decode_cf,
@@ -862,7 +886,7 @@ def open_datatree(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
@@ -883,8 +907,7 @@ def open_datatree(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataTree:
-    """
-    Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
+    """Open and decode a DataTree from a file or file-like object, creating one tree node for each group in the file.
 
     Parameters
     ----------
@@ -905,7 +928,7 @@ def open_datatree(
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -1006,7 +1029,7 @@ def open_datatree(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -1028,6 +1051,14 @@ def open_datatree(
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy".
 
+          .. warning::
+             A custom lock replaces the default locks, which also protect
+             libraries that are not thread-safe, like netCDF-C and HDF5. It
+             must therefore prevent concurrent access to those libraries as
+             well. Also, "netcdf4" only reads metadata while holding the lock if
+             the lock is reentrant, like the default locks. Opening files from
+             several threads with a non-reentrant lock can therefore crash.
+
         See engine open function for kwargs accepted by each specific engine.
 
     Returns
@@ -1035,17 +1066,17 @@ def open_datatree(
     tree : DataTree
         The newly created datatree.
 
+    See Also
+    --------
+    xarray.open_groups
+    xarray.open_dataset
+
     Notes
     -----
     ``open_datatree`` opens the file with read-only access. When you modify
     values of a DataTree, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
-
-    See Also
-    --------
-    xarray.open_groups
-    xarray.open_dataset
     """
     if cache is None:
         cache = chunks is None
@@ -1103,7 +1134,7 @@ def open_groups(
     filename_or_obj: T_PathFileOrDataStore,
     *,
     engine: T_Engine = None,
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | Mapping[str, bool] | None = None,
@@ -1124,8 +1155,7 @@ def open_groups(
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> dict[str, Dataset]:
-    """
-    Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
+    """Open and decode a file or file-like object, creating a dictionary containing one xarray Dataset for each group in the file.
 
     Useful for an HDF file ("netcdf4" or "h5netcdf") containing many groups that are not alignable with their parents
     and cannot be opened directly with ``open_datatree``. It is encouraged to use this function to inspect your data,
@@ -1151,7 +1181,7 @@ def open_groups(
         - ``chunks="auto"`` will use dask ``auto`` chunking taking into account the
           engine preferred chunks.
         - ``chunks=None`` skips using dask. This uses xarray's internally private
-          :ref:`lazy indexing classes <internal design.lazy indexing>`,
+          :ref:`lazy indexing classes <internal-design.lazy-indexing>`,
           but data is eagerly loaded into memory as numpy arrays when accessed.
           This can be more efficient for smaller arrays, though results may vary.
         - ``chunks=-1`` loads the data with dask using a single chunk for all arrays.
@@ -1250,7 +1280,7 @@ def open_groups(
         in the values of the task graph. See :py:func:`dask.array.from_array`.
     chunked_array_type: str, optional
         Which chunked array type to coerce this datasets' arrays to.
-        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEnetryPoint` system.
+        Defaults to 'dask' if installed, else whatever is registered via the `ChunkManagerEntryPoint` system.
         Experimental API that should not be relied upon.
     from_array_kwargs: dict
         Additional keyword arguments passed on to the `ChunkManagerEntrypoint.from_array` method used to create
@@ -1272,6 +1302,14 @@ def open_groups(
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy".
 
+          .. warning::
+             A custom lock replaces the default locks, which also protect
+             libraries that are not thread-safe, like netCDF-C and HDF5. It
+             must therefore prevent concurrent access to those libraries as
+             well. Also, "netcdf4" only reads metadata while holding the lock if
+             the lock is reentrant, like the default locks. Opening files from
+             several threads with a non-reentrant lock can therefore crash.
+
         See engine open function for kwargs accepted by each specific engine.
 
     Returns
@@ -1279,18 +1317,18 @@ def open_groups(
     groups : dict of str to xarray.Dataset
         The groups as Dataset objects
 
+    See Also
+    --------
+    xarray.open_datatree
+    xarray.open_dataset
+    xarray.DataTree.from_dict
+
     Notes
     -----
     ``open_groups`` opens the file with read-only access. When you modify
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
-
-    See Also
-    --------
-    xarray.open_datatree
-    xarray.open_dataset
-    xarray.DataTree.from_dict
     """
     if cache is None:
         cache = chunks is None
@@ -1347,14 +1385,11 @@ def open_groups(
     return groups
 
 
-_FLike = TypeVar("_FLike", bound=Union[str, ReadBuffer])
-
-
-def _remove_path(
-    paths: NestedSequence[_FLike], paths_to_remove: set[_FLike]
-) -> NestedSequence[_FLike]:
+def _remove_path[FLike: str | ReadBuffer](
+    paths: NestedSequence[FLike], paths_to_remove: set[FLike]
+) -> NestedSequence[FLike]:
     # Initialize an empty list to store the result
-    result: list[Union[_FLike, NestedSequence[_FLike]]] = []
+    result: list[Union[FLike, NestedSequence[FLike]]] = []
 
     for item in paths:
         if isinstance(item, list):
@@ -1373,7 +1408,7 @@ def open_mfdataset(
     paths: (
         str | os.PathLike | ReadBuffer | NestedSequence[str | os.PathLike | ReadBuffer]
     ),
-    chunks: T_Chunks = None,
+    chunks: T_Chunks | None = None,
     concat_dim: (
         str
         | DataArray
@@ -1387,7 +1422,7 @@ def open_mfdataset(
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine = None,
     data_vars: (
-        Literal["all", "minimal", "different"] | None | list[str] | CombineKwargDefault
+        Literal["all", "minimal", "different"] | list[str] | CombineKwargDefault | None
     ) = _DATA_VARS_DEFAULT,
     coords=_COORDS_DEFAULT,
     combine: Literal["by_coords", "nested"] = "by_coords",
@@ -1463,7 +1498,7 @@ def open_mfdataset(
         "netcdf4" over "h5netcdf" over "scipy" (customizable via
         ``netcdf_engine_order`` in ``xarray.set_options()``). A custom backend
         class (a subclass of ``BackendEntrypoint``) can also be used.
-    data_vars : {"minimal", "different", "all"} or list of str, default: "all"
+    data_vars : {"minimal", "different", "all", None} or list of str, default: "all"
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
             appears are included.
@@ -1473,9 +1508,12 @@ def open_mfdataset(
             load the data payload of data variables into memory if they are not
             already loaded.
           * "all": All data variables will be concatenated.
+          * None: Means ``"all"`` if ``concat_dim`` is not present in any of
+            the ``objs``, and ``"minimal"`` if ``concat_dim`` is present
+            in any of ``objs``.
           * list of str: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
-    coords : {"minimal", "different", "all"} or list of str, optional
+    coords : {"minimal", "different", "all"} or list of str, default: "different"
         These coordinate variables will be concatenated together:
          * "minimal": Only coordinates in which the dimension already appears
            are included.
@@ -1539,6 +1577,12 @@ def open_mfdataset(
     -------
     xarray.Dataset
 
+    See Also
+    --------
+    combine_by_coords
+    combine_nested
+    open_dataset
+
     Notes
     -----
     ``open_mfdataset`` opens files with read-only access. When you modify values
@@ -1546,11 +1590,11 @@ def open_mfdataset(
     are manipulating in xarray is modified: the original file on disk is never
     touched.
 
-    See Also
-    --------
-    combine_by_coords
-    combine_nested
-    open_dataset
+    References
+    ----------
+
+    .. [1] https://docs.xarray.dev/en/stable/dask.html
+    .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
 
     Examples
     --------
@@ -1574,12 +1618,6 @@ def open_mfdataset(
     >>> ds = xr.open_mfdataset(
     ...     "file.nc", drop_variables=["varname_1", "varname_2"]  # any list of vars
     ... )  # doctest: +SKIP
-
-    References
-    ----------
-
-    .. [1] https://docs.xarray.dev/en/stable/dask.html
-    .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
     """
     paths = _find_absolute_paths(paths, engine=engine, **kwargs)
 

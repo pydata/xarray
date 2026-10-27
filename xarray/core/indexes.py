@@ -3,9 +3,10 @@ from __future__ import annotations
 import collections.abc
 import copy
 import inspect
+import math
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload, override
 
 import numpy as np
 import pandas as pd
@@ -37,8 +38,7 @@ IndexVars = dict[Any, "Variable"]
 
 
 class Index:
-    """
-    Base class inherited by all xarray-compatible indexes.
+    """Base class inherited by all xarray-compatible indexes.
 
     Do not use this class directly for creating index objects. Xarray indexes
     are created exclusively from subclasses of ``Index``, mostly via Xarray's
@@ -83,6 +83,10 @@ class Index:
         variables : dict-like
             Mapping of :py:class:`Variable` objects holding the coordinate labels
             to index.
+        options : dict-like
+            Keyword arguments passed to this constructor. Propagated from
+            the ``**options`` argument of :py:meth:`xarray.DataArray.set_xindex`
+            or :py:meth:`xarray.Dataset.set_xindex`.
 
         Returns
         -------
@@ -98,8 +102,7 @@ class Index:
         dim: Hashable,
         positions: Iterable[Iterable[int]] | None = None,
     ) -> Self:
-        """Create a new index by concatenating one or more indexes of the same
-        type.
+        """Create a new index by concatenating one or more indexes of the same type.
 
         Implementation is optional but required in order to support
         ``concat``. Otherwise it will raise an error if the index needs to be
@@ -126,8 +129,7 @@ class Index:
 
     @classmethod
     def stack(cls, variables: Mapping[Any, Variable], dim: Hashable) -> Self:
-        """Create a new index by stacking coordinate variables into a single new
-        dimension.
+        """Create a new index by stacking coordinate variables into a new dimension.
 
         Implementation is optional but required in order to support ``stack``.
         Otherwise it will raise an error when trying to pass the Index subclass
@@ -204,8 +206,7 @@ class Index:
         var: Variable,
         dims: set[Hashable],
     ) -> bool:
-        """Define whether or not an index coordinate variable should be added to
-        a new DataArray.
+        """Define whether an index coordinate variable should be added to a DataArray.
 
         This method is called repeatedly for each Variable associated with this
         index when creating a new DataArray (via its constructor or from a
@@ -242,8 +243,9 @@ class Index:
         return all(d in dims for d in var.dims)
 
     def to_pandas_index(self) -> pd.Index:
-        """Cast this xarray index to a pandas.Index object or raise a
-        ``TypeError`` if this is not supported.
+        """Cast this xarray index to a pandas.Index object.
+
+        Raise a ``TypeError`` if this is not supported.
 
         This method is used by all xarray operations that still rely on
         pandas.Index objects.
@@ -256,8 +258,7 @@ class Index:
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Index | None:
-        """Maybe returns a new index from the current index itself indexed by
-        positional indexers.
+        """Maybe return a new index from this index indexed by positional indexers.
 
         This method should be re-implemented in subclasses of Index if the
         wrapped index structure supports indexing operations. For example,
@@ -311,8 +312,7 @@ class Index:
         raise NotImplementedError(f"{self!r} doesn't support label-based selection")
 
     def join(self, other: Self, how: JoinOptions = "inner") -> Self:
-        """Return a new index from the combination of this index with another
-        index of the same type.
+        """Return a new index by combining this index with another of the same type.
 
         Implementation is optional but required in order to support alignment.
 
@@ -487,7 +487,12 @@ class Index:
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from xarray.coding.cftimeindex import CFTimeIndex
 
-    if len(index) > 0 and index.dtype == "O" and not isinstance(index, CFTimeIndex):
+    if (
+        len(index) > 0
+        and index.dtype == "O"
+        and utils.module_available("cftime")
+        and not isinstance(index, CFTimeIndex)
+    ):
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
@@ -532,11 +537,17 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                         " Casting to `float64` for you, but in the future please"
                         " manually cast to either `float32` and `float64`."
                     ),
-                    category=DeprecationWarning,
+                    category=FutureWarning,
                 )
                 kwargs["dtype"] = "float64"
 
-        index = pd.Index(to_numpy(array), **kwargs)
+        values = to_numpy(array)
+        try:
+            index = pd.Index(values, **kwargs)
+        except UnicodeEncodeError:
+            # coerce to object if pandas fails to coerce to string
+            kwargs["dtype"] = "object"
+            index = pd.Index(values, **kwargs)
 
     return _maybe_cast_to_cftimeindex(index)
 
@@ -581,9 +592,7 @@ def _query_slice(index, label, coord_name="", method=None, tolerance=None):
 
 
 def _asarray_tuplesafe(values):
-    """
-    Convert values into a numpy array of at most 1-dimension, while preserving
-    tuples.
+    """Convert values into a numpy array of at most 1-dimension, preserving tuples.
 
     Adapted from pandas.core.common._asarray_tuplesafe
     """
@@ -622,9 +631,7 @@ def as_scalar(value: np.ndarray):
 
 
 def get_indexer_nd(index: pd.Index, labels, method=None, tolerance=None) -> np.ndarray:
-    """Wrapper around :meth:`pandas.Index.get_indexer` supporting n-dimensional
-    labels
-    """
+    """Call :meth:`pandas.Index.get_indexer` with support for n-dimensional labels."""
     flat_labels = np.ravel(labels)
     if flat_labels.dtype == "float16":
         flat_labels = flat_labels.astype("float64")
@@ -685,6 +692,7 @@ class PandasIndex(Index):
         return type(self)(index, dim, coord_dtype, fastpath=True)
 
     @classmethod
+    @override
     def from_variables(
         cls,
         variables: Mapping[Any, Variable],
@@ -760,6 +768,7 @@ class PandasIndex(Index):
         return new_pd_index
 
     @classmethod
+    @override
     def concat(
         cls,
         indexes: Sequence[Self],
@@ -779,6 +788,7 @@ class PandasIndex(Index):
 
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
+    @override
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
@@ -797,12 +807,16 @@ class PandasIndex(Index):
             encoding = None
 
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
-        var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding)
+        var = IndexVariable(
+            (self.dim,), data, attrs=attrs, encoding=encoding, fastpath=True
+        )
         return {name: var}
 
+    @override
     def to_pandas_index(self) -> pd.Index:
         return self.index
 
+    @override
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> PandasIndex | None:
@@ -819,8 +833,12 @@ class PandasIndex(Index):
             # scalar indexer: drop index
             return None
 
+        if isinstance(indxr, slice) and indxr == slice(None):
+            return self
+
         return self._replace(self.index[indxr])  # type: ignore[index,unused-ignore]
 
+    @override
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
@@ -882,11 +900,13 @@ class PandasIndex(Index):
 
         return IndexSelResult({self.dim: indexer})
 
+    @override
     def equals(self, other: Index, *, exclude: frozenset[Hashable] | None = None):
         if not isinstance(other, PandasIndex):
             return False
         return self.index.equals(other.index) and self.dim == other.dim
 
+    @override
     def join(
         self,
         other: Self,
@@ -897,10 +917,12 @@ class PandasIndex(Index):
         else:
             # how = "inner"
             index = self.index.intersection(other.index)
-
+        if is_allowed_extension_array_dtype(index.dtype):
+            return type(self)(index, self.dim)
         coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
+    @override
     def reindex_like(
         self, other: Self, method=None, tolerance=None
     ) -> dict[Hashable, Any]:
@@ -912,8 +934,9 @@ class PandasIndex(Index):
 
         return {self.dim: get_indexer_nd(self.index, other.index, method, tolerance)}
 
+    @override
     def roll(self, shifts: Mapping[Any, int]) -> PandasIndex:
-        shift = shifts[self.dim] % self.index.shape[0]
+        shift = shifts[self.dim] % (self.index.shape[0] or 1)
 
         if shift != 0:
             new_pd_idx = self.index[-shift:].append(self.index[:-shift])
@@ -922,6 +945,7 @@ class PandasIndex(Index):
 
         return self._replace(new_pd_idx)
 
+    @override
     def rename(self, name_dict, dims_dict):
         if self.index.name not in name_dict and self.dim not in dims_dict:
             return self
@@ -931,6 +955,7 @@ class PandasIndex(Index):
         new_dim = dims_dict.get(self.dim, self.dim)
         return self._replace(index, dim=new_dim)
 
+    @override
     def _copy(
         self: T_PandasIndex, deep: bool = True, memo: dict[int, Any] | None = None
     ) -> T_PandasIndex:
@@ -942,6 +967,7 @@ class PandasIndex(Index):
             index = self.index
         return self._replace(index)
 
+    @override
     def __getitem__(self, indexer: Any):
         return self._replace(self.index[indexer])
 
@@ -950,9 +976,10 @@ class PandasIndex(Index):
 
 
 def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"):
-    """Check that all multi-index variable candidates are 1-dimensional and
-    either share the same (single) dimension or each have a different dimension.
+    """Check that all multi-index variable candidates are 1-dimensional.
 
+    They must also either share the same (single) dimension or each have a
+    different dimension.
     """
     if any(var.ndim != 1 for var in variables.values()):
         raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
@@ -972,13 +999,8 @@ def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"
         )
 
 
-T_PDIndex = TypeVar("T_PDIndex", bound=pd.Index)
-
-
-def remove_unused_levels_categories(index: T_PDIndex) -> T_PDIndex:
-    """
-    Remove unused levels from MultiIndex and unused categories from CategoricalIndex
-    """
+def remove_unused_levels_categories[T_PDIndex: pd.Index](index: T_PDIndex) -> T_PDIndex:
+    """Remove unused MultiIndex levels and unused CategoricalIndex categories."""
     if isinstance(index, pd.MultiIndex):
         new_index = index.remove_unused_levels()
         # if it contains CategoricalIndex, we need to remove unused categories
@@ -1006,6 +1028,26 @@ def remove_unused_levels_categories(index: T_PDIndex) -> T_PDIndex:
     return index
 
 
+def is_full_ordered_product(index: pd.MultiIndex) -> bool:
+    """Check whether index contains every combination of its levels' values.
+
+    The combinations must be in C order, i.e. its codes must be those of
+    ``MultiIndex.from_product``.
+    """
+    shape = tuple(len(level) for level in index.levels)
+    if len(index) != math.prod(shape):
+        return False
+    # compare each level's codes with those of a product along its axis,
+    # avoiding temporaries larger than a boolean array of the index's size
+    for axis, (codes, size) in enumerate(zip(index.codes, shape, strict=True)):
+        expected = np.arange(size, dtype=codes.dtype).reshape(
+            [size if i == axis else 1 for i in range(len(shape))]
+        )
+        if not (np.asarray(codes).reshape(shape) == expected).all():
+            return False
+    return True
+
+
 class PandasMultiIndex(PandasIndex):
     """Wrap a pandas.MultiIndex as an xarray compatible index."""
 
@@ -1022,7 +1064,9 @@ class PandasMultiIndex(PandasIndex):
         # default index level names
         names = []
         for i, idx in enumerate(self.index.levels):
-            name = idx.name or f"{dim}_level_{i}"
+            # only unnamed levels get a synthetic name: ``""``, ``False`` and
+            # ``0`` are all valid (if unusual) level names
+            name = idx.name if idx.name is not None else f"{dim}_level_{i}"
             if name == dim:
                 raise ValueError(
                     f"conflicting multi-index level name {name!r} with dimension {dim!r}"
@@ -1036,6 +1080,7 @@ class PandasMultiIndex(PandasIndex):
             }
         self.level_coords_dtype = level_coords_dtype
 
+    @override
     def _replace(self, index, dim=None, level_coords_dtype=None) -> PandasMultiIndex:
         if dim is None:
             dim = self.dim
@@ -1045,6 +1090,7 @@ class PandasMultiIndex(PandasIndex):
         return type(self)(index, dim, level_coords_dtype)
 
     @classmethod
+    @override
     def from_variables(
         cls,
         variables: Mapping[Any, Variable],
@@ -1064,6 +1110,7 @@ class PandasMultiIndex(PandasIndex):
         return obj
 
     @classmethod
+    @override
     def concat(
         cls,
         indexes: Sequence[Self],
@@ -1084,13 +1131,14 @@ class PandasMultiIndex(PandasIndex):
         return cls(new_pd_index, dim=dim, level_coords_dtype=level_coords_dtype)
 
     @classmethod
+    @override
     def stack(
         cls, variables: Mapping[Any, Variable], dim: Hashable
     ) -> PandasMultiIndex:
-        """Create a new Pandas MultiIndex from the product of 1-d variables (levels) along a
-        new dimension.
+        """Create a new Pandas MultiIndex from the product of 1-d variables (levels).
 
-        Level variables must have a dimension distinct from each other.
+        The multi-index is created along a new dimension. Level variables must have
+        a dimension distinct from each other.
 
         Keeps levels the same (doesn't refactorize them) so that it gives back the original
         labels after a stack/unstack roundtrip.
@@ -1109,9 +1157,12 @@ class PandasMultiIndex(PandasIndex):
         # from_product sorts by default, so we can't use that always
         # https://github.com/pydata/xarray/issues/980
         # https://github.com/pandas-dev/pandas/issues/14672
+        # Don't pass sortorder: it is the number of levels that the codes are
+        # lexsorted by, which pandas computes when needed. sortorder=0 claimed
+        # that they are not sorted at all, which broke slicing with tuples.
         if all(index.is_monotonic_increasing for index in level_indexes):
             index = pd.MultiIndex.from_product(
-                level_indexes, sortorder=0, names=list(variables.keys())
+                level_indexes, names=list(variables.keys())
             )
         else:
             split_labels, levels = zip(
@@ -1121,16 +1172,24 @@ class PandasMultiIndex(PandasIndex):
             labels = [x.ravel().tolist() for x in labels_mesh]
 
             index = pd.MultiIndex(
-                levels=levels, codes=labels, sortorder=0, names=list(variables.keys())
+                levels=levels, codes=labels, names=list(variables.keys())
             )
         level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
         return cls(index, dim, level_coords_dtype=level_coords_dtype)
 
+    @override
     def unstack(self) -> tuple[dict[Hashable, Index], pd.MultiIndex]:
-        clean_index = remove_unused_levels_categories(self.index)
+        if is_full_ordered_product(self.index) and not any(
+            isinstance(level, pd.CategoricalIndex) for level in self.index.levels
+        ):
+            # every level value is used exactly once per combination: the index
+            # has no unused levels and is unique, skip the expensive checks
+            clean_index = self.index
+        else:
+            clean_index = remove_unused_levels_categories(self.index)
 
-        if not clean_index.is_unique:
+        if clean_index is not self.index and not clean_index.is_unique:
             raise ValueError(
                 "Cannot unstack MultiIndex containing duplicates. Make sure entries "
                 f"are unique, e.g., by  calling ``.drop_duplicates('{self.dim}')``, "
@@ -1153,8 +1212,9 @@ class PandasMultiIndex(PandasIndex):
         current_variables: Mapping[Any, Variable],
         variables: Mapping[Any, Variable],
     ) -> tuple[PandasMultiIndex, IndexVars]:
-        """Create a new multi-index maybe by expanding an existing one with
-        new variables as index levels.
+        """Create a new multi-index, maybe by expanding an existing one.
+
+        The new variables are added as index levels.
 
         The index and its corresponding coordinates may be created along a new dimension.
         """
@@ -1206,9 +1266,9 @@ class PandasMultiIndex(PandasIndex):
     def keep_levels(
         self, level_variables: Mapping[Any, Variable]
     ) -> PandasMultiIndex | PandasIndex:
-        """Keep only the provided levels and return a new multi-index with its
-        corresponding coordinates.
+        """Keep only the provided levels.
 
+        Return a new multi-index with its corresponding coordinates.
         """
         index = self.index.droplevel(
             [k for k in self.index.names if k not in level_variables]
@@ -1228,14 +1288,15 @@ class PandasMultiIndex(PandasIndex):
     def reorder_levels(
         self, level_variables: Mapping[Any, Variable]
     ) -> PandasMultiIndex:
-        """Re-arrange index levels using input order and return a new multi-index with
-        its corresponding coordinates.
+        """Re-arrange index levels using input order.
 
+        Return a new multi-index with its corresponding coordinates.
         """
         index = self.index.reorder_levels(list(level_variables.keys()))
         level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
         return self._replace(index, level_coords_dtype=level_coords_dtype)
 
+    @override
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
@@ -1263,7 +1324,7 @@ class PandasMultiIndex(PandasIndex):
 
             data = PandasMultiIndexingAdapter(self.index, dtype=dtype, level=level)  # type: ignore[arg-type]  # TODO: are Hashables ok?
             index_vars[name] = IndexVariable(
-                self.dim,
+                (self.dim,),
                 data,
                 attrs=attrs,
                 encoding=encoding,
@@ -1272,6 +1333,7 @@ class PandasMultiIndex(PandasIndex):
 
         return index_vars
 
+    @override
     def sel(self, labels, method=None, tolerance=None) -> IndexSelResult:
         from xarray.core.dataarray import DataArray
         from xarray.core.variable import Variable
@@ -1301,6 +1363,16 @@ class PandasMultiIndex(PandasIndex):
                     ) from err
 
             has_slice = any(isinstance(v, slice) for v in label_values.values())
+
+            if has_slice:
+                slice_levels = [
+                    k for k, v in label_values.items() if isinstance(v, slice)
+                ]
+                raise ValueError(
+                    f"slice-based selection on multi-index level(s) {slice_levels} "
+                    f"is not supported. Use scalar values for multi-index level "
+                    f"selection instead, e.g., ``.sel({slice_levels[0]}=value)``."
+                )
 
             if len(label_values) == self.index.nlevels and not has_slice:
                 indexer = self.index.get_loc(
@@ -1340,10 +1412,15 @@ class PandasMultiIndex(PandasIndex):
                 indexer = _query_slice(self.index, label, coord_name)
 
             elif isinstance(label, tuple):
-                if _is_nested_tuple(label):
+                if len(label) == self.index.nlevels:
+                    try:
+                        indexer = self.index.get_loc(label)
+                    except (KeyError, TypeError, pd.errors.InvalidIndexError):
+                        if not _is_nested_tuple(label):
+                            raise
+                        indexer = self.index.get_locs(label)
+                elif _is_nested_tuple(label):
                     indexer = self.index.get_locs(label)
-                elif len(label) == self.index.nlevels:
-                    indexer = self.index.get_loc(label)
                 else:
                     levels = [self.index.names[i] for i in range(len(label))]
                     indexer, new_index = self.index.get_loc_level(label, level=levels)
@@ -1422,6 +1499,7 @@ class PandasMultiIndex(PandasIndex):
         else:
             return IndexSelResult({self.dim: indexer})
 
+    @override
     def join(self, other, how: str = "inner"):
         if how == "outer":
             # bug in pandas? need to reset index.name
@@ -1440,6 +1518,7 @@ class PandasMultiIndex(PandasIndex):
 
         return type(self)(index, self.dim, level_coords_dtype=level_coords_dtype)
 
+    @override
     def rename(self, name_dict, dims_dict):
         if not set(self.index.names) & set(name_dict) and self.dim not in dims_dict:
             return self
@@ -1479,28 +1558,38 @@ class CoordinateTransformIndex(Index):
     ):
         self.transform = transform
 
+    @override
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
         from xarray.core.variable import Variable
 
-        new_variables = {}
+        new_variables: dict[Hashable, Variable] = {}
 
         for name in self.transform.coord_names:
             # copy attributes, if any
             attrs: Mapping[Hashable, Any] | None
+            dims = self.transform.dims
 
             if variables is not None and name in variables:
                 var = variables[name]
                 attrs = var.attrs
+                # preserve a dims order that only differs from the transform's own
+                # by a transpose (e.g. set by a prior `Variable.transpose()` call),
+                # instead of silently reverting to the transform's original order.
+                # `CoordinateTransform.dims` is always `tuple[str, ...]`, so a
+                # `var.dims` matching it as a set is too.
+                if set(var.dims) == set(dims):
+                    dims = cast(tuple[str, ...], var.dims)
             else:
                 attrs = None
 
-            data = CoordinateTransformIndexingAdapter(self.transform, name)
-            new_variables[name] = Variable(self.transform.dims, data, attrs=attrs)
+            data = CoordinateTransformIndexingAdapter(self.transform, name, dims)
+            new_variables[name] = Variable(dims, data, attrs=attrs)
 
         return new_variables
 
+    @override
     def isel(
         self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> Index | None:
@@ -1508,6 +1597,7 @@ class CoordinateTransformIndex(Index):
         # the transform or calculate another transform on a reduced dimension space)
         return None
 
+    @override
     def sel(
         self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
@@ -1572,6 +1662,7 @@ class CoordinateTransformIndex(Index):
 
         return IndexSelResult(results)
 
+    @override
     def equals(
         self, other: Index, *, exclude: frozenset[Hashable] | None = None
     ) -> bool:
@@ -1579,6 +1670,7 @@ class CoordinateTransformIndex(Index):
             return False
         return self.transform.equals(other.transform, exclude=exclude)
 
+    @override
     def rename(
         self,
         name_dict: Mapping[Any, Hashable],
@@ -1653,10 +1745,9 @@ def create_default_index_implicit(
 
 
 # generic type that represents either a pandas or an xarray index
-T_PandasOrXarrayIndex = TypeVar("T_PandasOrXarrayIndex", Index, pd.Index)
 
 
-class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
+class Indexes[T_PandasOrXarrayIndex: (Index, pd.Index)](collections.abc.Mapping):
     """Immutable proxy for Dataset or DataArray indexes.
 
     It is a mapping where keys are coordinate names and values are either pandas
@@ -1687,7 +1778,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         variables: Mapping[Any, Variable] | None = None,
         index_type: type[Index | pd.Index] = Index,
     ):
-        """Constructor not for public consumption.
+        """Construct the object (not for public consumption).
 
         Parameters
         ----------
@@ -1767,7 +1858,6 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     def get_unique(self) -> list[T_PandasOrXarrayIndex]:
         """Return a list of unique indexes, preserving order."""
-
         unique_indexes: list[T_PandasOrXarrayIndex] = []
         seen: set[int] = set()
 
@@ -1780,9 +1870,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return unique_indexes
 
     def is_multi(self, key: Hashable) -> bool:
-        """Return True if ``key`` maps to a multi-coordinate index,
-        False otherwise.
-        """
+        """Return True if ``key`` maps to a multi-coordinate index, False otherwise."""
         return len(self._id_coord_names[self._coord_name_id[key]]) > 1
 
     def get_all_coords(
@@ -1842,8 +1930,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     def group_by_index(
         self,
     ) -> list[tuple[T_PandasOrXarrayIndex, dict[Hashable, Variable]]]:
-        """Returns a list of unique indexes and their corresponding coordinates."""
-
+        """Return a list of unique indexes and their corresponding coordinates."""
         index_coords = []
         for i, index in self._id_index.items():
             coords = {k: self._variables[k] for k in self._id_coord_names[i]}
@@ -1852,7 +1939,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return index_coords
 
     def to_pandas_indexes(self) -> Indexes[pd.Index]:
-        """Returns an immutable proxy for Dataset or DataArray pandas indexes.
+        """Return an immutable proxy for Dataset or DataArray pandas indexes.
 
         Raises an error if this proxy contains indexes that cannot be coerced to
         pandas.Index objects.
@@ -1871,8 +1958,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     def copy_indexes(
         self, deep: bool = True, memo: dict[int, T_PandasOrXarrayIndex] | None = None
     ) -> tuple[dict[Hashable, T_PandasOrXarrayIndex], dict[Hashable, Variable]]:
-        """Return a new dictionary with copies of indexes, preserving
-        unique indexes.
+        """Return a new dictionary with copies of indexes, preserving unique indexes.
 
         Parameters
         ----------
@@ -2143,7 +2229,10 @@ def _apply_indexes_fast(indexes: Indexes[Index], args: Mapping[Any, Any], func: 
             new_index = getattr(index, func)(index_args)
             if new_index is not None:
                 new_indexes.update(dict.fromkeys(index_vars, new_index))
-                new_index_vars = new_index.create_variables(index_vars)
+                if new_index is index:
+                    new_index_vars = index_vars
+                else:
+                    new_index_vars = new_index.create_variables(index_vars)
                 new_index_variables.update(new_index_vars)
             else:
                 for k in index_vars:
@@ -2226,7 +2315,6 @@ def assert_no_index_corrupted(
     action: str = "remove coordinate(s)",
 ) -> None:
     """Assert removing coordinates or indexes will not corrupt indexes."""
-
     # An index may be corrupted when the set of its corresponding coordinate name(s)
     # partially overlaps the set of coordinate names to remove
     for index, index_coords in indexes.group_by_index():

@@ -238,18 +238,21 @@ def _is_leap_year(years, calendar):
 
 
 def _days_in_year(years, calendar):
-    """The number of days in the year according to given calendar."""
+    """Return the number of days in the year according to given calendar."""
     if calendar == "360_day":
         return full_like(years, 360)
     return _is_leap_year(years, calendar).astype(int) + 365
 
 
 def _interpolate_day_of_year(times, target_calendar):
-    """Returns the nearest day in the target calendar of the corresponding "decimal year" in the source calendar."""
+    """Return the nearest day in the target calendar for the source day of year.
+
+    The nearest day corresponds to the "decimal year" in the source calendar.
+    """
     source_calendar = times.dt.calendar
     return np.round(
         _days_in_year(times.dt.year, target_calendar)
-        * times.dt.dayofyear
+        * times.dt.day_of_year
         / _days_in_year(times.dt.year, source_calendar)
     ).astype(int)
 
@@ -272,7 +275,7 @@ def _random_day_of_year(time, target_calendar, use_cftime):
         new_doy = np.insert(new_doy, rm_idx - np.arange(5), -1)
         if _days_in_year(year, source_calendar) == 366:
             new_doy = np.insert(new_doy, 60, -1)
-    return new_doy[time.dt.dayofyear - 1]
+    return new_doy[time.dt.day_of_year - 1]
 
 
 def _convert_to_new_calendar_with_new_day_of_year(
@@ -347,7 +350,9 @@ def _decimal_year(times):
 
 
 def interp_calendar(source, target, dim="time"):
-    """Interpolates a DataArray or Dataset indexed by a time coordinate to
+    """Interpolate a DataArray or Dataset to another calendar.
+
+    Interpolates a DataArray or Dataset indexed by a time coordinate to
     another calendar based on decimal year measure.
 
     Each timestamp in `source` and `target` are first converted to their decimal
@@ -369,8 +374,8 @@ def interp_calendar(source, target, dim="time"):
     dim : str
       The time coordinate name.
 
-    Return
-    ------
+    Returns
+    -------
     DataArray or Dataset
       The source interpolated on the decimal years of target,
     """

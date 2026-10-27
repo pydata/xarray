@@ -1,4 +1,5 @@
-"""
+"""Plotting functions for xarray objects.
+
 Use this module directly:
     import xarray.plot as xplt
 
@@ -13,6 +14,7 @@ from xarray.plot.dataarray_plot import (
     hist,
     imshow,
     line,
+    lines,
     pcolormesh,
     plot,
     step,
@@ -28,6 +30,7 @@ __all__ = [
     "hist",
     "imshow",
     "line",
+    "lines",
     "pcolormesh",
     "plot",
     "scatter",

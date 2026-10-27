@@ -379,12 +379,13 @@ class TestAncestry:
     def test_lineage(self) -> None:
         _, leaf_f = create_test_tree()
         expected = ["f", "e", "b", "a"]
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning) as record:
             assert [node.name for node in leaf_f.lineage] == expected
+        assert len(record) == 1
 
     def test_ancestors(self) -> None:
         _, leaf_f = create_test_tree()
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             ancestors = leaf_f.ancestors
         expected = ["a", "b", "e", "f"]
         for node, expected_name in zip(ancestors, expected, strict=True):
@@ -510,3 +511,13 @@ def test_nodepath():
     path = NodePath("/Mary")
     assert path.root == "/"
     assert path.stem == "Mary"
+
+
+@pytest.mark.parametrize(
+    "segments", [("//Mary",), ("//", "Mary"), ("Sue", "//Mary"), ("///Mary",)]
+)
+def test_nodepath_double_leading_slash(segments) -> None:
+    path = NodePath(*segments)
+    assert path.root == "/"
+    assert path == NodePath("/Mary")
+    assert NodePath("Sue") / "//Mary" == NodePath("/Mary")

@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 from pandas.api.extensions import ExtensionDtype
 
-from xarray.compat import array_api_compat, npcompat
-from xarray.compat.npcompat import HAS_STRING_DTYPE
+from xarray.compat import array_api_compat
 from xarray.core import utils
+from xarray.core.types import PDDatetimeUnitOptions
 
 if TYPE_CHECKING:
     from typing import Any
@@ -52,11 +52,11 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
     (np.bytes_, np.str_),  # numpy promotes to unicode
 )
 
-T_dtype = TypeVar("T_dtype", np.dtype, ExtensionDtype)
 
-
-def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
-    """Simpler equivalent of pandas.core.common._maybe_promote
+def maybe_promote[T_dtype: (np.dtype, ExtensionDtype)](
+    dtype: T_dtype,
+) -> tuple[T_dtype, Any]:
+    """Simpler equivalent of pandas.core.common._maybe_promote.
 
     Parameters
     ----------
@@ -76,7 +76,7 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
         raise TypeError(
             f"dtype {dtype} must be one of an extension array dtype or numpy dtype"
         )
-    elif HAS_STRING_DTYPE and np.issubdtype(dtype, np.dtypes.StringDType()):
+    elif np.issubdtype(dtype, np.dtypes.StringDType()):
         # for now, we always promote string dtypes to object for consistency with existing behavior
         # TODO: refactor this once we have a better way to handle numpy vlen-string dtypes
         dtype_ = object
@@ -88,7 +88,11 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
         # See https://github.com/numpy/numpy/issues/10685
         # np.timedelta64 is a subclass of np.integer
         # Check np.timedelta64 before np.integer
-        fill_value = np.timedelta64("NaT")
+        unit, _ = np.datetime_data(dtype)
+        # np.datetime_data returns a generic str for the unit so we need to
+        # cast it to a valid time unit for mypy purposes.
+        unit = cast(PDDatetimeUnitOptions, unit)
+        fill_value = np.timedelta64("NaT", unit)
         dtype_ = dtype
     elif isdtype(dtype, "integral"):
         dtype_ = np.float32 if dtype.itemsize <= 2 else np.float64
@@ -97,8 +101,12 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
         dtype_ = dtype
         fill_value = np.nan + np.nan * 1j
     elif np.issubdtype(dtype, np.datetime64):
+        unit, _ = np.datetime_data(dtype)
+        # np.datetime_data returns a generic str for the unit so we need to
+        # cast it to a valid time unit for mypy purposes.
+        unit = cast(PDDatetimeUnitOptions, unit)
         dtype_ = dtype
-        fill_value = np.datetime64("NaT")
+        fill_value = np.datetime64("NaT", unit)
     else:
         dtype_ = object
         fill_value = np.nan
@@ -106,9 +114,6 @@ def maybe_promote(dtype: T_dtype) -> tuple[T_dtype, Any]:
     dtype_out = np.dtype(dtype_)
     fill_value = dtype_out.type(fill_value)
     return dtype_out, fill_value
-
-
-NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
 
 
 def get_fill_value(dtype):
@@ -189,17 +194,17 @@ def get_neg_infinity(dtype, min_for_int=False):
 
 
 def is_datetime_like(dtype) -> bool:
-    """Check if a dtype is a subclass of the numpy datetime types"""
+    """Check if a dtype is a subclass of the numpy datetime types."""
     return _is_numpy_subdtype(dtype, (np.datetime64, np.timedelta64))
 
 
 def is_object(dtype) -> bool:
-    """Check if a dtype is object"""
+    """Check if a dtype is object."""
     return _is_numpy_subdtype(dtype, object)
 
 
 def is_string(dtype) -> bool:
-    """Check if a dtype is a string dtype"""
+    """Check if a dtype is a string dtype."""
     return _is_numpy_subdtype(dtype, (np.str_, np.character))
 
 
@@ -212,7 +217,7 @@ def _is_numpy_subdtype(dtype, kind) -> bool:
 
 
 def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
-    """Compatibility wrapper for isdtype() from the array API standard.
+    """Check the kind of a dtype, like ``isdtype`` from the array API standard.
 
     Unlike xp.isdtype(), kind must be a string.
     """
@@ -225,7 +230,7 @@ def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
         raise TypeError(f"kind must be a string or a tuple of strings: {kind!r}")
 
     if isinstance(dtype, np.dtype):
-        return npcompat.isdtype(dtype, kind)
+        return np.isdtype(dtype, kind)
     elif utils.is_allowed_extension_array_dtype(dtype):
         # we never want to match pandas extension array dtypes
         return False
@@ -266,7 +271,8 @@ def should_promote_to_object(
     ],
     xp,
 ) -> bool:
-    """
+    """Test whether the given arrays and dtypes should be promoted to object.
+
     Test whether the given arrays_and_dtypes, when evaluated individually, match the
     type promotion rules found in PROMOTE_TO_OBJECT.
     """

@@ -23,13 +23,13 @@ notebooks-examples:
     path: examples/ERA5-GRIB-example.html
     thumbnail: _static/thumbnails/ERA5-GRIB-example.png
 
+external-examples:
   - title: Applying unvectorized functions with apply_ufunc
-    path: examples/apply_ufunc_vectorize_1d.html
+    path: https://tutorial.xarray.dev/advanced/apply_ufunc/example-interp.html
     thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
-external-examples:
   - title: Managing raster data with rioxarray
-    path: https://corteva.github.io/rioxarray/stable/examples/examples.html
+    path: https://vylor.github.io/rioxarray/stable/examples/examples.html
     thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
   - title: Xarray and dask on the cloud with Pangeo
@@ -37,9 +37,9 @@ external-examples:
     thumbnail: https://avatars.githubusercontent.com/u/60833341?s=200&v=4
 
   - title: Xarray with Dask Arrays
-    path: https://examples.dask.org/xarray.html_
+    path: https://examples.dask.org/xarray.html
     thumbnail: _static/logos/Xarray_Logo_RGB_Final.svg
 
   - title: Project Pythia Foundations Book
-    path: https://foundations.projectpythia.org/core/xarray.html
+    path: https://foundations.projectpythia.org/core/xarray
     thumbnail: https://raw.githubusercontent.com/ProjectPythia/projectpythia.github.io/main/portal/_static/images/logos/pythia_logo-blue-btext-twocolor.svg
