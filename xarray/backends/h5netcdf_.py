@@ -17,6 +17,7 @@ from xarray.backends.common import (
     WritableCFDataStore,
     _normalize_path,
     _open_remote_file,
+    _raise_if_zarr_store,
     collect_ancestor_dimensions,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
@@ -491,8 +492,7 @@ def _normalize_filename_or_obj(
 ) -> str | ReadBuffer | AbstractDataStore:
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
-    # Zarr stores are part of T_PathFileOrDataStore, but not supported here; they
-    # are passed on to h5py, which raises for them.
+    _raise_if_zarr_store(filename_or_obj, "h5netcdf")
     return cast(
         "str | ReadBuffer | AbstractDataStore", _normalize_path(filename_or_obj)
     )

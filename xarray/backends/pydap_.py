@@ -13,6 +13,7 @@ from xarray.backends.common import (
     T_PathFileOrDataStore,
     _is_likely_dap_url,
     _normalize_path,
+    _raise_if_zarr_store,
     datatree_from_dict_with_io_cleanup,
     robust_getitem,
 )
@@ -140,12 +141,15 @@ class PydapDataStore(AbstractDataStore):
         elif hasattr(url, "ds"):
             # pydap dataset
             dataset = url.ds
+        else:
+            _raise_if_zarr_store(url, "pydap")
+            raise TypeError(f"invalid url for pydap backend: {url!r}")
         args = {"dataset": dataset, "checksums": checksums}
         if group:
             args["group"] = group
-        if url.startswith(("http", "dap2")):
+        if isinstance(url, str) and url.startswith(("http", "dap2")):
             args["protocol"] = "dap2"
-        elif url.startswith("dap4"):
+        elif isinstance(url, str) and url.startswith("dap4"):
             args["protocol"] = "dap4"
         return cls(**args)
 

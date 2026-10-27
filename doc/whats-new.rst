@@ -427,7 +427,9 @@ Bug Fixes
 - Add type annotations to all arguments of :py:func:`open_zarr`, so that type
   checkers accept its documented arguments and reject unknown ones.
   :py:func:`open_dataset`, :py:func:`open_dataarray`, :py:func:`open_datatree`
-  and :py:func:`open_groups` now also accept zarr stores in their type hints
+  and :py:func:`open_groups` now also accept zarr stores in their type hints.
+  Passing a zarr store to the ``netcdf4``, ``h5netcdf``, ``scipy`` or ``pydap``
+  engine raises a ``TypeError`` that points to ``engine="zarr"``
   (:issue:`11221`, :pull:`11226`).
   By `Carson Jones <https://github.com/wavebyrd>`_.
 

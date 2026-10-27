@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import time
 import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
@@ -48,6 +49,25 @@ logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = "__values__"
+
+
+def _raise_if_zarr_store(filename_or_obj: object, engine: str) -> None:
+    """Raise a helpful error if a backend other than zarr gets a zarr store."""
+    # zarr stores can only exist if zarr has been imported already
+    zarr_store = sys.modules.get("zarr.abc.store")
+    zarr_storage = sys.modules.get("zarr.storage")
+    if (
+        isinstance(filename_or_obj, Mapping)
+        or (zarr_store is not None and isinstance(filename_or_obj, zarr_store.Store))
+        or (
+            zarr_storage is not None
+            and isinstance(filename_or_obj, zarr_storage.StorePath)
+        )
+    ):
+        raise TypeError(
+            f"the {engine} backend cannot open zarr stores, got {filename_or_obj!r}. "
+            "Use engine='zarr' instead."
+        )
 
 
 @overload
