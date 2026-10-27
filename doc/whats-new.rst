@@ -55,10 +55,6 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
-- The ``FacetGrid.axes`` property, deprecated since v2022.11.0, has been
-  removed. Use ``FacetGrid.axs`` instead
-  (:issue:`11721`, :pull:`11766`).
-  By `Adrián Muñoz Perera <https://github.com/pereradrian>`_.
 - The ``interpolation`` argument of ``quantile`` on :py:class:`Dataset`,
   :py:class:`DataArray`, :py:class:`Variable` and groupby objects, deprecated
   since v2022.03.0, has been removed. Use ``method`` instead (:issue:`11721`, :pull:`11750`).
@@ -136,6 +132,10 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- The deprecation of ``FacetGrid.axes`` has been lifted: it is now a plain
+  alias of ``FacetGrid.axs``, which remains the preferred name, and no longer
+  emits a ``FutureWarning`` (:issue:`11721`, :pull:`11766`).
+  By `Adrián Muñoz Perera <https://github.com/pereradrian>`_.
 - Passing any argument after ``bins`` positionally to
   :py:meth:`Dataset.groupby_bins` and :py:meth:`DataArray.groupby_bins` is
   deprecated. It was meant to be deprecated in v2024.07.0, but the warning never

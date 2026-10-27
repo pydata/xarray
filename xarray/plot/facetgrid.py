@@ -115,6 +115,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
     axs : ndarray of matplotlib.axes.Axes
         Array containing axes in corresponding position, as returned from
         :py:func:`matplotlib.pyplot.subplots`.
+    axes : ndarray of matplotlib.axes.Axes
+        Alias of ``axs``, which is the preferred name.
     col_labels : list of matplotlib.text.Annotation
         Column titles.
     row_labels : list of matplotlib.text.Annotation
@@ -318,6 +320,15 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         self._cmap_extend = None
         self._mappables = []
         self._finalized = False
+
+    @property
+    def axes(self) -> np.ndarray:
+        """Alias of :py:attr:`axs`, which is the preferred name."""
+        return self.axs
+
+    @axes.setter
+    def axes(self, axs: np.ndarray) -> None:
+        self.axs = axs
 
     @property
     def _left_axes(self) -> np.ndarray:

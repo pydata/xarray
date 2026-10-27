@@ -3649,6 +3649,18 @@ def test_plot_empty_raises(val: list | float, method: str) -> None:
 
 
 @requires_matplotlib
+def test_facetgrid_axes_is_alias_of_axs() -> None:
+    with figure_context():
+        ds = xr.tutorial.scatter_example_dataset()
+        g = ds.plot.scatter(x="A", y="B", col="x")
+        with assert_no_warnings():
+            assert g.axes is g.axs
+            axs = g.axs
+            g.axes = axs[:1]
+            assert g.axs is g.axes
+
+
+@requires_matplotlib
 def test_plot1d_default_rcparams() -> None:
     import matplotlib as mpl
 

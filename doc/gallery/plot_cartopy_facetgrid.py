@@ -34,7 +34,7 @@ p = air.plot(
 )
 
 # We have to set the map's options on all four axes
-for ax in p.axs.flat:
+for ax in p.axes.flat:
     ax.coastlines()
     ax.set_extent([-160, -30, 5, 75])
     # Without this aspect attributes the maps will look chaotic and the
