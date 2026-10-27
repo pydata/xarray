@@ -11,6 +11,7 @@ from xarray.backends.api import (
     open_groups,
     open_mfdataset,
 )
+from xarray.backends.plugins import show_backends
 from xarray.backends.writers import save_mfdataset
 from xarray.backends.zarr import open_zarr
 from xarray.coding.cftime_offsets import cftime_range, date_range, date_range_like
@@ -114,6 +115,7 @@ __all__ = (  # noqa: RUF022
     "register_datatree_accessor",
     "save_mfdataset",
     "set_options",
+    "show_backends",
     "show_versions",
     "unify_chunks",
     "where",

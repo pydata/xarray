@@ -521,7 +521,7 @@ def _get_interpolator(
             utils.emit_user_level_warning(
                 "The 1d SplineInterpolator class is performing an incorrect calculation and "
                 "is being deprecated. Please use `method=polynomial` for 1D Spline Interpolation.",
-                PendingDeprecationWarning,
+                FutureWarning,
             )
             if vectorizeable_only:
                 raise ValueError(f"{method} is not a vectorizeable interpolator. ")

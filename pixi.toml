@@ -187,7 +187,7 @@ generate-ops-ci = { cmd = 'test -z "$(git status --porcelain)" && echo "Success!
 ] }
 
 [feature.doc.dependencies]
-python = "3.14.*"
+python = "3.15.*"
 cartopy_offlinedata = "*"          # Natural Earth data, avoids downloads (and timeouts) while executing notebooks
 kerchunk = "*"
 ipykernel = "*"
@@ -414,6 +414,9 @@ dask-core = "<0.0a0"
 [feature.nightly.dependencies]
 python = "*"
 
+[feature.py315.dependencies]
+python = "3.15.*"
+
 [environments]
 # Testing
 # test-just-xarray = { features = ["test"] } # https://github.com/pydata/xarray/pull/10888/files#r2511336147
@@ -427,8 +430,8 @@ test-py313 = { features = [
   "viz",
   "extras",
 ] }
-test-py314-no-numba = { features = [
-  "py314",
+test-py315-no-numba = { features = [
+  "py315",
   "test",
   "backends",
   "accel",
@@ -436,7 +439,7 @@ test-py314-no-numba = { features = [
   "viz",
   "extras",
 ] }
-test-py314-no-dask = { features = [
+test-py315-no-dask = { features = [
   "py314",
   "nodask",
   "test",
@@ -468,6 +471,17 @@ test-py312 = { features = [
   "extras",
 ] }
 
+test-py315 = { features = [
+  "py315",
+  "test",
+  "backends",
+  "accel",
+  "numba",
+  "dask",
+  "viz",
+  "extras",
+] }
+
 test-py312-with-typing = { features = [
   "py312",
   "test",
@@ -481,8 +495,8 @@ test-py312-with-typing = { features = [
   "typing-stubs",
 ] }
 
-test-py314-with-typing = { features = [
-  "py314",
+test-py315-with-typing = { features = [
+  "py315",
   "test",
   "backends",
   "accel",
@@ -522,7 +536,7 @@ doc = { features = [
 pre-commit = { features = ["pre-commit"], no-default-feature = true }
 release = { features = ["release"], no-default-feature = true }
 default = { features = [
-  "py313",
+  "py315",
   "test",
   "backends",
   "accel",
