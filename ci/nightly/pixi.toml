@@ -2,7 +2,7 @@
 preview = ["pixi-build"]
 channels = ["conda-forge", "nodefaults"]
 platforms = ["linux-64"]
-requires-pixi = ">=0.63.2,!=0.68.0"
+requires-pixi = ">=0.82.1"
 
 [feature.test.dependencies]
 pytest = "!=9.1.0"

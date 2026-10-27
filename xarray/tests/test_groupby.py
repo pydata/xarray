@@ -274,6 +274,33 @@ def test_ds_groupby_map_func_args() -> None:
     assert_identical(expected, actual)
 
 
+@pytest.mark.parametrize("use_da", [True, False])
+def test_groupby_apply_deprecated(use_da: bool) -> None:
+    obj: xr.DataArray | xr.Dataset = xr.DataArray(
+        [1.0, 2.0, 3.0, 4.0], [("x", [1, 1, 2, 2])]
+    )
+    if not use_da:
+        obj = obj.to_dataset(name="foo")
+
+    expected = obj.groupby("x").map(lambda g: g - g.mean())
+    with pytest.warns(FutureWarning, match=r"GroupBy\.apply is deprecated"):
+        actual = obj.groupby("x").apply(lambda g: g - g.mean())
+    assert_identical(expected, actual)
+
+
+@pytest.mark.parametrize("use_da", [True, False])
+def test_resample_apply_deprecated(use_da: bool) -> None:
+    times = pd.date_range("2000-01-01", freq="6h", periods=8)
+    obj: xr.DataArray | xr.Dataset = xr.DataArray(np.arange(8.0), [("time", times)])
+    if not use_da:
+        obj = obj.to_dataset(name="foo")
+
+    expected = obj.resample(time="1D").map(lambda g: g.mean("time"))
+    with pytest.warns(FutureWarning, match=r"Resample\.apply is deprecated"):
+        actual = obj.resample(time="1D").apply(lambda g: g.mean("time"))
+    assert_identical(expected, actual)
+
+
 def test_da_groupby_empty() -> None:
     empty_array = xr.DataArray([], dims="dim")
 
@@ -2945,9 +2972,7 @@ def test_cftime_resample_gh_9108() -> None:
 
 def test_custom_grouper() -> None:
     class YearGrouper(Grouper):
-        """
-        An example re-implementation of ``.groupby("time.year")``.
-        """
+        """An example re-implementation of ``.groupby("time.year")``."""
 
         def factorize(self, group) -> EncodedGroups:
             assert np.issubdtype(group.dtype, np.datetime64)
@@ -3899,7 +3924,7 @@ def test_datetime_mean(use_dask, use_cftime):
 
 
 def test_mean_with_mixed_types():
-    """Test that mean correctly handles datasets with mixed types including strings"""
+    """Test that mean correctly handles datasets with mixed types including strings."""
     ds = xr.Dataset(
         {
             "numbers": (("x",), [1.0, 2.0, 3.0, 4.0]),
@@ -3934,7 +3959,7 @@ def test_mean_with_mixed_types():
 
 
 def test_mean_with_string_coords():
-    """Test that mean works when strings are in coordinates, not data vars"""
+    """Test that mean works when strings are in coordinates, not data vars."""
     ds = xr.Dataset(
         {
             "temperature": (("city", "time"), np.random.rand(3, 4)),
@@ -3960,7 +3985,7 @@ def test_mean_with_string_coords():
 
 
 def test_mean_datetime_edge_cases():
-    """Test mean with datetime edge cases like NaT"""
+    """Test mean with datetime edge cases like NaT."""
     # Test with NaT values
     dates_with_nat = pd.date_range("2021-01-01", periods=4, freq="D")
     dates_with_nat_array = dates_with_nat.values.copy()
@@ -3998,7 +4023,7 @@ def test_mean_datetime_edge_cases():
 
 @requires_cftime
 def test_mean_with_cftime_objects():
-    """Test mean with cftime objects (issue #5897)"""
+    """Test mean with cftime objects (issue #5897)."""
     ds = xr.Dataset(
         {
             "var1": (
@@ -4044,7 +4069,7 @@ def test_mean_with_cftime_objects():
 @requires_dask
 @requires_cftime
 def test_mean_with_cftime_objects_dask():
-    """Test mean with cftime objects using dask backend (issue #5897)"""
+    """Test mean with cftime objects using dask backend (issue #5897)."""
     ds = xr.Dataset(
         {
             "var1": (
@@ -4066,7 +4091,7 @@ def test_mean_with_cftime_objects_dask():
 
 
 def test_groupby_bins_datetime_mean():
-    """Test groupby_bins with datetime mean (issue #6995)"""
+    """Test groupby_bins with datetime mean (issue #6995)."""
     times = pd.date_range("2020-01-01", "2020-02-01", freq="1h", unit="ns")
     index = np.arange(len(times))
     bins = np.arange(0, len(index), 5)
@@ -4084,7 +4109,7 @@ def test_groupby_bins_datetime_mean():
 
 
 def test_groupby_bins_mean_time_series():
-    """Test groupby_bins mean on time series data (issue #10217)"""
+    """Test groupby_bins mean on time series data (issue #10217)."""
     ds = xr.Dataset(
         {
             "measurement": ("trial", np.arange(0, 100, 10)),

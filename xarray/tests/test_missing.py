@@ -143,7 +143,10 @@ def test_scipy_methods_function(method) -> None:
     # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
     if method == "spline":
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(
+            FutureWarning,
+            match="The 1d SplineInterpolator class is performing an incorrect calculation",
+        ):
             actual = da.interpolate_na(method=method, dim="time")
     else:
         actual = da.interpolate_na(method=method, dim="time")
@@ -443,9 +446,7 @@ def test_ffill():
 @pytest.mark.parametrize("compute_backend", [None], indirect=True)
 @pytest.mark.parametrize("method", ["ffill", "bfill"])
 def test_b_ffill_use_bottleneck_numbagg(method, compute_backend):
-    """
-    bfill & ffill fail if both bottleneck and numba are disabled
-    """
+    """Bfill & ffill fail if both bottleneck and numba are disabled."""
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     with pytest.raises(RuntimeError):
         getattr(da, method)("x")
@@ -455,9 +456,7 @@ def test_b_ffill_use_bottleneck_numbagg(method, compute_backend):
 @pytest.mark.parametrize("compute_backend", [None], indirect=True)
 @pytest.mark.parametrize("method", ["ffill", "bfill"])
 def test_b_ffill_use_bottleneck_dask(method, compute_backend):
-    """
-    ffill fails if both bottleneck and numba are disabled, on dask arrays
-    """
+    """Ffill fails if both bottleneck and numba are disabled, on dask arrays."""
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     with pytest.raises(RuntimeError):
         getattr(da, method)("x")
@@ -608,9 +607,11 @@ def test_interpolate_na_nan_block_lengths(y, lengths_expected):
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
-    """The index for CFTimeIndex is in units of days. This means that if two series using a 360 and 365 days
-    calendar each have a trend of .01C/year, the linear regression coefficients will be different because they
-    have different number of days.
+    """Test that the interpolation index of a CFTimeIndex is in units of days.
+
+    This means that if two series using a 360 and 365 days calendar each have a
+    trend of .01C/year, the linear regression coefficients will be different
+    because they have different number of days.
 
     Another option would be to have an index in units of years, but this would likely create other difficulties.
     """
@@ -762,8 +763,7 @@ def test_interpolate_na_2d(coords):
 
 @requires_scipy
 def test_interpolators_complex_out_of_bounds():
-    """Ensure complex nans are used for complex data"""
-
+    """Ensure complex nans are used for complex data."""
     xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
     yi = np.exp(1j * xi)
     x = np.array([-2, 1, 6], dtype=np.float64)

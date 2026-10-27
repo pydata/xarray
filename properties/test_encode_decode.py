@@ -1,5 +1,4 @@
-"""
-Property-based tests for encoding/decoding methods.
+"""Property-based tests for encoding/decoding methods.
 
 These ones pass, just as you'd hope!
 

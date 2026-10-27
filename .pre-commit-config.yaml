@@ -29,6 +29,13 @@ repos:
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
+      - id: ruff-check
+        # docstring preview rules: section order (D420) and documented parameters,
+        # returns and yields (DOC102, DOC202, DOC402); run them separately so
+        # preview mode doesn't change the behavior of the other rules
+        name: ruff check docstring preview rules
+        alias: ruff-check-docstring-sections
+        args: ["--preview", "--select", "D420,DOC102,DOC202,DOC402"]
       - id: ruff-format
   - repo: https://github.com/keewis/blackdoc
     rev: v0.4.6

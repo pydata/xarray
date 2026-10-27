@@ -1,4 +1,7 @@
-"""isort:skip_file"""
+"""Tests for using xarray with dask.distributed.
+
+isort:skip_file
+"""
 
 from __future__ import annotations
 

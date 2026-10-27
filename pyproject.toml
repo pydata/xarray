@@ -9,6 +9,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Scientific/Engineering",
 ]
 description = "N-D labeled arrays and datasets in Python"
@@ -151,6 +152,7 @@ module = [
   "fsspec.*",
   "h5netcdf.*",
   "h5py.*",
+  "IPython.*",
   "iris.*",
   "mpl_toolkits.*",
   "nc_time_axis.*",
@@ -265,12 +267,18 @@ extend-select = [
   "UP",   # pyupgrade
   "FURB", # refurb
   "RUF",
+  "D",    # pydocstyle
+  "D212", # summary on the first line, not part of the numpy convention
+  "D402", # signature in the summary, not part of the numpy convention
 ]
+# these preview rules only run in a separate pre-commit hook, keep their noqa comments
+external = ["D420", "DOC102", "DOC202", "DOC402"]
 extend-safe-fixes = [
   "TID252", # absolute imports
 ]
 ignore = [
   "C40",     # unnecessary generator, comprehension, or literal
+  "D1",      # missing docstrings
   "PIE790",  # unnecessary pass statement
   "PYI019",  # use `Self` instead of custom TypeVar
   "PYI041",  # use `float` instead of `int | float`
@@ -314,6 +322,13 @@ ignore = [
 # looks like ruff bugs
 "xarray/core/_typed_ops.py" = ["PYI034"]
 "xarray/namedarray/_typing.py" = ["PYI018", "PYI046"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.pydoclint]
+# e.g. private generators like `_iter_parents` don't need a Yields section
+ignore-one-line-docstrings = true
 
 [tool.ruff.lint.isort]
 known-first-party = ["xarray"]

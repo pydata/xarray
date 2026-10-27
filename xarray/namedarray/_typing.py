@@ -109,8 +109,7 @@ class SupportsImag[T](Protocol):
 
 @runtime_checkable
 class array[ShapeType, DType: np.dtype[Any]](Protocol):
-    """
-    Minimal duck array named array uses.
+    """Minimal duck array named array uses.
 
     Corresponds to np.ndarray.
     """
@@ -124,8 +123,7 @@ class array[ShapeType, DType: np.dtype[Any]](Protocol):
 
 @runtime_checkable
 class arrayfunction[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Protocol):
-    """
-    Duck array supporting NEP 18.
+    """Duck array supporting NEP 18.
 
     Corresponds to np.ndarray.
     """
@@ -189,8 +187,7 @@ class arrayfunction[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Pr
 
 @runtime_checkable
 class arrayapi[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Protocol):
-    """
-    Duck array supporting NEP 47.
+    """Duck array supporting NEP 47.
 
     Corresponds to np.ndarray.
     """
@@ -224,8 +221,7 @@ type NestedList[T] = list[T] | list[list[T]] | list[list[list[T]]]
 
 @runtime_checkable
 class chunkedarray[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Protocol):
-    """
-    Minimal chunked duck array.
+    """Minimal chunked duck array.
 
     Corresponds to np.ndarray.
     """
@@ -238,8 +234,7 @@ class chunkedarray[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Pro
 class chunkedarrayfunction[ShapeType, DType: np.dtype[Any]](
     arrayfunction[ShapeType, DType], Protocol
 ):
-    """
-    Chunked duck array supporting NEP 18.
+    """Chunked duck array supporting NEP 18.
 
     Corresponds to np.ndarray.
     """
@@ -252,8 +247,7 @@ class chunkedarrayfunction[ShapeType, DType: np.dtype[Any]](
 class chunkedarrayapi[ShapeType, DType: np.dtype[Any]](
     arrayapi[ShapeType, DType], Protocol
 ):
-    """
-    Chunked duck array supporting NEP 47.
+    """Chunked duck array supporting NEP 47.
 
     Corresponds to np.ndarray.
     """
@@ -271,8 +265,7 @@ type chunkedduckarray[ShapeType, DType: np.dtype[Any]] = (  # noqa: PYI042
 
 @runtime_checkable
 class sparsearray[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Protocol):
-    """
-    Minimal sparse duck array.
+    """Minimal sparse duck array.
 
     Corresponds to np.ndarray.
     """
@@ -284,8 +277,7 @@ class sparsearray[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Prot
 class sparsearrayfunction[ShapeType, DType: np.dtype[Any]](
     arrayfunction[ShapeType, DType], Protocol
 ):
-    """
-    Sparse duck array supporting NEP 18.
+    """Sparse duck array supporting NEP 18.
 
     Corresponds to np.ndarray.
     """
@@ -297,8 +289,7 @@ class sparsearrayfunction[ShapeType, DType: np.dtype[Any]](
 class sparsearrayapi[ShapeType, DType: np.dtype[Any]](
     arrayapi[ShapeType, DType], Protocol
 ):
-    """
-    Sparse duck array supporting NEP 47.
+    """Sparse duck array supporting NEP 47.
 
     Corresponds to np.ndarray.
     """

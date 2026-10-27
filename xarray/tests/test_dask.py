@@ -271,7 +271,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         with pytest.raises(NotImplementedError, match="dask"):
             v.argsort()
-        with pytest.raises(NotImplementedError, match="dask"):
+        with pytest.raises(NotImplementedError, match="Load the data into memory"):
             v[0].item()  # type: ignore[attr-defined]
 
     def test_univariate_ufunc(self):
@@ -1019,6 +1019,7 @@ kernel_call_count = 0
 
 def kernel(name):
     """Dask kernel to test pickling/unpickling and __repr__.
+
     Must be global to make it pickleable.
     """
     global kernel_call_count
@@ -1723,7 +1724,7 @@ def test_token_identical(obj, transform):
     ],
 )
 def test_tokenize_empty_attrs(obj):
-    """Issues #6970 and #8788"""
+    """Test tokenizing objects with empty attrs (issues #6970 and #8788)."""
     obj.attrs = {}
     assert obj._attrs is None
     a = dask.base.tokenize(obj)
@@ -1739,8 +1740,9 @@ def test_tokenize_empty_attrs(obj):
 
 
 def test_recursive_token():
-    """Test that tokenization is invoked recursively, and doesn't just rely on the
-    output of str()
+    """Test that tokenization is invoked recursively.
+
+    Tokenization must not just rely on the output of str().
     """
     a = np.ones(10000)
     b = np.ones(10000)
@@ -1879,7 +1881,9 @@ def test_optimize():
 
 @pytest.mark.skip_with_dask_array
 def test_graph_manipulation():
-    """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
+    """Test compatibility with dask.graph_manipulation.
+
+    dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
     function returned by __dask_postperist__; also, the dsk passed to the rebuilder is
     a HighLevelGraph whereas with dask.persist() and dask.optimize() it's a plain dict.
     """
