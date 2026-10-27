@@ -1,53 +1,55 @@
-"""
-External accessor support for xarray.
+"""Static type hints for popular external accessors.
 
-This module provides mixin classes with typed properties for external accessor
-packages, enabling full IDE support (autocompletion, parameter hints, docstrings)
-for packages like hvplot, cf-xarray, pint-xarray, rioxarray, and xarray-plotly.
+Accessors registered with :py:func:`register_dataarray_accessor` and
+:py:func:`register_dataset_accessor` only exist at runtime, so type checkers
+and IDEs can't know about them. The mixins below declare the accessors of some
+widely used packages, which gives autocompletion, parameter hints and
+docstrings for them.
 
-Properties are defined statically for IDE support
+The accessor classes are only imported for type checking, so none of these
+packages is a dependency of xarray. If a package isn't installed, type checkers
+treat its accessor as ``Any``, and at runtime the attribute doesn't exist.
+
+Packages are listed here if they are widely used, maintained and the accessor is
+their main API. Their modules need an ``ignore_missing_imports`` entry for mypy
+in ``pyproject.toml``. ``xarray/tests/test_accessors.py`` checks that the imports
+below resolve when the packages are installed.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from cf_xarray.accessor import CFAccessor
-    from hvplot.xarray import hvPlotAccessor
-    from pint_xarray import PintDataArrayAccessor, PintDatasetAccessor
-    from rioxarray import RasterArray, RasterDataset
+    from hvplot.plotting.core import hvPlot
+    from pint_xarray.accessors import PintDataArrayAccessor, PintDatasetAccessor
+    from rioxarray.raster_array import RasterArray
+    from rioxarray.raster_dataset import RasterDataset
     from xarray_plotly import DataArrayPlotlyAccessor, DatasetPlotlyAccessor
+
+    from xarray.core.extensions import _CachedAccessor
 
 
 class DataArrayExternalAccessorMixin:
-    """Mixin providing typed external accessor properties for DataArray."""
+    """Mixin declaring the accessors of external packages for DataArray."""
 
     __slots__ = ()
 
-    hvplot: ClassVar[type[hvPlotAccessor]]
-    cf: ClassVar[type[CFAccessor]]
-    pint: ClassVar[type[PintDataArrayAccessor]]
-    rio: ClassVar[type[RasterArray]]
-    plotly: ClassVar[type[DataArrayPlotlyAccessor]]
+    cf: _CachedAccessor[CFAccessor]
+    hvplot: _CachedAccessor[hvPlot]
+    pint: _CachedAccessor[PintDataArrayAccessor]
+    plotly: _CachedAccessor[DataArrayPlotlyAccessor]
+    rio: _CachedAccessor[RasterArray]
 
 
 class DatasetExternalAccessorMixin:
-    """Mixin providing typed external accessor properties for Dataset."""
+    """Mixin declaring the accessors of external packages for Dataset."""
 
     __slots__ = ()
 
-    hvplot: ClassVar[type[hvPlotAccessor]]
-    cf: ClassVar[type[CFAccessor]]
-    pint: ClassVar[type[PintDatasetAccessor]]
-    rio: ClassVar[type[RasterDataset]]
-    plotly: ClassVar[type[DatasetPlotlyAccessor]]
-
-
-class DataTreeExternalAccessorMixin:
-    """Mixin providing typed external accessor properties for DataTree."""
-
-    __slots__ = ()
-
-    hvplot: ClassVar[type[hvPlotAccessor]]
-    cf: ClassVar[type[CFAccessor]]
+    cf: _CachedAccessor[CFAccessor]
+    hvplot: _CachedAccessor[hvPlot]
+    pint: _CachedAccessor[PintDatasetAccessor]
+    plotly: _CachedAccessor[DatasetPlotlyAccessor]
+    rio: _CachedAccessor[RasterDataset]

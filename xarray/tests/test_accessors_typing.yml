@@ -1,0 +1,31 @@
+- case: test_mypy_cached_accessor_types
+  main: |
+    from xarray import Dataset
+    from xarray.core.extensions import _CachedAccessor
+
+    class GeoAccessor:
+        def __init__(self, obj: Dataset) -> None:
+            self._obj = obj
+
+        def center(self) -> float:
+            return 0.0
+
+    class GeoDataset(Dataset):
+        __slots__ = ()
+        geo: _CachedAccessor[GeoAccessor]
+
+    ds = GeoDataset()
+    reveal_type(ds.geo)  # N: Revealed type is "main.GeoAccessor"
+    reveal_type(ds.geo.center())  # N: Revealed type is "float"
+    reveal_type(GeoDataset.geo)  # N: Revealed type is "type[main.GeoAccessor]"
+
+- case: test_mypy_external_accessors_without_packages
+  main: |
+    from xarray import DataArray, Dataset
+
+    ds = Dataset()
+    ds.cf.keys()
+    ds.rio.reproject("EPSG:4326")
+    DataArray().pint.quantify("m")
+    ds.hvplot.line()
+    ds.plotly.line()
