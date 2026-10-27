@@ -61,6 +61,7 @@ from xarray.core.utils import (
     _default,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
+    emit_user_level_warning,
     maybe_wrap_array,
     parse_dims_as_set,
 )
@@ -700,9 +701,24 @@ class DataTree(
         ds = _to_new_dataset(data)
         self._replace_node(ds)
 
-    # soft-deprecated alias, to facilitate the transition from
+    # deprecated alias, to facilitate the transition from
     # xarray-contrib/datatree
-    ds = dataset
+    @property
+    def ds(self) -> DatasetView:
+        """Deprecated alias of :py:attr:`DataTree.dataset`."""
+        emit_user_level_warning(
+            "DataTree.ds is deprecated, use DataTree.dataset instead.",
+            FutureWarning,
+        )
+        return self.dataset
+
+    @ds.setter
+    def ds(self, data: Dataset | None = None) -> None:
+        emit_user_level_warning(
+            "DataTree.ds is deprecated, use DataTree.dataset instead.",
+            FutureWarning,
+        )
+        self.dataset = data  # type: ignore[assignment,unused-ignore]
 
     def to_dataset(
         self, inherit: bool | Literal["all_coords", "indexes"] = True

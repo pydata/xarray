@@ -493,13 +493,6 @@ class Dataset(
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self._encoding = dict(value)
 
-    def reset_encoding(self) -> Self:
-        emit_user_level_warning(
-            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
-            FutureWarning,
-        )
-        return self.drop_encoding()
-
     def drop_encoding(self) -> Self:
         """Return a new Dataset without encoding.
 
@@ -3934,6 +3927,12 @@ class Dataset(
         - When interpolating along multiple dimensions with methods `linear` and `nearest`,
             the process attempts to decompose the interpolation into independent interpolations
             along one dimension at a time.
+        - For Dask arrays, the chunks along the interpolated dimensions are merged
+            into a single chunk. With methods `linear` and `nearest`, the data is
+            first subset to the range of the new coordinates, so only the chunks that
+            are needed are read. This only happens if the new coordinates are in
+            memory, so loading chunked new coordinates first (e.g. with ``.compute()``)
+            can reduce the memory use considerably if they are cheap to compute.
         - The specific interpolation method and dimensionality determine which
             interpolant is used:
 
@@ -7187,10 +7186,9 @@ class Dataset(
         --------
         Dataset.map
         """
-        warnings.warn(
-            "Dataset.apply may be deprecated in the future. Using Dataset.map is encouraged",
-            PendingDeprecationWarning,
-            stacklevel=2,
+        emit_user_level_warning(
+            "Dataset.apply is deprecated, use Dataset.map instead.",
+            FutureWarning,
         )
         return self.map(func, keep_attrs, args, **kwargs)
 
@@ -7348,6 +7346,10 @@ class Dataset(
         self, dim: Hashable = "variable", name: Hashable | None = None
     ) -> DataArray:
         """Convert this dataset into a DataArray (deprecated, use to_dataarray)."""
+        emit_user_level_warning(
+            "Dataset.to_array is deprecated, use Dataset.to_dataarray instead.",
+            FutureWarning,
+        )
         return self.to_dataarray(dim=dim, name=name)
 
     def _normalize_dim_order(
@@ -10053,9 +10055,12 @@ class Dataset(
                 msg = f"expr for dim {dim} must be a string to be evaluated, {type(expr)} given"
                 raise ValueError(msg)
 
-        # evaluate the queries to create the indexers
+        # Include coords so pandas considers the resolvers nonempty even when
+        # there are no data variables.
         indexers = {
-            dim: pd.eval(expr, resolvers=[self], parser=parser, engine=engine)
+            dim: pd.eval(
+                expr, resolvers=[self, self.coords], parser=parser, engine=engine
+            )
             for dim, expr in queries.items()
         }
 
