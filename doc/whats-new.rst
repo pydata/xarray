@@ -215,6 +215,11 @@ Bug Fixes
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
   By `Huashuo Lei <https://github.com/wpyaoxueros>`_.
+- :py:meth:`DataArray.str.zfill` now keeps a leading ``+`` or ``-`` sign in front
+  of the zeros, like :py:meth:`str.zfill`, :py:func:`numpy.strings.zfill` and
+  :py:meth:`pandas.Series.str.zfill`. Previously the zeros were put before the
+  sign, e.g. ``"-12"`` became ``"0-12"`` instead of ``"-012"`` for ``width=4``.
+  By `Alexander Kropiunig <https://github.com/Kropiunig>`_.
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
