@@ -160,6 +160,10 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- The deprecation of ``FacetGrid.axes`` has been lifted: it is now a plain
+  alias of ``FacetGrid.axs``, which remains the preferred name, and no longer
+  emits a ``FutureWarning`` (:issue:`11721`, :pull:`11766`).
+  By `Adrián Muñoz Perera <https://github.com/pereradrian>`_.
 - The deprecated ``dims=`` (or ``dimensions=``) argument renamed to ``dim=``
   and ``interpolate_na(method="spline")`` now emit a ``FutureWarning`` instead
   of a ``PendingDeprecationWarning``, so these warnings are visible by default
