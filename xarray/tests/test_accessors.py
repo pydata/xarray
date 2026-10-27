@@ -38,7 +38,11 @@ def test_external_accessor_import(module: str, name: str) -> None:
 
 @pytest.mark.parametrize(
     "mixin",
-    [accessors.DataArrayExternalAccessorMixin, accessors.DatasetExternalAccessorMixin],
+    [
+        accessors.DataArrayExternalAccessorMixin,
+        accessors.DatasetExternalAccessorMixin,
+        accessors.DataTreeExternalAccessorMixin,
+    ],
 )
 def test_external_accessors_not_defined_at_runtime(mixin: type) -> None:
     assert mixin.__annotations__
