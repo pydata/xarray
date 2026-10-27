@@ -390,6 +390,11 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- :py:meth:`Dataset.isel`, :py:meth:`Dataset.sel`, :py:meth:`DataArray.isel` and
+  :py:meth:`DataArray.sel` now honor ``drop=True`` when a custom index preserves
+  selected coordinates as scalars. They now raise when only some of an index's
+  coordinates would be dropped, instead of silently keeping them (:pull:`11617`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix the ``preferred_chunks`` encoding of sharded Zarr variables read with
   :py:func:`open_zarr`: it now holds the shard (outer/storage chunk) sizes
   instead of the inner chunk sizes, so the default dask chunks align with the
