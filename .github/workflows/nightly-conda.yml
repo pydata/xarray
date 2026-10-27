@@ -47,7 +47,7 @@ jobs:
       always()
       && github.repository == 'pydata/xarray'
       && (
-        github.event_name == 'workflow_dispatch'
+        (github.event_name == 'workflow_dispatch' && needs.check-recent-commits.outputs.recent-commits-found)
         || (github.event_name == 'schedule' && needs.check-recent-commits.outputs.recent-commits-found)
       )
 
