@@ -1,3 +1,5 @@
+# None of these packages is a dependency of xarray
+# pyright: reportMissingImports=false
 """Static type hints for popular external accessors.
 
 Accessors registered with :py:func:`register_dataarray_accessor` and
