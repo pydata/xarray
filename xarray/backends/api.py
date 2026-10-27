@@ -419,13 +419,14 @@ def open_dataset(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview, DataStore or zarr store
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Bytes, memoryview and
         file-like objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf
-        (netCDF4).
+        (netCDF4). Zarr stores (see ``zarr.storage.StoreLike``) are opened
+        with ``engine="zarr"``.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -675,13 +676,14 @@ def open_dataarray(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview, DataStore or zarr store
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Bytes, memoryview and
         file-like objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf
-        (netCDF4).
+        (netCDF4). Zarr stores (see ``zarr.storage.StoreLike``) are opened
+        with ``engine="zarr"``.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -911,10 +913,11 @@ def open_datatree(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview, DataStore or zarr store
         Strings and Path objects are interpreted as a path to a netCDF file or
         Zarr store. Bytes and memoryview objects are interpreted as file
-        contents.
+        contents. Zarr stores (see ``zarr.storage.StoreLike``) are opened with
+        ``engine="zarr"``.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -1163,10 +1166,11 @@ def open_groups(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview, DataStore or zarr store
         Strings and Path objects are interpreted as a path to a netCDF file or
         Zarr store. Bytes and memoryview objects are interpreted as file
-        contents.
+        contents. Zarr stores (see ``zarr.storage.StoreLike``) are opened with
+        ``engine="zarr"``.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine

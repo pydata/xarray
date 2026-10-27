@@ -39,7 +39,7 @@ from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
-    from xarray.core.types import NestedSequence
+    from xarray.core.types import NestedSequence, ZarrStoreLike
 
     T_Name = Union[Hashable, None]
 
@@ -380,7 +380,13 @@ class AbstractDataStore:
 
 
 type T_PathFileOrDataStore = (
-    str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+    str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore
+    | ZarrStoreLike
 )
 
 

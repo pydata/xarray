@@ -1713,9 +1713,7 @@ def open_zarr(
     }
 
     ds = open_dataset(
-        # zarr stores aren't part of T_PathFileOrDataStore, but the zarr backend
-        # passes them through to zarr
-        filename_or_obj=cast("T_PathFileOrDataStore", store),
+        filename_or_obj=store,
         group=group,
         decode_cf=decode_cf,
         mask_and_scale=mask_and_scale,

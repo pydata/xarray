@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, override
 
 import numpy as np
 
@@ -28,11 +27,8 @@ from xarray.core.variable import Variable
 from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
-    import os
-
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ReadBuffer
 
 
 class PydapArrayWrapper(BackendArray):
@@ -264,9 +260,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
     @override
     def open_dataset(
         self,
-        filename_or_obj: (
-            str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
-        ),
+        filename_or_obj: T_PathFileOrDataStore,
         *,
         mask_and_scale=True,
         decode_times=True,
