@@ -161,7 +161,7 @@ levels : int or array-like, optional
     )
     def newplotfunc(
         ds: Dataset,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
@@ -193,12 +193,6 @@ levels : int or array-like, optional
         levels: ArrayLike | None = None,
         **kwargs: Any,
     ) -> Any:
-        if args:
-            raise TypeError(
-                "Using positional arguments is not supported for plot methods, use keyword arguments instead."
-            )
-        del args
-
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
         if _is_facetgrid:  # facetgrid call
             meta_data = kwargs.pop("meta_data")
@@ -307,7 +301,7 @@ levels : int or array-like, optional
 @overload
 def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
@@ -344,7 +338,7 @@ def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
 @overload
 def quiver(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
@@ -381,7 +375,7 @@ def quiver(
 @overload
 def quiver(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
@@ -458,7 +452,7 @@ def quiver(
 @overload
 def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
@@ -495,7 +489,7 @@ def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
 @overload
 def streamplot(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
@@ -532,7 +526,7 @@ def streamplot(
 @overload
 def streamplot(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
@@ -895,13 +889,13 @@ def scatter(
     locals_.update(locals_.pop("kwargs", {}))
     da = _temp_dataarray(ds, y, locals_)
 
-    return da.plot.scatter(*locals_.pop("args", ()), **locals_)
+    return da.plot.scatter(**locals_)
 
 
 @overload
 def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -941,7 +935,7 @@ def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
 @overload
 def lines(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -981,7 +975,7 @@ def lines(
 @overload
 def lines(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -1021,7 +1015,7 @@ def lines(
 @_update_doc_to_dataset(dataarray_plot.lines)
 def lines(
     ds: Dataset,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -1067,4 +1061,4 @@ def lines(
     locals_.update(locals_.pop("kwargs", {}))
     da = _temp_dataarray(ds, y, locals_)
 
-    return da.plot.lines(*locals_.pop("args", ()), **locals_)
+    return da.plot.lines(**locals_)

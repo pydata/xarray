@@ -138,7 +138,7 @@ class DataArrayPlotAccessor:
     @overload
     def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -177,7 +177,7 @@ class DataArrayPlotAccessor:
     @overload
     def lines(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -216,7 +216,7 @@ class DataArrayPlotAccessor:
     @overload
     def lines(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -253,8 +253,8 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.lines)
-    def lines(self, *args, **kwargs) -> LineCollection | FacetGrid[DataArray]:
-        return dataarray_plot.lines(self._da, *args, **kwargs)
+    def lines(self, **kwargs) -> LineCollection | FacetGrid[DataArray]:
+        return dataarray_plot.lines(self._da, **kwargs)
 
     @overload
     def step(  # type: ignore[misc,unused-ignore]  # None is hashable :(
@@ -299,7 +299,7 @@ class DataArrayPlotAccessor:
     @overload
     def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -338,7 +338,7 @@ class DataArrayPlotAccessor:
     @overload
     def scatter(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -377,7 +377,7 @@ class DataArrayPlotAccessor:
     @overload
     def scatter(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -414,13 +414,13 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.scatter, assigned=("__doc__",))
-    def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[DataArray]:
-        return dataarray_plot.scatter(self._da, *args, **kwargs)
+    def scatter(self, **kwargs) -> PathCollection | FacetGrid[DataArray]:
+        return dataarray_plot.scatter(self._da, **kwargs)
 
     @overload
     def imshow(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -459,7 +459,7 @@ class DataArrayPlotAccessor:
     @overload
     def imshow(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -498,7 +498,7 @@ class DataArrayPlotAccessor:
     @overload
     def imshow(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -535,13 +535,13 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.imshow, assigned=("__doc__",))
-    def imshow(self, *args, **kwargs) -> AxesImage | FacetGrid[DataArray]:
-        return dataarray_plot.imshow(self._da, *args, **kwargs)
+    def imshow(self, **kwargs) -> AxesImage | FacetGrid[DataArray]:
+        return dataarray_plot.imshow(self._da, **kwargs)
 
     @overload
     def contour(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -580,7 +580,7 @@ class DataArrayPlotAccessor:
     @overload
     def contour(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -619,7 +619,7 @@ class DataArrayPlotAccessor:
     @overload
     def contour(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -656,13 +656,13 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.contour, assigned=("__doc__",))
-    def contour(self, *args, **kwargs) -> QuadContourSet | FacetGrid[DataArray]:
-        return dataarray_plot.contour(self._da, *args, **kwargs)
+    def contour(self, **kwargs) -> QuadContourSet | FacetGrid[DataArray]:
+        return dataarray_plot.contour(self._da, **kwargs)
 
     @overload
     def contourf(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -701,7 +701,7 @@ class DataArrayPlotAccessor:
     @overload
     def contourf(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -740,7 +740,7 @@ class DataArrayPlotAccessor:
     @overload
     def contourf(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -777,13 +777,13 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid: ...
 
     @functools.wraps(dataarray_plot.contourf, assigned=("__doc__",))
-    def contourf(self, *args, **kwargs) -> QuadContourSet | FacetGrid[DataArray]:
-        return dataarray_plot.contourf(self._da, *args, **kwargs)
+    def contourf(self, **kwargs) -> QuadContourSet | FacetGrid[DataArray]:
+        return dataarray_plot.contourf(self._da, **kwargs)
 
     @overload
     def pcolormesh(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -822,7 +822,7 @@ class DataArrayPlotAccessor:
     @overload
     def pcolormesh(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -861,7 +861,7 @@ class DataArrayPlotAccessor:
     @overload
     def pcolormesh(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -898,13 +898,13 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataarray_plot.pcolormesh, assigned=("__doc__",))
-    def pcolormesh(self, *args, **kwargs) -> QuadMesh | FacetGrid[DataArray]:
-        return dataarray_plot.pcolormesh(self._da, *args, **kwargs)
+    def pcolormesh(self, **kwargs) -> QuadMesh | FacetGrid[DataArray]:
+        return dataarray_plot.pcolormesh(self._da, **kwargs)
 
     @overload
     def surface(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -943,7 +943,7 @@ class DataArrayPlotAccessor:
     @overload
     def surface(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -982,7 +982,7 @@ class DataArrayPlotAccessor:
     @overload
     def surface(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -1019,8 +1019,8 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid: ...
 
     @functools.wraps(dataarray_plot.surface, assigned=("__doc__",))
-    def surface(self, *args, **kwargs) -> Poly3DCollection:
-        return dataarray_plot.surface(self._da, *args, **kwargs)
+    def surface(self, **kwargs) -> Poly3DCollection:
+        return dataarray_plot.surface(self._da, **kwargs)
 
 
 class DatasetPlotAccessor:
@@ -1044,7 +1044,7 @@ class DatasetPlotAccessor:
     @overload
     def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -1083,7 +1083,7 @@ class DatasetPlotAccessor:
     @overload
     def lines(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -1122,7 +1122,7 @@ class DatasetPlotAccessor:
     @overload
     def lines(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -1159,13 +1159,13 @@ class DatasetPlotAccessor:
     ) -> FacetGrid[DataArray]: ...
 
     @functools.wraps(dataset_plot.lines)
-    def lines(self, *args, **kwargs) -> LineCollection | FacetGrid[DataArray]:
-        return dataset_plot.lines(self._ds, *args, **kwargs)
+    def lines(self, **kwargs) -> LineCollection | FacetGrid[DataArray]:
+        return dataset_plot.lines(self._ds, **kwargs)
 
     @overload
     def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -1204,7 +1204,7 @@ class DatasetPlotAccessor:
     @overload
     def scatter(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -1243,7 +1243,7 @@ class DatasetPlotAccessor:
     @overload
     def scatter(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -1280,13 +1280,13 @@ class DatasetPlotAccessor:
     ) -> FacetGrid[Dataset]: ...
 
     @functools.wraps(dataset_plot.scatter, assigned=("__doc__",))
-    def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[Dataset]:
-        return dataset_plot.scatter(self._ds, *args, **kwargs)
+    def scatter(self, **kwargs) -> PathCollection | FacetGrid[Dataset]:
+        return dataset_plot.scatter(self._ds, **kwargs)
 
     @overload
     def quiver(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
@@ -1322,7 +1322,7 @@ class DatasetPlotAccessor:
     @overload
     def quiver(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
@@ -1358,7 +1358,7 @@ class DatasetPlotAccessor:
     @overload
     def quiver(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
@@ -1392,13 +1392,13 @@ class DatasetPlotAccessor:
     ) -> FacetGrid[Dataset]: ...
 
     @functools.wraps(dataset_plot.quiver, assigned=("__doc__",))
-    def quiver(self, *args, **kwargs) -> Quiver | FacetGrid[Dataset]:
-        return dataset_plot.quiver(self._ds, *args, **kwargs)
+    def quiver(self, **kwargs) -> Quiver | FacetGrid[Dataset]:
+        return dataset_plot.quiver(self._ds, **kwargs)
 
     @overload
     def streamplot(  # type: ignore[misc,unused-ignore]  # None is hashable :(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
@@ -1434,7 +1434,7 @@ class DatasetPlotAccessor:
     @overload
     def streamplot(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
@@ -1470,7 +1470,7 @@ class DatasetPlotAccessor:
     @overload
     def streamplot(
         self,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
@@ -1504,5 +1504,5 @@ class DatasetPlotAccessor:
     ) -> FacetGrid[Dataset]: ...
 
     @functools.wraps(dataset_plot.streamplot, assigned=("__doc__",))
-    def streamplot(self, *args, **kwargs) -> LineCollection | FacetGrid[Dataset]:
-        return dataset_plot.streamplot(self._ds, *args, **kwargs)
+    def streamplot(self, **kwargs) -> LineCollection | FacetGrid[Dataset]:
+        return dataset_plot.streamplot(self._ds, **kwargs)

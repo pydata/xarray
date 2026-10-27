@@ -906,10 +906,10 @@ class TestPlot1D(PlotTestCase):
         assert "d = [10.009]" == title
 
     def test_raises_for_positional_args(self) -> None:
-        with pytest.raises(TypeError, match="Using positional arguments"):
-            self.darray.plot.scatter("period")
-        with pytest.raises(TypeError, match="Using positional arguments"):
-            self.darray.plot.scatter("period", col="period")
+        with pytest.raises(TypeError, match="takes 1 positional argument"):
+            self.darray.plot.scatter("period")  # type: ignore[call-overload]
+        with pytest.raises(TypeError, match="takes 1 positional argument"):
+            self.darray.plot.scatter("period", col="period")  # type: ignore[call-overload]
 
 
 class TestPlotStep(PlotTestCase):
@@ -1834,9 +1834,9 @@ class Common2dMixin:
             dims=("time", "x", "y"),
             coords={"x": np.arange(6), "y": np.arange(6)},
         )
-        with pytest.raises(TypeError, match="Using positional arguments"):
+        with pytest.raises(TypeError, match="takes 1 positional argument"):
             self.plotfunc(da, "x", "y", col="time")
-        with pytest.raises(TypeError, match="Using positional arguments"):
+        with pytest.raises(TypeError, match="takes 1 positional argument"):
             self.plotmethod("x")
 
 
@@ -2795,8 +2795,8 @@ class TestDatasetQuiverPlots(PlotTestCase):
         self.ds = ds
 
     def test_quiver_raises_for_positional_args(self) -> None:
-        with pytest.raises(TypeError, match="Using positional arguments"):
-            self.ds.isel(row=0, col=0).plot.quiver("x", "y", "u", "v")
+        with pytest.raises(TypeError, match="takes 1 positional argument"):
+            self.ds.isel(row=0, col=0).plot.quiver("x", "y", "u", "v")  # type: ignore[call-overload]
 
     def test_quiver(self) -> None:
         with figure_context():
@@ -3029,7 +3029,7 @@ class TestDatasetScatterPlots(PlotTestCase):
 
     def test_does_not_allow_positional_args(self) -> None:
         with pytest.raises(TypeError, match="takes 1 positional argument"):
-            self.ds.plot.scatter("A", "B")
+            self.ds.plot.scatter("A", "B")  # type: ignore[call-overload]
 
     def test_datetime_hue(self) -> None:
         ds2 = self.ds.copy()
