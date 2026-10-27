@@ -104,7 +104,7 @@ def array_ne(self, other):
 
 
 def _is_contiguous(positions):
-    """Given a non-empty list, does it consist of contiguous integers?"""
+    """Check whether a non-empty list consists of contiguous integers."""
     previous = positions[0]
     for current in positions[1:]:
         if current != previous + 1:
@@ -114,7 +114,7 @@ def _is_contiguous(positions):
 
 
 def _advanced_indexer_subspaces(key):
-    """Indices of the advanced indexes subspaces for mixed indexing and vindex."""
+    """Return indices of the advanced index subspaces for mixed indexing and vindex."""
     if not isinstance(key, tuple):
         key = (key,)
     advanced_index_positions = [

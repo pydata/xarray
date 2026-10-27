@@ -1,5 +1,4 @@
-"""
-Functions for applying functions that act on arrays to xarray's labeled data.
+"""Functions for applying functions that act on arrays to xarray's labeled data.
 
 NOTE: This module is currently large and contains various computational functionality.
 The long-term plan is to break it down into more focused submodules.
@@ -45,8 +44,7 @@ def cov(
     ddof: int = 1,
     weights: T_DataArray | None = None,
 ) -> T_DataArray:
-    """
-    Compute covariance between two DataArray objects along a shared dimension.
+    """Compute covariance between two DataArray objects along a shared dimension.
 
     Parameters
     ----------
@@ -150,9 +148,9 @@ def corr(
     dim: Dims = None,
     weights: T_DataArray | None = None,
 ) -> T_DataArray:
-    """
-    Compute the Pearson correlation coefficient between
-    two DataArray objects along a shared dimension.
+    """Compute the Pearson correlation coefficient between two DataArray objects.
+
+    The correlation is computed along a shared dimension.
 
     Parameters
     ----------
@@ -255,8 +253,9 @@ def _cov_corr(
     ddof: int = 0,
     method: Literal["cov", "corr"] | None = None,
 ) -> T_DataArray:
-    """
-    Internal method for xr.cov() and xr.corr() so only have to
+    """Compute the covariance or correlation of two arrays.
+
+    Internal method for xr.cov() and xr.corr() so we only have to
     sanitize the input arrays once and we don't repeat code.
     """
     # 1. Broadcast the two arrays
@@ -308,8 +307,7 @@ def _cov_corr(
 def cross(
     a: DataArray | Variable, b: DataArray | Variable, *, dim: Hashable
 ) -> DataArray | Variable:
-    """
-    Compute the cross product of two (arrays of) vectors.
+    """Compute the cross product of two (arrays of) vectors.
 
     The cross product of `a` and `b` in :math:`R^3` is a vector
     perpendicular to both `a` and `b`. The vectors in `a` and `b` are
@@ -327,6 +325,10 @@ def cross(
     dim : hashable
         The dimension along which the cross product will be computed.
         Must be available in both vectors.
+
+    See Also
+    --------
+    numpy.cross : Corresponding numpy function
 
     Examples
     --------
@@ -394,12 +396,7 @@ def cross(
         x        (dim_0) int64 8B -3
         y        (dim_0) int64 8B 6
         z        (dim_0) int64 8B -3
-
-    See Also
-    --------
-    numpy.cross : Corresponding numpy function
     """
-
     if dim not in a.dims:
         raise ValueError(f"Dimension {dim!r} not on a")
     elif dim not in b.dims:
@@ -478,8 +475,10 @@ def dot(
     dim: Dims = None,
     **kwargs: Any,
 ):
-    """Generalized dot product for xarray objects. Like ``np.einsum``, but
-    provides a simpler interface based on array dimension names.
+    """Generalized dot product for xarray objects.
+
+    Like ``np.einsum``, but provides a simpler interface based on array
+    dimension names.
 
     Parameters
     ----------
@@ -701,6 +700,12 @@ def where(cond, x, y, keep_attrs=None):
         In priority order: Dataset, DataArray, Variable or array, whichever
         type appears as an input argument.
 
+    See Also
+    --------
+    numpy.where : corresponding numpy function
+    Dataset.where, DataArray.where :
+        equivalent methods
+
     Examples
     --------
     >>> x = xr.DataArray(
@@ -776,12 +781,6 @@ def where(cond, x, y, keep_attrs=None):
     array([[1, 2],
            [0, 0]])
     Dimensions without coordinates: x, y
-
-    See Also
-    --------
-    numpy.where : corresponding numpy function
-    Dataset.where, DataArray.where :
-        equivalent methods
     """
     from xarray.core.dataset import Dataset
 
@@ -861,7 +860,7 @@ def polyval(
     coeffs: Dataset | DataArray,
     degree_dim: Hashable = "degree",
 ) -> Dataset | DataArray:
-    """Evaluate a polynomial at specific values
+    """Evaluate a polynomial at specific values.
 
     Parameters
     ----------
@@ -882,7 +881,6 @@ def polyval(
     xarray.DataArray.polyfit
     numpy.polynomial.polynomial.polyval
     """
-
     if degree_dim not in coeffs._indexes:
         raise ValueError(
             f"Dimension `{degree_dim}` should be a coordinate variable with labels."
@@ -908,7 +906,7 @@ def polyval(
 
 
 def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
-    """Converts all datetime64 variables to float64
+    """Convert all datetime64 variables to float64.
 
     Parameters
     ----------

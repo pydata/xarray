@@ -253,8 +253,10 @@ def unops(
     required_return_type: str = "Self",
     return_types: Mapping[str, str] | None = None,
 ) -> list[OpsType]:
-    """Unary operations, which return ``return_type`` or the type from
-    ``return_types`` for their name. ``_unary_op`` returns ``required_return_type``.
+    """Unary operations.
+
+    The operations return ``return_type`` or the type from ``return_types`` for
+    their name. ``_unary_op`` returns ``required_return_type``.
     """
     return_types = return_types or {}
 

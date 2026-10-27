@@ -56,7 +56,7 @@ PROMOTE_TO_OBJECT: tuple[tuple[type[np.generic], type[np.generic]], ...] = (
 def maybe_promote[T_dtype: (np.dtype, ExtensionDtype)](
     dtype: T_dtype,
 ) -> tuple[T_dtype, Any]:
-    """Simpler equivalent of pandas.core.common._maybe_promote
+    """Simpler equivalent of pandas.core.common._maybe_promote.
 
     Parameters
     ----------
@@ -194,17 +194,17 @@ def get_neg_infinity(dtype, min_for_int=False):
 
 
 def is_datetime_like(dtype) -> bool:
-    """Check if a dtype is a subclass of the numpy datetime types"""
+    """Check if a dtype is a subclass of the numpy datetime types."""
     return _is_numpy_subdtype(dtype, (np.datetime64, np.timedelta64))
 
 
 def is_object(dtype) -> bool:
-    """Check if a dtype is object"""
+    """Check if a dtype is object."""
     return _is_numpy_subdtype(dtype, object)
 
 
 def is_string(dtype) -> bool:
-    """Check if a dtype is a string dtype"""
+    """Check if a dtype is a string dtype."""
     return _is_numpy_subdtype(dtype, (np.str_, np.character))
 
 
@@ -217,7 +217,7 @@ def _is_numpy_subdtype(dtype, kind) -> bool:
 
 
 def isdtype(dtype, kind: str | tuple[str, ...], xp=None) -> bool:
-    """Compatibility wrapper for isdtype() from the array API standard.
+    """Check the kind of a dtype, like ``isdtype`` from the array API standard.
 
     Unlike xp.isdtype(), kind must be a string.
     """
@@ -271,7 +271,8 @@ def should_promote_to_object(
     ],
     xp,
 ) -> bool:
-    """
+    """Test whether the given arrays and dtypes should be promoted to object.
+
     Test whether the given arrays_and_dtypes, when evaluated individually, match the
     type promotion rules found in PROMOTE_TO_OBJECT.
     """

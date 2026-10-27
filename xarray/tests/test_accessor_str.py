@@ -65,6 +65,30 @@ def test_dask() -> None:
     assert_equal(result, expected)
 
 
+@requires_dask
+@pytest.mark.parametrize(
+    "func",
+    [
+        pytest.param(lambda s: s.strip(), id="strip"),
+        pytest.param(lambda s: s.rstrip(" c"), id="rstrip"),
+        pytest.param(lambda s: s.center(9, "*"), id="center"),
+        pytest.param(lambda s: s.zfill(6), id="zfill"),
+        pytest.param(lambda s: s.replace("b", "BB", regex=False), id="replace"),
+        pytest.param(lambda s: s.repeat(2), id="repeat"),
+        pytest.param(lambda s: s.find("b", 1), id="find"),
+        pytest.param(lambda s: s.contains("b", regex=False), id="contains"),
+    ],
+)
+def test_dask_string_results(dtype, func: Callable) -> None:
+    # results used to be truncated to a single character with dask
+    values = xr.DataArray(["  abc ", "Hello World", "ab", ""], dims="x").astype(dtype)
+
+    expected = func(values.str)
+    result = func(values.chunk(x=2).str).compute()
+
+    assert_equal(result, expected)
+
+
 def test_count(dtype) -> None:
     values = xr.DataArray(["foo", "foofoo", "foooofooofommmfoo"]).astype(dtype)
     pat_str = dtype(r"f[o]+")
@@ -399,6 +423,52 @@ def test_replace_n_zero(dtype) -> None:
     expected = xr.DataArray(
         [["fooBAD__barBAD", "foobarBAD", "foobar"]], dims=["x", "y"]
     ).astype(dtype)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+
+def test_replace_literal_case_insensitive(dtype) -> None:
+    values = xr.DataArray(["fooBAD.bad__barbAd"], dims=["x"]).astype(dtype)
+
+    result = values.str.replace("bad", "X", case=False, regex=False)
+    expected = xr.DataArray(["fooX.X__barX"], dims=["x"]).astype(dtype)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+    # the pattern is literal, and the replacement is not a regex template
+    result = values.str.replace("D.B", r"", n=1, case=False, regex=False)
+    expected = xr.DataArray([r"fooBAad__barbAd"], dims=["x"]).astype(dtype)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+    result = values.str.replace("bad", "X", n=2, case=False, regex=False)
+    expected = xr.DataArray(["fooX.X__barbAd"], dims=["x"]).astype(dtype)
+    assert_equal(result, expected)
+
+    result = values.str.replace("bad", "X", n=0, case=False, regex=False)
+    assert_equal(result, values)
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        pytest.param(np.array(["Foo", "xYz", "fOO.oo"], dtype=object), id="object"),
+        pytest.param(
+            np.array(["Foo", "xYz", "fOO.oo"], dtype=np.dtypes.StringDType()),
+            id="StringDType",
+        ),
+    ],
+)
+def test_case_insensitive_literal_non_unicode_dtype(values) -> None:
+    da = xr.DataArray(values, dims=["x"])
+
+    result = da.str.contains("o.", case=False, regex=False)
+    assert_equal(result, xr.DataArray([False, False, True], dims=["x"]))
+
+    result = da.str.replace("o", "_", case=False, regex=False)
+    expected = xr.DataArray(
+        np.array(["F__", "xYz", "f__.__"], dtype=values.dtype), dims=["x"]
+    )
     assert result.dtype == expected.dtype
     assert_equal(result, expected)
 
@@ -1966,8 +2036,7 @@ def test_index(dtype) -> None:
     assert_equal(result_0, expected)
     assert_equal(result_1, expected)
 
-    matchtype = "subsection" if dtype == np.bytes_ else "substring"
-    with pytest.raises(ValueError, match=f"{matchtype} not found"):
+    with pytest.raises(ValueError, match="substring not found"):
         s.str.index("DE")
 
 

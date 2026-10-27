@@ -46,9 +46,7 @@ _NTICKS = 5
 
 
 def _nicetitle(coord, value, maxchar, template):
-    """
-    Put coord, value in template and truncate at maxchar
-    """
+    """Put coord, value in template and truncate at maxchar."""
     prettyvalue = format_item(value, quote_strings=False)
     title = template.format(coord=coord, value=prettyvalue)
 
@@ -87,8 +85,7 @@ T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
 
 
 class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
-    """
-    Initialize the Matplotlib figure and FacetGrid object.
+    """Initialize the Matplotlib figure and FacetGrid object.
 
     The :class:`FacetGrid` is an object that links an xarray DataArray to
     a Matplotlib figure with a particular structure.
@@ -164,7 +161,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         size: float = 3,
         subplot_kws: dict[str, Any] | None = None,
     ) -> None:
-        """
+        """Initialize the FacetGrid.
+
         Parameters
         ----------
         data : DataArray or Dataset
@@ -192,7 +190,6 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             Dictionary of keyword arguments for Matplotlib subplots
             (:py:func:`matplotlib.pyplot.subplots`).
         """
-
         import matplotlib.pyplot as plt
 
         # Handle corner case of nonunique coordinates
@@ -358,8 +355,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         y: Hashable | None,
         **kwargs: Any,
     ) -> T_FacetGrid:
-        """
-        Apply a plotting function to a 2d facet's subset of the data.
+        """Apply a plotting function to a 2d facet's subset of the data.
 
         This is more convenient and less general than ``FacetGrid.map``
 
@@ -378,7 +374,6 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         self : FacetGrid object
 
         """
-
         if kwargs.get("cbar_ax") is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
@@ -441,8 +436,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         linewidth: Hashable | None = None,
         **kwargs: Any,
     ) -> T_FacetGrid:
-        """
-        Apply a plotting function to a 1d facet's subset of the data.
+        """Apply a plotting function to a 1d facet's subset of the data.
 
         This is more convenient and less general than ``FacetGrid.map``
 
@@ -826,8 +820,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         # self._adjust_fig_for_guide(self.quiverkey.text)
 
     def _get_largest_lims(self) -> dict[str, tuple[float, float]]:
-        """
-        Get largest limits in the facetgrid.
+        """Get largest limits in the facetgrid.
 
         Returns
         -------
@@ -864,8 +857,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         y: tuple[float, float] | None = None,
         z: tuple[float, float] | None = None,
     ) -> None:
-        """
-        Set the same limits for all the subplots in the facetgrid.
+        """Set the same limits for all the subplots in the facetgrid.
 
         Parameters
         ----------
@@ -933,8 +925,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         size=None,
         **kwargs,
     ) -> None:
-        """
-        Draw titles either above each facet or on the grid margins.
+        """Draw titles either above each facet or on the grid margins.
 
         Parameters
         ----------
@@ -944,10 +935,6 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             Truncate titles at maxchar
         **kwargs : keyword args
             additional arguments to matplotlib.text
-
-        Returns
-        -------
-        self: FacetGrid object
 
         """
         import matplotlib as mpl
@@ -1001,8 +988,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         max_yticks: int = _NTICKS,
         fontsize: str | int = _FONTSIZE,
     ) -> None:
-        """
-        Set and control tick behavior.
+        """Set and control tick behavior.
 
         Parameters
         ----------
@@ -1010,10 +996,6 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             Maximum number of labeled ticks to plot on x, y axes
         fontsize : string or int
             Font size as used by matplotlib text
-
-        Returns
-        -------
-        self : FacetGrid object
 
         """
         from matplotlib.ticker import MaxNLocator
@@ -1033,8 +1015,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
     def map(
         self: T_FacetGrid, func: Callable, *args: Hashable, **kwargs: Any
     ) -> T_FacetGrid:
-        """
-        Apply a plotting function to each facet's subset of the data.
+        """Apply a plotting function to each facet's subset of the data.
 
         Parameters
         ----------
@@ -1091,8 +1072,7 @@ def _easy_facetgrid(
     figsize: Iterable[float] | None = None,
     **kwargs: Any,
 ) -> FacetGrid[T_DataArrayOrSet]:
-    """
-    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
+    """Call xarray.plot.FacetGrid from 2d plotting methods.
 
     kwargs are the arguments to 2d plotting method
     """

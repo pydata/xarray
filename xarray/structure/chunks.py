@@ -1,6 +1,4 @@
-"""
-Functions for handling chunked arrays.
-"""
+"""Functions for handling chunked arrays."""
 
 from __future__ import annotations
 
@@ -142,7 +140,8 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
 
 
 def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
-    """
+    """Unify the chunk sizes of any number of Dataset and/or DataArray objects.
+
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.
 
