@@ -164,7 +164,7 @@ Breaking Changes
 - Subclasses of :py:class:`DataArray`, :py:class:`Dataset` and other xarray
   objects defined outside xarray must now explicitly define ``__slots__``.
   Defining one without ``__slots__`` raises an ``AttributeError`` instead of
-  the ``FutureWarning`` emitted since v0.13.0 (:issue:`11721`).
+  the ``FutureWarning`` emitted since v0.13.0 (:issue:`11721`, :pull:`11818`).
   By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
