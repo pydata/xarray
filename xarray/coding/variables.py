@@ -130,7 +130,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 def _apply_mask(
     data: np.ndarray,
-    encoded_fill_values: list,
+    encoded_fill_values: set[Any],
     decoded_fill_value: Any,
     dtype: np.typing.DTypeLike | None,
 ) -> np.ndarray:
@@ -183,7 +183,7 @@ def _check_fill_values(
 
     Issue SerializationWarning if appropriate.
     """
-    raw_fill_dict = {}
+    raw_fill_dict: dict[str, Any] = {}
     for attr in ("missing_value", "_FillValue"):
         pop_to(attrs, raw_fill_dict, attr, name=name)
     encoded_fill_values = set()
