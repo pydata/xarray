@@ -206,11 +206,6 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-- Local read-only HDF5 datasets opened with the ``h5netcdf`` or ``netcdf4``
-  engine now share a file handle while they remain open. The handle closes when
-  the last dataset closes, so changes made on disk are only seen after all
-  datasets using that HDF5 file have closed (:issue:`11581`, :pull:`11809`).
-  By `Oscar Man Shrestha <https://github.com/Oscar-man-shrestha>`_.
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
@@ -488,6 +483,11 @@ Documentation
 
 Performance
 ~~~~~~~~~~~
+- Local read-only HDF5 datasets opened with the ``h5netcdf`` or ``netcdf4``
+  engine now share a file handle while they remain open. The handle closes when
+  the last dataset closes, so changes made on disk are only seen after all
+  datasets using that HDF5 file have closed (:issue:`11581`, :pull:`11809`).
+  By `Oscar Man Shrestha <https://github.com/Oscar-man-shrestha>`_.
 - The string accessor uses the vectorized functions of ``np.strings`` for
   ``len``, ``startswith``, ``endswith``, ``find``, ``rfind``, ``index``,
   ``rindex``, ``strip``, ``lstrip``, ``rstrip``, ``pad``, ``center``,

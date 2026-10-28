@@ -571,19 +571,15 @@ class NetCDF4DataStore(WritableCFDataStore):
                 and not is_remote_uri(filename)
                 and try_read_magic_number_from_path(filename) == b"\x89HDF\r\n\x1a\n"
             )
-            if is_hdf5 and lock is NETCDF4_PYTHON_LOCK and not diskless:
-                manager = CachingFileManager(
-                    netCDF4.Dataset,
-                    filename,
-                    mode=mode,
-                    kwargs=kwargs,
-                    lock=lock,
-                    share=True,
-                )
-            else:
-                manager = CachingFileManager(
-                    netCDF4.Dataset, filename, mode=mode, kwargs=kwargs, lock=lock
-                )
+            share = is_hdf5 and lock is NETCDF4_PYTHON_LOCK and not diskless
+            manager = CachingFileManager(
+                netCDF4.Dataset,
+                filename,
+                mode=mode,
+                kwargs=kwargs,
+                lock=lock,
+                share=share,
+            )
         return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _metadata_lock(self) -> AbstractContextManager[Any]:

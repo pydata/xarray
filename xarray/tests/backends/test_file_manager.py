@@ -198,9 +198,13 @@ def test_shared_read_file_manager_lifetime() -> None:
     assert first.acquire() is second.acquire()
     opener.assert_called_once_with("filename", mode="r")
     first.close()
+    assert file_manager.REF_COUNTS[second._key] == 1
+    del first
+    gc.collect()
     file.close.assert_not_called()
     assert second.acquire() is file
     second.close()
+    assert second._key not in file_manager.REF_COUNTS
     file.close.assert_called_once_with()
 
     third = CachingFileManager(opener, "filename", mode="r", share=True)
@@ -238,7 +242,9 @@ def test_shared_read_file_manager_reopen() -> None:
     manager = CachingFileManager(opener, "filename", mode="r", share=True)
     first = manager.acquire()
     manager.close()
+    assert manager._key not in file_manager.REF_COUNTS
     second = manager.acquire()
+    assert file_manager.REF_COUNTS[manager._key] == 1
     assert first is not second
     manager.close()
 

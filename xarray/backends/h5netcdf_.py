@@ -253,20 +253,16 @@ class H5NetCDFStore(WritableCFDataStore):
 
         manager: FileManager[Any]
         if isinstance(filename, str) and not is_remote_uri(filename):
-            if mode == "r" and lock is HDF5_LOCK:
-                # Shared handles use the same HDF5 lock as reads.
-                manager = CachingFileManager(
-                    h5netcdf.File,
-                    filename,
-                    mode=mode,
-                    kwargs=kwargs,
-                    lock=HDF5_LOCK,
-                    share=True,
-                )
-            else:
-                manager = CachingFileManager(
-                    h5netcdf.File, filename, mode=mode, kwargs=kwargs
-                )
+            share = mode == "r" and lock is HDF5_LOCK
+            # Shared handles use the same HDF5 lock as reads.
+            manager = CachingFileManager(
+                h5netcdf.File,
+                filename,
+                mode=mode,
+                kwargs=kwargs,
+                lock=HDF5_LOCK if share else None,
+                share=share,
+            )
         else:
             manager = PickleableFileManager(
                 h5netcdf.File, filename, mode=mode, kwargs=kwargs

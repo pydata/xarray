@@ -45,10 +45,8 @@ _PIN_LOCK = FILE_CACHE._lock
 
 T_File = TypeVar("T_File", bound=Closable)
 
+# Number of managers that have not closed each cache entry.
 REF_COUNTS: dict[Any, int] = {}
-
-# Number of unclosed managers using each shared cache entry.
-_SHARED_COUNTS: dict[Any, int] = {}
 
 _OMIT_MODE = utils.ReprObject("<omitted>")
 
@@ -220,35 +218,31 @@ class CachingFileManager(FileManager[T_File]):
         self._share = share
         self._joined = False
 
-        # ref_counts[self._key] stores the number of CachingFileManager objects
-        # in memory referencing this same file. We use this to know if we can
-        # close a file when the manager is deallocated.
+        # ref_counts[self._key] stores the number of managers that have not
+        # closed this file. A closed manager joins again if it acquires a file.
         if ref_counts is None:
             ref_counts = REF_COUNTS
         self._ref_counter = _RefCounter(ref_counts)
-        self._ref_counter.increment(self._key)
         self._join()
 
     def _join(self) -> None:
-        """Count this manager as a user of its shared file until it closes."""
-        if self._share:
-            with _PIN_LOCK:
-                if not self._joined:
-                    _SHARED_COUNTS[self._key] = _SHARED_COUNTS.get(self._key, 0) + 1
-                    self._joined = True
-
-    def _leave(self) -> bool:
-        """Stop using the shared file; return whether it may be closed."""
-        if not self._share:
-            return True
+        """Count this manager as a user of its file until it closes."""
+        if self._joined:
+            return
         with _PIN_LOCK:
             if not self._joined:
-                return False
-            self._joined = False
-            count = _SHARED_COUNTS.pop(self._key) - 1
-            if count:
-                _SHARED_COUNTS[self._key] = count
-            return not count
+                self._ref_counter.increment(self._key)
+                self._joined = True
+
+    def _leave(self) -> int | None:
+        """Stop using the file and return its remaining manager count.
+
+        The caller must hold _PIN_LOCK through any resulting cache removal.
+        """
+        if not self._joined:
+            return None
+        self._joined = False
+        return self._ref_counter.decrement(self._key)
 
     def _make_key(self) -> _HashedSequence:
         """Make a key for caching files in the LRU cache."""
@@ -363,61 +357,51 @@ class CachingFileManager(FileManager[T_File]):
         # dask.distributed: https://github.com/dask/dask/issues/3832
         with self._optional_lock(needs_lock):
             with _PIN_LOCK:
-                if self._leave():
+                count = self._leave()
+                if count is not None and (not self._share or count == 0):
                     _close_cached_file(self._cache, self._key)
 
     def __del__(self) -> None:
-        # If we're the only CachingFileManger referencing an unclosed file,
+        # If we're the only CachingFileManager referencing an unclosed file,
         # remove it from the cache upon garbage collection.
         #
         # We keep track of our own reference count because we don't want to
         # close files if another identical file manager needs it. This can
         # happen if a CachingFileManager is pickled and unpickled without
         # closing the original file.
-        ref_count = self._ref_counter.decrement(self._key)
+        with _PIN_LOCK:
+            can_close = self._leave() == 0
+            has_file = can_close and self._key in self._cache
+            if has_file:
+                if acquire(self._lock, blocking=False):
+                    try:
+                        _close_cached_file(self._cache, self._key)
+                    finally:
+                        self._lock.release()
+                else:
+                    # Another thread holds the lock. Waiting here could deadlock
+                    # because garbage collection can run __del__ anywhere.
+                    # Close in a separate thread once the lock is free (GH11088).
+                    with suppress(RuntimeError):
+                        threading.Thread(
+                            target=_close_when_unlocked,
+                            args=(
+                                self._cache,
+                                self._key,
+                                self._lock,
+                                self._ref_counter._counts,
+                            ),
+                            name="xarray-close-file",
+                            daemon=True,
+                        ).start()
 
-        can_close = self._leave() if self._share else not ref_count
-        if can_close and self._key in self._cache:
-            if acquire(self._lock, blocking=False):
-                try:
-                    if self._share:
-                        with _PIN_LOCK:
-                            if self._key not in _SHARED_COUNTS:
-                                _close_cached_file(self._cache, self._key)
-                    else:
-                        self.close(needs_lock=False)
-                finally:
-                    self._lock.release()
-            else:
-                # Another thread holds the lock. Waiting for it here could
-                # deadlock, as garbage collection can run __del__ anywhere, so
-                # close the file in a separate thread once the lock is free.
-                # Leaving it open is no option: with several files open on the
-                # same path, closing one of them can crash HDF5 later (GH11088).
-                # At interpreter shutdown, no thread can be started anymore, and
-                # the file is left open.
-                with suppress(RuntimeError):
-                    threading.Thread(
-                        target=_close_when_unlocked,
-                        args=(
-                            self._cache,
-                            self._key,
-                            self._lock,
-                            _SHARED_COUNTS
-                            if self._share
-                            else self._ref_counter._counts,
-                        ),
-                        name="xarray-close-file",
-                        daemon=True,
-                    ).start()
-
-            if OPTIONS["warn_for_unclosed_files"]:
-                warnings.warn(
-                    f"deallocating {self}, but file is not already closed. "
-                    "This may indicate a bug.",
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+        if has_file and OPTIONS["warn_for_unclosed_files"]:
+            warnings.warn(
+                f"deallocating {self}, but file is not already closed. "
+                "This may indicate a bug.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
     def __getstate__(self):
         """State for pickling."""
