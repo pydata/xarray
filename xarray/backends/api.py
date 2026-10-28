@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
+import inspect
 import os
 from collections.abc import (
     Callable,
+    Hashable,
     Iterable,
     Mapping,
     Sequence,
@@ -274,13 +277,47 @@ def _chunk_ds(
     return backend_ds._replace(variables)
 
 
-def _maybe_create_default_indexes(ds):
-    to_index = {
-        name: coord.variable
+def _default_index_names(ds) -> list[Hashable]:
+    return [
+        name
         for name, coord in ds.coords.items()
         if coord.dims == (name,) and name not in ds.xindexes
-    }
+    ]
+
+
+def _maybe_create_default_indexes(ds):
+    to_index = {name: ds.coords[name].variable for name in _default_index_names(ds)}
     return ds.assign_coords(Coordinates(to_index))
+
+
+async def _load_default_index_variables_async(
+    tree: DataTree, max_concurrency: int | None
+) -> None:
+    """Load, concurrently and in place, the coordinates that get default indexes."""
+    variables = [
+        ds.variables[name]
+        for ds in (node.to_dataset(inherit=False) for node in tree.subtree)
+        for name in _default_index_names(ds)
+    ]
+    semaphore = asyncio.Semaphore(max_concurrency or 10)
+
+    async def load(variable) -> None:
+        # without async support, it is loaded later, when its index is created
+        async with semaphore:
+            with contextlib.suppress(NotImplementedError):
+                await variable.load_async()
+
+    tasks: list[asyncio.Task] = []
+    try:
+        async with asyncio.TaskGroup() as tg:
+            tasks = [tg.create_task(load(variable)) for variable in variables]
+    except ExceptionGroup:
+        # raise what loading the variables one after the other would raise
+        for task in tasks:
+            error = None if task.cancelled() else task.exception()
+            if error is not None:
+                raise error from None
+        raise
 
 
 def _dataset_from_backend_dataset(
@@ -904,6 +941,7 @@ def open_datatree(
     inline_array: bool = False,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
+    max_concurrency: int | None = None,
     backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataTree:
@@ -1036,6 +1074,11 @@ def open_datatree(
         chunked arrays, via whichever chunk manager is specified through the `chunked_array_type` kwarg.
         For example if :py:func:`dask.array.Array` objects are used for chunking, additional kwargs will be passed
         to :py:func:`dask.array.from_array`. Experimental API that should not be relied upon.
+    max_concurrency: int, optional
+        Maximum number of groups that are opened and decoded at the same time,
+        and of index coordinates loaded at the same time. Useful for limiting
+        resource usage with large hierarchies or stores that limit concurrent
+        access. Only supported by the Zarr backend. Defaults to 10.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -1104,12 +1147,30 @@ def open_datatree(
     )
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
 
+    open_kwargs = dict(kwargs)
+    if max_concurrency is not None:
+        if "max_concurrency" not in inspect.signature(backend.open_datatree).parameters:
+            raise ValueError(
+                f"max_concurrency is not supported by the {engine!r} engine"
+            )
+        # passed separately so that it does not become part of dask tokens
+        open_kwargs["max_concurrency"] = max_concurrency
+
     backend_tree = backend.open_datatree(
         filename_or_obj,
         drop_variables=drop_variables,
         **decoders,
-        **kwargs,
+        **open_kwargs,
     )
+
+    if create_default_indexes:
+        # backends that can load the index coordinates of all groups
+        # concurrently do so here; the indexes are still built below
+        run_async = getattr(backend, "_run_async", None)
+        if run_async is not None:
+            run_async(
+                _load_default_index_variables_async(backend_tree, max_concurrency)
+            )
 
     tree = _datatree_from_backend_datatree(
         backend_tree,

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import base64
+import concurrent.futures
+import contextvars
 import json
 import os
 import struct
-from collections.abc import Hashable, Iterable, Mapping
+import warnings
+from collections.abc import Coroutine, Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Literal, Self, cast, override
 
 import numpy as np
@@ -850,6 +853,7 @@ class ZarrStore(AbstractWritableDataStore):
         use_zarr_fill_value_as_mask=None,
         align_chunks: bool = False,
         cache_members: bool = True,
+        members: Mapping[str, ZarrArray | ZarrGroup] | None = None,
     ):
         if align_chunks:
             # Disabled the safe_chunks validations if the alignment is going to be applied
@@ -867,10 +871,13 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_empty = write_empty
         self._close_store_on_close = close_store_on_close
         self._use_zarr_fill_value_as_mask = use_zarr_fill_value_as_mask
-        self._cache_members: bool = cache_members
+        self._cache_members: bool = cache_members or members is not None
         self._members: dict[str, ZarrArray | ZarrGroup] = {}
 
-        if self._cache_members:
+        if members is not None:
+            # members already fetched by the caller, e.g. for many groups at once
+            self._members = dict(members)
+        elif self._cache_members:
             # initialize the cache
             # this cache is created here and never updated.
             # If the `ZarrStore` instance creates a new zarr array, or if an external process
@@ -1818,6 +1825,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
+        max_concurrency: int | None = None,
     ) -> DataTree:
         filename_or_obj = _normalize_path(filename_or_obj)
         groups_dict = self.open_groups_as_dict(
@@ -1835,6 +1843,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             storage_options=storage_options,
             zarr_format=zarr_format,
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+            max_concurrency=max_concurrency,
         )
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
@@ -1857,8 +1866,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
         zarr_format=None,
         use_zarr_fill_value_as_mask=None,
+        max_concurrency: int | None = None,
     ) -> dict[str, Dataset]:
         filename_or_obj = _normalize_path(filename_or_obj)
+        max_workers = _validate_max_concurrency(max_concurrency)
 
         # Check for a group and make it a parent if it exists
         if group:
@@ -1866,23 +1877,34 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         else:
             parent = str(NodePath("/"))
 
-        stores = ZarrStore.open_store(
-            filename_or_obj,
-            group=parent,
+        (
+            zarr_group,
+            consolidate_on_close,
+            close_store_on_close,
+            use_zarr_fill_value_as_mask,
+        ) = _get_open_params(
+            store=filename_or_obj,
             mode=mode,
+            group=parent,
             consolidated=consolidated,
             consolidate_on_close=False,
             storage_options=storage_options,
-            zarr_format=zarr_format,
             use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+            zarr_format=zarr_format,
         )
+        groups, children = _zarr_groups_and_members(zarr_group, parent)
 
-        groups_dict = {}
-        for path_group, store in stores.items():
-            store_entrypoint = StoreBackendEntrypoint()
-
+        def open_group(path: str) -> Dataset:
+            store = ZarrStore(
+                groups[path],
+                mode,
+                consolidate_on_close,
+                close_store_on_close=close_store_on_close,
+                use_zarr_fill_value_as_mask=use_zarr_fill_value_as_mask,
+                members=children[path],
+            )
             with close_on_error(store):
-                group_ds = store_entrypoint.open_dataset(
+                return StoreBackendEntrypoint().open_dataset(
                     store,
                     mask_and_scale=mask_and_scale,
                     decode_times=decode_times,
@@ -1892,12 +1914,105 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                     use_cftime=use_cftime,
                     decode_timedelta=decode_timedelta,
                 )
+
+        datasets = _open_in_threads(open_group, list(groups), max_workers)
+
+        groups_dict = {}
+        for path_group, group_ds in zip(groups, datasets, strict=True):
             if group:
                 group_name = str(NodePath(path_group).relative_to(parent))
             else:
                 group_name = str(NodePath(path_group))
             groups_dict[group_name] = group_ds
         return groups_dict
+
+    def _run_async(self, coro: Coroutine[Any, Any, None]) -> bool:
+        """Run ``coro`` on zarr's event loop; False if this zarr cannot."""
+        import zarr
+
+        # public since zarr-python#3997
+        run = getattr(zarr, "run", None)
+        if run is None:
+            coro.close()
+            return False
+        run(coro)
+        return True
+
+
+def _validate_max_concurrency(max_concurrency: int | None) -> int:
+    if max_concurrency is None:
+        return 10
+    # isinstance: user input, e.g. 1.5, despite the annotation
+    if not isinstance(max_concurrency, int) or max_concurrency < 1:  # type: ignore[redundant-expr,unused-ignore]
+        raise ValueError(
+            f"max_concurrency must be a positive integer, got {max_concurrency!r}"
+        )
+    return max_concurrency
+
+
+def _zarr_groups_and_members(
+    root: ZarrGroup, parent: str
+) -> tuple[dict[str, ZarrGroup], dict[str, dict[str, ZarrArray | ZarrGroup]]]:
+    """Every group below ``root`` and its direct members, from one listing.
+
+    Groups are in depth-first order, like ``_iter_zarr_groups``.
+    """
+    from zarr import Group
+
+    parent_nodepath = NodePath(parent)
+    # zarr fetches the metadata of the whole hierarchy concurrently
+    members = root.members(max_depth=None)
+
+    groups: dict[str, ZarrGroup] = {str(parent_nodepath): root}
+    for rel_path, member in members:
+        if isinstance(member, Group):
+            groups[str(parent_nodepath / rel_path)] = member
+    children: dict[str, dict[str, ZarrArray | ZarrGroup]] = {
+        path: {} for path in groups
+    }
+    for rel_path, member in members:
+        parent_rel, _, name = rel_path.rpartition("/")
+        children[str(parent_nodepath / parent_rel)][name] = member
+
+    ordered = sorted(groups, key=lambda path: NodePath(path).parts)
+    return {path: groups[path] for path in ordered}, children
+
+
+def _open_in_threads(open_group, paths: list[str], max_workers: int) -> list[Dataset]:
+    """``open_group`` for each path, at most ``max_workers`` at a time.
+
+    Behaves like opening the groups one after the other: results and the first
+    error are in ``paths`` order, warnings point at the caller, and nothing is
+    left open or running after an error or an interrupt.
+    """
+    caught: list[warnings.WarningMessage] = []
+    try:
+        with (
+            warnings.catch_warnings(record=True) as caught,
+            concurrent.futures.ThreadPoolExecutor(
+                max_workers=max_workers, thread_name_prefix="xarray-zarr"
+            ) as executor,
+        ):
+            # copy_context so warnings in the workers reach catch_warnings
+            # above with context-aware warnings (Python 3.14+)
+            futures = [
+                executor.submit(contextvars.copy_context().run, open_group, path)
+                for path in paths
+            ]
+            try:
+                return [future.result() for future in futures]
+            except BaseException:
+                for future in futures:
+                    future.cancel()
+                concurrent.futures.wait(futures)
+                for future in futures:
+                    if not future.cancelled() and future.exception() is None:
+                        future.result().close()
+                raise
+    finally:
+        # outside catch_warnings, so the user sees them, at their own line
+        for warning in caught:
+            emit_user_level_warning(warning.message, warning.category)
 
 
 def _iter_zarr_groups(root: ZarrGroup, parent: str = "/") -> Iterable[str]:
