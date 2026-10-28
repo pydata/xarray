@@ -424,6 +424,13 @@ Bug Fixes
   ``StringDtype`` is used as the new concat dimension and another input has a
   numpy string-dtype coord (:issue:`11317`, :pull:`11322`).
   By `Sai Asish Y <https://github.com/SAY-5>`_.
+- :py:meth:`Dataset.interpolate_na`, :py:meth:`Dataset.ffill`,
+  :py:meth:`Dataset.bfill`, :py:meth:`Dataset.polyfit`,
+  :py:meth:`Dataset.curvefit` and arithmetic with a ``dict`` no longer raise
+  ``AttributeError: DatasetView objects are not to be initialized directly``
+  when called on a node's dataset, e.g. inside
+  :py:meth:`DataTree.map_over_datasets` (:issue:`11813`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
 Documentation

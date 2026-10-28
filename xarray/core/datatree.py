@@ -51,7 +51,6 @@ from xarray.core.formatting_html import (
 )
 from xarray.core.indexes import Index, Indexes
 from xarray.core.options import OPTIONS as XR_OPTS
-from xarray.core.options import _get_keep_attrs
 from xarray.core.treenode import NamedNode, NodePath, zip_subtrees
 from xarray.core.types import Self
 from xarray.core.utils import (
@@ -62,7 +61,6 @@ from xarray.core.utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     emit_user_level_warning,
-    maybe_wrap_array,
     parse_dims_as_set,
 )
 from xarray.core.variable import Variable
@@ -252,13 +250,11 @@ class DatasetView(Dataset):
         "_variables",
     )
 
-    def __init__(
-        self,
-        data_vars: Mapping[Any, Any] | None = None,
-        coords: Mapping[Any, Any] | None = None,
-        attrs: Mapping[Any, Any] | None = None,
-    ):
-        raise AttributeError("DatasetView objects are not to be initialized directly")
+    def __new__(cls, *args: Any, **kwargs: Any) -> Dataset:  # type: ignore[misc]
+        # Methods inherited from Dataset build their result with
+        # ``type(self)(...)``, so return a plain (mutable) Dataset instead of a
+        # view. Python skips ``__init__`` as the result is not a DatasetView.
+        return Dataset(*args, **kwargs)
 
     @classmethod
     def _constructor(
@@ -388,77 +384,6 @@ class DatasetView(Dataset):
             encoding=encoding,
             inplace=inplace,
         )
-
-    @override
-    def map(  # type: ignore[override]
-        self,
-        func: Callable,
-        keep_attrs: bool | None = None,
-        args: Iterable[Any] = (),
-        **kwargs: Any,
-    ) -> Dataset:
-        """Apply a function to each data variable in this dataset.
-
-        Parameters
-        ----------
-        func : callable
-            Function which can be called in the form `func(x, *args, **kwargs)`
-            to transform each DataArray `x` in this dataset into another
-            DataArray.
-        keep_attrs : bool | None, optional
-            If True, both the dataset's and variables' attributes (`attrs`) will be
-            combined from the original objects and the function results using the
-            ``drop_conflicts`` strategy: matching attrs are kept, conflicting attrs
-            are dropped. If False, the new dataset and variables will have only
-            the attributes set by the function.
-        args : iterable, optional
-            Positional arguments passed on to `func`.
-        **kwargs : Any
-            Keyword arguments passed on to `func`.
-
-        Returns
-        -------
-        applied : Dataset
-            Resulting dataset from applying ``func`` to each data variable.
-
-        Examples
-        --------
-        >>> da = xr.DataArray(np.random.randn(2, 3))
-        >>> ds = xr.Dataset({"foo": da, "bar": ("x", [-1, 2])})
-        >>> ds
-        <xarray.Dataset> Size: 64B
-        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
-        Dimensions without coordinates: dim_0, dim_1, x
-        Data variables:
-            foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 -0.9773
-            bar      (x) int64 16B -1 2
-        >>> ds.map(np.fabs)
-        <xarray.Dataset> Size: 64B
-        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
-        Dimensions without coordinates: dim_0, dim_1, x
-        Data variables:
-            foo      (dim_0, dim_1) float64 48B 1.764 0.4002 0.9787 2.241 1.868 0.9773
-            bar      (x) float64 16B 1.0 2.0
-        """
-        # Copied from xarray.Dataset so as not to call type(self), which causes problems (see https://github.com/xarray-contrib/datatree/issues/188).
-        # TODO Refactor xarray upstream to avoid needing to overwrite this.
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=True)
-        variables = {
-            k: maybe_wrap_array(v, func(v, *args, **kwargs))
-            for k, v in self.data_vars.items()
-        }
-        if keep_attrs:
-            # Merge attrs from function result and original, dropping conflicts
-            from xarray.structure.merge import merge_attrs
-
-            for k, v in variables.items():
-                v.attrs = merge_attrs(
-                    [v.attrs, self.data_vars[k].attrs], "drop_conflicts"
-                )
-        attrs = self.attrs if keep_attrs else None
-        # return type(self)(variables, attrs=attrs)
-        return Dataset(variables, attrs=attrs)
 
 
 type FromDictDataValue = CoercibleValue | Dataset | DataTree | None
