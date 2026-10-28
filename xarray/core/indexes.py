@@ -320,7 +320,7 @@ class Index:
         ----------
         other : Index
             The other Index object to combine with this index.
-        join : str, optional
+        how : str, optional
             Method for joining the two indexes (see :py:func:`~xarray.align`).
 
         Returns
