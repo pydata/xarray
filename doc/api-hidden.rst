@@ -654,6 +654,8 @@
    backends.BackendArray
    backends.BackendEntrypoint.guess_can_open
    backends.BackendEntrypoint.open_dataset
+   backends.BackendEntrypoint.open_datatree
+   backends.BackendEntrypoint.open_groups_as_dict
 
    core.indexing.IndexingSupport
    core.indexing.explicit_indexing_adapter

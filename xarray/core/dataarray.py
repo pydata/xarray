@@ -1070,13 +1070,6 @@ class DataArray(
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self.variable.encoding = dict(value)
 
-    def reset_encoding(self) -> Self:
-        utils.emit_user_level_warning(
-            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
-            FutureWarning,
-        )
-        return self.drop_encoding()
-
     def drop_encoding(self) -> Self:
         """Return a new DataArray without encoding on the array or any coords."""
         ds = self._to_temp_dataset().drop_encoding()
@@ -2436,6 +2429,12 @@ class DataArray(
         - When interpolating along multiple dimensions with methods `linear` and `nearest`,
             the process attempts to decompose the interpolation into independent interpolations
             along one dimension at a time.
+        - For Dask arrays, the chunks along the interpolated dimensions are merged
+            into a single chunk. With methods `linear` and `nearest`, the data is
+            first subset to the range of the new coordinates, so only the chunks that
+            are needed are read. This only happens if the new coordinates are in
+            memory, so loading chunked new coordinates first (e.g. with ``.compute()``)
+            can reduce the memory use considerably if they are cheap to compute.
         - The specific interpolation method and dimensionality determine which
             interpolant is used:
 
@@ -3242,7 +3241,7 @@ class DataArray(
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 
         level_number = idx._get_level_number(level)  # type: ignore[attr-defined]
-        variables = idx.levels[level_number]
+        variables = idx.remove_unused_levels().levels[level_number]
         variable_dim = idx.names[level_number]
 
         # pull variables out of datarray
