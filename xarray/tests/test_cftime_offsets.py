@@ -45,7 +45,7 @@ cftime = pytest.importorskip("cftime")
 
 
 def _id_func(param):
-    """Called on each parameter passed to pytest.mark.parametrize"""
+    """Return the test ID for each parameter passed to pytest.mark.parametrize."""
     return str(param)
 
 
@@ -493,16 +493,17 @@ def test_mul_float_multiple_next_higher_resolution():
     ids=_id_func,
 )
 def test_nonTick_offset_multiplied_float_error(offset):
-    """Test that the appropriate error is raised if a non-Tick offset is
-    multiplied by a float."""
+    """Test that an error is raised if a non-Tick offset is multiplied by a float."""
     with pytest.raises(TypeError, match="unsupported operand type"):
         offset * 0.5
 
 
 def test_Microsecond_multiplied_float_error():
-    """Test that the appropriate error is raised if a Tick offset is multiplied
-    by a float which causes it not to be representable by a
-    microsecond-precision timedelta."""
+    """Test that an error is raised if a Tick offset times a float is unrepresentable.
+
+    The error is raised if a Tick offset is multiplied by a float which causes it
+    not to be representable by a microsecond-precision timedelta.
+    """
     with pytest.raises(
         ValueError, match="Could not convert to integer offset at any resolution"
     ):
@@ -1539,7 +1540,7 @@ def test_date_range_like_errors():
         date_range_like(da, "noleap")
 
 
-def as_timedelta_not_implemented_error():
+def test_as_timedelta_not_implemented_error():
     tick = Tick()
     with pytest.raises(NotImplementedError):
         tick.as_timedelta()
@@ -1602,9 +1603,9 @@ def test_cftime_range_same_as_pandas(start, end, freq) -> None:
     ],
 )
 def test_cftime_range_no_freq(start, end, periods):
-    """
-    Test whether date_range produces the same result as Pandas
-    when freq is not provided, but start, end and periods are.
+    """Test whether date_range produces the same result as Pandas without freq.
+
+    That is, when freq is not provided, but start, end and periods are.
     """
     # Generate date ranges using cftime_range
     cftimeindex = date_range(start=start, end=end, periods=periods, use_cftime=True)
@@ -1624,9 +1625,9 @@ def test_cftime_range_no_freq(start, end, periods):
     ],
 )
 def test_date_range_no_freq(start, end, periods):
-    """
-    Test whether date_range produces the same result as Pandas
-    when freq is not provided, but start, end and periods are.
+    """Test whether date_range produces the same result as Pandas without freq.
+
+    That is, when freq is not provided, but start, end and periods are.
     """
     # Generate date ranges using date_range
     result = date_range(start=start, end=end, periods=periods)

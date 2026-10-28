@@ -1,4 +1,5 @@
-"""
+"""Tutorial datasets and functions to load them.
+
 Useful for:
 
 * users learning xarray
@@ -90,8 +91,7 @@ def open_dataset(
     engine: T_Engine = None,
     **kws,
 ) -> Dataset:
-    """
-    Open a dataset from the online repository (requires internet).
+    """Open a dataset from the online repository (requires internet).
 
     If a local copy is found then always use that to avoid network traffic.
 
@@ -179,9 +179,9 @@ def open_dataset(
 
 
 def load_dataset(*args, **kwargs) -> Dataset:
-    """
-    Open, load into memory, and close a dataset from the online repository
-    (requires internet).
+    """Open, load into memory, and close a dataset from the online repository.
+
+    Requires internet.
 
     If a local copy is found then always use that to avoid network traffic.
 
@@ -220,8 +220,7 @@ def load_dataset(*args, **kwargs) -> Dataset:
 
 
 def scatter_example_dataset(*, seed: int | None = None) -> Dataset:
-    """
-    Create an example dataset.
+    """Create an example dataset.
 
     Parameters
     ----------
@@ -263,8 +262,7 @@ def open_datatree(
     engine: T_Engine = None,
     **kws,
 ) -> DataTree:
-    """
-    Open a dataset as a `DataTree` from the online repository (requires internet).
+    """Open a dataset as a `DataTree` from the online repository (requires internet).
 
     If a local copy is found then always use that to avoid network traffic.
 
@@ -353,9 +351,9 @@ def open_datatree(
 
 
 def load_datatree(*args, **kwargs) -> DataTree:
-    """
-    Open, load into memory (as a `DataTree`), and close a dataset from the online repository
-    (requires internet).
+    """Open, load into memory (as a `DataTree`), and close a dataset from the repository.
+
+    The dataset is fetched from the online repository, which requires internet.
 
     If a local copy is found then always use that to avoid network traffic.
 

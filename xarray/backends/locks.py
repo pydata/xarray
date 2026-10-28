@@ -74,7 +74,7 @@ class _ReentrantLock:
 # https://github.com/dask/dask/blob/74e898f0ec712e8317ba86cc3b9d18b6b9922be0/dask/utils.py#L1160-L1224
 # Used under the terms of Dask's license, see licenses/DASK_LICENSE.
 class SerializableLock(Lock):
-    """A Serializable per-process Lock
+    """A Serializable per-process Lock.
 
     This wraps a normal ``threading.Lock`` object and satisfies the same
     interface.  However, this lock can also be serialized and sent to different
@@ -189,7 +189,7 @@ def _get_multiprocessing_lock(key: str) -> Lock:
 
 
 def _get_lock_maker(scheduler: str | None = None) -> Callable[..., Lock]:
-    """Returns an appropriate function for creating resource locks.
+    """Return an appropriate function for creating resource locks.
 
     Parameters
     ----------
@@ -200,7 +200,6 @@ def _get_lock_maker(scheduler: str | None = None) -> Callable[..., Lock]:
     --------
     dask.utils.get_scheduler_lock
     """
-
     if scheduler is None or scheduler == "threaded":
         return _get_threaded_lock
     elif scheduler == "multiprocessing":

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import warnings
 from collections import defaultdict
 from collections.abc import Hashable, Iterable, Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, Union, cast
@@ -77,9 +76,9 @@ def ensure_not_multiindex(var: Variable, name: T_Name = None) -> None:
 def encode_cf_variable(
     var: Variable, needs_copy: bool = True, name: T_Name = None, coders=None
 ) -> Variable:
-    """
-    Converts a Variable into a Variable which follows some
-    of the CF conventions:
+    """Convert a Variable into a Variable which follows the CF conventions.
+
+    In particular:
 
         - Nans are masked using _FillValue (or the deprecated missing_value)
         - Rescaling via: scale_factor and add_offset
@@ -122,8 +121,7 @@ def decode_cf_variable(
     use_cftime: bool | None = None,
     decode_timedelta: bool | CFTimedeltaCoder | None = None,
 ) -> Variable:
-    """
-    Decodes a variable which may hold CF encoded information.
+    """Decode a variable which may hold CF encoded information.
 
     This includes variables that have been masked and scaled, which
     hold CF style time variables (this is almost always the case if
@@ -266,21 +264,20 @@ def decode_cf_variable(
 
 
 def _update_bounds_attributes(variables: T_Variables) -> None:
-    """Adds time attributes to time bounds variables.
+    """Add time attributes to time bounds variables.
 
     Variables handling time bounds ("Cell boundaries" in the CF
     conventions) do not necessarily carry the necessary attributes to be
     decoded. This copies the attributes from the time variable to the
     associated boundaries.
 
-    See Also:
-
+    See Also
+    --------
     http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
          cf-conventions.html#cell-boundaries
 
     https://github.com/pydata/xarray/issues/2565
     """
-
     # For all time variables with bounds
     for v in variables.values():
         attrs = v.attrs
@@ -294,21 +291,20 @@ def _update_bounds_attributes(variables: T_Variables) -> None:
 
 
 def _update_bounds_encoding(variables: T_Variables) -> None:
-    """Adds time encoding to time bounds variables.
+    """Add time encoding to time bounds variables.
 
     Variables handling time bounds ("Cell boundaries" in the CF
     conventions) do not necessarily carry the necessary attributes to be
     decoded. This copies the encoding from the time variable to the
     associated bounds variable so that we write CF-compliant files.
 
-    See Also:
-
+    See Also
+    --------
     http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
          cf-conventions.html#cell-boundaries
 
     https://github.com/pydata/xarray/issues/2565
     """
-
     # For all time variables with bounds
     for name, v in variables.items():
         attrs = v.attrs
@@ -344,9 +340,7 @@ def _update_bounds_encoding(variables: T_Variables) -> None:
 def _item_or_default[T, U](
     obj: Mapping[Any, T | U] | T, key: Hashable, default: T
 ) -> T | U:
-    """
-    Return item by key if obj is mapping and key is present, else return default value.
-    """
+    """Return item by key if obj is mapping and key is present, else default."""
     return obj.get(key, default) if isinstance(obj, Mapping) else obj
 
 
@@ -364,15 +358,10 @@ def decode_cf_variables(
     | Mapping[str, bool | CFTimedeltaCoder]
     | None = None,
 ) -> tuple[T_Variables, T_Attrs, set[Hashable]]:
-    """
-    Decode several CF encoded variables.
+    """Decode several CF encoded variables.
 
     See: decode_cf_variable
     """
-    # Only emit one instance of the decode_timedelta default change
-    # FutureWarning. This can be removed once this change is made.
-    warnings.filterwarnings("once", "decode_timedelta", FutureWarning)
-
     dimensions_used_by = defaultdict(list)
     for v in variables.values():
         for d in v.dims:
@@ -511,8 +500,9 @@ def decode_cf(
     | Mapping[str, bool | CFTimedeltaCoder]
     | None = None,
 ) -> Dataset:
-    """Decode the given Dataset or Datastore according to CF conventions into
-    a new Dataset.
+    """Decode the given Dataset or Datastore according to CF conventions.
+
+    The result is a new Dataset.
 
     Parameters
     ----------
@@ -611,8 +601,7 @@ def cf_decoder(
     mask_and_scale: bool = True,
     decode_times: bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder] = True,
 ) -> tuple[T_Variables, T_Attrs]:
-    """
-    Decode a set of CF encoded variables and attributes.
+    """Decode a set of CF encoded variables and attributes.
 
     Parameters
     ----------
@@ -745,8 +734,9 @@ def _encode_coordinates(
 
 
 def encode_dataset_coordinates(dataset: Dataset):
-    """Encode coordinates on the given dataset object into variable specific
-    and global attributes.
+    """Encode coordinates on the given dataset into attributes.
+
+    Coordinates are encoded into variable specific and global attributes.
 
     When possible, this is done according to CF conventions.
 
@@ -767,8 +757,8 @@ def encode_dataset_coordinates(dataset: Dataset):
 
 
 def cf_encoder(variables: T_Variables, attributes: T_Attrs):
-    """
-    Encode a set of CF encoded variables and attributes.
+    """Encode a set of CF encoded variables and attributes.
+
     Takes a dicts of variables and attributes and encodes them
     to conform to CF conventions as much as possible.
     This includes masking, scaling, character array handling,
@@ -792,7 +782,6 @@ def cf_encoder(variables: T_Variables, attributes: T_Attrs):
     --------
     decode_cf_variable, encode_cf_variable
     """
-
     # add encoding for time bounds variables if present.
     _update_bounds_encoding(variables)
 

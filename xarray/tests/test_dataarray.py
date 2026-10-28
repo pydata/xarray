@@ -13,12 +13,8 @@ from typing import Any, Final, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
+from numpy.exceptions import RankWarning
+from pandas.errors import UndefinedVariableError
 
 import xarray as xr
 import xarray.core.missing
@@ -51,13 +47,11 @@ from xarray.tests import (
     assert_no_warnings,
     dask_array_api,
     dask_array_type,
-    has_dask_ge_2025_1_0,
     has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cupy,
     requires_dask,
-    requires_dask_expr,
     requires_iris,
     requires_numexpr,
     requires_pint,
@@ -68,13 +62,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import XYIndex
-
-try:
-    from pandas.errors import UndefinedVariableError
-except ImportError:
-    # TODO: remove once we stop supporting pandas<1.4.3
-    from pandas.core.computation.ops import UndefinedVariableError
-
 
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
@@ -209,10 +196,7 @@ class TestDataArray:
         assert actual.dtype == expected.dtype
 
     def test_struct_array_dims(self) -> None:
-        """
-        This test checks subtraction of two DataArrays for the case
-        when dimension is a structured array.
-        """
+        """Test subtraction of two DataArrays when a dimension is a structured array."""
         # GH837, GH861
         # checking array subtraction when dims are the same
         p_data = np.array(
@@ -1023,6 +1007,10 @@ class TestDataArray:
         roundtripped = pickle.loads(pickle.dumps(data))
         assert_identical(data, roundtripped)
 
+    def test_chunk_none_raises(self) -> None:
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            DataArray(np.ones((3, 4))).chunk(None)  # type: ignore[arg-type]
+
     @requires_dask
     def test_chunk(self) -> None:
         unblocked = DataArray(np.ones((3, 4)))
@@ -1038,12 +1026,12 @@ class TestDataArray:
         assert blocked.data.name != first_dask_name
 
         with pytest.warns(FutureWarning):
-            blocked = unblocked.chunk(chunks=(3, 3))
+            blocked = unblocked.chunk(chunks=(3, 3))  # type: ignore[arg-type]
         assert blocked.chunks == ((3,), (3, 1))
         assert blocked.data.name != first_dask_name
 
         with pytest.raises(ValueError), pytest.warns(FutureWarning):
-            blocked.chunk(chunks=(3, 3, 3))
+            blocked.chunk(chunks=(3, 3, 3))  # type: ignore[arg-type]
 
         # name doesn't change when rechunking by same amount
         # this fails if ReprObject doesn't have __dask_tokenize__ defined
@@ -2914,6 +2902,23 @@ class TestDataArray:
         actual = stacked.sel(z=slice((x[0], "b"), (x[1], "a")))
         assert_identical(actual, stacked.isel(z=slice(1, 3)))
 
+    def test_unstack_coords_follow_multiindex_levels(self) -> None:
+        # pandas sorts MultiIndex levels, xarray's stack keeps the original order
+        arrays: list[np.ndarray] = [np.array(["c", "a", "b"]), np.array([1, 0, 0])]
+        midx = pd.MultiIndex.from_arrays(arrays, names=["x", "y"])
+        s = pd.Series([10, 20, 30], index=midx)
+        unstacked = DataArray(s, dims="z").unstack("z")
+        assert unstacked["x"].values.tolist() == ["a", "b", "c"]
+        assert unstacked["y"].values.tolist() == [0, 1]
+
+        orig = DataArray(
+            np.arange(6).reshape(3, 2),
+            coords={"x": ["c", "a", "b"], "y": [1, 0]},
+            dims=["x", "y"],
+        )
+        roundtripped = orig.stack(z=["x", "y"]).unstack("z")
+        assert_identical(orig, roundtripped)
+
     def test_unstack_pandas_consistency(self) -> None:
         df = pd.DataFrame({"foo": range(3), "x": ["a", "b", "b"], "y": [0, 0, 1]})
         s = df.set_index(["x", "y"])["foo"]
@@ -3332,28 +3337,6 @@ class TestDataArray:
         expected = np.nanquantile(self.dv.values, np.array(q), method=method)
 
         np.testing.assert_allclose(actual.values, expected)
-
-    @pytest.mark.filterwarnings(
-        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-    )
-    @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    def test_quantile_interpolation_deprecated(self, method) -> None:
-        da = DataArray(self.va)
-        q = [0.25, 0.5, 0.75]
-
-        with pytest.warns(
-            FutureWarning,
-            match="`interpolation` argument to quantile was renamed to `method`",
-        ):
-            actual = da.quantile(q, interpolation=method)
-
-        expected = da.quantile(q, method=method)
-
-        np.testing.assert_allclose(actual.values, expected.values)
-
-        with warnings.catch_warnings(record=True):
-            with pytest.raises(TypeError, match="interpolation and method keywords"):
-                da.quantile(q, method=method, interpolation=method)
 
     def test_reduce_keep_attrs(self) -> None:
         # Test default behavior (keeps attrs for reduction operations)
@@ -3904,9 +3887,8 @@ class TestDataArray:
             f"v data: expected {v_dtype}, got {df['v'].dtype}"
         )
 
-    @requires_dask_expr
     @requires_dask
-    @pytest.mark.xfail(not has_dask_ge_2025_1_0, reason="dask-expr is broken")
+    @requires_pyarrow
     def test_to_dask_dataframe(self) -> None:
         arr_np = np.arange(3 * 4).reshape(3, 4)
         arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
@@ -4492,9 +4474,12 @@ class TestDataArray:
         ],
     )
     def test_copy_coords(self, deep, expected_orig) -> None:
-        """The test fails for the shallow copy, and apparently only on Windows
+        """Test that copying a DataArray copies its coords.
+
+        The test fails for the shallow copy, and apparently only on Windows
         for some reason. In windows coords seem to be immutable unless it's one
-        dataarray deep copied from another."""
+        dataarray deep copied from another.
+        """
         da = xr.DataArray(
             np.ones([2, 2, 2]),
             coords={"a": [1, 2], "b": ["x", "y"], "c": [0, 1]},
@@ -5009,7 +4994,6 @@ class TestDataArray:
         self, use_dask: bool, engine: QueryEngineOptions, parser: QueryParserOptions
     ) -> None:
         """Test querying a dataset."""
-
         # setup test data
         np.random.seed(42)
         a = np.arange(0, 10, 1)
@@ -7447,6 +7431,13 @@ def test_isin(da) -> None:
     result = da.isin([2, 3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
 
+    # set-like objects give the same answer as the equivalent list, GH10022
+    result = da.isin({2, 3}).sel(y=list("de"), z=0)
+    assert_equal(result, expected)
+
+    result = da.isin({2: "a", 3: "b"}.keys()).sel(y=list("de"), z=0)
+    assert_equal(result, expected)
+
 
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
@@ -7774,8 +7765,10 @@ def test_subclass_slots() -> None:
 
 
 def test_weakref() -> None:
-    """Classes with __slots__ are incompatible with the weakref module unless they
-    explicitly state __weakref__ among their slots
+    """Test that DataArray supports weak references.
+
+    Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots.
     """
     from weakref import ref
 
@@ -7786,6 +7779,7 @@ def test_weakref() -> None:
 
 def test_delete_coords() -> None:
     """Make sure that deleting a coordinate doesn't corrupt the DataArray.
+
     See issue #3899.
 
     Also test that deleting succeeds and produces the expected output.
@@ -7810,7 +7804,7 @@ def test_delete_coords() -> None:
 
 
 def test_deepcopy_nested_attrs() -> None:
-    """Check attrs deep copy, see :issue:`2835`"""
+    """Check attrs deep copy, see :issue:`2835`."""
     da1 = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"), coords={"x": [10, 20]})
     da1.attrs["flat"] = "0"
     da1.attrs["nested"] = {"level1a": "1", "level1b": "1"}

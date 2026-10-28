@@ -102,9 +102,7 @@ flat_index_keys = [
 
 @pytest.fixture(params=flat_index_keys)
 def index_flat(request):
-    """
-    index fixture, but excluding MultiIndex cases.
-    """
+    """Index fixture, but excluding MultiIndex cases."""
     key = request.param
     return indices_dict[key].copy()
 

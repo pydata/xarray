@@ -14,8 +14,9 @@ from xarray.core.variable import Variable
 
 
 class RangeCoordinateTransform(CoordinateTransform):
-    """1-dimensional coordinate transform representing a simple bounded interval
-    with evenly spaced, floating-point values.
+    """1-dimensional coordinate transform representing a simple bounded interval.
+
+    The interval has evenly spaced, floating-point values.
     """
 
     start: float
@@ -145,8 +146,9 @@ class RangeCoordinateTransform(CoordinateTransform):
 
 
 class RangeIndex(CoordinateTransformIndex):
-    """Xarray index implementing a simple bounded 1-dimension interval with
-    evenly spaced, monotonic floating-point values.
+    """Xarray index implementing a simple bounded 1-dimension interval.
+
+    The interval has evenly spaced, monotonic floating-point values.
 
     This index is memory-saving, i.e., the values of its associated coordinate
     variable are not materialized in memory.
@@ -308,8 +310,7 @@ class RangeIndex(CoordinateTransformIndex):
         dim: str,
         dtype: Any = None,
     ) -> "RangeIndex":
-        """Create a new RangeIndex from given start / stop values and number of
-        values.
+        """Create a new RangeIndex from given start / stop values and number of values.
 
         Parameters
         ----------

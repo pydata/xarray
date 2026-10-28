@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 @lru_cache(None)
 def _load_static_files():
-    """Lazily load the resource files into memory the first time they are needed"""
+    """Lazily load the resource files into memory the first time they are needed."""
     return [
         files(package).joinpath(resource).read_text(encoding="utf-8")
         for package, resource in STATIC_FILES
@@ -179,7 +179,7 @@ def summarize_indexes(indexes) -> str:
 
 
 def _toggle_all(attrs_enabled: bool | None) -> str:
-    """Inputs to show/hide the attributes and data of all items of a section.
+    """Return inputs to show/hide the attributes and data of all items of a section.
 
     ``attrs_enabled=None`` leaves out the attributes toggle, e.g. for indexes.
     """

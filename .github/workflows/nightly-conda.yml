@@ -1,0 +1,147 @@
+name: Upload nightly conda packages
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # once per day
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-recent-commits:
+    name: Check for new commits
+    runs-on: ubuntu-slim
+
+    outputs:
+      recent-commits-found: ${{ steps.check-recent-commits.outputs.n-recent-commits > 0 }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: check for new commits
+        env:
+          PERIOD: "30 hours"
+        id: check-recent-commits
+        run: |
+          now=$(date)
+          cutoff=$(date "+%s" -d "$now - $PERIOD")
+          echo "n-recent-commits=$(git rev-list --max-age="$cutoff" HEAD | wc -l)" >> $GITHUB_OUTPUT
+
+      - name: Report
+        env:
+          RECENT_COMMITS: ${{ steps.check-recent-commits.outputs.n-recent-commits }}
+          RECENT_COMMITS_FOUND: ${{ steps.check-recent-commits.outputs.n-recent-commits > 0 }}
+        run: |
+          echo "Recent commits found: $RECENT_COMMITS (condition: ${RECENT_COMMITS_FOUND})"
+
+  build-artifacts:
+    name: Build artifacts
+    needs: check-recent-commits
+    runs-on: ubuntu-latest
+    if: |
+      always()
+      && github.repository == 'pydata/xarray'
+      && (
+        github.event_name == 'workflow_dispatch'
+        || (github.event_name == 'schedule' && needs.check-recent-commits.outputs.recent-commits-found)
+      )
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        with:
+          cache: false
+          environments: build-package
+
+      - name: build the package
+        run: pixi run build-package
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: releases
+          path: dist
+
+  upload:
+    name: Publish artifacts
+    needs: build-artifacts
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: scientific-python-nightly-conda
+      url: https://prefix.dev/scientific-python/scientific-python-nightly
+
+    permissions:
+      contents: read
+      issues: write # report failures
+      id-token: write # upload to prefix.dev
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: releases
+          path: dist
+
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        with:
+          run-install: false
+
+      - name: Upload packages
+        id: upload
+        run: |
+          pixi upload prefix \
+            -vvv \
+            -c scientific-python/scientific-python-nightly \
+            --skip-existing \
+            --generate-attestation \
+            dist/xarray-*.conda
+
+      - name: Report failures
+        if: failure()
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_LABEL: "CI"
+          ISSUE_TITLE: "Nightly conda build/upload failed"
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository}}/actions/runs/${{ github.run_id }}
+          TEMPLATE: ".github/nightly-conda-failure-template.md"
+        run: |
+          # Read the template
+          template=$(cat "$TEMPLATE")
+
+          # Replace placeholders
+          issue_body="${template//\{\{WORKFLOW\}\}/$GITHUB_WORKFLOW}"
+          issue_body="${issue_body//\{\{RUN_ID\}\}/$GITHUB_RUN_ID}"
+          issue_body="${issue_body//\{\{RUN_URL\}\}/$GITHUB_RUN_URL}"
+          issue_body="${issue_body//\{\{DATE\}\}/$(date -u)}"
+
+          # Check for existing open issue with same title
+          existing_issue=$(gh issue list --state open --label "$ISSUE_LABEL" --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number // empty')
+
+          if [ -n "$existing_issue" ]; then
+            echo "Found existing open issue #$existing_issue, updating it..."
+            echo "$issue_body" | gh issue edit "$existing_issue" --body-file -
+            echo "Updated existing issue #$existing_issue"
+          else
+            echo "No existing open issue found, creating new one..."
+            echo "$issue_body" | gh issue create \
+              --title "$ISSUE_TITLE" \
+              --body-file - \
+              --label "$ISSUE_LABEL"
+            echo "Created new issue"
+          fi

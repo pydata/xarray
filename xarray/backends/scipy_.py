@@ -58,10 +58,20 @@ def _decode_string[T](s: bytes | T) -> str | T:
     return s
 
 
+def _force_native_endianness_attr(value: Any) -> Any:
+    # scipy returns numeric attribute arrays in netCDF3's big-endian byte order
+    if isinstance(value, np.ndarray) and not value.dtype.isnative:
+        value = value.astype(value.dtype.newbyteorder("="))
+    return value
+
+
 def _decode_attrs[K, V](d: Mapping[K, V]) -> dict[K, V]:
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
-    return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}
+    return {
+        k: _force_native_endianness_attr(v if k == "_FillValue" else _decode_string(v))
+        for (k, v) in d.items()
+    }
 
 
 class ScipyArrayWrapper(BackendArray):
@@ -390,8 +400,7 @@ def _normalize_filename_or_obj(
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the scipy package.
+    """Backend for netCDF files based on the scipy package.
 
     It can open ".nc", ".cdf", and "nc..gz" files but will only be
     selected as the default if the "netcdf4" and "h5netcdf" engines are

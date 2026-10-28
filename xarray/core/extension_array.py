@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, cast, override
 
 import numpy as np
 import pandas as pd
-from packaging.version import Version
 from pandas.api.extensions import ExtensionArray, ExtensionDtype
 from pandas.api.types import is_scalar as pd_is_scalar
 
@@ -312,10 +311,7 @@ class PandasExtensionArray[T_ExtensionArray: pd.api.extensions.ExtensionArray](
     def __array__(
         self, dtype: np.typing.DTypeLike | None = None, /, *, copy: bool | None = None
     ) -> np.ndarray:
-        if Version(np.__version__) >= Version("2.0.0"):
-            return np.asarray(self.array, dtype=dtype, copy=copy)
-        else:
-            return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array, dtype=dtype, copy=copy)
 
     def __getattr__(self, attr: str) -> Any:
         #  with __deepcopy__ or __copy__, the object is first constructed and then the sub-objects are attached (see https://docs.python.org/3/library/copy.html)
