@@ -254,14 +254,18 @@ def __extension_duck_array__pad(
     parts: list[ExtensionArray] = []
     if before:
         parts.append(
-            constructor._from_sequence([fill_before] * before, dtype=array.dtype)
+            constructor._from_sequence(  # type: ignore[attr-defined]
+                [fill_before] * before, dtype=array.dtype
+            )
         )
     parts.append(array)
     if after:
         parts.append(
-            constructor._from_sequence([fill_after] * after, dtype=array.dtype)
+            constructor._from_sequence(  # type: ignore[attr-defined]
+                [fill_after] * after, dtype=array.dtype
+            )
         )
-    return type(array)._concat_same_type(parts)
+    return type(array)._concat_same_type(parts)  # type: ignore[attr-defined]
 
 
 def _replace_duck(args, replacer: Callable[[PandasExtensionArray], Any]) -> list:
