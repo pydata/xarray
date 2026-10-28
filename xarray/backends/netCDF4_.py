@@ -254,6 +254,16 @@ def _force_native_endianness(var):
     return var
 
 
+def _force_native_endianness_attr(value):
+    # netCDF4-python writes non-native-endian attribute arrays without
+    # byte-swapping, silently corrupting the stored values (variable data
+    # is handled by _force_native_endianness above):
+    # https://github.com/Unidata/netcdf4-python/issues/1502
+    if isinstance(value, np.ndarray) and value.dtype.byteorder not in ("=", "|"):
+        value = value.astype(value.dtype.newbyteorder("="))
+    return value
+
+
 def _extract_nc4_variable_encoding(
     variable: Variable,
     raise_on_invalid=False,
@@ -364,8 +374,8 @@ def _is_list_of_strings(value) -> bool:
 def _build_and_get_enum(
     store, var_name: str, dtype: np.dtype, enum_name: str, enum_dict: dict[str, int]
 ) -> ncEnumType | h5EnumType:
-    """
-    Add or get the netCDF4 Enum based on the dtype in encoding.
+    """Add or get the netCDF4 Enum based on the dtype in encoding.
+
     The return type should be ``netCDF4.EnumType``,
     but we avoid importing netCDF4 globally for performances.
     """
@@ -679,6 +689,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     @override
     def set_attribute(self, key, value):
+        value = _force_native_endianness_attr(value)
         if self.format != "NETCDF4":
             value = encode_nc3_attr_value(value)
         if _is_list_of_strings(value):
@@ -701,7 +712,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self, name, variable: Variable, check_encoding=False, unlimited_dims=None
     ):
         _ensure_no_forward_slash_in_name(name)
-        attrs = variable.attrs.copy()
+        attrs = {k: _force_native_endianness_attr(v) for k, v in variable.attrs.items()}
         fill_value = attrs.pop("_FillValue", None)
         datatype: np.dtype | ncEnumType | h5EnumType
         datatype = _get_datatype(
@@ -774,8 +785,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
 
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the netCDF4 package.
+    """Backend for netCDF files based on the netCDF4 package.
 
     It can open ".nc", ".nc4", ".cdf" files and will be chosen
     as default for these files.

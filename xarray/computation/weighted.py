@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Hashable, Iterable, Sequence
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Literal, cast, override
 
 import numpy as np
@@ -147,8 +147,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
     __slots__ = ("obj", "weights")
 
     def __init__(self, obj: T_Xarray, weights: T_DataArray) -> None:
-        """
-        Create a Weighted object
+        """Create a Weighted object.
 
         Parameters
         ----------
@@ -164,7 +163,6 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         ``weights`` must be a ``DataArray`` and cannot contain missing values.
         Missing values can be replaced by ``weights.fillna(0)``.
         """
-
         from xarray.core.dataarray import DataArray
 
         if not isinstance(weights, DataArray):
@@ -193,15 +191,11 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         self.weights: T_DataArray = weights
 
     def _check_dim(self, dim: Dims):
-        """raise an error if any dimension is missing"""
-
-        dims: list[Hashable]
-        if isinstance(dim, str) or not isinstance(dim, Iterable):
-            dims = [dim] if dim else []
-        else:
-            dims = list(dim)
+        """Raise an error if any dimension is missing."""
         all_dims = set(self.obj.dims).union(set(self.weights.dims))
-        missing_dims = set(dims) - all_dims
+        dims = utils.parse_dims_as_set(dim, all_dims, check_exists=False)
+
+        missing_dims = dims - all_dims
         if missing_dims:
             raise ValueError(
                 f"Dimensions {tuple(missing_dims)} not found in {self.__class__.__name__} dimensions {tuple(all_dims)}"
@@ -214,11 +208,10 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         dim: Dims = None,
         skipna: bool | None = None,
     ) -> T_DataArray:
-        """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
+        """Reduce using dot; equivalent to (da * weights).sum(dim, skipna).
 
         for internal use only
         """
-
         # need to infer dims as we use `dot`
         if dim is None:
             dim = ...
@@ -232,8 +225,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         return dot(da, weights, dim=dim)
 
     def _sum_of_weights(self, da: T_DataArray, dim: Dims = None) -> T_DataArray:
-        """Calculate the sum of weights, accounting for missing values"""
-
+        """Calculate the sum of weights, accounting for missing values."""
         # we need to mask data values that are nan; else the weights are wrong
         mask = da.notnull()
 
@@ -261,7 +253,6 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         skipna: bool | None = None,
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
-
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
 
         # TODO: unsure why mypy complains about these being DataArray return types
@@ -275,7 +266,6 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         skipna: bool | None = None,
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
-
         return self._reduce(da, self.weights, dim=dim, skipna=skipna)  # type: ignore[return-value]
 
     def _weighted_mean(
@@ -285,7 +275,6 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         skipna: bool | None = None,
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``mean`` along some dimension(s)."""
-
         weighted_sum = self._weighted_sum(da, dim=dim, skipna=skipna)
 
         sum_of_weights = self._sum_of_weights(da, dim=dim)
@@ -299,7 +288,6 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         skipna: bool | None = None,
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``var`` along some dimension(s)."""
-
         sum_of_squares = self._sum_of_squares(da, dim=dim, skipna=skipna)
 
         sum_of_weights = self._sum_of_weights(da, dim=dim)
@@ -313,7 +301,6 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         skipna: bool | None = None,
     ) -> T_DataArray:
         """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""
-
         return cast("T_DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
 
     def _weighted_quantile(
@@ -413,7 +400,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         if np.any((q < 0) | (q > 1)):
             raise ValueError("q values must be between 0 and 1")
 
-        if dim is None:
+        if dim is None or dim is ...:
             dim = da.dims
 
         if utils.is_scalar(dim):
@@ -531,8 +518,7 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         )
 
     def __repr__(self) -> str:
-        """provide a nice str repr of our Weighted object"""
-
+        """Provide a nice str repr of our Weighted object."""
         klass = self.__class__.__name__
         weight_dims = ", ".join(map(str, self.weights.dims))
         return f"{klass} with weights along dimensions: {weight_dims}"
@@ -558,10 +544,27 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 
 class DatasetWeighted(Weighted["Dataset"]):
+    def _restore_coords(self, dim: Dims, ds: Dataset) -> Dataset:
+        """Restore orphaned coordinates and dimensions.
+
+        self.obj.map will drop orphaned coordinates & dims that are not in
+        the weights DataArray. This restores them.
+        """
+        all_dims = set(self.obj.dims) | set(self.weights.dims)
+        reduced_dims = utils.parse_dims_as_set(dim, all_dims, check_exists=False)
+
+        to_drop = [
+            name
+            for name, coord in self.obj.coords.items()
+            if name in ds.coords or not reduced_dims.isdisjoint(coord.dims)
+        ]
+        return ds.assign_coords(self.obj.coords.drop_vars(to_drop))
+
     @override
     def _implementation(self, func, dim, **kwargs) -> Dataset:
         self._check_dim(dim)
         result = self.obj.map(func, dim=dim, **kwargs)
+        result = self._restore_coords(dim, result)
 
         # Clear attrs when keep_attrs is explicitly False
         # (weighted operations can propagate attrs from weights through internal computations)

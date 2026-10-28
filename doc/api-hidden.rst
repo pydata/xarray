@@ -136,9 +136,7 @@
    core.accessor_dt.DatetimeAccessor.season
    core.accessor_dt.DatetimeAccessor.second
    core.accessor_dt.DatetimeAccessor.time
-   core.accessor_dt.DatetimeAccessor.week
    core.accessor_dt.DatetimeAccessor.weekday
-   core.accessor_dt.DatetimeAccessor.weekofyear
    core.accessor_dt.DatetimeAccessor.year
 
    core.accessor_dt.TimedeltaAccessor.ceil
@@ -656,6 +654,8 @@
    backends.BackendArray
    backends.BackendEntrypoint.guess_can_open
    backends.BackendEntrypoint.open_dataset
+   backends.BackendEntrypoint.open_datatree
+   backends.BackendEntrypoint.open_groups_as_dict
 
    core.indexing.IndexingSupport
    core.indexing.explicit_indexing_adapter

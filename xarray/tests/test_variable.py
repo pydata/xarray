@@ -38,6 +38,7 @@ from xarray.core.types import T_DuckArray
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import (
+    DuckArrayWrapper,
     IndexableArray,
     assert_allclose,
     assert_array_equal,
@@ -174,9 +175,7 @@ class VariableSubclassobjects(NamedArraySubclassobjects, ABC):
         assert_identical(v._getitem_with_mask(indexer, fill_value=-1), indexer)
 
     def _assertIndexedLikeNDArray(self, variable, expected_value0, expected_dtype=None):
-        """Given a 1-dimensional variable, verify that the variable is indexed
-        like a numpy.ndarray.
-        """
+        """Verify that a 1-dimensional variable is indexed like a numpy.ndarray."""
         assert variable[0].shape == ()
         assert variable[0].ndim == 0
         assert variable[0].size == 1
@@ -1087,6 +1086,10 @@ class TestVariable(VariableSubclassobjects):
         v.values = d2
         assert source_ndarray(v.values) is d2
 
+    def test_chunk_none_raises(self) -> None:
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            Variable(["x"], np.arange(3)).chunk(None)  # type: ignore[arg-type]
+
     def test_numpy_same_methods(self):
         v = Variable([], np.float32(0.0))
         assert v.item() == 0  # type: ignore[attr-defined]
@@ -1340,6 +1343,23 @@ class TestVariable(VariableSubclassobjects):
         vind = Variable(("a", "b"), [[0, 2], [1, 3]])
         _, ind, _ = v._broadcast_indexes((vind, 3))
         assert type(ind) is indexing.VectorizedIndexer
+
+    def test_broadcast_indexes_0d_duck_array(self) -> None:
+        # GH8820: a 0d non-numpy duck array indexer should drop its dimension
+        v = Variable(["x", "y"], np.arange(24).reshape(4, 6))
+        key = DuckArrayWrapper(np.array(2))
+
+        dims, ind, _ = v._broadcast_indexes((key, slice(None)))
+        assert dims == ("y",)
+        assert type(ind) is indexing.OuterIndexer
+
+        dims, ind, _ = v._broadcast_indexes((key, Variable("y", [0, 2])))
+        assert dims == ("y",)
+        assert type(ind) is indexing.OuterIndexer
+
+        dims, ind, _ = v._broadcast_indexes((key, Variable("z", [0, 2])))
+        assert dims == ("z",)
+        assert type(ind) is indexing.OuterIndexer
 
     def test_indexer_type(self):
         # GH:issue:1688. Wrong indexer type induces NotImplementedError
@@ -1971,28 +1991,6 @@ class TestVariable(VariableSubclassobjects):
             assert isinstance(actual.data, dask_array_type)
 
         np.testing.assert_allclose(actual.values, expected)
-
-    @pytest.mark.filterwarnings(
-        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-    )
-    @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    def test_quantile_interpolation_deprecation(self, method) -> None:
-        v = Variable(["x", "y"], self.d)
-        q = np.array([0.25, 0.5, 0.75])
-
-        with pytest.warns(
-            FutureWarning,
-            match="`interpolation` argument to quantile was renamed to `method`",
-        ):
-            actual = v.quantile(q, dim="y", interpolation=method)
-
-        expected = v.quantile(q, dim="y", method=method)
-
-        np.testing.assert_allclose(actual.values, expected.values)
-
-        with warnings.catch_warnings(record=True):
-            with pytest.raises(TypeError, match="interpolation and method keywords"):
-                v.quantile(q, dim="y", interpolation=method, method=method)
 
     @requires_dask
     def test_quantile_chunked_dim_error(self):

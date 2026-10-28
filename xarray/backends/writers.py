@@ -79,7 +79,7 @@ def get_writable_netcdf_store(
 
 
 def _validate_dataset_names(dataset: Dataset) -> None:
-    """DataArray.name and Dataset keys must be a string or None"""
+    """Check that DataArray.name and Dataset keys are a string or None."""
 
     def check_name(name: Hashable):
         if isinstance(name, str):
@@ -101,7 +101,9 @@ def _validate_dataset_names(dataset: Dataset) -> None:
 
 
 def _validate_attrs(dataset, engine, invalid_netcdf=False):
-    """`attrs` must have a string key and a value which is either: a number,
+    """Validate the attributes of a dataset and its variables.
+
+    `attrs` must have a string key and a value which is either: a number,
     a string, an ndarray, a list/tuple of numbers/strings, or a numpy.bool_.
 
     Notes
@@ -109,7 +111,6 @@ def _validate_attrs(dataset, engine, invalid_netcdf=False):
     A numpy.bool_ is only allowed when using the h5netcdf engine with
     `invalid_netcdf=True`.
     """
-
     valid_types = (str, Number, np.ndarray, np.number, list, tuple, bytes)
     if invalid_netcdf and engine == "h5netcdf":
         valid_types += (np.bool_,)
@@ -167,7 +168,6 @@ def get_default_netcdf_write_engine(
     format: T_NetcdfTypes | None,
 ) -> Literal["netcdf4", "h5netcdf", "scipy"]:
     """Return the default netCDF library to use for writing a netCDF file."""
-
     module_names = {
         "netcdf4": "netCDF4",
         "scipy": "scipy",
@@ -386,8 +386,7 @@ def to_netcdf(
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
 ) -> tuple[ArrayWriter, AbstractDataStore] | memoryview | Delayed | None:
-    """This function creates an appropriate datastore for writing a dataset to
-    disk as a netCDF file
+    """Create an appropriate datastore for writing a dataset to disk as netCDF.
 
     See `Dataset.to_netcdf` for full API docs.
 
@@ -738,12 +737,10 @@ def to_zarr(
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> backends.ZarrStore | Delayed:
-    """This function creates an appropriate datastore for writing a dataset to
-    a zarr ztore
+    """Create an appropriate datastore for writing a dataset to a zarr store.
 
     See `Dataset.to_zarr` for full API docs.
     """
-
     # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
 
@@ -805,8 +802,7 @@ def _datatree_to_netcdf(
     invalid_netcdf: bool = False,
     auto_complex: bool | None = None,
 ) -> memoryview | Delayed | None:
-    """Implementation of `DataTree.to_netcdf`."""
-
+    """Implement `DataTree.to_netcdf`."""
     if format not in [None, *get_args(T_DataTreeNetcdfTypes)]:
         raise ValueError("DataTree.to_netcdf only supports the NETCDF4 format")
 
@@ -927,8 +923,7 @@ def _datatree_to_zarr(
     write_empty_chunks: bool | None = None,
     chunkmanager_store_kwargs: dict[str, Any] | None = None,
 ) -> ZarrStore | Delayed:
-    """Implementation of `DataTree.to_zarr`."""
-
+    """Implement `DataTree.to_zarr`."""
     if group is not None:
         raise NotImplementedError(
             "specifying a root group for the tree has not been implemented"
@@ -998,7 +993,7 @@ def _datatree_to_zarr(
 
 
 def _get_netcdf_autoclose(dataset: Dataset, engine: T_NetcdfEngine) -> bool:
-    """Should we close files after each write operations?"""
+    """Determine whether to close files after each write operation."""
     scheduler = get_dask_scheduler()
     have_chunks = any(v.chunks is not None for v in dataset.variables.values())
 
