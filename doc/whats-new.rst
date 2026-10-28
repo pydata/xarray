@@ -206,6 +206,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix :py:func:`decode_cf` leaving floating-point missing values unmasked when
+  their metadata has higher precision than the stored data (:issue:`9381`).
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
