@@ -24,6 +24,78 @@ def test_CFMaskCoder_decode() -> None:
     assert_identical(expected, encoded)
 
 
+@pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
+@pytest.mark.parametrize("attribute", ["_FillValue", "missing_value"])
+@pytest.mark.parametrize("packed", [False, True])
+def test_decode_cf_floating_fill_value(
+    dtype: str, attribute: str, packed: bool, use_dask: bool
+) -> None:
+    # https://github.com/pydata/xarray/issues/9381
+    fill_value = -99.9
+    stored_fill = np.array(fill_value, dtype=dtype)[()]
+    below = np.nextafter(stored_fill, np.array(-np.inf, dtype=dtype))
+    above = np.nextafter(stored_fill, np.array(np.inf, dtype=dtype))
+    data = np.array([below, stored_fill, above, 0], dtype=dtype)
+    attrs = {attribute: fill_value}
+    if packed:
+        attrs.update(scale_factor=np.float64(0.5), add_offset=np.float64(1))
+    original = xr.Dataset({"a": ("x", data, attrs)})
+    if use_dask:
+        original = original.chunk(x=2)
+
+    actual = xr.decode_cf(original)
+
+    expected_data = data.astype("float64" if packed else dtype)
+    expected_data[1] = np.nan
+    if packed:
+        expected_data = expected_data * 0.5 + 1
+    assert_identical(actual, xr.Dataset({"a": ("x", expected_data)}))
+    assert actual.a.encoding[attribute] == fill_value
+    if use_dask:
+        assert isinstance(actual.a.data, dask_array_type)
+
+
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+def test_decode_cf_out_of_range_floating_fill_value(dtype: str) -> None:
+    original = xr.Dataset(
+        {"a": ("x", np.array([-np.inf, 0, np.inf], dtype=dtype), {"_FillValue": 1e100})}
+    )
+    actual = xr.decode_cf(original)
+    expected = xr.Dataset({"a": ("x", np.array([-np.inf, 0, np.inf], dtype=dtype))})
+    assert_identical(actual, expected)
+
+
+def test_decode_cf_multiple_floating_fill_values() -> None:
+    original = xr.Dataset(
+        {
+            "a": (
+                "x",
+                np.array([-99.9, -88.8, np.nan, 1], dtype="float32"),
+                {"missing_value": np.array([-99.9, -88.8, np.nan])},
+            )
+        }
+    )
+    with pytest.warns(variables.SerializationWarning, match="multiple fill values"):
+        actual = xr.decode_cf(original)
+    expected = xr.Dataset(
+        {"a": ("x", np.array([np.nan, np.nan, np.nan, 1], dtype="float32"))}
+    )
+    assert_identical(actual, expected)
+    np.testing.assert_equal(
+        actual.a.encoding["missing_value"], original.a.attrs["missing_value"]
+    )
+
+
+@pytest.mark.parametrize("fill_value", [1.5, 257.0])
+def test_decode_cf_unrepresentable_integer_fill_value(fill_value: float) -> None:
+    original = xr.Dataset(
+        {"a": ("x", np.array([0, 1, 2], dtype="uint8"), {"_FillValue": fill_value})}
+    )
+    actual = xr.decode_cf(original)
+    expected = xr.Dataset({"a": ("x", np.array([0, 1, 2], dtype="float32"))})
+    assert_identical(actual, expected)
+
+
 encoding_with_dtype = {
     "dtype": np.dtype("float64"),
     "_FillValue": np.float32(1e20),
