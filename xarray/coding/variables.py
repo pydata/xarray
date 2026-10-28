@@ -174,7 +174,9 @@ def _is_time_like(units):
         return "timedelta" if any(tstr == units for tstr in time_strings) else False
 
 
-def _check_fill_values(attrs, name, dtype):
+def _check_fill_values(
+    attrs: MutableMapping, name: T_Name, dtype: np.dtype
+) -> tuple[dict, set]:
     """Check _FillValue and missing_value if available.
 
     Return dictionary with raw fill values and set with encoded fill values.
@@ -206,6 +208,17 @@ def _check_fill_values(attrs, name, dtype):
                 SerializationWarning,
                 stacklevel=3,
             )
+
+    if dtype.kind == "f":
+        # Compare floating fill values at the precision of the stored data,
+        # even when decoding later promotes the data for scale/offset handling.
+        # Do not turn out-of-range finite fill values into matching infinities.
+        encoded_fill_values = {
+            dtype.type(fv)
+            if isinstance(fv, (float, np.floating)) and abs(fv) <= np.finfo(dtype).max
+            else fv
+            for fv in encoded_fill_values
+        }
 
     return raw_fill_dict, encoded_fill_values
 
