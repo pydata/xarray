@@ -856,7 +856,7 @@ def test_extract_single_nocase(dtype) -> None:
 @pytest.mark.parametrize("compiled", [False, True])
 def test_extract_multi_string_dtypes(string_dtype, compiled) -> None:
     value = xr.DataArray(
-        np.array(["alpha_1234", "beta", "!"], dtype=string_dtype), dims="X"
+        np.array(["!", "alpha_1234", "beta"], dtype=string_dtype), dims="X"
     )
     pattern_str = r"([a-z]+)(?:_(\d+))?"
     pattern = (
@@ -865,7 +865,7 @@ def test_extract_multi_string_dtypes(string_dtype, compiled) -> None:
         else pattern_str
     )
     expected = xr.DataArray(
-        np.array([["alpha", "1234"], ["beta", ""], ["", ""]], dtype=string_dtype),
+        np.array([["", ""], ["alpha", "1234"], ["beta", ""]], dtype=string_dtype),
         dims=["X", "group"],
     )
 
