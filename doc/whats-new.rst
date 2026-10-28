@@ -182,9 +182,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-- ``DataArray.str.extract`` with a named output dimension now supports NumPy
-  variable-width strings, including unmatched values and optional capture groups
-  (:issue:`11785`).
+- :py:meth:`DataArray.str.extract` with ``dim`` now supports NumPy ``StringDType`` arrays,
+  and no longer fails if the first value does not match (:pull:`11793`).
   By `jdotc1 <https://github.com/jdotc1>`_.
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
   variables (:issue:`6449`).
