@@ -4284,6 +4284,49 @@ class Dataset(
             4. **Interpolation along multiple dimensions of multi-dimensional data**
                 - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
                     "cubic", "quintic", "pchip"}.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "temperature": ("x", [10.0, 20.0, 30.0]),
+        ...         "pressure": ("x", [1.0, 2.0, 4.0]),
+        ...     },
+        ...     coords={"x": [0.0, 1.0, 2.0]},
+        ... )
+        >>> other = xr.Dataset(coords={"x": [0.5, 1.5, 2.5]})
+
+        Interpolate all variables to the coordinates of ``other``. Values
+        outside of the original coordinates are ``NaN``:
+
+        >>> ds.interp_like(other)
+        <xarray.Dataset> Size: 72B
+        Dimensions:      (x: 3)
+        Coordinates:
+          * x            (x) float64 24B 0.5 1.5 2.5
+        Data variables:
+            temperature  (x) float64 24B 15.0 25.0 nan
+            pressure     (x) float64 24B 1.5 3.0 nan
+
+        Use another method, or pass options to the interpolator, e.g. to
+        extrapolate:
+
+        >>> ds.interp_like(other, method="nearest")
+        <xarray.Dataset> Size: 72B
+        Dimensions:      (x: 3)
+        Coordinates:
+          * x            (x) float64 24B 0.5 1.5 2.5
+        Data variables:
+            temperature  (x) float64 24B 10.0 20.0 nan
+            pressure     (x) float64 24B 1.0 2.0 nan
+        >>> ds.interp_like(other, kwargs={"fill_value": "extrapolate"})
+        <xarray.Dataset> Size: 72B
+        Dimensions:      (x: 3)
+        Coordinates:
+          * x            (x) float64 24B 0.5 1.5 2.5
+        Data variables:
+            temperature  (x) float64 24B 15.0 25.0 35.0
+            pressure     (x) float64 24B 1.5 3.0 5.0
         """
         if kwargs is None:
             kwargs = {}
@@ -10383,6 +10426,24 @@ class Dataset(
             will be dropped as there are no equivalent dates in a standard calendar.
 
             This option is best used with data on a frequency coarser than daily.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("time", [10.0, 11.0, 12.0])},
+        ...     coords={"time": pd.date_range("2000-01-29", periods=3)},
+        ... )
+
+        The ``"360_day"`` calendar has no 31st, so with ``align_on="date"`` the
+        31st of January is dropped:
+
+        >>> ds.convert_calendar("360_day", align_on="date")
+        <xarray.Dataset> Size: 32B
+        Dimensions:      (time: 2)
+        Coordinates:
+          * time         (time) object 16B 2000-01-29 00:00:00 2000-01-30 00:00:00
+        Data variables:
+            temperature  (time) float64 16B 10.0 11.0
         """
         return convert_calendar(
             self,
