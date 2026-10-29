@@ -1163,6 +1163,57 @@ def test_as_indexable(array, expected_type):
     assert isinstance(actual, expected_type)
 
 
+class ArrayWithNamespaceNdArray(np.ndarray):
+    """ndarray subclass implementing both the Array API and numpy protocols."""
+
+    def __array_namespace__(self, /, *, api_version=None):
+        raise NotImplementedError
+
+
+def test_array_api_adapter_vindex_falls_back_to_array_function() -> None:
+    # GH9694: vectorized indexing is not part of the Array API standard, but
+    # arrays implementing both protocols should still support it
+    array = np.arange(6, dtype=np.int64).reshape(2, 3).view(ArrayWithNamespaceNdArray)
+    adapter = indexing.ArrayApiIndexingAdapter(array)
+    indexer = indexing.VectorizedIndexer((np.array([1, 0]), np.array([2, 1])))
+
+    actual = adapter.vindex[indexer]
+
+    expected = np.array([5, 1])
+    np.testing.assert_array_equal(np.asarray(actual), expected)
+
+
+def test_array_api_adapter_vindex_without_array_function_raises() -> None:
+    # GH9694: without the numpy protocol there is no way to vectorize
+    adapter = indexing.ArrayApiIndexingAdapter(ArrayWithNamespace())
+    indexer = indexing.VectorizedIndexer((np.array([0]),))
+
+    with pytest.raises(TypeError, match="Vectorized indexing is not supported"):
+        adapter.vindex[indexer]
+
+
+@requires_sparse
+def test_vectorized_indexing_sparse_array() -> None:
+    # GH9694: DataArray.sel with DataArray indexers (vectorized indexing)
+    # raised TypeError for sparse-backed arrays
+    import sparse
+
+    data = np.arange(15, dtype=np.float64).reshape(3, 5)
+    da = DataArray(
+        sparse.COO.from_numpy(data),
+        dims=("x", "y"),
+        coords={"x": ["x0", "x1", "x2"], "y": ["y0", "y1", "y2", "y3", "y4"]},
+    )
+    newdim = {"newdim": ["nd0", "nd1", "nd2"]}
+    x_idx = DataArray(["x2", "x1", "x2"], coords=newdim, dims="newdim")
+    y_idx = DataArray(["y4", "y2", "y0"], coords=newdim, dims="newdim")
+
+    actual = da.sel(x=x_idx, y=y_idx)
+
+    assert isinstance(actual.data, sparse.COO)
+    np.testing.assert_array_equal(actual.data.todense(), [14.0, 7.0, 10.0])
+
+
 @requires_sparse
 @pytest.mark.parametrize(
     "key",
