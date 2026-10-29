@@ -161,7 +161,7 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
 
     Examples
     --------
-    >>> ds = xr.Dataset({"a": ("x", [1, 2, 3])})
+    >>> ds = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0])})
     >>> ds.to_netcdf("example.nc")
 
     The data is loaded into memory and the file is closed again:
@@ -171,7 +171,7 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
     Dimensions:  (x: 3)
     Dimensions without coordinates: x
     Data variables:
-        a        (x) int64 24B 1 2 3
+        a        (x) float64 24B 1.0 2.0 3.0
     """
     if "cache" in kwargs:
         raise TypeError("cache has no effect in this context")
@@ -202,14 +202,14 @@ def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArra
 
     Examples
     --------
-    >>> da = xr.DataArray([1, 2, 3], dims="x", name="a")
+    >>> da = xr.DataArray([1.0, 2.0, 3.0], dims="x", name="a")
     >>> da.to_netcdf("example.nc")
 
     The data is loaded into memory and the file is closed again:
 
     >>> xr.load_dataarray("example.nc")
     <xarray.DataArray 'a' (x: 3)> Size: 24B
-    array([1, 2, 3])
+    array([1., 2., 3.])
     Dimensions without coordinates: x
     """
     if "cache" in kwargs:
@@ -628,8 +628,10 @@ def open_dataset(
     Open a dataset from a netCDF file. First, we create a file for this example:
 
     >>> ds = xr.Dataset(
-    ...     {"a": ("time", [1, 2, 3])},
-    ...     coords={"time": ("time", [0, 1, 2], {"units": "days since 2000-01-01"})},
+    ...     {"a": ("time", [1.0, 2.0, 3.0])},
+    ...     coords={
+    ...         "time": ("time", [0.0, 1.0, 2.0], {"units": "days since 2000-01-01"})
+    ...     },
     ... )
     >>> ds.to_netcdf("example.nc")
 
@@ -643,7 +645,7 @@ def open_dataset(
     Coordinates:
       * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     Data variables:
-        a        (time) int64 24B ...
+        a        (time) float64 24B ...
     >>> ds_disk.close()
 
     Keep the raw values of the time coordinate:
@@ -654,9 +656,9 @@ def open_dataset(
     <xarray.Dataset> Size: 48B
     Dimensions:  (time: 3)
     Coordinates:
-      * time     (time) int64 24B 0 1 2
+      * time     (time) float64 24B 0.0 1.0 2.0
     Data variables:
-        a        (time) int64 24B ...
+        a        (time) float64 24B ...
 
     Open the data as dask arrays, using the chunks of the file on disk:
 
@@ -668,7 +670,7 @@ def open_dataset(
     Coordinates:
       * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     Data variables:
-        a        (time) int64 24B dask.array<chunksize=(3,), meta=np.ndarray>
+        a        (time) float64 24B dask.array<chunksize=(3,), meta=np.ndarray>
 
     Open a dataset from a remote OPeNDAP URL:
 
@@ -920,7 +922,7 @@ def open_dataarray(
     --------
     Open a DataArray from a netCDF file. First, we create a file for this example:
 
-    >>> da = xr.DataArray([1, 2, 3], dims="x", name="a")
+    >>> da = xr.DataArray([1.0, 2.0, 3.0], dims="x", name="a")
     >>> da.to_netcdf("example.nc")
 
     The data is only loaded from the file when it is needed:
@@ -928,7 +930,7 @@ def open_dataarray(
     >>> da_disk = xr.open_dataarray("example.nc")
     >>> da_disk
     <xarray.DataArray 'a' (x: 3)> Size: 24B
-    [3 values with dtype=int64]
+    [3 values with dtype=float64]
     Dimensions without coordinates: x
     >>> da_disk.close()
     """
@@ -1433,8 +1435,8 @@ def open_groups(
     Open groups from a netCDF file as a dictionary of Datasets. First, create a
     file with groups:
 
-    >>> ds1 = xr.Dataset({"a": ("x", [1, 2, 3])})
-    >>> ds2 = xr.Dataset({"b": ("y", [4, 5])})
+    >>> ds1 = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0])})
+    >>> ds2 = xr.Dataset({"b": ("y", [4.0, 5.0])})
     >>> ds1.to_netcdf("example.nc", group="group1", mode="w")
     >>> ds2.to_netcdf("example.nc", group="group2", mode="a")
 
@@ -1448,7 +1450,7 @@ def open_groups(
     Dimensions:  (x: 3)
     Dimensions without coordinates: x
     Data variables:
-        a        (x) int64 24B ...
+        a        (x) float64 24B ...
     >>> for ds in groups.values():
     ...     ds.close()
     ...
@@ -1723,8 +1725,8 @@ def open_mfdataset(
     --------
     Combine two files along their coordinate ``x``:
 
-    >>> ds1 = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"x": [0, 1, 2]})
-    >>> ds2 = xr.Dataset({"a": ("x", [4, 5, 6])}, coords={"x": [3, 4, 5]})
+    >>> ds1 = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0])}, coords={"x": [0.0, 1.0, 2.0]})
+    >>> ds2 = xr.Dataset({"a": ("x", [4.0, 5.0, 6.0])}, coords={"x": [3.0, 4.0, 5.0]})
     >>> ds1.to_netcdf("example_1.nc")
     >>> ds2.to_netcdf("example_2.nc")
     >>> ds = xr.open_mfdataset(["example_1.nc", "example_2.nc"], combine="by_coords")
@@ -1732,16 +1734,16 @@ def open_mfdataset(
     <xarray.Dataset> Size: 96B
     Dimensions:  (x: 6)
     Coordinates:
-      * x        (x) int64 48B 0 1 2 3 4 5
+      * x        (x) float64 48B 0.0 1.0 2.0 3.0 4.0 5.0
     Data variables:
-        a        (x) int64 48B dask.array<chunksize=(3,), meta=np.ndarray>
+        a        (x) float64 48B dask.array<chunksize=(3,), meta=np.ndarray>
     >>> ds.close()
 
     Files without a coordinate to combine by can be stacked along a new
     dimension, in the order given:
 
-    >>> ds1 = xr.Dataset({"a": ("x", [1, 2, 3])})
-    >>> ds2 = xr.Dataset({"a": ("x", [4, 5, 6])})
+    >>> ds1 = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0])})
+    >>> ds2 = xr.Dataset({"a": ("x", [4.0, 5.0, 6.0])})
     >>> ds1.to_netcdf("example_1.nc")
     >>> ds2.to_netcdf("example_2.nc")
     >>> ds = xr.open_mfdataset(
@@ -1752,7 +1754,7 @@ def open_mfdataset(
     Dimensions:  (time: 2, x: 3)
     Dimensions without coordinates: time, x
     Data variables:
-        a        (time, x) int64 48B dask.array<chunksize=(1, 3), meta=np.ndarray>
+        a        (time, x) float64 48B dask.array<chunksize=(1, 3), meta=np.ndarray>
     >>> ds.close()
 
     A user might want to pass additional arguments into ``preprocess`` when

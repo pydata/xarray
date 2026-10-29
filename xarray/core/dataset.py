@@ -6390,38 +6390,41 @@ class Dataset(
         Examples
         --------
         >>> ds = xr.Dataset(
-        ...     {"a": (("x", "y"), [[1, 2], [3, 4]]), "b": (("x",), [5, 6])},
-        ...     coords={"x": [0, 1], "y": [0, 1]},
+        ...     {
+        ...         "a": (("x", "y"), [[1.0, 2.0], [3.0, 4.0]]),
+        ...         "b": (("x",), [5.0, 6.0]),
+        ...     },
+        ...     coords={"x": ["a", "b"], "y": ["c", "d"]},
         ... )
         >>> ds
-        <xarray.Dataset> Size: 80B
+        <xarray.Dataset> Size: 64B
         Dimensions:  (x: 2, y: 2)
         Coordinates:
-          * x        (x) int64 16B 0 1
-          * y        (y) int64 16B 0 1
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) <U1 8B 'c' 'd'
         Data variables:
-            a        (x, y) int64 32B 1 2 3 4
-            b        (x) int64 16B 5 6
+            a        (x, y) float64 32B 1.0 2.0 3.0 4.0
+            b        (x) float64 16B 5.0 6.0
 
         Drop ``y`` and the variables that use it:
 
         >>> ds.drop_dims("y")
-        <xarray.Dataset> Size: 32B
+        <xarray.Dataset> Size: 24B
         Dimensions:  (x: 2)
         Coordinates:
-          * x        (x) int64 16B 0 1
+          * x        (x) <U1 8B 'a' 'b'
         Data variables:
-            b        (x) int64 16B 5 6
+            b        (x) float64 16B 5.0 6.0
 
         Dimensions that don't exist raise an error, unless ``errors="ignore"``:
 
         >>> ds.drop_dims(["y", "z"], errors="ignore")
-        <xarray.Dataset> Size: 32B
+        <xarray.Dataset> Size: 24B
         Dimensions:  (x: 2)
         Coordinates:
-          * x        (x) int64 16B 0 1
+          * x        (x) <U1 8B 'a' 'b'
         Data variables:
-            b        (x) int64 16B 5 6
+            b        (x) float64 16B 5.0 6.0
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')

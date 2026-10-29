@@ -565,8 +565,16 @@ def decode_cf(
     Decode times and apply the scale factor of a dataset with CF attributes:
 
     >>> ds = xr.Dataset(
-    ...     {"temp": ("time", [10, 11, 12], {"scale_factor": 0.5})},
-    ...     coords={"time": ("time", [0, 1, 2], {"units": "days since 2000-01-01"})},
+    ...     {
+    ...         "temp": (
+    ...             "time",
+    ...             np.array([10, 11, 12], dtype="int16"),
+    ...             {"scale_factor": 0.5},
+    ...         )
+    ...     },
+    ...     coords={
+    ...         "time": ("time", [0.0, 1.0, 2.0], {"units": "days since 2000-01-01"})
+    ...     },
     ... )
     >>> decoded = xr.decode_cf(ds)
     >>> decoded
@@ -582,12 +590,12 @@ def decode_cf(
     Each decoding step can be turned off, e.g. to keep the raw values:
 
     >>> xr.decode_cf(ds, mask_and_scale=False, decode_times=False)
-    <xarray.Dataset> Size: 48B
+    <xarray.Dataset> Size: 30B
     Dimensions:  (time: 3)
     Coordinates:
-      * time     (time) int64 24B 0 1 2
+      * time     (time) float64 24B 0.0 1.0 2.0
     Data variables:
-        temp     (time) int64 24B 10 11 12
+        temp     (time) int16 6B 10 11 12
     """
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
