@@ -206,6 +206,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix CuPy indexers with pandas-backed coordinates, basic and label-based
+  assignment to CuPy arrays, and scalar truth conversion
+  (:issue:`11739`, :pull:`11797`).
+  By `Huashuo Lei <https://github.com/wpyaoxueros>`_.
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).

@@ -166,7 +166,12 @@ class AbstractArray(Generic[DimType_co]):  # noqa: UP046
     __slots__ = ()
 
     def __bool__(self: Any) -> bool:
-        return bool(self.values)
+        data = self.data
+        if isinstance(data, pd.api.extensions.ExtensionArray):
+            # bool(pd.array([False])) is True because it falls back to len().
+            # Convert to preserve NumPy's scalar and ambiguous truth semantics.
+            return bool(self.values)
+        return bool(data)
 
     def __float__(self: Any) -> float:
         return float(self.values)
