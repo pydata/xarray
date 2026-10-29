@@ -441,6 +441,12 @@ Bug Fixes
   engine raises a ``TypeError`` that points to ``engine="zarr"``
   (:issue:`11221`, :pull:`11226`).
   By `Carson Jones <https://github.com/wavebyrd>`_.
+- Vectorized (paired) indexing, e.g. :py:meth:`DataArray.sel` with
+  :py:class:`DataArray` indexers, works again for arrays that implement both
+  ``__array_function__`` and ``__array_namespace__``, such as ``sparse``
+  arrays, which previously raised ``TypeError: Vectorized indexing is not
+  supported`` (:issue:`9694`, :pull:`11828`).
+  By `Chirag Jangir <https://github.com/chiragjangiir>`_.
 
 
 Documentation

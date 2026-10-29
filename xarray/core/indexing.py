@@ -1855,6 +1855,12 @@ class ArrayApiIndexingAdapter(IndexingAdapter):
 
     @override
     def _vindex_get(self, indexer: VectorizedIndexer):
+        # Vectorized (paired) indexing is not part of the Array API standard,
+        # but arrays implementing both protocols (e.g. sparse) can still
+        # handle it through ``__array_function__``, mirroring the fallback
+        # used elsewhere in ``as_indexable`` (GH9694).
+        if hasattr(self.array, "__array_function__"):
+            return NdArrayLikeIndexingAdapter(self.array)._vindex_get(indexer)
         raise TypeError("Vectorized indexing is not supported")
 
     @override
