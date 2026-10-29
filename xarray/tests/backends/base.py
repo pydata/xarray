@@ -2147,15 +2147,15 @@ class NetCDF4Base(NetCDFBase):
 class InMemoryNetCDF:
     engine: T_NetcdfEngine | None
 
-    @pytest.mark.parametrize("chunks", [None, pytest.param({}, marks=requires_dask)])
-    def test_roundtrip_via_memoryview(self, chunks) -> None:
+    def test_roundtrip_via_memoryview(self, use_dask: bool) -> None:
+        chunks = {} if use_dask else None
         original = create_test_data()
         result = original.to_netcdf(engine=self.engine)
         roundtrip = load_dataset(result, engine=self.engine, chunks=chunks)
         assert_identical(roundtrip, original)
 
-    @pytest.mark.parametrize("chunks", [None, pytest.param({}, marks=requires_dask)])
-    def test_roundtrip_via_bytes(self, chunks) -> None:
+    def test_roundtrip_via_bytes(self, use_dask: bool) -> None:
+        chunks = {} if use_dask else None
         original = create_test_data()
         result = bytes(original.to_netcdf(engine=self.engine))
         roundtrip = load_dataset(result, engine=self.engine, chunks=chunks)
