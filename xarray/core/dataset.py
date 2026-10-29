@@ -2659,6 +2659,27 @@ class Dataset(
         Dataset.chunksizes
         xarray.unify_chunks
         dask.array.from_array
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("time", np.arange(6.0))},
+        ...     coords={"time": pd.date_range("2000-01-01", freq="MS", periods=6)},
+        ... )
+        >>> ds.chunk(time=2)
+        <xarray.Dataset> Size: 96B
+        Dimensions:      (time: 6)
+        Coordinates:
+          * time         (time) datetime64[us] 48B 2000-01-01 2000-02-01 ... 2000-06-01
+        Data variables:
+            temperature  (time) float64 48B dask.array<chunksize=(2,), meta=np.ndarray>
+
+        Along a datetime-like dimension, a resampler creates one chunk per period,
+        here one per quarter:
+
+        >>> from xarray.groupers import TimeResampler
+        >>> ds.chunk(time=TimeResampler("QS")).chunksizes
+        Frozen({'time': (3, 3)})
         """
         from xarray.groupers import Resampler
 
@@ -6385,6 +6406,16 @@ class Dataset(
         Drop ``y`` and the variables that use it:
 
         >>> ds.drop_dims("y")
+        <xarray.Dataset> Size: 32B
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) int64 16B 0 1
+        Data variables:
+            b        (x) int64 16B 5 6
+
+        Dimensions that don't exist raise an error, unless ``errors="ignore"``:
+
+        >>> ds.drop_dims(["y", "z"], errors="ignore")
         <xarray.Dataset> Size: 32B
         Dimensions:  (x: 2)
         Coordinates:

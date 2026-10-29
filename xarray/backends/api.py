@@ -627,19 +627,48 @@ def open_dataset(
     --------
     Open a dataset from a netCDF file. First, we create a file for this example:
 
-    >>> ds = xr.Dataset({"a": ("x", [1, 2, 3])})
+    >>> ds = xr.Dataset(
+    ...     {"a": ("time", [1, 2, 3])},
+    ...     coords={"time": ("time", [0, 1, 2], {"units": "days since 2000-01-01"})},
+    ... )
     >>> ds.to_netcdf("example.nc")
 
-    The data is only loaded from the file when it is needed:
+    The data is only loaded from the file when it is needed, and times are
+    decoded following the CF conventions:
 
     >>> ds_disk = xr.open_dataset("example.nc")
     >>> ds_disk
-    <xarray.Dataset> Size: 24B
-    Dimensions:  (x: 3)
-    Dimensions without coordinates: x
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 3)
+    Coordinates:
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
     Data variables:
-        a        (x) int64 24B ...
+        a        (time) int64 24B ...
     >>> ds_disk.close()
+
+    Keep the raw values of the time coordinate:
+
+    >>> with xr.open_dataset("example.nc", decode_times=False) as ds_disk:
+    ...     ds_disk
+    ...
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 3)
+    Coordinates:
+      * time     (time) int64 24B 0 1 2
+    Data variables:
+        a        (time) int64 24B ...
+
+    Open the data as dask arrays, using the chunks of the file on disk:
+
+    >>> with xr.open_dataset("example.nc", chunks={}) as ds_disk:
+    ...     ds_disk
+    ...
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 3)
+    Coordinates:
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+    Data variables:
+        a        (time) int64 24B dask.array<chunksize=(3,), meta=np.ndarray>
 
     Open a dataset from a remote OPeNDAP URL:
 
@@ -1706,6 +1735,24 @@ def open_mfdataset(
       * x        (x) int64 48B 0 1 2 3 4 5
     Data variables:
         a        (x) int64 48B dask.array<chunksize=(3,), meta=np.ndarray>
+    >>> ds.close()
+
+    Files without a coordinate to combine by can be stacked along a new
+    dimension, in the order given:
+
+    >>> ds1 = xr.Dataset({"a": ("x", [1, 2, 3])})
+    >>> ds2 = xr.Dataset({"a": ("x", [4, 5, 6])})
+    >>> ds1.to_netcdf("example_1.nc")
+    >>> ds2.to_netcdf("example_2.nc")
+    >>> ds = xr.open_mfdataset(
+    ...     ["example_1.nc", "example_2.nc"], combine="nested", concat_dim="time"
+    ... )
+    >>> ds
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 2, x: 3)
+    Dimensions without coordinates: time, x
+    Data variables:
+        a        (time, x) int64 48B dask.array<chunksize=(1, 3), meta=np.ndarray>
     >>> ds.close()
 
     A user might want to pass additional arguments into ``preprocess`` when

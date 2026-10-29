@@ -891,6 +891,16 @@ def polyval(
     <xarray.DataArray (x: 5)> Size: 40B
     array([ 1,  6, 17, 34, 57])
     Dimensions without coordinates: x
+
+    Evaluate the result of :py:meth:`DataArray.polyfit` along its coordinate:
+
+    >>> y = xr.DataArray([1, 6, 17, 34, 57], dims="x", coords={"x": np.arange(5)})
+    >>> fit = y.polyfit("x", deg=2)
+    >>> xr.polyval(y.x, fit.polyfit_coefficients).round(6)
+    <xarray.DataArray (x: 5)> Size: 40B
+    array([ 1.,  6., 17., 34., 57.])
+    Coordinates:
+      * x        (x) int64 40B 0 1 2 3 4
     """
     if degree_dim not in coeffs._indexes:
         raise ValueError(

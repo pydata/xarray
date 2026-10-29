@@ -1359,6 +1359,18 @@ class DataArray(
         DataArray.load_async
         Dataset.compute
         Variable.compute
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1, 2, 3], dims="x").chunk(x=1)
+        >>> computed = da.compute()
+        >>> type(computed.data)
+        <class 'numpy.ndarray'>
+
+        The original DataArray is not modified:
+
+        >>> type(da.data)
+        <class 'dask.array.core.Array'>
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1384,6 +1396,18 @@ class DataArray(
         See Also
         --------
         dask.persist
+        DataArray.compute
+        Dataset.persist
+
+        Examples
+        --------
+        The result is still a dask array, but its chunks are computed and kept
+        in memory:
+
+        >>> da = xr.DataArray([1, 2, 3], dims="x").chunk(x=1)
+        >>> persisted = da.persist()
+        >>> type(persisted.data)
+        <class 'dask.array.core.Array'>
         """
         ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
@@ -1582,6 +1606,26 @@ class DataArray(
         DataArray.chunksizes
         xarray.unify_chunks
         dask.array.from_array
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(12).reshape(3, 4), dims=("x", "y"))
+
+        Split ``x`` into chunks of one element, ``y`` remains a single chunk:
+
+        >>> da.chunk(x=1).chunks
+        ((1, 1, 1), (4,))
+
+        Pass a dictionary to chunk several dimensions at once. The last chunk is
+        smaller if the size isn't a multiple of the chunk size:
+
+        >>> da.chunk({"x": 2, "y": 2}).chunksizes
+        Frozen({'x': (2, 1), 'y': (2, 2)})
+
+        Use ``-1`` to put a whole dimension into a single chunk:
+
+        >>> da.chunk(x=1).chunk(x=-1).chunks
+        ((3,), (4,))
         """
         chunk_mapping: T_ChunksFreq
         if chunks is None:

@@ -578,6 +578,16 @@ def decode_cf(
         temp     (time) float64 24B ...
     >>> decoded["temp"].values
     array([5. , 5.5, 6. ])
+
+    Each decoding step can be turned off, e.g. to keep the raw values:
+
+    >>> xr.decode_cf(ds, mask_and_scale=False, decode_times=False)
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 3)
+    Coordinates:
+      * time     (time) int64 24B 0 1 2
+    Data variables:
+        temp     (time) int64 24B 10 11 12
     """
     from xarray.backends.common import AbstractDataStore
     from xarray.core.dataset import Dataset
