@@ -26,9 +26,8 @@ def test_CFMaskCoder_decode() -> None:
 
 @pytest.mark.parametrize("dtype", ["float16", "float32", "float64"])
 @pytest.mark.parametrize("attribute", ["_FillValue", "missing_value"])
-@pytest.mark.parametrize("packed", [False, True])
 def test_decode_cf_floating_fill_value(
-    dtype: str, attribute: str, packed: bool, use_dask: bool
+    dtype: str, attribute: str, use_dask: bool
 ) -> None:
     # https://github.com/pydata/xarray/issues/9381
     fill_value = -99.9
@@ -37,20 +36,55 @@ def test_decode_cf_floating_fill_value(
     above = np.nextafter(stored_fill, np.array(np.inf, dtype=dtype))
     data = np.array([below, stored_fill, above, 0], dtype=dtype)
     attrs = {attribute: fill_value}
-    if packed:
-        attrs.update(scale_factor=np.float64(0.5), add_offset=np.float64(1))
     original = xr.Dataset({"a": ("x", data, attrs)})
     if use_dask:
         original = original.chunk(x=2)
 
     actual = xr.decode_cf(original)
 
-    expected_data = data.astype("float64" if packed else dtype)
+    expected_data = data.copy()
     expected_data[1] = np.nan
-    if packed:
-        expected_data = expected_data * 0.5 + 1
     assert_identical(actual, xr.Dataset({"a": ("x", expected_data)}))
     assert actual.a.encoding[attribute] == fill_value
+    if use_dask:
+        assert isinstance(actual.a.data, dask_array_type)
+
+
+@pytest.mark.parametrize(
+    "packed_dtype, decoded_dtype",
+    [
+        ("int8", "float32"),
+        ("uint8", "float32"),
+        ("int16", "float32"),
+        ("uint16", "float32"),
+        ("int32", "float64"),
+        ("uint32", "float64"),
+    ],
+)
+@pytest.mark.parametrize("attribute", ["_FillValue", "missing_value"])
+def test_decode_cf_packed_fill_value(
+    packed_dtype: str, decoded_dtype: str, attribute: str, use_dask: bool
+) -> None:
+    data = np.array([0, 1, 2, 3], dtype=packed_dtype)
+    fill_value = data[1]
+    scalar = np.dtype(decoded_dtype).type
+    attrs = {
+        attribute: fill_value,
+        "scale_factor": scalar(0.5),
+        "add_offset": scalar(1),
+    }
+    original = xr.Dataset({"a": ("x", data, attrs)})
+    if use_dask:
+        original = original.chunk(x=2)
+
+    actual = xr.decode_cf(original)
+
+    expected = xr.Dataset(
+        {"a": ("x", np.array([1, np.nan, 2, 2.5], dtype=decoded_dtype))}
+    )
+    assert_identical(actual, expected)
+    assert actual.a.encoding[attribute] == fill_value
+    assert actual.a.encoding[attribute].dtype == data.dtype
     if use_dask:
         assert isinstance(actual.a.data, dask_array_type)
 
