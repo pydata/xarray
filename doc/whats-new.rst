@@ -178,7 +178,6 @@ Bug Fixes
   raising ``PermissionError`` while checking file-based backends. Permission
   errors for ordinary files still propagate (:issue:`11799`, :pull:`11802`).
   By `Gabriel Demetrios Lafis <https://github.com/galafis>`_.
-
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
   variables (:issue:`6449`).
   By `Liang, Jingyi <https://github.com/LJimmy007>`_.

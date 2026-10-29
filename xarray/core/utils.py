@@ -780,20 +780,18 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
 def try_read_magic_number_from_path(pathlike: Any, count: int = 8) -> bytes | None:
     if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
         path = os.fspath(pathlike)
+        if os.path.isdir(path):
+            # directories (e.g. zarr stores) have no magic number; on Windows,
+            # opening one raises PermissionError instead of IsADirectoryError
+            return None
         try:
             # Open unbuffered: a buffered reader fills its whole buffer, whose size
             # follows the filesystem block size and can be several MB on parallel
             # filesystems, effectively reading entire small files (GH7697).
             with open(path, "rb", buffering=0) as f:
                 return read_magic_number_from_file(f, count)
-        except (FileNotFoundError, IsADirectoryError, TypeError):
+        except (FileNotFoundError, TypeError):
             pass
-        except PermissionError:
-            # Windows reports PermissionError rather than IsADirectoryError
-            # when opening a directory. Let other backends inspect it, but
-            # preserve permission errors for ordinary files.
-            if not os.path.isdir(path):
-                raise
     return None
 
 
