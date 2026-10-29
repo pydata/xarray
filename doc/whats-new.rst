@@ -442,7 +442,8 @@ Bug Fixes
   (:issue:`11221`, :pull:`11226`).
   By `Carson Jones <https://github.com/wavebyrd>`_.
 - :py:func:`open_dataset` no longer raises ``TypeError: cannot use a string
-  pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``.
+  pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
+  (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
 
 
