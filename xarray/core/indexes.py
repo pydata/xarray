@@ -545,6 +545,9 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 kwargs["dtype"] = "float64"
 
         values = to_numpy(array)
+        if values.dtype.names is not None:
+            # pandas deprecates creating an index from a structured array
+            values = values.astype(object)
         try:
             index = pd.Index(values, **kwargs)
         except UnicodeEncodeError:

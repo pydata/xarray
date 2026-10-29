@@ -578,6 +578,9 @@ Internal Changes
 - Add an asv benchmark for opening a zarr :py:class:`DataTree` from a store with
   object storage latency (:pull:`11810`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Convert structured arrays to object arrays of tuples before creating a
+  :py:class:`pandas.Index` from them, which pandas deprecated (:issue:`11749`).
+  By `glaziermag <https://github.com/glaziermag>`_.
 
 
 .. _whats-new.2026.09.0:
