@@ -138,8 +138,7 @@ def deprecate_dims[T: Callable](func: T, old_name="dims") -> T:
                 f"The `{old_name}` argument has been renamed to `dim`, and will be removed "
                 "in the future. This renaming is taking place throughout xarray over the "
                 "next few releases.",
-                # Upgrade to `FutureWarning` in the future, when the renaming is complete.
-                PendingDeprecationWarning,
+                FutureWarning,
             )
             kwargs["dim"] = kwargs.pop(old_name)
         return func(*args, **kwargs)

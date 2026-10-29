@@ -69,7 +69,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: "test-py313"
+      PIXI_ENV: "test-py315"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -114,7 +114,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test-py314-with-typing
+      PIXI_ENV: test-py315-with-typing
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -217,7 +217,7 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      PIXI_ENV: test-py314-with-typing
+      PIXI_ENV: test-py315-with-typing
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -257,7 +257,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pixi-env: ["test-py314-with-typing", "test-py312-with-typing"]
+        pixi-env: ["test-py315-with-typing", "test-py312-with-typing"]
     if: |
       always()
       && (
@@ -435,6 +435,47 @@ jobs:
         run: |
           pixi run generate-ops-ci
 
+  check-doc-redirects:
+    name: Check redirects of moved doc pages
+    runs-on: ubuntu-latest
+    needs: detect-ci-trigger
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # The check looks at every page ever added to doc/.
+          persist-credentials: false
+
+      # Every page ever added to doc/ must still exist or be redirected in
+      # rediraffe_redirects in doc/conf.py, so that links to old URLs keep working.
+      - name: Check that moved or removed doc pages are redirected
+        shell: bash
+        run: |
+          # Page names: paths below doc/ without suffix, skipping _build, _static, ...
+          pages() {
+            grep -E '\.(rst|md|ipynb)$' | grep -vE '/[_.]' |
+              sed -E 's#^doc/##; s#\.(rst|md|ipynb)$##' | sort -u
+          }
+          # Pages that were removed on purpose and have no successor in the docs.
+          removed_pages=(
+            getting-started                    # xray v0.1 docs
+            tutorial                           # xray v0.1 docs
+            team                               # moved to https://xarray.dev/team (GH7061)
+            sphinxext/ipython_sphinxext/README # vendored sphinx extension
+          )
+          ever=$(git log --format= --name-only --no-renames --diff-filter=A -- doc | pages)
+          known=$({
+            git ls-files doc
+            sed -n '/^rediraffe_redirects = {/,/^}/s#^ *"\([^"]*\)":.*#doc/\1#p' doc/conf.py
+            printf 'doc/%s.rst\n' "${removed_pages[@]}"
+          } | pages)
+          missing=$(comm -23 <(echo "$ever") <(echo "$known"))
+          if [ -n "$missing" ]; then
+            echo "These doc pages were removed or moved without a redirect in doc/conf.py:"
+            echo "$missing"
+            exit 1
+          fi
+
   zizmor:
     name: GHA Security Analysis using Zizmor
     runs-on: ubuntu-latest
@@ -447,4 +488,4 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -9,7 +11,7 @@ from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
 
-from . import randint, randn, requires_dask, skip_slow
+from . import randint, randn, requires_dask, requires_zarr, skip_slow
 
 try:
     import dask
@@ -19,7 +21,10 @@ except ImportError:
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
-_ENGINES = tuple(sorted(xr.backends.list_engines().keys() - {"store"}))
+# the installed engines that can write netCDF files
+_ENGINES = tuple(
+    sorted(xr.backends.list_engines().keys() & {"h5netcdf", "netcdf4", "scipy"})
+)
 
 
 class IOSingleNetCDF:
@@ -557,6 +562,45 @@ class IOReadDataTreeNetCDF4(IONestedDataTree):
 
     def time_open_datatree_netcdf4(self):
         xr.open_datatree(self.filepath, engine="netcdf4")
+
+
+class IOReadDataTreeZarrLatency:
+    """Benchmark opening a zarr DataTree from a store with object storage latency.
+
+    Every read from the store waits ``latency`` seconds, so the time is dominated
+    by the number of reads that are made one after the other.
+    """
+
+    params = [[0.0, 0.01]]
+    param_names = ["latency"]
+    # One sample per process. With repeat = 3 (6 samples per commit), asv's
+    # Mann-Whitney test can never be significant, so no change was reported.
+    repeat = 1
+    number = 1
+    warmup_time = 0.0
+
+    def setup(self, latency: float) -> None:
+        requires_zarr()
+        import zarr
+
+        class LatencyStore(zarr.storage.WrapperStore):
+            async def get(self, *args: Any, **kwargs: Any) -> Any:
+                await asyncio.sleep(latency)
+                return await super().get(*args, **kwargs)
+
+        ds = xr.Dataset(
+            {"foo": (("x", "y"), randn((10, 10)))},
+            coords={"x": np.arange(10), "y": np.arange(10)},
+        )
+        # 71 groups: the root and 35 groups with one subgroup each
+        tree = xr.DataTree.from_dict({f"group_{i}/sub": ds for i in range(35)})
+        store = zarr.storage.MemoryStore()
+        # without consolidated metadata, every group is listed and read separately
+        tree.to_zarr(store, consolidated=False)
+        self.store = LatencyStore(store)
+
+    def time_open_datatree(self, latency: float) -> None:
+        xr.open_datatree(self.store, engine="zarr", consolidated=False)
 
 
 # TODO: Lazily skipped in CI as it is very demanding and slow.

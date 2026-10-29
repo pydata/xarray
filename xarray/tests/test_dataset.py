@@ -37,7 +37,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.types import ArrayLike
+from xarray.core.types import ArrayLike, QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.groupers import SeasonResampler, TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
@@ -3386,17 +3386,6 @@ class TestDataset:
 
         assert_equal(actual, orig)
 
-    def test_reset_encoding_deprecated(self) -> None:
-        ds = create_test_data()
-        objs: list[Dataset | DataArray | Variable] = [
-            ds,
-            ds["var1"],
-            ds["var1"].variable,
-        ]
-        for obj in objs:
-            with pytest.warns(FutureWarning, match="deprecated since 2023.10"):
-                obj.reset_encoding()
-
     def test_rename(self) -> None:
         data = create_test_data()
         newnames = {
@@ -3666,6 +3655,13 @@ class TestDataset:
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
         assert actual.xindexes["y"].equals(expected.xindexes["y"])
+
+    def test_to_array_deprecated(self) -> None:
+        ds = Dataset({"a": 1, "b": ("x", [1, 2, 3])}, coords={"c": 42})
+        expected = ds.to_dataarray("abc", name="foo")
+        with pytest.warns(FutureWarning, match=r"Dataset\.to_array is deprecated"):
+            actual = ds.to_array("abc", name="foo")
+        assert_identical(expected, actual)
 
     def test_expand_dims_error(self) -> None:
         original = Dataset(
@@ -4457,6 +4453,42 @@ class TestDataset:
         x0 = y[0].to_unstacked_dataset("features")
         d0 = D.isel(x=0)
         assert_identical(d0, x0)
+
+    @pytest.mark.parametrize(
+        "indexer, variables",
+        [(slice(0, 2), ["a"]), ([4, 5], ["c"]), ([0, 1, 4, 5], ["a", "c"])],
+    )
+    @pytest.mark.parametrize("level", [0, "variable", -1])
+    def test_to_unstacked_dataset_after_feature_selection(
+        self,
+        indexer: slice | list[int],
+        variables: list[str],
+        level: int | str,
+        use_dask: bool,
+    ) -> None:
+        data = xr.Dataset(
+            {
+                "a": (("sample", "y"), [[1, 2], [3, 4]]),
+                "b": (("sample", "y"), [[5, 6], [7, 8]]),
+                "c": (("sample", "y"), [[9, 10], [11, 12]]),
+            },
+            coords={"sample": [10, 20], "y": ["u", "v"]},
+        )
+        data["sample"].attrs["long_name"] = "sample identifier"
+        data["y"].attrs["long_name"] = "channel"
+        if use_dask:
+            data = data.chunk()
+
+        stacked = data.to_stacked_array("features", sample_dims=["sample"])
+        if level != 0:
+            stacked = stacked.reorder_levels(features=["y", "variable"])
+        selected = stacked.isel(features=indexer)
+        original = selected.copy(deep=True)
+
+        actual = selected.to_unstacked_dataset("features", level=level)
+
+        assert_identical(actual, data[variables])
+        assert_identical(selected, original)
 
     def test_to_stacked_array_to_unstacked_dataset_different_dimension(self) -> None:
         # test when variables have different dimensionality
@@ -6844,11 +6876,11 @@ class TestDataset:
         result = ds.map(modify_attr, keep_attrs=False)
         assert result["test"].attrs == {"original": "modified", "extra": "added"}
 
-    def test_apply_pending_deprecated_map(self) -> None:
+    def test_apply_deprecated_map(self) -> None:
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(FutureWarning, match=r"Dataset\.apply is deprecated"):
             # data.apply keeps all attrs by default
             assert_identical(data.apply(np.mean), data.mean())
 
@@ -7926,11 +7958,18 @@ class TestDataset:
         assert not data.astype(float, keep_attrs=False).attrs
         assert not data.astype(float, keep_attrs=False).var1.attrs
 
+    @pytest.mark.parametrize("coords_only", [False, True])
     @pytest.mark.parametrize("parser", ["pandas", "python"])
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
     )
-    def test_query(self, use_dask: bool, engine, parser) -> None:
+    def test_query(
+        self,
+        use_dask: bool,
+        engine: QueryEngineOptions,
+        parser: QueryParserOptions,
+        coords_only: bool,
+    ) -> None:
         """Test querying a dataset."""
         # setup test data
         np.random.seed(42)
@@ -7984,6 +8023,9 @@ class TestDataset:
                     "f2": (("x", "y", "z"), f),
                 },
             )
+
+        if coords_only:
+            ds = ds.set_coords(list(ds.data_vars))
 
         # query single dim, single variable
         with raise_if_dask_computes():
@@ -8076,6 +8118,17 @@ class TestDataset:
                 )
             expect = ds.isel(dict(x=(a > 5), y=(c < 0.5), z=(d == "bar")))
             assert_identical(expect, actual)
+
+        # query a dimension without a coordinate
+        with raise_if_dask_computes():
+            actual = ds.query(x="x > 5", engine=engine, parser=parser)
+        assert_identical(ds.isel(x=slice(6, None)), actual)
+
+        # query a dimension coordinate
+        ds = ds.assign_coords(x=a + 10)
+        with raise_if_dask_computes():
+            actual = ds.query(x="x > 15", engine=engine, parser=parser)
+        assert_identical(ds.isel(x=slice(6, None)), actual)
 
         # test error handling
         with pytest.raises(ValueError):
@@ -8503,12 +8556,7 @@ def test_no_dict() -> None:
 
 
 def test_subclass_slots() -> None:
-    """Test that Dataset subclasses must explicitly define ``__slots__``.
-
-    .. note::
-       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
-       defined outside of the xarray package.
-    """
+    """Test that Dataset subclasses must explicitly define ``__slots__``."""
     with pytest.raises(AttributeError) as e:
 
         class MyDS(Dataset):
