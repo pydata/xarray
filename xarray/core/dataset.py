@@ -875,6 +875,13 @@ class Dataset(
         Dataset.load_async
         DataArray.compute
         Variable.compute
+
+        Examples
+        --------
+        >>> ds = xr.Dataset({"a": (("x",), [1, 2, 3])}).chunk({"x": 1})
+        >>> computed = ds.compute()
+        >>> type(computed["a"].data)
+        <class 'numpy.ndarray'>
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -919,6 +926,13 @@ class Dataset(
         See Also
         --------
         dask.persist
+
+        Examples
+        --------
+        >>> ds = xr.Dataset({"a": (("x",), [1, 2, 3])}).chunk({"x": 1})
+        >>> persisted = ds.persist()
+        >>> type(persisted["a"].data)
+        <class 'dask.array.core.Array'>
         """
         new = self.copy(deep=False)
         return new._persist_inplace(**kwargs)
@@ -2645,6 +2659,27 @@ class Dataset(
         Dataset.chunksizes
         xarray.unify_chunks
         dask.array.from_array
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("time", np.arange(6.0))},
+        ...     coords={"time": pd.date_range("2000-01-01", freq="MS", periods=6)},
+        ... )
+        >>> ds.chunk(time=2)
+        <xarray.Dataset> Size: 96B
+        Dimensions:      (time: 6)
+        Coordinates:
+          * time         (time) datetime64[us] 48B 2000-01-01 2000-02-01 ... 2000-06-01
+        Data variables:
+            temperature  (time) float64 48B dask.array<chunksize=(2,), meta=np.ndarray>
+
+        Along a datetime-like dimension, a resampler creates one chunk per period,
+        here one per quarter:
+
+        >>> from xarray.groupers import TimeResampler
+        >>> ds.chunk(time=TimeResampler("QS")).chunksizes
+        Frozen({'time': (3, 3)})
         """
         from xarray.groupers import Resampler
 
@@ -6399,6 +6434,50 @@ class Dataset(
         obj : Dataset
             The dataset without the given dimensions (or any variables
             containing those dimensions).
+
+        See Also
+        --------
+        Dataset.drop_vars
+        DataArray.drop_vars
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "a": (("x", "y"), [[1.0, 2.0], [3.0, 4.0]]),
+        ...         "b": (("x",), [5.0, 6.0]),
+        ...     },
+        ...     coords={"x": ["a", "b"], "y": ["c", "d"]},
+        ... )
+        >>> ds
+        <xarray.Dataset> Size: 64B
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) <U1 8B 'c' 'd'
+        Data variables:
+            a        (x, y) float64 32B 1.0 2.0 3.0 4.0
+            b        (x) float64 16B 5.0 6.0
+
+        Drop ``y`` and the variables that use it:
+
+        >>> ds.drop_dims("y")
+        <xarray.Dataset> Size: 24B
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+        Data variables:
+            b        (x) float64 16B 5.0 6.0
+
+        Dimensions that don't exist raise an error, unless ``errors="ignore"``:
+
+        >>> ds.drop_dims(["y", "z"], errors="ignore")
+        <xarray.Dataset> Size: 24B
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+        Data variables:
+            b        (x) float64 16B 5.0 6.0
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
