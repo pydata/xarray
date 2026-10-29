@@ -3591,6 +3591,27 @@ class Dataset(
         Data variables:
             temperature  (time) float64 24B 18.0 nan 21.0
 
+        Filling missing values with a specified value:
+
+        >>> observations.reindex_like(target, fill_value=0.0)
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) float64 24B 18.0 0.0 21.0
+
+        Filling missing values with the previous valid index with respect to
+        the coordinates' value:
+
+        >>> observations.reindex_like(target, method="ffill")
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) float64 24B 18.0 18.0 21.0
+
         """
         return alignment.reindex_like(
             self,
