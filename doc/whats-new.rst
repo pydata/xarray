@@ -211,6 +211,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
+  include a note naming the data variable being processed (:issue:`2078`).
+  By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
 - Fix CuPy indexers with pandas-backed coordinates, basic and label-based
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
