@@ -67,7 +67,15 @@ def test_dataset_weighted_non_numeric(
     if include_numeric:
         expected["numeric"] = getattr(numeric.weighted(weights), operation)(**kwargs)
     if operation == "sum_of_weights":
-        expected = expected.assign(text=3.0, bytes=3.0, objects=1.0)
+        expected = expected.assign(
+            text=3.0,
+            bytes=3.0,
+            objects=(
+                data["objects"].weighted(weights).sum_of_weights(**kwargs)
+                if use_dask
+                else 1.0
+            ),
+        )
     assert_identical(result, expected)
     assert_identical(data, original)
 
