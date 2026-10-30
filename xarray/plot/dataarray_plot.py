@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import functools
-import warnings
 from collections.abc import Callable, Hashable, Iterable, MutableMapping
 from typing import TYPE_CHECKING, Any, Literal, Union, cast, overload
 
@@ -880,7 +879,7 @@ artist :
     )
     def newplotfunc(
         darray: DataArray,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -942,32 +941,6 @@ artist :
         if darray.ndim == 0 or darray.size == 0:
             # TypeError to be consistent with pandas
             raise TypeError("No numeric data to plot.")
-
-        # The allargs dict passed to _easy_facetgrid above contains args
-        if args == ():
-            args = kwargs.pop("args", ())
-
-        if args:
-            assert "args" not in kwargs
-            # TODO: Deprecated since 2022.10:
-            msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
-            assert x is None
-            x = args[0]
-            if len(args) > 1:
-                assert y is None
-                y = args[1]
-            if len(args) > 2:
-                assert z is None
-                z = args[2]
-            if len(args) > 3:
-                assert hue is None
-                hue = args[3]
-            if len(args) > 4:
-                raise ValueError(msg)
-            else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
-            del msg
-        del args
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
@@ -1143,7 +1116,7 @@ def _add_labels(
 @overload
 def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -1183,7 +1156,7 @@ def lines(  # type: ignore[misc,unused-ignore]  # None is hashable :(
 @overload
 def lines(
     darray: T_DataArray,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -1223,7 +1196,7 @@ def lines(
 @overload
 def lines(
     darray: T_DataArray,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -1310,7 +1283,7 @@ def lines(
 @overload
 def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
     darray: DataArray,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -1350,7 +1323,7 @@ def scatter(  # type: ignore[misc,unused-ignore]  # None is hashable :(
 @overload
 def scatter(
     darray: T_DataArray,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -1390,7 +1363,7 @@ def scatter(
 @overload
 def scatter(
     darray: T_DataArray,
-    *args: Any,
+    *,
     x: Hashable | None = None,
     y: Hashable | None = None,
     z: Hashable | None = None,
@@ -1604,7 +1577,7 @@ artist :
     )
     def newplotfunc(
         darray: DataArray,
-        *args: Any,
+        *,
         x: Hashable | None = None,
         y: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -1640,21 +1613,6 @@ artist :
         **kwargs: Any,
     ) -> Any:
         # All 2d plots in xarray share this function signature.
-
-        if args:
-            # TODO: Deprecated since 2022.10:
-            msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
-            assert x is None
-            x = args[0]
-            if len(args) > 1:
-                assert y is None
-                y = args[1]
-            if len(args) > 2:
-                raise ValueError(msg)
-            else:
-                warnings.warn(msg, FutureWarning, stacklevel=2)
-            del msg
-        del args
 
         # Decide on a default for the colorbar before facetgrids
         if add_colorbar is None:
