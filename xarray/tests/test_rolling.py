@@ -1072,7 +1072,7 @@ class TestDatasetRollingExp:
 
 @pytest.mark.parametrize("dim_arg", ["x", ["x"]])
 def test_cumulative_on_empty_dimension(dim_arg) -> None:
-    """cumulative derives its window from the data, so length 0 is not a bad window.
+    """Cumulative derives its window from the data, so length 0 is not a bad window.
 
     cumsum returns an empty result for the same input. Before the fix the
     derived window of 0 hit Rolling's window guard, and the user saw
