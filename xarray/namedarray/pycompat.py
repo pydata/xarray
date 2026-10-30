@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from packaging.version import Version
 
-from xarray.core.utils import is_scalar
 from xarray.namedarray.utils import is_duck_array, is_duck_dask_array
 
 integer_types = (int, np.integer)
@@ -15,12 +14,11 @@ integer_types = (int, np.integer)
 if TYPE_CHECKING:
     ModType = Literal["dask", "pint", "cupy", "sparse", "cubed", "numbagg"]
     DuckArrayTypes = tuple[type[Any], ...]  # TODO: improve this? maybe Generic
-    from xarray.namedarray._typing import _DType, _ShapeType, duckarray
+    from xarray.namedarray._typing import duckarray
 
 
 class DuckArrayModule:
-    """
-    Solely for internal isinstance and version checks.
+    """Solely for internal isinstance and version checks.
 
     Motivated by having to only import pint when required (as pint currently imports xarray)
     https://github.com/pydata/xarray/pull/5561#discussion_r664815718
@@ -92,10 +90,6 @@ def is_chunked_array(x: duckarray[Any, Any]) -> bool:
     return is_duck_dask_array(x) or (is_duck_array(x) and hasattr(x, "chunks"))
 
 
-def is_0d_dask_array(x: duckarray[Any, Any]) -> bool:
-    return is_duck_dask_array(x) and is_scalar(x)
-
-
 def to_numpy(
     data: duckarray[Any, Any], **kwargs: Any
 ) -> np.ndarray[Any, np.dtype[Any]]:
@@ -127,7 +121,9 @@ def to_numpy(
     return data
 
 
-def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, _DType]:
+def to_duck_array[ShapeType, DType: np.dtype[Any]](
+    data: Any, **kwargs: dict[str, Any]
+) -> duckarray[ShapeType, DType]:
     from xarray.core.indexing import (
         ExplicitlyIndexed,
         ImplicitToExplicitIndexingAdapter,
@@ -147,9 +143,9 @@ def to_duck_array(data: Any, **kwargs: dict[str, Any]) -> duckarray[_ShapeType, 
         return np.asarray(data)  # type: ignore[return-value, unused-ignore]
 
 
-async def async_to_duck_array(
+async def async_to_duck_array[ShapeType, DType: np.dtype[Any]](
     data: Any, **kwargs: dict[str, Any]
-) -> duckarray[_ShapeType, _DType]:
+) -> duckarray[ShapeType, DType]:
     from xarray.core.indexing import (
         ExplicitlyIndexed,
         ImplicitToExplicitIndexingAdapter,

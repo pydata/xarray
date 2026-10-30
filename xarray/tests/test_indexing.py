@@ -22,6 +22,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_dask,
     requires_pandas_3,
+    requires_sparse,
 )
 from xarray.tests.arrays import DuckArrayWrapper
 
@@ -537,6 +538,7 @@ class TestLazyArray:
         x = indexing.NumpyIndexingAdapter(original)
         lazy = indexing.LazilyIndexedArray(x)
 
+        indexer: indexing.ExplicitIndexer
         if indexer_class is indexing.BasicIndexer:
             indexer = indexer_class(key)
             lazy[indexer] = value
@@ -888,6 +890,52 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support) -> None:
         np.testing.assert_array_equal(expected, array)
 
 
+@pytest.mark.parametrize("shape", [(10, 5), (10, 5, 8)])
+@pytest.mark.parametrize("empty_axis", ["first", "last"])
+@pytest.mark.parametrize(
+    "indexing_support",
+    [
+        indexing.IndexingSupport.BASIC,
+        indexing.IndexingSupport.OUTER,
+        indexing.IndexingSupport.OUTER_1VECTOR,
+        indexing.IndexingSupport.VECTORIZED,
+    ],
+)
+def test_decompose_indexer_empty_ndarray(shape, empty_axis, indexing_support) -> None:
+    # An empty indexer array must be decomposable for backends that do not
+    # support full vectorized indexing. The empty array is turned into an empty
+    # slice, which keeps the dimension, so the in-memory indexer needs a
+    # matching entry for it.
+    # See https://github.com/pydata/xarray/issues/11625
+    # and https://github.com/pydata/xarray/issues/9075
+    data = np.random.randn(*shape)
+    key = [np.arange(s)[::-1] for s in shape]
+    key[0 if empty_axis == "first" else -1] = np.array([], dtype=np.int64)
+    indexer = indexing.OuterIndexer(tuple(key))
+
+    expected = indexing.NumpyIndexingAdapter(data).oindex[indexer]
+    backend_ind, np_ind = indexing.decompose_indexer(indexer, shape, indexing_support)
+    indexing_adapter = indexing.NumpyIndexingAdapter(data)
+
+    if isinstance(backend_ind, indexing.VectorizedIndexer):
+        array = indexing_adapter.vindex[backend_ind]
+    elif isinstance(backend_ind, indexing.OuterIndexer):
+        array = indexing_adapter.oindex[backend_ind]
+    else:
+        array = indexing_adapter[backend_ind]
+
+    if len(np_ind.tuple) > 0:
+        array_indexing_adapter = indexing.NumpyIndexingAdapter(array)
+        if isinstance(np_ind, indexing.VectorizedIndexer):
+            array = array_indexing_adapter.vindex[np_ind]
+        elif isinstance(np_ind, indexing.OuterIndexer):
+            array = array_indexing_adapter.oindex[np_ind]
+        else:
+            array = array_indexing_adapter[np_ind]
+
+    assert_array_equal(expected, array)
+
+
 def test_implicit_indexing_adapter() -> None:
     array = np.arange(10, dtype=np.int64)
     implicit = indexing.ImplicitToExplicitIndexingAdapter(
@@ -948,6 +996,20 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized() -> None:
         actual = indexing._outer_to_numpy_indexer(outer_index, v.shape)
         actual_data = v.data[actual]
         np.testing.assert_array_equal(actual_data, expected_data)
+
+
+def test_outer_to_vectorized_indexer_0d_duck_array() -> None:
+    # GH8820: a 0d non-numpy duck array should be treated like an integer
+    original = np.arange(24).reshape(4, 6)
+    outer_index = indexing.OuterIndexer(
+        (DuckArrayWrapper(np.array(2)), np.array([0, 2]))  # type: ignore[arg-type]
+    )
+    actual = indexing._outer_to_vectorized_indexer(outer_index, original.shape)
+    assert isinstance(actual.tuple[0], DuckArrayWrapper)
+    key = tuple(
+        k.to_numpy() if isinstance(k, DuckArrayWrapper) else k for k in actual.tuple
+    )
+    np.testing.assert_array_equal(original[key], original[2, [0, 2]])
 
 
 def test_create_mask_outer_indexer() -> None:
@@ -1101,6 +1163,24 @@ def test_as_indexable(array, expected_type):
     assert isinstance(actual, expected_type)
 
 
+@requires_sparse
+@pytest.mark.parametrize(
+    "key",
+    [
+        pytest.param(np.array([1, 2]), id="vector"),
+        pytest.param(np.array([[0, 2], [3, 1]]), id="multidimensional"),
+    ],
+)
+def test_pandas_indexing_sparse_indexer(key: np.ndarray) -> None:
+    import sparse
+
+    labels = np.array([10, 20, 30, 40])
+    adapter = indexing.PandasIndexingAdapter(pd.Index(labels))
+    indexer = indexing.VectorizedIndexer((sparse.COO.from_numpy(key),))
+    actual = adapter.vindex[indexer]
+    assert_array_equal(np.asarray(actual), labels[key])
+
+
 def test_indexing_1d_object_array() -> None:
     items = (np.arange(3), np.arange(6))
     arr = DataArray(np.array(items, dtype=object))
@@ -1196,7 +1276,7 @@ def test_advanced_indexing_dask_array() -> None:
 
 
 def test_backend_indexing_non_numpy() -> None:
-    """This model indexing of a Zarr store that reads to GPU memory."""
+    """Model indexing of a Zarr store that reads to GPU memory."""
     array = DuckArrayWrapper(np.array([1, 2, 3]))
     indexed = indexing.explicit_indexing_adapter(
         indexing.BasicIndexer((slice(1),)),

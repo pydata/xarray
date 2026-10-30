@@ -11,11 +11,20 @@ kernelspec:
 ```{code-cell}
 :tags: [remove-input]
 
+import random
+
 import numpy as np
 import pandas as pd
+from hypothesis import settings
+
 import xarray as xr
 
 np.random.seed(123456)
+
+# make the outputs of the hypothesis strategies reproducible between doc builds
+settings.register_profile("docs", derandomize=True)
+settings.load_profile("docs")
+random.seed(123456)
 ```
 
 (testing.hypothesis)=
@@ -45,8 +54,8 @@ quickly ensuring that your code can handle xarray objects of all possible struct
 
 These strategies are accessible in the {py:mod}`xarray.testing.strategies` module, which provides
 
-```{eval-rst}
-.. currentmodule:: xarray
+```{currentmodule} xarray
+
 ```
 
 ```{eval-rst}
@@ -73,17 +82,18 @@ To see an example of what each of these strategies might produce, you can call o
 which is a general hypothesis method valid for all strategies.
 
 ```{code-cell}
+import hypothesis.strategies as st
 import xarray.testing.strategies as xrst
 
-xrst.variables().example()
+xrst.variables(attrs=st.just({})).example()
 ```
 
 ```{code-cell}
-xrst.variables().example()
+xrst.variables(attrs=st.just({})).example()
 ```
 
 ```{code-cell}
-xrst.variables().example()
+xrst.variables(attrs=st.just({})).example()
 ```
 
 You can see that calling `.example()` multiple times will generate different examples, giving you an idea of the wide
@@ -121,8 +131,6 @@ If you want to fix one aspect of the data structure, whilst allowing variation i
 over all other aspects, then use {py:func}`hypothesis.strategies.just()`.
 
 ```{code-cell}
-import hypothesis.strategies as st
-
 # Generates only variable objects with dimensions ["x", "y"]
 xrst.variables(dims=st.just(["x", "y"])).example()
 ```

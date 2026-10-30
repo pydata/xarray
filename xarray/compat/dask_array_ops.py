@@ -12,7 +12,7 @@ from xarray.namedarray.parallelcompat import get_chunked_array_type
 def dask_rolling_wrapper(
     moving_func, a, window, min_count=None, axis=-1, input_dtype=None
 ):
-    """Wrapper to apply bottleneck moving window funcs on dask arrays"""
+    """Apply bottleneck moving window funcs on dask arrays."""
     if input_dtype is None:
         input_dtype = a.dtype
     if input_dtype.kind in "biufc":
@@ -103,9 +103,7 @@ def _dtype_push(a, axis, dtype=None):
 
 
 def push(array, n, axis, method="blelloch"):
-    """
-    Dask-aware bottleneck.push
-    """
+    """Dask-aware bottleneck.push."""
     import numpy as np
 
     from xarray.core.duck_array_ops import _push

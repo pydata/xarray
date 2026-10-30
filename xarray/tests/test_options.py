@@ -32,12 +32,12 @@ def test_arithmetic_join() -> None:
         assert OPTIONS["arithmetic_join"] == "exact"
 
 
-def test_enable_cftimeindex() -> None:
-    with pytest.raises(ValueError):
-        xarray.set_options(enable_cftimeindex=None)
-    with pytest.warns(FutureWarning, match="no-op"):
-        with xarray.set_options(enable_cftimeindex=True):
-            assert OPTIONS["enable_cftimeindex"]
+def test_display_expand_groups_deprecated() -> None:
+    with pytest.warns(FutureWarning, match="display_expand_groups") as record:
+        with xarray.set_options(display_expand_groups=False):
+            assert OPTIONS["display_expand_groups"] is False
+    assert len(record) == 1
+    assert OPTIONS["display_expand_groups"] == "default"
 
 
 def test_file_cache_maxsize() -> None:
@@ -245,7 +245,7 @@ class TestAttrRetention:
     [("left"), ("exact")],
 )
 def test_get_options_retention(set_value):
-    """Test to check if get_options will return changes made by set_options"""
+    """Test to check if get_options will return changes made by set_options."""
     with xarray.set_options(arithmetic_join=set_value):
         get_options = xarray.get_options()
         assert get_options["arithmetic_join"] == set_value

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+import subprocess
 import sys
 from importlib.metadata import EntryPoint, EntryPoints
 from itertools import starmap
@@ -7,6 +9,7 @@ from unittest import mock
 
 import pytest
 
+import xarray as xr
 from xarray.backends import common, plugins
 from xarray.core.options import OPTIONS
 from xarray.tests import (
@@ -15,9 +18,10 @@ from xarray.tests import (
     has_pydap,
     has_scipy,
     has_zarr,
+    requires_h5netcdf,
+    requires_netCDF4,
+    requires_zarr,
 )
-
-# Do not import list_engines here, this will break the lazy tests
 
 importlib_metadata_mock = "importlib.metadata"
 
@@ -45,10 +49,10 @@ class DummyBackendEntrypoint2(common.BackendEntrypoint):
 @pytest.fixture
 def dummy_duplicated_entrypoints():
     specs = [
-        ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
-        ["engine1", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
-        ["engine2", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
-        ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
+        ["engine1", "xarray.tests.backends.test_plugins:backend_1", "xarray.backends"],
+        ["engine1", "xarray.tests.backends.test_plugins:backend_2", "xarray.backends"],
+        ["engine2", "xarray.tests.backends.test_plugins:backend_1", "xarray.backends"],
+        ["engine2", "xarray.tests.backends.test_plugins:backend_2", "xarray.backends"],
     ]
     eps = list(starmap(EntryPoint, specs))
     return eps
@@ -64,7 +68,7 @@ def test_remove_duplicates(dummy_duplicated_entrypoints) -> None:
 def test_broken_plugin() -> None:
     broken_backend = EntryPoint(
         "broken_backend",
-        "xarray.tests.test_plugins:backend_1",
+        "xarray.tests.backends.test_plugins:backend_1",
         "xarray.backends",
     )
     with pytest.warns(RuntimeWarning) as record:
@@ -90,8 +94,8 @@ def test_remove_duplicates_warnings(dummy_duplicated_entrypoints) -> None:
 )
 def test_backends_dict_from_pkg() -> None:
     specs = [
-        ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
-        ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
+        ["engine1", "xarray.tests.backends.test_plugins:backend_1", "xarray.backends"],
+        ["engine2", "xarray.tests.backends.test_plugins:backend_2", "xarray.backends"],
     ]
     entrypoints = list(starmap(EntryPoint, specs))
     engines = plugins.backends_dict_from_pkg(entrypoints)
@@ -143,7 +147,7 @@ def test_set_missing_parameters_raise_error() -> None:
 )
 def test_build_engines() -> None:
     dummy_pkg_entrypoint = EntryPoint(
-        "dummy", "xarray.tests.test_plugins:backend_1", "xarray_backends"
+        "dummy", "xarray.tests.backends.test_plugins:backend_1", "xarray_backends"
     )
     backend_entrypoints = plugins.build_engines(EntryPoints([dummy_pkg_entrypoint]))
 
@@ -162,10 +166,14 @@ def test_build_engines_sorted() -> None:
     dummy_pkg_entrypoints = EntryPoints(
         [
             EntryPoint(
-                "dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"
+                "dummy2",
+                "xarray.tests.backends.test_plugins:backend_1",
+                "xarray.backends",
             ),
             EntryPoint(
-                "dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"
+                "dummy1",
+                "xarray.tests.backends.test_plugins:backend_1",
+                "xarray.backends",
             ),
         ]
     )
@@ -250,6 +258,16 @@ def test_guess_engine_file_not_found() -> None:
         plugins.guess_engine("https://example.com/missing.h5")
 
 
+@mock.patch(
+    "xarray.backends.plugins.list_engines",
+    mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
+)
+@pytest.mark.parametrize("paths", [["a.nc", "b.nc"], ("a.nc", "b.nc")])
+def test_guess_engine_sequence_of_paths(paths) -> None:
+    with pytest.raises(ValueError, match=r"Use open_mfdataset"):
+        plugins.guess_engine(paths)
+
+
 @pytest.mark.parametrize("engine", common.BACKEND_ENTRYPOINTS.keys())
 def test_get_backend_fastpath_skips_list_engines(engine: str) -> None:
     """Test that built-in engines skip list_engines (fastpath)."""
@@ -283,36 +301,31 @@ def test_lazy_import() -> None:
         "sparse",
         "zarr",
     ]
-    # ensure that none of the above modules has been imported before
-    modules_backup = {}
-    for pkg in list(sys.modules.keys()):
-        for mod in deny_list + ["xarray"]:
-            if pkg.startswith(mod):
-                modules_backup[pkg] = sys.modules[pkg]
-                del sys.modules[pkg]
-                break
+    # Check in a fresh interpreter. In this process, the modules have already
+    # been imported by other tests and while collecting the tests (e.g. by the
+    # has_* checks), and removing them from sys.modules is not reliable: e.g.
+    # threads or modules left over from other tests can import them again.
+    code = f"""
+import sys
 
-    try:
-        import xarray  # noqa: F401
-        from xarray.backends import list_engines
+import xarray
+from xarray.backends import list_engines
 
-        list_engines()
+list_engines()
 
-        # ensure that none of the modules that are supposed to be
-        # lazy loaded are loaded when importing xarray
-        is_imported = set()
-        for pkg in sys.modules:
-            for mod in deny_list:
-                if pkg.startswith(mod):
-                    is_imported.add(mod)
-                    break
-        assert len(is_imported) == 0, (
-            f"{is_imported} have been imported but should be lazy"
-        )
-
-    finally:
-        # restore original
-        sys.modules.update(modules_backup)
+deny_list = {deny_list!r}
+imported = sorted(
+    mod
+    for mod in deny_list
+    if any(pkg == mod or pkg.startswith(mod + ".") for pkg in sys.modules)
+)
+print(",".join(imported))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    is_imported = result.stdout.strip()
+    assert not is_imported, f"{is_imported} have been imported but should be lazy"
 
 
 def test_list_engines() -> None:
@@ -359,3 +372,139 @@ def test_refresh_engines() -> None:
 
     # reset to original
     refresh_engines()
+
+
+class DummyDescribedBackend(common.BackendEntrypoint):
+    description = "Open dummy files"
+    url = "https://example.com/dummy"
+    supports_groups = True
+
+    def open_dataset(self, filename_or_obj, *, decoder):  # type: ignore[override]
+        pass
+
+
+def test_show_backends() -> None:
+    from xarray.backends import list_engines, refresh_engines
+
+    dist = mock.MagicMock()
+    dist.name = "dummy-pkg"
+    dist.version = "1.2.3"
+    ep = mock.MagicMock()
+    ep.name = "dummy"
+    ep.dist = dist
+    ep.load.return_value = DummyDescribedBackend
+
+    text = io.StringIO()
+    md = io.StringIO()
+    with mock.patch(
+        "xarray.backends.plugins.entry_points", return_value=EntryPoints([ep])
+    ):
+        list_engines.cache_clear()
+        xr.show_backends(file=text)
+        xr.show_backends(file=md, markdown=True)
+    refresh_engines()
+
+    out = text.getvalue()
+    assert out.startswith("AVAILABLE BACKENDS\n------------------\n")
+    expected_dummy = (
+        "dummy: DummyDescribedBackend from dummy-pkg 1.2.3 (supports groups)\n"
+        "    Open dummy files\n"
+        "    https://example.com/dummy\n"
+    )
+    assert expected_dummy in out
+    assert "store: StoreBackendEntrypoint from xarray\n" in out
+    # backends that are not installed are not listed
+    assert ("\nscipy: " in out) == has_scipy
+    if has_scipy:
+        assert "scipy: ScipyBackendEntrypoint from xarray (using scipy " in out
+
+    out = md.getvalue()
+    assert out.startswith("<details><summary>AVAILABLE BACKENDS</summary>\n\n")
+    expected_dummy = (
+        "- **dummy**: `DummyDescribedBackend` from dummy-pkg 1.2.3 (supports groups)\n"
+        "  - Open dummy files\n"
+        "  - https://example.com/dummy\n"
+    )
+    assert expected_dummy in out
+    assert "- **store**: `StoreBackendEntrypoint` from xarray\n" in out
+
+
+@requires_h5netcdf
+@requires_netCDF4
+@requires_zarr
+def test_remote_url_backend_auto_detection() -> None:
+    """Test that remote URLs are correctly selected by the backend resolution system.
+
+    This tests the fix for issue where netCDF4, h5netcdf, and pydap backends were
+    claiming ALL remote URLs, preventing remote Zarr stores from being
+    auto-detected.
+
+    See: https://github.com/pydata/xarray/issues/10801
+    """
+    from xarray.backends.plugins import guess_engine
+
+    # Test cases: (url, expected_backend)
+    test_cases = [
+        # Remote Zarr URLs
+        ("https://example.com/store.zarr", "zarr"),
+        ("http://example.com/data.zarr/", "zarr"),
+        ("s3://bucket/path/to/data.zarr", "zarr"),
+        # Remote netCDF URLs (non-DAP) - netcdf4 wins (first in order, no query params)
+        ("https://example.com/file.nc", "netcdf4"),
+        ("http://example.com/data.nc4", "netcdf4"),
+        ("https://example.com/test.cdf", "netcdf4"),
+        ("s3://bucket/path/to/data.nc", "netcdf4"),
+        # Remote netCDF URLs with query params - netcdf4 wins
+        # Note: Query params are typically indicative of DAP URLs (e.g., OPeNDAP constraint expressions),
+        # so we prefer netcdf4 (which has DAP support) over h5netcdf (which doesn't)
+        ("https://example.com/data.nc?var=temperature&time=0", "netcdf4"),
+        (
+            "http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4?dap4.ce=/time[0:1:0]",
+            "netcdf4",
+        ),
+        # DAP URLs with .nc extensions (no query params) - netcdf4 wins (first in order)
+        ("http://test.opendap.org/opendap/dap4/StaggeredGrid.nc4", "netcdf4"),
+        ("https://example.com/DAP4/data.nc", "netcdf4"),
+        ("http://example.com/data/Dap4/file.nc", "netcdf4"),
+    ]
+
+    for url, expected_backend in test_cases:
+        engine = guess_engine(url)
+        assert engine == expected_backend, (
+            f"URL {url!r} should select {expected_backend!r} but got {engine!r}"
+        )
+
+    # DAP URLs - netcdf4 should handle these (it comes first in backend order)
+    # Both netcdf4 and pydap can open DAP URLs, but netcdf4 has priority
+    expected_dap_backend = "netcdf4"
+    dap_urls = [
+        # Explicit DAP protocol schemes
+        "dap2://opendap.earthdata.nasa.gov/collections/dataset",
+        "dap4://opendap.earthdata.nasa.gov/collections/dataset",
+        "dap://example.com/dataset",
+        "DAP2://example.com/dataset",  # uppercase scheme
+        "DAP4://example.com/dataset",  # uppercase scheme
+        # DAP path indicators
+        "https://example.com/services/DAP2/dataset",  # uppercase in path
+        "http://test.opendap.org/opendap/data/nc/file.nc",  # /opendap/ path
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day",  # ERDDAP
+        "http://thredds.ucar.edu/thredds/dodsC/grib/NCEP/GFS/",  # THREDDS dodsC
+        "https://disc2.gesdisc.eosdis.nasa.gov/dods/TRMM_3B42",  # GrADS /dods/
+    ]
+
+    for url in dap_urls:
+        engine = guess_engine(url)
+        assert engine == expected_dap_backend, (
+            f"URL {url!r} should select {expected_dap_backend!r} but got {engine!r}"
+        )
+
+    # URLs with .dap suffix are claimed by netcdf4 (backward compatibility fallback)
+    # Note: .dap suffix is intentionally NOT recognized as a DAP dataset URL
+    fallback_urls = [
+        ("http://test.opendap.org/opendap/data/nc/coads_climatology.nc.dap", "netcdf4"),
+        ("https://example.com/data.dap", "netcdf4"),
+    ]
+
+    for url, expected_backend in fallback_urls:
+        engine = guess_engine(url)
+        assert engine == expected_backend

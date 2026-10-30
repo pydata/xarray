@@ -6,8 +6,13 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-artifacts:
+    name: Build artifacts
     runs-on: ubuntu-latest
     if: github.repository == 'pydata/xarray'
 
@@ -16,26 +21,21 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install build twine
+      - uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        with:
+          cache: false
+          environments: build-wheels
 
       - name: Build tarball and wheels
         id: build
         run: |
-          git clean -xdf
-          git restore -SW .
-          python -m build
+          pixi run build-wheels
 
       - name: Check built artifacts
         id: check
         run: |
-          python -m twine check --strict dist/*
+          pixi run -e build-wheels python -m twine check --strict dist/*
           pwd
           if [ -f dist/xarray-0.0.0.tar.gz ]; then
               echo "❌ INVALID VERSION NUMBER"
@@ -44,12 +44,13 @@ jobs:
               echo "✅ Looks good"
           fi
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: releases
           path: dist
 
   upload:
+    name: Publish artifacts
     needs: build-artifacts
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
@@ -59,40 +60,46 @@ jobs:
 
     permissions:
       contents: read
-      issues: write
+      issues: write # report failing uploads
 
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: releases
           path: dist
 
       - name: Upload wheel
         id: upload
-        uses: scientific-python/upload-nightly-action@e76cfec8a4611fd02808a801b0ff5a7d7c1b2d99 # 0.6.4
+        uses: scientific-python/upload-nightly-action@16fa02eacee1655195143de09f03676e60ef2bf5 # 0.6.5
         with:
           anaconda_nightly_upload_token: ${{ secrets.ANACONDA_NIGHTLY }}
           artifacts_path: dist
 
       - name: Create or update failure issue
-        if: ${{ failure() }}
+        if: failure()
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_WORKFLOW: ${{ github.workflow }}
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_LABEL: "CI"
+          ISSUE_TITLE: "Nightly wheel build/upload failed"
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository}}/actions/runs/${{ github.run_id }}
+          TEMPLATE: ".github/nightly-wheel-failure-template.md"
         run: |
           # Read the template
-          template=$(cat .github/nightly-wheel-failure-template.md)
+          template=$(cat "$TEMPLATE")
 
           # Replace placeholders
           issue_body="${template//\{\{WORKFLOW\}\}/$GITHUB_WORKFLOW}"
-          issue_body="${issue_body//\{\{RUN_ID\}\}/${{ github.run_id }}}"
-          issue_body="${issue_body//\{\{RUN_URL\}\}/${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}}"
+          issue_body="${issue_body//\{\{RUN_ID\}\}/$GITHUB_RUN_ID}"
+          issue_body="${issue_body//\{\{RUN_URL\}\}/$GITHUB_RUN_URL}"
           issue_body="${issue_body//\{\{DATE\}\}/$(date -u)}"
 
           # Check for existing open issue with same title
-          issue_title="Nightly wheel build/upload failed"
-          existing_issue=$(gh issue list --state open --label "CI" --search "\"$issue_title\" in:title" --json number --jq '.[0].number // empty')
+          existing_issue=$(gh issue list --state open --label "$ISSUE_LABEL" --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number // empty')
 
           if [ -n "$existing_issue" ]; then
             echo "Found existing open issue #$existing_issue, updating it..."
@@ -101,8 +108,8 @@ jobs:
           else
             echo "No existing open issue found, creating new one..."
             echo "$issue_body" | gh issue create \
-              --title "$issue_title" \
+              --title "$ISSUE_TITLE" \
               --body-file - \
-              --label "CI"
+              --label "$ISSUE_LABEL"
             echo "Created new issue"
           fi

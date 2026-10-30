@@ -1,5 +1,4 @@
-"""
-Functions for applying functions that act on arrays to xarray's labeled data.
+"""Functions for applying functions that act on arrays to xarray's labeled data.
 
 NOTE: This module is currently large and contains various computational functionality.
 The long-term plan is to break it down into more focused submodules.
@@ -9,10 +8,8 @@ from __future__ import annotations
 
 import functools
 from collections import Counter
-from collections.abc import (
-    Callable,
-    Hashable,
-)
+from collections.abc import Callable, Hashable, Sequence
+from types import EllipsisType
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
@@ -23,10 +20,7 @@ from xarray.core.common import zeros_like
 from xarray.core.duck_array_ops import datetime_to_numeric
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.core.types import Dims, T_DataArray
-from xarray.core.utils import (
-    is_scalar,
-    parse_dims_as_set,
-)
+from xarray.core.utils import is_scalar, parse_dims_as_set
 from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import get_chunked_array_type
 from xarray.namedarray.pycompat import is_chunked_array
@@ -50,8 +44,7 @@ def cov(
     ddof: int = 1,
     weights: T_DataArray | None = None,
 ) -> T_DataArray:
-    """
-    Compute covariance between two DataArray objects along a shared dimension.
+    """Compute covariance between two DataArray objects along a shared dimension.
 
     Parameters
     ----------
@@ -155,9 +148,9 @@ def corr(
     dim: Dims = None,
     weights: T_DataArray | None = None,
 ) -> T_DataArray:
-    """
-    Compute the Pearson correlation coefficient between
-    two DataArray objects along a shared dimension.
+    """Compute the Pearson correlation coefficient between two DataArray objects.
+
+    The correlation is computed along a shared dimension.
 
     Parameters
     ----------
@@ -260,8 +253,9 @@ def _cov_corr(
     ddof: int = 0,
     method: Literal["cov", "corr"] | None = None,
 ) -> T_DataArray:
-    """
-    Internal method for xr.cov() and xr.corr() so only have to
+    """Compute the covariance or correlation of two arrays.
+
+    Internal method for xr.cov() and xr.corr() so we only have to
     sanitize the input arrays once and we don't repeat code.
     """
     # 1. Broadcast the two arrays
@@ -296,10 +290,7 @@ def _cov_corr(
         # Adjust covariance for degrees of freedom
         valid_count = valid_values.sum(dim)
         adjust = valid_count / (valid_count - ddof)
-        # I think the cast is required because of `T_DataArray` + `T_Xarray` (would be
-        # the same with `T_DatasetOrArray`)
-        # https://github.com/pydata/xarray/pull/8384#issuecomment-1784228026
-        return cast(T_DataArray, cov * adjust)
+        return cov * adjust
 
     else:
         # Compute std and corr
@@ -316,8 +307,7 @@ def _cov_corr(
 def cross(
     a: DataArray | Variable, b: DataArray | Variable, *, dim: Hashable
 ) -> DataArray | Variable:
-    """
-    Compute the cross product of two (arrays of) vectors.
+    """Compute the cross product of two (arrays of) vectors.
 
     The cross product of `a` and `b` in :math:`R^3` is a vector
     perpendicular to both `a` and `b`. The vectors in `a` and `b` are
@@ -335,6 +325,10 @@ def cross(
     dim : hashable
         The dimension along which the cross product will be computed.
         Must be available in both vectors.
+
+    See Also
+    --------
+    numpy.cross : Corresponding numpy function
 
     Examples
     --------
@@ -402,12 +396,7 @@ def cross(
         x        (dim_0) int64 8B -3
         y        (dim_0) int64 8B 6
         z        (dim_0) int64 8B -3
-
-    See Also
-    --------
-    numpy.cross : Corresponding numpy function
     """
-
     if dim not in a.dims:
         raise ValueError(f"Dimension {dim!r} not on a")
     elif dim not in b.dims:
@@ -486,8 +475,10 @@ def dot(
     dim: Dims = None,
     **kwargs: Any,
 ):
-    """Generalized dot product for xarray objects. Like ``np.einsum``, but
-    provides a simpler interface based on array dimension names.
+    """Generalized dot product for xarray objects.
+
+    Like ``np.einsum``, but provides a simpler interface based on array
+    dimension names.
 
     Parameters
     ----------
@@ -709,6 +700,12 @@ def where(cond, x, y, keep_attrs=None):
         In priority order: Dataset, DataArray, Variable or array, whichever
         type appears as an input argument.
 
+    See Also
+    --------
+    numpy.where : corresponding numpy function
+    Dataset.where, DataArray.where :
+        equivalent methods
+
     Examples
     --------
     >>> x = xr.DataArray(
@@ -784,12 +781,6 @@ def where(cond, x, y, keep_attrs=None):
     array([[1, 2],
            [0, 0]])
     Dimensions without coordinates: x, y
-
-    See Also
-    --------
-    numpy.where : corresponding numpy function
-    Dataset.where, DataArray.where :
-        equivalent methods
     """
     from xarray.core.dataset import Dataset
 
@@ -869,7 +860,7 @@ def polyval(
     coeffs: Dataset | DataArray,
     degree_dim: Hashable = "degree",
 ) -> Dataset | DataArray:
-    """Evaluate a polynomial at specific values
+    """Evaluate a polynomial at specific values.
 
     Parameters
     ----------
@@ -889,8 +880,32 @@ def polyval(
     --------
     xarray.DataArray.polyfit
     numpy.polynomial.polynomial.polyval
-    """
 
+    Examples
+    --------
+    Evaluate the polynomial ``1 + 2 * x + 3 * x**2``:
+
+    >>> x = xr.DataArray(np.arange(5.0), dims="x")
+    >>> coeffs = xr.DataArray(
+    ...     [1.0, 2.0, 3.0], dims="degree", coords={"degree": [0, 1, 2]}
+    ... )
+    >>> xr.polyval(x, coeffs)
+    <xarray.DataArray (x: 5)> Size: 40B
+    array([ 1.,  6., 17., 34., 57.])
+    Dimensions without coordinates: x
+
+    Evaluate the result of :py:meth:`DataArray.polyfit` along its coordinate:
+
+    >>> y = xr.DataArray(
+    ...     [1.0, 6.0, 17.0, 34.0, 57.0], dims="x", coords={"x": np.arange(5.0)}
+    ... )
+    >>> fit = y.polyfit("x", deg=2)
+    >>> xr.polyval(y.x, fit.polyfit_coefficients).round(6)
+    <xarray.DataArray (x: 5)> Size: 40B
+    array([ 1.,  6., 17., 34., 57.])
+    Coordinates:
+      * x        (x) float64 40B 0.0 1.0 2.0 3.0 4.0
+    """
     if degree_dim not in coeffs._indexes:
         raise ValueError(
             f"Dimension `{degree_dim}` should be a coordinate variable with labels."
@@ -916,7 +931,7 @@ def polyval(
 
 
 def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
-    """Converts all datetime64 variables to float64
+    """Convert all datetime64 variables to float64.
 
     Parameters
     ----------
@@ -962,7 +977,7 @@ def _calc_idxminmax(
     *,
     array,
     func: Callable,
-    dim: Hashable | None = None,
+    dim: Hashable | Sequence[Hashable] | EllipsisType | None = None,
     skipna: bool | None = None,
     fill_value: Any = dtypes.NA,
     keep_attrs: bool | None = None,
@@ -972,23 +987,30 @@ def _calc_idxminmax(
     if not array.ndim:
         raise ValueError("This function does not apply for scalars")
 
-    if dim is not None:
+    if dim is Ellipsis:
+        dim = array.dims
+    elif dim is not None:
         pass  # Use the dim if available
     elif array.ndim == 1:
         # it is okay to guess the dim if there is only 1
         dim = array.dims[0]
     else:
-        # The dim is not specified and ambiguous.  Don't guess.
-        raise ValueError("Must supply 'dim' argument for multidimensional arrays")
+        # like the future behavior of argmin/argmax without dim, use all dims
+        dim = array.dims
 
-    if dim not in array.dims:
-        raise KeyError(
-            f"Dimension {dim!r} not found in array dimensions {array.dims!r}"
-        )
-    if dim not in array.coords:
-        raise KeyError(
-            f"Dimension {dim!r} is not one of the coordinates {tuple(array.coords.keys())}"
-        )
+    # like argmin/argmax, a sequence of dims (other than a str) returns a dict
+    single_dim = not isinstance(dim, Sequence) or isinstance(dim, str)
+    dims = [dim] if single_dim else list(cast(Sequence[Hashable], dim))
+
+    for _dim in dims:
+        if _dim not in array.dims:
+            raise KeyError(
+                f"Dimension {_dim!r} not found in array dimensions {array.dims!r}"
+            )
+        if _dim not in array.coords:
+            raise KeyError(
+                f"Dimension {_dim!r} is not one of the coordinates {tuple(array.coords.keys())}"
+            )
 
     # These are dtypes with NaN values argmin and argmax can handle
     na_dtypes = "cfO"
@@ -998,27 +1020,39 @@ def _calc_idxminmax(
         allna = array.isnull().all(dim)
         array = array.where(~allna, 0)
 
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=True)
+
     # This will run argmin or argmax.
-    index = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
+    index = func(array, dim=dim, axis=None, keep_attrs=False, skipna=skipna)
+    # Force dictionary format in case of single dim so that we can iterate over it in for loop below
+    if single_dim:
+        index = {dim: index}
 
-    # Handle chunked arrays (e.g. dask).
-    coord = array[dim]._variable.to_base_variable()
-    if is_chunked_array(array.data):
-        chunkmanager = get_chunked_array_type(array.data)
-        coord_array = chunkmanager.from_array(
-            array[dim].data, chunks=((array.sizes[dim],),)
-        )
-        coord = coord.copy(data=coord_array)
-    else:
-        coord = coord.copy(data=to_like_array(array[dim].data, array.data))
+    res = {}
+    for _dim in dims:
+        _da_idx = index[_dim]
+        # Handle chunked arrays (e.g. dask).
+        coord = array[_dim]._variable.to_base_variable()
+        if is_chunked_array(array.data):
+            chunkmanager = get_chunked_array_type(array.data)
+            coord_array = chunkmanager.from_array(
+                array[_dim].data, chunks=((array.sizes[_dim],),)
+            )
+            coord = coord.copy(data=coord_array)
+        else:
+            coord = coord.copy(data=to_like_array(array[_dim].data, array.data))
 
-    res = index._replace(coord[(index.variable,)]).rename(dim)
+        _res = _da_idx._replace(coord[(_da_idx.variable,)]).rename(_dim)
+        if skipna or (skipna is None and array.dtype.kind in na_dtypes):
+            # Put the NaN values back in after removing them.
+            # We attempt to preserve dtype where we can.
+            if is_chunked_array(allna.data) or allna.any():
+                _res = _res.where(~allna, fill_value)
+        # the result are labels of the coordinate, so keep its attributes
+        _res.attrs = dict(coord.attrs) if keep_attrs else {}
+        res[_dim] = _res
 
-    if skipna or (skipna is None and array.dtype.kind in na_dtypes):
-        # Put the NaN values back in after removing them
-        res = res.where(~allna, fill_value)
-
-    # Copy attributes from argmin/argmax, if any
-    res.attrs = index.attrs
-
+    if single_dim:
+        return res[dim]
     return res

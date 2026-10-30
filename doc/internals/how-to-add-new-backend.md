@@ -12,7 +12,9 @@ Adding a new backend for read support to Xarray does not require
 one to integrate any code in Xarray; all you need to do is:
 
 - Create a class that inherits from Xarray {py:class}`~xarray.backends.BackendEntrypoint`
-  and implements the method `open_dataset` see {ref}`rst-backend-entrypoint`
+  and implements the appropriate read method: `open_dataset` for individual
+  datasets, or the optional `open_datatree` and `open_groups_as_dict` methods
+  for hierarchical data. See {ref}`rst-backend-entrypoint`.
 - Declare this class as an external plugin in your project configuration, see {ref}`rst-backend-registration`
 
 If you also want to support lazy loading and dask see {ref}`rst-lazy-loading`.
@@ -30,7 +32,9 @@ with {py:class}`~xarray.backends.list_engines()`.
 Your `BackendEntrypoint` sub-class is the primary interface with Xarray, and
 it should implement the following attributes and methods:
 
-- the `open_dataset` method (mandatory)
+- the `open_dataset` method (mandatory for dataset-reading backends)
+- the `open_datatree` method (optional, for hierarchical data)
+- the `open_groups_as_dict` method (optional, for hierarchical data)
 - the `open_dataset_parameters` attribute (optional)
 - the `guess_can_open` method (optional)
 - the `description` attribute (optional)
@@ -143,6 +147,38 @@ parameter or explicitly using the syntax `**kwargs`.
 If you don't want to support the lazy loading, then the
 {py:class}`~xarray.Dataset` shall contain values as a {py:class}`numpy.ndarray`
 and your work is almost done.
+
+(rst-open-datatree)=
+
+### Hierarchical data: open_datatree and open_groups_as_dict
+
+Backends for hierarchical formats can optionally implement one or both of
+{py:meth}`~xarray.backends.BackendEntrypoint.open_datatree` and
+{py:meth}`~xarray.backends.BackendEntrypoint.open_groups_as_dict`.
+Backends that only support individual datasets do **not** need to implement
+either method. A backend supporting groups should set
+`supports_groups = True` on its `BackendEntrypoint` subclass. This also lets
+`xarray.open_datatree` and `xarray.open_groups` discover the backend when
+selecting an engine automatically; without this flag, users must pass
+`engine=` explicitly to use its group-reading methods.
+
+- `open_datatree(filename_or_obj, *, drop_variables=None)` is used by
+  {py:func}`xarray.open_datatree` and returns a {py:class}`~xarray.DataTree`.
+  This supports opening a hierarchy as one tree.
+- `open_groups_as_dict(filename_or_obj, *, drop_variables=None)` is used by
+  {py:func}`xarray.open_groups` and returns a mapping from group paths to
+  {py:class}`~xarray.Dataset` objects. This lets callers access all groups
+  without requiring them to satisfy the constraints of a single
+  {py:class}`~xarray.DataTree`.
+
+Both methods accept the same `filename_or_obj` argument as `open_dataset`.
+Their implementation is format-specific; neither method is required for all
+backends, and implementing one does not automatically require the other.
+For formats supporting both methods, one option is to implement
+`open_groups_as_dict` and construct a tree from the returned datasets with
+{py:meth}`xarray.DataTree.from_dict`, as done by the netCDF4 and h5netcdf
+backends. See the {py:class}`~xarray.backends.BackendEntrypoint` API reference
+for the method signatures.
 
 (rst-open-dataset-parameters)=
 
@@ -277,48 +313,37 @@ configurations), with:
 
 You can declare the entrypoint in your project configuration like so:
 
-```{eval-rst}
-.. tab:: pyproject.toml
-
-   .. code:: toml
-
-      [project.entry-points."xarray.backends"]
-      my_engine = "my_package.my_module:MyBackendEntrypoint"
+````{tab} pyproject.toml
+```toml
+[project.entry-points."xarray.backends"]
+my_engine = "my_package.my_module:MyBackendEntrypoint"
 ```
+````
 
-```{eval-rst}
-.. tab:: pyproject.toml [Poetry]
-
-   .. code-block:: toml
-
-       [tool.poetry.plugins."xarray.backends"]
-       my_engine = "my_package.my_module:MyBackendEntrypoint"
+````{tab} pyproject.toml [Poetry]
+```toml
+[tool.poetry.plugins."xarray.backends"]
+my_engine = "my_package.my_module:MyBackendEntrypoint"
 ```
+````
 
-```{eval-rst}
-.. tab:: setup.cfg
-
-   .. code-block:: cfg
-
-       [options.entry_points]
-       xarray.backends =
-           my_engine = my_package.my_module:MyBackendEntrypoint
+````{tab} setup.cfg
+```cfg
+[options.entry_points]
+xarray.backends =
+    my_engine = my_package.my_module:MyBackendEntrypoint
 ```
+````
 
-```{eval-rst}
-.. tab:: setup.py
-
-   .. code-block::
-
-       setuptools.setup(
-           entry_points={
-               "xarray.backends": [
-                   "my_engine=my_package.my_module:MyBackendEntrypoint"
-               ],
-           },
-       )
-
+````{tab} setup.py
+```python
+setuptools.setup(
+    entry_points={
+        "xarray.backends": ["my_engine=my_package.my_module:MyBackendEntrypoint"],
+    },
+)
 ```
+````
 
 See the [Python Packaging User Guide](https://packaging.python.org/specifications/entry-points/#data-model) for more
 information on entrypoints and details of the syntax.
@@ -463,7 +488,7 @@ array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
 ```python
 # shall support integers
-backend_array._raw_indexing_method(1, 1)
+backend_array._raw_indexing_method((1, 1))
 ```
 
 ```
@@ -472,7 +497,7 @@ backend_array._raw_indexing_method(1, 1)
 
 ```python
 # shall support slices
-backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+backend_array._raw_indexing_method((slice(0, 3), slice(2, 4)))
 ```
 
 ```
@@ -486,7 +511,7 @@ support also lists of integers. The outer indexing is equivalent to
 combining multiple input list with `itertools.product()`:
 
 ```python
-backend_array._raw_indexing_method([0, 1], [0, 1, 2])
+backend_array._raw_indexing_method(([0, 1], [0, 1, 2]))
 ```
 
 ```
@@ -495,7 +520,7 @@ array([[0, 1, 2], [4, 5, 6]])
 
 ```python
 # shall support integers
-backend_array._raw_indexing_method(1, 1)
+backend_array._raw_indexing_method((1, 1))
 ```
 
 ```

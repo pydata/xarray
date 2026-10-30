@@ -13,16 +13,9 @@ from typing import Any, Literal, cast
 import numpy as np
 import pandas as pd
 import pytest
-from packaging.version import Version
+from numpy import trapezoid
+from numpy.exceptions import RankWarning
 from pandas.core.indexes.datetimes import DatetimeIndex
-
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy.exceptions import RankWarning
-except ImportError:
-    from numpy import RankWarning  # type: ignore[no-redef,attr-defined,unused-ignore]
-
-
 from pandas.errors import UndefinedVariableError
 
 import xarray as xr
@@ -44,7 +37,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import Coordinates, DatasetCoordinates
 from xarray.core.indexes import Index, PandasIndex
-from xarray.core.types import ArrayLike
+from xarray.core.types import ArrayLike, QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.groupers import SeasonResampler, TimeResampler
 from xarray.namedarray.pycompat import array_type, integer_types
@@ -62,8 +55,6 @@ from xarray.tests import (
     create_test_data,
     dask_array_api,
     dask_array_type,
-    has_cftime,
-    has_dask,
     has_pyarrow,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -78,15 +69,6 @@ from xarray.tests import (
     source_ndarray,
 )
 from xarray.tests.indexes import ScalarIndex, XYIndex
-
-# from numpy version 2.0 trapz is deprecated and renamed to trapezoid
-# remove once numpy 2.0 is the oldest supported version
-try:
-    from numpy import trapezoid  # type: ignore[attr-defined,unused-ignore]
-except ImportError:
-    from numpy import (  # type: ignore[arg-type,no-redef,attr-defined,unused-ignore]
-        trapz as trapezoid,
-    )
 
 sparse_array_type = array_type("sparse")
 
@@ -210,9 +192,7 @@ def create_test_stacked_array() -> tuple[DataArray, DataArray]:
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
-    """
-    Store that does not allow any data access.
-    """
+    """Store that does not allow any data access."""
 
     def __init__(self):
         super().__init__()
@@ -235,7 +215,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 
 
 class DuckBackendArrayWrapper(backends.common.BackendArray):
-    """Mimic a BackendArray wrapper around DuckArrayWrapper"""
+    """Mimic a BackendArray wrapper around DuckArrayWrapper."""
 
     def __init__(self, array):
         self.array = DuckArrayWrapper(array)
@@ -250,9 +230,9 @@ class DuckBackendArrayWrapper(backends.common.BackendArray):
 
 
 class AccessibleAsDuckArrayDataStore(backends.InMemoryDataStore):
-    """
-    Store that returns a duck array, not convertible to numpy array,
-    on read. Modeled after nVIDIA's kvikio.
+    """Store that returns a duck array, not convertible to numpy array, on read.
+
+    Modeled after nVIDIA's kvikio.
     """
 
     def __init__(self):
@@ -299,7 +279,7 @@ class TestDataset:
                 var1     (dim1, dim2) float64 576B -0.9891 -0.3678 1.288 ... -0.2116 0.364
                 var2     (dim1, dim2) float64 576B 0.953 1.52 1.704 ... 0.1347 -0.6423
                 var3     (dim3, dim1) float64 640B 0.4107 0.9941 0.1665 ... 0.716 1.555
-                var4     (dim1) category 3{6 if Version(pd.__version__) >= Version("3.0.0dev0") else 2}B b c b a c a c a{var5}
+                var4     (dim1) category {data["var4"].nbytes}B b c b a c a c a{var5}
             Attributes:
                 foo:      bar"""
         )
@@ -639,13 +619,17 @@ class TestDataset:
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2]], names=("level_1", "level_2")
         )
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            with pytest.warns(
-                FutureWarning,
-                match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
-            ):
-                Dataset({}, {"x": mindex, "y": mindex})
-                Dataset({}, {"x": mindex, "level_1": range(4)})
+        conflicting_coords: list[dict[str, Any]] = [
+            {"x": mindex, "y": mindex},
+            {"x": mindex, "level_1": range(4)},
+        ]
+        for coords in conflicting_coords:
+            with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+                with pytest.warns(
+                    FutureWarning,
+                    match=r".*`pandas.MultiIndex`.*no longer be implicitly promoted.*",
+                ):
+                    Dataset({}, coords)
 
     def test_constructor_no_default_index(self) -> None:
         # explicitly passing a Coordinates object skips the creation of default index
@@ -1157,9 +1141,9 @@ class TestDataset:
         "use_cftime,calendar",
         [
             (False, "standard"),
-            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "standard"),
-            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "noleap"),
-            (pytest.param(True, marks=pytest.mark.skipif(not has_cftime)), "360_day"),
+            pytest.param(True, "standard", marks=requires_cftime),
+            pytest.param(True, "noleap", marks=requires_cftime),
+            pytest.param(True, "360_day", marks=requires_cftime),
         ],
     )
     def test_chunk_by_season_resampler(self, use_cftime: bool, calendar: str) -> None:
@@ -1265,6 +1249,11 @@ class TestDataset:
         with pytest.raises(ValueError):
             ds.chunk(x=SeasonResampler(["DJF", "MAM", "SON"]))
 
+    def test_chunk_none_raises(self) -> None:
+        data = create_test_data()
+        with pytest.raises(TypeError, match=r"chunks=None is not supported"):
+            data.chunk(None)  # type: ignore[arg-type]
+
     @requires_dask
     def test_chunk(self) -> None:
         data = create_test_data()
@@ -1334,7 +1323,7 @@ class TestDataset:
             "standard",
             pytest.param(
                 "gregorian",
-                marks=pytest.mark.skipif(not has_cftime, reason="needs cftime"),
+                marks=requires_cftime,
             ),
         ),
     )
@@ -1634,7 +1623,7 @@ class TestDataset:
         assert_identical(actual, expected)
 
     def test_isel_dataarray(self) -> None:
-        """Test for indexing by DataArray"""
+        """Test for indexing by DataArray."""
         data = create_test_data()
         # indexing with DataArray with same-name coordinates.
         indexing_da = DataArray(
@@ -3312,6 +3301,17 @@ class TestDataset:
 
             assert data.attrs["Test"] is not copied.attrs["Test"]
 
+    def test_copy_preserves_close(self) -> None:
+        calls: list[None] = []
+        data = create_test_data()
+        data.set_close(lambda: calls.append(None))
+
+        copied = data.copy()
+        data.close()
+        copied.close()
+
+        assert calls == [None, None]
+
     def test_copy_with_data(self) -> None:
         orig = create_test_data()
         new_data = {k: np.random.randn(*v.shape) for k, v in orig.data_vars.items()}
@@ -3345,9 +3345,12 @@ class TestDataset:
         ],
     )
     def test_copy_coords(self, deep, expected_orig) -> None:
-        """The test fails for the shallow copy, and apparently only on Windows
+        """Test how modifying the coords of a deep or shallow copy affects the original.
+
+        The test fails for the shallow copy, and apparently only on Windows
         for some reason. In windows coords seem to be immutable unless it's one
-        dataset deep copied from another."""
+        dataset deep copied from another.
+        """
         ds = xr.DataArray(
             np.ones([2, 2, 2]),
             coords={"a": [1, 2], "b": ["x", "y"], "c": [0, 1]},
@@ -3661,6 +3664,13 @@ class TestDataset:
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
         assert actual.xindexes["y"].equals(expected.xindexes["y"])
+
+    def test_to_array_deprecated(self) -> None:
+        ds = Dataset({"a": 1, "b": ("x", [1, 2, 3])}, coords={"c": 42})
+        expected = ds.to_dataarray("abc", name="foo")
+        with pytest.warns(FutureWarning, match=r"Dataset\.to_array is deprecated"):
+            actual = ds.to_array("abc", name="foo")
+        assert_identical(expected, actual)
 
     def test_expand_dims_error(self) -> None:
         original = Dataset(
@@ -4343,6 +4353,61 @@ class TestDataset:
         actual = stacked.isel(z=slice(None, None, -1)).unstack("z")
         assert actual.identical(ds[["b"]])
 
+    @pytest.mark.parametrize(
+        "stacked_dim_first",
+        [
+            pytest.param(True, id="stacked-first"),
+            pytest.param(False, id="stacked-last"),
+        ],
+    )
+    def test_unstack_full_product_is_view(self, stacked_dim_first: bool) -> None:
+        data = np.arange(24).reshape(6, 4)
+        index = pd.MultiIndex.from_product([[0, 1, 2], ["a", "b"]], names=["x", "y"])
+        coords = Coordinates.from_pandas_multiindex(index, "z")
+        if stacked_dim_first:
+            ds = Dataset({"v": (("z", "w"), data)}, coords=coords)
+        else:
+            ds = Dataset({"v": (("w", "z"), data.T)}, coords=coords)
+        expected = Dataset(
+            {"v": (("w", "x", "y"), data.T.reshape(4, 3, 2))},
+            coords={"x": [0, 1, 2], "y": ["a", "b"]},
+        )
+
+        actual = ds.unstack("z")
+        assert_identical(actual, expected)
+        assert np.shares_memory(actual["v"].values, ds["v"].values)
+
+    @pytest.mark.parametrize(
+        "index",
+        [
+            pytest.param(
+                pd.MultiIndex.from_product([[1, 0], ["b", "a"]], names=["x", "y"]),
+                id="unsorted-levels",
+            ),
+            pytest.param(
+                pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])[
+                    ::-1
+                ],
+                id="reversed",
+            ),
+            pytest.param(
+                pd.MultiIndex.from_tuples(
+                    [(0, "a"), (0, "b"), (1, "a")], names=["x", "y"]
+                ),
+                id="missing",
+            ),
+        ],
+    )
+    def test_unstack_not_full_product(self, index: pd.MultiIndex) -> None:
+        values = np.arange(len(index), dtype=float)
+        coords = Coordinates.from_pandas_multiindex(index, "z")
+        ds = Dataset({"v": ("z", values)}, coords=coords)
+        expected = pd.Series(values, index=index, name="v").to_xarray().to_dataset()
+
+        actual = ds.unstack("z")
+        assert_equal(actual, expected)
+        assert not np.shares_memory(actual["v"].values, ds["v"].values)
+
     def test_to_stacked_array_invalid_sample_dims(self) -> None:
         data = xr.Dataset(
             data_vars={"a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]), "b": ("x", [6, 7])},
@@ -4397,6 +4462,42 @@ class TestDataset:
         x0 = y[0].to_unstacked_dataset("features")
         d0 = D.isel(x=0)
         assert_identical(d0, x0)
+
+    @pytest.mark.parametrize(
+        "indexer, variables",
+        [(slice(0, 2), ["a"]), ([4, 5], ["c"]), ([0, 1, 4, 5], ["a", "c"])],
+    )
+    @pytest.mark.parametrize("level", [0, "variable", -1])
+    def test_to_unstacked_dataset_after_feature_selection(
+        self,
+        indexer: slice | list[int],
+        variables: list[str],
+        level: int | str,
+        use_dask: bool,
+    ) -> None:
+        data = xr.Dataset(
+            {
+                "a": (("sample", "y"), [[1, 2], [3, 4]]),
+                "b": (("sample", "y"), [[5, 6], [7, 8]]),
+                "c": (("sample", "y"), [[9, 10], [11, 12]]),
+            },
+            coords={"sample": [10, 20], "y": ["u", "v"]},
+        )
+        data["sample"].attrs["long_name"] = "sample identifier"
+        data["y"].attrs["long_name"] = "channel"
+        if use_dask:
+            data = data.chunk()
+
+        stacked = data.to_stacked_array("features", sample_dims=["sample"])
+        if level != 0:
+            stacked = stacked.reorder_levels(features=["y", "variable"])
+        selected = stacked.isel(features=indexer)
+        original = selected.copy(deep=True)
+
+        actual = selected.to_unstacked_dataset("features", level=level)
+
+        assert_identical(actual, data[variables])
+        assert_identical(selected, original)
 
     def test_to_stacked_array_to_unstacked_dataset_different_dimension(self) -> None:
         # test when variables have different dimensionality
@@ -4549,6 +4650,23 @@ class TestDataset:
         actual3 = data[dict(dim1=0)]
         expected3 = data.isel(dim1=0)
         assert_identical(expected3, actual3)
+
+    def test_getitem_iterator(self) -> None:
+        data = create_test_data()
+        keys = iter(["var1", "var2"])
+
+        actual = data[keys]
+
+        expected = data[["var1", "var2"]]
+        assert_identical(expected, actual)
+
+    def test_setitem_iterator(self) -> None:
+        actual = Dataset({"a": 0, "b": 0})
+
+        actual[iter(["a", "b"])] = [1, 2]
+
+        expected = Dataset({"a": 1, "b": 2})
+        assert_identical(expected, actual)
 
     def test_getitem_hashable(self) -> None:
         data = create_test_data()
@@ -4773,8 +4891,7 @@ class TestDataset:
             data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4]}].values
         data5 = data4.astype(str)
         data5["var4"] = data4["var1"]
-        # convert to `np.str_('a')` once `numpy<2.0` has been dropped
-        err_msg = "could not convert string to float: .*'a'.*"
+        err_msg = r"could not convert string to float: (np\.str_\()?'a'\)?"
         with pytest.raises(ValueError, match=err_msg):
             data5[{"dim2": 1}] = "a"
 
@@ -5382,7 +5499,9 @@ class TestDataset:
 
         # test a case with a MultiIndex along a single dimension
         data_dict = dict(
-            x=[1, 2, 1, 2, 1], y=["a", "a", "b", "b", "b"], z=[5, 10, 15, 20, 25]
+            x=np.array([1, 2, 1, 2, 1], dtype=np.int64),
+            y=["a", "a", "b", "b", "b"],
+            z=np.array([5, 10, 15, 20, 25], dtype=np.int64),
         )
         data_dict_w_dims = {k: ("single_dim", v) for k, v in data_dict.items()}
 
@@ -5400,7 +5519,10 @@ class TestDataset:
             [list(range(6)), list("ab")], names=["A", "B"]
         )
         ds = DataArray(
-            range(12), [("MI", mindex_single)], dims="MI", name="test"
+            np.arange(12, dtype=np.int64),
+            [("MI", mindex_single)],
+            dims="MI",
+            name="test",
         )._to_dataset_whole()
         ds.coords["C"] = "a single value"
         ds.coords["D"] = ds.coords["A"] ** 2
@@ -6298,6 +6420,34 @@ class TestDataset:
         actual = data["a"].mean("x").to_dataset()
         assert_identical(actual, expected)
 
+    @pytest.mark.parametrize(
+        "reduce",
+        [
+            lambda ds: ds.mean("x"),
+            lambda ds: ds.quantile(0.5, dim="x"),
+            lambda ds: ds.integrate("x"),
+        ],
+        ids=["mean", "quantile", "integrate"],
+    )
+    def test_reduce_drops_spanning_index(self, reduce) -> None:
+        class CustomIndex(Index): ...
+
+        spanning_index = CustomIndex()
+        coords = {"x": ("x", [0.0, 1.0, 2.0]), "y": ("y", [3.0, 4.0])}
+        ds = Dataset(
+            {"a": (("x", "y"), np.arange(6).reshape(3, 2))},
+            coords=Coordinates(
+                coords, indexes={"x": spanning_index, "y": spanning_index}
+            ),
+        ).assign_coords(z=("z", [5.0, 6.0]))
+
+        result = reduce(ds)
+
+        assert "y" in result.coords
+        assert "x" not in result.xindexes
+        assert "y" not in result.xindexes
+        assert result.xindexes["z"].equals(ds.xindexes["z"])
+
     def test_mean_uint_dtype(self) -> None:
         data = xr.Dataset(
             {
@@ -6410,6 +6560,18 @@ class TestDataset:
         expected = Dataset({"x": 10})
         actual = ds.idxmax()
         assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("func", ["idxmin", "idxmax"])
+    @pytest.mark.parametrize("dim", [["x"], ("x", "y"), ...])
+    def test_idxminmax_multiple_dims_raises(self, func, dim) -> None:
+        ds = Dataset(
+            {"a": (("x", "y"), [[1, 2], [3, 0]])}, coords={"x": [0, 1], "y": [0, 1]}
+        )
+        with pytest.raises(ValueError, match="returns a dict"):
+            getattr(ds, func)(dim)
+        # without dim, multidimensional variables need a dim
+        with pytest.raises(ValueError, match="Must supply 'dim'"):
+            getattr(ds, func)()
 
         expected = Dataset({"x": b"a"})
         ds = Dataset({"x": ("y", np.array(["a", "b"], "S1"))})
@@ -6585,24 +6747,6 @@ class TestDataset:
         assert_identical(result.var2, ds.var2.quantile(q, method=method))
         assert_identical(result.var3, ds.var3.quantile(q, method=method))
 
-    @pytest.mark.filterwarnings(
-        "default:The `interpolation` argument to quantile was renamed to `method`:FutureWarning"
-    )
-    @pytest.mark.parametrize("method", ["midpoint", "lower"])
-    def test_quantile_interpolation_deprecated(self, method) -> None:
-        ds = create_test_data(seed=123)
-        q = [0.25, 0.5, 0.75]
-
-        with pytest.warns(
-            FutureWarning,
-            match="`interpolation` argument to quantile was renamed to `method`",
-        ):
-            ds.quantile(q, interpolation=method)
-
-        with warnings.catch_warnings(record=True):
-            with pytest.raises(TypeError, match="interpolation and method keywords"):
-                ds.quantile(q, method=method, interpolation=method)
-
     @requires_bottleneck
     def test_rank(self) -> None:
         ds = create_test_data(seed=1234)
@@ -6712,11 +6856,40 @@ class TestDataset:
         expected = xr.Dataset({"foo": 42, "bar": ("y", [4, 5])})
         assert_identical(result, expected)
 
-    def test_apply_pending_deprecated_map(self) -> None:
+    def test_map_preserves_function_attrs(self) -> None:
+        # Regression test for GH11019
+        # Attrs added by function should be preserved in result
+        ds = xr.Dataset({"test": ("x", [1, 2, 3], {"original": "value"})})
+
+        def add_attr(da):
+            return da.assign_attrs(new_attr="foobar")
+
+        # With keep_attrs=True: merge using drop_conflicts (no conflict here)
+        result = ds.map(add_attr, keep_attrs=True)
+        assert result["test"].attrs == {"original": "value", "new_attr": "foobar"}
+
+        # With keep_attrs=False: function's attrs preserved
+        result = ds.map(add_attr, keep_attrs=False)
+        assert result["test"].attrs == {"original": "value", "new_attr": "foobar"}
+
+        # When function modifies existing attr with keep_attrs=True, conflict is dropped
+        def modify_attr(da):
+            return da.assign_attrs(original="modified", extra="added")
+
+        result = ds.map(modify_attr, keep_attrs=True)
+        assert result["test"].attrs == {
+            "extra": "added"
+        }  # "original" dropped due to conflict
+
+        # When function modifies existing attr with keep_attrs=False, function wins
+        result = ds.map(modify_attr, keep_attrs=False)
+        assert result["test"].attrs == {"original": "modified", "extra": "added"}
+
+    def test_apply_deprecated_map(self) -> None:
         data = create_test_data()
         data.attrs["foo"] = "bar"
 
-        with pytest.warns(PendingDeprecationWarning):
+        with pytest.warns(FutureWarning, match=r"Dataset\.apply is deprecated"):
             # data.apply keeps all attrs by default
             assert_identical(data.apply(np.mean), data.mean())
 
@@ -6925,7 +7098,7 @@ class TestDataset:
         # test missing dimension, raise warning
         with pytest.warns(UserWarning):
             actual = ds.transpose(..., "not_a_dim", missing_dims="warn")
-            assert_identical(expected_ell, actual)
+        assert_identical(expected_ell, actual)
 
         assert "T" not in dir(ds)
 
@@ -7003,6 +7176,41 @@ class TestDataset:
         expected.coords["numbers"] = ("dim3", ds["numbers"].values)
         assert_equal(expected, actual)
 
+    def test_dataset_diff_large_n(self) -> None:
+        # GH11702: used to raise RecursionError for n close to the recursion limit
+        values = np.arange(3000.0) ** 2
+        ds = Dataset({"a": ("x", values)}, coords={"x": np.arange(3000)})
+        actual = ds.diff("x", n=1200)
+        expected = Dataset(
+            {"a": ("x", np.diff(values, n=1200))}, coords={"x": np.arange(1200, 3000)}
+        )
+        assert_equal(expected, actual)
+
+    @pytest.mark.parametrize(
+        ("label", "coords"), [("upper", [2, 3, 4, 5]), ("lower", [0, 1, 2, 3])]
+    )
+    def test_dataset_diff_n2_label(self, label, coords) -> None:
+        values = np.arange(6.0) ** 3
+        ds = Dataset(
+            {"a": ("x", values), "c": ("x", list("abcdef"))}, coords={"x": range(6)}
+        )
+        ds = ds.set_coords("c")
+        actual = ds.diff("x", n=2, label=label)
+        expected = Dataset(
+            {"a": ("x", np.diff(values, n=2))},
+            coords={"x": coords, "c": ("x", [list("abcdef")[i] for i in coords])},
+        )
+        assert_equal(expected, actual)
+
+    def test_dataset_diff_n_larger_than_size(self) -> None:
+        ds = Dataset({"a": ("x", [1.0, 4.0, 9.0])}, coords={"x": [0, 1, 2]})
+        actual = ds.diff("x", n=5)
+        expected = Dataset(
+            {"a": ("x", np.diff([1.0, 4.0, 9.0], n=5))},
+            coords={"x": np.array([], dtype=int)},
+        )
+        assert_equal(expected, actual)
+
     def test_dataset_diff_exception_n_neg(self) -> None:
         ds = create_test_data(seed=1)
         with pytest.raises(ValueError, match=r"must be non-negative"):
@@ -7012,6 +7220,16 @@ class TestDataset:
         ds = create_test_data(seed=1)
         with pytest.raises(ValueError, match=r"'label' argument has to"):
             ds.diff("dim2", label="raise_me")  # type: ignore[arg-type]
+
+    def test_dataset_diff_exception_invalid_dim(self) -> None:
+        # GH7748: diff along a non-existent dimension should raise instead of
+        # silently returning the object unchanged.
+        ds = create_test_data(seed=1)
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim")
+        # the check runs before the ``n == 0`` short-circuit
+        with pytest.raises(ValueError, match=r"not found in data dimensions"):
+            ds.diff("not_a_dim", n=0)
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": -10}])
     def test_shift(self, fill_value) -> None:
@@ -7749,16 +7967,19 @@ class TestDataset:
         assert not data.astype(float, keep_attrs=False).attrs
         assert not data.astype(float, keep_attrs=False).var1.attrs
 
+    @pytest.mark.parametrize("coords_only", [False, True])
     @pytest.mark.parametrize("parser", ["pandas", "python"])
     @pytest.mark.parametrize(
         "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
     )
-    @pytest.mark.parametrize(
-        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
-    )
-    def test_query(self, backend, engine, parser) -> None:
+    def test_query(
+        self,
+        use_dask: bool,
+        engine: QueryEngineOptions,
+        parser: QueryParserOptions,
+        coords_only: bool,
+    ) -> None:
         """Test querying a dataset."""
-
         # setup test data
         np.random.seed(42)
         a = np.arange(0, 10, 1)
@@ -7769,7 +7990,7 @@ class TestDataset:
         )
         e = np.arange(0, 10 * 20).reshape(10, 20)
         f = np.random.normal(0, 1, size=(10, 20, 30))
-        if backend == "numpy":
+        if not use_dask:
             ds = Dataset(
                 {
                     "a": ("x", a),
@@ -7788,7 +8009,7 @@ class TestDataset:
                     "f2": (("x", "y", "z"), f),
                 },
             )
-        elif backend == "dask":
+        else:
             da = dask_array_api
             ds = Dataset(
                 {
@@ -7811,6 +8032,9 @@ class TestDataset:
                     "f2": (("x", "y", "z"), f),
                 },
             )
+
+        if coords_only:
+            ds = ds.set_coords(list(ds.data_vars))
 
         # query single dim, single variable
         with raise_if_dask_computes():
@@ -7904,6 +8128,17 @@ class TestDataset:
             expect = ds.isel(dict(x=(a > 5), y=(c < 0.5), z=(d == "bar")))
             assert_identical(expect, actual)
 
+        # query a dimension without a coordinate
+        with raise_if_dask_computes():
+            actual = ds.query(x="x > 5", engine=engine, parser=parser)
+        assert_identical(ds.isel(x=slice(6, None)), actual)
+
+        # query a dimension coordinate
+        ds = ds.assign_coords(x=a + 10)
+        with raise_if_dask_computes():
+            actual = ds.query(x="x > 15", engine=engine, parser=parser)
+        assert_identical(ds.isel(x=slice(6, None)), actual)
+
         # test error handling
         with pytest.raises(ValueError):
             ds.query("a > 5")  # type: ignore[arg-type] # must be dict or kwargs
@@ -7922,8 +8157,15 @@ class TestDataset:
 # pytest tests — new tests should go here, rather than in the class.
 
 
-@pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin(test_elements, backend) -> None:
+@pytest.mark.parametrize(
+    "test_elements",
+    ([1, 2], np.array([1, 2]), DataArray([1, 2]), {1, 2}, frozenset({1, 2})),
+    ids=["list", "numpy", "dataarray", "set", "frozenset"],
+)
+def test_isin(
+    test_elements: list[int] | np.ndarray | DataArray | set[int] | frozenset[int],
+    use_dask: bool,
+) -> None:
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),
@@ -7932,7 +8174,7 @@ def test_isin(test_elements, backend) -> None:
         }
     ).astype("bool")
 
-    if backend == "dask":
+    if use_dask:
         expected = expected.chunk()
 
     result = Dataset(
@@ -8029,9 +8271,8 @@ def test_raise_no_warning_assert_close(ds) -> None:
     assert_allclose(ds, ds)
 
 
-@pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("edge_order", [1, 2])
-def test_differentiate(dask, edge_order) -> None:
+def test_differentiate(use_dask, edge_order) -> None:
     rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -8040,7 +8281,7 @@ def test_differentiate(dask, edge_order) -> None:
         dims=["x", "y"],
         coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8078,8 +8319,7 @@ def test_differentiate(dask, edge_order) -> None:
         da.differentiate("x2d")
 
 
-@pytest.mark.parametrize("dask", [True, False])
-def test_differentiate_datetime(dask) -> None:
+def test_differentiate_datetime(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = np.array(
         [
@@ -8100,7 +8340,7 @@ def test_differentiate_datetime(dask) -> None:
         dims=["x", "y"],
         coords={"x": coord, "z": 3, "x2d": (("x", "y"), rs.random((8, 6)))},
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     # along x
@@ -8128,8 +8368,7 @@ def test_differentiate_datetime(dask) -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("dask", [True, False])
-def test_differentiate_cftime(dask) -> None:
+def test_differentiate_cftime(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = xr.date_range("2000", periods=8, freq="2ME", use_cftime=True)
 
@@ -8139,7 +8378,7 @@ def test_differentiate_cftime(dask) -> None:
         dims=["time", "y"],
     )
 
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"time": 4})
 
     actual = da.differentiate("time", edge_order=1, datetime_unit="D")
@@ -8157,8 +8396,7 @@ def test_differentiate_cftime(dask) -> None:
     assert_allclose(actual, xr.ones_like(da["time"]).astype(float))
 
 
-@pytest.mark.parametrize("dask", [True, False])
-def test_integrate(dask) -> None:
+def test_integrate(use_dask) -> None:
     rs = np.random.default_rng(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -8172,7 +8410,7 @@ def test_integrate(dask) -> None:
             "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8211,8 +8449,7 @@ def test_integrate(dask) -> None:
 
 
 @requires_scipy
-@pytest.mark.parametrize("dask", [True, False])
-def test_cumulative_integrate(dask) -> None:
+def test_cumulative_integrate(use_dask) -> None:
     rs = np.random.default_rng(43)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -8226,7 +8463,7 @@ def test_cumulative_integrate(dask) -> None:
             "x2d": (("x", "y"), rs.random((8, 6))),
         },
     )
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"x": 4})
 
     ds = xr.Dataset({"var": da})
@@ -8272,12 +8509,10 @@ def test_cumulative_integrate(dask) -> None:
         da.cumulative_integrate("x2d")
 
 
-@pytest.mark.parametrize("dask", [True, False])
-@pytest.mark.parametrize("which_datetime", ["np", "cftime"])
-def test_trapezoid_datetime(dask, which_datetime) -> None:
+def test_trapezoid_datetime(use_dask, use_cftime) -> None:
     rs = np.random.default_rng(42)
     coord: ArrayLike
-    if which_datetime == "np":
+    if not use_cftime:
         coord = np.array(
             [
                 "2004-07-13",
@@ -8292,8 +8527,6 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
             dtype="datetime64",
         )
     else:
-        if not has_cftime:
-            pytest.skip("Test requires cftime.")
         coord = xr.date_range("2000", periods=8, freq="2D", use_cftime=True)
 
     da = xr.DataArray(
@@ -8302,7 +8535,7 @@ def test_trapezoid_datetime(dask, which_datetime) -> None:
         dims=["time", "y"],
     )
 
-    if dask and has_dask:
+    if use_dask:
         da = da.chunk({"time": 4})
 
     actual = da.integrate("time", datetime_unit="D")
@@ -8332,12 +8565,7 @@ def test_no_dict() -> None:
 
 
 def test_subclass_slots() -> None:
-    """Test that Dataset subclasses must explicitly define ``__slots__``.
-
-    .. note::
-       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
-       defined outside of the xarray package.
-    """
+    """Test that Dataset subclasses must explicitly define ``__slots__``."""
     with pytest.raises(AttributeError) as e:
 
         class MyDS(Dataset):
@@ -8347,8 +8575,10 @@ def test_subclass_slots() -> None:
 
 
 def test_weakref() -> None:
-    """Classes with __slots__ are incompatible with the weakref module unless they
-    explicitly state __weakref__ among their slots
+    """Test that a Dataset can be weakly referenced.
+
+    Classes with __slots__ are incompatible with the weakref module unless they
+    explicitly state __weakref__ among their slots.
     """
     from weakref import ref
 
@@ -8508,8 +8738,7 @@ class TestNumpyCoercion:
 
 
 def test_string_keys_typing() -> None:
-    """Tests that string keys to `variables` are permitted by mypy"""
-
+    """Tests that string keys to `variables` are permitted by mypy."""
     da = xr.DataArray(np.arange(10), dims=["x"])
     ds = xr.Dataset(dict(x=da))
     mapping = {"y": da}

@@ -26,7 +26,6 @@ from xarray.structure.alignment import broadcast
 from xarray.tests import (
     dask_array_api,
     dask_array_type,
-    has_dask,
     raise_if_dask_computes,
     requires_cftime,
     requires_dask,
@@ -34,7 +33,7 @@ from xarray.tests import (
 
 
 def assert_identical(a, b):
-    """A version of this function which accepts numpy arrays"""
+    """Assert two objects are identical, also accepting numpy arrays."""
     __tracebackhide__ = True
     from xarray.testing import assert_identical as assert_identical_
 
@@ -1646,6 +1645,147 @@ def test_vectorize_exclude_dims_dask() -> None:
     assert_identical(expected, actual)
 
 
+@pytest.mark.parametrize(
+    "vectorize, expected_shapes",
+    [
+        (["t"], [((3, 1, 5), (1, 2, 5))] * 4),
+        ("t", [((3, 1, 5), (1, 2, 5))] * 4),
+        (["t", "r"], [((1, 5), (2, 5))] * 12),
+    ],
+)
+def test_vectorize_dims(
+    use_dask: bool,
+    vectorize: str | list[str],
+    expected_shapes: list[tuple[tuple[int, ...], tuple[int, ...]]],
+) -> None:
+    rng = np.random.default_rng(0)
+    a = xr.DataArray(rng.random((4, 3, 5)), dims=("t", "r", "z"))
+    b = xr.DataArray(rng.random((4, 2, 5)), dims=("t", "s", "z"))
+    if use_dask:
+        a, b = a.chunk(t=2), b.chunk(t=2)
+    shapes = []
+
+    def dot(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        shapes.append((x.shape, y.shape))
+        return (x * y).sum(axis=-1)
+
+    actual = apply_ufunc(
+        dot,
+        a,
+        b,
+        input_core_dims=[["z"], ["z"]],
+        vectorize=vectorize,
+        dask="parallelized",
+        output_dtypes=[float],
+    ).compute()
+    expected = (a * b).sum("z").transpose("t", "r", "s").compute()
+    xr.testing.assert_allclose(actual, expected)
+    # only the given dimensions are looped over, all others are passed in bulk
+    assert shapes == expected_shapes
+
+
+def test_vectorize_dims_empty() -> None:
+    # no loop dimensions, same as vectorize=False
+    a = xr.DataArray(np.arange(6.0).reshape(2, 3), dims=("x", "z"))
+    b = xr.DataArray(np.arange(3.0), dims="z")
+    shapes = []
+
+    def dot(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        shapes.append((x.shape, y.shape))
+        return (x * y).sum(axis=-1)
+
+    actual = apply_ufunc(dot, a, b, input_core_dims=[["z"], ["z"]], vectorize=[])
+    assert_identical(actual, xr.DataArray([5.0, 14.0], dims="x"))
+    assert shapes == [((2, 3), (3,))]
+
+
+def test_vectorize_dims_loop_order() -> None:
+    a = xr.DataArray(np.arange(6.0).reshape(2, 3), dims=("x", "y"))
+    calls = []
+
+    def func(x: np.ndarray) -> np.ndarray:
+        calls.append(x.item())
+        return x
+
+    actual = apply_ufunc(func, a, vectorize=["y", "x"])
+    assert_identical(actual, a)
+    assert calls == [0.0, 3.0, 1.0, 4.0, 2.0, 5.0]
+
+
+def test_vectorize_dims_missing_on_some_inputs() -> None:
+    a = xr.DataArray(np.arange(6.0).reshape(2, 3), dims=("x", "z"))
+    b = xr.DataArray(np.arange(3.0), dims="z")
+    shapes = []
+
+    def dot(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        shapes.append((x.shape, y.shape))
+        return (x * y).sum(axis=-1)
+
+    actual = apply_ufunc(dot, a, b, input_core_dims=[["z"], ["z"]], vectorize=["x"])
+    assert_identical(actual, xr.DataArray([5.0, 14.0], dims="x"))
+    assert shapes == [((3,), (3,))] * 2
+
+
+def test_vectorize_dims_dataset() -> None:
+    # the loop dimension is missing on one of the data variables
+    ds = xr.Dataset(
+        {"a": (("x", "z"), np.arange(6.0).reshape(2, 3)), "b": ("z", np.arange(3.0))}
+    )
+    actual = apply_ufunc(
+        np.sum, ds, input_core_dims=[["z"]], kwargs={"axis": -1}, vectorize=["x"]
+    )
+    assert_identical(actual, ds.sum("z"))
+
+
+def test_vectorize_dims_multiple_outputs() -> None:
+    a = xr.DataArray(np.arange(12.0).reshape(2, 2, 3), dims=("x", "y", "z"))
+    b = xr.DataArray(np.ones((2, 3)), dims=("x", "z"))
+
+    def func(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        return (x * y).sum(axis=-1), (x * y).max(axis=-1)
+
+    actual_sum, actual_max = apply_ufunc(
+        func,
+        a,
+        b,
+        input_core_dims=[["z"], ["z"]],
+        output_core_dims=[[], []],
+        vectorize=["x"],
+    )
+    assert_identical(actual_sum, a.sum("z"))
+    assert_identical(actual_max, a.max("z"))
+
+
+def test_vectorize_dims_empty_loop() -> None:
+    a = xr.DataArray(np.zeros((0, 3, 2)), dims=("x", "y", "z"))
+    b = xr.DataArray(np.zeros((0, 2)), dims=("x", "z"))
+
+    def func(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        raise AssertionError("must not be called")
+
+    actual = apply_ufunc(
+        func,
+        a,
+        b,
+        input_core_dims=[["z"], ["z"]],
+        vectorize=["x"],
+        output_dtypes=[float],
+    )
+    assert actual.sizes == {"x": 0, "y": 3}
+    assert actual.dtype == float
+
+    with pytest.raises(ValueError, match=r"empty loop dimension"):
+        apply_ufunc(func, a, b, input_core_dims=[["z"], ["z"]], vectorize=["x"])
+
+
+def test_vectorize_dims_invalid() -> None:
+    a = xr.DataArray([[1.0]], dims=("x", "y"))
+    with pytest.raises(ValueError, match=r"only loop over broadcast dimensions"):
+        apply_ufunc(np.sum, a, input_core_dims=[["y"]], vectorize=["y"])
+    with pytest.raises(ValueError, match=r"not present on any of the arguments"):
+        apply_ufunc(np.sum, a, input_core_dims=[["y"]], vectorize=["z"])
+
+
 def test_corr_only_dataarray() -> None:
     with pytest.raises(TypeError, match=r"Only xr.DataArray is supported"):
         xr.corr(xr.Dataset(), xr.Dataset())  # type: ignore[type-var]
@@ -2109,11 +2249,7 @@ def test_output_wrong_dim_size() -> None:
     )
 
 
-@pytest.mark.parametrize("use_dask", [True, False])
 def test_dot(use_dask: bool) -> None:
-    if use_dask and not has_dask:
-        pytest.skip("test for dask.")
-
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
     c = np.arange(5 * 60).reshape(5, 60)
@@ -2238,12 +2374,8 @@ def test_dot(use_dask: bool) -> None:
     pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
-@pytest.mark.parametrize("use_dask", [True, False])
 def test_dot_align_coords(use_dask: bool) -> None:
     # GH 3694
-
-    if use_dask and not has_dask:
-        pytest.skip("test for dask.")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -2386,9 +2518,6 @@ def test_where_attrs() -> None:
 
 
 @pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
-)
-@pytest.mark.parametrize(
     ["x", "coeffs", "expected"],
     [
         pytest.param(
@@ -2522,8 +2651,6 @@ def test_polyval(
     expected: xr.DataArray | xr.Dataset,
 ) -> None:
     if use_dask:
-        if not has_dask:
-            pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
 
@@ -2534,9 +2661,6 @@ def test_polyval(
 
 
 @requires_cftime
-@pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
-)
 @pytest.mark.parametrize("date", ["1970-01-01", "0753-04-21"])
 def test_polyval_cftime(use_dask: bool, date: str) -> None:
     import cftime
@@ -2548,8 +2672,6 @@ def test_polyval_cftime(use_dask: bool, date: str) -> None:
     coeffs = xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]})
 
     if use_dask:
-        if not has_dask:
-            pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
 
@@ -2588,9 +2710,6 @@ def test_polyval_timedelta_nat() -> None:
 
 
 @pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
-)
-@pytest.mark.parametrize(
     "x",
     [
         pytest.param(xr.DataArray([0, 1, 2], dims="x"), id="simple"),
@@ -2626,8 +2745,6 @@ def test_polyfit_polyval_integration(
 ) -> None:
     y.coords["x"] = x
     if use_dask:
-        if not has_dask:
-            pytest.skip("requires dask")
         y = y.chunk({"x": 2})
 
     fit = y.polyfit(dim="x", deg=2)
@@ -2636,7 +2753,6 @@ def test_polyfit_polyval_integration(
     xr.testing.assert_allclose(evaluated.variable, expected.variable)
 
 
-@pytest.mark.parametrize("use_dask", [False, True])
 @pytest.mark.parametrize(
     "a, b, ae, be, dim, axis",
     [
@@ -2738,8 +2854,6 @@ def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
     expected = np.cross(ae, be, axis=axis)
 
     if use_dask:
-        if not has_dask:
-            pytest.skip("test for dask.")
         a = a.chunk()
         b = b.chunk()
 

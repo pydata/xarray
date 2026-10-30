@@ -2,7 +2,9 @@
 
 import os
 
+import numpy as np
 import pytest
+from packaging.version import Version
 
 
 def _use_dask_array(config: pytest.Config) -> bool:
@@ -47,6 +49,13 @@ def pytest_addoption(parser: pytest.Parser):
 
 
 def pytest_configure(config: pytest.Config):
+    if Version(np.__version__) < Version("2"):
+        # raised by `numpy` < 2 for code in `h5netcdf` reading fill values. Not scoped
+        # to a module because warnings re-emitted by `pytest.warns` lose their module.
+        config.addinivalue_line(
+            "filterwarnings",
+            "ignore:Conversion of an array with ndim > 0 to a scalar:DeprecationWarning",
+        )
     config.addinivalue_line(
         "markers",
         "skip_with_dask_array: skip when dask-array is registered as xarray's dask chunk manager",
@@ -54,6 +63,11 @@ def pytest_configure(config: pytest.Config):
     config.addinivalue_line(
         "markers",
         "xfail_with_dask_array: xfail when dask-array is registered as xarray's dask chunk manager",
+    )
+    config.addinivalue_line(
+        "markers",
+        "skip_if_param(*, reason, condition=True, **params): skip the test cases whose "
+        "parametrized arguments or fixtures equal all of the given params",
     )
     if not _use_dask_array(config):
         return
@@ -64,13 +78,8 @@ def pytest_configure(config: pytest.Config):
 def pytest_runtest_setup(item):
     if _use_dask_array(item.config):
         _register_dask_array()
-    # based on https://stackoverflow.com/questions/47559524
-    if "flaky" in item.keywords and not item.config.getoption("--run-flaky"):
-        pytest.skip("set --run-flaky option to run flaky tests")
-    if "network" in item.keywords and not item.config.getoption("--run-network-tests"):
-        pytest.skip(
-            "set --run-network-tests to run test requiring an internet connection"
-        )
+    # The mypy yaml test items have no line number, which pytest requires to
+    # report a skip coming from a mark, so these have to be skipped at runtime.
     if any("mypy" in m.name for m in item.own_markers) and not item.config.getoption(
         "--run-mypy"
     ):
@@ -78,8 +87,11 @@ def pytest_runtest_setup(item):
 
 
 # See https://docs.pytest.org/en/stable/example/markers.html#automatically-adding-markers-based-on-test-names
-def pytest_collection_modifyitems(items):
+def pytest_collection_modifyitems(config: pytest.Config, items):
+    run_flaky = config.getoption("--run-flaky")
+    run_network = config.getoption("--run-network-tests")
     for item in items:
+        _apply_skip_if_param(item)
         if "mypy" in item.nodeid:
             # IMPORTANT: mypy type annotation tests leverage the pytest-mypy-plugins
             # plugin, and are thus written in test_*.yml files.  As such, there are
@@ -88,6 +100,17 @@ def pytest_collection_modifyitems(items):
             # marking approach, meaning that each test case must contain "mypy" in the
             # name.
             item.add_marker(pytest.mark.mypy)
+        # based on https://stackoverflow.com/questions/47559524
+        if "flaky" in item.keywords and not run_flaky:
+            item.add_marker(
+                pytest.mark.skip(reason="set --run-flaky option to run flaky tests")
+            )
+        if "network" in item.keywords and not run_network:
+            item.add_marker(
+                pytest.mark.skip(
+                    reason="set --run-network-tests to run test requiring an internet connection"
+                )
+            )
         if _use_dask_array(item.config) and "skip_with_dask_array" in item.keywords:
             item.add_marker(
                 pytest.mark.skip(reason="skipped with dask-array chunk manager")
@@ -100,6 +123,25 @@ def pytest_collection_modifyitems(items):
             )
             kwargs.setdefault("strict", True)
             item.add_marker(pytest.mark.xfail(**kwargs))
+
+
+def _apply_skip_if_param(item: pytest.Item) -> None:
+    markers = list(item.iter_markers("skip_if_param"))
+    if not markers:
+        return
+    callspec = getattr(item, "callspec", None)
+    params = callspec.params if callspec is not None else {}
+    for marker in markers:
+        kwargs = dict(marker.kwargs)
+        reason = kwargs.pop("reason")
+        condition = kwargs.pop("condition", True)
+        if missing := set(kwargs) - set(params):
+            raise pytest.UsageError(
+                f"{item.nodeid}: skip_if_param requires the test to be "
+                f"parametrized over {sorted(missing)}"
+            )
+        if condition and all(params[name] == value for name, value in kwargs.items()):
+            item.add_marker(pytest.mark.skip(reason=reason))
 
 
 @pytest.fixture(autouse=True)

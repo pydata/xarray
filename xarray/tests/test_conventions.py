@@ -28,7 +28,7 @@ from xarray.tests import (
     requires_dask,
     requires_netCDF4,
 )
-from xarray.tests.test_backends import CFEncodedBase
+from xarray.tests.backends.base import CFEncodedBase
 
 
 class TestBoolTypeArray:
@@ -85,7 +85,7 @@ def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     )
     with pytest.warns(SerializationWarning, match="has multiple fill"):
         actual = conventions.decode_cf_variable("t", var)
-        assert_identical(actual, expected)
+    assert_identical(actual, expected)
 
     expected = Variable(["t"], np.arange(10), {"units": "foobar"})
 
@@ -434,7 +434,7 @@ class TestDecodeCF:
             _vars, _attrs, coords = conventions.decode_cf_variables(
                 original.variables, {}, decode_coords="all"
             )
-            assert coords == {"lat", "lon", "crs", "crs2"}
+        assert coords == {"lat", "lon", "crs", "crs2"}
 
     def test_0d_int32_encoding(self) -> None:
         original = Variable((), np.int32(0), encoding={"dtype": "int64"})
@@ -447,7 +447,7 @@ class TestDecodeCF:
         expected = Variable(["t"], [np.nan, np.nan, 2], {})
         with pytest.warns(SerializationWarning, match="has multiple fill"):
             actual = conventions.decode_cf_variable("t", original)
-            assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_decode_cf_with_drop_variables(self) -> None:
         original = Dataset(
@@ -616,7 +616,7 @@ class TestDecodeCF:
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
     def encode_variable(self, var, name=None):
-        """encode one variable"""
+        """Encode one variable."""
         coder = coding.strings.EncodedStringCoder(allows_unicode=True)
         var = coder.encode(var, name=name)
         return var
@@ -706,6 +706,29 @@ def test_decode_cf_error_includes_variable_name():
         match=r"unable to decode(?s:.*)my_invalid_var",
     ):
         decode_cf(ds)
+
+
+def test_encode_fixed_width_string_preserves_longer_values() -> None:
+    # regression test for GH10968: a narrower same-kind encoding dtype must
+    # not truncate fixed-width strings, and the dtype encoding is still dropped
+    unicode_values = np.array(["NC100 (OSS)"], dtype="<U11")
+    unicode_var = Variable(["x"], unicode_values, encoding={"dtype": np.dtype("<U5")})
+    encoded = conventions.encode_cf_variable(unicode_var)
+    assert_identical(encoded, Variable(["x"], unicode_values))
+
+    bytes_values = np.array([b"base_case"], dtype="S9")
+    bytes_var = Variable(["x"], bytes_values, encoding={"dtype": np.dtype("S6")})
+    encoded_bytes = conventions.encode_cf_variable(bytes_var)
+    assert_identical(encoded_bytes, Variable(["x"], bytes_values))
+
+    # a change of string kind still follows the existing cast path
+    kind_change = Variable(
+        ["x"], np.array(["ab"], dtype="<U2"), encoding={"dtype": np.dtype("S2")}
+    )
+    encoded_kind = conventions.encode_cf_variable(kind_change)
+    assert encoded_kind.dtype == np.dtype("S2")
+    assert_array_equal(encoded_kind.values, np.array([b"ab"]))
+    assert "dtype" not in encoded_kind.encoding
 
 
 def test_encode_cf_variable_with_vlen_dtype() -> None:

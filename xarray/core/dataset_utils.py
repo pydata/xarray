@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 from collections.abc import Hashable, Mapping
-from typing import Any, Generic
+from typing import Any
 
 import pandas as pd
 
@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
     from xarray.core.dataset import Dataset
 
 
-class _LocIndexer(Generic[T_Dataset]):
+class _LocIndexer[T_Dataset: Dataset]:
     __slots__ = ("dataset",)
 
     def __init__(self, dataset: T_Dataset):
@@ -57,9 +57,9 @@ def as_dataset(obj: Any) -> Dataset:
 def _get_virtual_variable(
     variables, key: Hashable, dim_sizes: Mapping | None = None
 ) -> tuple[Hashable, Hashable, Variable]:
-    """Get a virtual variable (e.g., 'time.year') from a dict of xarray.Variable
-    objects (if possible)
+    """Get a virtual variable (e.g., 'time.year') from a dict of variables, if possible.
 
+    The dict maps names to xarray.Variable objects.
     """
     from xarray.core.dataarray import DataArray
 

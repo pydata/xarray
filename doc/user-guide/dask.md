@@ -4,8 +4,8 @@ kernelspec:
   name: python3
 ---
 
-```{eval-rst}
-.. currentmodule:: xarray
+```{currentmodule} xarray
+
 ```
 
 (dask)=
@@ -94,70 +94,75 @@ Nearly all Xarray methods have been extended to work automatically with Dask Arr
 
 When reading data, Dask divides your dataset into smaller chunks. You can specify the size of chunks with the `chunks` argument. Specifying `chunks="auto"` will set the dask chunk sizes to be a multiple of the on-disk chunk sizes. This can be a good idea, but usually the appropriate dask chunk size will depend on your workflow.
 
-```{eval-rst}
-.. tab:: Zarr
+````{tab} Zarr
+The [Zarr](https://zarr.readthedocs.io/en/stable/) format is ideal for working with large datasets. Each chunk is stored in a separate file, allowing parallel reading and writing with Dask. You can also use Zarr to read/write directly from cloud storage buckets (see the [Dask documentation on connecting to remote data](https://docs.dask.org/en/stable/how-to/connect-to-remote-data.html?utm_source=xarray-docs))
 
-    The `Zarr <https://zarr.readthedocs.io/en/stable/>`_ format is ideal for working with large datasets. Each chunk is stored in a separate file, allowing parallel reading and writing with Dask. You can also use Zarr to read/write directly from cloud storage buckets (see the `Dask documentation on connecting to remote data <https://docs.dask.org/en/stable/how-to/connect-to-remote-data.html?utm_source=xarray-docs>`__)
+When you open a Zarr dataset with {py:func}`~xarray.open_zarr`, it is loaded as a Dask array by default (if Dask is installed):
 
-    When you open a Zarr dataset with :py:func:`~xarray.open_zarr`, it is loaded as a Dask array by default (if Dask is installed)::
-
-        ds = xr.open_zarr("path/to/directory.zarr")
-
-    See :ref:`io.zarr` for more details.
+```python
+ds = xr.open_zarr("path/to/directory.zarr")
 ```
 
-```{eval-rst}
-.. tab:: NetCDF
+See {ref}`io.zarr` for more details.
+````
 
-    Open a single netCDF file with :py:func:`~xarray.open_dataset` and supplying a ``chunks`` argument::
+`````{tab} NetCDF
+Open a single netCDF file with {py:func}`~xarray.open_dataset` and supplying a `chunks` argument:
 
-        ds = xr.open_dataset("example-data.nc", chunks={"time": 10})
-
-    Or open multiple files in parallel with py:func:`~xarray.open_mfdataset`::
-
-        xr.open_mfdataset('my/files/*.nc', parallel=True)
-
-    .. tip::
-
-        When reading in many netCDF files with py:func:`~xarray.open_mfdataset`, using ``engine="h5netcdf"`` can
-        be faster than the default which uses the netCDF4 package.
-
-    Save larger-than-memory netCDF files::
-
-        ds.to_netcdf("my-big-file.nc")
-
-    Or set ``compute=False`` to return a dask.delayed object that can be computed later::
-
-       delayed_write = ds.to_netcdf("my-big-file.nc", compute=False)
-       delayed_write.compute()
-
-    .. note::
-
-        When using Dask’s distributed scheduler to write NETCDF4 files, it may be necessary to set the environment variable ``HDF5_USE_FILE_LOCKING=FALSE`` to avoid competing locks within the HDF5 SWMR file locking scheme. Note that writing netCDF files with Dask’s distributed scheduler is only supported for the netcdf4 backend.
-
-    See :ref:`io.netcdf` for more details.
+```python
+ds = xr.open_dataset("example-data.nc", chunks={"time": 10})
 ```
 
-```{eval-rst}
-.. tab:: HDF5
+Or open multiple files in parallel with {py:func}`~xarray.open_mfdataset`:
 
-    Open HDF5 files with :py:func:`~xarray.open_dataset`::
-
-        xr.open_dataset("/path/to/my/file.h5", chunks='auto')
-
-    See :ref:`io.hdf5` for more details.
+```python
+xr.open_mfdataset("my/files/*.nc", parallel=True)
 ```
 
-```{eval-rst}
-.. tab:: GeoTIFF
+````{tip}
+When reading in many netCDF files with {py:func}`~xarray.open_mfdataset`, using `engine="h5netcdf"` can
+be faster than the default which uses the netCDF4 package.
+````
 
-    Open large geoTIFF files with rioxarray::
+Save larger-than-memory netCDF files:
 
-        xds = rioxarray.open_rasterio("my-satellite-image.tif", chunks='auto')
-
-    See :ref:`io.rasterio` for more details.
-
+```python
+ds.to_netcdf("my-big-file.nc")
 ```
+
+Or set `compute=False` to return a dask.delayed object that can be computed later:
+
+```python
+delayed_write = ds.to_netcdf("my-big-file.nc", compute=False)
+delayed_write.compute()
+```
+
+````{note}
+When using Dask’s distributed scheduler to write NETCDF4 files, it may be necessary to set the environment variable `HDF5_USE_FILE_LOCKING=FALSE` to avoid competing locks within the HDF5 SWMR file locking scheme. Note that writing netCDF files with Dask’s distributed scheduler is only supported for the netcdf4 backend.
+````
+
+See {ref}`io.netcdf` for more details.
+`````
+
+````{tab} HDF5
+Open HDF5 files with {py:func}`~xarray.open_dataset`:
+
+```python
+xr.open_dataset("/path/to/my/file.h5", chunks="auto")
+```
+
+See {ref}`io.hdf5` for more details.
+````
+
+````{tab} GeoTIFF
+Open large geoTIFF files with rioxarray:
+
+```python
+xds = rioxarray.open_rasterio("my-satellite-image.tif", chunks="auto")
+```
+
+See {ref}`io.rasterio` for more details.
+````
 
 ### Loading Dask Arrays
 
