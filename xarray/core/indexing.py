@@ -1855,13 +1855,46 @@ class ArrayApiIndexingAdapter(IndexingAdapter):
 
     @override
     def _vindex_get(self, indexer: VectorizedIndexer):
-        # Vectorized (paired) indexing is not part of the Array API standard,
-        # but arrays implementing both protocols (e.g. sparse) can still
-        # handle it through ``__array_function__``, mirroring the fallback
+        # Arrays implementing both protocols (e.g. sparse) handle paired
+        # indexing through ``__array_function__``, mirroring the fallback
         # used elsewhere in ``as_indexable`` (GH9694).
         if hasattr(self.array, "__array_function__"):
             return NdArrayLikeIndexingAdapter(self.array)._vindex_get(indexer)
-        raise TypeError("Vectorized indexing is not supported")
+
+        # For array-API-only arrays, integer array indexing is supported since
+        # the 2024.12 standard. Slices are converted to arange arrays broadcasting along
+        # their axis, yielding the vectorized dimension order directly.
+        try:
+            xp = self.array.__array_namespace__()
+        except (AttributeError, TypeError):
+            xp = None
+
+        if xp is None or not hasattr(xp, "arange"):
+            raise TypeError("Vectorized indexing is not supported")
+
+        device = getattr(self.array, "device", None)
+        key = indexer.tuple
+        shape = np.broadcast_shapes(*(k.shape for k in key if not isinstance(k, slice)))
+        n_slices = sum(isinstance(k, slice) for k in key)
+        new_key = []
+        i_slice = 0
+        for size, k in zip(self.array.shape, key, strict=True):
+            if isinstance(k, slice):
+                k = xp.arange(*k.indices(size), device=device)
+                new_shape = (
+                    (1,) * (len(shape) + i_slice)
+                    + k.shape
+                    + (1,) * (n_slices - i_slice - 1)
+                )
+                i_slice += 1
+            else:
+                k = xp.broadcast_to(xp.asarray(k, device=device), shape)
+                new_shape = shape + (1,) * n_slices
+            new_key.append(xp.reshape(k, new_shape))
+        try:
+            return self.array[tuple(new_key)]
+        except TypeError as exc:
+            raise TypeError("Vectorized indexing is not supported") from exc
 
     @override
     def __getitem__(self, indexer: ExplicitIndexer):

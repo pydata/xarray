@@ -20,6 +20,7 @@ from xarray.tests import (
     dask_array_type,
     has_dask,
     raise_if_dask_computes,
+    requires_array_api_strict,
     requires_dask,
     requires_pandas_3,
     requires_sparse,
@@ -1190,6 +1191,40 @@ def test_array_api_adapter_vindex_without_array_function_raises() -> None:
 
     with pytest.raises(TypeError, match="Vectorized indexing is not supported"):
         adapter.vindex[indexer]
+
+
+@requires_array_api_strict
+def test_array_api_adapter_vindex_array_api_strict() -> None:
+    import array_api_strict as xp
+
+    # 3D array: test 1D indexers, 2D indexers, and slices interleaved between indexed axes
+    x_np = np.arange(24, dtype=np.int64).reshape(2, 3, 4)
+    x_xp = xp.asarray(x_np)
+    adapter = indexing.ArrayApiIndexingAdapter(x_xp)
+
+    # 1D indexers with interleaved slice
+    idxr_1d = indexing.VectorizedIndexer(
+        (np.array([0, 1]), slice(1, 3), np.array([3, 2]))
+    )
+    actual_1d = adapter.vindex[idxr_1d]
+    expected_1d = indexing.NdArrayLikeIndexingAdapter(x_np)._vindex_get(idxr_1d)
+    np.testing.assert_array_equal(np.asarray(actual_1d), expected_1d)
+
+    # 2D indexers
+    idxr_2d = indexing.VectorizedIndexer(
+        (
+            np.array([[0, 1], [1, 0]]),
+            slice(0, 2),
+            np.array([[2, 3], [1, 0]]),
+        )
+    )
+    actual_2d = adapter.vindex[idxr_2d]
+    expected_2d = indexing.NdArrayLikeIndexingAdapter(x_np)._vindex_get(idxr_2d)
+    np.testing.assert_array_equal(np.asarray(actual_2d), expected_2d)
+
+    # Vectorized assignment is unsupported
+    with pytest.raises(TypeError, match="Vectorized indexing is not supported"):
+        adapter.vindex[idxr_1d] = 0
 
 
 @requires_sparse
