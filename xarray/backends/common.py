@@ -418,27 +418,6 @@ class AbstractDataStore:
         self.close()
 
 
-def _dask_tokenize_store(store: AbstractDataStore) -> object:
-    """Token for dask of a store that reads through a file manager.
-
-    For the ``__dask_tokenize__`` method of a store whose state identifies
-    the data it reads and uses a file manager. This function generates the
-    token using the state of the store including tokenizing the file manager
-    underneath. Tokenized state also works for subclasses.
-    Stores that don't define a `__dask_tokenize__` will instead
-    get pickled by dask including pickling the file manager and its random
-    id giving every instance of a store a different token even for the same
-    file (GH11814).
-    """
-    from dask.base import normalize_token
-
-    # dask only calls __dask_tokenize__ on the object it tokenizes, not on the
-    # objects inside a pickle. Normalizing the *state* of the store instead of
-    # the store itself tokenizes each of its attributes on its own, and so the
-    # file manager with its __dask_tokenize__.
-    return normalize_token((type(store), store.__getstate__()))
-
-
 type T_PathFileOrDataStore = (
     str
     | os.PathLike[Any]

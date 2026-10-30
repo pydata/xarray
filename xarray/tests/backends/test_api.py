@@ -2126,7 +2126,8 @@ def test_open_dataset_from_store_names_open_kwargs(
 @requires_dask
 @pytest.mark.parametrize("store_class", _STORE_CLASSES)
 def test_open_dataset_from_store_subclass_names(tmp_path, store_class) -> None:
-    # all state of a store is tokenized, including that of subclasses
+    # a subclass may read the data differently, so it gets other names than its
+    # base class
     from dask.base import tokenize
 
     path = tmp_path / "test.nc"
@@ -2139,8 +2140,6 @@ def test_open_dataset_from_store_subclass_names(tmp_path, store_class) -> None:
     ):
         assert tokenize(substore) == tokenize(other_substore)
         assert tokenize(substore) != tokenize(store)
-        other_substore.extra_state = 1
-        assert tokenize(substore) != tokenize(other_substore)
 
 
 @requires_dask

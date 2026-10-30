@@ -24,7 +24,6 @@ from xarray.backends.common import (
     BytesIOProxy,
     T_PathFileOrDataStore,
     WritableCFDataStore,
-    _dask_tokenize_store,
     _normalize_path,
     _raise_if_zarr_store,
 )
@@ -306,7 +305,15 @@ class ScipyDataStore(WritableCFDataStore):
         self._manager = manager
 
     def __dask_tokenize__(self) -> object:
-        return _dask_tokenize_store(self)
+        """Token for dask, identifying the data by the type and file manager.
+
+        dask would otherwise pickle the store, including the random id of its
+        file manager, and so give every store a different token (GH11814).
+        Subclasses with state that changes the data need to add it.
+        """
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._manager))
 
     @property
     def ds(self) -> scipy.io.netcdf_file:
