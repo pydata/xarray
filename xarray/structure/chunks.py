@@ -1,6 +1,4 @@
-"""
-Functions for handling chunked arrays.
-"""
+"""Functions for handling chunked arrays."""
 
 from __future__ import annotations
 
@@ -65,7 +63,7 @@ def _get_breaks_cached(
 def _maybe_chunk(
     name: Hashable,
     var: Variable,
-    chunks: Mapping[Any, T_ChunkDim] | None,
+    chunks: Mapping[Any, T_ChunkDim],
     token=None,
     lock=None,
     name_prefix: str = "xarray-",
@@ -77,8 +75,7 @@ def _maybe_chunk(
 ) -> Variable:
     from xarray.namedarray.daskmanager import DaskManager
 
-    if chunks is not None:
-        chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
+    chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
     if var.ndim:
         chunked_array_type = guess_chunkmanager(
@@ -143,7 +140,8 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
 
 
 def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
-    """
+    """Unify the chunk sizes of any number of Dataset and/or DataArray objects.
+
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.
 
@@ -155,6 +153,23 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     See Also
     --------
     dask.array.core.unify_chunks
+
+    Examples
+    --------
+    >>> da1 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(x=1)
+    >>> da2 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(y=1)
+    >>> da1.chunks
+    ((1, 1), (3,))
+    >>> da2.chunks
+    ((2,), (1, 1, 1))
+
+    Afterwards, both have the same chunks:
+
+    >>> da1, da2 = xr.unify_chunks(da1, da2)
+    >>> da1.chunks
+    ((1, 1), (1, 1, 1))
+    >>> da2.chunks
+    ((1, 1), (1, 1, 1))
     """
     from xarray.core.dataarray import DataArray
 

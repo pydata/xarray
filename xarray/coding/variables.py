@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from non-native to native endianness
+    """Decode arrays on the fly from non-native to native endianness.
 
     This is useful for decoding arrays from netCDF3 files (which are all
     big endian) into native endianness, so they can be used with Cython
@@ -80,7 +80,7 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 
 class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
-    """Decode arrays on the fly from integer to boolean datatype
+    """Decode arrays on the fly from integer to boolean datatype.
 
     This is useful for decoding boolean arrays from integer typed netCDF
     variables.
@@ -654,7 +654,11 @@ class NonStringCoder(VariableCoder):
         ):
             dims, data, attrs, encoding = unpack_for_encoding(variable)
             dtype = np.dtype(encoding.pop("dtype"))
-            if dtype != variable.dtype:
+            # Fixed-width string itemsize is not meaningful for netCDF values.
+            # Matching kinds (S or U) stay compatible when only the width
+            # differs, so a stale narrower encoding cannot truncate data.
+            same_string_kind = dtype.kind in "SU" and dtype.kind == variable.dtype.kind
+            if dtype != variable.dtype and not same_string_kind:
                 if np.issubdtype(dtype, np.integer):
                     # CF coordinate variables are not allowed to have missing values, so
                     # they do not need a _FillValue. For simplicity we don't warn with 1D dimension coordinates.

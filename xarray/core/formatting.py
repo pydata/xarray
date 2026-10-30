@@ -39,9 +39,11 @@ UNITS = ("B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
 
 
 def pretty_print(x, numchars: int):
-    """Given an object `x`, call `str(x)` and format the returned string so
-    that it is numchars long, padding with trailing spaces or truncating with
-    ellipses as necessary
+    """Format `str(x)` so that it is numchars long.
+
+    Given an object `x`, call `str(x)` and format the returned string so that it
+    is numchars long, padding with trailing spaces or truncating with ellipses as
+    necessary.
     """
     s = maybe_truncate(x, numchars)
     return s + " " * max(numchars - len(s), 0)
@@ -75,7 +77,7 @@ def _get_indexer_at_least_n_items(shape, n_desired, from_end):
 
 
 def first_n_items(array, n_desired):
-    """Returns the first n_desired items of an array"""
+    """Return the first n_desired items of an array."""
     # Unfortunately, we can't just do array.flat[:n_desired] here because it
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
@@ -105,7 +107,7 @@ def first_n_items(array, n_desired):
 
 
 def last_n_items(array, n_desired):
-    """Returns the last n_desired items of an array"""
+    """Return the last n_desired items of an array."""
     # Unfortunately, we can't just do array.flat[-n_desired:] here because it
     # might not be a numpy.ndarray. Moreover, access to elements of the array
     # could be very expensive (e.g. if it's only available over DAP), so go out
@@ -131,7 +133,7 @@ def last_n_items(array, n_desired):
 
 
 def last_item(array):
-    """Returns the last item of an array."""
+    """Return the last item of an array."""
     indexer = (slice(-1, None),) * array.ndim
     return ravel(to_duck_array(array[indexer]))
 
@@ -147,7 +149,7 @@ def calc_max_rows_last(max_rows: int) -> int:
 
 
 def format_timestamp(t):
-    """Cast given object to a Timestamp and return a nicely formatted string"""
+    """Cast given object to a Timestamp and return a nicely formatted string."""
     try:
         timestamp = pd.Timestamp(t)
         datetime_str = timestamp.isoformat(sep=" ")
@@ -167,7 +169,7 @@ def format_timestamp(t):
 
 
 def format_timedelta(t, timedelta_format=None):
-    """Cast given object to a Timestamp and return a nicely formatted string"""
+    """Cast given object to a Timestamp and return a nicely formatted string."""
     timedelta_str = str(pd.Timedelta(t))
     try:
         days_str, time_str = timedelta_str.split(" days ")
@@ -184,7 +186,7 @@ def format_timedelta(t, timedelta_format=None):
 
 
 def format_item(x, timedelta_format=None, quote_strings=True):
-    """Returns a succinct summary of an object as a string"""
+    """Return a succinct summary of an object as a string."""
     if isinstance(x, PandasExtensionArray):
         # We want to bypass PandasExtensionArray's repr here
         # because its __repr__ is PandasExtensionArray(array=[...])
@@ -205,7 +207,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
 
 
 def format_items(x):
-    """Returns a succinct summaries of all items in a sequence as strings"""
+    """Return succinct summaries of all items in a sequence as strings."""
     x = to_duck_array(x)
     timedelta_format = "datetime"
     if not isinstance(x, PandasExtensionArray) and np.issubdtype(
@@ -225,8 +227,10 @@ def format_items(x):
 
 
 def format_array_flat(array, max_width: int):
-    """Return a formatted string for as many items in the flattened version of
-    array that will fit within max_width characters.
+    """Return a formatted string of the flattened array, fitting within max_width.
+
+    The string contains as many items of the flattened version of the array as
+    will fit within max_width characters.
     """
     # every item will take up at least two characters, but we always want to
     # print at least first and last items
@@ -281,9 +285,10 @@ _KNOWN_TYPE_REPRS = {
 
 
 def inline_dask_repr(array):
-    """Similar to dask.array.DataArray.__repr__, but without
-    redundant information that's already printed by the repr
-    function of the xarray wrapper.
+    """Return a repr similar to dask.array.DataArray.__repr__.
+
+    Unlike the dask repr, it omits redundant information that's already printed
+    by the repr function of the xarray wrapper.
     """
     assert isinstance(array, array_type("dask")), array
 
@@ -473,8 +478,10 @@ def coords_repr(coords: AbstractCoordinates, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(coords)
     dims = tuple(coords._data.dims)
+    # sort the variables, not the coordinate DataArrays: constructing all of them
+    # is slow, while only the first and last max_rows are displayed
     dim_ordered_coords = sorted(
-        coords.items(), key=functools.partial(_coord_sort_key, dims=dims)
+        coords.variables.items(), key=functools.partial(_coord_sort_key, dims=dims)
     )
     return _mapping_repr(
         dict(dim_ordered_coords),
@@ -578,8 +585,7 @@ def _element_formatter(
     max_rows: int | None = None,
     delimiter: str = ", ",
 ) -> str:
-    """
-    Formats elements for better readability.
+    """Format elements for better readability.
 
     Once it becomes wider than the display width it will create a newline and
     continue indented to col_width.
@@ -657,9 +663,10 @@ def set_numpy_options(*args, **kwargs):
 
 
 def limit_lines(string: str, *, limit: int):
-    """
-    If the string is more lines than the limit,
-    this returns the middle lines replaced by an ellipsis
+    """Limit the number of lines of a string.
+
+    If the string is more lines than the limit, this returns the middle lines
+    replaced by an ellipsis.
     """
     lines = string.splitlines()
     if len(lines) > limit:
@@ -1095,8 +1102,8 @@ def diff_array_repr(a, b, compat):
 
 
 def diff_treestructure(a: DataTree, b: DataTree) -> str | None:
-    """
-    Return a summary of why two trees are not isomorphic.
+    """Return a summary of why two trees are not isomorphic.
+
     If they are isomorphic return None.
     """
     # .group_subtrees walks nodes in breadth-first-order, in order to produce as
@@ -1138,8 +1145,7 @@ def diff_dataset_repr(a, b, compat):
 
 
 def diff_nodewise_summary(a: DataTree, b: DataTree, compat):
-    """Iterates over all corresponding nodes, recording differences between data at each location."""
-
+    """Iterate over all corresponding nodes, recording differences in their data."""
     summary = []
     for path, (node_a, node_b) in group_subtrees(a, b):
         a_ds, b_ds = node_a.dataset, node_b.dataset
@@ -1246,7 +1252,7 @@ def _datatree_node_repr(node: DataTree, root: bool) -> str:
 
 
 def datatree_repr(dt: DataTree) -> str:
-    """A printable representation of the structure of this entire tree."""
+    """Return a printable representation of the structure of this entire tree."""
     max_children = OPTIONS["display_max_children"]
 
     renderer = RenderDataTree(dt, maxchildren=max_children)
@@ -1301,7 +1307,7 @@ def render_human_readable_nbytes(
     *,
     attempt_constant_width: bool = False,
 ) -> str:
-    """Renders simple human-readable byte count representation
+    """Render simple human-readable byte count representation.
 
     This is only a quick representation that should not be relied upon for precise needs.
 

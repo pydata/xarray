@@ -1,21 +1,27 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
 from enum import Enum
 from types import EllipsisType, ModuleType
 from typing import (
+    TYPE_CHECKING,
     Any,
     Final,
     Literal,
     Protocol,
     SupportsIndex,
-    TypeVar,
     Union,
     overload,
     runtime_checkable,
 )
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeVar
+else:
+    from typing import TypeVar
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -29,7 +35,12 @@ _default = Default.token
 # their variance would be inferred as invariant, see the comment there.
 DType_co = TypeVar("DType_co", covariant=True, bound=np.dtype[Any])
 ShapeType_co = TypeVar("ShapeType_co", bound=Any, covariant=True)
-DimType_co = TypeVar("DimType_co", bound=Hashable, covariant=True)
+# The default (PEP 696) makes a bare `Variable` mean `Variable[Any, Any, Hashable]`.
+# TODO: remove the version check once Python 3.13 is the minimum.
+if TYPE_CHECKING or sys.version_info >= (3, 13):
+    DimType_co = TypeVar("DimType_co", bound=Hashable, covariant=True, default=Hashable)
+else:
+    DimType_co = TypeVar("DimType_co", bound=Hashable, covariant=True)
 
 dtype = np.dtype
 
@@ -60,8 +71,17 @@ NormalizedChunks = tuple[tuple[int, ...], ...]
 # FYI in some cases we don't allow `None`, which this doesn't take account of.
 # # FYI the `str` is for a size string, e.g. "16MB", supported by dask.
 type T_ChunkDim = str | int | Literal["auto"] | tuple[int, ...] | None  # noqa: PYI051
+# A top-level `None` is not allowed (use `T_Chunks | None` where it means "don't
+# chunk"), but `None` stays valid for single dimensions inside the mapping or tuple.
 # We allow the tuple form of this (though arguably we could transition to named dims only)
-type T_Chunks = T_ChunkDim | Mapping[Any, T_ChunkDim] | tuple[T_ChunkDim, ...]
+type T_Chunks = (
+    str
+    | int
+    | Literal["auto"]  # noqa: PYI051
+    | tuple[int, ...]
+    | Mapping[Any, T_ChunkDim]
+    | tuple[T_ChunkDim, ...]
+)
 
 # single str is also allowed, but luckily str = Iterable[str]
 type DimsLike[DimType: Hashable] = Iterable[DimType] | EllipsisType | None
@@ -89,8 +109,7 @@ class SupportsImag[T](Protocol):
 
 @runtime_checkable
 class array[ShapeType, DType: np.dtype[Any]](Protocol):
-    """
-    Minimal duck array named array uses.
+    """Minimal duck array named array uses.
 
     Corresponds to np.ndarray.
     """
@@ -104,8 +123,7 @@ class array[ShapeType, DType: np.dtype[Any]](Protocol):
 
 @runtime_checkable
 class arrayfunction[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Protocol):
-    """
-    Duck array supporting NEP 18.
+    """Duck array supporting NEP 18.
 
     Corresponds to np.ndarray.
     """
@@ -169,8 +187,7 @@ class arrayfunction[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Pr
 
 @runtime_checkable
 class arrayapi[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Protocol):
-    """
-    Duck array supporting NEP 47.
+    """Duck array supporting NEP 47.
 
     Corresponds to np.ndarray.
     """
@@ -196,11 +213,15 @@ type duckarray[ShapeType, DType: np.dtype[Any]] = (  # noqa: PYI042
 # Corresponds to np.typing.NDArray:
 type DuckArray[ScalarType: np.generic] = arrayfunction[Any, np.dtype[ScalarType]]
 
+# Lists of Python scalars, which numpy converts to arrays of a known dtype, e.g.
+# list[float] to float64. Nested up to three levels: lists are invariant, so a
+# recursive alias would not match e.g. list[list[int]].
+type NestedList[T] = list[T] | list[list[T]] | list[list[list[T]]]
+
 
 @runtime_checkable
 class chunkedarray[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Protocol):
-    """
-    Minimal chunked duck array.
+    """Minimal chunked duck array.
 
     Corresponds to np.ndarray.
     """
@@ -213,8 +234,7 @@ class chunkedarray[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Pro
 class chunkedarrayfunction[ShapeType, DType: np.dtype[Any]](
     arrayfunction[ShapeType, DType], Protocol
 ):
-    """
-    Chunked duck array supporting NEP 18.
+    """Chunked duck array supporting NEP 18.
 
     Corresponds to np.ndarray.
     """
@@ -227,8 +247,7 @@ class chunkedarrayfunction[ShapeType, DType: np.dtype[Any]](
 class chunkedarrayapi[ShapeType, DType: np.dtype[Any]](
     arrayapi[ShapeType, DType], Protocol
 ):
-    """
-    Chunked duck array supporting NEP 47.
+    """Chunked duck array supporting NEP 47.
 
     Corresponds to np.ndarray.
     """
@@ -246,8 +265,7 @@ type chunkedduckarray[ShapeType, DType: np.dtype[Any]] = (  # noqa: PYI042
 
 @runtime_checkable
 class sparsearray[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Protocol):
-    """
-    Minimal sparse duck array.
+    """Minimal sparse duck array.
 
     Corresponds to np.ndarray.
     """
@@ -259,8 +277,7 @@ class sparsearray[ShapeType, DType: np.dtype[Any]](array[ShapeType, DType], Prot
 class sparsearrayfunction[ShapeType, DType: np.dtype[Any]](
     arrayfunction[ShapeType, DType], Protocol
 ):
-    """
-    Sparse duck array supporting NEP 18.
+    """Sparse duck array supporting NEP 18.
 
     Corresponds to np.ndarray.
     """
@@ -272,8 +289,7 @@ class sparsearrayfunction[ShapeType, DType: np.dtype[Any]](
 class sparsearrayapi[ShapeType, DType: np.dtype[Any]](
     arrayapi[ShapeType, DType], Protocol
 ):
-    """
-    Sparse duck array supporting NEP 47.
+    """Sparse duck array supporting NEP 47.
 
     Corresponds to np.ndarray.
     """
