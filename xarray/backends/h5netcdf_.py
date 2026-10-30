@@ -15,6 +15,7 @@ from xarray.backends.common import (
     BytesIOProxy,
     T_PathFileOrDataStore,
     WritableCFDataStore,
+    _dask_tokenize_store,
     _normalize_path,
     _open_remote_file,
     _raise_if_zarr_store,
@@ -172,6 +173,9 @@ class H5NetCDFStore(WritableCFDataStore):
             autoclose=self.autoclose,
         )
 
+    def __dask_tokenize__(self) -> object:
+        return _dask_tokenize_store(self)
+
     @classmethod
     def open(
         cls,
@@ -190,6 +194,10 @@ class H5NetCDFStore(WritableCFDataStore):
         open_kwargs: dict[str, Any] | None = None,
     ):
         import h5netcdf
+
+        if isinstance(filename, os.PathLike):
+            # a local path is opened with a CachingFileManager, like a string
+            filename = os.fspath(filename)
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode

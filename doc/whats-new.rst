@@ -444,6 +444,14 @@ Bug Fixes
 - :py:func:`open_dataset` no longer raises ``TypeError: cannot use a string
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
+- Opening a :py:class:`~xarray.backends.NetCDF4DataStore`,
+  :py:class:`~xarray.backends.H5NetCDFStore` or
+  :py:class:`~xarray.backends.ScipyDataStore` of a file opened for reading with
+  :py:func:`open_dataset` now gives the same dask array names every time, like
+  opening the file by its path. The names change when the modification time of
+  the file changes. Previously, they were random, so dask did not reuse the data
+  of the same file. :py:meth:`H5NetCDFStore.open <xarray.backends.H5NetCDFStore.open>`
+  now opens a :py:class:`pathlib.Path` like a string path (:issue:`11814`).
   By `David Hoese <https://github.com/djhoese>`_.
 
 

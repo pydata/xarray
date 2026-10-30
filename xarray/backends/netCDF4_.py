@@ -18,6 +18,7 @@ from xarray.backends.common import (
     BytesIOProxy,
     T_PathFileOrDataStore,
     WritableCFDataStore,
+    _dask_tokenize_store,
     _normalize_path,
     _raise_if_zarr_store,
     collect_ancestor_dimensions,
@@ -483,6 +484,9 @@ class NetCDF4DataStore(WritableCFDataStore):
             lock=self.lock,
             autoclose=self.autoclose,
         )
+
+    def __dask_tokenize__(self) -> object:
+        return _dask_tokenize_store(self)
 
     @classmethod
     def open(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import sys
@@ -107,6 +108,24 @@ def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
         path = os.path.abspath(os.path.expanduser(path))
 
     return path  # type: ignore[return-value]
+
+
+def _get_mtime(filename_or_obj):
+    # if passed an actual file path, augment the token with
+    # the file modification time
+    mtime = None
+
+    try:
+        path = os.fspath(filename_or_obj)
+    except TypeError:
+        path = None
+
+    # bytes are the contents of a file, not a path
+    if isinstance(path, str) and not is_remote_uri(path):
+        with contextlib.suppress(OSError):
+            mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
+
+    return mtime
 
 
 @overload
@@ -397,6 +416,27 @@ class AbstractDataStore:
 
     def __exit__(self, exception_type, exception_value, traceback):
         self.close()
+
+
+def _dask_tokenize_store(store: AbstractDataStore) -> object:
+    """Token for dask of a store that reads through a file manager.
+
+    For the ``__dask_tokenize__`` method of a store whose state identifies
+    the data it reads and uses a file manager. This function generates the
+    token using the state of the store including tokenizing the file manager
+    underneath. Tokenized state also works for subclasses.
+    Stores that don't define a `__dask_tokenize__` will instead
+    get pickled by dask including pickling the file manager and its random
+    id giving every instance of a store a different token even for the same
+    file (GH11814).
+    """
+    from dask.base import normalize_token
+
+    # dask only calls __dask_tokenize__ on the object it tokenizes, not on the
+    # objects inside a pickle. Normalizing the *state* of the store instead of
+    # the store itself tokenizes each of its attributes on its own, and so the
+    # file manager with its __dask_tokenize__.
+    return normalize_token((type(store), store.__getstate__()))
 
 
 type T_PathFileOrDataStore = (

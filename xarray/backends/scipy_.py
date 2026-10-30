@@ -24,6 +24,7 @@ from xarray.backends.common import (
     BytesIOProxy,
     T_PathFileOrDataStore,
     WritableCFDataStore,
+    _dask_tokenize_store,
     _normalize_path,
     _raise_if_zarr_store,
 )
@@ -303,6 +304,9 @@ class ScipyDataStore(WritableCFDataStore):
             )
 
         self._manager = manager
+
+    def __dask_tokenize__(self) -> object:
+        return _dask_tokenize_store(self)
 
     @property
     def ds(self) -> scipy.io.netcdf_file:
