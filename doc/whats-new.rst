@@ -211,6 +211,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Dataset weighted arithmetic reductions now skip nonnumeric data variables
+  (:issue:`9322`).
 - Fix CuPy indexers with pandas-backed coordinates, basic and label-based
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
