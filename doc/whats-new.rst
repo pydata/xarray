@@ -230,6 +230,11 @@ Bug Fixes
   truncated to a single character, and ``repeat`` no longer fails on dask arrays
   (:pull:`11746`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- String accessor methods on fixed-width string arrays now accept
+  ``StringDType`` arguments (e.g. ``contains``, ``cat``, ``+``, ``replace``)
+  instead of raising ``TypeError: cannot cast dtype StringDType()``, and
+  ``replace`` accepts a ``StringDType`` replacement (:issue:`11785`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 - Encoding a string variable whose ``char_dim_name`` has characters after its
   last number (e.g. ``"n4_chars"``) no longer drops them. When the length does
   not match, only the number is replaced (``"n3_chars"``) (:pull:`11757`).
