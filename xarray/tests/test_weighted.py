@@ -73,6 +73,7 @@ def test_dataset_weighted_non_numeric(
 
 
 @pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
+@pytest.mark.parametrize("use_opt_einsum", (False, True))
 @pytest.mark.parametrize(
     "values",
     (
@@ -82,15 +83,21 @@ def test_dataset_weighted_non_numeric(
     ),
 )
 def test_dataset_weighted_retains_aggregatable_dtypes(
-    values: Any, operation: str
+    values: Any, operation: str, use_opt_einsum: bool
 ) -> None:
     data = DataArray(values, dims="x", name="data")
     weights = DataArray([1.0, 2.0], dims="x")
 
-    result = getattr(data.to_dataset().weighted(weights), operation)()
-    expected = getattr(data.weighted(weights), operation)().to_dataset()
-
-    assert_identical(result, expected)
+    with xr.set_options(use_opt_einsum=use_opt_einsum):
+        try:
+            expected = getattr(data.weighted(weights), operation)().to_dataset()
+        except np.exceptions.DTypePromotionError as expected_error:
+            with pytest.raises(np.exceptions.DTypePromotionError) as actual_error:
+                getattr(data.to_dataset().weighted(weights), operation)()
+            assert str(actual_error.value) == str(expected_error)
+        else:
+            result = getattr(data.to_dataset().weighted(weights), operation)()
+            assert_identical(result, expected)
 
 
 def test_dataset_weighted_timedelta_quantile(use_dask: bool) -> None:
