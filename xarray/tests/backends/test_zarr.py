@@ -2619,6 +2619,44 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
 @requires_zarr
 @requires_dask
 @pytest.mark.parametrize(
+    "chunks,expected",
+    [
+        ("auto", (160, 500)),
+        (-1, (500, 500)),
+        ({}, (10, 10)),
+        ({"x": "auto"}, (500, 10)),
+        ({"x": -1}, (500, 10)),
+        ({"x": "auto", "y": -1}, (160, 500)),
+    ],
+)
+def test_open_dataset_chunking_zarr_with_preserve(
+    chunks, expected, tmp_path: Path
+) -> None:
+    encoded_chunks = 10
+    dask_arr = dask_array_api.from_array(
+        np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
+    )
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                dask_arr,
+                dims=("x", "y"),
+            )
+        }
+    )
+    ds["test"].encoding["chunks"] = encoded_chunks
+    ds.to_zarr(tmp_path / "test.zarr")
+
+    with dask.config.set({"array.chunk-size": "1MiB"}):
+        with open_dataset(
+            tmp_path / "test.zarr", engine="zarr", chunks=chunks
+        ) as actual:
+            assert (actual.chunks["x"][0], actual.chunks["y"][0]) == expected
+
+
+@requires_zarr
+@requires_dask
+@pytest.mark.parametrize(
     "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
 @pytest.mark.filterwarnings("ignore:The specified chunks separate")
