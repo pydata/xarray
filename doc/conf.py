@@ -10,6 +10,11 @@ import packaging.version
 import sphinx_autosummary_accessors
 import yaml
 from sphinx.application import Sphinx
+from sphinx.ext.autodoc import (
+    AttributeDocumenter,
+    MethodDocumenter,
+    PropertyDocumenter,
+)
 from sphinx.util import logging
 
 import xarray
@@ -53,7 +58,6 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "jupyter_sphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",
     "sphinxext.opengraph",
@@ -79,7 +83,6 @@ copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: 
 copybutton_prompt_is_regexp = True
 
 # myst-nb
-nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
 # RTD does not publish the .err.log report, so print tracebacks in the build log
 nb_execution_show_tb = True
 
@@ -188,6 +191,10 @@ llms_txt_suppress_unknown_node_warnings = [
     "mermaid",
     "PassthroughTextElement",
 ]
+# build the markdown after the html: running both builds at the same time lets their
+# notebook kernels race for the same ports ("ZMQError: Address already in use").
+# See https://github.com/NVIDIA/sphinx-llm/issues/159
+llms_txt_build_parallel = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
@@ -213,7 +220,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "debug.ipynb", "**.ipynb_checkpoints"]
+exclude_patterns = ["_build", "debug.ipynb", "**.ipynb_checkpoints", "README.md"]
 
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -314,11 +321,24 @@ rediraffe_redirects = {
     "duckarrays.rst": "user-guide/duckarrays.rst",
     "related-projects.rst": "user-guide/ecosystem.rst",
     "faq.rst": "get-help/faq.rst",
+    "getting-started-guide/faq.rst": "get-help/faq.rst",
+    "help-diagram.rst": "get-help/help-diagram.rst",
+    "howdoi.rst": "get-help/howdoi.rst",
+    "ecosystem.rst": "user-guide/ecosystem.rst",
+    "tutorials-and-videos.rst": "getting-started-guide/tutorials-and-videos.rst",
+    "quickstart.rst": "getting-started-guide/quick-overview.rst",
+    "examples/quick-overview.rst": "getting-started-guide/quick-overview.rst",
+    "why-xray.rst": "getting-started-guide/why-xarray.rst",
+    "whats_new.rst": "whats-new.rst",
+    "examples.rst": "gallery.rst",
+    "internals.rst": "internals/index.rst",
+    "internals/variable-objects.rst": "internals/internal-design.rst",
     "why-xarray.rst": "getting-started-guide/why-xarray.rst",
     "installing.rst": "getting-started-guide/installing.rst",
     "quick-overview.rst": "getting-started-guide/quick-overview.rst",
     "contributing.rst": "contribute/contributing.rst",
     "developers-meeting.rst": "contribute/developers-meeting.rst",
+    "examples/apply_ufunc_vectorize_1d.ipynb": "gallery.rst",
 }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
@@ -495,9 +515,68 @@ def check_intersphinx_inventories(app: Sphinx) -> None:
         sys.exit(1)
 
 
+def _qualified_name(obj) -> str | None:
+    module = getattr(obj, "__module__", None)
+    qualname = getattr(obj, "__qualname__", None)
+    if not module or not qualname or "<locals>" in qualname:
+        return None
+    return f"{module}.{qualname}"
+
+
+class _CanonicalMemberMixin:
+    """Add ``:canonical:`` to class members, like autodoc does for classes.
+
+    This adds hidden inventory aliases at the definition path (e.g.
+    ``xarray.core.dataarray.DataArray.sel``), which sphinx-codeautolink looks up.
+    """
+
+    def get_member_canonical(self) -> str | None:
+        raise NotImplementedError
+
+    def add_directive_header(self, sig: str) -> None:
+        super().add_directive_header(sig)
+        canonical = self.get_member_canonical()
+        if (
+            canonical
+            and canonical != self.fullname
+            # skip members inherited from other packages, e.g. pandas.Index
+            and canonical.split(".")[0] == self.fullname.split(".")[0]
+            # one alias per name: the same object can be documented on several classes
+            and canonical not in self.env.domains["py"].objects
+        ):
+            self.add_line(f"   :canonical: {canonical}", self.get_sourcename())
+
+
+class CanonicalMethodDocumenter(_CanonicalMemberMixin, MethodDocumenter):
+    def get_member_canonical(self) -> str | None:
+        return _qualified_name(self.object)
+
+
+class CanonicalPropertyDocumenter(_CanonicalMemberMixin, PropertyDocumenter):
+    def get_member_canonical(self) -> str | None:
+        return _qualified_name(self._get_property_getter())
+
+
+class CanonicalAttributeDocumenter(_CanonicalMemberMixin, AttributeDocumenter):
+    def get_member_canonical(self) -> str | None:
+        # attributes have no __qualname__: use the class that defines them
+        name = self.objpath[-1]
+        for cls in inspect.getmro(self.parent) if inspect.isclass(self.parent) else ():
+            if name in vars(cls) or name in getattr(cls, "__annotations__", {}):
+                cls_name = _qualified_name(cls)
+                return f"{cls_name}.{name}" if cls_name else None
+        return None
+
+
 def setup(app: Sphinx):
     app.connect("html-page-context", html_page_context)
     # run after sphinx.ext.intersphinx loaded the inventories (priority 500)
     app.connect("builder-inited", check_intersphinx_inventories, priority=900)
     app.connect("builder-inited", update_gallery)
     app.connect("builder-inited", update_videos)
+    for documenter in (
+        CanonicalMethodDocumenter,
+        CanonicalPropertyDocumenter,
+        CanonicalAttributeDocumenter,
+    ):
+        app.add_autodocumenter(documenter, override=True)

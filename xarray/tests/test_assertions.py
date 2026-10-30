@@ -101,7 +101,7 @@ def test_assert_allclose_equal_transpose(func) -> None:
 
 
 def test_assert_equal_transpose_datatree() -> None:
-    """Ensure `check_dim_order=False` works for transposed DataTree"""
+    """Ensure `check_dim_order=False` works for transposed DataTree."""
     ds = xr.Dataset(data_vars={"data": (("x", "y"), [[1, 2]])})
 
     a = xr.DataTree.from_dict({"node": ds})
@@ -223,7 +223,7 @@ def test_ensure_warnings_not_elevated(func) -> None:
             warnings.warn("warning in test", stacklevel=2)
             return super().dims
 
-        def __array__(
+        def __array__(  # type: ignore[override]
             self,
             dtype: np.typing.DTypeLike | None = None,
             /,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import time
 import traceback
 from collections.abc import Callable, Hashable, Iterable, Mapping, Sequence
@@ -39,7 +40,7 @@ from xarray.namedarray.utils import is_duck_dask_array
 
 if TYPE_CHECKING:
     from xarray.core.dataset import Dataset
-    from xarray.core.types import NestedSequence
+    from xarray.core.types import NestedSequence, ZarrStoreLike
 
     T_Name = Union[Hashable, None]
 
@@ -48,6 +49,25 @@ logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = "__values__"
+
+
+def _raise_if_zarr_store(filename_or_obj: object, engine: str) -> None:
+    """Raise a helpful error if a backend other than zarr gets a zarr store."""
+    # zarr stores can only exist if zarr has been imported already
+    zarr_store = sys.modules.get("zarr.abc.store")
+    zarr_storage = sys.modules.get("zarr.storage")
+    if (
+        isinstance(filename_or_obj, Mapping)
+        or (zarr_store is not None and isinstance(filename_or_obj, zarr_store.Store))
+        or (
+            zarr_storage is not None
+            and isinstance(filename_or_obj, zarr_storage.StorePath)
+        )
+    ):
+        raise TypeError(
+            f"the {engine} backend cannot open zarr stores, got {filename_or_obj!r}. "
+            "Use engine='zarr' instead."
+        )
 
 
 @overload
@@ -63,8 +83,7 @@ def _normalize_path[T](path: T) -> T: ...
 
 
 def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
-    """
-    Normalize pathlikes to string.
+    """Normalize pathlikes to string.
 
     Parameters
     ----------
@@ -133,8 +152,7 @@ def _find_absolute_paths(
     | NestedSequence[str | os.PathLike | ReadBuffer],
     **kwargs,
 ) -> NestedSequence[str | ReadBuffer]:
-    """
-    Find absolute paths from the pattern.
+    """Find absolute paths from the pattern.
 
     Parameters
     ----------
@@ -257,7 +275,7 @@ def find_root_and_group(ds):
 
 
 def collect_ancestor_dimensions(group) -> dict[str, int]:
-    """Returns dimensions defined in parent groups.
+    """Return dimensions defined in parent groups.
 
     If dimensions are defined in multiple ancestors, use the size of the closest
     ancestor.
@@ -284,9 +302,10 @@ def datatree_from_dict_with_io_cleanup(groups_dict: Mapping[str, Dataset]) -> Da
 
 
 def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500):
-    """
-    Robustly index an array, using retry logic with exponential backoff if any
-    of the errors ``catch`` are raised. The initial_delay is measured in ms.
+    """Robustly index an array, using retry logic with exponential backoff.
+
+    The retry logic is used if any of the errors ``catch`` are raised. The
+    initial_delay is measured in ms.
 
     With the default settings, the maximum delay will be in the range of 32-64
     seconds.
@@ -347,8 +366,8 @@ class AbstractDataStore:
         return {}
 
     def load(self):
-        """
-        This loads the variables and attributes simultaneously.
+        """Load the variables and attributes simultaneously.
+
         A centralized loading function makes it easier to create
         data stores that do automatic encoding/decoding.
 
@@ -381,7 +400,13 @@ class AbstractDataStore:
 
 
 type T_PathFileOrDataStore = (
-    str | os.PathLike[Any] | ReadBuffer | bytes | memoryview | AbstractDataStore
+    str
+    | os.PathLike[Any]
+    | ReadBuffer
+    | bytes
+    | memoryview
+    | AbstractDataStore
+    | ZarrStoreLike
 )
 
 
@@ -434,8 +459,7 @@ class AbstractWritableDataStore(AbstractDataStore):
     __slots__ = ()
 
     def encode(self, variables, attributes):
-        """
-        Encode the variables and attributes in this store
+        """Encode the variables and attributes in this store.
 
         Parameters
         ----------
@@ -469,11 +493,11 @@ class AbstractWritableDataStore(AbstractDataStore):
         return encoded_variables, encoded_attributes
 
     def encode_variable(self, v, name=None):
-        """encode one variable"""
+        """Encode one variable."""
         return v
 
     def encode_attribute(self, a):
-        """encode one attribute"""
+        """Encode one attribute."""
         return a
 
     def prepare_variable(self, name, variable, check_encoding, unlimited_dims):
@@ -489,11 +513,12 @@ class AbstractWritableDataStore(AbstractDataStore):
         raise NotImplementedError()
 
     def store_dataset(self, dataset):
-        """
-        in stores, variables are all variables AND coordinates
+        """Store a whole dataset in this store.
+
+        In stores, variables are all variables AND coordinates
         in xarray.Dataset variables are variables NOT coordinates,
         so here we pass the whole dataset in instead of doing
-        dataset.variables
+        dataset.variables.
         """
         self.store(dataset, dataset.attrs)
 
@@ -505,8 +530,10 @@ class AbstractWritableDataStore(AbstractDataStore):
         writer=None,
         unlimited_dims=None,
     ):
-        """
+        """Put data on this store.
+
         Top level method for putting data on this store, this method:
+
           - encodes variables/attributes
           - sets dimensions
           - sets variables
@@ -537,7 +564,8 @@ class AbstractWritableDataStore(AbstractDataStore):
         )
 
     def set_attributes(self, attributes):
-        """
+        """Set the dataset attributes on the data store.
+
         This provides a centralized method to set the dataset attributes on the
         data store.
 
@@ -550,7 +578,8 @@ class AbstractWritableDataStore(AbstractDataStore):
             self.set_attribute(k, v)
 
     def set_variables(self, variables, check_encoding_set, writer, unlimited_dims=None):
-        """
+        """Set the variables on the data store.
+
         This provides a centralized method to set the variables on the data
         store.
 
@@ -566,7 +595,6 @@ class AbstractWritableDataStore(AbstractDataStore):
             List of dimension names that should be treated as unlimited
             dimensions.
         """
-
         for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -577,7 +605,8 @@ class AbstractWritableDataStore(AbstractDataStore):
             writer.add(source, target)
 
     def set_dimensions(self, variables, unlimited_dims=None):
-        """
+        """Set the dimensions on the data store.
+
         This provides a centralized method to set the dimensions on the data
         store.
 
@@ -725,7 +754,8 @@ class WritableCFDataStore(AbstractWritableDataStore):
 
 
 class BackendEntrypoint:
-    """
+    """Main interface for the backend plugins.
+
     ``BackendEntrypoint`` is a class container and it is the main interface
     for the backend plugins, see :ref:`rst-backend-entrypoint`.
     It shall implement:
@@ -739,14 +769,13 @@ class BackendEntrypoint:
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
     - ``open_datatree`` method: it shall implement reading from file, variables
-      decoding and it returns an instance of :py:class:`~datatree.DataTree`.
+      decoding and it returns an instance of :py:class:`~xarray.DataTree`.
       It shall take in input at least ``filename_or_obj`` argument. The
-      implementation of this method is not mandatory.  For more details see
-      <reference to open_datatree documentation>.
+      implementation of this method is not mandatory. For more details see
+      :ref:`rst-open-datatree`.
 
     Attributes
     ----------
-
     open_dataset_parameters : tuple, default: None
         A list of ``open_dataset`` method parameters.
         The setting of this attribute is not mandatory.
@@ -780,20 +809,14 @@ class BackendEntrypoint:
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> Dataset:
-        """
-        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
-        """
-
+        """Backend open_dataset method used by :py:func:`~xarray.open_dataset`."""
         raise NotImplementedError()
 
     def guess_can_open(
         self,
         filename_or_obj: T_PathFileOrDataStore,
     ) -> bool:
-        """
-        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
-        """
-
+        """Backend guess_can_open method used by :py:func:`~xarray.open_dataset`."""
         return False
 
     def open_datatree(
@@ -802,12 +825,10 @@ class BackendEntrypoint:
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> DataTree:
-        """
-        Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
+        """Backend open_datatree method used by Xarray in :py:func:`~xarray.open_datatree`.
 
         If implemented, set the class variable supports_groups to True.
         """
-
         raise NotImplementedError()
 
     def open_groups_as_dict(
@@ -816,8 +837,7 @@ class BackendEntrypoint:
         *,
         drop_variables: str | Iterable[str] | None = None,
     ) -> dict[str, Dataset]:
-        """
-        Opens a dictionary mapping from group names to Datasets.
+        """Open a dictionary mapping from group names to Datasets.
 
         Called by :py:func:`~xarray.open_groups`.
         This function exists to provide a universal way to open all groups in a file,
@@ -826,7 +846,6 @@ class BackendEntrypoint:
 
         If implemented, set the class variable supports_groups to True.
         """
-
         raise NotImplementedError()
 
 
@@ -835,9 +854,10 @@ BACKEND_ENTRYPOINTS: dict[str, tuple[str | None, type[BackendEntrypoint]]] = {}
 
 
 def _is_likely_dap_url(url: str) -> bool:
-    """
-    Determines if a URL is likely an OPeNDAP (DAP) endpoint based on
-    known protocols, server software path patterns, and file extensions.
+    """Determine if a URL is likely an OPeNDAP (DAP) endpoint.
+
+    The decision is based on known protocols, server software path patterns,
+    and file extensions.
 
     Parameters
     ----------

@@ -33,7 +33,6 @@ from xarray.backends.zarr import ZarrStore
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.cftime_offsets import date_range
 from xarray.coding.variables import SerializationWarning
-from xarray.compat.npcompat import HAS_STRING_DTYPE
 from xarray.core.indexes import PandasIndex
 from xarray.tests import (
     assert_equal,
@@ -44,7 +43,6 @@ from xarray.tests import (
     has_netCDF4,
     has_zarr,
     has_zarr_v3_async_oindex,
-    has_zarr_v3_dtypes,
     parametrize_zarr_format,
     requires_cftime,
     requires_dask,
@@ -53,9 +51,7 @@ from xarray.tests import (
     requires_netCDF4,
     requires_zarr,
     requires_zarr_rectilinear_chunks,
-    requires_zarr_v3,
     requires_zarr_v3_async_oindex,
-    requires_zarr_v3_dtypes,
 )
 from xarray.tests.backends.base import (
     DATA_DIR,
@@ -132,9 +128,6 @@ class ZarrBase(CFEncodedBase):
     def test_encoding_unlimited_dims(self) -> None:
         super().test_encoding_unlimited_dims()
 
-    @skip_if_zarr_format_3(
-        "endian support requires zarr-python>=3.1", condition=not has_zarr_v3_dtypes
-    )
     def test_roundtrip_endian(self) -> None:
         super().test_roundtrip_endian()
 
@@ -778,9 +771,6 @@ class ZarrBase(CFEncodedBase):
                     **self.version_kwargs,
                 )
 
-    @skip_if_zarr_format_3(
-        "This actually works fine with Zarr format 3", condition=not has_zarr_v3_dtypes
-    )
     @pytest.mark.parametrize("dtype", ["U", "S"])
     def test_append_string_length_mismatch_raises(self, dtype) -> None:
         ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
@@ -790,24 +780,6 @@ class ZarrBase(CFEncodedBase):
                 ds_to_append.to_zarr(
                     store_target, append_dim="time", **self.version_kwargs
                 )
-
-    @pytest.mark.skipif(
-        has_zarr_v3_dtypes,
-        reason="This works on pre ZDtype Zarr-Python, but fails after.",
-    )
-    # ...but it probably would work with Zarr format 2 if we used object dtype
-    @skip_if_zarr_format_2("This doesn't work with Zarr format 2")
-    @pytest.mark.parametrize("dtype", ["U", "S"])
-    def test_append_string_length_mismatch_works(self, dtype) -> None:
-
-        ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
-        expected = xr.concat([ds, ds_to_append], dim="time")
-
-        with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
-            ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
-            actual = xr.open_dataset(store_target, engine="zarr")
-            xr.testing.assert_identical(expected, actual)
 
     def test_check_encoding_is_consistent_after_append(self) -> None:
         ds, ds_to_append, _ = create_append_test_data()
@@ -1276,13 +1248,14 @@ class ZarrBase(CFEncodedBase):
             assert original.chunks == actual.chunks
 
     def test_cache_members(self) -> None:
-        """
-        Ensure that if `ZarrStore` is created with `cache_members` set to `True`,
+        """Ensure that `ZarrStore` caches its members if `cache_members` is `True`.
+
+        If `ZarrStore` is created with `cache_members` set to `True`,
         a `ZarrStore` only inspects the underlying zarr group once,
-        and that the results of that inspection are cached.
+        and the results of that inspection are cached.
 
         Otherwise, `ZarrStore.members` should inspect the underlying zarr group each time it is
-        invoked
+        invoked.
         """
         with self.create_zarr_target() as store_target:
             zstore_mut = backends.ZarrStore.open_group(
@@ -1344,11 +1317,7 @@ class ZarrBase(CFEncodedBase):
 
         # turn off all decoding so we see what Zarr returns to us.
         # Since chunks, are not written, we should receive on `fill_value`
-        open_kwargs = {
-            "mask_and_scale": False,
-            "consolidated": False,
-            "use_zarr_fill_value_as_mask": False,
-        }
+        open_kwargs = {"mask_and_scale": False, "consolidated": False}
         save_kwargs = dict(compute=False, consolidated=False)
         with self.roundtrip(
             ds,
@@ -1397,6 +1366,26 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(ds, open_kwargs=open_kwargs) as opened:
             with self.roundtrip(opened, open_kwargs=open_kwargs) as actual:
                 assert actual.foo.encoding["fill_value"] == -99
+
+    @skip_if_zarr_format_2("fill_value is only an encoding key for zarr_format 3")
+    @pytest.mark.parametrize(
+        "use_zarr_fill_value_as_mask, expected",
+        [(True, [1.0, np.nan, 3.0]), (False, [1.0, -99.0, 3.0])],
+    )
+    def test_use_zarr_fill_value_as_mask(
+        self, use_zarr_fill_value_as_mask, expected
+    ) -> None:
+        # GH #10269: the option has to reach the store, otherwise the
+        # zarr_format 3 default (False) is always used
+        ds = xr.Dataset({"foo": ("x", [1.0, -99.0, 3.0])})
+        ds.foo.encoding = {"fill_value": -99.0}
+
+        open_kwargs = {
+            "consolidated": False,
+            "use_zarr_fill_value_as_mask": use_zarr_fill_value_as_mask,
+        }
+        with self.roundtrip(ds, open_kwargs=open_kwargs) as actual:
+            np.testing.assert_equal(actual.foo.values, expected)
 
 
 @requires_zarr
@@ -1542,8 +1531,7 @@ class TestInstrumentedZarrStore:
             self.check_requests(expected, patches)
 
 
-@requires_zarr_v3_dtypes
-@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+@requires_zarr
 def test_roundtrip_stringdtype_zarr_v3() -> None:
     dtype = np.dtypes.StringDType()
     data = np.array(["a", "bb", "ccc"], dtype=dtype)
@@ -1569,8 +1557,7 @@ def test_roundtrip_stringdtype_zarr_v3() -> None:
     assert_identical(expected, actual)
 
 
-@requires_zarr_v3_dtypes
-@pytest.mark.skipif(not HAS_STRING_DTYPE, reason="requires StringDType")
+@requires_zarr
 def test_stringdtype_with_na_object_uses_the_compatibility_path() -> None:
     dtype = np.dtypes.StringDType(na_object=np.nan)
     data = np.array(["a", "bb", "ccc"], dtype=dtype)
@@ -1616,7 +1603,6 @@ class TestZarrDictStore(ZarrBase):
                 assert actual["var1"].encoding["chunks"] == (2, 2)
 
     @pytest.mark.asyncio
-    @requires_zarr_v3
     async def test_async_load_multiple_variables(self) -> None:
         target_class = zarr.AsyncArray
         method_name = "getitem"
@@ -1645,7 +1631,6 @@ class TestZarrDictStore(ZarrBase):
             xrt.assert_identical(result_ds, ds.load())
 
     @pytest.mark.asyncio
-    @requires_zarr_v3
     @pytest.mark.parametrize("cls_name", ["Variable", "DataArray", "Dataset"])
     async def test_concurrent_load_multiple_objects(
         self,
@@ -1683,7 +1668,6 @@ class TestZarrDictStore(ZarrBase):
                 xrt.assert_identical(result, xr_obj.load())
 
     @pytest.mark.asyncio
-    @requires_zarr_v3
     @pytest.mark.skip_if_param(
         cls_name="Variable", method="sel", reason="Variable doesn't have a .sel method"
     )
@@ -1810,8 +1794,7 @@ class TestZarrDictStore(ZarrBase):
         expected_err_msg,
         zarr_format,
     ):
-        """Test that trying to use async load with insufficiently new version of zarr raises a clear error"""
-
+        """Test that async load with a too old version of zarr raises a clear error."""
         original = create_test_data()
         with self.create_zarr_target() as store:
             original.to_zarr(store, consolidated=False, zarr_format=zarr_format)
@@ -1856,8 +1839,7 @@ def get_xr_obj(
 
 
 class NoConsolidatedMetadataSupportStore(WrapperStore):
-    """
-    Store that explicitly does not support consolidated metadata.
+    """Store that explicitly does not support consolidated metadata.
 
     Useful as a proxy for stores like Icechunk, see https://github.com/zarr-developers/zarr-python/pull/3119.
     """
@@ -1881,11 +1863,10 @@ class NoConsolidatedMetadataSupportStore(WrapperStore):
         )
 
 
-@requires_zarr_v3
+@requires_zarr
 class TestZarrNoConsolidatedMetadataSupport(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        # TODO the zarr version would need to be >3.08 for the supports_consolidated_metadata property to have any effect
         yield NoConsolidatedMetadataSupportStore(
             zarr.storage.MemoryStore({}, read_only=False)
         )
@@ -1953,7 +1934,7 @@ class TestZarrWriteEmpty(TestZarrDirectoryStore):
         use_dask: bool,
     ) -> None:
         def assert_expected_files(expected: list[str], store: str) -> None:
-            """Convenience for comparing with actual files written"""
+            """Compare the expected files with the actual files written."""
             ls = []
             test_root = os.path.join(store, "test")
             for root, _, files in os.walk(test_root):
@@ -2229,6 +2210,51 @@ def test_fill_value_coder_inf_nan(value, dtype) -> None:
 
 
 @requires_zarr
+@pytest.mark.parametrize(
+    "value,dtype,expected",
+    [
+        ("hello", np.dtype("S5"), b"hello"),
+        (None, np.dtype("float32"), None),
+        (0.0, np.dtype("float32"), np.float32(0.0)),
+        ("hello", np.dtype("U5"), "hello"),
+    ],
+)
+def test_fill_value_coder_json(value, dtype, expected) -> None:
+    from xarray.backends.zarr import FillValueCoder
+
+    decoded = FillValueCoder.decode(value, dtype)
+
+    assert decoded == expected
+
+
+@requires_zarr
+def test_open_zarr_json_native_fill_value(tmp_path) -> None:
+    import zarr
+
+    store_path = tmp_path / "test.zarr"
+
+    root = zarr.open_group(store_path, mode="w", zarr_format=3)
+    arr = root.create_array(
+        "data",
+        shape=(3,),
+        chunks=(3,),
+        dtype="float32",
+        fill_value=0.0,
+        dimension_names=["x"],
+        attributes={"_FillValue": 0.0},
+    )
+    arr[:] = np.array([1.0, 2.0, 3.0], dtype="float32")
+
+    ds = xr.open_zarr(
+        store_path,
+        zarr_format=3,
+        consolidated=False,
+    ).load()
+
+    np.testing.assert_array_equal(ds["data"], [1.0, 2.0, 3.0])
+
+
+@requires_zarr
 def test_extract_zarr_variable_encoding() -> None:
     var = xr.Variable("x", [1, 2])
     actual = backends.zarr.extract_zarr_variable_encoding(var, zarr_format=3)
@@ -2365,8 +2391,11 @@ class TestZarrRectilinearChunksRead:
 
     @requires_dask
     def test_read_zero_length_dim(self, tmp_path) -> None:
-        """zarr reports no chunk sizes at all along a zero-length dimension,
-        which must not be passed to dask as an empty tuple."""
+        """Test reading a zero-length dimension.
+
+        Zarr reports no chunk sizes at all along a zero-length dimension,
+        which must not be passed to dask as an empty tuple.
+        """
         import zarr
 
         store_path = tmp_path / "source.zarr"
@@ -2384,8 +2413,11 @@ class TestZarrRectilinearChunksRead:
             assert roundtrip["var"].data.chunks == ((0,), (5, 10, 5))
 
     def test_read_rectilinear_shards(self, tmp_path) -> None:
-        """Regular inner chunks with rectilinear shards. The regular chunks
-        must be reported as an int regardless of zarr-python version."""
+        """Regular inner chunks with rectilinear shards.
+
+        The regular chunks must be reported as an int regardless of zarr-python
+        version.
+        """
         import zarr
 
         data = np.array([1.0, 2.0, 3.0], dtype="float32")
@@ -2410,8 +2442,10 @@ class TestZarrRectilinearChunksRead:
             np.testing.assert_array_equal(roundtrip["var"].values, data)
 
     def test_write_after_read_gives_helpful_error(self, tmp_path) -> None:
-        """Writing isn't supported yet; the error should say so, not just
-        "must be an int"."""
+        """Writing isn't supported yet; the error should say so.
+
+        The error should not just say "must be an int".
+        """
         import zarr
 
         data = np.arange(60, dtype="float32")
@@ -2722,6 +2756,74 @@ def test_zarr_create_default_indexes(tmp_path, create_default_indexes) -> None:
             assert len(loaded_ds.xindexes) == 0
 
 
+def _write_encoded_times(store_path, values, units, zarr_format) -> None:
+    # "time" is an index coordinate (decoded at open), "valid_time" is not
+    # (decoded on load); both are stored with one value per chunk
+    encoded = {"units": units}
+    xr.Dataset(
+        {"valid_time": ("time", np.array(values), encoded)},
+        coords={"time": ("time", np.array(values), encoded)},
+    ).to_zarr(
+        store_path,
+        mode="w",
+        zarr_format=zarr_format,
+        encoding={"time": {"chunks": (1,)}, "valid_time": {"chunks": (1,)}},
+    )
+
+
+@requires_zarr
+@requires_dask
+@requires_cftime
+@parametrize_zarr_format
+@pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
+@pytest.mark.parametrize(
+    ("units", "values"),
+    [
+        ("hours since 2000-01-01", [0.0, 1.0, 2.0]),
+        # dates near the reference date need cftime, but these are in 2020
+        ("hours since 1-1-1 00:00:0.0", [17_700_000.0, 17_700_001.0, 17_700_002.0]),
+    ],
+)
+def test_zarr_infer_dtype_metadata_round_trip(
+    tmp_path, zarr_format, units, values
+) -> None:
+    store_path = tmp_path / "tmp.zarr"
+    _write_encoded_times(store_path, values, units, zarr_format)
+
+    with (
+        open_dataset(store_path, engine="zarr", chunks={}) as expected,
+        open_dataset(
+            store_path,
+            engine="zarr",
+            chunks={},
+            decode_times=CFDatetimeCoder(infer_dtype="metadata"),
+        ) as actual,
+    ):
+        assert actual.time.dtype == expected.time.dtype
+        assert actual.valid_time.dtype == expected.valid_time.dtype
+        assert_identical(actual.compute(), expected.compute())
+
+
+@requires_zarr
+@requires_dask
+@requires_cftime
+@parametrize_zarr_format
+@pytest.mark.filterwarnings("ignore:Unable to decode time axis")
+def test_zarr_infer_dtype_metadata_wrong_dtype_raises(tmp_path, zarr_format) -> None:
+    # dates in 2821, beyond datetime64[ns]: metadata infers datetime64[ns]
+    store_path = tmp_path / "tmp.zarr"
+    _write_encoded_times(store_path, [0, 300_000], "days since 2000-01-01", zarr_format)
+
+    with pytest.raises(ValueError, match="as inferred from metadata"):
+        # the index coordinate is decoded when the dataset is opened
+        open_dataset(
+            store_path,
+            engine="zarr",
+            chunks={},
+            decode_times=CFDatetimeCoder(infer_dtype="metadata"),
+        )
+
+
 @requires_zarr
 @pytest.mark.usefixtures("default_zarr_format")
 def test_raises_key_error_on_invalid_zarr_store(tmp_path):
@@ -2836,8 +2938,9 @@ class TestZarrRegionAuto:
 
     @requires_dask
     def test_zarr_region_chunk_partial(self):
-        """
-        Check that writing to partial chunks with `region` fails, assuming `safe_chunks=False`.
+        """Check that writing to partial chunks with `region` fails.
+
+        This assumes `safe_chunks=False`.
         """
         ds = (
             xr.DataArray(np.arange(120).reshape(4, 3, -1), dims=list("abc"))
@@ -2909,12 +3012,16 @@ class TestZarrRegionAuto:
 
             self.save(store, da.isel(x=slice(10)).chunk(x=(10,)), region="auto")
 
-            self.save(
-                store,
-                da.isel(x=slice(5, 25)).chunk(x=(10, 10)),
-                safe_chunks=False,
-                region="auto",
-            )
+            # Both dask chunks write to the zarr chunk x=10..20, which is only
+            # safe if they are not written in parallel.
+            with dask.config.set(scheduler="synchronous"):
+                self.save(
+                    store,
+                    da.isel(x=slice(5, 25)).chunk(x=(10, 10)),
+                    safe_chunks=False,
+                    region="auto",
+                )
+            assert xr.open_zarr(store)["foo"].equals(da.where(da.x < 25))
 
             with pytest.raises(ValueError):
                 self.save(
@@ -3204,3 +3311,75 @@ class TestZarrRegionAuto:
                 region="auto",
             )
             assert_identical(ds, xr.open_zarr(store))
+
+
+@requires_zarr
+@requires_dask
+@pytest.mark.parametrize(
+    "shape, enc_chunks, enc_shards",
+    [
+        (
+            (16, 16),
+            (2, 2),
+            (8, 4),
+        ),
+        (
+            (10, 10),
+            (2, 2),
+            (4, 4),
+        ),
+        (
+            (100, 10),
+            (2, 2),
+            (4, 4),
+        ),
+        (
+            (100, 10, 1),
+            (2, 2, 1),
+            (4, 4, 1),
+        ),
+    ],
+)
+def test_zarr_shard_roundtrip(
+    shape: tuple[int, ...],
+    enc_chunks: tuple[int, ...],
+    enc_shards: tuple[int, ...],
+    tmp_path: Path,
+) -> None:
+
+    dimensions = tuple(f"dim_{i}" for i in range(len(shape)))
+    sizes = dict(zip(dimensions, shape, strict=True))
+
+    data_values = np.arange(np.prod(shape)).reshape(shape)
+    coords = {dim: np.arange(sizes[dim]) for dim in dimensions}
+
+    chunks = dict(zip(dimensions, enc_chunks, strict=True))
+    shards = dict(zip(dimensions, enc_shards, strict=True))
+
+    ds = xr.Dataset(
+        {
+            "data": (dimensions, data_values),
+        },
+        coords=coords,
+    )
+
+    # Make the xarray chunks match the zarr shards
+    ds_sharded = ds.chunk(shards)
+    encoding: dict[str, dict[str, tuple[int, ...]]] = {
+        dim: {"chunks": (chunks[dim],), "shards": (shards[dim],)} for dim in dimensions
+    }
+    encoding["data"] = {"chunks": enc_chunks, "shards": enc_shards}
+
+    store = tmp_path / "test.zarr"
+    ds_sharded.to_zarr(
+        store,
+        mode="w",
+        encoding=encoding,
+        zarr_format=3,
+        consolidated=False,
+    )
+
+    # reopen dataset and store it back
+    reopened_ds = xr.open_zarr(store, consolidated=False)
+    reopened_ds.to_zarr(store, mode="a")
+    assert reopened_ds.chunks == ds_sharded.chunks

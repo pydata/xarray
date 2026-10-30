@@ -4,7 +4,16 @@ import gzip
 import io
 import os
 from collections.abc import Iterable, Mapping
-from typing import IO, TYPE_CHECKING, Any, Literal, overload, override
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    cast,
+    overload,
+    override,
+)
 
 import numpy as np
 
@@ -16,6 +25,7 @@ from xarray.backends.common import (
     T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
+    _raise_if_zarr_store,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
 from xarray.backends.locks import ensure_lock, get_write_lock
@@ -58,10 +68,20 @@ def _decode_string[T](s: bytes | T) -> str | T:
     return s
 
 
+def _force_native_endianness_attr(value: Any) -> Any:
+    # scipy returns numeric attribute arrays in netCDF3's big-endian byte order
+    if isinstance(value, np.ndarray) and not value.dtype.isnative:
+        value = value.astype(value.dtype.newbyteorder("="))
+    return value
+
+
 def _decode_attrs[K, V](d: Mapping[K, V]) -> dict[K, V]:
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
-    return {k: v if k == "_FillValue" else _decode_string(v) for (k, v) in d.items()}
+    return {
+        k: _force_native_endianness_attr(v if k == "_FillValue" else _decode_string(v))
+        for (k, v) in d.items()
+    }
 
 
 class ScipyArrayWrapper(BackendArray):
@@ -127,11 +147,18 @@ class ScipyArrayWrapper(BackendArray):
 # TODO: Remove this after upstreaming the fixes to scipy.
 class _PickleWorkaround:
     flush_only_netcdf_file: type[scipy.io.netcdf_file]
+    _initialized: ClassVar[bool] = False
 
     @classmethod
     def add_cls(cls, new_class: type[Any]) -> None:
-        setattr(cls, new_class.__name__, new_class)
-        new_class.__qualname__ = cls.__qualname__ + "." + new_class.__name__
+        # Only set the class once to ensure pickling stability.
+        # Each call to _open_scipy_netcdf creates a new class, but we only need
+        # the first one. Subsequent calls would overwrite the class definition,
+        # breaking pickle's class-identity check for instances created earlier.
+        if not cls._initialized:
+            setattr(cls, new_class.__name__, new_class)
+            new_class.__qualname__ = cls.__qualname__ + "." + new_class.__name__
+            cls._initialized = True
 
 
 def _open_scipy_netcdf(
@@ -378,13 +405,14 @@ def _normalize_filename_or_obj(
 ) -> str | ReadBuffer | AbstractDataStore:
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
-    else:
-        return _normalize_path(filename_or_obj)
+    _raise_if_zarr_store(filename_or_obj, "scipy")
+    return cast(
+        "str | ReadBuffer | AbstractDataStore", _normalize_path(filename_or_obj)
+    )
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the scipy package.
+    """Backend for netCDF files based on the scipy package.
 
     It can open ".nc", ".cdf", and "nc..gz" files but will only be
     selected as the default if the "netcdf4" and "h5netcdf" engines are

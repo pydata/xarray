@@ -28,9 +28,9 @@ if TYPE_CHECKING:
 
 
 class DataArrayPlotAccessor:
-    """
-    Enables use of xarray.plot functions as attributes on a DataArray.
-    For example, DataArray.plot.imshow
+    """Enables use of xarray.plot functions as attributes on a DataArray.
+
+    For example, DataArray.plot.imshow.
     """
 
     _da: DataArray
@@ -143,7 +143,6 @@ class DataArrayPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -183,7 +182,6 @@ class DataArrayPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -223,7 +221,6 @@ class DataArrayPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -307,7 +304,6 @@ class DataArrayPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -347,7 +343,6 @@ class DataArrayPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -387,7 +382,6 @@ class DataArrayPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -1030,9 +1024,9 @@ class DataArrayPlotAccessor:
 
 
 class DatasetPlotAccessor:
-    """
-    Enables use of xarray.plot functions as attributes on a Dataset.
-    For example, Dataset.plot.scatter
+    """Enables use of xarray.plot functions as attributes on a Dataset.
+
+    For example, Dataset.plot.scatter.
     """
 
     _ds: Dataset
@@ -1055,7 +1049,6 @@ class DatasetPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -1095,7 +1088,6 @@ class DatasetPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -1135,7 +1127,6 @@ class DatasetPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -1179,7 +1170,6 @@ class DatasetPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -1219,7 +1209,6 @@ class DatasetPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -1259,7 +1248,6 @@ class DatasetPlotAccessor:
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,

@@ -8,7 +8,8 @@ import xarray as xr
 from xarray import AlignmentError
 from xarray.core.coordinate_transform import CoordinateTransform
 from xarray.core.indexes import CoordinateTransformIndex
-from xarray.tests import assert_equal, assert_identical
+from xarray.core.indexing import OuterIndexer
+from xarray.tests import assert_equal, assert_identical, requires_dask
 
 
 class SimpleCoordinateTransform(CoordinateTransform):
@@ -152,6 +153,31 @@ def test_coordinate_transform_variable_basic_outer_indexing() -> None:
 
     with pytest.raises(IndexError, match="out of bounds index"):
         var[-5]
+
+
+def test_coordinate_transform_variable_outer_indexer_integer() -> None:
+    # integer keys drop their axis, as with basic indexing
+    adapter = create_coords(scale=2.0, shape=(4, 4))["x"].variable._data
+
+    actual = adapter.oindex[OuterIndexer((1, np.array([0, 2])))]  # type: ignore[union-attr]
+    np.testing.assert_array_equal(actual, [0.0, 4.0])
+
+    actual = adapter.oindex[OuterIndexer((1, 2))]  # type: ignore[union-attr]
+    assert actual.shape == ()
+    assert actual == 4.0
+
+
+@requires_dask
+def test_coordinate_transform_chunked_integer_isel() -> None:
+    # dask reads chunks with outer indexers; GH rasterix#92
+    coords = create_coords(scale=2.0, shape=(4, 4))
+    da = xr.DataArray(np.ones((3, 4, 4)), dims=("t", "y", "x"), coords=coords)
+
+    expected = da.isel(x=1, y=2)
+    actual = da.chunk(t=1).isel(x=1, y=2).compute()
+
+    assert_identical(actual, expected)
+    assert actual.x.shape == ()
 
 
 def test_coordinate_transform_variable_vectorized_indexing() -> None:
