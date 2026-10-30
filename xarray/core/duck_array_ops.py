@@ -870,6 +870,21 @@ def isin(element, test_elements, **kwargs):
     return xp.isin(element, test_elements, **kwargs)
 
 
+def replace_values(data: np.ndarray, to_replace: np.ndarray, value: Any) -> np.ndarray:
+    if not to_replace.size:
+        return data
+    sorter = np.argsort(to_replace)
+    index = np.take(
+        sorter, np.searchsorted(to_replace, data, sorter=sorter), mode="clip"
+    )
+    candidate = to_replace[index]
+    # NaN != NaN, so match missing values separately
+    found = (candidate == data) | (isnull(candidate) & isnull(data))
+    if np.ndim(value):
+        value = value[index]
+    return where(found, value, data)
+
+
 def least_squares(lhs, rhs, rcond=None, skipna=False):
     """Return the coefficients and residuals of a least-squares fit."""
     if is_duck_dask_array(rhs):

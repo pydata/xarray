@@ -126,6 +126,7 @@ Missing value handling
    Dataset.interpolate_na
    Dataset.where
    Dataset.isin
+   Dataset.replace_values
 
 Computation
 -----------
