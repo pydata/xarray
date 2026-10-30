@@ -161,6 +161,11 @@ Breaking Changes
   :py:class:`Variable`, deprecated since v2023.10.0, has been removed. Use
   ``drop_encoding`` instead (:issue:`11721`, :pull:`11805`).
   By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
+- Subclasses of :py:class:`DataArray`, :py:class:`Dataset` and other xarray
+  objects defined outside xarray must now explicitly define ``__slots__``.
+  Defining one without ``__slots__`` raises an ``AttributeError`` instead of
+  the ``FutureWarning`` emitted since v0.13.0 (:issue:`11721`, :pull:`11818`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Deprecations
@@ -208,6 +213,10 @@ Bug Fixes
 ~~~~~~~~~
 - Fix :py:func:`decode_cf` leaving floating-point missing values unmasked when
   their metadata has higher precision than the stored data (:issue:`9381`).
+- Fix CuPy indexers with pandas-backed coordinates, basic and label-based
+  assignment to CuPy arrays, and scalar truth conversion
+  (:issue:`11739`, :pull:`11797`).
+  By `Huashuo Lei <https://github.com/wpyaoxueros>`_.
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
@@ -426,6 +435,18 @@ Bug Fixes
   ``StringDtype`` is used as the new concat dimension and another input has a
   numpy string-dtype coord (:issue:`11317`, :pull:`11322`).
   By `Sai Asish Y <https://github.com/SAY-5>`_.
+- Add type annotations to all arguments of :py:func:`open_zarr`, so that type
+  checkers accept its documented arguments and reject unknown ones.
+  :py:func:`open_dataset`, :py:func:`open_dataarray`, :py:func:`open_datatree`
+  and :py:func:`open_groups` now also accept zarr stores in their type hints.
+  Passing a zarr store to the ``netcdf4``, ``h5netcdf``, ``scipy`` or ``pydap``
+  engine raises a ``TypeError`` that points to ``engine="zarr"``
+  (:issue:`11221`, :pull:`11226`).
+  By `Carson Jones <https://github.com/wavebyrd>`_.
+- :py:func:`open_dataset` no longer raises ``TypeError: cannot use a string
+  pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
+  (:pull:`11826`).
+  By `David Hoese <https://github.com/djhoese>`_.
 
 
 Documentation
@@ -563,6 +584,9 @@ Internal Changes
 - Add an asv benchmark for opening a zarr :py:class:`DataTree` from a store with
   object storage latency (:pull:`11810`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Convert structured arrays to object arrays of tuples before creating a
+  :py:class:`pandas.Index` from them, which pandas deprecated (:issue:`11749`).
+  By `glaziermag <https://github.com/glaziermag>`_.
 
 
 .. _whats-new.2026.09.0:

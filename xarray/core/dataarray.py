@@ -1049,7 +1049,62 @@ class DataArray(
 
     @property
     def loc(self) -> _LocIndexer:
-        """Attribute for location based indexing like pandas."""
+        """Attribute for label-based indexing like pandas.
+
+        Index with labels instead of integer positions, in the order of the
+        dimensions or as a dictionary ``{dim: labels}``. Label slices include
+        both ends. It also supports assigning values.
+
+        See Also
+        --------
+        DataArray.sel
+        DataArray.isel
+        Dataset.loc
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+        ...     dims=("x", "y"),
+        ...     coords={"x": ["a", "b"], "y": [10.0, 20.0, 30.0]},
+        ... )
+        >>> da.loc["a"]
+        <xarray.DataArray (y: 3)> Size: 24B
+        array([1., 2., 3.])
+        Coordinates:
+          * y        (y) float64 24B 10.0 20.0 30.0
+            x        <U1 4B 'a'
+
+        Slices of labels include the end:
+
+        >>> da.loc["b", 20.0:30.0]
+        <xarray.DataArray (y: 2)> Size: 16B
+        array([5., 6.])
+        Coordinates:
+          * y        (y) float64 16B 20.0 30.0
+            x        <U1 4B 'b'
+
+        Use a dictionary to select by dimension name:
+
+        >>> da.loc[{"y": [10.0, 30.0]}]
+        <xarray.DataArray (x: 2, y: 2)> Size: 32B
+        array([[1., 3.],
+               [4., 6.]])
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) float64 16B 10.0 30.0
+
+        Assign a new value in place:
+
+        >>> da.loc[{"x": "a", "y": 20.0}] = 0.0
+        >>> da
+        <xarray.DataArray (x: 2, y: 3)> Size: 48B
+        array([[1., 0., 3.],
+               [4., 5., 6.]])
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) float64 24B 10.0 20.0 30.0
+        """
         return _LocIndexer(self)
 
     @property
@@ -1359,6 +1414,18 @@ class DataArray(
         DataArray.load_async
         Dataset.compute
         Variable.compute
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1, 2, 3], dims="x").chunk(x=1)
+        >>> computed = da.compute()
+        >>> type(computed.data)
+        <class 'numpy.ndarray'>
+
+        The original DataArray is not modified:
+
+        >>> type(da.data)
+        <class 'dask.array.core.Array'>
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1384,6 +1451,18 @@ class DataArray(
         See Also
         --------
         dask.persist
+        DataArray.compute
+        Dataset.persist
+
+        Examples
+        --------
+        The result is still a dask array, but its chunks are computed and kept
+        in memory:
+
+        >>> da = xr.DataArray([1, 2, 3], dims="x").chunk(x=1)
+        >>> persisted = da.persist()
+        >>> type(persisted.data)
+        <class 'dask.array.core.Array'>
         """
         ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
@@ -1582,6 +1661,26 @@ class DataArray(
         DataArray.chunksizes
         xarray.unify_chunks
         dask.array.from_array
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(12).reshape(3, 4), dims=("x", "y"))
+
+        Split ``x`` into chunks of one element, ``y`` remains a single chunk:
+
+        >>> da.chunk(x=1).chunks
+        ((1, 1, 1), (4,))
+
+        Pass a dictionary to chunk several dimensions at once. The last chunk is
+        smaller if the size isn't a multiple of the chunk size:
+
+        >>> da.chunk({"x": 2, "y": 2}).chunksizes
+        Frozen({'x': (2, 1), 'y': (2, 2)})
+
+        Use ``-1`` to put a whole dimension into a single chunk:
+
+        >>> da.chunk(x=1).chunk(x=-1).chunks
+        ((3,), (4,))
         """
         chunk_mapping: T_ChunksFreq
         if chunks is None:
@@ -4037,6 +4136,33 @@ class DataArray(
         reduced : DataArray
             DataArray with this object's array replaced with an array with
             summarized data and the indicated dimension(s) removed.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+        ...     dims=("x", "y"),
+        ...     coords={"x": ["a", "b"]},
+        ... )
+        >>> da.reduce(np.max, dim="y")
+        <xarray.DataArray (x: 2)> Size: 16B
+        array([3., 6.])
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+
+        Additional keyword arguments are passed on to the function:
+
+        >>> da.reduce(np.percentile, q=50, dim="y")
+        <xarray.DataArray (x: 2)> Size: 16B
+        array([2., 5.])
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+
+        Without ``dim``, the reduction is over all dimensions:
+
+        >>> da.reduce(np.sum)
+        <xarray.DataArray ()> Size: 8B
+        array(21.)
         """
         var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims, **kwargs)
         return self._replace_maybe_drop_dims(var)
@@ -7095,6 +7221,32 @@ class DataArray(
             will be dropped as there are no equivalent dates in a standard calendar.
 
             This option is best used with data on a frequency coarser than daily.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     [1.0, 2.0, 3.0, 4.0],
+        ...     dims="time",
+        ...     coords={"time": pd.date_range("2000-02-27", periods=4)},
+        ... )
+
+        The 29th of February doesn't exist in the ``"noleap"`` calendar, so it
+        is dropped:
+
+        >>> noleap = da.convert_calendar("noleap")
+        >>> noleap
+        <xarray.DataArray (time: 3)> Size: 24B
+        array([1., 2., 4.])
+        Coordinates:
+          * time     (time) object 24B 2000-02-27 00:00:00 ... 2000-03-01 00:00:00
+
+        Converting back, ``missing`` fills the dates that are not in the source:
+
+        >>> noleap.convert_calendar("standard", missing=np.nan)
+        <xarray.DataArray (time: 4)> Size: 32B
+        array([ 1.,  2., nan,  4.])
+        Coordinates:
+          * time     (time) datetime64[ns] 32B 2000-02-27 2000-02-28 ... 2000-03-01
         """
         return convert_calendar(
             self,

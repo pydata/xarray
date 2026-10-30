@@ -42,9 +42,10 @@ from xarray.namedarray.parallelcompat import guess_chunkmanager
 from xarray.namedarray.pycompat import integer_types
 
 if TYPE_CHECKING:
+    from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
     from xarray.core.dataset import Dataset
     from xarray.core.datatree import DataTree
-    from xarray.core.types import ZarrArray, ZarrGroup
+    from xarray.core.types import T_Chunks, ZarrArray, ZarrGroup, ZarrStoreLike
 
 
 def _get_mappers(*, storage_options, store):
@@ -1525,27 +1526,30 @@ class ZarrStore(AbstractWritableDataStore):
 
 
 def open_zarr(
-    store,
-    group=None,
-    chunks: int | dict | Literal["auto"] | Default | None = _default,
-    decode_cf=True,
-    mask_and_scale=True,
-    decode_times=True,
-    concat_characters=True,
+    store: ZarrStoreLike,
+    group: str | None = None,
+    chunks: T_Chunks | Default | None = _default,
+    decode_cf: bool = True,
+    mask_and_scale: bool | Mapping[str, bool] = True,
+    decode_times: (
+        bool | CFDatetimeCoder | Mapping[str, bool | CFDatetimeCoder]
+    ) = True,
+    concat_characters: bool | Mapping[str, bool] = True,
     decode_coords: Literal["coordinates", "all"] | bool = True,
-    drop_variables=None,
-    consolidated=None,
-    overwrite_encoded_chunks=False,
-    storage_options=None,
-    decode_timedelta=None,
-    use_cftime=None,
-    zarr_format=None,
-    use_zarr_fill_value_as_mask=None,
+    drop_variables: str | Iterable[str] | None = None,
+    consolidated: bool | None = None,
+    overwrite_encoded_chunks: bool = False,
+    storage_options: dict[str, Any] | None = None,
+    decode_timedelta: (
+        bool | CFTimedeltaCoder | Mapping[str, bool | CFTimedeltaCoder] | None
+    ) = None,
+    use_cftime: bool | Mapping[str, bool] | None = None,
+    zarr_format: ZarrFormat | None = None,
+    use_zarr_fill_value_as_mask: bool | None = None,
     chunked_array_type: str | None = None,
     from_array_kwargs: dict[str, Any] | None = None,
-    create_default_indexes=True,
-    **kwargs,
-):
+    create_default_indexes: bool = True,
+) -> Dataset:
     """Load and decode a dataset from a Zarr store.
 
     The `store` object should be a valid store for a Zarr group. `store`
@@ -1554,9 +1558,9 @@ def open_zarr(
 
     Parameters
     ----------
-    store : MutableMapping or str
-        A MutableMapping where a Zarr Group has been stored or a path to a
-        directory in file system where a Zarr DirectoryStore has been stored.
+    store : zarr.storage.StoreLike
+        A zarr store, an fsspec mapper or a ``dict`` where a Zarr Group has been
+        stored, or a path or URL to a Zarr Group.
     group : str, optional
         Group path. (a.k.a. `path` in zarr terminology.)
     chunks : int, dict, "auto" or None, optional
@@ -1580,22 +1584,27 @@ def open_zarr(
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
-    mask_and_scale : bool, optional
+    mask_and_scale : bool or dict-like, optional
         If True, replace array values equal to `_FillValue` with NA and scale
         values according to the formula `original_values * scale_factor +
         add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA.
-    decode_times : bool, optional
+        be replaced by NA. Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
+    decode_times : bool, CFDatetimeCoder or dict-like, optional
         If True, decode times encoded in the standard NetCDF datetime format
-        into datetime objects. Otherwise, leave them encoded as numbers.
-    concat_characters : bool, optional
+        into datetime objects. Otherwise, use :py:class:`coders.CFDatetimeCoder` or
+        leave them encoded as numbers. Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
+    concat_characters : bool or dict-like, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
+        Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
     decode_coords : bool or {"coordinates", "all"}, optional
         Controls which variables are set as coordinate variables:
 
@@ -1620,12 +1629,16 @@ def open_zarr(
     storage_options : dict, optional
         Any additional parameters for the storage backend (ignored for local
         paths).
-    decode_timedelta : bool, optional
+    decode_timedelta : bool, CFTimedeltaCoder or dict-like, optional
         If True, decode variables and coordinates with time units in
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
         into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
-    use_cftime : bool, optional
+        If None (default), assume the same value of ``decode_times``; if
+        ``decode_times`` is a :py:class:`coders.CFDatetimeCoder` instance, this
+        takes the form of a :py:class:`coders.CFTimedeltaCoder` instance with a
+        matching ``time_unit``. Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
+    use_cftime : bool or dict-like, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
@@ -1634,9 +1647,10 @@ def open_zarr(
         ``cftime.datetime`` objects, regardless of whether or not they can be
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
-        raise an error.
-    zarr_format : int or None, optional
-        The desired zarr format to target (currently 2 or 3). The default
+        raise an error. Pass a mapping, e.g. ``{"my_variable": False}``,
+        to toggle this feature per-variable individually.
+    zarr_format : {2, 3} or None, optional
+        The desired zarr format to target. The default
         of None will attempt to determine the zarr version from ``store`` when
         possible, otherwise defaulting to the default version used by
         the zarr-python library installed.
@@ -1690,11 +1704,6 @@ def open_zarr(
             chunks = {}
         except (ValueError, ImportError):
             chunks = None
-
-    if kwargs:
-        raise TypeError(
-            "open_zarr() got unexpected keyword arguments " + ",".join(kwargs.keys())
-        )
 
     backend_kwargs = {
         "consolidated": consolidated,

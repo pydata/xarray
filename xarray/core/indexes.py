@@ -26,12 +26,15 @@ from xarray.core.utils import (
     get_valid_numpy_dtype,
     is_allowed_extension_array_dtype,
     is_dict_like,
+    is_duck_array,
     is_scalar,
 )
+from xarray.namedarray.pycompat import to_numpy
 
 if TYPE_CHECKING:
     from xarray.core.types import ErrorOptions, JoinOptions, Self
     from xarray.core.variable import Variable
+    from xarray.namedarray._typing import duckarray
 
 
 IndexVars = dict[Any, "Variable"]
@@ -542,6 +545,9 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 kwargs["dtype"] = "float64"
 
         values = to_numpy(array)
+        if values.dtype.names is not None:
+            # pandas deprecates creating an index from a structured array
+            values = values.astype(object)
         try:
             index = pd.Index(values, **kwargs)
         except UnicodeEncodeError:
@@ -835,6 +841,9 @@ class PandasIndex(Index):
 
         if isinstance(indxr, slice) and indxr == slice(None):
             return self
+
+        if is_duck_array(indxr) and not isinstance(indxr, np.ndarray):
+            indxr = to_numpy(cast("duckarray[Any, Any]", indxr))
 
         return self._replace(self.index[indxr])  # type: ignore[index,unused-ignore]
 
