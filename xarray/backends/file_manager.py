@@ -420,8 +420,7 @@ class CachingFileManager(FileManager[T_File]):
         if args:
             # a relative path depends on the working directory
             args[0] = _normalize_path(args[0])
-            if isinstance(args[0], str):
-                mtime = _get_mtime(args[0])
+            mtime = _get_mtime(args[0])
         return normalize_token(
             (type(self), self._opener, tuple(args), self._mode, self._kwargs, mtime)
         )
