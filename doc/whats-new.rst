@@ -452,7 +452,7 @@ Bug Fixes
   the file changes. Previously, they were random, so dask did not reuse the data
   of the same file. :py:meth:`H5NetCDFStore.open <xarray.backends.H5NetCDFStore.open>`
   now opens a :py:class:`pathlib.Path` like a string path (:issue:`11814`).
-  By `David Hoese <https://github.com/djhoese>`_ (:issue:`11814`, :pull:`11831`). 
+  By `David Hoese <https://github.com/djhoese>`_ (:issue:`11814`, :pull:`11831`).
 
 
 Documentation
