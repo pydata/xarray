@@ -559,6 +559,16 @@ Performance
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 
+Bug fixes
+~~~~~~~~~
+- Rolling reductions of dask-backed arrays now keep the input chunks along the
+  rolled dimensions in the result. Previously, padding and building the sliding
+  windows could split the rolling dimension into differently-sized chunks
+  (e.g. ``(N-1, 1)`` for ``center=True``), which broke downstream operations
+  that use the rolling dimension as a core dimension (:issue:`11689`).
+  By `inchang-ing <https://github.com/inchang-ing>`_.
+
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - The generated arithmetic operators in ``xarray/core/_typed_ops.py`` use PEP 695
