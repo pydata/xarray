@@ -852,6 +852,29 @@ def test_extract_single_nocase(dtype) -> None:
     assert_equal(res_re_dim, targ_dim)
 
 
+@pytest.mark.parametrize("string_dtype", ["T", "U", "S"])
+@pytest.mark.parametrize("compiled", [False, True])
+def test_extract_multi_string_dtypes(string_dtype, compiled) -> None:
+    value = xr.DataArray(
+        np.array(["!", "alpha_1234", "beta"], dtype=string_dtype), dims="X"
+    )
+    pattern_str = r"([a-z]+)(?:_(\d+))?"
+    pattern = (
+        re.compile(pattern_str.encode() if string_dtype == "S" else pattern_str)
+        if compiled
+        else pattern_str
+    )
+    expected = xr.DataArray(
+        np.array([["", ""], ["alpha", "1234"], ["beta", ""]], dtype=string_dtype),
+        dims=["X", "group"],
+    )
+
+    result = value.str.extract(pattern, dim="group")
+
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+
 def test_extract_multi_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
     pat_re: str | bytes = (
@@ -2244,6 +2267,21 @@ def test_zfill_broadcast(dtype) -> None:
     expected = xr.DataArray(["0001", "00022", "aaa", "333", "00045678"]).astype(dtype)
     assert result.dtype == expected.dtype
     assert_equal(result, expected)
+
+
+def test_zfill_sign(dtype) -> None:
+    # like str.zfill, the zeros go after a leading sign
+    values = xr.DataArray(["-12", "+7", "-", "5-"]).astype(dtype)
+    expected = xr.DataArray(["-012", "+007", "-000", "005-"]).astype(dtype)
+
+    result = values.str.zfill(4)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+    # object arrays use the elementwise path
+    result = values.astype(np.object_).str.zfill(4)
+    assert result.dtype == np.object_
+    assert_equal(result, expected.astype(np.object_))
 
 
 def test_slice(dtype) -> None:
