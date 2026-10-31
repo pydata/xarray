@@ -211,6 +211,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
+  include a note naming the data variable being processed (:issue:`2078`).
+  By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
 - :py:func:`open_dataset` can detect local Zarr directories on Windows without
   raising ``PermissionError`` while checking file-based backends. Permission
   errors for ordinary files still propagate (:issue:`11799`, :pull:`11802`).
