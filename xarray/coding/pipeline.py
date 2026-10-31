@@ -63,10 +63,12 @@ class ReorderableDict[K, V](dict[K, V]):
         return index
 
     def insert(self, name: K, value: V, at: int) -> None:
+        if name in self:
+            raise ValueError(f"duplicate key: {name}")
+
         if at < 0:
-            at = len(self) - at
-        if at < 0 or at > len(self) + 1:
-            raise ValueError(f"at is out of bounds: {at}")
+            # clip to 0 to prepend
+            at = max(len(self) + at, 0)
 
         new_keys = list(self.keys())
         new_keys.insert(at, name)
