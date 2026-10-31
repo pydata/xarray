@@ -458,6 +458,13 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Writing to a Zarr store that addresses a node below the store root, e.g.
+  ``zarr.storage.StorePath(store, "grp")``, with ``consolidated=True`` now also
+  consolidates metadata at that node. Previously it was only consolidated at
+  the store root, so reading the same store back emitted a ``RuntimeWarning``
+  and fell back to non-consolidated metadata, or raised a ``ValueError`` with
+  ``consolidated=True`` (:pull:`XXXXX`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 
 Documentation
