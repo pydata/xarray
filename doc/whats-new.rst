@@ -459,6 +459,13 @@ Bug Fixes
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
 
+- :py:meth:`DataArray.shift`, :py:meth:`Dataset.shift`, :py:meth:`DataArray.pad`
+  and :py:meth:`Dataset.pad` no longer raise ``TypeError`` on variables backed by
+  pandas nullable extension arrays (e.g. ``Int64``, ``Float64``, ``boolean``).
+  The padding/fill values are now inserted using the extension array's own
+  missing value (``pd.NA``), preserving the extension dtype instead of letting
+  numpy coerce it to an ``object`` or numeric ndarray (:issue:`10301`).
+  By `Mayk Thewessen <https://github.com/MaykThewessen>`_.
 
 Documentation
 ~~~~~~~~~~~~~
