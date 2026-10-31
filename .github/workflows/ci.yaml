@@ -124,6 +124,19 @@ jobs:
           environments: ${{ matrix.pixi-env }}
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
 
+      - name: Check OPeNDAP test endpoint
+        if: matrix.pytest-addopts == 'flaky'
+        run: |
+          if curl --location --fail --silent --show-error \
+            --connect-timeout 5 --max-time 10 \
+            --output /dev/null \
+            https://test.opendap.org/opendap/dap4/unaligned_simple_datatree.nc.h5.dmr; then
+            echo "OPENDAP_AVAILABLE=true" >> "$GITHUB_ENV"
+          else
+            echo "OPENDAP_AVAILABLE=false" >> "$GITHUB_ENV"
+            echo "::warning::Skipping network-marked tests because the OPeNDAP test endpoint is unavailable."
+          fi
+
       - name: Set environment variables
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
@@ -135,7 +148,11 @@ jobs:
             then
               # The thread timeout method also kills tests stuck in C code or deadlocked
               # threads, which the default signal method cannot interrupt.
-              echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests --timeout-method=thread -W default" >> $GITHUB_ENV
+              if [[ "$OPENDAP_AVAILABLE" == "true" ]] ; then
+                echo "PYTEST_ADDOPTS=-m 'flaky or network' --run-flaky --run-network-tests --timeout-method=thread -W default" >> $GITHUB_ENV
+              else
+                echo "PYTEST_ADDOPTS=-m 'flaky' --run-flaky --timeout-method=thread -W default" >> $GITHUB_ENV
+              fi
             elif [[ "${{ matrix.pytest-addopts }}" == "mypy" ]] ;
             then
               echo "PYTEST_ADDOPTS=-n 1 -m 'mypy' --run-mypy -W default" >> $GITHUB_ENV
@@ -178,7 +195,12 @@ jobs:
       - name: Run tests
         id: tests
         run: |
-          pixi run -e ${{ matrix.pixi-env }} -- python -m pytest -n ${{ matrix.numprocesses || 4 }} \
+          if [[ "${{ matrix.pytest-addopts }}" == "flaky" ]]; then
+            NPROCS=""
+          else
+            NPROCS="-n ${{ matrix.numprocesses || 4 }}"
+          fi
+          pixi run -e ${{ matrix.pixi-env }} -- python -m pytest $NPROCS \
             --timeout 180 \
             --cov=xarray \
             --cov-report=xml \
