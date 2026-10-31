@@ -20,7 +20,7 @@ from xarray.namedarray._typing import (
 )
 from xarray.namedarray.core import NamedArray, from_array
 from xarray.namedarray.utils import fake_target_chunksize, module_available
-from xarray.tests import requires_array_api_strict, requires_cftime
+from xarray.tests import dask_array_api, requires_array_api_strict, requires_cftime
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -684,7 +684,21 @@ def test_fake_target_chunksize(
 
 
 @requires_cftime
-def test_fake_target_chunksize_cftime() -> None:
+@pytest.mark.parametrize(
+    "date_type",
+    [
+        "Datetime360Day",
+        "DatetimeNoLeap",
+        "DatetimeAllLeap",
+        "DatetimeGregorian",
+        "DatetimeProlepticGregorian",
+        "DatetimeJulian",
+    ],
+)
+@pytest.mark.parametrize("shape", [(100,), (10, 10)])
+def test_fake_target_chunksize_cftime(
+    date_type: str, shape: tuple[int, ...], use_dask: bool
+) -> None:
     """Check that `fake_target_chunksize` returns the expected chunksize and dtype.
 
     - It pretends to dask we are chunking an array with an 8-byte dtype, ie. a float64.
@@ -696,17 +710,23 @@ def test_fake_target_chunksize_cftime() -> None:
 
     input_array = np.array(
         [
-            cftime.Datetime360Day(2000, month, day, 0, 0, 0, 0)
+            getattr(cftime, date_type)(2000, month, day, 0, 0, 0, 0)
             for month in range(1, 11)
             for day in range(1, 11)
         ],
         dtype=object,
-    ).reshape(10, 10)
+    ).reshape(shape)
+
+    # One pointer and one independently allocated datetime per element, not
+    # the shallow size of the temporary array used to retrieve the first item.
+    bytes_per_element = input_array.dtype.itemsize + sys.getsizeof(input_array.flat[0])
+    expected_elements = target_chunksize / bytes_per_element
+    if use_dask:
+        input_array = dask_array_api.from_array(input_array, chunks=5)
 
     faked_chunksize, dtype = fake_target_chunksize(input_array, target_chunksize)  # type: ignore[arg-type,unused-ignore]
 
-    # sys.getsizeof of the object array is smaller on 32-bit platforms
-    assert faked_chunksize == (73 if sys.maxsize > 2**32 else 146)
+    assert faked_chunksize == int(expected_elements * np.dtype(np.float64).itemsize)
     assert dtype == np.float64
 
 

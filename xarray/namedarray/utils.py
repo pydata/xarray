@@ -293,7 +293,11 @@ def fake_target_chunksize(
 
     output_dtype = np.dtype(np.float64)
 
-    nbytes_approx: int = sys.getsizeof(first_n_items(data, 1))  # type: ignore[no-untyped-call]
+    sample = first_n_items(data, 1)[0]  # type: ignore[no-untyped-call]
+    # Object arrays store pointers to separately allocated datetime objects.
+    # Size the scalar, not the temporary sample array, and include its pointer.
+    # This estimates distinct datetime objects, without counting shared referents.
+    nbytes_approx = sys.getsizeof(sample) + data.dtype.itemsize
 
     f64_nbytes = output_dtype.itemsize
 

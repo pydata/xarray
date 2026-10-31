@@ -1241,6 +1241,19 @@ def test_auto_chunk_da_cftime():
 
 
 @requires_cftime
+def test_auto_chunk_da_cftime_memory_limit() -> None:
+    dates = xr.date_range("2000-01-01", periods=100, use_cftime=True).values
+    bytes_per_element = dates.dtype.itemsize + sys.getsizeof(dates[0])
+    # Choose a budget that distinguishes sizing a scalar plus its pointer from
+    # sizing the one-element sample array.
+    limit = 14 * bytes_per_element
+    with dask.config.set({"array.chunk-size": limit}):
+        actual = xr.DataArray(dates, dims="time").chunk({"time": 1}).chunk("auto")
+
+    assert actual.chunks == ((14,) * 7 + (2,),)
+
+
+@requires_cftime
 @pytest.mark.parametrize(
     ("chunks", "expected"),
     [({"x": 2, "y": 3}, ((2,), (3,))), ({"x": 2}, ((2,), (1, 1, 1)))],

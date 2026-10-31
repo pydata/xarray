@@ -211,6 +211,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Fix automatic chunk sizes for cftime arrays to account for both the datetime
+  objects and their array pointers, instead of sizing a temporary sample array.
 - Fix CuPy indexers with pandas-backed coordinates, basic and label-based
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
