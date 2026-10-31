@@ -1063,9 +1063,7 @@ class NamedArray(
         # Return NamedArray to handle IndexVariable when data is nD
         return from_array(dims, data, attrs=self._attrs)
 
-    def _nonzero[T_NamedArrayInteger: _NamedArray[np.integer[Any], Any]](
-        self: T_NamedArrayInteger,
-    ) -> tuple[T_NamedArrayInteger, ...]:
+    def _nonzero(self) -> tuple[Self, ...]:
         """Equivalent numpy's nonzero but returns a tuple of NamedArrays."""
         # TODO: we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
@@ -1073,7 +1071,7 @@ class NamedArray(
         nonzeros = np.nonzero(cast("NDArray[np.integer[Any]]", self.data))
         _attrs = self.attrs
         return tuple(
-            cast("T_NamedArrayInteger", self._new((dim,), nz, _attrs))
+            cast("Self", self._new((dim,), nz, _attrs))
             for nz, dim in zip(nonzeros, self.dims, strict=True)
         )
 
@@ -1281,11 +1279,6 @@ class NamedArray(
         from xarray.namedarray._array_api import expand_dims
 
         return expand_dims(self, dim=dim)
-
-
-type _NamedArray[ScalarType: np.generic, DimType: Hashable] = NamedArray[
-    Any, np.dtype[ScalarType], DimType
-]
 
 
 def _raise_if_any_duplicate_dimensions[DimType_co: Hashable](
