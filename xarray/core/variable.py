@@ -1129,6 +1129,7 @@ class Variable(
                 value = Variable(dims[-value.ndim :], value)
         # broadcast to become assignable
         value = value.set_dims(dims).data
+        value = to_like_array(value, self._data)
 
         if new_order:
             value = duck_array_ops.asarray(value)
@@ -1152,13 +1153,6 @@ class Variable(
             self._encoding = dict(value)
         except ValueError as err:
             raise ValueError("encoding must be castable to a dictionary") from err
-
-    def reset_encoding(self) -> Self:
-        emit_user_level_warning(
-            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
-            FutureWarning,
-        )
-        return self.drop_encoding()
 
     def drop_encoding(self) -> Self:
         """Return a new Variable without encoding."""

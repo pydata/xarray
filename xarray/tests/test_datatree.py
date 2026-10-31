@@ -220,6 +220,17 @@ class TestStoreDatasets:
         with pytest.raises(TypeError):
             john.dataset = "junk"  # type: ignore[assignment]
 
+    def test_ds_deprecated(self) -> None:
+        john = DataTree(name="john", dataset=xr.Dataset({"a": 0}))
+        with pytest.warns(FutureWarning, match=r"DataTree\.ds is deprecated"):
+            actual = john.ds
+        assert_identical(actual, john.dataset)
+
+        dat = xr.Dataset({"a": 1})
+        with pytest.warns(FutureWarning, match=r"DataTree\.ds is deprecated"):
+            john.ds = dat  # type: ignore[assignment,unused-ignore]
+        assert_identical(john.to_dataset(), dat)
+
     def test_has_data(self) -> None:
         john = DataTree(name="john", dataset=xr.Dataset({"a": 0}))
         assert john.has_data

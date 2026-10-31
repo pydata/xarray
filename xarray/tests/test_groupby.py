@@ -274,6 +274,33 @@ def test_ds_groupby_map_func_args() -> None:
     assert_identical(expected, actual)
 
 
+@pytest.mark.parametrize("use_da", [True, False])
+def test_groupby_apply_deprecated(use_da: bool) -> None:
+    obj: xr.DataArray | xr.Dataset = xr.DataArray(
+        [1.0, 2.0, 3.0, 4.0], [("x", [1, 1, 2, 2])]
+    )
+    if not use_da:
+        obj = obj.to_dataset(name="foo")
+
+    expected = obj.groupby("x").map(lambda g: g - g.mean())
+    with pytest.warns(FutureWarning, match=r"GroupBy\.apply is deprecated"):
+        actual = obj.groupby("x").apply(lambda g: g - g.mean())
+    assert_identical(expected, actual)
+
+
+@pytest.mark.parametrize("use_da", [True, False])
+def test_resample_apply_deprecated(use_da: bool) -> None:
+    times = pd.date_range("2000-01-01", freq="6h", periods=8)
+    obj: xr.DataArray | xr.Dataset = xr.DataArray(np.arange(8.0), [("time", times)])
+    if not use_da:
+        obj = obj.to_dataset(name="foo")
+
+    expected = obj.resample(time="1D").map(lambda g: g.mean("time"))
+    with pytest.warns(FutureWarning, match=r"Resample\.apply is deprecated"):
+        actual = obj.resample(time="1D").apply(lambda g: g.mean("time"))
+    assert_identical(expected, actual)
+
+
 def test_da_groupby_empty() -> None:
     empty_array = xr.DataArray([], dims="dim")
 

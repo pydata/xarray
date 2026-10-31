@@ -493,13 +493,6 @@ class Dataset(
     def encoding(self, value: Mapping[Any, Any]) -> None:
         self._encoding = dict(value)
 
-    def reset_encoding(self) -> Self:
-        emit_user_level_warning(
-            "reset_encoding is deprecated since 2023.10, use `drop_encoding` instead",
-            FutureWarning,
-        )
-        return self.drop_encoding()
-
     def drop_encoding(self) -> Self:
         """Return a new Dataset without encoding.
 
@@ -882,6 +875,13 @@ class Dataset(
         Dataset.load_async
         DataArray.compute
         Variable.compute
+
+        Examples
+        --------
+        >>> ds = xr.Dataset({"a": (("x",), [1, 2, 3])}).chunk({"x": 1})
+        >>> computed = ds.compute()
+        >>> type(computed["a"].data)
+        <class 'numpy.ndarray'>
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -926,6 +926,13 @@ class Dataset(
         See Also
         --------
         dask.persist
+
+        Examples
+        --------
+        >>> ds = xr.Dataset({"a": (("x",), [1, 2, 3])}).chunk({"x": 1})
+        >>> persisted = ds.persist()
+        >>> type(persisted["a"].data)
+        <class 'dask.array.core.Array'>
         """
         new = self.copy(deep=False)
         return new._persist_inplace(**kwargs)
@@ -2652,6 +2659,27 @@ class Dataset(
         Dataset.chunksizes
         xarray.unify_chunks
         dask.array.from_array
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("time", np.arange(6.0))},
+        ...     coords={"time": pd.date_range("2000-01-01", freq="MS", periods=6)},
+        ... )
+        >>> ds.chunk(time=2)
+        <xarray.Dataset> Size: 96B
+        Dimensions:      (time: 6)
+        Coordinates:
+          * time         (time) datetime64[us] 48B 2000-01-01 2000-02-01 ... 2000-06-01
+        Data variables:
+            temperature  (time) float64 48B dask.array<chunksize=(2,), meta=np.ndarray>
+
+        Along a datetime-like dimension, a resampler creates one chunk per period,
+        here one per quarter:
+
+        >>> from xarray.groupers import TimeResampler
+        >>> ds.chunk(time=TimeResampler("QS")).chunksizes
+        Frozen({'time': (3, 3)})
         """
         from xarray.groupers import Resampler
 
@@ -3566,6 +3594,59 @@ class Dataset(
         DataArray.reindex_like
         align
 
+        Examples
+        --------
+        Reindex time-series observations to the time index of another dataset.
+        Values for new index labels are filled with ``NaN`` by default:
+
+        >>> observations = xr.Dataset(
+        ...     {"temperature": ("time", [18.0, 21.0])},
+        ...     coords={"time": [0, 2]},
+        ... )
+        >>> observations
+        <xarray.Dataset> Size: 32B
+        Dimensions:      (time: 2)
+        Coordinates:
+          * time         (time) int64 16B 0 2
+        Data variables:
+            temperature  (time) float64 16B 18.0 21.0
+        >>> target = xr.Dataset(coords={"time": [0, 1, 2]})
+        >>> target
+        <xarray.Dataset> Size: 24B
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) int64 24B 0 1 2
+        Data variables:
+            *empty*
+        >>> observations.reindex_like(target)
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) float64 24B 18.0 nan 21.0
+
+        Filling missing values with a specified value:
+
+        >>> observations.reindex_like(target, fill_value=0.0)
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) float64 24B 18.0 0.0 21.0
+
+        Filling missing values with the previous valid index with respect to
+        the coordinates' value:
+
+        >>> observations.reindex_like(target, method="ffill")
+        <xarray.Dataset> Size: 48B
+        Dimensions:      (time: 3)
+        Coordinates:
+          * time         (time) int64 24B 0 1 2
+        Data variables:
+            temperature  (time) float64 24B 18.0 18.0 21.0
+
         """
         return alignment.reindex_like(
             self,
@@ -3902,6 +3983,12 @@ class Dataset(
         - When interpolating along multiple dimensions with methods `linear` and `nearest`,
             the process attempts to decompose the interpolation into independent interpolations
             along one dimension at a time.
+        - For Dask arrays, the chunks along the interpolated dimensions are merged
+            into a single chunk. With methods `linear` and `nearest`, the data is
+            first subset to the range of the new coordinates, so only the chunks that
+            are needed are read. This only happens if the new coordinates are in
+            memory, so loading chunked new coordinates first (e.g. with ``.compute()``)
+            can reduce the memory use considerably if they are cheap to compute.
         - The specific interpolation method and dimensionality determine which
             interpolant is used:
 
@@ -4232,6 +4319,49 @@ class Dataset(
             4. **Interpolation along multiple dimensions of multi-dimensional data**
                 - Uses :py:func:`scipy.interpolate.interpn` for methods {"linear", "nearest", "slinear",
                     "cubic", "quintic", "pchip"}.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "temperature": ("x", [10.0, 20.0, 30.0]),
+        ...         "pressure": ("x", [1.0, 2.0, 4.0]),
+        ...     },
+        ...     coords={"x": [0.0, 1.0, 2.0]},
+        ... )
+        >>> other = xr.Dataset(coords={"x": [0.5, 1.5, 2.5]})
+
+        Interpolate all variables to the coordinates of ``other``. Values
+        outside of the original coordinates are ``NaN``:
+
+        >>> ds.interp_like(other)
+        <xarray.Dataset> Size: 72B
+        Dimensions:      (x: 3)
+        Coordinates:
+          * x            (x) float64 24B 0.5 1.5 2.5
+        Data variables:
+            temperature  (x) float64 24B 15.0 25.0 nan
+            pressure     (x) float64 24B 1.5 3.0 nan
+
+        Use another method, or pass options to the interpolator, e.g. to
+        extrapolate:
+
+        >>> ds.interp_like(other, method="nearest")
+        <xarray.Dataset> Size: 72B
+        Dimensions:      (x: 3)
+        Coordinates:
+          * x            (x) float64 24B 0.5 1.5 2.5
+        Data variables:
+            temperature  (x) float64 24B 10.0 20.0 nan
+            pressure     (x) float64 24B 1.0 2.0 nan
+        >>> ds.interp_like(other, kwargs={"fill_value": "extrapolate"})
+        <xarray.Dataset> Size: 72B
+        Dimensions:      (x: 3)
+        Coordinates:
+          * x            (x) float64 24B 0.5 1.5 2.5
+        Data variables:
+            temperature  (x) float64 24B 15.0 25.0 35.0
+            pressure     (x) float64 24B 1.5 3.0 5.0
         """
         if kwargs is None:
             kwargs = {}
@@ -6347,6 +6477,50 @@ class Dataset(
         obj : Dataset
             The dataset without the given dimensions (or any variables
             containing those dimensions).
+
+        See Also
+        --------
+        Dataset.drop_vars
+        DataArray.drop_vars
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "a": (("x", "y"), [[1.0, 2.0], [3.0, 4.0]]),
+        ...         "b": (("x",), [5.0, 6.0]),
+        ...     },
+        ...     coords={"x": ["a", "b"], "y": ["c", "d"]},
+        ... )
+        >>> ds
+        <xarray.Dataset> Size: 64B
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+          * y        (y) <U1 8B 'c' 'd'
+        Data variables:
+            a        (x, y) float64 32B 1.0 2.0 3.0 4.0
+            b        (x) float64 16B 5.0 6.0
+
+        Drop ``y`` and the variables that use it:
+
+        >>> ds.drop_dims("y")
+        <xarray.Dataset> Size: 24B
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+        Data variables:
+            b        (x) float64 16B 5.0 6.0
+
+        Dimensions that don't exist raise an error, unless ``errors="ignore"``:
+
+        >>> ds.drop_dims(["y", "z"], errors="ignore")
+        <xarray.Dataset> Size: 24B
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) <U1 8B 'a' 'b'
+        Data variables:
+            b        (x) float64 16B 5.0 6.0
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
@@ -7155,10 +7329,9 @@ class Dataset(
         --------
         Dataset.map
         """
-        warnings.warn(
-            "Dataset.apply may be deprecated in the future. Using Dataset.map is encouraged",
-            PendingDeprecationWarning,
-            stacklevel=2,
+        emit_user_level_warning(
+            "Dataset.apply is deprecated, use Dataset.map instead.",
+            FutureWarning,
         )
         return self.map(func, keep_attrs, args, **kwargs)
 
@@ -10332,6 +10505,24 @@ class Dataset(
             will be dropped as there are no equivalent dates in a standard calendar.
 
             This option is best used with data on a frequency coarser than daily.
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"temperature": ("time", [10.0, 11.0, 12.0])},
+        ...     coords={"time": pd.date_range("2000-01-29", periods=3)},
+        ... )
+
+        The ``"360_day"`` calendar has no 31st, so with ``align_on="date"`` the
+        31st of January is dropped:
+
+        >>> ds.convert_calendar("360_day", align_on="date")
+        <xarray.Dataset> Size: 32B
+        Dimensions:      (time: 2)
+        Coordinates:
+          * time         (time) object 16B 2000-01-29 00:00:00 2000-01-30 00:00:00
+        Data variables:
+            temperature  (time) float64 16B 10.0 11.0
         """
         return convert_calendar(
             self,

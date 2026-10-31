@@ -101,7 +101,8 @@ def _get_mtime(filename_or_obj):
     except TypeError:
         path = None
 
-    if path and not is_remote_uri(path):
+    # bytes are the contents of a file, not a path
+    if isinstance(path, str) and not is_remote_uri(path):
         with contextlib.suppress(OSError):
             mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
 
@@ -158,6 +159,20 @@ def load_dataset(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:
     See Also
     --------
     open_dataset
+
+    Examples
+    --------
+    >>> ds = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0])})
+    >>> ds.to_netcdf("example.nc")
+
+    The data is loaded into memory and the file is closed again:
+
+    >>> xr.load_dataset("example.nc")
+    <xarray.Dataset> Size: 24B
+    Dimensions:  (x: 3)
+    Dimensions without coordinates: x
+    Data variables:
+        a        (x) float64 24B 1.0 2.0 3.0
     """
     if "cache" in kwargs:
         raise TypeError("cache has no effect in this context")
@@ -185,6 +200,18 @@ def load_dataarray(filename_or_obj: T_PathFileOrDataStore, **kwargs) -> DataArra
     See Also
     --------
     open_dataarray
+
+    Examples
+    --------
+    >>> da = xr.DataArray([1.0, 2.0, 3.0], dims="x", name="a")
+    >>> da.to_netcdf("example.nc")
+
+    The data is loaded into memory and the file is closed again:
+
+    >>> xr.load_dataarray("example.nc")
+    <xarray.DataArray 'a' (x: 3)> Size: 24B
+    array([1., 2., 3.])
+    Dimensions without coordinates: x
     """
     if "cache" in kwargs:
         raise TypeError("cache has no effect in this context")
@@ -419,13 +446,14 @@ def open_dataset(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview, DataStore or zarr store
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Bytes, memoryview and
         file-like objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf
-        (netCDF4).
+        (netCDF4). Zarr stores (see ``zarr.storage.StoreLike``) are opened
+        with ``engine="zarr"``.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -581,6 +609,8 @@ def open_dataset(
     See Also
     --------
     open_mfdataset
+    load_dataset
+    open_dataarray
 
     Notes
     -----
@@ -594,6 +624,61 @@ def open_dataset(
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
+
+    Examples
+    --------
+    Open a dataset from a netCDF file. First, we create a file for this example:
+
+    >>> ds = xr.Dataset(
+    ...     {"a": ("time", [1.0, 2.0, 3.0])},
+    ...     coords={
+    ...         "time": ("time", [0.0, 1.0, 2.0], {"units": "days since 2000-01-01"})
+    ...     },
+    ... )
+    >>> ds.to_netcdf("example.nc")
+
+    The data is only loaded from the file when it is needed, and times are
+    decoded following the CF conventions:
+
+    >>> ds_disk = xr.open_dataset("example.nc")
+    >>> ds_disk
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 3)
+    Coordinates:
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+    Data variables:
+        a        (time) float64 24B ...
+    >>> ds_disk.close()
+
+    Keep the raw values of the time coordinate:
+
+    >>> with xr.open_dataset("example.nc", decode_times=False) as ds_disk:
+    ...     ds_disk
+    ...
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 3)
+    Coordinates:
+      * time     (time) float64 24B 0.0 1.0 2.0
+    Data variables:
+        a        (time) float64 24B ...
+
+    Open the data as dask arrays, using the chunks of the file on disk:
+
+    >>> with xr.open_dataset("example.nc", chunks={}) as ds_disk:
+    ...     ds_disk
+    ...
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 3)
+    Coordinates:
+      * time     (time) datetime64[ns] 24B 2000-01-01 2000-01-02 2000-01-03
+    Data variables:
+        a        (time) float64 24B dask.array<chunksize=(3,), meta=np.ndarray>
+
+    Open a dataset from a remote OPeNDAP URL:
+
+    >>> ds = xr.open_dataset(
+    ...     "https://psl.noaa.gov/thredds/dodsC/Datasets/ncep.reanalysis.dailyavgs/surface/air.sig995.1948.nc"
+    ... )  # doctest: +SKIP
     """
     if cache is None:
         cache = chunks is None
@@ -675,13 +760,14 @@ def open_dataarray(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview, DataStore or zarr store
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Bytes, memoryview and
         file-like objects are opened by scipy.io.netcdf (netCDF3) or h5netcdf
-        (netCDF4).
+        (netCDF4). Zarr stores (see ``zarr.storage.StoreLike``) are opened
+        with ``engine="zarr"``.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "zarr", None}\
         , installed backend \
         or subclass of xarray.backends.BackendEntrypoint, optional
@@ -824,6 +910,7 @@ def open_dataarray(
     See Also
     --------
     open_dataset
+    load_dataarray
 
     Notes
     -----
@@ -833,6 +920,22 @@ def open_dataarray(
 
     All parameters are passed directly to `xarray.open_dataset`. See that
     documentation for further details.
+
+    Examples
+    --------
+    Open a DataArray from a netCDF file. First, we create a file for this example:
+
+    >>> da = xr.DataArray([1.0, 2.0, 3.0], dims="x", name="a")
+    >>> da.to_netcdf("example.nc")
+
+    The data is only loaded from the file when it is needed:
+
+    >>> da_disk = xr.open_dataarray("example.nc")
+    >>> da_disk
+    <xarray.DataArray 'a' (x: 3)> Size: 24B
+    [3 values with dtype=float64]
+    Dimensions without coordinates: x
+    >>> da_disk.close()
     """
     dataset = open_dataset(
         filename_or_obj,
@@ -911,10 +1014,11 @@ def open_datatree(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview, DataStore or zarr store
         Strings and Path objects are interpreted as a path to a netCDF file or
         Zarr store. Bytes and memoryview objects are interpreted as file
-        contents.
+        contents. Zarr stores (see ``zarr.storage.StoreLike``) are opened with
+        ``engine="zarr"``.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -1163,10 +1267,11 @@ def open_groups(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file-like, bytes, memoryview or DataStore
+    filename_or_obj : str, Path, file-like, bytes, memoryview, DataStore or zarr store
         Strings and Path objects are interpreted as a path to a netCDF file or
         Zarr store. Bytes and memoryview objects are interpreted as file
-        contents.
+        contents. Zarr stores (see ``zarr.storage.StoreLike``) are opened with
+        ``engine="zarr"``.
     engine : {"netcdf4", "h5netcdf", "zarr", None}, \
              installed backend or xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
@@ -1329,6 +1434,31 @@ def open_groups(
     values of a Dataset, even one linked to files on disk, only the in-memory
     copy you are manipulating in xarray is modified: the original file on disk
     is never touched.
+
+    Examples
+    --------
+    Open groups from a netCDF file as a dictionary of Datasets. First, create a
+    file with groups:
+
+    >>> ds1 = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0])})
+    >>> ds2 = xr.Dataset({"b": ("y", [4.0, 5.0])})
+    >>> ds1.to_netcdf("example.nc", group="group1", mode="w")
+    >>> ds2.to_netcdf("example.nc", group="group2", mode="a")
+
+    The dictionary includes the root group:
+
+    >>> groups = xr.open_groups("example.nc")
+    >>> sorted(groups)
+    ['/', '/group1', '/group2']
+    >>> groups["/group1"]
+    <xarray.Dataset> Size: 24B
+    Dimensions:  (x: 3)
+    Dimensions without coordinates: x
+    Data variables:
+        a        (x) float64 24B ...
+    >>> for ds in groups.values():
+    ...     ds.close()
+    ...
     """
     if cache is None:
         cache = chunks is None
@@ -1598,6 +1728,40 @@ def open_mfdataset(
 
     Examples
     --------
+    Combine two files along their coordinate ``x``:
+
+    >>> ds1 = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0])}, coords={"x": [0.0, 1.0, 2.0]})
+    >>> ds2 = xr.Dataset({"a": ("x", [4.0, 5.0, 6.0])}, coords={"x": [3.0, 4.0, 5.0]})
+    >>> ds1.to_netcdf("example_1.nc")
+    >>> ds2.to_netcdf("example_2.nc")
+    >>> ds = xr.open_mfdataset(["example_1.nc", "example_2.nc"], combine="by_coords")
+    >>> ds
+    <xarray.Dataset> Size: 96B
+    Dimensions:  (x: 6)
+    Coordinates:
+      * x        (x) float64 48B 0.0 1.0 2.0 3.0 4.0 5.0
+    Data variables:
+        a        (x) float64 48B dask.array<chunksize=(3,), meta=np.ndarray>
+    >>> ds.close()
+
+    Files without a coordinate to combine by can be stacked along a new
+    dimension, in the order given:
+
+    >>> ds1 = xr.Dataset({"a": ("x", [1.0, 2.0, 3.0])})
+    >>> ds2 = xr.Dataset({"a": ("x", [4.0, 5.0, 6.0])})
+    >>> ds1.to_netcdf("example_1.nc")
+    >>> ds2.to_netcdf("example_2.nc")
+    >>> ds = xr.open_mfdataset(
+    ...     ["example_1.nc", "example_2.nc"], combine="nested", concat_dim="time"
+    ... )
+    >>> ds
+    <xarray.Dataset> Size: 48B
+    Dimensions:  (time: 2, x: 3)
+    Dimensions without coordinates: time, x
+    Data variables:
+        a        (time, x) float64 48B dask.array<chunksize=(1, 3), meta=np.ndarray>
+    >>> ds.close()
+
     A user might want to pass additional arguments into ``preprocess`` when
     applying some operation to many individual files that are being opened. One route
     to do this is through the use of ``functools.partial``.
