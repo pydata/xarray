@@ -463,7 +463,7 @@ Bug Fixes
   consolidates metadata at that node. Previously it was only consolidated at
   the store root, so reading the same store back emitted a ``RuntimeWarning``
   and fell back to non-consolidated metadata, or raised a ``ValueError`` with
-  ``consolidated=True`` (:pull:`XXXXX`).
+  ``consolidated=True`` (:pull:`11835`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 
