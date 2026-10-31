@@ -1951,7 +1951,7 @@ class TestContour(Common2dMixin, PlotTestCase):
         with pytest.raises(ValueError):
             self.plotmethod(colors="k", cmap="RdBu")
 
-    def list_of_colors_in_cmap_raises_error(self) -> None:
+    def test_list_of_colors_in_cmap_raises_error(self) -> None:
         with pytest.raises(ValueError, match=r"list of colors"):
             self.plotmethod(cmap=["k", "b"])
 
