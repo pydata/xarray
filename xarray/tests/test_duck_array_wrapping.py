@@ -124,14 +124,6 @@ NAMESPACES = [
     for namespace in NAMESPACE_ARRAYS
 ]
 
-try:
-    import jax  # type: ignore[import-not-found,unused-ignore]
-
-    # enable double-precision
-    jax.config.update("jax_enable_x64", True)
-except ImportError:
-    pass
-
 
 class _BaseTest:
     def setup_for_test(self, request, namespace):
@@ -154,6 +146,13 @@ class _BaseTest:
             self.constructor = getattr(
                 self.xp, NAMESPACE_ARRAYS[namespace]["attrs"]["constructor"]
             )
+
+        if namespace == "jax.numpy":
+            import jax  # type: ignore[import-not-found,unused-ignore]
+
+            # enable double-precision
+            jax.config.update("jax_enable_x64", True)
+
         if xarray_method in NAMESPACE_ARRAYS[namespace]["xfails"]:
             reason = NAMESPACE_ARRAYS[namespace]["xfails"][xarray_method]
             pytest.xfail(f"xfail for {self.namespace}: {reason}")
