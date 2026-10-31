@@ -211,6 +211,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:func:`open_dataset` can detect local Zarr directories on Windows without
+  raising ``PermissionError`` while checking file-based backends. Permission
+  errors for ordinary files still propagate (:issue:`11799`, :pull:`11802`).
+  By `Gabriel Demetrios Lafis <https://github.com/galafis>`_.
 - Fix CuPy indexers with pandas-backed coordinates, basic and label-based
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
