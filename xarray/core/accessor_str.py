@@ -2159,10 +2159,10 @@ class StringAccessor[T_DataArray: DataArray]:
         def _get_res_multi(val, pat):
             match = pat.search(val)
             if match is None:
-                return np.array([""], val.dtype)
+                return np.array([""] * maxgroups, dtype=np.object_)
             match = match.groups()
             match = [grp if grp is not None else "" for grp in match]
-            return np.array(match, val.dtype)
+            return np.array(match, dtype=np.object_)
 
         if dim is None:
             return self._apply(func=_get_res_single, func_args=(pat,))

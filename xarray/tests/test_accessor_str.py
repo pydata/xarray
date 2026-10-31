@@ -852,6 +852,29 @@ def test_extract_single_nocase(dtype) -> None:
     assert_equal(res_re_dim, targ_dim)
 
 
+@pytest.mark.parametrize("string_dtype", ["T", "U", "S"])
+@pytest.mark.parametrize("compiled", [False, True])
+def test_extract_multi_string_dtypes(string_dtype, compiled) -> None:
+    value = xr.DataArray(
+        np.array(["!", "alpha_1234", "beta"], dtype=string_dtype), dims="X"
+    )
+    pattern_str = r"([a-z]+)(?:_(\d+))?"
+    pattern = (
+        re.compile(pattern_str.encode() if string_dtype == "S" else pattern_str)
+        if compiled
+        else pattern_str
+    )
+    expected = xr.DataArray(
+        np.array([["", ""], ["alpha", "1234"], ["beta", ""]], dtype=string_dtype),
+        dims=["X", "group"],
+    )
+
+    result = value.str.extract(pattern, dim="group")
+
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+
 def test_extract_multi_case(dtype) -> None:
     pat_str = r"(\w+)_Xy_(\d*)"
     pat_re: str | bytes = (
