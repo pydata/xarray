@@ -2246,6 +2246,21 @@ def test_zfill_broadcast(dtype) -> None:
     assert_equal(result, expected)
 
 
+def test_zfill_sign(dtype) -> None:
+    # like str.zfill, the zeros go after a leading sign
+    values = xr.DataArray(["-12", "+7", "-", "5-"]).astype(dtype)
+    expected = xr.DataArray(["-012", "+007", "-000", "005-"]).astype(dtype)
+
+    result = values.str.zfill(4)
+    assert result.dtype == expected.dtype
+    assert_equal(result, expected)
+
+    # object arrays use the elementwise path
+    result = values.astype(np.object_).str.zfill(4)
+    assert result.dtype == np.object_
+    assert_equal(result, expected.astype(np.object_))
+
+
 def test_slice(dtype) -> None:
     arr = xr.DataArray(["aafootwo", "aabartwo", "aabazqux"]).astype(dtype)
 
