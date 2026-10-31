@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import os
 from collections.abc import (
     Callable,
@@ -21,6 +20,7 @@ from xarray.backends import plugins
 from xarray.backends.common import (
     T_PathFileOrDataStore,
     _find_absolute_paths,
+    _get_mtime,
     _normalize_path,
 )
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
@@ -32,7 +32,7 @@ from xarray.core.datatree import DataTree
 from xarray.core.indexes import Index
 from xarray.core.treenode import group_subtrees
 from xarray.core.types import ReadBuffer
-from xarray.core.utils import emit_user_level_warning, is_remote_uri
+from xarray.core.utils import emit_user_level_warning
 from xarray.namedarray.daskmanager import DaskManager
 from xarray.namedarray.parallelcompat import guess_chunkmanager, list_chunkmanagers
 from xarray.namedarray.utils import _get_chunk
@@ -89,24 +89,6 @@ def _resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decod
         if decoders[d] is None:
             decoders.pop(d)
     return decoders
-
-
-def _get_mtime(filename_or_obj):
-    # if passed an actual file path, augment the token with
-    # the file modification time
-    mtime = None
-
-    try:
-        path = os.fspath(filename_or_obj)
-    except TypeError:
-        path = None
-
-    # bytes are the contents of a file, not a path
-    if isinstance(path, str) and not is_remote_uri(path):
-        with contextlib.suppress(OSError):
-            mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
-
-    return mtime
 
 
 def _protect_dataset_variables_inplace(dataset: Dataset, cache: bool) -> None:

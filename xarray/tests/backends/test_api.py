@@ -2023,3 +2023,146 @@ def test_get_mtime_non_file_paths() -> None:
 
     # GDAL virtual filesystem paths are not real files
     assert _get_mtime("/vsicurl/https://example.com/file.nc") is None
+
+
+_STORE_CLASSES = [
+    pytest.param(xr.backends.NetCDF4DataStore, marks=requires_netCDF4, id="netcdf4"),
+    pytest.param(xr.backends.H5NetCDFStore, marks=requires_h5netcdf, id="h5netcdf"),
+    pytest.param(xr.backends.ScipyDataStore, marks=requires_scipy, id="scipy"),
+]
+
+
+def _open_store(store_class, path, **kwargs):
+    if issubclass(store_class, xr.backends.ScipyDataStore):
+        return store_class(str(path), **kwargs)
+    return store_class.open(path, **kwargs)
+
+
+def _engine(store_class) -> T_NetcdfEngine:
+    if issubclass(store_class, xr.backends.NetCDF4DataStore):
+        return "netcdf4"
+    if issubclass(store_class, xr.backends.H5NetCDFStore):
+        return "h5netcdf"
+    return "scipy"
+
+
+def _dask_name(store) -> str:
+    with open_dataset(store, chunks={}) as ds:
+        return ds["a"].data.name
+
+
+@requires_dask
+@pytest.mark.parametrize("store_class", _STORE_CLASSES)
+def test_open_dataset_from_store_deterministic_names(tmp_path, store_class) -> None:
+    # GH11814: like a filename, a store gives the same dask names every time
+    path = tmp_path / "test.nc"
+    other = tmp_path / "other.nc"
+    data = Dataset({"a": ("x", np.arange(4))})
+    data.to_netcdf(path, engine=_engine(store_class))
+    data.to_netcdf(other, engine=_engine(store_class))
+    name = _dask_name(_open_store(store_class, path))
+
+    # the same file through another store, with another file manager
+    assert _dask_name(_open_store(store_class, path)) == name
+    assert _dask_name(_open_store(store_class, other)) != name
+    # the file rewritten, i.e. with another modification time
+    mtime_ns = path.stat().st_mtime_ns
+    os.utime(path, ns=(mtime_ns, mtime_ns + 1_000_000_000))
+    assert _dask_name(_open_store(store_class, path)) != name
+
+
+@requires_dask
+@pytest.mark.parametrize("store_class", _STORE_CLASSES[:2])
+def test_open_dataset_from_store_group_names(tmp_path, store_class) -> None:
+    path = tmp_path / "test.nc"
+    engine = _engine(store_class)
+    Dataset({"a": ("x", np.arange(4))}).to_netcdf(path, engine=engine)
+    for group, factor in [("g", 2), ("g/h", 3)]:
+        data = Dataset({"a": ("x", np.arange(4) * factor)})
+        data.to_netcdf(path, mode="a", group=group, engine=engine)
+    root = _dask_name(_open_store(store_class, path))
+    g = _dask_name(_open_store(store_class, path, group="g"))
+    g_h = _dask_name(_open_store(store_class, path, group="g/h"))
+
+    assert len({root, g, g_h}) == 3
+    # a child store has the same group, and so the same data
+    assert _dask_name(_open_store(store_class, path).get_child_store("g")) == g
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "store_class, kwargs",
+    [
+        pytest.param(
+            xr.backends.NetCDF4DataStore,
+            {"auto_complex": True},
+            marks=requires_netCDF4,
+            id="netcdf4-auto_complex",
+        ),
+        pytest.param(
+            xr.backends.H5NetCDFStore,
+            {"decode_vlen_strings": False},
+            marks=requires_h5netcdf,
+            id="h5netcdf-decode_vlen_strings",
+        ),
+        pytest.param(
+            xr.backends.H5NetCDFStore,
+            {"phony_dims": "access"},
+            marks=requires_h5netcdf,
+            id="h5netcdf-phony_dims",
+        ),
+    ],
+)
+def test_open_dataset_from_store_names_open_kwargs(
+    tmp_path, store_class, kwargs
+) -> None:
+    # options of opening the file change the data, and so the names
+    path = tmp_path / "test.nc"
+    Dataset({"a": ("x", np.arange(4))}).to_netcdf(path, engine=_engine(store_class))
+    name = _dask_name(_open_store(store_class, path))
+    assert _dask_name(_open_store(store_class, path, **kwargs)) != name
+
+
+@requires_dask
+@pytest.mark.parametrize("store_class", _STORE_CLASSES)
+def test_open_dataset_from_store_subclass_names(tmp_path, store_class) -> None:
+    # a subclass may read the data differently, so it gets other names than its
+    # base class
+    from dask.base import tokenize
+
+    path = tmp_path / "test.nc"
+    Dataset({"a": ("x", np.arange(4))}).to_netcdf(path, engine=_engine(store_class))
+    subclass = type("SubclassedStore", (store_class,), {})
+    with (
+        _open_store(store_class, path) as store,
+        _open_store(subclass, path) as substore,
+        _open_store(subclass, path) as other_substore,
+    ):
+        assert tokenize(substore) == tokenize(other_substore)
+        assert tokenize(substore) != tokenize(store)
+
+
+@requires_dask
+@pytest.mark.parametrize("store_class", _STORE_CLASSES)
+def test_open_dataset_from_store_append_random_names(tmp_path, store_class) -> None:
+    # a file opened for writing may change at any time
+    path = tmp_path / "test.nc"
+    Dataset({"a": ("x", np.arange(4))}).to_netcdf(path, engine=_engine(store_class))
+    with _open_store(store_class, path, mode="a") as store:
+        first = open_dataset(store, chunks={})
+        second = open_dataset(store, chunks={})
+        assert first["a"].data.name != second["a"].data.name
+
+
+@requires_dask
+@pytest.mark.parametrize("store_class", _STORE_CLASSES[:2])
+def test_open_dataset_from_open_file_random_names(tmp_path, store_class) -> None:
+    # a store of an already open file can't tell whether it still matches the
+    # file on disk, so its names are random
+    path = tmp_path / "test.nc"
+    Dataset({"a": ("x", np.arange(4))}).to_netcdf(path, engine=_engine(store_class))
+    with _open_store(store_class, path) as path_store:
+        store = store_class(path_store.ds)
+        first = open_dataset(store, chunks={})
+        second = open_dataset(store, chunks={})
+        assert first["a"].data.name != second["a"].data.name

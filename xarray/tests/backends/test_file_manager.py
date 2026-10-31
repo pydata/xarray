@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+import os
 import pickle
 import threading
 from unittest import mock
@@ -15,7 +16,7 @@ from xarray.backends.file_manager import (
 )
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options
-from xarray.tests import assert_no_warnings
+from xarray.tests import assert_no_warnings, requires_dask
 
 
 @pytest.fixture(params=[1, 2, 3, None])
@@ -394,3 +395,60 @@ def test_file_manager_del_while_pin_lock_held() -> None:
         thread = threading.Thread(target=delete_while_locked, daemon=True)
         thread.start()
         assert done.wait(timeout=5)
+
+
+@requires_dask
+def test_file_manager_dask_tokenize(tmp_path, monkeypatch) -> None:
+    # GH11814: managers of the same file opened for reading share a token
+    from dask.base import tokenize
+
+    path = tmp_path / "testing.txt"
+    path.write_text("foo")
+    other = tmp_path / "other.txt"
+    other.write_text("foo")
+    token = tokenize(CachingFileManager(open, str(path), mode="r"))
+
+    # the manager id and the lock don't change the data, nor does a relative path
+    assert tokenize(CachingFileManager(open, str(path), mode="r")) == token
+    lock = threading.Lock()
+    assert tokenize(CachingFileManager(open, str(path), mode="r", lock=lock)) == token
+    monkeypatch.chdir(tmp_path)
+    assert tokenize(CachingFileManager(open, "testing.txt", mode="r")) == token
+
+    # but what is opened does
+    assert tokenize(CachingFileManager(open, str(other), mode="r")) != token
+    kwargs = {"encoding": "latin-1"}
+    assert (
+        tokenize(CachingFileManager(open, str(path), mode="r", kwargs=kwargs)) != token
+    )
+
+    # and so does rewriting the file
+    mtime_ns = path.stat().st_mtime_ns
+    os.utime(path, ns=(mtime_ns, mtime_ns + 1_000_000_000))
+    assert tokenize(CachingFileManager(open, str(path), mode="r")) != token
+
+
+class _SubclassedCachingFileManager(CachingFileManager):
+    pass
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "manager_class, mode",
+    [
+        pytest.param(CachingFileManager, "w", id="write"),
+        pytest.param(CachingFileManager, "a", id="append"),
+        pytest.param(CachingFileManager, file_manager._OMIT_MODE, id="no-mode"),
+        pytest.param(_SubclassedCachingFileManager, "r", id="subclass"),
+    ],
+)
+def test_file_manager_dask_tokenize_random(tmp_path, manager_class, mode) -> None:
+    # A file opened for writing may change at any time, the mode an opener
+    # defaults to is unknown, and a subclass may have state that changes the
+    # data, so the token must be random.
+    from dask.base import tokenize
+
+    path = tmp_path / "testing.txt"
+    path.write_text("foo")
+    manager = manager_class(open, str(path), mode=mode)
+    assert tokenize(manager) != tokenize(manager)

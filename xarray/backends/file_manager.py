@@ -8,6 +8,7 @@ from collections.abc import Callable, Hashable, Iterator, Mapping, MutableMappin
 from contextlib import AbstractContextManager, contextmanager, suppress
 from typing import Any, Literal, TypeVar, cast, override
 
+from xarray.backends.common import _get_mtime, _normalize_path
 from xarray.backends.locks import acquire
 from xarray.backends.lru_cache import LRUCache
 from xarray.core import utils
@@ -392,6 +393,36 @@ class CachingFileManager(FileManager[T_File]):
         opener, args, mode, kwargs, lock, manager_id = state
         self.__init__(  # type: ignore[misc]
             opener, *args, mode=mode, kwargs=kwargs, lock=lock, manager_id=manager_id
+        )
+
+    def __dask_tokenize__(self) -> object:
+        """Token for dask so arrays with the same token are treated as the same data.
+
+        A file opened for reading is identified by what is opened (the opener,
+        its arguments with the path made absolute, the mode, and the keyword
+        arguments) and by the modification time of a local file, so that
+        managers opening the same file the same way get the same token. The
+        manager id and the lock are left out, as they don't change the data
+        (GH11814).
+
+        Files opened in any other mode, and instances of subclasses of
+        ``CachingFileManager``, get a random token: a file opened for writing
+        may change at any time, and a subclass may have state that changes the
+        data.
+
+        """
+        from dask.base import normalize_token
+
+        if type(self) is not CachingFileManager or self._mode != "r":
+            return uuid.uuid4().hex
+        args = list(self._args)
+        mtime = None
+        if args:
+            # a relative path depends on the working directory
+            args[0] = _normalize_path(args[0])
+            mtime = _get_mtime(args[0])
+        return normalize_token(
+            (type(self), self._opener, tuple(args), self._mode, self._kwargs, mtime)
         )
 
     def __repr__(self) -> str:

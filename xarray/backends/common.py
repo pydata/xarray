@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import sys
@@ -107,6 +108,24 @@ def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
         path = os.path.abspath(os.path.expanduser(path))
 
     return path  # type: ignore[return-value]
+
+
+def _get_mtime(filename_or_obj):
+    # if passed an actual file path, augment the token with
+    # the file modification time
+    mtime = None
+
+    try:
+        path = os.fspath(filename_or_obj)
+    except TypeError:
+        path = None
+
+    # bytes are the contents of a file, not a path
+    if isinstance(path, str) and not is_remote_uri(path):
+        with contextlib.suppress(OSError):
+            mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
+
+    return mtime
 
 
 @overload
