@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, get_args
 
 from xarray.core.types import CompatOptions
-from xarray.core.utils import FrozenDict
+from xarray.core.utils import FrozenDict, emit_user_level_warning
 
 if TYPE_CHECKING:
     from matplotlib.colors import Colormap
@@ -284,8 +284,9 @@ class set_options:
 
     display_expand_groups : {"default", True, False}, default: "default"
         Has no effect since the HTML repr of ``DataTree`` was reworked in
-        v2026.01.0. Use ``display_max_children`` and
-        ``display_max_html_elements`` to limit the displayed groups instead.
+        v2026.01.0 and is deprecated: setting it emits a ``FutureWarning``. Use
+        ``display_max_children`` and ``display_max_html_elements`` to limit the
+        displayed groups instead.
 
     display_expand_indexes : {"default", True, False}, default: "default"
         Whether to expand the indexes section for display of
@@ -429,6 +430,12 @@ class set_options:
                 raise ValueError(
                     f"option {k!r} given an invalid value: {v!r}. " + expected
                 )
+            if k == "display_expand_groups":
+                emit_user_level_warning(
+                    "The display_expand_groups option has no effect and will be "
+                    "removed in a future version of xarray.",
+                    FutureWarning,
+                )
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 
@@ -452,5 +459,14 @@ def get_options():
     --------
     set_options
 
+    Examples
+    --------
+    >>> original_width = xr.get_options()["display_width"]
+    >>> with xr.set_options(display_width=original_width + 10):
+    ...     xr.get_options()["display_width"] == original_width + 10
+    ...
+    True
+    >>> xr.get_options()["display_width"] == original_width
+    True
     """
     return FrozenDict(OPTIONS)

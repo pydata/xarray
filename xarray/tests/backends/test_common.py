@@ -2,13 +2,21 @@ from __future__ import annotations
 
 import io
 import re
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pytest
 
 import xarray as xr
 from xarray.backends.common import _infer_dtype, robust_getitem
-from xarray.tests import requires_scipy
+from xarray.tests import (
+    requires_h5netcdf,
+    requires_netCDF4,
+    requires_pydap,
+    requires_scipy,
+    requires_zarr,
+)
 
 
 class DummyFailure(Exception):
@@ -87,3 +95,42 @@ class TestCommon:
 
         actual = robust_getitem(array, 0, catch=UnreliableArrayFailure, initial_delay=0)
         assert actual == 0
+
+
+def _memory_store() -> Any:
+    from zarr.storage import MemoryStore
+
+    return MemoryStore()
+
+
+def _store_path() -> Any:
+    from zarr.storage import MemoryStore, StorePath
+
+    return StorePath(MemoryStore())
+
+
+@pytest.mark.parametrize(
+    "engine",
+    [
+        pytest.param("netcdf4", marks=requires_netCDF4),
+        pytest.param("h5netcdf", marks=requires_h5netcdf),
+        pytest.param("scipy", marks=requires_scipy),
+        pytest.param("pydap", marks=requires_pydap),
+    ],
+)
+@pytest.mark.parametrize(
+    "make_store",
+    [
+        pytest.param(dict, id="dict"),
+        pytest.param(_memory_store, id="MemoryStore", marks=requires_zarr),
+        pytest.param(_store_path, id="StorePath", marks=requires_zarr),
+    ],
+)
+def test_open_zarr_store_with_other_engine(
+    engine: str, make_store: Callable[[], Any]
+) -> None:
+    with pytest.raises(TypeError, match=r"cannot open zarr stores.*engine='zarr'"):
+        xr.open_dataset(make_store(), engine=engine)
+    if engine != "scipy":
+        with pytest.raises(TypeError, match=r"cannot open zarr stores.*engine='zarr'"):
+            xr.open_datatree(make_store(), engine=engine)

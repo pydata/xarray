@@ -4454,6 +4454,42 @@ class TestDataset:
         d0 = D.isel(x=0)
         assert_identical(d0, x0)
 
+    @pytest.mark.parametrize(
+        "indexer, variables",
+        [(slice(0, 2), ["a"]), ([4, 5], ["c"]), ([0, 1, 4, 5], ["a", "c"])],
+    )
+    @pytest.mark.parametrize("level", [0, "variable", -1])
+    def test_to_unstacked_dataset_after_feature_selection(
+        self,
+        indexer: slice | list[int],
+        variables: list[str],
+        level: int | str,
+        use_dask: bool,
+    ) -> None:
+        data = xr.Dataset(
+            {
+                "a": (("sample", "y"), [[1, 2], [3, 4]]),
+                "b": (("sample", "y"), [[5, 6], [7, 8]]),
+                "c": (("sample", "y"), [[9, 10], [11, 12]]),
+            },
+            coords={"sample": [10, 20], "y": ["u", "v"]},
+        )
+        data["sample"].attrs["long_name"] = "sample identifier"
+        data["y"].attrs["long_name"] = "channel"
+        if use_dask:
+            data = data.chunk()
+
+        stacked = data.to_stacked_array("features", sample_dims=["sample"])
+        if level != 0:
+            stacked = stacked.reorder_levels(features=["y", "variable"])
+        selected = stacked.isel(features=indexer)
+        original = selected.copy(deep=True)
+
+        actual = selected.to_unstacked_dataset("features", level=level)
+
+        assert_identical(actual, data[variables])
+        assert_identical(selected, original)
+
     def test_to_stacked_array_to_unstacked_dataset_different_dimension(self) -> None:
         # test when variables have different dimensionality
         a, b = create_test_stacked_array()
@@ -8520,12 +8556,7 @@ def test_no_dict() -> None:
 
 
 def test_subclass_slots() -> None:
-    """Test that Dataset subclasses must explicitly define ``__slots__``.
-
-    .. note::
-       As of 0.13.0, this is actually mitigated into a FutureWarning for any class
-       defined outside of the xarray package.
-    """
+    """Test that Dataset subclasses must explicitly define ``__slots__``."""
     with pytest.raises(AttributeError) as e:
 
         class MyDS(Dataset):

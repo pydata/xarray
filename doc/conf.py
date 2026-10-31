@@ -83,7 +83,6 @@ copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: 
 copybutton_prompt_is_regexp = True
 
 # myst-nb
-nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
 # RTD does not publish the .err.log report, so print tracebacks in the build log
 nb_execution_show_tb = True
 
@@ -339,6 +338,7 @@ rediraffe_redirects = {
     "quick-overview.rst": "getting-started-guide/quick-overview.rst",
     "contributing.rst": "contribute/contributing.rst",
     "developers-meeting.rst": "contribute/developers-meeting.rst",
+    "examples/apply_ufunc_vectorize_1d.ipynb": "gallery.rst",
 }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,

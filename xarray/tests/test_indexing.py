@@ -22,6 +22,7 @@ from xarray.tests import (
     raise_if_dask_computes,
     requires_dask,
     requires_pandas_3,
+    requires_sparse,
 )
 from xarray.tests.arrays import DuckArrayWrapper
 
@@ -1160,6 +1161,24 @@ def test_as_indexable(array, expected_type):
     actual = indexing.as_indexable(array)
 
     assert isinstance(actual, expected_type)
+
+
+@requires_sparse
+@pytest.mark.parametrize(
+    "key",
+    [
+        pytest.param(np.array([1, 2]), id="vector"),
+        pytest.param(np.array([[0, 2], [3, 1]]), id="multidimensional"),
+    ],
+)
+def test_pandas_indexing_sparse_indexer(key: np.ndarray) -> None:
+    import sparse
+
+    labels = np.array([10, 20, 30, 40])
+    adapter = indexing.PandasIndexingAdapter(pd.Index(labels))
+    indexer = indexing.VectorizedIndexer((sparse.COO.from_numpy(key),))
+    actual = adapter.vindex[indexer]
+    assert_array_equal(np.asarray(actual), labels[key])
 
 
 def test_indexing_1d_object_array() -> None:

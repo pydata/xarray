@@ -880,6 +880,31 @@ def polyval(
     --------
     xarray.DataArray.polyfit
     numpy.polynomial.polynomial.polyval
+
+    Examples
+    --------
+    Evaluate the polynomial ``1 + 2 * x + 3 * x**2``:
+
+    >>> x = xr.DataArray(np.arange(5.0), dims="x")
+    >>> coeffs = xr.DataArray(
+    ...     [1.0, 2.0, 3.0], dims="degree", coords={"degree": [0, 1, 2]}
+    ... )
+    >>> xr.polyval(x, coeffs)
+    <xarray.DataArray (x: 5)> Size: 40B
+    array([ 1.,  6., 17., 34., 57.])
+    Dimensions without coordinates: x
+
+    Evaluate the result of :py:meth:`DataArray.polyfit` along its coordinate:
+
+    >>> y = xr.DataArray(
+    ...     [1.0, 6.0, 17.0, 34.0, 57.0], dims="x", coords={"x": np.arange(5.0)}
+    ... )
+    >>> fit = y.polyfit("x", deg=2)
+    >>> xr.polyval(y.x, fit.polyfit_coefficients).round(6)
+    <xarray.DataArray (x: 5)> Size: 40B
+    array([ 1.,  6., 17., 34., 57.])
+    Coordinates:
+      * x        (x) float64 40B 0.0 1.0 2.0 3.0 4.0
     """
     if degree_dim not in coeffs._indexes:
         raise ValueError(

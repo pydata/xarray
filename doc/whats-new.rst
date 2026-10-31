@@ -13,6 +13,11 @@ v2026.09.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- :py:func:`apply_ufunc` accepts dimension names for ``vectorize``, e.g.
+  ``vectorize=["time"]``, to only loop over these broadcast dimensions and pass
+  all other broadcast dimensions to ``func`` in bulk. This is much faster than
+  ``vectorize=True`` if ``func`` can broadcast its inputs, for numpy and dask
+  arrays alike (:pull:`11681`).
 - :py:class:`~xarray.Variable` is now generic in the types of its shape, dtype
   and dimension names, like :py:class:`~xarray.NamedArray`: it is defined as
   ``class Variable(NamedArray[ShapeType_co, DType_co, DimType_co])``, so static
@@ -156,10 +161,19 @@ Breaking Changes
   :py:class:`Variable`, deprecated since v2023.10.0, has been removed. Use
   ``drop_encoding`` instead (:issue:`11721`, :pull:`11805`).
   By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
+- Subclasses of :py:class:`DataArray`, :py:class:`Dataset` and other xarray
+  objects defined outside xarray must now explicitly define ``__slots__``.
+  Defining one without ``__slots__`` raises an ``AttributeError`` instead of
+  the ``FutureWarning`` emitted since v0.13.0 (:issue:`11721`, :pull:`11818`).
+  By `Daisy DAI <https://github.com/ShinoKana>`_.
 
 
 Deprecations
 ~~~~~~~~~~~~
+- The deprecation of ``FacetGrid.axes`` has been lifted: it is now a plain
+  alias of ``FacetGrid.axs``, which remains the preferred name, and no longer
+  emits a ``FutureWarning`` (:issue:`11721`, :pull:`11766`).
+  By `Adrián Muñoz Perera <https://github.com/pereradrian>`_.
 - The deprecated ``dims=`` (or ``dimensions=``) argument renamed to ``dim=``
   and ``interpolate_na(method="spline")`` now emit a ``FutureWarning`` instead
   of a ``PendingDeprecationWarning``, so these warnings are visible by default
@@ -187,11 +201,43 @@ Deprecations
   but it did not emit any warning previously, now it emits a ``FutureWarning``
   (:issue:`11721`, :pull:`11788`).
   By `Soutrik Das <https://github.com/SoutrikDas>`_.
+- :py:attr:`DataTree.ds`, a soft-deprecated alias of :py:attr:`DataTree.dataset`,
+  and setting the ``display_expand_groups`` option of :py:func:`set_options`,
+  which has no effect since v2026.01.0, now emit a ``FutureWarning``
+  (:issue:`11721`, :pull:`11803`).
+  By `Mohansree Vijayakumar <https://github.com/mohansree14>`_.
 
 
 
 Bug Fixes
 ~~~~~~~~~
+- Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
+  include a note naming the data variable being processed (:issue:`2078`).
+  By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
+- :py:func:`open_dataset` can detect local Zarr directories on Windows without
+  raising ``PermissionError`` while checking file-based backends. Permission
+  errors for ordinary files still propagate (:issue:`11799`, :pull:`11802`).
+  By `Gabriel Demetrios Lafis <https://github.com/galafis>`_.
+- Fix CuPy indexers with pandas-backed coordinates, basic and label-based
+  assignment to CuPy arrays, and scalar truth conversion
+  (:issue:`11739`, :pull:`11797`).
+  By `Huashuo Lei <https://github.com/wpyaoxueros>`_.
+- :py:meth:`DataArray.str.zfill` now keeps a leading ``+`` or ``-`` sign in front
+  of the zeros, like :py:meth:`str.zfill`, :py:func:`numpy.strings.zfill` and
+  :py:meth:`pandas.Series.str.zfill`. Previously the zeros were put before the
+  sign, e.g. ``"-12"`` became ``"0-12"`` instead of ``"-012"`` for ``width=4``
+  (:pull:`11817`).
+  By `Alexander Kropiunig <https://github.com/Kropiunig>`_.
+- Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
+  ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
+  coordinates (:pull:`11681`).
+- :py:meth:`DataArray.to_unstacked_dataset` no longer raises ``KeyError`` for
+  unused variable labels left in the stacked index after selecting features
+  (:pull:`11808`).
+  By `Aryan R. Ganjoo <https://github.com/AryanRG>`_.
+- :py:meth:`DataArray.str.extract` with ``dim`` now supports NumPy ``StringDType`` arrays,
+  and no longer fails if the first value does not match (:pull:`11793`).
+  By `jdotc1 <https://github.com/jdotc1>`_.
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
   variables (:issue:`6449`).
   By `Liang, Jingyi <https://github.com/LJimmy007>`_.
@@ -403,10 +449,28 @@ Bug Fixes
   ``StringDtype`` is used as the new concat dimension and another input has a
   numpy string-dtype coord (:issue:`11317`, :pull:`11322`).
   By `Sai Asish Y <https://github.com/SAY-5>`_.
+- Add type annotations to all arguments of :py:func:`open_zarr`, so that type
+  checkers accept its documented arguments and reject unknown ones.
+  :py:func:`open_dataset`, :py:func:`open_dataarray`, :py:func:`open_datatree`
+  and :py:func:`open_groups` now also accept zarr stores in their type hints.
+  Passing a zarr store to the ``netcdf4``, ``h5netcdf``, ``scipy`` or ``pydap``
+  engine raises a ``TypeError`` that points to ``engine="zarr"``
+  (:issue:`11221`, :pull:`11226`).
+  By `Carson Jones <https://github.com/wavebyrd>`_.
+- :py:func:`open_dataset` no longer raises ``TypeError: cannot use a string
+  pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
+  (:pull:`11826`).
+  By `David Hoese <https://github.com/djhoese>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
+- Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
+  docstring. The ``apply_ufunc`` example notebook was removed in favor of the
+  `apply_ufunc interpolation tutorial
+  <https://tutorial.xarray.dev/advanced/apply_ufunc/example-interp.html>`_
+  (:pull:`11681`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Document how :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` handle
   chunks of Dask arrays, and that loading chunked new coordinates first can
   reduce the memory use for ``method="linear"`` and ``"nearest"``
@@ -489,6 +553,12 @@ Performance
   ones instead of sorting them. This avoids copying the data before
   interpolating (:issue:`9758`, :pull:`11658`).
   By `Bhaskar Gurram <https://github.com/bhaskargurram-ai>`_.
+- Fix a performance regression in :py:meth:`Dataset.interp` and
+  :py:meth:`DataArray.interp` when the new coordinates vary along a dimension
+  of the interpolated object, e.g. ``da.interp(z=new_z)`` where ``new_z`` has a
+  dimension ``t`` of ``da``. The interpolation now only loops over the
+  dimensions the new coordinates depend on, for numpy and dask arrays alike
+  (:issue:`10683`, :pull:`11681`).
 - :py:meth:`Dataset.unstack` and :py:meth:`DataArray.unstack` reshape the data
   instead of copying it when the MultiIndex contains every combination of its
   levels in order, e.g. after :py:meth:`Dataset.stack`. The unstacked data is
@@ -536,6 +606,9 @@ Internal Changes
 - Add an asv benchmark for opening a zarr :py:class:`DataTree` from a store with
   object storage latency (:pull:`11810`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Convert structured arrays to object arrays of tuples before creating a
+  :py:class:`pandas.Index` from them, which pandas deprecated (:issue:`11749`).
+  By `glaziermag <https://github.com/glaziermag>`_.
 
 
 .. _whats-new.2026.09.0:
@@ -6669,7 +6742,7 @@ Documentation
 - Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
   ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Add new :doc:`example notebook <examples/apply_ufunc_vectorize_1d>` example notebook demonstrating
+- Add new ``apply_ufunc_vectorize_1d`` example notebook demonstrating
   vectorization of a 1D function using :py:func:`apply_ufunc` , dask and numba.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added example for :py:func:`~xarray.map_blocks`. (:pull:`3667`)
