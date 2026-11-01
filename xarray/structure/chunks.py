@@ -12,7 +12,6 @@ from xarray.core.variable import Variable
 from xarray.namedarray.parallelcompat import (
     ChunkManagerEntrypoint,
     get_chunked_array_type,
-    guess_chunkmanager,
     list_chunkmanagers,
 )
 
@@ -64,12 +63,12 @@ def _maybe_chunk(
     name: Hashable,
     var: Variable,
     chunks: Mapping[Any, T_ChunkDim],
+    chunkmanager: ChunkManagerEntrypoint,
     token=None,
     lock=None,
     name_prefix: str = "xarray-",
     overwrite_encoded_chunks: bool = False,
     inline_array: bool = False,
-    chunked_array_type: str | ChunkManagerEntrypoint | None = None,
     from_array_kwargs=None,
     just_use_token=False,
 ) -> Variable:
@@ -78,14 +77,26 @@ def _maybe_chunk(
     chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
 
     if var.ndim:
-        chunked_array_type = guess_chunkmanager(
-            chunked_array_type
-        )  # coerce string to ChunkManagerEntrypoint type
-        is_dask_chunkmanager = isinstance(chunked_array_type, DaskManager) or any(
-            name == "dask" and manager is chunked_array_type
-            for name, manager in list_chunkmanagers().items()
-        )
-        if is_dask_chunkmanager:
+        if (
+            var.shape
+            and var.chunks
+            and chunks
+            and any(c == "auto" for c in chunks.values())
+        ):
+            chunk_shape = chunkmanager.preserve_chunks(
+                tuple(chunks.get(dim, ()) for dim in var.dims),
+                shape=var.shape,
+                target=chunkmanager.get_auto_chunk_size(),
+                typesize=getattr(var.dtype, "itemsize", 8),
+                previous_chunks=var.chunks,
+            )
+            chunks = {
+                dim: chunk_shape[i] for i, dim in enumerate(var.dims) if dim in chunks
+            }
+
+        if isinstance(chunkmanager, DaskManager) or any(
+            v is chunkmanager and k == "dask" for k, v in list_chunkmanagers().items()
+        ):
             if not just_use_token:
                 from dask.base import tokenize
 
@@ -106,7 +117,7 @@ def _maybe_chunk(
 
         var = var.chunk(
             chunks,
-            chunked_array_type=chunked_array_type,
+            chunked_array_type=chunkmanager,
             from_array_kwargs=from_array_kwargs,
         )
 
