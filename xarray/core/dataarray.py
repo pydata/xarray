@@ -3340,15 +3340,28 @@ class DataArray(
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 
         level_number = idx._get_level_number(level)  # type: ignore[attr-defined]
-        variables = idx.remove_unused_levels().levels[level_number]
+        variable_labels = idx.get_level_values(level_number)
+        variables = variable_labels.unique()
         variable_dim = idx.names[level_number]
 
-        # pull variables out of datarray
         data_dict = {}
         for k in variables:
-            data_dict[k] = self.sel({variable_dim: k}, drop=True).squeeze(drop=True)
+            variable_index = idx[variable_labels == k]
+            # to_stacked_array pads dimensions absent from a variable with NaN.
+            # Select those levels too, rather than squeezing real singleton dims.
+            selectors = {
+                name: np.nan
+                for name, codes in zip(
+                    variable_index.names, variable_index.codes, strict=True
+                )
+                if name != variable_dim and (codes == -1).all()
+            }
+            selectors[variable_dim] = k
+            data = self.sel(selectors, drop=True)
+            if dim in data.dims and isinstance(data.indexes[dim], pd.MultiIndex):
+                data = data.unstack([dim])
+            data_dict[k] = data
 
-        # unstacked dataset
         return Dataset(data_dict)
 
     @deprecate_dims

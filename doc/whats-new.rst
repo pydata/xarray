@@ -218,6 +218,10 @@ Bug Fixes
   raising ``PermissionError`` while checking file-based backends. Permission
   errors for ordinary files still propagate (:issue:`11799`, :pull:`11802`).
   By `Gabriel Demetrios Lafis <https://github.com/galafis>`_.
+- :py:meth:`DataArray.to_unstacked_dataset` now restores multiple feature
+  dimensions, preserves singleton dimensions, and keeps variables in their
+  stacked order (:issue:`3495`).
+  By `Amadeus Brandes <https://github.com/AMBRA7592>`_.
 - Fix CuPy indexers with pandas-backed coordinates, basic and label-based
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
