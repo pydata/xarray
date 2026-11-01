@@ -761,6 +761,12 @@ Bug Fixes
 - Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
   round trips (:issue:`11466`, :pull:`11474`).
   By `stanbot8 <https://github.com/stanbot8>`_.
+- Fixed :py:meth:`Dataset.quantile`, :py:meth:`DataArray.quantile` and
+  :py:meth:`Variable.quantile` raising on an empty result. Numeric data now
+  gives ``NaN``, matching :py:meth:`~xarray.DataArray.mean`,
+  :py:meth:`~xarray.DataArray.median` and pandas, and datetime and timedelta
+  data gives ``NaT`` (:issue:`11549`).
+  By `Chirag Gupta <https://github.com/chiruu12>`_.
 - :py:func:`~xarray.open_dataset` now raises an error pointing at
   :py:func:`~xarray.open_mfdataset` when it is given a list or tuple of paths,
   instead of reporting that no IO backend matched the input (:issue:`6510`).
