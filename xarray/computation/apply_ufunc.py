@@ -444,7 +444,11 @@ def apply_dict_of_variables_vfunc(
     for name, variable_args in zip(names, grouped_by_name, strict=True):
         core_dim_present = _check_core_dims(signature, variable_args, name)
         if core_dim_present is True:
-            result_vars[name] = func(*variable_args)
+            try:
+                result_vars[name] = func(*variable_args)
+            except Exception as e:
+                e.add_note(f"Raised while applying function to variable {name!r}")
+                raise
         elif on_missing_core_dim == "raise":
             raise ValueError(core_dim_present)
         elif on_missing_core_dim == "copy":

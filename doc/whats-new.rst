@@ -213,10 +213,23 @@ Bug Fixes
 ~~~~~~~~~
 - Dataset weighted arithmetic reductions now skip nonnumeric data variables
   (:issue:`9322`).
+- Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
+  include a note naming the data variable being processed (:issue:`2078`).
+  By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
+- :py:func:`open_dataset` can detect local Zarr directories on Windows without
+  raising ``PermissionError`` while checking file-based backends. Permission
+  errors for ordinary files still propagate (:issue:`11799`, :pull:`11802`).
+  By `Gabriel Demetrios Lafis <https://github.com/galafis>`_.
 - Fix CuPy indexers with pandas-backed coordinates, basic and label-based
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
   By `Huashuo Lei <https://github.com/wpyaoxueros>`_.
+- :py:meth:`DataArray.str.zfill` now keeps a leading ``+`` or ``-`` sign in front
+  of the zeros, like :py:meth:`str.zfill`, :py:func:`numpy.strings.zfill` and
+  :py:meth:`pandas.Series.str.zfill`. Previously the zeros were put before the
+  sign, e.g. ``"-12"`` became ``"0-12"`` instead of ``"-012"`` for ``width=4``
+  (:pull:`11817`).
+  By `Alexander Kropiunig <https://github.com/Kropiunig>`_.
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
@@ -224,6 +237,9 @@ Bug Fixes
   unused variable labels left in the stacked index after selecting features
   (:pull:`11808`).
   By `Aryan R. Ganjoo <https://github.com/AryanRG>`_.
+- :py:meth:`DataArray.str.extract` with ``dim`` now supports NumPy ``StringDType`` arrays,
+  and no longer fails if the first value does not match (:pull:`11793`).
+  By `jdotc1 <https://github.com/jdotc1>`_.
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
   variables (:issue:`6449`).
   By `Liang, Jingyi <https://github.com/LJimmy007>`_.
