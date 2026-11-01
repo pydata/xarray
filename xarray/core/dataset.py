@@ -7313,8 +7313,23 @@ class Dataset(
                     )
         # When keep_attrs=False, leave attrs as the function returned them
 
+        # Coordinates on dims that no data variable uses (before or after func)
+        # are never seen by func, so restore them rather than dropping them (GH6445)
+        used_dims = {
+            dim
+            for v in (*self.data_vars.values(), *variables.values())
+            for dim in v.dims
+        }
+        unused = [
+            k
+            for k, v in self.coords.items()
+            if k in coords or not v.dims or not used_dims.isdisjoint(v.dims)
+        ]
+
         attrs = self.attrs if keep_attrs else None
-        return type(self)(variables, coords=coords, attrs=attrs)
+        return type(self)(variables, coords=coords, attrs=attrs).assign_coords(
+            self.coords.drop_vars(unused)
+        )
 
     def apply(
         self,
