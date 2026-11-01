@@ -484,6 +484,17 @@ class NetCDF4DataStore(WritableCFDataStore):
             autoclose=self.autoclose,
         )
 
+    def __dask_tokenize__(self) -> object:
+        """Token for dask, identifying the data by the type, file manager, and group.
+
+        dask would otherwise pickle the store, including the random id of its
+        file manager, and so give every store a different token (GH11814).
+        Subclasses with state that changes the data need to add it.
+        """
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._manager, self._group))
+
     @classmethod
     def open(
         cls,
@@ -501,8 +512,9 @@ class NetCDF4DataStore(WritableCFDataStore):
     ):
         import netCDF4
 
-        if isinstance(filename, os.PathLike):
-            filename = os.fspath(filename)
+        # a relative path made absolute, like by open_dataset, so that reopening
+        # the file doesn't depend on the working directory
+        filename = _normalize_path(filename)
 
         if isinstance(filename, IOBase):
             raise TypeError(

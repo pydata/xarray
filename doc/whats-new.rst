@@ -461,6 +461,13 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- :py:func:`open_dataset` now gives deterministic dask names for a
+  :py:class:`~xarray.backends.NetCDF4DataStore`,
+  :py:class:`~xarray.backends.H5NetCDFStore`, or
+  :py:class:`~xarray.backends.ScipyDataStore` opened for reading, like for a
+  file path. A relative path, a :py:class:`pathlib.Path`, and an absolute path
+  of the same file now also give the same names (:issue:`11814`, :pull:`11831`).
+  By `David Hoese <https://github.com/djhoese>`_.
 
 
 Documentation
