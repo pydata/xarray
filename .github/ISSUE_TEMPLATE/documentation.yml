@@ -1,0 +1,30 @@
+name: 📚 Documentation Issue/Suggestion
+description: Report problems with the docs or suggest improvements
+labels: [documentation]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: |
+        If you are referencing an existing piece of documentation or example please provide a link.
+
+        Examples:
+        - I found [...] to be unclear because [...]
+        - [...] made me think that [...] when really it should be [...]
+        - There is no example showing how to do [...]
+    validations:
+      required: true
+  - type: textarea
+    id: suggested-improvement
+    attributes:
+      label: Suggested Improvement
+      description: |
+        If you have an idea to improve the documentation please suggest it here.
+
+        Examples:
+        - This line should be changed to say [...]
+        - Include a paragraph explaining [...]
+        - Add a figure showing [...]
+    validations:
+      required: false
