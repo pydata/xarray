@@ -361,6 +361,29 @@ def test_apply_two_outputs() -> None:
     assert_identical(out1, dataset)
 
 
+def test_apply_dataset_error_mentions_variable_name() -> None:
+    # GH2078
+    ds_a = xr.Dataset({"status": (("x", "y"), np.zeros((2, 3)))})
+    ds_b = xr.Dataset({"status": ("y", np.zeros(3))})
+
+    # broadcast_compat_data only sees the Variable, the note adds its name
+    with pytest.raises(ValueError, match="unexpected dimensions") as excinfo:
+        apply_ufunc(lambda a, b: a, ds_a, ds_b, input_core_dims=[[], ["y"]])
+    assert "Raised while applying function to variable 'status'" in (
+        excinfo.value.__notes__
+    )
+
+    # errors from the applied function itself keep their type
+    def fail(x: np.ndarray) -> np.ndarray:
+        raise KeyError("boom")
+
+    with pytest.raises(KeyError, match="boom") as excinfo_key:
+        apply_ufunc(fail, ds_a)
+    assert "Raised while applying function to variable 'status'" in (
+        excinfo_key.value.__notes__
+    )
+
+
 def test_apply_missing_dims() -> None:
     ## Single arg
 
