@@ -211,6 +211,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Dask-backed datetime :py:class:`DataArray` inputs and
+  :py:meth:`DataArray.astype` results now use the same dtype and values as
+  NumPy-backed arrays for unsupported datetime units such as months or years
+  (:issue:`10673`).
+  By `Oscar Man Shrestha <https://github.com/Oscar-man-shrestha>`_.
 - Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
   include a note naming the data variable being processed (:issue:`2078`).
   By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
