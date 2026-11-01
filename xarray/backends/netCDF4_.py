@@ -512,8 +512,9 @@ class NetCDF4DataStore(WritableCFDataStore):
     ):
         import netCDF4
 
-        if isinstance(filename, os.PathLike):
-            filename = os.fspath(filename)
+        # a relative path made absolute, like by open_dataset, so that reopening
+        # the file doesn't depend on the working directory
+        filename = _normalize_path(filename)
 
         if isinstance(filename, IOBase):
             raise TypeError(

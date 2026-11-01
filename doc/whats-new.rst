@@ -449,7 +449,8 @@ Bug Fixes
   :py:class:`~xarray.backends.NetCDF4DataStore`,
   :py:class:`~xarray.backends.H5NetCDFStore`, or
   :py:class:`~xarray.backends.ScipyDataStore` opened for reading, like for a
-  file path (:issue:`11814`, :pull:`11831`).
+  file path. A relative path, a :py:class:`pathlib.Path`, and an absolute path
+  of the same file now also give the same names (:issue:`11814`, :pull:`11831`).
   By `David Hoese <https://github.com/djhoese>`_.
 
 

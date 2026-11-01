@@ -266,6 +266,9 @@ class ScipyDataStore(WritableCFDataStore):
         else:
             raise ValueError(f"invalid format for scipy.io.netcdf backend: {format!r}")
 
+        # a relative path made absolute, like by open_dataset, so that reopening
+        # the file doesn't depend on the working directory
+        filename_or_obj = _normalize_path(filename_or_obj)
         if lock is None and mode != "r" and isinstance(filename_or_obj, str):
             lock = get_write_lock(filename_or_obj)
 

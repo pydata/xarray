@@ -2060,7 +2060,7 @@ def _dask_name(store: _FileStore) -> str:
 @requires_dask
 @pytest.mark.parametrize("store_class", _STORE_CLASSES)
 def test_open_dataset_from_store_deterministic_names(
-    tmp_path: Path, store_class: type[_FileStore]
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store_class: type[_FileStore]
 ) -> None:
     # GH11814: like a filename, a store gives the same dask names every time
     path = tmp_path / "test.nc"
@@ -2073,10 +2073,29 @@ def test_open_dataset_from_store_deterministic_names(
     # the same file through another store, with another file manager
     assert _dask_name(_open_store(store_class, path)) == name
     assert _dask_name(_open_store(store_class, other)) != name
+    # the same file through a relative path
+    monkeypatch.chdir(tmp_path)
+    assert _dask_name(_open_store(store_class, Path("test.nc"))) == name
     # the file rewritten, i.e. with another modification time
     mtime_ns = path.stat().st_mtime_ns
     os.utime(path, ns=(mtime_ns, mtime_ns + 1_000_000_000))
     assert _dask_name(_open_store(store_class, path)) != name
+
+
+@requires_dask
+@requires_scipy_or_netCDF4
+def test_open_dataset_from_path_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # a str, a Path, and a relative path of the same file give the same names
+    path = tmp_path / "test.nc"
+    Dataset({"a": ("x", np.arange(4))}).to_netcdf(path)
+    monkeypatch.chdir(tmp_path)
+    names = set()
+    for filename in (str(path), path, "test.nc", Path("test.nc")):
+        with open_dataset(filename, chunks={}) as ds:
+            names.add(ds["a"].data.name)
+    assert len(names) == 1
 
 
 @requires_dask

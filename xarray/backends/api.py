@@ -249,7 +249,10 @@ def _chunk_ds(
         from dask.base import tokenize
 
         mtime = _get_mtime(filename_or_obj)
-        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+        # a relative path or a Path is the same file as the absolute path
+        token = tokenize(
+            _normalize_path(filename_or_obj), mtime, engine, chunks, **extra_tokens
+        )
         name_prefix = "open_dataset-"
     else:
         # not used

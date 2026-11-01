@@ -400,9 +400,7 @@ def test_file_manager_del_while_pin_lock_held() -> None:
 
 
 @requires_dask
-def test_file_manager_dask_tokenize(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_file_manager_dask_tokenize(tmp_path: Path) -> None:
     # GH11814: managers of the same file opened for reading share a token
     from dask.base import tokenize
 
@@ -412,12 +410,10 @@ def test_file_manager_dask_tokenize(
     other.write_text("foo")
     token = tokenize(CachingFileManager(open, str(path), mode="r"))
 
-    # the manager id and the lock don't change the data, nor does a relative path
+    # the manager id and the lock don't change the data
     assert tokenize(CachingFileManager(open, str(path), mode="r")) == token
     lock = threading.Lock()
     assert tokenize(CachingFileManager(open, str(path), mode="r", lock=lock)) == token
-    monkeypatch.chdir(tmp_path)
-    assert tokenize(CachingFileManager(open, "testing.txt", mode="r")) == token
 
     # but what is opened does
     assert tokenize(CachingFileManager(open, str(other), mode="r")) != token

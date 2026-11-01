@@ -202,9 +202,9 @@ class H5NetCDFStore(WritableCFDataStore):
     ):
         import h5netcdf
 
-        if isinstance(filename, os.PathLike):
-            # a local path is opened with a CachingFileManager, like a string
-            filename = os.fspath(filename)
+        # a relative path made absolute, like by open_dataset, so that reopening
+        # the file doesn't depend on the working directory
+        filename = _normalize_path(filename)
 
         if isinstance(filename, str) and is_remote_uri(filename) and driver is None:
             mode_ = "rb" if mode == "r" else mode
