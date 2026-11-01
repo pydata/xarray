@@ -20,6 +20,10 @@ from xarray.core.indexes import (
     indexes_all_equal,
     safe_cast_to_index,
 )
+from xarray.core.indexing import (
+    CoordinateTransformIndexingAdapter,
+    PandasIndexingAdapter,
+)
 from xarray.core.types import JoinOptions, T_Alignable
 from xarray.core.utils import emit_user_level_warning, is_dict_like, is_full_slice
 from xarray.core.variable import Variable, as_compatible_data, calculate_dimensions
@@ -140,6 +144,52 @@ CoordNamesAndDims = tuple[tuple[Hashable, tuple[Hashable, ...]], ...]
 MatchingIndexKey = tuple[CoordNamesAndDims, type[Index]]
 IndexesToAlign = dict[MatchingIndexKey, Index]
 IndexVarsToAlign = dict[MatchingIndexKey, dict[Hashable, Variable]]
+
+
+def _is_loaded(var: Variable) -> bool:
+    # Index-backed data (e.g. a pd.RangeIndex or a coordinate transform) is
+    # not "_in_memory" because it is costly to convert, but comparing it reads
+    # nothing from a backend.
+    return var._in_memory or isinstance(
+        var._data, PandasIndexingAdapter | CoordinateTransformIndexingAdapter
+    )
+
+
+def _warn_conflicting_unindexed_coords(
+    obj: Alignable, index_vars: Mapping[Hashable, Variable]
+) -> None:
+    """Warn when index variables about to be assigned to ``obj`` replace
+    same-named coordinates without an index that hold different values.
+
+    Only coordinates with the same dimensions as the index variable are
+    compared, so scalar leftovers of a selection (``da - da.isel(x=0)``) are
+    left alone. Coordinates that would have to be read from a backend or
+    computed by dask are skipped rather than loaded.
+    """
+    from xarray.core.coordinates import Coordinates
+
+    if isinstance(obj, Coordinates):
+        coord_vars = obj.variables
+    else:
+        coord_vars = obj.coords.variables  # type: ignore[attr-defined]
+    for name, idx_var in index_vars.items():
+        var = coord_vars.get(name)
+        if (
+            var is None
+            or name in obj.xindexes
+            or var.dims != idx_var.dims
+            or not (_is_loaded(var) and _is_loaded(idx_var))
+            or var.equals(idx_var)
+        ):
+            continue
+        emit_user_level_warning(
+            f"the index of coordinate {name!r} replaces a coordinate {name!r} "
+            "without an index that has different values. In a future version "
+            "of xarray this will raise an error. Drop one of the coordinates, "
+            "give them equal values, or use join='override' to keep the "
+            "current behavior.",
+            FutureWarning,
+        )
 
 
 class Aligner[T_Alignable: Alignable]:
@@ -603,6 +653,7 @@ class Aligner[T_Alignable: Alignable]:
                 # add the aligned index if it relates to unindexed dimensions in obj
                 dims = {d for var in aligned_idx_vars.values() for d in var.dims}
                 if dims <= set(obj.dims):
+                    _warn_conflicting_unindexed_coords(obj, aligned_idx_vars)
                     obj_idx = aligned_idx
 
             if obj_idx is not None:
