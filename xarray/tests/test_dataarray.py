@@ -2581,6 +2581,35 @@ class TestDataArray:
         assert np.issubdtype(original.dtype, np.integer)
         assert np.issubdtype(converted.dtype, np.floating)
 
+    @requires_dask
+    @pytest.mark.parametrize("unit", ["Y", "M", "D", "s", "ps"])
+    def test_astype_datetime_unit_matches_dask(self, unit: str) -> None:
+        values = np.array(["2016-01-15", "2016-06-15"], dtype="datetime64[s]")
+        eager = DataArray(values, dims="time").astype(f"datetime64[{unit}]")
+        lazy = (
+            DataArray(values, dims="time")
+            .chunk({"time": 1})
+            .astype(f"datetime64[{unit}]")
+        )
+
+        assert isinstance(lazy.data, dask_array_type)
+        assert lazy.dtype == eager.dtype
+        assert_identical(lazy.compute(), eager)
+        assert_identical(lazy.astype(int).compute(), eager.astype(int))
+
+    @requires_dask
+    @pytest.mark.parametrize("unit", ["Y", "M", "D", "s", "ps"])
+    def test_dask_datetime_input_unit_matches_numpy(self, unit: str) -> None:
+        values = np.array(["2016-01-15", "2016-06-15"], dtype=f"datetime64[{unit}]")
+        eager = DataArray(values, dims="time", name="test")
+        lazy = DataArray(
+            dask_array_api.from_array(values, chunks=1), dims="time", name="test"
+        )
+
+        assert isinstance(lazy.data, dask_array_type)
+        assert lazy.dtype == eager.dtype
+        assert_identical(lazy.compute(), eager)
+
     def test_astype_order(self) -> None:
         original = DataArray([[1, 2], [3, 4]])
         converted = original.astype("d", order="F")
