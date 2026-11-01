@@ -28,7 +28,7 @@ from xarray.core.variable import (
     as_variable,
     calculate_dimensions,
 )
-from xarray.structure.alignment import deep_align
+from xarray.structure.alignment import AlignmentError, deep_align
 from xarray.util.deprecation_helpers import (
     _COMPAT_DEFAULT,
     _JOIN_DEFAULT,
@@ -1191,6 +1191,46 @@ def dataset_merge_method(
     )
 
 
+def _check_update_index_types(
+    dataset: Dataset,
+    objects: Mapping[Hashable | None, DataArray | Dataset],
+    replaced: AbstractSet[Hashable],
+) -> None:
+    """Raise if an index in ``objects`` would replace one of ``dataset``'s
+    indexes with an index of another type or coordinate set.
+    Coordinates in ``replaced`` are skipped.
+    """
+    dataset_indexes = dataset.xindexes
+    for key, obj in objects.items():
+        object_indexes = obj.xindexes
+        for name, index in object_indexes.items():
+            if name not in dataset_indexes:
+                continue
+            own_coords = set(dataset_indexes.get_all_coords(name))
+            if own_coords & replaced:
+                continue
+            own = dataset_indexes[name]
+            coords = set(object_indexes.get_all_coords(name))
+            if type(index) is type(own) and coords == own_coords:
+                continue
+            source = "the other Dataset" if key is None else f"the value for {key!r}"
+            to_drop = sorted(
+                {
+                    coord
+                    for c in own_coords | coords
+                    for coord in object_indexes.get_all_coords(c, errors="ignore")
+                },
+                key=str,
+            )
+            raise AlignmentError(
+                f"cannot update Dataset: coordinate {name!r} is indexed by "
+                f"{type(own).__name__} over coordinates {sorted(own_coords, key=str)!r} "
+                f"on the Dataset but by {type(index).__name__} over coordinates "
+                f"{sorted(coords, key=str)!r} in {source}. "
+                f"Drop the incoming index first, e.g. with .drop_indexes({to_drop!r})."
+            )
+
+
 def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeResult:
     """Guts of the Dataset.update method.
 
@@ -1217,6 +1257,14 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
                     variable = value.variable.to_base_variable()
                     value = value._replace(variable=variable)
                 other[key] = value
+        (other,) = coerce_pandas_values([other])
+        _check_update_index_types(
+            dataset,
+            {k: v for k, v in other.items() if isinstance(v, DataArray)},
+            replaced=set(other),
+        )
+    else:
+        _check_update_index_types(dataset, {None: other}, replaced=set())
 
     return merge_core(
         [dataset, other],
