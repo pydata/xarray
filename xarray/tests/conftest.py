@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Generator
+from typing import TYPE_CHECKING
 
-import numpy as np
-import pandas as pd
 import pytest
 
-import xarray as xr
-from xarray import DataArray, Dataset, DataTree
 from xarray.tests import create_test_data, has_zarr, requires_cftime, requires_dask
 
-if has_zarr:
-    import zarr
+if TYPE_CHECKING:
+    from xarray import DataArray, Dataset
 
+if has_zarr:
     ZARR_FORMATS = [2, 3]
 else:
     ZARR_FORMATS = []
@@ -27,6 +25,8 @@ def handle_numpy_1_warnings():
     (e.g., 255 to int8), while NumPy 2.x raises OverflowError. This fixture
     suppresses the warning in NumPy 1.x environments to allow tests to pass.
     """
+    import numpy as np
+
     # Only apply for NumPy < 2.0
     if np.__version__.startswith("1."):
         with warnings.catch_warnings():
@@ -52,6 +52,8 @@ def use_dask(request):
 
 @pytest.fixture(params=["numbagg", "bottleneck", None])
 def compute_backend(request):
+    import xarray as xr
+
     if request.param is None:
         options = dict(use_bottleneck=False, use_numbagg=False)
     elif request.param == "bottleneck":
@@ -66,8 +68,12 @@ def compute_backend(request):
 
 
 def _create_test_ds(variant) -> Dataset:
+    import numpy as np
+
+    import xarray as xr
+
     if variant == 1:
-        return Dataset(
+        return xr.Dataset(
             dict(
                 z1=(["y", "x"], np.random.randn(2, 8)),
                 z2=(["time", "y"], np.random.randn(10, 2)),
@@ -80,7 +86,7 @@ def _create_test_ds(variant) -> Dataset:
             ),
         )
     elif variant == 2:
-        return Dataset(
+        return xr.Dataset(
             dict(
                 z1=(["time", "y"], np.random.randn(10, 2)),
                 z2=(["time"], np.random.randn(10)),
@@ -99,17 +105,24 @@ def _create_test_ds(variant) -> Dataset:
 
 
 def _create_test_da(variant) -> DataArray:
+    import numpy as np
+    import pandas as pd
+
+    import xarray as xr
+
     if variant == 1:
         times = pd.date_range("2000-01-01", freq="1D", periods=21)
-        return DataArray(
+        return xr.DataArray(
             np.random.random((3, 21, 4)),
             dims=("a", "time", "x"),
             coords=dict(time=times),
         )
     elif variant == 2:
-        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
+        return xr.DataArray(
+            [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"
+        )
     elif variant == "repeating_ints":
-        return DataArray(
+        return xr.DataArray(
             np.tile(np.arange(12), 5).reshape(5, 4, 3),
             coords={"x": list("abc"), "y": list("defg")},
             dims=list("zyx"),
@@ -153,17 +166,24 @@ def use_cftime(request):
     return request.param
 
 
-@pytest.fixture(params=[Dataset, DataArray])
+@pytest.fixture(params=["Dataset", "DataArray"])
 def type(request):
-    return request.param
+    import xarray as xr
+
+    return getattr(xr, request.param)
 
 
 @pytest.fixture(params=[1])
 def d(request, use_dask, type) -> DataArray | Dataset:
     """For tests which can test either a DataArray or a Dataset."""
+    import numpy as np
+    import pandas as pd
+
+    import xarray as xr
+
     result: DataArray | Dataset
     if request.param == 1:
-        ds = Dataset(
+        ds = xr.Dataset(
             dict(
                 a=(["x", "z"], np.arange(24).reshape(2, 12)),
                 b=(["y", "z"], np.arange(100, 136).reshape(3, 12).astype(np.float64)),
@@ -175,9 +195,9 @@ def d(request, use_dask, type) -> DataArray | Dataset:
                 w=("x", ["a", "b"]),
             ),
         )
-        if type == DataArray:
+        if type == xr.DataArray:
             result = ds["a"].assign_coords(w=ds.coords["w"])
-        elif type == Dataset:
+        elif type == xr.Dataset:
             result = ds
         else:
             raise ValueError
@@ -221,13 +241,14 @@ def create_test_datatree():
     The structure has deliberately repeated names of tags, variables, and
     dimensions in order to better check for bugs caused by name conflicts.
     """
+    import xarray as xr
 
     def _create_test_datatree(modify=lambda ds: ds):
         set1_data = modify(xr.Dataset({"a": 0, "b": 1}))
         set2_data = modify(xr.Dataset({"a": ("x", [2, 3]), "b": ("x", [0.1, 0.2])}))
         root_data = modify(xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])}))
 
-        root = DataTree.from_dict(
+        root = xr.DataTree.from_dict(
             {
                 "/": root_data,
                 "/set1": set1_data,
@@ -260,5 +281,7 @@ def time_unit(request):
 
 @pytest.fixture(params=ZARR_FORMATS)
 def default_zarr_format(request) -> Generator[None, None]:
+    import zarr
+
     with zarr.config.set(default_zarr_format=request.param):
         yield

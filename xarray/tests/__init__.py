@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import importlib
+import importlib.metadata
 import platform
 import string
 import warnings
 from contextlib import contextmanager, nullcontext
+from importlib.util import find_spec
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -77,15 +79,12 @@ def assert_writeable(ds):
 def _importorskip(
     modname: str, minversion: str | None = None
 ) -> tuple[bool, pytest.MarkDecorator]:
-    try:
-        mod = importlib.import_module(modname)
-        has = True
-        if minversion is not None:
-            v = getattr(mod, "__version__", "999")
-            if Version(v) < Version(minversion):
-                raise ImportError("Minimum version not satisfied")
-    except ImportError:
-        has = False
+    mod = find_spec(modname)
+    has = mod is not None
+    if minversion is not None:
+        v = importlib.metadata.version(modname)
+        if Version(v) < Version(minversion):
+            raise ImportError("Minimum version not satisfied")
 
     reason = f"requires {modname}"
     if minversion is not None:
