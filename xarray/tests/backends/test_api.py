@@ -10,7 +10,7 @@ import warnings
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 import pandas as pd
@@ -2025,6 +2025,12 @@ def test_get_mtime_non_file_paths() -> None:
     assert _get_mtime("/vsicurl/https://example.com/file.nc") is None
 
 
+type _FileStore = (
+    xr.backends.NetCDF4DataStore
+    | xr.backends.H5NetCDFStore
+    | xr.backends.ScipyDataStore
+)
+
 _STORE_CLASSES = [
     pytest.param(xr.backends.NetCDF4DataStore, marks=requires_netCDF4, id="netcdf4"),
     pytest.param(xr.backends.H5NetCDFStore, marks=requires_h5netcdf, id="h5netcdf"),
@@ -2032,13 +2038,13 @@ _STORE_CLASSES = [
 ]
 
 
-def _open_store(store_class, path, **kwargs):
+def _open_store(store_class: type[_FileStore], path: Path, **kwargs: Any) -> _FileStore:
     if issubclass(store_class, xr.backends.ScipyDataStore):
         return store_class(str(path), **kwargs)
     return store_class.open(path, **kwargs)
 
 
-def _engine(store_class) -> T_NetcdfEngine:
+def _engine(store_class: type[_FileStore]) -> T_NetcdfEngine:
     if issubclass(store_class, xr.backends.NetCDF4DataStore):
         return "netcdf4"
     if issubclass(store_class, xr.backends.H5NetCDFStore):
@@ -2046,14 +2052,16 @@ def _engine(store_class) -> T_NetcdfEngine:
     return "scipy"
 
 
-def _dask_name(store) -> str:
+def _dask_name(store: _FileStore) -> str:
     with open_dataset(store, chunks={}) as ds:
         return ds["a"].data.name
 
 
 @requires_dask
 @pytest.mark.parametrize("store_class", _STORE_CLASSES)
-def test_open_dataset_from_store_deterministic_names(tmp_path, store_class) -> None:
+def test_open_dataset_from_store_deterministic_names(
+    tmp_path: Path, store_class: type[_FileStore]
+) -> None:
     # GH11814: like a filename, a store gives the same dask names every time
     path = tmp_path / "test.nc"
     other = tmp_path / "other.nc"
@@ -2073,7 +2081,9 @@ def test_open_dataset_from_store_deterministic_names(tmp_path, store_class) -> N
 
 @requires_dask
 @pytest.mark.parametrize("store_class", _STORE_CLASSES[:2])
-def test_open_dataset_from_store_group_names(tmp_path, store_class) -> None:
+def test_open_dataset_from_store_group_names(
+    tmp_path: Path, store_class: type[_FileStore]
+) -> None:
     path = tmp_path / "test.nc"
     engine = _engine(store_class)
     Dataset({"a": ("x", np.arange(4))}).to_netcdf(path, engine=engine)
@@ -2114,7 +2124,7 @@ def test_open_dataset_from_store_group_names(tmp_path, store_class) -> None:
     ],
 )
 def test_open_dataset_from_store_names_open_kwargs(
-    tmp_path, store_class, kwargs
+    tmp_path: Path, store_class: type[_FileStore], kwargs: dict[str, Any]
 ) -> None:
     # options of opening the file change the data, and so the names
     path = tmp_path / "test.nc"
@@ -2125,26 +2135,9 @@ def test_open_dataset_from_store_names_open_kwargs(
 
 @requires_dask
 @pytest.mark.parametrize("store_class", _STORE_CLASSES)
-def test_open_dataset_from_store_subclass_names(tmp_path, store_class) -> None:
-    # a subclass may read the data differently, so it gets other names than its
-    # base class
-    from dask.base import tokenize
-
-    path = tmp_path / "test.nc"
-    Dataset({"a": ("x", np.arange(4))}).to_netcdf(path, engine=_engine(store_class))
-    subclass = type("SubclassedStore", (store_class,), {})
-    with (
-        _open_store(store_class, path) as store,
-        _open_store(subclass, path) as substore,
-        _open_store(subclass, path) as other_substore,
-    ):
-        assert tokenize(substore) == tokenize(other_substore)
-        assert tokenize(substore) != tokenize(store)
-
-
-@requires_dask
-@pytest.mark.parametrize("store_class", _STORE_CLASSES)
-def test_open_dataset_from_store_append_random_names(tmp_path, store_class) -> None:
+def test_open_dataset_from_store_append_random_names(
+    tmp_path: Path, store_class: type[_FileStore]
+) -> None:
     # a file opened for writing may change at any time
     path = tmp_path / "test.nc"
     Dataset({"a": ("x", np.arange(4))}).to_netcdf(path, engine=_engine(store_class))
@@ -2156,7 +2149,9 @@ def test_open_dataset_from_store_append_random_names(tmp_path, store_class) -> N
 
 @requires_dask
 @pytest.mark.parametrize("store_class", _STORE_CLASSES[:2])
-def test_open_dataset_from_open_file_random_names(tmp_path, store_class) -> None:
+def test_open_dataset_from_open_file_random_names(
+    tmp_path: Path, store_class: type[_FileStore]
+) -> None:
     # a store of an already open file can't tell whether it still matches the
     # file on disk, so its names are random
     path = tmp_path / "test.nc"

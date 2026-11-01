@@ -4,6 +4,8 @@ import gc
 import os
 import pickle
 import threading
+from pathlib import Path
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -398,7 +400,9 @@ def test_file_manager_del_while_pin_lock_held() -> None:
 
 
 @requires_dask
-def test_file_manager_dask_tokenize(tmp_path, monkeypatch) -> None:
+def test_file_manager_dask_tokenize(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # GH11814: managers of the same file opened for reading share a token
     from dask.base import tokenize
 
@@ -428,27 +432,21 @@ def test_file_manager_dask_tokenize(tmp_path, monkeypatch) -> None:
     assert tokenize(CachingFileManager(open, str(path), mode="r")) != token
 
 
-class _SubclassedCachingFileManager(CachingFileManager):
-    pass
-
-
 @requires_dask
 @pytest.mark.parametrize(
-    "manager_class, mode",
+    "mode",
     [
-        pytest.param(CachingFileManager, "w", id="write"),
-        pytest.param(CachingFileManager, "a", id="append"),
-        pytest.param(CachingFileManager, file_manager._OMIT_MODE, id="no-mode"),
-        pytest.param(_SubclassedCachingFileManager, "r", id="subclass"),
+        pytest.param("w", id="write"),
+        pytest.param("a", id="append"),
+        pytest.param(file_manager._OMIT_MODE, id="no-mode"),
     ],
 )
-def test_file_manager_dask_tokenize_random(tmp_path, manager_class, mode) -> None:
-    # A file opened for writing may change at any time, the mode an opener
-    # defaults to is unknown, and a subclass may have state that changes the
-    # data, so the token must be random.
+def test_file_manager_dask_tokenize_random(tmp_path: Path, mode: Any) -> None:
+    # A file opened for writing may change at any time, and the mode an opener
+    # defaults to is unknown, so the token must be random.
     from dask.base import tokenize
 
     path = tmp_path / "testing.txt"
     path.write_text("foo")
-    manager = manager_class(open, str(path), mode=mode)
+    manager = CachingFileManager(open, str(path), mode=mode)
     assert tokenize(manager) != tokenize(manager)

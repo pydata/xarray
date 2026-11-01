@@ -110,7 +110,7 @@ def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
     return path  # type: ignore[return-value]
 
 
-def _get_mtime(filename_or_obj):
+def _get_mtime(filename_or_obj: Any) -> float | None:
     # if passed an actual file path, augment the token with
     # the file modification time
     mtime = None
@@ -123,7 +123,7 @@ def _get_mtime(filename_or_obj):
     # bytes are the contents of a file, not a path
     if isinstance(path, str) and not is_remote_uri(path):
         with contextlib.suppress(OSError):
-            mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
+            mtime = os.path.getmtime(os.path.expanduser(path))
 
     return mtime
 
