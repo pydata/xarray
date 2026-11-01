@@ -836,6 +836,10 @@ Bug Fixes
 - Fixed a bug that caused rechunking a multi-dimensional cftime array along a
   subset of its dimensions to raise an error (:issue:`11567`, :pull:`11576`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`DataArray.get_index` and :py:meth:`Dataset.get_index` now return a
+  shallow copy of the stored index, so setting ``.name`` on the result no longer
+  renames the coordinate of the object it came from (:issue:`2949`).
+  By `Chirag Gupta <https://github.com/chiruu12>`_.
 - :py:meth:`Dataset.diff` and :py:meth:`DataArray.diff` now raise a ``ValueError``
   when ``dim`` is not an existing dimension, instead of silently returning the
   object unchanged. This matches the behavior of other methods such as
