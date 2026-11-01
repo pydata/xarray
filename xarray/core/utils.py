@@ -539,9 +539,9 @@ class FrozenMappingWarningOnValuesAccess(Frozen[K, V]):
     def get(self, key: K, /) -> V | None: ...
 
     @overload
-    def get(self, key: K, /, default: V | T) -> V | T: ...
+    def get[T](self, key: K, /, default: V | T) -> V | T: ...
 
-    def get(self, key: K, default: T | None = None) -> V | T | None:
+    def get[T](self, key: K, default: T | None = None) -> V | T | None:
         self._warn()
         return super().get(key, default)
 
