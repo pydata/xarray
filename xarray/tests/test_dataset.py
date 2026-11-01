@@ -4500,6 +4500,131 @@ class TestDataset:
         x = y.to_unstacked_dataset("features")
         assert_identical(D, x)
 
+    @pytest.mark.parametrize("sample_size", [1, 2])
+    @pytest.mark.parametrize("feature_size", [1, 3])
+    @pytest.mark.parametrize("level", [0, "variable", -1])
+    def test_to_unstacked_dataset_distinct_dimensions(
+        self, sample_size: int, feature_size: int, level: int | str, use_dask: bool
+    ) -> None:
+        # GH3495, GH9541: absent dimensions must not be confused with singletons.
+        data = xr.Dataset(
+            {
+                "a": (
+                    ("sample", "x"),
+                    np.arange(sample_size * feature_size).reshape(
+                        sample_size, feature_size
+                    ),
+                ),
+                "b": (
+                    ("sample", "y"),
+                    np.arange(sample_size * 2).reshape(sample_size, 2),
+                ),
+                "c": ("sample", np.arange(sample_size)),
+            },
+            coords={
+                "sample": np.arange(sample_size),
+                "x": np.arange(feature_size),
+                "y": [10, 20],
+            },
+        )
+        data["x"].attrs["units"] = "m"
+        data["sample"].attrs["long_name"] = "sample identifier"
+        if use_dask:
+            data = data.chunk({"sample": 1})
+
+        stacked = data.to_stacked_array("features", sample_dims=["sample"])
+        if level != 0:
+            stacked = stacked.reorder_levels(features=["x", "y", "variable"])
+        original = stacked.copy(deep=True)
+        with raise_if_dask_computes():
+            actual = stacked.to_unstacked_dataset("features", level=level)
+
+        assert_identical(actual, data)
+        assert_identical(stacked, original)
+        if use_dask:
+            assert all(var.chunks is not None for var in actual.data_vars.values())
+
+    @pytest.mark.parametrize("sample_size", [1, 2])
+    @pytest.mark.parametrize("feature_size", [1, 3])
+    def test_to_unstacked_dataset_multiple_dimensions(
+        self, sample_size: int, feature_size: int, use_dask: bool
+    ) -> None:
+        values = np.arange(sample_size * 2 * feature_size, dtype=float).reshape(
+            sample_size, 2, feature_size
+        )
+        values[0, 0, 0] = np.nan
+        data = xr.Dataset(
+            {
+                "temperature": (("time", "x", "y"), values),
+                "precipitation": (("time", "x", "y"), values + 100),
+            },
+            coords={
+                "time": np.arange(sample_size),
+                "x": [20, 10],
+                "y": np.arange(feature_size)[::-1],
+                "lat": (
+                    ("x", "y"),
+                    np.arange(2 * feature_size).reshape(2, feature_size),
+                ),
+                "reference_time": 42,
+            },
+        )
+        data["lat"].attrs["units"] = "degrees_north"
+        if use_dask:
+            data = data.copy(
+                data={
+                    name: var.chunk({"time": 1}).data
+                    for name, var in data.data_vars.items()
+                }
+            )
+
+        stacked = data.to_stacked_array("features", sample_dims=["time"])
+        original = stacked.copy(deep=True)
+        with raise_if_dask_computes():
+            actual = stacked.to_unstacked_dataset("features")
+
+        assert_identical(actual, data)
+        assert list(actual) == list(data)
+        assert_identical(stacked, original)
+        if use_dask:
+            assert all(var.chunks is not None for var in actual.data_vars.values())
+
+    def test_to_unstacked_dataset_variable_order(self, use_dask: bool) -> None:
+        data = xr.Dataset(
+            {"john": ("x", [42]), "bob": ("x", [24]), "alice": ("x", [42])}
+        )
+        if use_dask:
+            data = data.chunk()
+        stacked = data.to_stacked_array("features", sample_dims=["x"])
+        actual = stacked.to_unstacked_dataset("features")
+
+        assert_identical(actual, data)
+        assert list(actual) == list(data)
+
+    def test_to_unstacked_dataset_selected_multiple_dimensions(
+        self, use_dask: bool
+    ) -> None:
+        data = xr.Dataset(
+            {
+                "a": (("sample", "x", "y"), np.arange(8).reshape(2, 2, 2)),
+                "b": (("sample", "x", "y"), np.arange(8, 16).reshape(2, 2, 2)),
+                "c": (("sample", "x", "y"), np.arange(16, 24).reshape(2, 2, 2)),
+            },
+            coords={"sample": [10, 20], "x": [1, 2], "y": ["u", "v"]},
+        )
+        if use_dask:
+            data = data.chunk()
+        selected = data.to_stacked_array("features", ["sample"]).isel(
+            features=[5, 7, 1, 3]
+        )
+        original = selected.copy(deep=True)
+        with raise_if_dask_computes():
+            actual = selected.to_unstacked_dataset("features")
+
+        assert_identical(actual, data[["b", "a"]].sel(y=["v"]))
+        assert list(actual) == ["b", "a"]
+        assert_identical(selected, original)
+
     def test_to_stacked_array_preserves_dtype(self) -> None:
         # regression test for bug found in https://github.com/pydata/xarray/pull/8872#issuecomment-2081218616
         ds = xr.Dataset(
