@@ -9,6 +9,7 @@ from numpy.typing import ArrayLike
 from xarray.computation.apply_ufunc import apply_ufunc
 from xarray.computation.computation import dot
 from xarray.core import duck_array_ops, utils
+from xarray.core.common import _is_numeric_aggregatable_dtype
 from xarray.core.types import Dims, T_DataArray, T_Xarray
 from xarray.namedarray.utils import is_duck_dask_array
 from xarray.structure.alignment import align, broadcast
@@ -128,6 +129,9 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
+
     from xarray.core.dataarray import DataArray
     from xarray.core.dataset import Dataset
 
@@ -561,9 +565,24 @@ class DatasetWeighted(Weighted["Dataset"]):
         return ds.assign_coords(self.obj.coords.drop_vars(to_drop))
 
     @override
-    def _implementation(self, func, dim, **kwargs) -> Dataset:
+    def _implementation(
+        self, func: Callable[..., DataArray], dim: Dims, **kwargs: Any
+    ) -> Dataset:
         self._check_dim(dim)
-        result = self.obj.map(func, dim=dim, **kwargs)
+        dataset = self.obj
+        # Counting valid weights works for nonnumeric variables too.
+        if func != self._sum_of_weights:
+            numeric_vars = [
+                name
+                for name, var in self.obj.data_vars.items()
+                if var.dtype.kind in "biufcmM"
+                or (
+                    not utils.is_allowed_extension_array_dtype(var.dtype)
+                    and _is_numeric_aggregatable_dtype(var.variable)
+                )
+            ]
+            dataset = dataset[numeric_vars]
+        result = dataset.map(func, dim=dim, **kwargs)
         result = self._restore_coords(dim, result)
 
         # Clear attrs when keep_attrs is explicitly False
