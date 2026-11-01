@@ -362,18 +362,19 @@ def as_compatible_data(
     if not is_numpy and (
         hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
     ):
+        duck_data = cast("duckarray[Any, Any]", data)
         if (
-            is_duck_dask_array(data)
-            and data.dtype.kind == "M"
-            and np.datetime_data(data.dtype)[0] != "generic"
+            is_duck_dask_array(duck_data)
+            and duck_data.dtype.kind == "M"
+            and np.datetime_data(duck_data.dtype)[0] != "generic"
         ):
             # Match the pandas datetime unit conversion applied to NumPy data.
             normalized_dtype = np.asarray(
-                pd.Series(np.empty(0, dtype=data.dtype))
+                pd.Series(np.empty(0, dtype=duck_data.dtype))
             ).dtype
-            if data.dtype != normalized_dtype:
-                data = data.astype(normalized_dtype)
-        return cast("T_DuckArray", data)
+            if duck_data.dtype != normalized_dtype:
+                duck_data = duck_data.astype(normalized_dtype)
+        return cast("T_DuckArray", duck_data)
 
     # anything left will be converted to `numpy.ndarray`, including `numpy` scalars
     data = np.asarray(data)
