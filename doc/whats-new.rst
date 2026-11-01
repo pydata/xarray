@@ -761,6 +761,11 @@ Bug Fixes
 - Preserve NumPy ``StringDType`` variables and coordinates in Zarr format 3
   round trips (:issue:`11466`, :pull:`11474`).
   By `stanbot8 <https://github.com/stanbot8>`_.
+- :py:meth:`DataArray.cumulative` and :py:meth:`Dataset.cumulative` no longer raise
+  ``ValueError: window must be > 0`` on a dimension of length 0, and
+  :py:meth:`DataArray.rolling` no longer raises on one either. Both now return an
+  empty result, matching :py:meth:`DataArray.cumsum` (:pull:`11572`).
+  By `Chirag Gupta <https://github.com/chiruu12>`_.
 - :py:func:`~xarray.open_dataset` now raises an error pointing at
   :py:func:`~xarray.open_mfdataset` when it is given a list or tuple of paths,
   instead of reporting that no IO backend matched the input (:issue:`6510`).
