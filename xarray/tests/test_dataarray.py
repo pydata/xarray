@@ -3720,7 +3720,8 @@ class TestDataArray:
         ds = Dataset({"x": ("y", [100, 200])})
 
         with pytest.raises(
-            ValueError, match=r"variables \{'x'\} are found in both data_vars and coords"
+            ValueError,
+            match=r"variables \{'x'\} are found in both data_vars and coords",
         ):
             broadcast(array, ds)
 
