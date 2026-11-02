@@ -157,12 +157,20 @@ def did_you_mean(
     return msg
 
 
+def pandas_string_dtype_to_numpy(dtype: pd.StringDtype) -> np.dtypes.StringDType:
+    """Convert pandas StringDtype, preserving its missing-value marker."""
+    return np.dtypes.StringDType(na_object=dtype.na_value)
+
+
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:
     """Return a numpy compatible dtype from either a numpy array or a pandas.Index.
 
     Used for wrapping a pandas.Index as an xarray.Variable.
 
     """
+    if isinstance(array.dtype, pd.StringDtype):
+        return pandas_string_dtype_to_numpy(array.dtype)
+
     if isinstance(array, pd.PeriodIndex):
         return np.dtype("O")
 

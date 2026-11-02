@@ -132,6 +132,22 @@ class TestPandasIndex:
         index = PandasIndex(pd_idx, "x")
         assert index.index.name == "x"
 
+    @pytest.mark.parametrize("na_value", [pd.NA, np.nan], ids=["pd.NA", "nan"])
+    def test_pandas_string_dtype_coordinate_preserved(self, na_value: Any) -> None:
+        pd_idx = pd.Index(
+            ["a", None, "c"], name="x", dtype=pd.StringDtype(na_value=na_value)
+        )
+        expected_dtype = np.dtypes.StringDType(na_object=na_value)
+
+        array = xr.DataArray([1, 2, 3], dims="x", coords={"x": pd_idx})
+        dataset = xr.Dataset(coords={"x": pd_idx})
+        assigned = xr.DataArray([1, 2, 3], dims="x").assign_coords(x=pd_idx)
+        series = pd.Series([1, 2, 3], index=pd_idx).to_xarray()
+
+        for obj in [array, dataset, assigned, series]:
+            assert obj["x"].dtype == expected_dtype
+            assert obj["x"].isnull().values.tolist() == [False, True, False]
+
     def test_from_variables(self) -> None:
         # pandas has only Float64Index but variable dtype should be preserved
         data = np.array([1.1, 2.2, 3.3], dtype=np.float32)

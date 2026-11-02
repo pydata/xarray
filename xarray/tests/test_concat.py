@@ -43,6 +43,20 @@ if TYPE_CHECKING:
     from xarray.core.types import CombineAttrsOptions, JoinOptions
 
 
+@pytest.mark.parametrize("na_value", [pd.NA, np.nan], ids=["pd.NA", "nan"])
+@pytest.mark.parametrize("as_variable", [False, True], ids=["index", "variable"])
+def test_concat_pandas_string_dim_dtype_preserved(
+    na_value: Any, as_variable: bool
+) -> None:
+    index = pd.Index(["a", None], name="x", dtype=pd.StringDtype(na_value=na_value))
+    dim = Variable("x", index) if as_variable else index
+
+    result = concat([DataArray(1), DataArray(2)], dim=dim)
+
+    assert result["x"].dtype == np.dtypes.StringDType(na_object=na_value)
+    assert result["x"].isnull().values.tolist() == [False, True]
+
+
 @pytest.mark.parametrize("reverse", [False, True])
 @pytest.mark.parametrize(
     "operation", ["concat_array", "concat_dataset", "to_dataarray"]

@@ -7624,6 +7624,20 @@ class Dataset(
                 self._variables[k].set_dims(ordered_dims).values.reshape(-1)
                 for k in non_extension_array_columns
             ]
+            # NumPy StringDType arrays are otherwise converted to object
+            # columns by pandas; preserve the missing-value convention.
+            for i, k in enumerate(non_extension_array_columns):
+                dtype = self._variables[k].dtype
+                if isinstance(dtype, np.dtypes.StringDType):
+                    na_value = dtype.na_object
+                    # pandas StringDtype rejects custom markers, including
+                    # NumPy float32 NaN, but accepts Python/float64 NaN.
+                    if na_value is pd.NA or (
+                        isinstance(na_value, float) and np.isnan(na_value)
+                    ):
+                        data[i] = pd.array(
+                            data[i], dtype=pd.StringDtype(na_value=na_value)
+                        )
             index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(
             {

@@ -1181,6 +1181,15 @@ def test_pandas_indexing_sparse_indexer(key: np.ndarray) -> None:
     assert_array_equal(np.asarray(actual), labels[key])
 
 
+@pytest.mark.parametrize("na_value", [pd.NA, np.nan], ids=["pd.NA", "nan"])
+def test_pandas_string_indexing_adapter_explicit_dtype(na_value: Any) -> None:
+    index = pd.Index(["a", None], dtype=pd.StringDtype(na_value=na_value))
+    adapter = indexing.PandasIndexingAdapter(index, dtype=index.dtype)
+
+    assert adapter.dtype == np.dtypes.StringDType(na_object=na_value)
+    assert np.asarray(adapter).dtype == adapter.dtype
+
+
 def test_indexing_1d_object_array() -> None:
     items = (np.arange(3), np.arange(6))
     arr = DataArray(np.array(items, dtype=object))

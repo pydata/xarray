@@ -30,6 +30,7 @@ from xarray.core.utils import (
     is_full_slice,
     is_scalar,
     is_valid_numpy_dtype,
+    pandas_string_dtype_to_numpy,
     to_0d_array,
 )
 from xarray.namedarray.parallelcompat import get_chunked_array_type
@@ -2006,7 +2007,7 @@ class PandasIndexingAdapter(IndexingAdapter):
         elif is_allowed_extension_array_dtype(dtype):
             self._dtype = cast(pd.api.extensions.ExtensionDtype, dtype)
         elif isinstance(dtype, pd.StringDtype):
-            self._dtype = np.dtypes.StringDType(na_object=dtype.na_value)
+            self._dtype = pandas_string_dtype_to_numpy(dtype)
         else:
             self._dtype = np.dtype(cast(DTypeLike, dtype))
 
