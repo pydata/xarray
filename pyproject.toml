@@ -79,7 +79,7 @@ types = [
 dev = [
   "hypothesis",
   "jinja2",
-  "mypy==2.4.0",
+  "mypy==2.4.1",
   "pre-commit",
   "pytest",
   "pytest-cov",
