@@ -75,6 +75,14 @@ New Features
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Add static type hints for the accessors of popular external packages:
+  ``.cf`` (cf-xarray), ``.hvplot`` (hvplot), ``.metpy`` (MetPy), ``.odc``
+  (odc-geo), ``.pint`` (pint-xarray), ``.plotly`` (xarray-plotly), ``.rio``
+  (rioxarray), ``.vz`` (VirtualiZarr), ``.xrs`` (xarray-spatial) and ``.xvec``
+  (xvec). If the package is installed, type checkers and IDEs know the
+  accessor's methods. These packages are not new
+  dependencies (:issue:`11078`, :pull:`11087`).
+  By `Julia Signell <https://github.com/jsignell>`_ and `Felix Bumann <https://github.com/FBumann>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
