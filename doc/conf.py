@@ -83,7 +83,6 @@ copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.{3,}: | {5,8}: 
 copybutton_prompt_is_regexp = True
 
 # myst-nb
-nb_execution_excludepatterns = ["examples/apply_ufunc_vectorize_1d.ipynb"]
 # RTD does not publish the .err.log report, so print tracebacks in the build log
 nb_execution_show_tb = True
 
@@ -322,11 +321,24 @@ rediraffe_redirects = {
     "duckarrays.rst": "user-guide/duckarrays.rst",
     "related-projects.rst": "user-guide/ecosystem.rst",
     "faq.rst": "get-help/faq.rst",
+    "getting-started-guide/faq.rst": "get-help/faq.rst",
+    "help-diagram.rst": "get-help/help-diagram.rst",
+    "howdoi.rst": "get-help/howdoi.rst",
+    "ecosystem.rst": "user-guide/ecosystem.rst",
+    "tutorials-and-videos.rst": "getting-started-guide/tutorials-and-videos.rst",
+    "quickstart.rst": "getting-started-guide/quick-overview.rst",
+    "examples/quick-overview.rst": "getting-started-guide/quick-overview.rst",
+    "why-xray.rst": "getting-started-guide/why-xarray.rst",
+    "whats_new.rst": "whats-new.rst",
+    "examples.rst": "gallery.rst",
+    "internals.rst": "internals/index.rst",
+    "internals/variable-objects.rst": "internals/internal-design.rst",
     "why-xarray.rst": "getting-started-guide/why-xarray.rst",
     "installing.rst": "getting-started-guide/installing.rst",
     "quick-overview.rst": "getting-started-guide/quick-overview.rst",
     "contributing.rst": "contribute/contributing.rst",
     "developers-meeting.rst": "contribute/developers-meeting.rst",
+    "examples/apply_ufunc_vectorize_1d.ipynb": "gallery.rst",
 }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,

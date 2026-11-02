@@ -32,6 +32,14 @@ def test_arithmetic_join() -> None:
         assert OPTIONS["arithmetic_join"] == "exact"
 
 
+def test_display_expand_groups_deprecated() -> None:
+    with pytest.warns(FutureWarning, match="display_expand_groups") as record:
+        with xarray.set_options(display_expand_groups=False):
+            assert OPTIONS["display_expand_groups"] is False
+    assert len(record) == 1
+    assert OPTIONS["display_expand_groups"] == "default"
+
+
 def test_file_cache_maxsize() -> None:
     with pytest.raises(ValueError):
         xarray.set_options(file_cache_maxsize=0)

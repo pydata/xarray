@@ -112,6 +112,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
     axs : ndarray of matplotlib.axes.Axes
         Array containing axes in corresponding position, as returned from
         :py:func:`matplotlib.pyplot.subplots`.
+    axes : ndarray of matplotlib.axes.Axes
+        Alias of ``axs``, which is the preferred name.
     col_labels : list of matplotlib.text.Annotation
         Column titles.
     row_labels : list of matplotlib.text.Annotation
@@ -318,26 +320,11 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
 
     @property
     def axes(self) -> np.ndarray:
-        warnings.warn(
-            (
-                "self.axes is deprecated since 2022.11 in order to align with "
-                "matplotlibs plt.subplots, use self.axs instead."
-            ),
-            FutureWarning,
-            stacklevel=2,
-        )
+        """Alias of :py:attr:`axs`, which is the preferred name."""
         return self.axs
 
     @axes.setter
     def axes(self, axs: np.ndarray) -> None:
-        warnings.warn(
-            (
-                "self.axes is deprecated since 2022.11 in order to align with "
-                "matplotlibs plt.subplots, use self.axs instead."
-            ),
-            FutureWarning,
-            stacklevel=2,
-        )
         self.axs = axs
 
     @property

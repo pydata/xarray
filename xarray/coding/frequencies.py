@@ -79,6 +79,34 @@ def infer_freq(index):
         If the index is not datetime-like.
     ValueError
         If there are fewer than three values or the index is not 1D.
+
+    See Also
+    --------
+    pandas.infer_freq
+
+    Examples
+    --------
+    >>> times = pd.date_range("2000-01-01", periods=5, freq="D")
+    >>> xr.infer_freq(times)
+    'D'
+    >>> times = pd.date_range("2000-01-01", periods=5, freq="2h")
+    >>> xr.infer_freq(times)
+    '2h'
+
+    It also works on time coordinates and with non-standard calendars:
+
+    >>> times = xr.date_range(
+    ...     "2000-01-01", periods=3, freq="MS", calendar="noleap", use_cftime=True
+    ... )
+    >>> da = xr.DataArray([1, 2, 3], dims="time", coords={"time": times})
+    >>> xr.infer_freq(da.time)
+    'MS'
+
+    ``None`` is returned if there is no regular frequency:
+
+    >>> times = pd.DatetimeIndex(["2000-01-01", "2000-01-02", "2000-01-04"])
+    >>> print(xr.infer_freq(times))
+    None
     """
     from xarray.core.dataarray import DataArray
     from xarray.core.variable import Variable
