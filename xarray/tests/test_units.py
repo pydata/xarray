@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.core import dtypes, duck_array_ops
+from xarray.core import dtypes, duck_array_ops, utils
 from xarray.tests import (
     assert_allclose,
     assert_duckarray_allclose,
@@ -1529,6 +1529,20 @@ def test_dot_dataarray(dtype):
 
     assert_units_equal(expected, actual)
     assert_identical(expected, actual)
+
+
+def test_equivalent_quantity_attrs() -> None:
+    # pint quantities are eager duck arrays, so they are compared by value (GH11841)
+    lengths = Quantity(np.array([1.0, 2.0]), "m")
+    assert utils.equivalent(lengths, Quantity(np.array([1.0, 2.0]), "m"))
+    assert utils.equivalent(lengths, Quantity(np.array([0.001, 0.002]), "km"))
+    assert not utils.equivalent(lengths, Quantity(np.array([1.0, 3.0]), "m"))
+    assert not utils.equivalent(lengths, Quantity(np.array([1.0, 2.0]), "s"))
+
+    a = xr.DataArray([1, 2], dims="x", attrs={"lengths": lengths})
+    b = xr.DataArray([3, 4], dims="x", attrs={"lengths": lengths.copy()})
+    actual = xr.concat([a, b], dim="x", combine_attrs="drop_conflicts")
+    assert "lengths" in actual.attrs
 
 
 class TestVariable:

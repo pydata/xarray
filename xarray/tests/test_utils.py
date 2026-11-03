@@ -86,9 +86,17 @@ class TestDictionaries:
         assert utils.equivalent(np.float64(np.nan), float("nan"))
         # Other missing value scalars
         assert utils.equivalent(pd.NA, pd.NA)
-        assert utils.equivalent(None, np.nan)
         assert utils.equivalent(np.datetime64("NaT", "ns"), np.datetime64("NaT", "ns"))
         assert not utils.equivalent(np.nan, 0.0)
+        # None is only equivalent to None
+        assert utils.equivalent(None, None)
+        assert not utils.equivalent(None, np.nan)
+        assert not utils.equivalent(np.float64(np.nan), None)
+        assert not utils.equivalent(None, pd.NA)
+        assert not utils.equivalent(None, np.datetime64("NaT", "ns"))
+        # NumPy scalars are compared as arrays, not iterated like lists
+        assert not utils.equivalent(np.float64(1.0), [1.0, 2.0])
+        assert not utils.equivalent([1.0, 2.0], np.float64(1.0))
 
     def test_safe(self):
         # should not raise exception:
