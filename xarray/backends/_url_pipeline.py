@@ -14,8 +14,6 @@ import functools
 import sys
 from typing import TYPE_CHECKING
 
-from xarray.namedarray.utils import module_available
-
 if TYPE_CHECKING:
     from zarr.storage import URLPipeline  # type: ignore[attr-defined,unused-ignore]
 
@@ -23,11 +21,12 @@ if TYPE_CHECKING:
 @functools.cache
 def _has_url_pipeline() -> bool:
     """Whether the installed zarr supports URL pipelines (feature detection)."""
-    if not module_available("zarr"):
-        return False
-    import zarr.storage  # optional dependency, only imported once a "|" is seen
+    try:
+        import zarr.storage  # optional dependency, only imported once a "|" is seen
 
-    return hasattr(zarr.storage, "URLPipeline")
+        return hasattr(zarr.storage, "URLPipeline")
+    except ImportError:
+        return False
 
 
 def as_zarr_url_pipeline[T](store: T) -> T | URLPipeline:
