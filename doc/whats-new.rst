@@ -605,7 +605,7 @@ Internal Changes
 - Convert structured arrays to object arrays of tuples before creating a
   :py:class:`pandas.Index` from them, which pandas deprecated (:issue:`11749`).
   By `glaziermag <https://github.com/glaziermag>`_.
- 
+
 .. _whats-new.2026.09.0:
 
 v2026.09.0 (Sep 29, 2026)

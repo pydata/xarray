@@ -213,10 +213,10 @@ class TestStoreDatasets:
         ):
             DataTree(name="mary", dataset={})  # type: ignore[arg-type]
 
-    def test_set_data(self ) -> None:
+    def test_set_data(self) -> None:
         john = DataTree(name="john")
         dat = xr.Dataset({"a": 0})
-        
+
         john.dataset = dat  # type: ignore[assignment,unused-ignore]
 
         assert_identical(john.to_dataset(), dat)
@@ -226,7 +226,7 @@ class TestStoreDatasets:
             match=r"data object is not an xarray\.Dataset, xarray\.Coordinates, or None",
         ):
             john.dataset = {}  # type: ignore[assignment]
-            
+
     def test_ds_deprecated(self) -> None:
         john = DataTree(name="john", dataset=xr.Dataset({"a": 0}))
         with pytest.warns(FutureWarning, match=r"DataTree\.ds is deprecated"):
