@@ -1129,6 +1129,7 @@ class Variable(
                 value = Variable(dims[-value.ndim :], value)
         # broadcast to become assignable
         value = value.set_dims(dims).data
+        value = to_like_array(value, self._data)
 
         if new_order:
             value = duck_array_ops.asarray(value)

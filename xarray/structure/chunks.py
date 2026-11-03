@@ -153,6 +153,23 @@ def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ..
     See Also
     --------
     dask.array.core.unify_chunks
+
+    Examples
+    --------
+    >>> da1 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(x=1)
+    >>> da2 = xr.DataArray(np.arange(6).reshape(2, 3), dims=("x", "y")).chunk(y=1)
+    >>> da1.chunks
+    ((1, 1), (3,))
+    >>> da2.chunks
+    ((2,), (1, 1, 1))
+
+    Afterwards, both have the same chunks:
+
+    >>> da1, da2 = xr.unify_chunks(da1, da2)
+    >>> da1.chunks
+    ((1, 1), (1, 1, 1))
+    >>> da2.chunks
+    ((1, 1), (1, 1, 1))
     """
     from xarray.core.dataarray import DataArray
 

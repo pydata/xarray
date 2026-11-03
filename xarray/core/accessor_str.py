@@ -1468,6 +1468,8 @@ class StringAccessor[T_DataArray: DataArray]:
         Strings in the array are padded with '0' characters on the
         left of the string to reach a total string length  `width`. Strings
         in the array with length greater or equal to `width` are unchanged.
+        Like :meth:`str.zfill`, a leading sign (``+`` or ``-``) stays at the
+        start of the string and the '0' characters are inserted after it.
 
         If `width` is array-like, it is broadcast against the array and applied
         elementwise.
@@ -1482,7 +1484,10 @@ class StringAccessor[T_DataArray: DataArray]:
         -------
         filled : same type as values
         """
-        return self.rjust(width, fillchar="0")
+        # np.strings requires integer widths
+        width = width.astype(int) if hasattr(width, "astype") else int(width)
+        func = self._method("zfill")
+        return self._apply(func=func, np_func=np.strings.zfill, func_args=(width,))
 
     def contains(
         self,
@@ -2154,10 +2159,10 @@ class StringAccessor[T_DataArray: DataArray]:
         def _get_res_multi(val, pat):
             match = pat.search(val)
             if match is None:
-                return np.array([""], val.dtype)
+                return np.array([""] * maxgroups, dtype=np.object_)
             match = match.groups()
             match = [grp if grp is not None else "" for grp in match]
-            return np.array(match, val.dtype)
+            return np.array(match, dtype=np.object_)
 
         if dim is None:
             return self._apply(func=_get_res_single, func_args=(pat,))
@@ -2628,7 +2633,7 @@ class StringAccessor[T_DataArray: DataArray]:
 
         Returns
         -------
-        splitted : same type as values or object array
+        split : same type as values or object array
 
         See Also
         --------
@@ -2650,8 +2655,8 @@ class StringAccessor[T_DataArray: DataArray]:
 
         Split once and put the results in a new dimension
 
-        >>> values.str.split(dim="splitted", maxsplit=1)
-        <xarray.DataArray (X: 2, Y: 3, splitted: 2)> Size: 864B
+        >>> values.str.split(dim="split", maxsplit=1)
+        <xarray.DataArray (X: 2, Y: 3, split: 2)> Size: 864B
         array([[['abc', 'def'],
                 ['spam', 'eggs\tswallow'],
                 ['red_blue', '']],
@@ -2659,12 +2664,12 @@ class StringAccessor[T_DataArray: DataArray]:
                [['test0', 'test1\ntest2\n\ntest3'],
                 ['', ''],
                 ['abra', 'ka\nda\tbra']]], dtype='<U18')
-        Dimensions without coordinates: X, Y, splitted
+        Dimensions without coordinates: X, Y, split
 
         Split as many times as needed and put the results in a new dimension
 
-        >>> values.str.split(dim="splitted")
-        <xarray.DataArray (X: 2, Y: 3, splitted: 4)> Size: 768B
+        >>> values.str.split(dim="split")
+        <xarray.DataArray (X: 2, Y: 3, split: 4)> Size: 768B
         array([[['abc', 'def', '', ''],
                 ['spam', 'eggs', 'swallow', ''],
                 ['red_blue', '', '', '']],
@@ -2672,7 +2677,7 @@ class StringAccessor[T_DataArray: DataArray]:
                [['test0', 'test1', 'test2', 'test3'],
                 ['', '', '', ''],
                 ['abra', 'ka', 'da', 'bra']]], dtype='<U8')
-        Dimensions without coordinates: X, Y, splitted
+        Dimensions without coordinates: X, Y, split
 
         Split once and put the results in lists
 
@@ -2696,8 +2701,8 @@ class StringAccessor[T_DataArray: DataArray]:
 
         Split only on spaces
 
-        >>> values.str.split(dim="splitted", sep=" ")
-        <xarray.DataArray (X: 2, Y: 3, splitted: 3)> Size: 2kB
+        >>> values.str.split(dim="split", sep=" ")
+        <xarray.DataArray (X: 2, Y: 3, split: 3)> Size: 2kB
         array([[['abc', 'def', ''],
                 ['spam\t\teggs\tswallow', '', ''],
                 ['red_blue', '', '']],
@@ -2705,7 +2710,7 @@ class StringAccessor[T_DataArray: DataArray]:
                [['test0\ntest1\ntest2\n\ntest3', '', ''],
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
-        Dimensions without coordinates: X, Y, splitted
+        Dimensions without coordinates: X, Y, split
         """
         return self._splitter(
             func=self._method("split"),
@@ -2745,7 +2750,7 @@ class StringAccessor[T_DataArray: DataArray]:
 
         Returns
         -------
-        rsplitted : same type as values or object array
+        rsplit : same type as values or object array
 
         See Also
         --------
@@ -2767,8 +2772,8 @@ class StringAccessor[T_DataArray: DataArray]:
 
         Split once and put the results in a new dimension
 
-        >>> values.str.rsplit(dim="splitted", maxsplit=1)
-        <xarray.DataArray (X: 2, Y: 3, splitted: 2)> Size: 816B
+        >>> values.str.rsplit(dim="split", maxsplit=1)
+        <xarray.DataArray (X: 2, Y: 3, split: 2)> Size: 816B
         array([[['abc', 'def'],
                 ['spam\t\teggs', 'swallow'],
                 ['', 'red_blue']],
@@ -2776,12 +2781,12 @@ class StringAccessor[T_DataArray: DataArray]:
                [['test0\ntest1\ntest2', 'test3'],
                 ['', ''],
                 ['abra  ka\nda', 'bra']]], dtype='<U17')
-        Dimensions without coordinates: X, Y, splitted
+        Dimensions without coordinates: X, Y, split
 
         Split as many times as needed and put the results in a new dimension
 
-        >>> values.str.rsplit(dim="splitted")
-        <xarray.DataArray (X: 2, Y: 3, splitted: 4)> Size: 768B
+        >>> values.str.rsplit(dim="split")
+        <xarray.DataArray (X: 2, Y: 3, split: 4)> Size: 768B
         array([[['', '', 'abc', 'def'],
                 ['', 'spam', 'eggs', 'swallow'],
                 ['', '', '', 'red_blue']],
@@ -2789,7 +2794,7 @@ class StringAccessor[T_DataArray: DataArray]:
                [['test0', 'test1', 'test2', 'test3'],
                 ['', '', '', ''],
                 ['abra', 'ka', 'da', 'bra']]], dtype='<U8')
-        Dimensions without coordinates: X, Y, splitted
+        Dimensions without coordinates: X, Y, split
 
         Split once and put the results in lists
 
@@ -2813,8 +2818,8 @@ class StringAccessor[T_DataArray: DataArray]:
 
         Split only on spaces
 
-        >>> values.str.rsplit(dim="splitted", sep=" ")
-        <xarray.DataArray (X: 2, Y: 3, splitted: 3)> Size: 2kB
+        >>> values.str.rsplit(dim="split", sep=" ")
+        <xarray.DataArray (X: 2, Y: 3, split: 3)> Size: 2kB
         array([[['', 'abc', 'def'],
                 ['', '', 'spam\t\teggs\tswallow'],
                 ['', '', 'red_blue']],
@@ -2822,7 +2827,7 @@ class StringAccessor[T_DataArray: DataArray]:
                [['', '', 'test0\ntest1\ntest2\n\ntest3'],
                 ['', '', ''],
                 ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
-        Dimensions without coordinates: X, Y, splitted
+        Dimensions without coordinates: X, Y, split
         """
         return self._splitter(
             func=self._method("rsplit"),

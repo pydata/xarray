@@ -69,6 +69,7 @@ Machine Learning
 - `sklearn-xarray (1) <https://phausamann.github.io/sklearn-xarray>`_: Combines scikit-learn and xarray (1).
 - `sklearn-xarray (2) <https://sklearn-xarray.readthedocs.io/en/latest/>`_: Combines scikit-learn and xarray (2).
 - `xbatcher <https://xbatcher.readthedocs.io>`_: Batch Generation from Xarray Datasets.
+- `xdflow <https://github.com/general-sense/xdflow>`_: Dimension-aware ML pipelines and cross-validation for labeled scientific data, with scikit-learn estimators.
 
 Other domains
 ~~~~~~~~~~~~~

@@ -1791,7 +1791,7 @@ class NumpyIndexingAdapter(IndexingAdapter):
             array[key] = value
         except ValueError as exc:
             # More informative exception if read-only view
-            if not array.flags.writeable and not array.flags.owndata:
+            if not getattr(array.flags, "writeable", True) and not array.flags.owndata:
                 raise ValueError(
                     "Assignment destination is a view.  "
                     "Do you want to .copy() array first?"
@@ -2090,7 +2090,13 @@ class PandasIndexingAdapter(IndexingAdapter):
     def _index_get(
         self, indexer: ExplicitIndexer, func_name: str
     ) -> PandasIndexingAdapter | np.ndarray:
-        key = indexer.tuple
+        indexer = type(indexer)(
+            tuple(
+                to_numpy(k) if is_duck_array(k) and not isinstance(k, np.ndarray) else k
+                for k in indexer.tuple
+            )
+        )
+        key: Any = indexer.tuple
 
         if len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
