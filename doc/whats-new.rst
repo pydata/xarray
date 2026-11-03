@@ -274,6 +274,11 @@ Bug Fixes
   needs to move core dimensions to the end. The internal ``transpose`` duck
   array helper now uses the Array API ``permute_dims`` (:issue:`9933`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- Weighted reductions on a :py:class:`Dataset` no longer raise an error when
+  reducing over a dimension that is neither on the ``weights`` nor on one of
+  the data variables, restoring the behaviour before (:pull:`8606`)
+  (:issue:`8679`).
+  By `Dresden Goehner <https://github.com/DresdenGman>`_.
 - Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
   include a note naming the data variable being processed (:issue:`2078`).
   By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.

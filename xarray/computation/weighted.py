@@ -219,6 +219,17 @@ class Weighted[T_Xarray: (DataArray, Dataset)]:
         if dim is None:
             dim = ...
 
+        if dim is not ...:
+            # `dot` raises if a dimension is not present on either array
+            # (GH8606), but reductions on a Dataset are applied to each
+            # variable separately, and a variable may not have a dimension
+            # that only exists on other variables of the Dataset (GH8679).
+            # Drop such dimensions, which `dot` used to silently ignore.
+            all_dims = set(da.dims) | set(weights.dims)
+            dims = utils.parse_dims_as_set(dim, all_dims=all_dims, check_exists=False)
+            if ... not in dims:
+                dim = tuple(dims & all_dims)
+
         # need to mask invalid values in da, as `dot` does not implement skipna
         if skipna or (skipna is None and da.dtype.kind in "cfO"):
             da = da.fillna(0.0)
