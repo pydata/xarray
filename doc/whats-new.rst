@@ -466,6 +466,11 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- :py:meth:`plot.FacetGrid.map_plot1d` and
+  :py:meth:`plot.FacetGrid.map_dataarray_line` only work on a ``FacetGrid`` of a
+  :py:class:`DataArray`, and their ``self`` is now typed as such instead of
+  ``FacetGrid[Any]`` (:issue:`11730`).
+  By `Francesco Pezzella <https://github.com/FrancescoPezzella>`_.
 
 
 Documentation
