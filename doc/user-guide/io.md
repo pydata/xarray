@@ -1040,6 +1040,38 @@ ds_gcs = xr.open_zarr(zstore)
 
 `````
 
+(io.zarr.url-pipelines)=
+
+### URL pipelines
+
+With a zarr-python release that supports
+[URL pipelines](https://zarr.dev/zeps/draft/ZEP0008.html)
+([zarr-python#4192](https://github.com/zarr-developers/zarr-python/pull/4192)),
+a single string can address data inside nested containers, with
+`|`-separated segments read from left to right. For example, to read a tagged
+version of an Icechunk repository:
+
+```python
+ds = xr.open_zarr("s3://bucket/repo|icechunk://tag.v1/")
+```
+
+Such strings work wherever xarray accepts a Zarr store, including
+{py:func}`open_dataset` (which picks `engine="zarr"` for them),
+{py:func}`open_datatree`, {py:func}`open_mfdataset` and
+{py:meth}`Dataset.to_zarr`. A parsed `zarr.storage.URLPipeline` works too:
+
+```python
+from zarr.storage import URLPipeline
+
+ds = xr.open_zarr(URLPipeline.from_url("s3://bucket/repo|icechunk://tag.v1/"))
+```
+
+A string is only read as a pipeline when it contains `|` and zarr can parse
+it as one; otherwise it keeps its usual meaning, so for example a relative
+local path containing `|` is still a path. A string that zarr parses but whose
+adapter (`icechunk:`, ...) isn't installed fails when it is opened. With older
+zarr versions, `|` is an ordinary character.
+
 (io-zarr-distributed-writes)=
 
 ### Distributed writes
