@@ -7635,9 +7635,10 @@ class Dataset(
                     if na_value is pd.NA or (
                         isinstance(na_value, float) and np.isnan(na_value)
                     ):
-                        data[i] = pd.array(
-                            data[i], dtype=pd.StringDtype(na_value=na_value)
-                        )
+                        # pandas-stubs versions differ on the na_value
+                        # constructor and the pd.array overloads.
+                        string_dtype = cast(Any, pd.StringDtype)(na_value=na_value)
+                        data[i] = cast(Any, pd.array)(data[i], dtype=string_dtype)
             index = self.coords.to_index([*ordered_dims])
         broadcasted_df = pd.DataFrame(
             {
@@ -10659,10 +10660,10 @@ class Dataset(
         Execute a reduction
 
         >>> ds.groupby("letters").sum()
-        <xarray.Dataset> Size: 64B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (letters: 2, y: 3)
         Coordinates:
-          * letters  (letters) object 16B 'a' 'b'
+          * letters  (letters) ... 'a' 'b'
         Dimensions without coordinates: y
         Data variables:
             foo      (letters, y) int64 48B 9 11 13 9 11 13
@@ -10679,11 +10680,11 @@ class Dataset(
         >>> from xarray.groupers import BinGrouper, UniqueGrouper
         >>>
         >>> ds.groupby(x=BinGrouper(bins=[5, 15, 25]), letters=UniqueGrouper()).sum()
-        <xarray.Dataset> Size: 144B
+        <xarray.Dataset> Size: ...B
         Dimensions:  (y: 3, x_bins: 2, letters: 2)
         Coordinates:
           * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
-          * letters  (letters) object 16B 'a' 'b'
+          * letters  (letters) ... 'a' 'b'
         Dimensions without coordinates: y
         Data variables:
             foo      (y, x_bins, letters) float64 96B 0.0 nan nan 3.0 ... nan nan 5.0

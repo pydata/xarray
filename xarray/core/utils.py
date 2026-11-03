@@ -159,7 +159,8 @@ def did_you_mean(
 
 def pandas_string_dtype_to_numpy(dtype: pd.StringDtype) -> np.dtypes.StringDType:
     """Convert pandas StringDtype, preserving its missing-value marker."""
-    return np.dtypes.StringDType(na_object=dtype.na_value)
+    # NumPy and pandas typing stubs differ on accepted missing-value markers.
+    return np.dtypes.StringDType(na_object=cast(Any, dtype.na_value))
 
 
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index) -> np.dtype:

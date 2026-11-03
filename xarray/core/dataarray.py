@@ -7397,7 +7397,7 @@ class DataArray(
         array([[ 9, 11, 13],
                [ 9, 11, 13]])
         Coordinates:
-          * letters  (letters) object 16B 'a' 'b'
+          * letters  (letters) ... 'a' 'b'
         Dimensions without coordinates: y
 
         Grouping by multiple variables
@@ -7420,7 +7420,7 @@ class DataArray(
                 [ 3.,  4.,  5.]]])
         Coordinates:
           * x_bins   (x_bins) interval[int64, right] 32B (5, 15] (15, 25]
-          * letters  (letters) object 16B 'a' 'b'
+          * letters  (letters) ... 'a' 'b'
         Dimensions without coordinates: y
         """
         from xarray.core.groupby import (
