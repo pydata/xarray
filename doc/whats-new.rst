@@ -466,6 +466,12 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Comparing attributes that hold dask arrays, e.g. in arithmetic with
+  ``keep_attrs=True`` or ``combine_attrs="drop_conflicts"``, no longer computes
+  them. Such attributes are only considered equal if their dask tokens match.
+  :py:meth:`DataArray.identical` and :py:meth:`Dataset.identical` also no longer
+  raise ``ValueError`` for these attributes (:issue:`11841`).
+  By `David Hoese <https://github.com/djhoese>`_.
 
 
 Documentation
