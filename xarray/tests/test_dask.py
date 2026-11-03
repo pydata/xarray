@@ -1646,11 +1646,25 @@ def test_equivalent_lazy_arrays_no_computes() -> None:
         # otherwise equality is unknown without computing: not equivalent
         assert not utils.equivalent(x, x * 1)
         assert not utils.equivalent(x, da.zeros((10, 10), chunks=2))
+        assert not utils.equivalent(x, da.ones((10, 10), chunks=2).mean())
         assert not utils.equivalent(x, np.ones((10, 10)))
         assert not utils.equivalent(np.ones((10, 10)), x)
         assert not utils.equivalent(x, lazy_da)
         assert not utils.equivalent(lazy_da, lazy_da + 0)
+        assert not utils.equivalent(np.ones((10, 10)), lazy_da)
+        assert not utils.equivalent(lazy_da, np.ones((10, 10)))
         assert not utils.equivalent([x], [x * 1])
+
+        # dask scalars, e.g. reductions over all dimensions
+        assert utils.equivalent(x.mean(), x.mean())
+        assert not utils.equivalent(x.mean(), (x * 2).mean())
+        nan = da.from_array(np.array(np.nan))
+        assert not utils.equivalent(nan * 1, nan + 0)
+        assert not utils.equivalent(x.mean(), 1.0)
+        assert not utils.equivalent(1.0, x.mean())
+        assert not utils.equivalent(x.mean(), np.float64(1.0))
+        assert not utils.equivalent(lazy_da.mean(), lazy_da.mean())
+        assert not utils.equivalent(lazy_da.mean(), 1.0)
 
 
 def test_dask_array_attrs_no_computes() -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import xarray as xr
+from xarray.core import utils
 from xarray.testing import assert_equal
 
 np = pytest.importorskip("numpy", minversion="1.22")
@@ -159,3 +160,18 @@ def test_where() -> None:
     assert isinstance(actual.data, Array)
     actual_np = actual.copy(data=np.asarray(actual.data))
     assert_equal(actual_np, expected)
+
+
+def test_equivalent_attrs() -> None:
+    # array_api_strict arrays are eager duck arrays, so they are compared by value
+    # (GH11841)
+    values = xp.asarray([1.0, 2.0, np.nan])
+    assert utils.equivalent(values, xp.asarray([1.0, 2.0, np.nan]))
+    assert not utils.equivalent(values, xp.asarray([1.0, 3.0, np.nan]))
+
+    a = xr.DataArray(np.array([1, 2]), dims="x", attrs={"values": values})
+    b = xr.DataArray(
+        np.array([3, 4]), dims="x", attrs={"values": xp.asarray([1.0, 2.0, np.nan])}
+    )
+    actual = xr.concat([a, b], dim="x", combine_attrs="drop_conflicts")
+    assert "values" in actual.attrs
