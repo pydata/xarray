@@ -5515,11 +5515,12 @@ class TestDataset:
     def test_to_dataframe_string_dtype_scalar(
         self, na_value: Any, value: str | None
     ) -> None:
-        index = pd.Index([value], name="x", dtype=pd.StringDtype(na_value=na_value))
+        string_dtype = cast(Any, pd.StringDtype)(na_value=na_value)
+        index = pd.Index([value], name="x", dtype=string_dtype)
         dataset = Dataset({"x": index, "value": ("row", [1])}).isel(x=0)
         frame = dataset.to_dataframe()
 
-        assert frame["x"].dtype == pd.StringDtype(na_value=na_value)
+        assert frame["x"].dtype == string_dtype
         assert bool(pd.isna(frame["x"].iloc[0])) is (value is None)
         if value is not None:
             assert frame["x"].iloc[0] == value

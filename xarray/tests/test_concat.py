@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 from unittest.mock import patch
 
 import numpy as np
@@ -48,7 +48,8 @@ if TYPE_CHECKING:
 def test_concat_pandas_string_dim_dtype_preserved(
     na_value: Any, as_variable: bool
 ) -> None:
-    index = pd.Index(["a", None], name="x", dtype=pd.StringDtype(na_value=na_value))
+    string_dtype = cast(Any, pd.StringDtype)(na_value=na_value)
+    index = pd.Index(["a", None], name="x", dtype=string_dtype)
     dim = Variable("x", index) if as_variable else index
 
     result = concat([DataArray(1), DataArray(2)], dim=dim)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -134,9 +134,8 @@ class TestPandasIndex:
 
     @pytest.mark.parametrize("na_value", [pd.NA, np.nan], ids=["pd.NA", "nan"])
     def test_pandas_string_dtype_coordinate_preserved(self, na_value: Any) -> None:
-        pd_idx = pd.Index(
-            ["a", None, "c"], name="x", dtype=pd.StringDtype(na_value=na_value)
-        )
+        string_dtype = cast(Any, pd.StringDtype)(na_value=na_value)
+        pd_idx = pd.Index(["a", None, "c"], name="x", dtype=string_dtype)
         expected_dtype = np.dtypes.StringDType(na_object=na_value)
 
         array = xr.DataArray([1, 2, 3], dims="x", coords={"x": pd_idx})
