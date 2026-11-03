@@ -829,6 +829,56 @@ def test_weighted_bad_dim(operation, as_dataset):
 
 
 @pytest.mark.parametrize(
+    "operation, expected",
+    [
+        pytest.param(
+            "mean",
+            Dataset({"a": ("x", [1.0, 2.0]), "scalar": ("x", [1.0, 1.0])}),
+            id="mean",
+        ),
+        pytest.param(
+            "sum",
+            Dataset({"a": ("x", [1, 4]), "scalar": ("x", [1, 2])}),
+            id="sum",
+        ),
+        pytest.param(
+            "sum_of_weights",
+            Dataset({"a": ("x", [1.0, 2.0]), "scalar": ("x", [1.0, 2.0])}),
+            id="sum_of_weights",
+        ),
+    ],
+)
+def test_weighted_dataset_dim_not_on_weights_or_variable(
+    operation: str, expected: Dataset
+) -> None:
+    # GH8679: reducing a Dataset over a dimension that is neither on the
+    # weights nor on one of the variables used to work before GH8606 made
+    # ``dot`` raise for dimensions missing from both of its inputs.
+    ds = Dataset({"a": (("y", "x"), [[1, 2]]), "scalar": 1})
+    weights = DataArray([1, 2], dims="x")
+
+    result = getattr(ds.weighted(weights), operation)("y")
+    assert_identical(result, expected)
+
+
+def test_weighted_dataset_dim_missing_on_some_variables() -> None:
+    # GH8679: only some variables have the reduction dimension; the others
+    # are combined with the weights without reducing.
+    ds = Dataset({"a": (("y",), [1.0, 3.0]), "b": (("x",), [10.0, 20.0])})
+    weights = DataArray([1, 2], dims="x")
+
+    result = ds.weighted(weights).mean("y")
+    expected = Dataset({"a": ("x", [2.0, 2.0]), "b": ("x", [10.0, 20.0])})
+    assert_identical(result, expected)
+
+    # reducing over both dimensions at once only drops the missing ones
+    ds = Dataset({"a": (("y", "x"), [[1, 2]]), "scalar": 1})
+    result = ds.weighted(weights).mean(["y", "x"])
+    expected = Dataset({"a": 5.0 / 3.0, "scalar": 1.0})
+    assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize(
     "operation", ["sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std"]
 )
 @pytest.mark.parametrize(
