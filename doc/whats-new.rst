@@ -82,7 +82,7 @@ New Features
   :py:func:`open_dataset` selects ``engine="zarr"`` for them and for
   ``zarr.storage.URLPipeline`` objects. A string is only read as a pipeline
   when it contains ``|`` and zarr can parse it as one, so other strings keep
-  their meaning; with older zarr versions nothing changes (:pull:`XXXXX`).
+  their meaning; with older zarr versions nothing changes (:pull:`11844`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking Changes
