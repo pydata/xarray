@@ -1,0 +1,32 @@
+- case: test_mypy_open_zarr_arguments
+  main: |
+    from pathlib import Path
+
+    from zarr.storage import MemoryStore
+
+    import xarray as xr
+
+    ds = xr.open_zarr("store.zarr", chunks="auto")
+    reveal_type(ds)  # N: Revealed type is "xarray.core.dataset.Dataset"
+
+    xr.open_zarr(Path("store.zarr"), group="a/b", chunks=None, zarr_format=3)
+    xr.open_zarr(MemoryStore(), chunks={"x": 10}, consolidated=False)
+    xr.open_zarr(
+        "store.zarr",
+        mask_and_scale={"a": False},
+        decode_times=xr.coders.CFDatetimeCoder(use_cftime=True),
+        decode_timedelta={"b": xr.coders.CFTimedeltaCoder()},
+        drop_variables=["c"],
+        storage_options={"anon": True},
+    )
+
+- case: test_mypy_open_zarr_invalid_arguments
+  main: |
+    import xarray as xr
+
+    xr.open_zarr("store.zarr", zarr_format=4)
+    xr.open_zarr("store.zarr", chunk={"x": 10})
+  out: |
+    main:3: error: Argument "zarr_format" to "open_zarr" has incompatible type "Literal[4]"; expected "Literal[2, 3] | None"  [arg-type]
+    main:4: error: Unexpected keyword argument "chunk" for "open_zarr"; did you mean "chunks"?  [call-arg]
+    main:4: note: "open_zarr" defined in "xarray.backends.zarr"

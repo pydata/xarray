@@ -8,7 +8,7 @@ import warnings
 from collections.abc import Callable
 from html import escape
 from importlib.metadata import entry_points
-from typing import TYPE_CHECKING, Any, TextIO
+from typing import TYPE_CHECKING, TextIO
 
 from xarray.backends.common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 from xarray.core.options import OPTIONS
@@ -18,8 +18,7 @@ from xarray.util._report import package_version, show_report
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoint, EntryPoints
 
-    from xarray.backends.common import AbstractDataStore
-    from xarray.core.types import ReadBuffer
+    from xarray.backends.common import T_PathFileOrDataStore
 
 
 def remove_duplicates(entrypoints: EntryPoints) -> list[EntryPoint]:
@@ -215,12 +214,7 @@ def show_backends(file: TextIO | None = None, markdown: bool = False) -> None:
 
 
 def guess_engine(
-    store_spec: str
-    | os.PathLike[Any]
-    | ReadBuffer
-    | bytes
-    | memoryview
-    | AbstractDataStore,
+    store_spec: T_PathFileOrDataStore,
     must_support_groups: bool = False,
 ) -> str | type[BackendEntrypoint]:
     engines = list_engines()

@@ -4,7 +4,16 @@ import gzip
 import io
 import os
 from collections.abc import Iterable, Mapping
-from typing import IO, TYPE_CHECKING, Any, ClassVar, Literal, overload, override
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    cast,
+    overload,
+    override,
+)
 
 import numpy as np
 
@@ -16,6 +25,7 @@ from xarray.backends.common import (
     T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
+    _raise_if_zarr_store,
 )
 from xarray.backends.file_manager import CachingFileManager, DummyFileManager
 from xarray.backends.locks import ensure_lock, get_write_lock
@@ -395,8 +405,10 @@ def _normalize_filename_or_obj(
 ) -> str | ReadBuffer | AbstractDataStore:
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
-    else:
-        return _normalize_path(filename_or_obj)
+    _raise_if_zarr_store(filename_or_obj, "scipy")
+    return cast(
+        "str | ReadBuffer | AbstractDataStore", _normalize_path(filename_or_obj)
+    )
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):

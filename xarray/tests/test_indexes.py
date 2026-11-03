@@ -704,15 +704,17 @@ class TestIndexes:
             assert_identical(new, original)
 
 
-def test_safe_cast_to_index():
+def test_safe_cast_to_index() -> None:
     dates = pd.date_range("2000-01-01", periods=10)
     x = np.arange(5)
     td = x * np.timedelta64(1, "D")
+    struct = np.array([(1, "a"), (2, "b")], dtype=[("x", int), ("y", "U1")])
     for expected, array in [
         (dates, dates.values),
         (pd.Index(x, dtype=object), x.astype(object)),
         (pd.Index(td), td),
         (pd.Index(td, dtype=object), td.astype(object)),
+        (pd.Index(struct.astype(object)), struct),
     ]:
         actual = safe_cast_to_index(array)
         assert_array_equal(expected, actual)

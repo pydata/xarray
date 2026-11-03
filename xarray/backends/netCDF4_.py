@@ -19,6 +19,7 @@ from xarray.backends.common import (
     T_PathFileOrDataStore,
     WritableCFDataStore,
     _normalize_path,
+    _raise_if_zarr_store,
     collect_ancestor_dimensions,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
@@ -509,6 +510,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             )
 
         if not isinstance(filename, str | bytes | memoryview | BytesIOProxy):
+            _raise_if_zarr_store(filename, "netCDF4")
             raise TypeError(f"invalid filename for netCDF4 backend: {filename}")
 
         if format is None:
