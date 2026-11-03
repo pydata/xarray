@@ -211,8 +211,6 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
-- Fix :py:func:`decode_cf` leaving floating-point missing values unmasked when
-  their metadata has higher precision than the stored data (:issue:`9381`).
 - Fix CuPy indexers with pandas-backed coordinates, basic and label-based
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
@@ -220,6 +218,8 @@ Bug Fixes
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
+- Fix :py:func:`decode_cf` leaving floating-point missing values unmasked when
+  their metadata has higher precision than the stored data (:issue:`9381`).
 - :py:meth:`DataArray.to_unstacked_dataset` no longer raises ``KeyError`` for
   unused variable labels left in the stacked index after selecting features
   (:pull:`11808`).
