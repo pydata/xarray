@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import operator
 import pickle
 import sys
@@ -14,7 +15,7 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
-from xarray.core import duck_array_ops
+from xarray.core import duck_array_ops, utils
 from xarray.core.duck_array_ops import lazy_array_equiv
 from xarray.core.indexes import PandasIndex
 from xarray.testing import assert_chunks_equal
@@ -1632,6 +1633,48 @@ def test_identical_coords_no_computes():
     with raise_if_dask_computes():
         c = a + b
     assert_identical(c, a)
+
+
+def test_equivalent_lazy_arrays_no_computes() -> None:
+    # GH11841: comparing lazy arrays must not compute them
+    x = da.ones((10, 10), chunks=2)
+    lazy_da = xr.DataArray(x, dims=("y", "x"))
+    with raise_if_dask_computes():
+        # equal dask tokens are equivalent
+        assert utils.equivalent(x, copy.deepcopy(x))
+        assert utils.equivalent(x, da.ones((10, 10), chunks=2))
+        # otherwise equality is unknown without computing: not equivalent
+        assert not utils.equivalent(x, x * 1)
+        assert not utils.equivalent(x, da.zeros((10, 10), chunks=2))
+        assert not utils.equivalent(x, np.ones((10, 10)))
+        assert not utils.equivalent(np.ones((10, 10)), x)
+        assert not utils.equivalent(x, lazy_da)
+        assert not utils.equivalent(lazy_da, lazy_da + 0)
+        assert not utils.equivalent([x], [x * 1])
+
+
+def test_dask_array_attrs_no_computes() -> None:
+    # GH11841: merging attrs holding dask arrays must not compute them
+    a = xr.DataArray(
+        da.ones((10, 10), chunks=2),
+        dims=("y", "x"),
+        attrs={"flags": da.ones((10, 10), chunks=2)},
+    )
+    b = a.copy(data=da.ones((10, 10), chunks=2) * 2)
+    b.attrs["flags"] = da.zeros((10, 10), chunks=2)
+    a_copy = a.copy(deep=True)
+
+    with raise_if_dask_computes():
+        assert "flags" not in (a - b).attrs
+        concatenated = xr.concat([a, b], dim="t", combine_attrs="drop_conflicts")
+        assert "flags" not in concatenated.attrs
+        assert not a.identical(b)
+
+        # deep copies of dask arrays have the same token, so are equivalent
+        assert "flags" in (a - a_copy).attrs
+        concatenated = xr.concat([a, a_copy], dim="t", combine_attrs="drop_conflicts")
+        assert "flags" in concatenated.attrs
+        assert a.identical(a_copy)
 
 
 @pytest.mark.parametrize(

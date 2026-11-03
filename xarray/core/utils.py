@@ -82,6 +82,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.namedarray._typing import Default, _default  # noqa: F401
+from xarray.namedarray.pycompat import is_chunked_array
 from xarray.namedarray.utils import (  # noqa: F401
     ReprObject,
     drop_missing_dims,
@@ -213,6 +214,10 @@ def maybe_wrap_array(original, new_array):
 def equivalent[T](first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality).
 
+    Lazy (chunked) arrays such as dask arrays are never computed: they are
+    equivalent only if ``lazy_array_equiv`` can tell without computing them
+    (e.g. equal dask tokens), and are otherwise considered not equivalent.
+
     Uses array_equiv if either object is an ndarray. If both objects are lists,
     equivalent is sequentially called on all the elements.
 
@@ -226,6 +231,17 @@ def equivalent[T](first: T, second: T) -> bool:
     if first is second:
         return True
 
+    first_is_lazy = is_chunked_array(first)  # type: ignore[arg-type]
+    second_is_lazy = is_chunked_array(second)  # type: ignore[arg-type]
+    if first_is_lazy or second_is_lazy:
+        # lazy_array_equiv returns None when equality could only be determined
+        # by computing, which we treat as not equivalent (GH11841)
+        return (
+            first_is_lazy
+            and second_is_lazy
+            and duck_array_ops.lazy_array_equiv(first, second) is True
+        )
+
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
 
@@ -233,8 +249,15 @@ def equivalent[T](first: T, second: T) -> bool:
         return list_equiv(first, second)  # type: ignore[arg-type]
 
     # Check for NaN equivalence early (before equality comparison)
-    # This handles both Python float NaN and NumPy scalar NaN (issue #10833)
-    if pd.isnull(first) and pd.isnull(second):  # type: ignore[call-overload]
+    # This handles both Python float NaN and NumPy scalar NaN (issue #10833).
+    # Only scalars are checked: pd.isnull converts array-likes with np.asarray,
+    # which would compute lazy objects like dask-backed DataArrays (GH11841).
+    if (
+        pd.api.types.is_scalar(first)
+        and pd.api.types.is_scalar(second)
+        and pd.isnull(first)  # type: ignore[call-overload]
+        and pd.isnull(second)  # type: ignore[call-overload]
+    ):
         return True
 
     # For non-array/list types, use == but require boolean result
