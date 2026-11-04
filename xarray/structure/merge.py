@@ -788,10 +788,18 @@ def merge_core(
             coord_names.add(dim)
     ambiguous_coords = coord_names.intersection(noncoord_names)
     if ambiguous_coords:
-        raise MergeError(
-            "unable to determine if these variables should be "
-            f"coordinates or not in the merged result: {ambiguous_coords}"
+        emit_user_level_warning(
+            "unable to unambiguously determine if these variables should be "
+            f"coordinates or not in the merged result: {ambiguous_coords}, "
+            "their status will be taken from the first object.",
+            UserWarning,
         )
+        keep_coords, _ = determine_coords([coerced[0]])
+        if explicit_coords is not None:
+            keep_coords.update(explicit_coords)
+        coord_names = coord_names - {
+            crd for crd in ambiguous_coords if crd not in keep_coords
+        }
 
     attrs = merge_attrs(
         [var.attrs for var in coerced if isinstance(var, Dataset | DataArray)],

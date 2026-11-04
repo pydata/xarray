@@ -5384,10 +5384,12 @@ class TestDataset:
             data.merge(other)
 
         other = Dataset({"level_1": ("x", range(4))})
-        with pytest.raises(
-            ValueError, match=r"unable to determine.*coordinates or not.*"
+        with pytest.warns(
+            UserWarning,
+            match=r"unable to unambiguously determine.*coordinates or not.*",
         ):
-            data.merge(other)
+            out = data.merge(other)
+        assert "level_1" in out.coords
 
         # `other` Dataset coordinates are ignored (bug or feature?)
         other = Dataset(coords={"level_1": ("x", range(4))})
