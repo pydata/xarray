@@ -75,6 +75,10 @@ New Features
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- :py:class:`~xarray.DataTree` now implements the Dask collection protocol, so
+  ``dask.compute``, ``dask.persist``, ``dask.optimize`` and ``dask.tokenize``
+  accept a whole tree as one collection (:issue:`9355`).
+  By `Sainath Singineedi <https://github.com/sainad2222>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
