@@ -2605,6 +2605,137 @@ class DataTree(
         new = self.copy(deep=False)
         return new._persist_inplace(**kwargs)
 
+    def _dask_datasets(self) -> list[tuple[str, Dataset]]:
+        """Return each node's data, keyed by path, excluding inherited coordinates."""
+        datasets = []
+        for node in self.subtree:
+            # own data only, so inherited parent coordinates stay on the parent
+            ds = node.to_dataset(inherit=False)
+            datasets.append((node.path, ds))
+        return datasets
+
+    def _dask_rebuild(self, nodes: Mapping[str, Dataset]) -> Self:
+        new = type(self).from_dict(nodes, name=self.name)
+        # from_dict copies nodes, which drops the closers, so put them back
+        for node in self.subtree:
+            new[node.path].set_close(node._close)
+        return new
+
+    def __dask_tokenize__(self) -> object:
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self.name, tuple(self._dask_datasets())))
+
+    def __dask_graph__(self):
+        graphs = {path: ds.__dask_graph__() for path, ds in self._dask_datasets()}
+        graphs = {path: g for path, g in graphs.items() if g is not None}
+        if not graphs:
+            return None
+        from dask.highlevelgraph import HighLevelGraph
+
+        if all(isinstance(g, HighLevelGraph) for g in graphs.values()):
+            return HighLevelGraph.merge(*graphs.values())
+
+        from dask.utils import ensure_dict
+
+        merged = {}
+        for g in graphs.values():
+            merged.update(ensure_dict(g))
+        return merged
+
+    def __dask_keys__(self):
+        import dask
+
+        keys = []
+        for _, ds in self._dask_datasets():
+            if dask.is_dask_collection(ds):
+                keys.extend(ds.__dask_keys__())
+        return keys
+
+    def __dask_exprs__(self):
+        import dask
+
+        exprs = []
+        for _, ds in self._dask_datasets():
+            if dask.is_dask_collection(ds):
+                node_exprs = ds.__dask_exprs__()
+                if node_exprs is None:
+                    # a single graph-backed node keeps the whole tree on that path
+                    return None
+                exprs.extend(node_exprs)
+        return exprs or None
+
+    def __dask_rebuild_from_exprs__(self, exprs):
+        import dask
+
+        exprs_iter = iter(exprs)
+        nodes = {}
+        for path, ds in self._dask_datasets():
+            if dask.is_dask_collection(ds):
+                n_exprs = sum(dask.is_dask_collection(v) for v in ds.variables.values())
+                node_exprs = [next(exprs_iter) for _ in range(n_exprs)]
+                ds = ds.__dask_rebuild_from_exprs__(node_exprs)
+            nodes[path] = ds
+        return self._dask_rebuild(nodes)
+
+    def __dask_layers__(self):
+        import dask
+
+        return sum(
+            (
+                ds.__dask_layers__()
+                for _, ds in self._dask_datasets()
+                if dask.is_dask_collection(ds)
+            ),
+            (),
+        )
+
+    @property
+    def __dask_optimize__(self):
+        import dask.array as da
+
+        return da.Array.__dask_optimize__
+
+    @property
+    def __dask_scheduler__(self):
+        import dask.array as da
+
+        return da.Array.__dask_scheduler__
+
+    def __dask_postcompute__(self):
+        return self._dask_postcompute, ()
+
+    def __dask_postpersist__(self):
+        return self._dask_postpersist, ()
+
+    def _dask_postcompute(self, results):
+        import dask
+
+        results_iter = iter(results)
+        nodes = {}
+        for path, ds in self._dask_datasets():
+            if dask.is_dask_collection(ds):
+                n_results = sum(
+                    dask.is_dask_collection(v) for v in ds.variables.values()
+                )
+                node_results = [next(results_iter) for _ in range(n_results)]
+                rebuild, args = ds.__dask_postcompute__()
+                ds = rebuild(node_results, *args)
+            nodes[path] = ds
+        return self._dask_rebuild(nodes)
+
+    def _dask_postpersist(self, dsk, *, rename=None):
+        import dask
+
+        nodes = {}
+        for path, ds in self._dask_datasets():
+            if dask.is_dask_collection(ds):
+                rebuild, args = ds.__dask_postpersist__()
+                kwargs = {"rename": rename} if rename else {}
+                ds = rebuild(dsk, *args, **kwargs)
+            nodes[path] = ds
+        return self._dask_rebuild(nodes)
+
     @property
     def chunksizes(self) -> Mapping[str, Mapping[Hashable, tuple[int, ...]]]:
         """Mapping from group paths to a mapping of chunksizes.
