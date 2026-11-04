@@ -75,6 +75,10 @@ New Features
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- When merging, if a variable appears as a coordinate on one input and as a data
+  variable on another, the coordinate "status" is chosen by looking at the first object.
+  A warning is emitted, instead of an error (:issue:`6447`, :pull:`11854`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
