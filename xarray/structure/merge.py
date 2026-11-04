@@ -949,6 +949,8 @@ def merge(
     Dataset or DataTree
         Objects with combined variables from the inputs. If any inputs are a
         DataTree, this will also be a DataTree. Otherwise it will be a Dataset.
+        If a variable appears as a coordinate on one input but as a data variable
+        on another, it's coordinate status is taken from the first input.
 
     Raises
     ------
