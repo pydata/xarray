@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import ClassVar, Literal, Self, cast, overload
+from typing import Any, ClassVar, Literal, Self, cast, overload
 
 from xarray.coding.core import Coder
 from xarray.core.dataset import Dataset
@@ -240,6 +240,33 @@ class CoderPipeline[T: XarrayObj]:
 
     def chain(self, other: Self) -> Self:
         return self._replace(self.coders | other.coders)
+
+    def configure_one(self, name: str, **settings: dict[str, Any]) -> Self:
+        """Reconfigure a single coder in the pipeline."""
+        coder = self.coders.get(name)
+        if coder is None:
+            raise KeyError(f"unknown coder: {name}")
+
+        coders = copy.copy(self.coders)
+        coders["name"] = coder.configure(**settings)
+
+        return self._replace(coders)
+
+    def configure(self, mapping: dict[str, dict[str, Any]]) -> Self:
+        """Reconfigure multiple coders in the pipeline."""
+        errors = [
+            ValueError(f"unknown coder: {name}")
+            for name in mapping
+            if name not in self.coders
+        ]
+        if errors:
+            raise ExceptionGroup("tried to configure unknown coders", errors)
+
+        coders = copy.copy(self.coders)
+        for name, settings in mapping.items():
+            coders[name] = coders[name].configure(**settings)
+
+        return self._replace(coders)
 
     @property
     def datatree_coders(self) -> dict[str, Coder[DataTree]]:

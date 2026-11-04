@@ -1,11 +1,18 @@
-from typing import ClassVar, Generic, Literal, Protocol, TypeVar
+from typing import ClassVar, Literal, Protocol, Self
+
+from xarray.core.dataset import Dataset
+from xarray.core.datatree import DataTree
+from xarray.core.variable import Variable
 
 CoderKind = Literal["variable", "dataset", "datatree"]
-T = TypeVar("T")
+
+XarrayObj = Variable | Dataset | DataTree
 
 
-class Coder(Protocol, Generic[T]):
+class Coder[T: XarrayObj](Protocol):
     kind: ClassVar[CoderKind]
+
+    def configure(self, **settings) -> Self: ...
 
     def decode(self, obj: T) -> T: ...
 
