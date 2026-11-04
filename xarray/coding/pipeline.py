@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, ClassVar, Literal, Self, cast, overload
+from typing import Any, ClassVar, Literal, Self, overload
 
 from xarray.coding.core import Coder
 from xarray.core.dataset import Dataset
@@ -129,24 +129,24 @@ def _decode[T: XarrayObj](coders: dict[str, Coder[T]], obj: T) -> T:
 
 
 @overload
-def _extract_coder(
+def _extract_coders(
     coders: Mapping[str, Coder[DataTree]], kind: Literal["datatree"]
 ) -> dict[str, Coder[DataTree]]: ...
 
 
 @overload
-def _extract_coder(
+def _extract_coders(
     coders: Mapping[str, Coder[Dataset]], kind: Literal["dataset"]
 ) -> dict[str, Coder[Dataset]]: ...
 
 
 @overload
-def _extract_coder(
+def _extract_coders(
     coders: Mapping[str, Coder[Variable]], kind: Literal["variable"]
 ) -> dict[str, Coder[Variable]]: ...
 
 
-def _extract_coder[T: XarrayObj](
+def _extract_coders[T: XarrayObj](
     coders: Mapping[str, Coder[T]], kind: Literal["datatree", "dataset", "variable"]
 ) -> dict[str, T]:
     return {name: coder for name, coder in coders.items() if coder.kind == kind}
@@ -207,9 +207,10 @@ class CoderPipeline[T: XarrayObj]:
             # append by default
             at = len(self.coders)
 
-        self.coders.insert(name, coder, at)
+        coders = copy.copy(self.coders)
+        coders.insert(name, coder, at)
 
-        return self
+        return self._replace(coders)
 
     def remove(self, name: str) -> Self:
         new = copy.copy(self.coders)
@@ -234,9 +235,10 @@ class CoderPipeline[T: XarrayObj]:
         elif after is not MISSING:
             at = self.coders.index_of(after) + 1
 
-        self.coders.move(name, at)
+        coders = copy.copy(self.coders)
+        coders.move(name, at)
 
-        return self
+        return self._replace(coders)
 
     def chain(self, other: Self) -> Self:
         return self._replace(self.coders | other.coders)
@@ -270,27 +272,15 @@ class CoderPipeline[T: XarrayObj]:
 
     @property
     def datatree_coders(self) -> dict[str, Coder[DataTree]]:
-        return {
-            name: cast(Coder[DataTree], coder)
-            for name, coder in self.coders.items()
-            if coder.kind == "datatree"
-        }
+        return _extract_coders(self.coders, "datatree")
 
     @property
     def dataset_coders(self) -> dict[str, Coder[Dataset]]:
-        return {
-            name: cast(Coder[Dataset], coder)
-            for name, coder in self.coders.items()
-            if coder.kind == "dataset"
-        }
+        return _extract_coders(self.coders, "dataset")
 
     @property
     def variable_coders(self) -> dict[str, Coder[Variable]]:
-        return {
-            name: cast(Coder[Variable], coder)
-            for name, coder in self.coders.items()
-            if coder.kind == "variable"
-        }
+        return _extract_coders(self.coders, "variable")
 
     def _decode_datatree(self, tree: DataTree) -> DataTree:
         decoded = _decode(self.datatree_coders, tree)
