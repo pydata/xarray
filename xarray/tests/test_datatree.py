@@ -3068,8 +3068,8 @@ class TestDask:
     def test_dask_expr_protocol(self) -> None:
         import dask
         import dask.array as da
-        import dask_array
 
+        dask_array = pytest.importorskip("dask_array")
         dask_expr = pytest.importorskip("dask._expr")
         if not hasattr(dask_expr, "CompositeExpr"):
             pytest.skip("requires Dask composite expressions")
