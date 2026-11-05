@@ -411,8 +411,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
 
         return self
 
-    def map_plot1d(
-        self: T_FacetGrid,
+    def map_plot1d[T_DataArray: DataArray](
+        self: FacetGrid[T_DataArray],
         func: Callable,
         x: Hashable | None,
         y: Hashable | None,
@@ -422,7 +422,7 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         **kwargs: Any,
-    ) -> T_FacetGrid:
+    ) -> FacetGrid[T_DataArray]:
         """Apply a plotting function to a 1d facet's subset of the data.
 
         This is more convenient and less general than ``FacetGrid.map``
@@ -594,16 +594,16 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
 
         return self
 
-    def map_dataarray_line(
-        self: T_FacetGrid,
+    def map_dataarray_line[T_DataArray: DataArray](
+        self: FacetGrid[T_DataArray],
         func: Callable,
         x: Hashable | None,
         y: Hashable | None,
         hue: Hashable | None,
         add_legend: bool = True,
-        _labels=None,
+        _labels: bool | None = None,
         **kwargs: Any,
-    ) -> T_FacetGrid:
+    ) -> FacetGrid[T_DataArray]:
         from xarray.plot.dataarray_plot import _infer_line_data
 
         for d, ax in zip(self.name_dicts.flat, self.axs.flat, strict=True):
