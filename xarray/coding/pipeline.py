@@ -3,7 +3,13 @@ from __future__ import annotations
 import copy
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
-from typing import Any, ClassVar, Literal, Self, cast, overload
+from typing import Any, Literal, Self, cast, overload
+
+try:
+    sentinel  # noqa: B018
+except NameError:
+    # backwards compatibility: python < 3.15
+    from typing_extensions import sentinel
 
 from xarray.coding.core import Coder
 from xarray.core.dataset import Dataset
@@ -12,22 +18,7 @@ from xarray.core.variable import Variable
 
 XarrayObj = DataTree | Dataset | Variable
 
-
-class _Missing:
-    _instance: ClassVar[_Missing | None] = None
-
-    def __init__(self):
-        raise TypeError("cannot create new instances")
-
-    @classmethod
-    def _instance(cls) -> Self:
-        if cls._instance is None:
-            cls._instance = cls.__new__(cls)
-
-        return cls._instance
-
-
-MISSING = _Missing._instance()
+MISSING = sentinel("MISSING")
 
 
 def _exactly_one_parameter[T](func_name: str, **kwargs):
