@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
-from typing import Any, ClassVar, Literal, Self, overload
+from typing import Any, ClassVar, Literal, Self, cast, overload
 
 from xarray.coding.core import Coder
 from xarray.core.dataset import Dataset
@@ -52,7 +52,7 @@ def _at_most_one_parameter[T](func_name: str, **kwargs):
         )
 
 
-class ReorderableDict[K, V](dict[K, V]):
+class ReorderableDict[K, V](MutableMapping[K, V]):
     def index_of(self, name: K) -> int:
         keys = list(self.keys())
         try:
@@ -87,20 +87,26 @@ class ReorderableDict[K, V](dict[K, V]):
 
         self.insert(name, value, at)
 
+    def __or__(self, other: Self) -> Self:
+        new = copy.copy(self)
+        new.update(other)
 
-@overload
-def _encode(coders: dict[str, Coder[DataTree]], obj: DataTree) -> DataTree: ...
-
-
-@overload
-def _encode(coders: dict[str, Coder[Dataset]], obj: Dataset) -> Dataset: ...
+        return new
 
 
 @overload
-def _encode(coders: dict[str, Coder[Variable]], obj: Variable) -> Variable: ...
+def _encode(coders: Mapping[str, Coder[DataTree]], obj: DataTree) -> DataTree: ...
 
 
-def _encode[T: XarrayObj](coders: dict[str, Coder[T]], obj: T) -> T:
+@overload
+def _encode(coders: Mapping[str, Coder[Dataset]], obj: Dataset) -> Dataset: ...
+
+
+@overload
+def _encode(coders: Mapping[str, Coder[Variable]], obj: Variable) -> Variable: ...
+
+
+def _encode[T: XarrayObj](coders: Mapping[str, Coder[T]], obj: T) -> T:
     encoded = obj
     for coder in coders.values():
         encoded = coder.encode(encoded)
@@ -109,18 +115,18 @@ def _encode[T: XarrayObj](coders: dict[str, Coder[T]], obj: T) -> T:
 
 
 @overload
-def _decode(coders: dict[str, Coder[DataTree]], obj: DataTree) -> DataTree: ...
+def _decode(coders: Mapping[str, Coder[DataTree]], obj: DataTree) -> DataTree: ...
 
 
 @overload
-def _decode(coders: dict[str, Coder[Dataset]], obj: Dataset) -> Dataset: ...
+def _decode(coders: Mapping[str, Coder[Dataset]], obj: Dataset) -> Dataset: ...
 
 
 @overload
-def _decode(coders: dict[str, Coder[Variable]], obj: Variable) -> Variable: ...
+def _decode(coders: Mapping[str, Coder[Variable]], obj: Variable) -> Variable: ...
 
 
-def _decode[T: XarrayObj](coders: dict[str, Coder[T]], obj: T) -> T:
+def _decode[T: XarrayObj](coders: Mapping[str, Coder[T]], obj: T) -> T:
     decoded = obj
     for coder in coders.values():
         decoded = coder.decode(decoded)
@@ -130,36 +136,38 @@ def _decode[T: XarrayObj](coders: dict[str, Coder[T]], obj: T) -> T:
 
 @overload
 def _extract_coders(
-    coders: Mapping[str, Coder[DataTree]], kind: Literal["datatree"]
-) -> dict[str, Coder[DataTree]]: ...
+    coders: Mapping[str, Coder[XarrayObj]], kind: Literal["datatree"]
+) -> Mapping[str, Coder[DataTree]]: ...
 
 
 @overload
 def _extract_coders(
-    coders: Mapping[str, Coder[Dataset]], kind: Literal["dataset"]
-) -> dict[str, Coder[Dataset]]: ...
+    coders: Mapping[str, Coder[XarrayObj]], kind: Literal["dataset"]
+) -> Mapping[str, Coder[Dataset]]: ...
 
 
 @overload
 def _extract_coders(
-    coders: Mapping[str, Coder[Variable]], kind: Literal["variable"]
-) -> dict[str, Coder[Variable]]: ...
+    coders: Mapping[str, Coder[XarrayObj]], kind: Literal["variable"]
+) -> Mapping[str, Coder[Variable]]: ...
 
 
-def _extract_coders[T: XarrayObj](
-    coders: Mapping[str, Coder[T]], kind: Literal["datatree", "dataset", "variable"]
-) -> dict[str, T]:
+def _extract_coders(
+    coders: Mapping[str, Coder[XarrayObj]],
+    kind: Literal["datatree", "dataset", "variable"],
+) -> Any:
+    # return Any so mypy stops complaining
     return {name: coder for name, coder in coders.items() if coder.kind == kind}
 
 
 @dataclass
-class CoderPipeline[T: XarrayObj]:
-    coders: ReorderableDict[str, Coder[T]]
+class CoderPipeline:
+    coders: ReorderableDict[str, Coder[XarrayObj]]
 
     def __post_init__(self):
         self.coders = ReorderableDict(self.coders)
 
-    def _replace(self, coders: ReorderableDict[str, Coder[T]]) -> Self:
+    def _replace(self, coders: ReorderableDict[str, Coder[XarrayObj]]) -> Self:
         cls = type(self)
         new = cls.__new__(cls)
         new.coders = coders
@@ -169,7 +177,7 @@ class CoderPipeline[T: XarrayObj]:
     def insert(
         self,
         name: str,
-        coder: Coder[T],
+        coder: Coder[XarrayObj],
         *,
         before: str | MISSING = MISSING,
         after: str | MISSING = MISSING,
@@ -234,6 +242,9 @@ class CoderPipeline[T: XarrayObj]:
             at = self.coders.index_of(before)
         elif after is not MISSING:
             at = self.coders.index_of(after) + 1
+        else:
+            # at has already been checked above
+            at = cast(int, at)
 
         coders = copy.copy(self.coders)
         coders.move(name, at)
@@ -271,15 +282,15 @@ class CoderPipeline[T: XarrayObj]:
         return self._replace(coders)
 
     @property
-    def datatree_coders(self) -> dict[str, Coder[DataTree]]:
+    def datatree_coders(self) -> Mapping[str, Coder[DataTree]]:
         return _extract_coders(self.coders, "datatree")
 
     @property
-    def dataset_coders(self) -> dict[str, Coder[Dataset]]:
+    def dataset_coders(self) -> Mapping[str, Coder[Dataset]]:
         return _extract_coders(self.coders, "dataset")
 
     @property
-    def variable_coders(self) -> dict[str, Coder[Variable]]:
+    def variable_coders(self) -> Mapping[str, Coder[Variable]]:
         return _extract_coders(self.coders, "variable")
 
     def _decode_datatree(self, tree: DataTree) -> DataTree:
