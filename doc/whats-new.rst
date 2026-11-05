@@ -472,6 +472,10 @@ Bug Fixes
   By `David Hoese <https://github.com/djhoese>`_.
 
 
+- Fix the :py:class:`DataTree` constructor error message to correctly list
+  the accepted input types, and include :py:class:`Coordinates` in the
+  constructor documentation (:issue:`11514`).
+
 Documentation
 ~~~~~~~~~~~~~
 - Add examples from basic to advanced usage to the :py:func:`apply_ufunc`
@@ -610,7 +614,6 @@ Internal Changes
 - Convert structured arrays to object arrays of tuples before creating a
   :py:class:`pandas.Index` from them, which pandas deprecated (:issue:`11749`).
   By `glaziermag <https://github.com/glaziermag>`_.
-
 
 .. _whats-new.2026.09.0:
 
