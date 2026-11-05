@@ -5,6 +5,7 @@ import contextlib
 import os.path
 import platform
 import re
+import sys
 import tempfile
 import uuid
 import warnings
@@ -29,7 +30,10 @@ from xarray import (
     open_dataset,
     open_mfdataset,
 )
-from xarray.backends.zarr import ZarrStore
+from xarray.backends import _url_pipeline
+from xarray.backends._url_pipeline import as_zarr_url_pipeline
+from xarray.backends.common import _find_absolute_paths, _normalize_path
+from xarray.backends.zarr import ZarrStore, _get_mappers
 from xarray.coders import CFDatetimeCoder, CFTimedeltaCoder
 from xarray.coding.cftime_offsets import date_range
 from xarray.coding.variables import SerializationWarning
@@ -51,6 +55,7 @@ from xarray.tests import (
     requires_netCDF4,
     requires_zarr,
     requires_zarr_rectilinear_chunks,
+    requires_zarr_url_pipeline,
     requires_zarr_v3_async_oindex,
 )
 from xarray.tests.backends.base import (
@@ -3383,3 +3388,212 @@ def test_zarr_shard_roundtrip(
     reopened_ds = xr.open_zarr(store, consolidated=False)
     reopened_ds.to_zarr(store, mode="a")
     assert reopened_ds.chunks == ds_sharded.chunks
+
+
+class TestZarrURLPipeline:
+    """Zarr URL pipeline strings (ZEP 8).
+
+    xarray turns a string that contains ``|`` and that zarr's parser accepts
+    into a ``zarr.storage.URLPipeline`` (``as_zarr_url_pipeline``); every other
+    value keeps its meaning. The end-to-end tests register a small test adapter
+    over a ``file:`` root, so they need nothing but zarr's pipeline core.
+    """
+
+    scheme = "xarray-test.sub"
+    form = pytest.mark.parametrize("form", ["string", "object"])
+    skip_on_windows = pytest.mark.skipif(
+        ON_WINDOWS, reason="POSIX paths; '|' is invalid in Windows paths"
+    )
+
+    @staticmethod
+    def create_dataset() -> xr.Dataset:
+        return xr.Dataset(
+            {"a": (("x", "y"), np.arange(6.0).reshape(3, 2))},
+            coords={"x": [10, 20, 30]},
+            attrs={"title": "pipeline"},
+        )
+
+    @classmethod
+    def url(cls, path: Path, body: str = "") -> str:
+        # "file://" makes the root look remote, which exercises engine guessing
+        return f"file://{path.as_posix()}|{cls.scheme}:{body}"
+
+    @staticmethod
+    def as_form(url: str, form: str) -> Any:
+        from zarr.storage import URLPipeline  # type: ignore[attr-defined,unused-ignore]
+
+        return url if form == "string" else URLPipeline.from_url(url)
+
+    @pytest.fixture
+    def sub_adapter(self) -> Iterator[str]:
+        """Register ``...|xarray-test.sub:<path>``, which descends into ``<path>``."""
+        from zarr.abc.url_pipeline import (  # type: ignore[import-not-found,unused-ignore]
+            URLPipelineAdapter,
+        )
+        from zarr.registry import (  # type: ignore[attr-defined,unused-ignore]
+            _url_adapter_registry,
+            register_url_adapter,
+        )
+        from zarr.storage import StorePath
+
+        class SubAdapter(URLPipelineAdapter):  # type: ignore[misc,unused-ignore]
+            @classmethod
+            async def open_pipeline_segment(
+                cls, segment: Any, context: Any
+            ) -> StorePath:
+                preceding = await context.resolve_preceding()
+                parts = (preceding.path.strip("/"), segment.body.strip("/"))
+                return StorePath(preceding.store, "/".join(p for p in parts if p))
+
+        register_url_adapter(self.scheme, SubAdapter)
+        yield self.scheme
+        _url_adapter_registry.pop(self.scheme, None)
+
+    # --- the helper ----------------------------------------------------------
+
+    @requires_zarr_url_pipeline
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "s3://bucket/repo|icechunk://tag.v1/",
+            "file:///data/x.zip|zip:inner|zarr3:",
+            "file:/data/x|zarr3:",
+            "memory:x|xarray-test.sub:a",
+        ],
+    )
+    def test_pipeline_string_becomes_url_pipeline(self, url: str) -> None:
+        from zarr.storage import URLPipeline  # type: ignore[attr-defined,unused-ignore]
+
+        # parsing loads no adapter, so the adapters need not be installed
+        result = as_zarr_url_pipeline(url)
+        assert isinstance(result, URLPipeline)
+        assert result == URLPipeline.from_url(url)
+
+    @requires_zarr
+    @pytest.mark.parametrize(
+        "value",
+        [
+            None,
+            1,
+            b"memory:|zarr3:",
+            Path("a|b"),
+            "plain/path.zarr",
+            "s3://bucket/data.zarr",
+            pytest.param("a|b", marks=skip_on_windows, id="relative"),
+            pytest.param("/abs/a|b.zarr", marks=skip_on_windows, id="absolute"),
+            pytest.param("~/a|b", marks=skip_on_windows, id="home"),
+            pytest.param("C:\\x|y", id="windows-drive"),
+            pytest.param("1bad://x|zarr3:", id="invalid-scheme"),
+            pytest.param(" s3://bucket/x|zarr3:", id="whitespace"),
+            pytest.param("s3://bucket/x#frag|zarr3:", id="fragment"),
+        ],
+    )
+    def test_non_pipelines_pass_through(self, value: object) -> None:
+        assert as_zarr_url_pipeline(value) is value
+
+    @requires_zarr_url_pipeline
+    def test_url_pipeline_object_passes_through(self) -> None:
+        from zarr.storage import URLPipeline  # type: ignore[attr-defined,unused-ignore]
+
+        pipeline = URLPipeline.from_url("memory:|zarr3:")
+        assert as_zarr_url_pipeline(pipeline) is pipeline
+
+    @requires_zarr
+    def test_noop_without_zarr_url_pipelines(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # zarr without URL pipelines: the helper must not even import zarr's modules
+        monkeypatch.setattr(_url_pipeline, "_has_url_pipeline", lambda: False)
+        monkeypatch.setitem(sys.modules, "zarr.errors", None)
+        monkeypatch.setitem(sys.modules, "zarr.storage", None)
+        url = "s3://bucket/repo|icechunk://tag.v1/"
+        assert as_zarr_url_pipeline(url) is url
+
+    @requires_zarr_url_pipeline
+    def test_normalize_path_leaves_pipelines_alone(self) -> None:
+        url = "file:/data/x|zarr3:"  # not a "remote" URI to _normalize_path
+        assert _normalize_path(url) == url
+        assert _find_absolute_paths("file:///data/*.zarr|zarr3:") == [
+            "file:///data/*.zarr|zarr3:"
+        ]
+
+    # --- end to end ----------------------------------------------------------
+
+    @requires_zarr_url_pipeline
+    @form
+    @pytest.mark.parametrize("engine", [None, "zarr", "open_zarr"])
+    def test_open(
+        self, tmp_path: Path, sub_adapter: str, form: str, engine: str | None
+    ) -> None:
+        expected = self.create_dataset()
+        # no "zarr" in the path, which would steer engine guessing on its own
+        expected.to_zarr(tmp_path / "data")
+        store = self.as_form(self.url(tmp_path / "data"), form)
+        if engine == "open_zarr":
+            actual = xr.open_zarr(store)
+        else:
+            # without engine=, zarr is guessed for a pipeline string and object
+            actual = xr.open_dataset(store, engine=engine)
+        with actual:
+            assert_identical(actual, expected)
+
+    @requires_zarr_url_pipeline
+    @form
+    def test_to_zarr(self, tmp_path: Path, sub_adapter: str, form: str) -> None:
+        expected = self.create_dataset()
+        # the pipeline addresses a node below the store's root, where to_zarr
+        # doesn't consolidate (see #11835), so don't use consolidated metadata
+        expected.to_zarr(
+            self.as_form(self.url(tmp_path / "data.zarr", "nested"), form),
+            consolidated=False,
+        )
+        with xr.open_zarr(
+            tmp_path / "data.zarr", group="nested", consolidated=False
+        ) as actual:
+            assert_identical(actual, expected)
+
+    @requires_zarr_url_pipeline
+    @form
+    def test_datatree_round_trip(
+        self, tmp_path: Path, sub_adapter: str, form: str
+    ) -> None:
+        ds = self.create_dataset()
+        expected = xr.DataTree.from_dict({"/": ds, "/child": ds})
+        store = self.as_form(self.url(tmp_path / "tree.zarr"), form)
+        expected.to_zarr(store)
+        # zarr resolved the pipeline, rather than writing to a path with "|" in it
+        assert [p.name for p in tmp_path.iterdir()] == ["tree.zarr"]
+        with xr.open_datatree(store, engine="zarr") as actual:
+            xrt.assert_identical(actual, expected)
+
+    @requires_zarr_url_pipeline
+    @requires_dask
+    def test_open_mfdataset(self, tmp_path: Path, sub_adapter: str) -> None:
+        expected = self.create_dataset()
+        expected.isel(x=[0]).to_zarr(tmp_path / "a.zarr")
+        expected.isel(x=[1, 2]).to_zarr(tmp_path / "b.zarr")
+        urls = [self.url(tmp_path / "a.zarr"), self.url(tmp_path / "b.zarr")]
+        with xr.open_mfdataset(urls, engine="zarr", combine="by_coords") as actual:
+            assert_identical(actual, expected)
+        # a pipeline is one node: "*" in it is not a glob pattern
+        with pytest.raises(FileNotFoundError):
+            xr.open_mfdataset(self.url(tmp_path / "*.zarr"), engine="zarr")
+
+    @requires_zarr_url_pipeline
+    @form
+    def test_to_zarr_accepts_storage_options(self, form: str) -> None:
+        url = "s3://bucket/repo|icechunk://tag.v1/"
+        kwargs, mapper = _get_mappers(
+            storage_options={"anon": True}, store=self.as_form(url, form)
+        )
+        assert kwargs == {"storage_options": {"anon": True}}
+        assert mapper == as_zarr_url_pipeline(url)
+
+    @requires_zarr
+    @skip_on_windows
+    def test_local_path_with_pipe(self, tmp_path: Path) -> None:
+        expected = self.create_dataset()
+        path = str(tmp_path / "a|b.zarr")
+        expected.to_zarr(path)
+        with xr.open_zarr(path) as actual:
+            assert_identical(actual, expected)

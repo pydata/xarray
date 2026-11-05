@@ -21,6 +21,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from xarray.backends._url_pipeline import _is_zarr_url_pipeline
 from xarray.coding import strings, variables
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import cf_encoder
@@ -103,7 +104,12 @@ def _normalize_path[T](path: os.PathLike | str | T) -> str | T:
     if isinstance(path, os.PathLike):
         path = os.fspath(path)
 
-    if isinstance(path, str) and not is_remote_uri(path):
+    if (
+        isinstance(path, str)
+        and not is_remote_uri(path)
+        # a Zarr URL pipeline string is not a local path; zarr resolves it
+        and not _is_zarr_url_pipeline(path)
+    ):
         path = os.path.abspath(os.path.expanduser(path))
 
     return path  # type: ignore[return-value]
@@ -172,6 +178,9 @@ def _find_absolute_paths(
     ['common.py']
     """
     if isinstance(paths, str):
+        if _is_zarr_url_pipeline(paths):
+            # a Zarr URL pipeline names a single node: don't glob it
+            return [paths]
         if is_remote_uri(paths) and kwargs.get("engine") == "zarr":
             if TYPE_CHECKING:
                 import fsspec

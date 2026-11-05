@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from xarray import coding, conventions
+from xarray.backends._url_pipeline import _is_zarr_url_pipeline, as_zarr_url_pipeline
 from xarray.backends.chunks import grid_rechunk, validate_grid_chunks_alignment
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
@@ -51,12 +52,14 @@ if TYPE_CHECKING:
 def _get_mappers(*, storage_options, store):
     # expand str and path-like arguments
     store = _normalize_path(store)
+    # to_zarr / DataTree.to_zarr: zarr opens a Zarr URL pipeline string
+    store = as_zarr_url_pipeline(store)
 
     kwargs = {}
     if storage_options is None:
         mapper = store
     else:
-        if not isinstance(store, str):
+        if not isinstance(store, str) and not _is_zarr_url_pipeline(store):
             raise ValueError(
                 f"store must be a string to use storage_options. Got {type(store)}"
             )
@@ -1751,6 +1754,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
 
     @override
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
+        if _is_zarr_url_pipeline(filename_or_obj):
+            # only zarr can open a Zarr URL pipeline (string or object)
+            return True
+
         if isinstance(filename_or_obj, str | os.PathLike):
             # allow a trailing slash to account for an autocomplete
             # adding it.
@@ -1935,6 +1942,8 @@ def _get_open_params(
     # zarr doesn't support pathlib.Path objects yet. zarr-python#601
     if isinstance(store, os.PathLike):
         store = os.fspath(store)
+    # every reader and writer opens its store here: zarr opens pipeline strings
+    store = as_zarr_url_pipeline(store)
 
     open_kwargs = dict(
         # mode='a-' is a handcrafted xarray specialty

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Self, override
 
 import numpy as np
 
+from xarray.backends._url_pipeline import _is_zarr_url_pipeline
 from xarray.backends.common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
@@ -834,7 +835,10 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                 # Remote netcdf-c can handle both regular URLs and DAP URLs
                 if _has_netcdf_ext(filename_or_obj, is_remote=True):
                     return True
-                elif "zarr" in filename_or_obj.lower():
+                # leave Zarr URL pipeline strings to the zarr engine
+                elif "zarr" in filename_or_obj.lower() or _is_zarr_url_pipeline(
+                    filename_or_obj
+                ):
                     return False
                 # return true for non-zarr URLs so we don't have a breaking change for people relying on this
                 # netcdf backend guessing true for all remote sources.

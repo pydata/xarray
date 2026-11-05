@@ -75,6 +75,15 @@ New Features
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- With a zarr-python release that supports URL pipelines (`ZEP 8
+  <https://zarr.dev/zeps/draft/ZEP0008.html>`_), the Zarr backend opens and
+  writes URL pipeline strings such as
+  ``xr.open_zarr("s3://bucket/repo|icechunk://tag.v1/")``, and
+  :py:func:`open_dataset` selects ``engine="zarr"`` for them and for
+  ``zarr.storage.URLPipeline`` objects. A string is only read as a pipeline
+  when it contains ``|`` and zarr can parse it as one, so other strings keep
+  their meaning; with older zarr versions nothing changes (:pull:`11844`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~

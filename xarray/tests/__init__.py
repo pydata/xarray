@@ -157,6 +157,11 @@ if has_zarr:
     requires_zarr_v3_async_oindex = pytest.mark.skipif(
         not has_zarr_v3_async_oindex, reason="requires zarr>3.1.1"
     )
+# URL pipelines (ZEP 8) are feature-detected: no zarr release has them yet
+has_zarr_url_pipeline = has_zarr and hasattr(zarr.storage, "URLPipeline")
+requires_zarr_url_pipeline = pytest.mark.skipif(
+    not has_zarr_url_pipeline, reason="requires zarr with URL pipeline support"
+)
 
 
 has_fsspec, requires_fsspec = _importorskip("fsspec")
