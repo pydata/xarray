@@ -217,6 +217,10 @@ Bug Fixes
   ``row`` raises a ``ValueError`` instead of being silently ignored
   (:issue:`5614`).
   By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- :py:func:`apply_ufunc` no longer fails on :py:mod:`sparse` arrays when it
+  needs to move core dimensions to the end. The internal ``transpose`` duck
+  array helper now uses the Array API ``permute_dims`` (:issue:`9933`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
   include a note naming the data variable being processed (:issue:`2078`).
   By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.

@@ -678,7 +678,7 @@ def broadcast_compat_data(
     reordered_dims = old_broadcast_dims + core_dims
     if reordered_dims != old_dims:
         order = tuple(old_dims.index(d) for d in reordered_dims)
-        data = duck_array_ops.transpose(data, order)
+        data = duck_array_ops.permute_dims(data, order)
 
     if new_dims != reordered_dims:
         key_parts: list[slice | None] = []
