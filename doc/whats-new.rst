@@ -211,6 +211,11 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Unary operations such as ``~`` on :py:class:`Variable`, :py:class:`DataArray`
+  and :py:class:`Dataset` now raise a ``TypeError`` when the underlying duck
+  array returns ``NotImplemented``, e.g. ``~`` on dask arrays with float data,
+  instead of a misleading ``ValueError`` about dimensions (:issue:`6427`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
   include a note naming the data variable being processed (:issue:`2078`).
   By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
