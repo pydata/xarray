@@ -385,13 +385,14 @@ class TestDataset:
     def test_repr_multiindex(self) -> None:
         data = create_test_multiindex()
         obj_size = np.dtype("O").itemsize
+        level_1 = data["level_1"]
         expected = dedent(
             f"""\
-            <xarray.Dataset> Size: {8 * obj_size + 32}B
+            <xarray.Dataset> Size: {4 * obj_size + level_1.nbytes + 32}B
             Dimensions:  (x: 4)
             Coordinates:
               * x        (x) object {4 * obj_size}B MultiIndex
-              * level_1  (x) object {4 * obj_size}B 'a' 'a' 'b' 'b'
+              * level_1  (x) {level_1.dtype} {level_1.nbytes}B 'a' 'a' 'b' 'b'
               * level_2  (x) int64 32B 1 2 1 2
             Data variables:
                 *empty*"""
@@ -406,13 +407,14 @@ class TestDataset:
         )
         midx_coords = Coordinates.from_pandas_multiindex(midx, "x")
         data = Dataset({}, midx_coords)
+        level_1 = data["a_quite_long_level_name"]
         expected = dedent(
             f"""\
-            <xarray.Dataset> Size: {8 * obj_size + 32}B
+            <xarray.Dataset> Size: {4 * obj_size + level_1.nbytes + 32}B
             Dimensions:                  (x: 4)
             Coordinates:
               * x                        (x) object {4 * obj_size}B MultiIndex
-              * a_quite_long_level_name  (x) object {4 * obj_size}B 'a' 'a' 'b' 'b'
+              * a_quite_long_level_name  (x) {level_1.dtype} {level_1.nbytes}B 'a' 'a' 'b' 'b'
               * level_2                  (x) int64 32B 1 2 1 2
             Data variables:
                 *empty*"""
@@ -5507,6 +5509,48 @@ class TestDataset:
         actual = ds.to_dataarray("abc", name="foo")
         expected = expected.rename({"variable": "abc"}).rename("foo")
         assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("na_value", [pd.NA, np.nan], ids=["pd.NA", "nan"])
+    @pytest.mark.parametrize("value", ["a", None], ids=["text", "missing"])
+    def test_to_dataframe_string_dtype_scalar(
+        self, na_value: Any, value: str | None
+    ) -> None:
+        string_dtype = cast(Any, pd.StringDtype)(na_value=na_value)
+        index = pd.Index([value], name="x", dtype=string_dtype)
+        dataset = Dataset({"x": index, "value": ("row", [1])}).isel(x=0)
+        frame = dataset.to_dataframe()
+
+        assert frame["x"].dtype == string_dtype
+        assert bool(pd.isna(frame["x"].iloc[0])) is (value is None)
+        if value is not None:
+            assert frame["x"].iloc[0] == value
+
+    @pytest.mark.parametrize("na_value", ["MISSING", False, 42])
+    def test_to_dataframe_custom_string_missing_value(
+        self, na_value: str | bool | int
+    ) -> None:
+        dtype = np.dtypes.StringDType(na_object=na_value)
+        array = np.array(["a", na_value], dtype=dtype)
+        dataset = Dataset({"s": ("x", array)}, coords={"x": [1, 2]})
+
+        frame = dataset.to_dataframe()
+
+        # pandas StringDtype accepts only pd.NA and NaN; keep the
+        # NumPy custom marker unchanged by falling back to object.
+        assert frame["s"].dtype == np.dtype("O")
+        assert frame["s"].tolist() == ["a", na_value]
+
+    def test_to_dataframe_float32_nan_string_missing_value(self) -> None:
+        missing = np.float32(np.nan)
+        dtype = np.dtypes.StringDType(na_object=missing)
+        array = np.array(["a", missing], dtype=dtype)
+        dataset = Dataset({"s": ("x", array)}, coords={"x": [1, 2]})
+
+        frame = dataset.to_dataframe()
+
+        assert frame["s"].dtype == np.dtype("O")
+        assert frame["s"].iloc[0] == "a"
+        assert np.isnan(frame["s"].iloc[1])
 
     def test_to_and_from_dataframe(self) -> None:
         x = np.random.randn(10)
