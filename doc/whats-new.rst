@@ -211,6 +211,10 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- :py:func:`broadcast` now raises a clear ``ValueError`` when given an object that
+  is not a :py:class:`DataArray` or :py:class:`Dataset`, such as an ``int``,
+  instead of an ``AttributeError`` about ``xindexes`` (:issue:`7459`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
   include a note naming the data variable being processed (:issue:`2078`).
   By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.

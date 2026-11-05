@@ -1317,6 +1317,16 @@ def broadcast(
         a        (x, y) int64 48B 1 1 2 2 3 3
         b        (x, y) int64 48B 5 6 5 6 5 6
     """
+    from xarray.core.dataarray import DataArray
+    from xarray.core.dataset import Dataset
+
+    for arg in args:
+        if not isinstance(arg, DataArray | Dataset):
+            raise ValueError(
+                "all input must be Dataset or DataArray objects, "
+                f"got {type(arg).__name__}"
+            )
+
     if exclude is None:
         exclude = set()
     args = align(*args, join="outer", copy=False, exclude=exclude)
