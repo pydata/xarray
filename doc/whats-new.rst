@@ -211,6 +211,12 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
+  ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
+  ``TypeError`` or ``ValueError``, and passing ``col_wrap`` without ``col`` or
+  ``row`` raises a ``ValueError`` instead of being silently ignored
+  (:issue:`5614`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
   include a note naming the data variable being processed (:issue:`2078`).
   By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
