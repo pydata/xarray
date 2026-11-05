@@ -14,9 +14,9 @@ from xarray.core.variable import Variable
 from xarray.structure.alignment import broadcast
 
 if TYPE_CHECKING:
-    from scipy.spatial import KDTree
+    from typing import Self
 
-    from xarray.core.types import Self
+    from scipy.spatial import KDTree
 
 
 class TreeAdapter(abc.ABC):
