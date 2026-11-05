@@ -18,6 +18,7 @@ from xarray.tests import (
     assert_array_equal,
     create_test_data,
     requires_dask,
+    requires_dask_array,
     source_ndarray,
 )
 
@@ -2883,3 +2884,249 @@ class TestDask:
         assert actual.chunksizes == expected.chunksizes
         assert set(actual.chunksizes["/"]) == {"x"}
         assert set(actual.chunksizes["/group1"]) == {"y"}
+
+    @staticmethod
+    def _chunked_tree(name: str = "root") -> xr.DataTree:
+        return xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset({"a": ("x", np.arange(10))}).chunk({"x": 5}),
+                "/group1": xr.Dataset({"b": ("y", np.arange(6))}).chunk({"y": 3}),
+            },
+            name=name,
+        )
+
+    def test_dask_collection_protocol(self) -> None:
+        import dask
+
+        tree = self._chunked_tree()
+        expected = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset({"a": ("x", np.arange(10))}),
+                "/group1": xr.Dataset({"b": ("y", np.arange(6))}),
+            },
+            name="root",
+        )
+        original_chunksizes = tree.chunksizes
+
+        assert dask.is_dask_collection(tree)
+
+        computed = dask.compute(tree)[0]
+        assert_identical(computed, expected)
+        assert computed.chunksizes == {node.path: {} for node in computed.subtree}
+
+        persisted = dask.persist(tree)[0]
+        assert persisted.chunksizes == original_chunksizes
+        assert_identical(persisted.compute(), expected)
+
+        optimized = dask.optimize(tree)[0]
+        assert_identical(optimized.compute(), expected)
+
+        assert tree.chunksizes == original_chunksizes, "original tree was modified"
+
+    def test_dask_tokenize(self) -> None:
+        from dask.base import tokenize
+
+        tree = self._chunked_tree()
+
+        assert tokenize(tree) == tokenize(self._chunked_tree())
+        assert tokenize(tree) != tokenize(
+            xr.DataTree.from_dict(
+                {
+                    "/": xr.Dataset({"a": ("x", np.arange(10) + 1)}).chunk({"x": 5}),
+                    "/group1": xr.Dataset({"b": ("y", np.arange(6))}).chunk({"y": 3}),
+                },
+                name="root",
+            )
+        )
+        assert tokenize(tree) != tokenize(
+            xr.DataTree.from_dict(
+                {
+                    "/": xr.Dataset({"a": ("x", np.arange(10))}).chunk({"x": 5}),
+                    "/group1": xr.Dataset({"b": ("y", np.arange(6))}).chunk({"y": 3}),
+                    "/group2": xr.Dataset(),
+                },
+                name="root",
+            )
+        )
+        assert tokenize(tree) != tokenize(self._chunked_tree(name="other"))
+
+    def test_dask_preserves_root_name(self) -> None:
+        import dask
+
+        tree = self._chunked_tree(name="root")
+
+        assert dask.compute(tree)[0].name == "root"
+        assert dask.persist(tree)[0].name == "root"
+        assert dask.optimize(tree)[0].name == "root"
+
+    def test_dask_mixed_nodes(self) -> None:
+        import dask
+
+        tree = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset({"a": ("x", np.arange(3))}),
+                "/group1": xr.Dataset({"b": ("y", np.arange(4))}).chunk({"y": 2}),
+            },
+            name="root",
+        )
+
+        actual = dask.compute(tree)[0]
+
+        assert_identical(
+            actual,
+            xr.DataTree.from_dict(
+                {
+                    "/": xr.Dataset({"a": ("x", np.arange(3))}),
+                    "/group1": xr.Dataset({"b": ("y", np.arange(4))}),
+                },
+                name="root",
+            ),
+        )
+        assert isinstance(actual[""].a.data, np.ndarray)
+        assert isinstance(actual["group1"].b.data, np.ndarray)
+
+    def test_dask_child_only(self) -> None:
+        import dask
+
+        tree = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset(),
+                "/group1": xr.Dataset({"b": ("y", np.arange(4))}).chunk({"y": 2}),
+            },
+            name="root",
+        )
+
+        actual = dask.compute(tree)[0]
+
+        assert_identical(actual[""].to_dataset(inherit=False), xr.Dataset())
+        assert isinstance(actual["group1"].b.data, np.ndarray)
+        assert tree.children["group1"].to_dataset(inherit=False).chunksizes == {
+            "y": (2, 2)
+        }
+
+    def test_dask_no_chunked_data(self) -> None:
+        import dask
+
+        tree = xr.DataTree.from_dict(
+            {"/": xr.Dataset({"a": ("x", np.arange(3))})}, name="root"
+        )
+
+        assert not dask.is_dask_collection(tree)
+        assert dask.compute(tree)[0] is tree
+        assert dask.persist(tree)[0] is tree
+
+    def test_dask_empty_tree(self) -> None:
+        import dask
+
+        tree = xr.DataTree()
+
+        assert tree.__dask_graph__() is None
+        assert not dask.is_dask_collection(tree)
+        assert dask.compute(tree)[0] is tree
+
+    def test_dask_does_not_copy_inherited_coordinates(self) -> None:
+        import dask
+
+        tree = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset(coords={"x": ("x", np.arange(4))}).chunk({"x": 2}),
+                "/group1": xr.Dataset({"a": ("x", np.arange(4))}).chunk({"x": 2}),
+            }
+        )
+
+        actual = dask.compute(tree)[0]
+        child = actual["group1"].to_dataset(inherit=False)
+
+        assert "x" not in child.variables
+        assert list(child.coords) == []
+        np.testing.assert_array_equal(actual["group1"].dataset["x"], np.arange(4))
+
+    def test_dask_preserves_closers(self) -> None:
+        import dask
+
+        closed = []
+        tree = self._chunked_tree()
+        tree.set_close(lambda: closed.append("/"))
+        tree["group1"].set_close(lambda: closed.append("/group1"))
+
+        computed = dask.compute(tree)[0]
+        assert closed == []
+        computed.close()
+        assert closed == ["/", "/group1"]
+
+        closed.clear()
+        persisted = dask.persist(tree)[0]
+        assert closed == []
+        persisted.close()
+        assert closed == ["/", "/group1"]
+
+        closed.clear()
+        tree.close()
+        assert closed == ["/", "/group1"]
+
+    @requires_dask_array
+    def test_dask_expr_protocol(self) -> None:
+        import dask
+        import dask.array as da
+
+        dask_array = pytest.importorskip("dask_array")
+        dask_expr = pytest.importorskip("dask._expr")
+        if not hasattr(dask_expr, "CompositeExpr"):
+            pytest.skip("requires Dask composite expressions")
+
+        def chunked(mod):
+            return xr.DataTree.from_dict(
+                {
+                    "/": xr.Dataset({"a": ("x", mod.arange(6, chunks=(3,)) + 1)}),
+                    "/group1": xr.Dataset({"b": ("y", mod.arange(4, chunks=(2,)) + 2)}),
+                },
+                name="root",
+            )
+
+        tree = chunked(dask_array)
+        expected = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset({"a": ("x", np.arange(6) + 1)}),
+                "/group1": xr.Dataset({"b": ("y", np.arange(4) + 2)}),
+            },
+            name="root",
+        )
+
+        assert isinstance(dask.base.collections_to_expr(tree), dask_expr.CompositeExpr)
+        assert_identical(dask.compute(tree, scheduler="single-threaded")[0], expected)
+
+        persisted = dask.persist(tree, scheduler="single-threaded")[0]
+        assert persisted[""].a.data.__class__ is dask_array.Array
+        assert_identical(persisted.compute(), expected)
+
+        optimized = dask.optimize(tree)[0]
+        assert optimized[""].a.data.__class__ is dask_array.Array
+        assert_identical(optimized.compute(), expected)
+
+        mixed = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset(
+                    {
+                        "a": ("x", dask_array.arange(3, chunks=(1,))),
+                        "b": ("x", np.arange(3)),
+                    }
+                ),
+                "/group1": xr.Dataset({"c": ("y", dask_array.arange(3, chunks=(1,)))}),
+            }
+        )
+        assert mixed.__dask_exprs__() is not None
+
+        legacy_mixed = xr.DataTree.from_dict(
+            {
+                "/": xr.Dataset(
+                    {
+                        "a": ("x", dask_array.arange(3, chunks=(1,))),
+                        "b": ("x", da.arange(3, chunks=(1,))),
+                    }
+                )
+            }
+        )
+        assert legacy_mixed.__dask_exprs__() is None
+        assert isinstance(
+            dask.base.collections_to_expr(legacy_mixed), dask_expr.HLGExpr
+        )

@@ -214,6 +214,8 @@ ds = ds.persist()
 Remember to save the dataset returned by persist! This is a common mistake.
 ```
 
+A {py:class}`~xarray.DataTree` is also a Dask collection, so `dask.compute`, `dask.persist`, `dask.optimize` and `dask.tokenize` work on a whole tree at once, exactly as they do for a {py:class}`~xarray.Dataset`. For example, `dask.compute(tree)[0]` returns a new tree with the data in every node computed, and leaves the original tree lazy.
+
 (dask.chunks)=
 
 ### Chunking and performance
