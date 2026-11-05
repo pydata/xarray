@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import platform
 import string
 import warnings
@@ -11,7 +10,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_array_equal  # noqa: F401
-from packaging.version import Version
 from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
@@ -21,6 +19,7 @@ from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.extension_array import PandasExtensionArray
 from xarray.core.options import set_options
 from xarray.core.variable import IndexVariable
+from xarray.namedarray.utils import module_available
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
     assert_duckarray_allclose,
@@ -77,15 +76,7 @@ def assert_writeable(ds):
 def _importorskip(
     modname: str, minversion: str | None = None
 ) -> tuple[bool, pytest.MarkDecorator]:
-    try:
-        mod = importlib.import_module(modname)
-        has = True
-        if minversion is not None:
-            v = getattr(mod, "__version__", "999")
-            if Version(v) < Version(minversion):
-                raise ImportError("Minimum version not satisfied")
-    except ImportError:
-        has = False
+    has = module_available(modname, minversion)
 
     reason = f"requires {modname}"
     if minversion is not None:
