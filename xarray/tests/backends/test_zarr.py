@@ -1577,6 +1577,32 @@ class TestZarrDictStore(ZarrBase):
     def create_zarr_target(self):
         yield zarr.storage.MemoryStore({}, read_only=False)
 
+    @pytest.mark.parametrize("group", [None, "child"])
+    def test_consolidate_at_store_path(self, group: str | None) -> None:
+        # Writing to a StorePath that addresses a node below the store root
+        # must consolidate metadata at that node, where reading the same
+        # StorePath looks for it.
+        expected = create_test_data()
+        with self.create_zarr_target() as store:
+            target = zarr.storage.StorePath(store, "grp")
+            expected.to_zarr(target, group=group, consolidated=True)
+
+            # raises if there is no consolidated metadata at "grp"
+            node = zarr.open_consolidated(
+                zarr.storage.StorePath(store, "grp"), mode="r"
+            )
+            assert node.metadata.consolidated_metadata is not None
+
+            for consolidated in [True, None]:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error", RuntimeWarning)
+                    with xr.open_zarr(
+                        zarr.storage.StorePath(store, "grp"),
+                        group=group,
+                        consolidated=consolidated,
+                    ) as actual:
+                        assert_identical(actual, expected)
+
     def test_chunk_key_encoding_v2(self) -> None:
         encoding = {"name": "v2", "configuration": {"separator": "/"}}
 
