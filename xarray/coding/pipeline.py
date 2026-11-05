@@ -43,7 +43,7 @@ def _at_most_one_parameter[T](func_name: str, **kwargs):
         )
 
 
-class ReorderableDict[K, V](MutableMapping[K, V]):
+class ReorderableDict[K, V](dict, MutableMapping[K, V]):
     def index_of(self, name: K) -> int:
         keys = list(self.keys())
         try:
