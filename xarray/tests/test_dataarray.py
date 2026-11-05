@@ -3690,10 +3690,40 @@ class TestDataArray:
             result,
             other_result,
             *broadcast(other_x, other_y, array),
+            other.broadcast_like(array),
         ):
             assert set(broadcast_result.coords) == {"x", "y"}
             assert_array_equal(broadcast_result.x, [10, 20, 30])
             assert_array_equal(broadcast_result.y, [0, 1])
+            assert isinstance(broadcast_result.xindexes["x"], XYIndex)
+            assert broadcast_result.xindexes["x"] is broadcast_result.xindexes["y"]
+
+    def test_broadcast_exclude_drops_multi_coordinate_index(self) -> None:
+        array = DataArray(
+            np.arange(6).reshape(2, 3),
+            dims=("y", "x"),
+            coords={"y": [0, 1], "x": [10, 20, 30]},
+        )
+        array = array.drop_indexes(["y", "x"]).set_xindex(["y", "x"], XYIndex)
+        other = DataArray([1, 2], dims="channel")
+
+        result, other_result = broadcast(array, other, exclude=["x"])
+
+        assert result.xindexes["x"] is result.xindexes["y"]
+        assert set(other_result.dims) == {"channel", "y"}
+        assert "x" not in other_result.coords
+        assert_array_equal(other_result.y, [0, 1])
+        assert isinstance(other_result.xindexes["y"], PandasIndex)
+
+    def test_broadcast_dataset_data_var_coordinate_conflict(self) -> None:
+        array = DataArray([1, 2], dims="x", coords={"x": [10, 20]})
+        ds = Dataset({"x": ("y", [100, 200])})
+
+        with pytest.raises(
+            ValueError,
+            match=r"variables \{'x'\} are found in both data_vars and coords",
+        ):
+            broadcast(array, ds)
 
     def test_broadcast_arrays_misaligned(self) -> None:
         # broadcast on misaligned coords must auto-align
