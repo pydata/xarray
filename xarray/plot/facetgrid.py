@@ -14,6 +14,7 @@ from xarray.plot.utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_legend,
+    _check_col_wrap,
     _determine_guide,
     _get_nice_quiver_magnitude,
     _group_hue_values,
@@ -193,6 +194,8 @@ class FacetGrid[T_DataArrayOrSet: Dataset | DataArray]:
             (:py:func:`matplotlib.pyplot.subplots`).
         """
         import matplotlib.pyplot as plt
+
+        _check_col_wrap(col_wrap, row, col)
 
         # Handle corner case of nonunique coordinates
         rep_col = col is not None and not data[col].to_index().is_unique
