@@ -230,6 +230,40 @@ def _sparse_coo_to_index(
     return mindex.get_level_values(0) if len(dims) == 1 else mindex
 
 
+def _drop_index_labels(
+    index: pd.Index, labels: Any, errors: ErrorOptions = "raise"
+) -> pd.Index:
+    """Drop ``labels`` from ``index``, resolving labels like ``.sel`` does.
+
+    Labels that are not exact matches (e.g. partial datetime strings such as
+    ``"2000-01"``) are looked up with ``index.get_loc``, so that every label
+    accepted by ``.sel`` is also accepted by ``.drop_sel``.
+    """
+    try:
+        return index.drop(labels, errors="raise")
+    except KeyError:
+        pass
+
+    if isinstance(labels, tuple):
+        # a tuple is a single label (e.g. for a MultiIndex), like in pandas
+        labels = [labels]
+
+    to_drop = np.zeros(len(index), dtype=bool)
+    missing = []
+    for label in labels:
+        try:
+            loc = index.get_loc(label)
+        except KeyError:
+            missing.append(label)
+        else:
+            to_drop[loc] = True
+
+    if missing and errors == "raise":
+        raise KeyError(f"{missing} not found in axis")
+
+    return index[~to_drop]
+
+
 class Dataset(
     DataWithCoords,
     DatasetAggregations,
@@ -6396,7 +6430,7 @@ class Dataset(
                 raise ValueError(
                     f"dimension {dim!r} does not have coordinate labels"
                 ) from err
-            new_index = index.drop(labels_for_dim, errors=errors)
+            new_index = _drop_index_labels(index, labels_for_dim, errors)
             ds = ds.loc[{dim: new_index}]
         return ds
 
