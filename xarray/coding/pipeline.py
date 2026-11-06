@@ -26,9 +26,14 @@ def _exactly_one_parameter[T](func_name: str, **kwargs):
 
     n_given = len(given_parameters)
     if n_given != 1:
+        parameters = (
+            ", ".join(map(repr, sorted(given_parameters.keys())))
+            if n_given != 0
+            else "none"
+        )
         raise TypeError(
             f"Must pass exactly one of the keyword parameters of {func_name!r}."
-            f" Got {', '.join(map(repr, sorted(given_parameters.keys())))}."
+            f" Got {parameters}."
         )
 
 
@@ -37,9 +42,10 @@ def _at_most_one_parameter[T](func_name: str, **kwargs):
 
     n_given = len(given_parameters)
     if n_given > 1:
+        parameters = ", ".join(map(repr, sorted(given_parameters.keys())))
         raise TypeError(
             f"Must pass at most one of the keyword parameters of {func_name!r}."
-            f" Got {', '.join(map(repr, sorted(given_parameters.keys())))}."
+            f" Got {parameters}."
         )
 
 
