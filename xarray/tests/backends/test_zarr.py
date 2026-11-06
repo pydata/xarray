@@ -1532,7 +1532,8 @@ class TestInstrumentedZarrStore:
 
 
 @requires_zarr
-def test_roundtrip_stringdtype_zarr_v3() -> None:
+@parametrize_zarr_format
+def test_roundtrip_stringdtype(zarr_format: int) -> None:
     dtype = np.dtypes.StringDType()
     data = np.array(["a", "bb", "ccc"], dtype=dtype)
     expected = Dataset(
@@ -1548,7 +1549,7 @@ def test_roundtrip_stringdtype_zarr_v3() -> None:
     store = zarr.storage.MemoryStore({}, read_only=False)
 
     with assert_no_warnings():
-        expected.to_zarr(store, zarr_format=3, consolidated=False)
+        expected.to_zarr(store, zarr_format=zarr_format, consolidated=False)
     actual = xr.open_zarr(store, consolidated=False).load()
 
     for name in expected.variables:
@@ -1558,13 +1559,37 @@ def test_roundtrip_stringdtype_zarr_v3() -> None:
 
 
 @requires_zarr
-def test_stringdtype_with_na_object_uses_the_compatibility_path() -> None:
+@parametrize_zarr_format
+def test_roundtrip_opened_stringdtype(zarr_format: int) -> None:
+    # Variables opened from Zarr keep their encoding, including a VLenUTF8
+    # filter in format 2 (GH11466)
+    original = Dataset({"data": ("dim", np.array(["a", "bb", "ccc"], dtype=object))})
+    source = zarr.storage.MemoryStore({}, read_only=False)
+    original.to_zarr(source, zarr_format=zarr_format, consolidated=False)
+    opened = xr.open_zarr(source, consolidated=False)
+    target = zarr.storage.MemoryStore({}, read_only=False)
+
+    with assert_no_warnings():
+        opened.to_zarr(target, zarr_format=zarr_format, consolidated=False)
+    actual = xr.open_zarr(target, consolidated=False).load()
+
+    dtype = np.dtypes.StringDType()
+    assert zarr.open_array(store=target, path="data", mode="r").dtype == dtype
+    assert actual["data"].dtype == dtype
+    assert_identical(opened.load(), actual)
+
+
+@requires_zarr
+@parametrize_zarr_format
+def test_stringdtype_with_na_object_uses_the_compatibility_path(
+    zarr_format: int,
+) -> None:
     dtype = np.dtypes.StringDType(na_object=np.nan)
     data = np.array(["a", "bb", "ccc"], dtype=dtype)
     expected = Dataset({"data": ("dim", data.copy())})
     store = zarr.storage.MemoryStore({}, read_only=False)
 
-    expected.to_zarr(store, zarr_format=3, consolidated=False)
+    expected.to_zarr(store, zarr_format=zarr_format, consolidated=False)
     actual = xr.open_zarr(store, consolidated=False).load()
 
     assert zarr.open_array(store=store, path="data", mode="r").dtype.kind != "T"

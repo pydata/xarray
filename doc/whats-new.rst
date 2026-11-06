@@ -476,6 +476,11 @@ Bug Fixes
   pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
   (:pull:`11826`).
   By `David Hoese <https://github.com/djhoese>`_.
+- Preserve NumPy ``StringDType`` variables in Zarr format 2 round trips, as in
+  Zarr format 3. Saving strings opened from a format 2 store no longer raises
+  ``ValueError``, and strings are no longer written as fixed-width Unicode
+  (:issue:`11848`, :pull:`11849`).
+  By `Ao Zhang <https://github.com/Billyzhang1229>`_.
 
 
 Documentation

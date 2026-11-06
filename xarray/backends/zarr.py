@@ -602,6 +602,12 @@ def encode_zarr_variable(
     ----------
     var : Variable
         A variable holding un-encoded data.
+    zarr_format : {2, 3}, optional
+        The Zarr format the variable will be written to. If given, variables
+        with the default NumPy ``StringDType`` are kept as variable-length
+        strings, which Zarr supports in both formats. Otherwise, or if the
+        ``StringDType`` has an ``na_object``, they are encoded as fixed-width
+        strings.
 
     Returns
     -------
@@ -612,7 +618,7 @@ def encode_zarr_variable(
     var = ensure_dtype_not_object(var, name=name)
 
     if (
-        zarr_format == 3
+        zarr_format is not None
         and var.dtype.kind == "T"
         and var.dtype == np.dtypes.StringDType()
     ):
