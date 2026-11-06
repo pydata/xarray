@@ -170,6 +170,13 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Aligning or combining objects where an index would silently replace a
+  coordinate of the same name and dimensions without an index, but with
+  different values, now emits a ``FutureWarning``; this will raise an error in
+  a future version. Previously the indexed value was kept without checking,
+  e.g. in arithmetic, :py:func:`merge` and :py:func:`align`. Use
+  ``join="override"`` to keep the current behavior (:issue:`11607`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - The deprecation of ``FacetGrid.axes`` has been lifted: it is now a plain
   alias of ``FacetGrid.axs``, which remains the preferred name, and no longer
   emits a ``FutureWarning`` (:issue:`11721`, :pull:`11766`).
