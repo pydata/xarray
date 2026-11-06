@@ -211,6 +211,8 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Dataset weighted arithmetic reductions now skip nonnumeric data variables
+  (:issue:`9322`).
 - Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
   ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
   ``TypeError`` or ``ValueError``, and passing ``col_wrap`` without ``col`` or
