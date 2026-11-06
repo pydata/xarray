@@ -238,6 +238,21 @@ def as_variable(obj: Any, name: Hashable = None, auto_convert: bool = True) -> V
     return obj
 
 
+def _check_unary_op_result(result: Any, f: Callable, data: Any) -> Any:
+    """Raise a TypeError if a unary op on a duck array returned NotImplemented.
+
+    Unary operators have no reflected fallback, so a duck array returning
+    NotImplemented (e.g. dask's ``~`` on float data) would otherwise be wrapped
+    as 0-dimensional data and fail later with a confusing error.
+    """
+    if result is NotImplemented:
+        raise TypeError(
+            f"unsupported operand type for {getattr(f, '__name__', f)}: "
+            f"{type(data).__name__} with dtype {data.dtype}"
+        )
+    return result
+
+
 def _maybe_wrap_data(data):
     """Put pandas.Index and numpy.ndarray arguments in adapter objects.
 
@@ -2661,7 +2676,8 @@ class Variable(
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
         with np.errstate(all="ignore"):
-            result = self.__array_wrap__(f(self.data, *args, **kwargs))
+            data = _check_unary_op_result(f(self.data, *args, **kwargs), f, self.data)
+            result = self.__array_wrap__(data)
             if keep_attrs:
                 result.attrs = self.attrs
             return result

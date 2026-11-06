@@ -1099,6 +1099,28 @@ def test_dataarray_with_dask_coords():
     assert all(isinstance(v._variable.data, np.ndarray) for v in array2.coords.values())
 
 
+@pytest.mark.parametrize("obj_type", ["variable", "dataarray", "dataset"])
+def test_invert_float_raises_type_error(obj_type: str) -> None:
+    # GH6427: dask's ``~`` returns NotImplemented for float data
+    arr = DataArray(da.ones((4,), chunks=2), dims="x")
+    obj: Variable | DataArray | Dataset
+    if obj_type == "variable":
+        obj = arr.variable
+    elif obj_type == "dataarray":
+        obj = arr
+    else:
+        obj = arr.to_dataset(name="v")
+    with pytest.raises(TypeError, match=r"unsupported operand type for invert"):
+        _ = ~obj
+
+
+def test_invert_bool_lazy() -> None:
+    arr = DataArray(da.ones((4,), chunks=2), dims="x") > 0
+    with raise_if_dask_computes():
+        actual = ~arr
+    assert_identical(actual.compute(), ~arr.compute())
+
+
 def test_basic_compute():
     ds = Dataset({"foo": ("x", range(5)), "bar": ("x", range(5))}).chunk({"x": 2})
     for get in [dask.threaded.get, dask.multiprocessing.get, dask.local.get_sync, None]:
