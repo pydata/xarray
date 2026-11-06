@@ -97,7 +97,7 @@ def _contains_str_like(pat: Any) -> bool:
     if not hasattr(pat, "dtype"):
         return False
 
-    return pat.dtype.kind in ["U", "S"]
+    return pat.dtype.kind in ["U", "S", "T"]
 
 
 def _contains_compiled_re(pat: Any) -> bool:
@@ -218,6 +218,9 @@ class StringAccessor[T_DataArray: DataArray]:
         This is mostly here to tell mypy a pattern is a str/bytes not a re.Pattern.
         """
         if hasattr(invar, "astype"):
+            if invar.dtype.kind == "T" and self._obj.dtype.kind in ["U", "S"]:
+                # numpy can't cast StringDType to an unsized "U" or "S" directly
+                invar = invar.astype(object)
             return invar.astype(self._obj.dtype.kind)
         else:
             return self._obj.dtype.type(invar)
