@@ -212,7 +212,8 @@ Deprecations
 Bug Fixes
 ~~~~~~~~~
 - ``.dt.decimal_year`` now returns NaN for ``NaT`` values instead of raising
-  ``ValueError: cannot convert float NaN to integer``.
+  ``ValueError: cannot convert float NaN to integer``
+  (:pull:`11860`).
   By `Wei-Lun Li <https://github.com/b84330808>`_.
 - Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
   ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
