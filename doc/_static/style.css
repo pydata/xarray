@@ -52,3 +52,10 @@ html[data-theme="dark"] div.cell_output .text_html:has(div.xr-wrap) {
   background-color: var(--pst-color-on-background) !important;
   color: var(--pst-color-text-base) !important;
 }
+
+/* the theme puts a light background behind cell output images in dark mode, but the
+dark mode versions of matplotlib figures (see _dark_mode_figures.py) are meant to be
+shown on the page background */
+html[data-theme="dark"] .bd-content div.cell_output img.only-dark {
+  background-color: transparent;
+}
