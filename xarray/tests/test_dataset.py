@@ -3174,6 +3174,53 @@ class TestDataset:
         with pytest.raises(KeyError, match=r"not found in axis"):
             data.drop_sel(x=0)
 
+    def test_drop_sel_partial_datetime_string(self) -> None:
+        # GH7699
+        times = pd.to_datetime(
+            ["2022-03-03T13:50:49", "2022-03-11T13:50:50", "2022-03-12T13:44:35"]
+        )
+        data = Dataset({"A": ("time", [0, 1, 2])}, coords={"time": times})
+
+        actual = data.drop_sel(time="2022-03-11")
+        assert_identical(data.isel(time=[0, 2]), actual)
+
+        actual = data.drop_sel(time=["2022-03-11", "2022-03-03"])
+        assert_identical(data.isel(time=[2]), actual)
+
+        actual = data.drop_sel(time="2022-03")
+        assert_identical(data.isel(time=slice(0, 0)), actual)
+
+        # mixing exact labels and partial strings
+        actual = data.drop_sel(time=[times[0], "2022-03-12"])
+        assert_identical(data.isel(time=[1]), actual)
+
+        with pytest.raises(KeyError, match=r"not found in axis"):
+            data.drop_sel(time="2023-01")
+
+        actual = data.drop_sel(time=["2022-03-11", "2023-01"], errors="ignore")
+        assert_identical(data.isel(time=[0, 2]), actual)
+
+    @requires_cftime
+    def test_drop_sel_partial_datetime_string_cftime(self) -> None:
+        # GH7699
+        times = xr.date_range(
+            "2000-01-01", periods=4, freq="MS", calendar="noleap", use_cftime=True
+        )
+        data = Dataset({"A": ("time", [0, 1, 2, 3])}, coords={"time": times})
+
+        actual = data.drop_sel(time="2000-02")
+        assert_identical(data.isel(time=[0, 2, 3]), actual)
+
+    def test_drop_sel_missing_multiindex_label_ignore(self) -> None:
+        data = create_test_multiindex()
+
+        # a missing tuple is a single label and must not drop partial matches
+        actual = data.drop_sel(x=("a", 3), errors="ignore")
+        assert_identical(data, actual)
+
+        with pytest.raises(KeyError):
+            data.drop_sel(x=("a", 3))
+
     def test_drop_labels_by_keyword(self) -> None:
         data = Dataset(
             {"A": (["x", "y"], np.random.randn(2, 6)), "x": ["a", "b"], "y": range(6)}
