@@ -148,6 +148,11 @@ def test_CharacterArrayCoder_encode(data) -> None:
     [
         (Variable(("x",), [b"ab", b"cdef"]), "string4"),
         (Variable(("x",), [b"ab", b"cdef"], encoding={"char_dim_name": "foo"}), "foo"),
+        # characters after the last number are kept
+        (
+            Variable(("x",), [b"ab", b"cdef"], encoding={"char_dim_name": "n4_chars"}),
+            "n4_chars",
+        ),
     ],
 )
 def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name) -> None:
@@ -170,6 +175,18 @@ def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name) -> 
         (
             Variable(("x",), [b"ab", b"cde"], encoding={"char_dim_name": "foo4"}),
             "foo3",
+            3,
+            "String dimension naming mismatch",
+        ),
+        (
+            Variable(("x",), [b"ab", b"cde"], encoding={"char_dim_name": "n4_chars"}),
+            "n3_chars",
+            3,
+            "String dimension naming mismatch",
+        ),
+        (
+            Variable(("x",), [b"ab", b"cde"], encoding={"char_dim_name": "n2_4_chars"}),
+            "n2_3_chars",
             3,
             "String dimension naming mismatch",
         ),

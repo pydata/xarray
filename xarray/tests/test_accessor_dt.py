@@ -8,7 +8,6 @@ import xarray as xr
 from xarray.tests import (
     _CFTIME_CALENDARS,
     _all_cftime_date_types,
-    assert_allclose,
     assert_array_equal,
     assert_chunks_equal,
     assert_equal,
@@ -55,8 +54,6 @@ class TestDatetimeAccessor:
             "second",
             "microsecond",
             "nanosecond",
-            "week",
-            "weekofyear",
             "dayofweek",
             "weekday",
             "day_of_week",
@@ -77,17 +74,14 @@ class TestDatetimeAccessor:
         ],
     )
     def test_field_access(self, field) -> None:
-        if field in ["week", "weekofyear"]:
-            data = self.times.isocalendar()["week"]
-        else:
-            pandas_translations = {
-                "weekday": "day_of_week",
-                "dayofweek": "day_of_week",
-                "daysinmonth": "days_in_month",
-                "dayofyear": "day_of_year",
-            }
-            pandas_name = pandas_translations.get(field, field)
-            data = getattr(self.times, pandas_name)
+        pandas_translations = {
+            "weekday": "day_of_week",
+            "dayofweek": "day_of_week",
+            "daysinmonth": "days_in_month",
+            "dayofyear": "day_of_year",
+        }
+        pandas_name = pandas_translations.get(field, field)
+        data = getattr(self.times, pandas_name)
 
         if data.dtype.kind != "b" and field not in ("date", "time"):
             # pandas 2.0 returns int32 for integer fields now
@@ -95,13 +89,7 @@ class TestDatetimeAccessor:
 
         expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
 
-        if field in ["week", "weekofyear"]:
-            with pytest.warns(
-                FutureWarning, match="dt.weekofyear and dt.week have been deprecated"
-            ):
-                actual = getattr(self.data.time.dt, field)
-        else:
-            actual = getattr(self.data.time.dt, field)
+        actual = getattr(self.data.time.dt, field)
         assert not isinstance(actual.variable, xr.IndexVariable)
 
         assert expected.dtype == actual.dtype
@@ -117,8 +105,7 @@ class TestDatetimeAccessor:
             name="total_seconds",
             coords=[self.data.time],
         )
-        # This works with assert_identical when pandas is >=1.5.0.
-        assert_allclose(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "field, pandas_field",
@@ -165,7 +152,6 @@ class TestDatetimeAccessor:
         with pytest.raises(AttributeError, match=r"dt"):
             _ = nontime_data.time.dt
 
-    @pytest.mark.filterwarnings("ignore:dt.weekofyear and dt.week have been deprecated")
     @requires_dask
     @pytest.mark.parametrize(
         "field",
@@ -178,8 +164,6 @@ class TestDatetimeAccessor:
             "second",
             "microsecond",
             "nanosecond",
-            "week",
-            "weekofyear",
             "dayofweek",
             "weekday",
             "day_of_week",
@@ -490,7 +474,7 @@ def test_date_cftime(data) -> None:
 @requires_cftime
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_cftime_strftime_access(data) -> None:
-    """compare cftime formatting against datetime formatting"""
+    """Compare cftime formatting against datetime formatting."""
     date_format = "%Y%m%d%H"
     result = data.time.dt.strftime(date_format)
     datetime_array = xr.DataArray(
@@ -580,8 +564,6 @@ def cftime_rounding_dataarray(cftime_date_type):
 
 
 @requires_cftime
-@requires_dask
-@pytest.mark.parametrize("use_dask", [False, True])
 def test_cftime_floor_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
@@ -611,8 +593,6 @@ def test_cftime_floor_accessor(
 
 
 @requires_cftime
-@requires_dask
-@pytest.mark.parametrize("use_dask", [False, True])
 def test_cftime_ceil_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
@@ -642,8 +622,6 @@ def test_cftime_ceil_accessor(
 
 
 @requires_cftime
-@requires_dask
-@pytest.mark.parametrize("use_dask", [False, True])
 def test_cftime_round_accessor(
     cftime_rounding_dataarray, cftime_date_type, use_dask
 ) -> None:
@@ -672,16 +650,6 @@ def test_cftime_round_accessor(
     assert_identical(result, expected)
 
 
-@pytest.mark.parametrize(
-    "use_cftime",
-    [False, pytest.param(True, marks=requires_cftime)],
-    ids=lambda x: f"use_cftime={x}",
-)
-@pytest.mark.parametrize(
-    "use_dask",
-    [False, pytest.param(True, marks=requires_dask)],
-    ids=lambda x: f"use_dask={x}",
-)
 def test_decimal_year(use_cftime, use_dask) -> None:
     year = 2000
     periods = 10

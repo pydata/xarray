@@ -10,7 +10,11 @@ policy:
     numpy: 18
   default: 12
   # overrides for the policy
-  overrides: {}
+  overrides:
+    # conda-forge has no netcdf4 1.7.0 (the series starts at 1.7.1), which the
+    # policy needs to consider 1.7 released. Remove once
+    # https://github.com/xarray-contrib/minimum-dependency-versions/pull/94 is released
+    netcdf4: "1.7"
   # these packages are completely ignored
   exclude:
     - coveralls
@@ -27,6 +31,7 @@ policy:
     - pytz
     - pytest-reportlog
     - pyarrow # transitive dependency of dask.dataframe, not an xarray dependency
+    - google-crc32c # used by numcodecs if installed, not an xarray dependency
   # these packages don't fail the CI, but will be printed in the report
   ignored_violations:
     - array-api-strict

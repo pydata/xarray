@@ -8,14 +8,11 @@ functions.
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import numpy as np
 
 from xarray.core import dtypes, duck_array_ops
-
-if TYPE_CHECKING:
-    pass
 
 try:
     import bottleneck as bn
@@ -46,86 +43,10 @@ NUM_BINARY_OPS = [
 # be careful not to list methods that we would want to wrap later
 NUMPY_SAME_METHODS = ["item", "searchsorted"]
 
-# methods which remove an axis
-REDUCE_METHODS = ["all", "any"]
-NAN_REDUCE_METHODS = [
-    "max",
-    "min",
-    "mean",
-    "prod",
-    "sum",
-    "std",
-    "var",
-    "median",
-]
-# TODO: wrap take, dot, sort
-
-
-_CUM_DOCSTRING_TEMPLATE = """\
-Apply `{name}` along some dimension of {cls}.
-
-Parameters
-----------
-{extra_args}
-skipna : bool, optional
-    If True, skip missing values (as marked by NaN). By default, only
-    skips missing values for float dtypes; other dtypes either do not
-    have a sentinel missing value (int) or skipna=True has not been
-    implemented (object, datetime64 or timedelta64).
-keep_attrs : bool, optional
-    If True, the attributes (`attrs`) will be copied from the original
-    object to the new one.  If False (default), the new object will be
-    returned without attributes.
-**kwargs : dict
-    Additional keyword arguments passed on to `{name}`.
-
-Returns
--------
-cumvalue : {cls}
-    New {cls} object with `{name}` applied to its data along the
-    indicated dimension.
-"""
-
-_REDUCE_DOCSTRING_TEMPLATE = """\
-Reduce this {cls}'s data by applying `{name}` along some dimension(s).
-
-Parameters
-----------
-{extra_args}{skip_na_docs}{min_count_docs}
-keep_attrs : bool, optional
-    If True, the attributes (`attrs`) will be copied from the original
-    object to the new one.  If False (default), the new object will be
-    returned without attributes.
-**kwargs : dict
-    Additional keyword arguments passed on to the appropriate array
-    function for calculating `{name}` on this object's data.
-
-Returns
--------
-reduced : {cls}
-    New {cls} object with `{name}` applied to its data and the
-    indicated dimension(s) removed.
-"""
-
-_SKIPNA_DOCSTRING = """
-skipna : bool, optional
-    If True, skip missing values (as marked by NaN). By default, only
-    skips missing values for float dtypes; other dtypes either do not
-    have a sentinel missing value (int) or skipna=True has not been
-    implemented (object, datetime64 or timedelta64)."""
-
-_MINCOUNT_DOCSTRING = """
-min_count : int, default: None
-    The required number of valid values to perform the operation. If
-    fewer than min_count non-NA values are present the result will be
-    NA. Only used if skipna is set to True or defaults to True for the
-    array's dtype. New in version 0.10.8: Added with the default being
-    None. Changed in version 0.17.0: if specified on an integer array
-    and skipna=True, the result will be a float array."""
-
 
 def fillna(data, other, join="left", dataset_join="left"):
     """Fill missing values in this object with data from the other object.
+
     Follows normal broadcasting and alignment rules.
 
     Parameters
@@ -205,12 +126,29 @@ def _call_possibly_missing_method(arg, name, args, kwargs):
         return method(*args, **kwargs)
 
 
+# Note appended to the inherited NumPy docstring of ``item``, which is not
+# implemented for lazy (e.g. dask) arrays, see
+# duck_array_ops.fail_on_dask_array_input. Inserted before the "Parameters"
+# section so it renders near the top of the method documentation.
+_ITEM_DASK_NOTE = (
+    "\n.. note::\n"
+    "    For xarray objects wrapping a lazy array such as a dask array,\n"
+    "    ``item`` is not implemented and raises ``NotImplementedError``.\n"
+    "    Load the data into memory first, for example with\n"
+    "    ``obj.compute().item()`` or ``obj.as_numpy().item()``.\n"
+)
+
+
 def _values_method_wrapper(name):
     def func(self, *args, **kwargs):
         return _call_possibly_missing_method(self.data, name, args, kwargs)
 
     func.__name__ = name
-    func.__doc__ = getattr(np.ndarray, name).__doc__
+    doc = getattr(np.ndarray, name).__doc__
+    if name == "item" and doc is not None:
+        anchor = "\nParameters\n"
+        doc = doc.replace(anchor, _ITEM_DASK_NOTE + anchor, 1)
+    func.__doc__ = doc
     return func
 
 
@@ -241,33 +179,6 @@ def _func_slash_method_wrapper(f, name=None):
     return func
 
 
-def inject_reduce_methods(cls):
-    methods = (
-        [
-            (name, getattr(duck_array_ops, f"array_{name}"), False)
-            for name in REDUCE_METHODS
-        ]
-        + [(name, getattr(duck_array_ops, name), True) for name in NAN_REDUCE_METHODS]
-        + [("count", duck_array_ops.count, False)]
-    )
-    for name, f, include_skipna in methods:
-        numeric_only = getattr(f, "numeric_only", False)
-        available_min_count = getattr(f, "available_min_count", False)
-        skip_na_docs = _SKIPNA_DOCSTRING if include_skipna else ""
-        min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ""
-
-        func = cls._reduce_method(f, include_skipna, numeric_only)
-        func.__name__ = name
-        func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
-            name=name,
-            cls=cls.__name__,
-            extra_args=cls._reduce_extra_args_docstring.format(name=name),
-            skip_na_docs=skip_na_docs,
-            min_count_docs=min_count_docs,
-        )
-        setattr(cls, name, func)
-
-
 def op_str(name):
     return f"__{name}__"
 
@@ -295,16 +206,6 @@ def inject_numpy_same(cls):
     # don't try to patch these in for Dataset objects
     for name in NUMPY_SAME_METHODS:
         setattr(cls, name, _values_method_wrapper(name))
-
-
-class IncludeReduceMethods:
-    __slots__ = ()
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-
-        if getattr(cls, "_reduce_method", None):
-            inject_reduce_methods(cls)
 
 
 class IncludeNumpySameMethods:

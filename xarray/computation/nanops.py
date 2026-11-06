@@ -17,9 +17,7 @@ from xarray.core.duck_array_ops import (
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
-    """
-    xarray version of pandas.core.nanops._maybe_null_out
-    """
+    """Xarray version of pandas.core.nanops._maybe_null_out."""
     if axis is not None and getattr(result, "ndim", False):
         null_mask = (
             np.take(mask.shape, axis).prod()
@@ -39,8 +37,9 @@ def _maybe_null_out(result, axis, mask, min_count=1):
 
 
 def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
-    """In house nanargmin, nanargmax for object arrays. Always return integer
-    type
+    """In house nanargmin, nanargmax for object arrays.
+
+    Always return integer type.
     """
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
@@ -54,7 +53,7 @@ def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
 
 
 def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
-    """In house nanmin and nanmax for object array"""
+    """In house nanmin and nanmax for object array."""
     valid_count = count(value, axis=axis)
     filled_value = fillna(value, fill_value)
     data = getattr(np, func)(filled_value, axis=axis, **kwargs)
@@ -106,7 +105,10 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
-    """In house nanmean. ddof argument will be used in _nanvar method"""
+    """In house nanmean.
+
+    ddof argument will be used in _nanvar method.
+    """
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)
     # As dtype inference is impossible for object dtype, we assume float
@@ -153,11 +155,21 @@ def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
     if a.dtype.kind == "O":
         return _nanvar_object(a, axis=axis, dtype=dtype, ddof=ddof)
 
-    return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"Degrees of freedom <= 0 for slice", category=RuntimeWarning
+        )
+
+        return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
-    return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"Degrees of freedom <= 0 for slice", category=RuntimeWarning
+        )
+
+        return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):

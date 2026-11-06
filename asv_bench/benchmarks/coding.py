@@ -1,11 +1,10 @@
 import numpy as np
+from asv_runner.benchmarks.mark import parameterize
 
 import xarray as xr
 
-from . import parameterized
 
-
-@parameterized(["calendar"], [("standard", "noleap")])
+@parameterize({"calendar": ("standard", "noleap")})
 class EncodeCFDatetime:
     def setup(self, calendar):
         self.units = "days since 2000-01-01"

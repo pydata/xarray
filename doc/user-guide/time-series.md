@@ -4,8 +4,8 @@ kernelspec:
   name: python3
 ---
 
-```{eval-rst}
-.. currentmodule:: xarray
+```{currentmodule} xarray
+
 ```
 
 (time-series)=
@@ -297,8 +297,8 @@ and resampling to a seasonal frequency using Pandas syntax: `.resample(time="QS-
 Quite commonly one wants more flexibility in defining seasons. For these use-cases, Xarray provides
 {py:class}`groupers.SeasonGrouper` and {py:class}`groupers.SeasonResampler`.
 
-```{eval-rst}
-.. currentmodule:: xarray.groupers
+```{currentmodule} xarray.groupers
+
 ```
 
 ```{code-cell}

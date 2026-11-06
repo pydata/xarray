@@ -1,11 +1,13 @@
 ---
 file_format: mystnb
+mystnb:
+  execution_in_temp: true
 kernelspec:
   name: python3
 ---
 
-```{eval-rst}
-.. currentmodule:: xarray
+```{currentmodule} xarray
+
 ```
 
 (complex)=
@@ -17,19 +19,6 @@ kernelspec:
 
 import numpy as np
 import xarray as xr
-```
-
-```{code-cell}
-:tags: [remove-input]
-
-# Ensure the file is located in a unique temporary directory
-# so that it doesn't conflict with parallel builds of the
-# documentation.
-
-import tempfile
-import os.path
-
-tempdir = tempfile.TemporaryDirectory()
 ```
 
 Xarray leverages NumPy to seamlessly handle complex numbers in {py:class}`~xarray.DataArray` and {py:class}`~xarray.Dataset` objects.
@@ -75,13 +64,6 @@ complex_nums_h5_filename = "complex_nums_h5.nc"
 ```
 
 ```{code-cell}
-:tags: [remove-input]
-
-complex_nums_h5_filename = os.path.join(tempdir.name, complex_nums_h5_filename)
-
-```
-
-```{code-cell}
 
 # write the data to disk
 da.to_netcdf(complex_nums_h5_filename, engine="h5netcdf")
@@ -99,13 +81,6 @@ Requires the [netcdf4-python (>= 1.7.1)](https://github.com/Unidata/netcdf4-pyth
 ```{code-cell}
 
 complex_nums_nc4_filename = "complex_nums_nc4.nc"
-
-```
-
-```{code-cell}
-:tags: [remove-input]
-
-complex_nums_nc4_filename = os.path.join(tempdir.name, complex_nums_nc4_filename)
 
 ```
 
@@ -136,12 +111,6 @@ complex_manual_filename = "complex_manual.nc"
 ```
 
 ```{code-cell}
-:tags: [remove-input]
-
-complex_manual_filename = os.path.join(tempdir.name, complex_manual_filename)
-```
-
-```{code-cell}
 # Write data to file
 ds_manual = xr.Dataset(
     {
@@ -161,14 +130,6 @@ reconstructed = ds[f"{da.name}_real"] + 1j * ds[f"{da.name}_imag"]
 - Use `engine="netcdf4"` with `auto_complex=True` for full compliance and ease.
 - Use `h5netcdf` for HDF5-based storage when interoperability with HDF5 is desired.
 - For maximum legacy support (NetCDF3), manually handle real/imaginary components.
-
-```{code-cell}
-:tags: [remove-input]
-
-# Cleanup
-tempdir.cleanup()
-
-```
 
 ## See also
 

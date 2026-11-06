@@ -1,6 +1,4 @@
-"""
-Property-based tests for roundtripping between xarray and pandas objects.
-"""
+"""Property-based tests for roundtripping between xarray and pandas objects."""
 
 from functools import partial
 from typing import cast
@@ -57,7 +55,7 @@ an_array = npst.arrays(
 
 @st.composite
 def datasets_1d_vars(draw) -> xr.Dataset:
-    """Generate datasets with only 1D variables
+    """Generate datasets with only 1D variables.
 
     Suitable for converting to pandas dataframes.
     """
@@ -113,7 +111,6 @@ numeric_homogeneous_dataframe = numeric_dtypes.flatmap(
 )
 
 
-@pytest.mark.xfail
 @given(numeric_homogeneous_dataframe)
 def test_roundtrip_pandas_dataframe(df) -> None:
     # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.
@@ -122,7 +119,8 @@ def test_roundtrip_pandas_dataframe(df) -> None:
     arr = xr.DataArray(df)
     roundtripped = arr.to_pandas()
     pd.testing.assert_frame_equal(df, cast(pd.DataFrame, roundtripped))
-    xr.testing.assert_identical(arr, roundtripped.to_xarray())
+    # DataFrame.to_xarray returns a Dataset, so convert back to a DataArray
+    xr.testing.assert_identical(arr, xr.DataArray(roundtripped))
 
 
 @pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/65712")

@@ -1388,7 +1388,7 @@ def test_round(rounding_index, date_type):
 def test_asi8(date_type):
     index = xr.CFTimeIndex([date_type(1970, 1, 1), date_type(1970, 1, 2)])
     result = index.asi8
-    expected = 1000000 * 86400 * np.array([0, 1])
+    expected = 1000000 * 86400 * np.array([0, 1], dtype=np.int64)
     np.testing.assert_array_equal(result, expected)
 
 

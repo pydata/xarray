@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Hashable, MutableMapping
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, override
 
 import numpy as np
 
@@ -37,11 +37,11 @@ class VariableCoder:
     """
 
     def encode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """Convert an encoded variable to a decoded variable"""
+        """Convert an encoded variable to a decoded variable."""
         raise NotImplementedError()
 
     def decode(self, variable: Variable, name: T_Name = None) -> Variable:
-        """Convert a decoded variable to an encoded variable"""
+        """Convert a decoded variable to an encoded variable."""
         raise NotImplementedError()
 
 
@@ -59,6 +59,7 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         self.func = func
         self._dtype = dtype
 
+    @override
     @property
     def dtype(self) -> np.dtype:
         return np.dtype(self._dtype)
@@ -67,27 +68,34 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         # For elementwise functions, we can compose transpose and function application
         return type(self)(self.array.transpose(order), self.func, self.dtype)
 
+    @override
     def _oindex_get(self, key):
         return type(self)(self.array.oindex[key], self.func, self.dtype)
 
+    @override
     def _vindex_get(self, key):
         return type(self)(self.array.vindex[key], self.func, self.dtype)
 
+    @override
     def __getitem__(self, key):
         return type(self)(self.array[key], self.func, self.dtype)
 
+    @override
     def get_duck_array(self):
         return self.func(self.array.get_duck_array())
 
+    @override
     async def async_get_duck_array(self):
         return self.func(await self.array.async_get_duck_array())
 
+    @override
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.array!r}, func={self.func!r}, dtype={self.dtype!r})"
 
 
 def lazy_elemwise_func(array, func: Callable, dtype: np.typing.DTypeLike | None):
     """Lazily apply an element-wise function to an array.
+
     Parameters
     ----------
     array : any valid value of Variable._data
@@ -124,8 +132,8 @@ def safe_setitem(dest, key: Hashable, value, name: T_Name = None):
 def pop_to(
     source: MutableMapping, dest: MutableMapping, key: Hashable, name: T_Name = None
 ) -> Any:
-    """
-    A convenience function which pops a key k from source to dest.
+    """Pop a key k from source to dest.
+
     None values are not passed on.  If k already exists in dest an
     error is raised.
     """

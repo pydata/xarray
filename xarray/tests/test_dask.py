@@ -29,10 +29,11 @@ from xarray.tests import (
     has_dask_array_expr,
     mock,
     raise_if_dask_computes,
+    requires_cftime,
     requires_pint,
     requires_scipy_or_netCDF4,
 )
-from xarray.tests.test_backends import create_tmp_file
+from xarray.tests.backends.base import create_tmp_file
 
 dask = pytest.importorskip("dask")
 pytest.importorskip("dask.array")
@@ -270,7 +271,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         with pytest.raises(NotImplementedError, match="dask"):
             v.argsort()
-        with pytest.raises(NotImplementedError, match="dask"):
+        with pytest.raises(NotImplementedError, match="Load the data into memory"):
             v[0].item()  # type: ignore[attr-defined]
 
     def test_univariate_ufunc(self):
@@ -1018,6 +1019,7 @@ kernel_call_count = 0
 
 def kernel(name):
     """Dask kernel to test pickling/unpickling and __repr__.
+
     Must be global to make it pickleable.
     """
     global kernel_call_count
@@ -1222,6 +1224,7 @@ def test_partial_auto_chunk_zero_len_dim_variable(obj):
     obj.chunk({"y": "auto"})
 
 
+@requires_cftime
 def test_auto_chunk_da_cftime():
     yrs = np.arange(2000, 2120)
     cftime_dates = xr.date_range(
@@ -1235,6 +1238,21 @@ def test_auto_chunk_da_cftime():
     expected = da.data.rechunk({0: 10, 1: 120})
     np.testing.assert_array_equal(actual, expected)
     assert actual.chunks == expected.chunks
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("chunks", "expected"),
+    [({"x": 2, "y": 3}, ((2,), (3,))), ({"x": 2}, ((2,), (1, 1, 1)))],
+    ids=lambda x: f"{x}",
+)
+def test_rechunk_multi_dimensional_da_cftime(chunks, expected):
+    times = xr.date_range("2000", periods=6, use_cftime=True)
+    times = times.to_numpy().reshape((2, 3))
+    da = xr.DataArray(times, dims=["x", "y"])
+    da = da.chunk({"x": 1, "y": 1})
+    result = da.chunk(chunks).chunks
+    assert result == expected
 
 
 def test_map_blocks_error(map_da, map_ds):
@@ -1404,6 +1422,8 @@ def test_map_blocks_change_name(map_da):
     assert_identical(actual, expected)
 
 
+# filling integer variables with NaN is intentional
+@pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_kwargs(obj):
     expected = xr.full_like(obj, fill_value=np.nan)
@@ -1704,7 +1724,7 @@ def test_token_identical(obj, transform):
     ],
 )
 def test_tokenize_empty_attrs(obj):
-    """Issues #6970 and #8788"""
+    """Test tokenizing objects with empty attrs (issues #6970 and #8788)."""
     obj.attrs = {}
     assert obj._attrs is None
     a = dask.base.tokenize(obj)
@@ -1720,8 +1740,9 @@ def test_tokenize_empty_attrs(obj):
 
 
 def test_recursive_token():
-    """Test that tokenization is invoked recursively, and doesn't just rely on the
-    output of str()
+    """Test that tokenization is invoked recursively.
+
+    Tokenization must not just rely on the output of str().
     """
     a = np.ones(10000)
     b = np.ones(10000)
@@ -1860,7 +1881,9 @@ def test_optimize():
 
 @pytest.mark.skip_with_dask_array
 def test_graph_manipulation():
-    """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
+    """Test compatibility with dask.graph_manipulation.
+
+    dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
     function returned by __dask_postperist__; also, the dsk passed to the rebuilder is
     a HighLevelGraph whereas with dask.persist() and dask.optimize() it's a plain dict.
     """
@@ -1947,3 +1970,11 @@ def test_conjugate():
     assert dask.is_dask_collection(conj_data)
 
     assert_equal(conj_data, data.conj())
+
+
+def test_isel_0d_dask_indexer_with_outer_indexer() -> None:
+    # GH8820: 0d dask indexer combined with an outer indexer on numpy data
+    data = xr.DataArray(np.arange(24).reshape(4, 6), dims=["x", "y"])
+    actual = data.isel(x=da.from_array(np.array(2)), y=[0, 2])
+    expected = data.isel(x=2, y=[0, 2])
+    assert_identical(actual, expected)

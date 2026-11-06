@@ -4,7 +4,7 @@ import functools
 import io
 import os
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, cast, override
 
 import numpy as np
 from packaging.version import Version
@@ -17,6 +17,7 @@ from xarray.backends.common import (
     WritableCFDataStore,
     _normalize_path,
     _open_remote_file,
+    _raise_if_zarr_store,
     collect_ancestor_dimensions,
     datatree_from_dict_with_io_cleanup,
     find_root_and_group,
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
+    @override
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
         return ds.variables[self.variable_name]
@@ -108,7 +110,7 @@ def _h5netcdf_create_group(dataset, name):
 
 
 class H5NetCDFStore(WritableCFDataStore):
-    """Store for reading and writing data via h5netcdf"""
+    """Store for reading and writing data via h5netcdf."""
 
     __slots__ = (
         "_filename",
@@ -149,11 +151,13 @@ class H5NetCDFStore(WritableCFDataStore):
         self.format = format or "NETCDF4"
         # todo: utilizing find_root_and_group seems a bit clunky
         #  making filename available on h5netcdf.Group seems better
-        self._filename = find_root_and_group(self.ds)[0].filename
+        with manager.acquire_context():
+            self._filename = find_root_and_group(self.ds)[0].filename
         self.is_remote = is_remote_uri(self._filename)
         self.lock = ensure_lock(lock)
         self.autoclose = autoclose
 
+    @override
     def get_child_store(self, group: str) -> Self:
         if self.format == "NETCDF4_CLASSIC":
             raise ValueError("Cannot create sub-groups in `NETCDF4_CLASSIC` format.")
@@ -294,8 +298,8 @@ class H5NetCDFStore(WritableCFDataStore):
                 },
             )
         else:
-            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-            if vlen_dtype is str:
+            string_info = h5py.check_string_dtype(var.dtype)
+            if string_info is not None and string_info.length is None:
                 encoding["dtype"] = str
             else:
                 # xarray doesn't support writing arbitrary vlen dtypes yet, so
@@ -329,20 +333,25 @@ class H5NetCDFStore(WritableCFDataStore):
 
         return Variable(dimensions, data, attrs, encoding)
 
+    @override
     def get_variables(self):
         return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
 
+    @override
     def get_attrs(self):
         return FrozenDict(_read_attributes(self.ds))
 
+    @override
     def get_dimensions(self):
         return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
+    @override
     def get_parent_dimensions(self):
         return FrozenDict(collect_ancestor_dimensions(self.ds))
 
+    @override
     def get_encoding(self):
         return {
             "unlimited_dims": {
@@ -350,6 +359,7 @@ class H5NetCDFStore(WritableCFDataStore):
             }
         }
 
+    @override
     def set_dimension(self, name, length, is_unlimited=False):
         _ensure_no_forward_slash_in_name(name)
         if is_unlimited:
@@ -358,17 +368,20 @@ class H5NetCDFStore(WritableCFDataStore):
         else:
             self.ds.dimensions[name] = length
 
+    @override
     def set_attribute(self, key, value):
         if self.format == "NETCDF4_CLASSIC":
             value = encode_nc3_attr_value(value)
         self.ds.attrs[key] = value
 
+    @override
     def encode_variable(self, variable, name=None):
         if self.format == "NETCDF4_CLASSIC":
             return encode_nc3_variable(variable, name=name)
         else:
             return _encode_nc4_variable(variable, name=name)
 
+    @override
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
     ):
@@ -448,9 +461,11 @@ class H5NetCDFStore(WritableCFDataStore):
 
         return target, variable.data
 
+    @override
     def sync(self):
         self.ds.sync()
 
+    @override
     def close(self, **kwargs):
         self._manager.close(**kwargs)
 
@@ -477,13 +492,14 @@ def _normalize_filename_or_obj(
 ) -> str | ReadBuffer | AbstractDataStore:
     if isinstance(filename_or_obj, bytes | memoryview):
         return io.BytesIO(filename_or_obj)
-    else:
-        return _normalize_path(filename_or_obj)
+    _raise_if_zarr_store(filename_or_obj, "h5netcdf")
+    return cast(
+        "str | ReadBuffer | AbstractDataStore", _normalize_path(filename_or_obj)
+    )
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
-    """
-    Backend for netCDF files based on the h5netcdf package.
+    """Backend for netCDF files based on the h5netcdf package.
 
     It can open ".nc", ".nc4", ".cdf" files but will only be
     selected as the default if the "netcdf4" engine is not available.
@@ -509,6 +525,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
     url = "https://docs.xarray.dev/en/stable/generated/xarray.backends.H5netcdfBackendEntrypoint.html"
     supports_groups = True
 
+    @override
     def guess_can_open(self, filename_or_obj: T_PathFileOrDataStore) -> bool:
         from xarray.core.utils import is_remote_uri
 
@@ -527,6 +544,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         return False
 
+    @override
     def open_dataset(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -570,16 +588,17 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         store_entrypoint = StoreBackendEntrypoint()
 
-        ds = store_entrypoint.open_dataset(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
+        with store._manager.acquire_context():
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
 
         # only warn if phony_dims exist in file
         # remove together with the above check
@@ -589,6 +608,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         return ds
 
+    @override
     def open_datatree(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -632,6 +652,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         return datatree_from_dict_with_io_cleanup(groups_dict)
 
+    @override
     def open_groups_as_dict(
         self,
         filename_or_obj: T_PathFileOrDataStore,
@@ -686,26 +707,27 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
         manager = store._manager
         groups_dict = {}
-        for path_group in _iter_nc_groups(store.ds, parent=parent):
-            group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
-            store_entrypoint = StoreBackendEntrypoint()
-            with close_on_error(group_store):
-                group_ds = store_entrypoint.open_dataset(
-                    group_store,
-                    mask_and_scale=mask_and_scale,
-                    decode_times=decode_times,
-                    concat_characters=concat_characters,
-                    decode_coords=decode_coords,
-                    drop_variables=drop_variables,
-                    use_cftime=use_cftime,
-                    decode_timedelta=decode_timedelta,
-                )
+        with manager.acquire_context():
+            for path_group in _iter_nc_groups(store.ds, parent=parent):
+                group_store = H5NetCDFStore(manager, group=path_group, **kwargs)
+                store_entrypoint = StoreBackendEntrypoint()
+                with close_on_error(group_store):
+                    group_ds = store_entrypoint.open_dataset(
+                        group_store,
+                        mask_and_scale=mask_and_scale,
+                        decode_times=decode_times,
+                        concat_characters=concat_characters,
+                        decode_coords=decode_coords,
+                        drop_variables=drop_variables,
+                        use_cftime=use_cftime,
+                        decode_timedelta=decode_timedelta,
+                    )
 
-            if group:
-                group_name = str(NodePath(path_group).relative_to(parent))
-            else:
-                group_name = str(NodePath(path_group))
-            groups_dict[group_name] = group_ds
+                if group:
+                    group_name = str(NodePath(path_group).relative_to(parent))
+                else:
+                    group_name = str(NodePath(path_group))
+                groups_dict[group_name] = group_ds
 
         # only warn if phony_dims exist in file
         # remove together with the above check

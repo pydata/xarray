@@ -10,6 +10,7 @@ Dataset
    :toctree: ../generated/
    :template: autosummary/accessor_method.rst
 
+   Dataset.plot.lines
    Dataset.plot.scatter
    Dataset.plot.quiver
    Dataset.plot.streamplot
@@ -32,6 +33,7 @@ DataArray
    DataArray.plot.hist
    DataArray.plot.imshow
    DataArray.plot.line
+   DataArray.plot.lines
    DataArray.plot.pcolormesh
    DataArray.plot.step
    DataArray.plot.scatter

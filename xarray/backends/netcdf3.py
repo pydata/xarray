@@ -60,7 +60,7 @@ COERCION_VALUE_ERROR = (
 
 
 def coerce_nc3_dtype(arr):
-    """Coerce an array to a data type that can be stored in a netCDF-3 file
+    """Coerce an array to a data type that can be stored in a netCDF-3 file.
 
     This function performs the dtype conversions as specified by the
     ``_nc3_dtype_coercions`` mapping:
@@ -131,8 +131,7 @@ def encode_nc3_variable(var, name=None):
 
 
 def _isalnumMUTF8(c):
-    """Return True if the given UTF-8 encoded character is alphanumeric
-    or multibyte.
+    """Return True if the given UTF-8 encoded character is alphanumeric or multibyte.
 
     Input is not checked!
     """
@@ -140,8 +139,10 @@ def _isalnumMUTF8(c):
 
 
 def is_valid_nc3_name(s):
-    """Test whether an object can be validly converted to a netCDF-3
-    dimension, variable or attribute name
+    """Test whether an object is a valid netCDF-3 name.
+
+    Test whether an object can be validly converted to a netCDF-3 dimension,
+    variable or attribute name.
 
     Earlier versions of the netCDF C-library reference implementation
     enforced a more restricted set of characters in creating new names,

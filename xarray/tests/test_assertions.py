@@ -8,7 +8,7 @@ import pytest
 import xarray as xr
 from xarray.core.coordinates import Coordinates
 from xarray.core.indexes import Index
-from xarray.tests import has_dask
+from xarray.tests import requires_dask, requires_pint
 
 try:
     from dask.array import from_array as dask_from_array
@@ -23,13 +23,10 @@ try:
     def quantity(x):
         return unit_registry.Quantity(x, "m")
 
-    has_pint = True
 except ImportError:
 
     def quantity(x):
         return x
-
-    has_pint = False
 
 
 def test_allclose_regression() -> None:
@@ -104,7 +101,7 @@ def test_assert_allclose_equal_transpose(func) -> None:
 
 
 def test_assert_equal_transpose_datatree() -> None:
-    """Ensure `check_dim_order=False` works for transposed DataTree"""
+    """Ensure `check_dim_order=False` works for transposed DataTree."""
     ds = xr.Dataset(data_vars={"data": (("x", "y"), [[1, 2]])})
 
     a = xr.DataTree.from_dict({"node": ds})
@@ -144,12 +141,12 @@ def test_assert_equal_transpose_datatree() -> None:
         pytest.param(
             dask_from_array,
             id="dask",
-            marks=pytest.mark.skipif(not has_dask, reason="requires dask"),
+            marks=requires_dask,
         ),
         pytest.param(
             quantity,
             id="pint",
-            marks=pytest.mark.skipif(not has_pint, reason="requires pint"),
+            marks=requires_pint,
         ),
     ),
 )
@@ -180,12 +177,12 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2) -> None:
         pytest.param(
             dask_from_array,
             id="dask",
-            marks=pytest.mark.skipif(not has_dask, reason="requires dask"),
+            marks=requires_dask,
         ),
         pytest.param(
             quantity,
             id="pint",
-            marks=pytest.mark.skipif(not has_pint, reason="requires pint"),
+            marks=requires_pint,
         ),
     ),
 )
@@ -226,7 +223,7 @@ def test_ensure_warnings_not_elevated(func) -> None:
             warnings.warn("warning in test", stacklevel=2)
             return super().dims
 
-        def __array__(
+        def __array__(  # type: ignore[override]
             self,
             dtype: np.typing.DTypeLike | None = None,
             /,
