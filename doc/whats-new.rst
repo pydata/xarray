@@ -75,6 +75,9 @@ New Features
   By `Alfonso Ladino <https://github.com/aladinor>`_.
 - Use ``check_string_dtype()`` to detect variable-length strings in h5netcdf backend (:pull:`11789`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Add :py:meth:`DataArray.replace_values` and :py:meth:`Dataset.replace_values`
+  to replace values with others, like :py:meth:`pandas.Series.replace` (:issue:`6377`).
+  By `aiedwardyi <https://github.com/aiedwardyi>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
