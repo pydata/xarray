@@ -17,6 +17,7 @@ from xarray.plot.utils import (
     _add_colorbar,
     _add_legend,
     _assert_valid_xy,
+    _check_col_wrap,
     _determine_guide,
     _ensure_plottable,
     _group_hue_values,
@@ -288,6 +289,8 @@ def plot(
     --------
     xarray.DataArray.squeeze
     """
+    _check_col_wrap(col_wrap, row, col)
+
     darray = darray.squeeze(
         d for d, s in darray.sizes.items() if s == 1 and d not in (row, col, hue)
     ).compute()
@@ -925,6 +928,8 @@ artist :
 
         if subplot_kws is None:
             subplot_kws = dict()
+
+        _check_col_wrap(col_wrap, row, col)
 
         # Handle facetgrids first
         if row or col:
@@ -1686,6 +1691,8 @@ artist :
             # In facet grids, shared axis labels don't make sense for surface plots
             sharex = False
             sharey = False
+
+        _check_col_wrap(col_wrap, row, col)
 
         # Handle facetgrids first
         if row or col:
