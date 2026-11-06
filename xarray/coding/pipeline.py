@@ -1,0 +1,363 @@
+from __future__ import annotations
+
+import copy
+from collections.abc import Mapping, MutableMapping
+from dataclasses import dataclass
+from typing import Any, Literal, Self, cast, overload
+
+try:
+    sentinel  # noqa: B018
+except NameError:
+    # backwards compatibility: python < 3.15
+    from typing_extensions import sentinel
+
+from xarray.coding.core import Coder
+from xarray.core.dataset import Dataset
+from xarray.core.datatree import DataTree
+from xarray.core.variable import Variable
+
+XarrayObj = DataTree | Dataset | Variable
+
+MISSING = sentinel("MISSING")
+
+
+def _exactly_one_parameter[T](func_name: str, **kwargs):
+    given_parameters = {k: v for k, v in kwargs.items() if v is not MISSING}
+
+    n_given = len(given_parameters)
+    if n_given != 1:
+        parameters = (
+            ", ".join(map(repr, sorted(given_parameters.keys())))
+            if n_given != 0
+            else "none"
+        )
+        raise TypeError(
+            f"Must pass exactly one of the keyword parameters of {func_name!r}."
+            f" Got {parameters}."
+        )
+
+
+def _at_most_one_parameter[T](func_name: str, **kwargs):
+    given_parameters = {k: v for k, v in kwargs.items() if v is not MISSING}
+
+    n_given = len(given_parameters)
+    if n_given > 1:
+        parameters = ", ".join(map(repr, sorted(given_parameters.keys())))
+        raise TypeError(
+            f"Must pass at most one of the keyword parameters of {func_name!r}."
+            f" Got {parameters}."
+        )
+
+
+class ReorderableDict[K, V](dict, MutableMapping[K, V]):
+    def index_of(self, name: K) -> int:
+        keys = list(self.keys())
+        try:
+            index = keys.index(name)
+        except ValueError:
+            raise ValueError(f"unknown key: {name}") from None
+
+        return index
+
+    def insert(self, name: K, value: V, at: int) -> None:
+        if name in self:
+            raise ValueError(f"duplicate key: {name}")
+
+        if at < 0:
+            # clip to 0 to prepend
+            at = max(len(self) + at, 0)
+
+        new_keys = list(self.keys())
+        new_keys.insert(at, name)
+
+        self[name] = value
+
+        # no builtin sort, so we replace self with the new one
+        new = dict(sorted(self.items(), key=lambda it: new_keys.index(it[0])))
+        self.clear()
+        self.update(new)
+
+    def move(self, name: K, at: int) -> None:
+        value = self.pop(name, MISSING)
+        if value is MISSING:
+            raise KeyError(f"unknown key: {name}")
+
+        self.insert(name, value, at)
+
+    def __or__(self, other: Self) -> Self:
+        new = copy.copy(self)
+        new.update(other)
+
+        return new
+
+
+@overload
+def _encode(coders: Mapping[str, Coder[DataTree]], obj: DataTree) -> DataTree: ...
+
+
+@overload
+def _encode(coders: Mapping[str, Coder[Dataset]], obj: Dataset) -> Dataset: ...
+
+
+@overload
+def _encode(coders: Mapping[str, Coder[Variable]], obj: Variable) -> Variable: ...
+
+
+def _encode[T: XarrayObj](coders: Mapping[str, Coder[T]], obj: T) -> T:
+    encoded = obj
+    for coder in coders.values():
+        encoded = coder.encode(encoded)
+
+    return encoded
+
+
+@overload
+def _decode(coders: Mapping[str, Coder[DataTree]], obj: DataTree) -> DataTree: ...
+
+
+@overload
+def _decode(coders: Mapping[str, Coder[Dataset]], obj: Dataset) -> Dataset: ...
+
+
+@overload
+def _decode(coders: Mapping[str, Coder[Variable]], obj: Variable) -> Variable: ...
+
+
+def _decode[T: XarrayObj](coders: Mapping[str, Coder[T]], obj: T) -> T:
+    decoded = obj
+    for coder in coders.values():
+        decoded = coder.decode(decoded)
+
+    return decoded
+
+
+@overload
+def _extract_coders(
+    coders: Mapping[str, Coder[XarrayObj]], kind: Literal["datatree"]
+) -> Mapping[str, Coder[DataTree]]: ...
+
+
+@overload
+def _extract_coders(
+    coders: Mapping[str, Coder[XarrayObj]], kind: Literal["dataset"]
+) -> Mapping[str, Coder[Dataset]]: ...
+
+
+@overload
+def _extract_coders(
+    coders: Mapping[str, Coder[XarrayObj]], kind: Literal["variable"]
+) -> Mapping[str, Coder[Variable]]: ...
+
+
+def _extract_coders(
+    coders: Mapping[str, Coder[XarrayObj]],
+    kind: Literal["datatree", "dataset", "variable"],
+) -> Any:
+    # return Any so mypy stops complaining
+    return {name: coder for name, coder in coders.items() if coder.kind == kind}
+
+
+@dataclass
+class CoderPipeline:
+    coders: ReorderableDict[str, Coder[XarrayObj]]
+
+    def __post_init__(self):
+        self.coders = ReorderableDict(self.coders)
+
+    def _replace(self, coders: ReorderableDict[str, Coder[XarrayObj]]) -> Self:
+        cls = type(self)
+        new = cls.__new__(cls)
+        new.coders = coders
+
+        return new
+
+    def insert(
+        self,
+        name: str,
+        coder: Coder[XarrayObj],
+        *,
+        before: str | MISSING = MISSING,
+        after: str | MISSING = MISSING,
+        at: int | MISSING = MISSING,
+    ) -> Self:
+        """Insert a new coder.
+
+        If none of ``begin``, ``after``, or ``at`` was given, appends at the end.
+
+        Parameters
+        ----------
+        name : str
+            The name of the coder. Must be unique.
+        coder : Coder
+            The coder to insert.
+        before : str, optional
+            Insert before this coder. Must exist in the existing coders.
+        after : str, optional
+            Insert after this coder. Must exist in the existing coders.
+        at : int, optional
+            Insert at this position.
+        """
+        _at_most_one_parameter(
+            "CoderPipeline.insert", before=before, after=after, at=at
+        )
+
+        if name in self.coders:
+            raise ValueError(f"Coder {name} already exists.")
+
+        if before is not MISSING:
+            at = self.coders.index_of(before)
+        elif after is not MISSING:
+            at = self.coders.index_of(after) + 1
+        elif at is MISSING:
+            # append by default
+            at = len(self.coders)
+
+        coders = copy.copy(self.coders)
+        coders.insert(name, coder, at)
+
+        return self._replace(coders)
+
+    def remove(self, name: str) -> Self:
+        new = copy.copy(self.coders)
+        result = new.pop(name, MISSING)
+        if result is MISSING:
+            raise KeyError(f"unknown coder: {name}")
+
+        return self._replace(new)
+
+    def move(
+        self,
+        name: str,
+        *,
+        before: str | MISSING = MISSING,
+        after: str | MISSING = MISSING,
+        at: int | MISSING = MISSING,
+    ) -> Self:
+        _exactly_one_parameter("CoderPipeline.move", before=before, after=after, at=at)
+
+        if before is not MISSING:
+            at = self.coders.index_of(before)
+        elif after is not MISSING:
+            at = self.coders.index_of(after) + 1
+        else:
+            # at has already been checked above
+            at = cast(int, at)
+
+        coders = copy.copy(self.coders)
+        coders.move(name, at)
+
+        return self._replace(coders)
+
+    def chain(self, other: Self) -> Self:
+        return self._replace(self.coders | other.coders)
+
+    def configure_one(self, name: str, **settings: dict[str, Any]) -> Self:
+        """Reconfigure a single coder in the pipeline."""
+        coder = self.coders.get(name)
+        if coder is None:
+            raise KeyError(f"unknown coder: {name}")
+
+        coders = copy.copy(self.coders)
+        coders["name"] = coder.configure(**settings)
+
+        return self._replace(coders)
+
+    def configure(self, mapping: dict[str, dict[str, Any]]) -> Self:
+        """Reconfigure multiple coders in the pipeline."""
+        errors = [
+            ValueError(f"unknown coder: {name}")
+            for name in mapping
+            if name not in self.coders
+        ]
+        if errors:
+            raise ExceptionGroup("tried to configure unknown coders", errors)
+
+        coders = copy.copy(self.coders)
+        for name, settings in mapping.items():
+            coders[name] = coders[name].configure(**settings)
+
+        return self._replace(coders)
+
+    @property
+    def datatree_coders(self) -> Mapping[str, Coder[DataTree]]:
+        return _extract_coders(self.coders, "datatree")
+
+    @property
+    def dataset_coders(self) -> Mapping[str, Coder[Dataset]]:
+        return _extract_coders(self.coders, "dataset")
+
+    @property
+    def variable_coders(self) -> Mapping[str, Coder[Variable]]:
+        return _extract_coders(self.coders, "variable")
+
+    def _decode_datatree(self, tree: DataTree) -> DataTree:
+        decoded = _decode(self.datatree_coders, tree)
+
+        return decoded.map_over_datasets(self._decode_dataset)
+
+    def _decode_dataset(self, ds: Dataset) -> Dataset:
+        decoded = _decode(self.dataset_coders, ds)
+        return decoded._replace(
+            variables={
+                name: self._decode_variable(var)
+                for name, var in decoded.variables.items()
+            }
+        )
+
+    def _decode_variable(self, var: Variable) -> Variable:
+        return _decode(self.variable_coders, var)
+
+    @overload
+    def decode(self, obj: DataTree) -> DataTree: ...
+
+    @overload
+    def decode(self, obj: Dataset) -> Dataset: ...
+
+    @overload
+    def decode(self, obj: Variable) -> Variable: ...
+
+    def decode(self, obj: XarrayObj) -> XarrayObj:
+        if isinstance(obj, DataTree):
+            return self._decode_datatree(obj)
+        elif isinstance(obj, Dataset):
+            return self._decode_dataset(obj)
+        elif isinstance(obj, Variable):
+            return self._decode_variable(obj)
+        else:
+            raise TypeError(f"unknown object type: {type(obj)}")
+
+    def _encode_datatree(self, tree: DataTree) -> DataTree:
+        encoded = _encode(self.datatree_coders, tree)
+
+        return encoded.map_over_datasets(self._encode_dataset)
+
+    def _encode_dataset(self, ds: Dataset) -> Dataset:
+        encoded = _encode(self.dataset_coders, ds)
+        return encoded._replace(
+            variables={
+                name: self._encode_variable(var)
+                for name, var in encoded.variables.items()
+            }
+        )
+
+    def _encode_variable(self, var: Variable) -> Variable:
+        return _encode(self.variable_coders, var)
+
+    @overload
+    def encode(self, obj: DataTree) -> DataTree: ...
+
+    @overload
+    def encode(self, obj: Dataset) -> Dataset: ...
+
+    @overload
+    def encode(self, obj: Variable) -> Variable: ...
+
+    def encode(self, obj: XarrayObj) -> XarrayObj:
+        if isinstance(obj, DataTree):
+            return self._encode_datatree(obj)
+        elif isinstance(obj, Dataset):
+            return self._encode_dataset(obj)
+        elif isinstance(obj, Variable):
+            return self._encode_variable(obj)
+        else:
+            raise TypeError(f"unknown object type: {type(obj)}")
