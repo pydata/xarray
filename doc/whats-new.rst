@@ -213,6 +213,16 @@ Bug Fixes
 ~~~~~~~~~
 - Dataset weighted arithmetic reductions now skip nonnumeric data variables
   (:issue:`9322`).
+- Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
+  ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
+  ``TypeError`` or ``ValueError``, and passing ``col_wrap`` without ``col`` or
+  ``row`` raises a ``ValueError`` instead of being silently ignored
+  (:issue:`5614`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- :py:func:`apply_ufunc` no longer fails on :py:mod:`sparse` arrays when it
+  needs to move core dimensions to the end. The internal ``transpose`` duck
+  array helper now uses the Array API ``permute_dims`` (:issue:`9933`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
   include a note naming the data variable being processed (:issue:`2078`).
   By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
@@ -417,6 +427,11 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- :py:meth:`Dataset.isel`, :py:meth:`Dataset.sel`, :py:meth:`DataArray.isel` and
+  :py:meth:`DataArray.sel` now honor ``drop=True`` when a custom index preserves
+  selected coordinates as scalars. They now raise when only some of an index's
+  coordinates would be dropped, instead of silently keeping them (:pull:`11617`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix the ``preferred_chunks`` encoding of sharded Zarr variables read with
   :py:func:`open_zarr`: it now holds the shard (outer/storage chunk) sizes
   instead of the inner chunk sizes, so the default dask chunks align with the
