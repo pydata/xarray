@@ -170,6 +170,11 @@ Breaking Changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Warn when an index replaces a same-named, same-dimension unindexed coordinate
+  with different values during alignment or merging. This will become an
+  :py:class:`AlignmentError` in a future version; use ``join="override"`` to
+  retain the current behavior (:issue:`11607`).
+  By `Anshu Raj Bisoyi <https://github.com/anshurajbisoyi98-ctrl>`_.
 - The deprecation of ``FacetGrid.axes`` has been lifted: it is now a plain
   alias of ``FacetGrid.axs``, which remains the preferred name, and no longer
   emits a ``FutureWarning`` (:issue:`11721`, :pull:`11766`).
