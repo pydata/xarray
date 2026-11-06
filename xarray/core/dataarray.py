@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import datetime
-import json
 import warnings
 from collections.abc import Callable, Collection, Hashable, Iterable, Mapping, Sequence
 from functools import partial
@@ -21,6 +20,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core._aggregations import DataArrayAggregations
 from xarray.core.accessor_dt import CombinedDatetimelikeAccessor
 from xarray.core.accessor_str import StringAccessor
+from xarray.core.arrow import _broadcast_to_dims, _get_schema_from_dataarray
 from xarray.core.common import AbstractArray, DataWithCoords, get_chunksizes
 from xarray.core.coordinates import (
     Coordinates,
@@ -81,6 +81,7 @@ from xarray.structure.merge import PANDAS_TYPES, MergeError
 from xarray.util.deprecation_helpers import _deprecate_positional_args, deprecate_dims
 
 if TYPE_CHECKING:
+    import pyarrow as pa
     from dask.dataframe import DataFrame as DaskDataFrame
     from dask.delayed import Delayed
     from iris.cube import Cube as iris_Cube
@@ -262,21 +263,6 @@ class _LocIndexer[T_DataArray: DataArray]:
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
 _THIS_ARRAY = ReprObject("<this-array>")
-
-
-class _NumpyEncoder(json.JSONEncoder):
-    """Encode numpy value in Arrow schema metadata."""
-
-    def default(self, obj: Any) -> Any:
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.bool_):
-            return bool(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super().default(obj)
 
 
 class DataArray(
@@ -501,42 +487,8 @@ class DataArray(
 
         self._close = None
 
-    def __arrow_c_schema__(self):
-        try:
-            import pyarrow as pa
-        except ImportError:
-            raise ImportError(
-                "pyarrow is required to export via the Arrow PyCapsule Interface."
-            ) from None
-
-        values_column = self.name or "values"
-
-        fields = []
-        for name, coord in self._coords.items():
-            arrow_dtype = pa.from_numpy_dtype(coord.dtype)
-            fields.append(pa.field(str(name), arrow_dtype))
-
-        fields.append(
-            pa.field(str(values_column), pa.from_numpy_dtype(self._variable.dtype))
-        )
-
-        xarray_metadata = {
-            "name": self.name,
-            "dims": list(self._variable.dims),
-            "shape": list(self._variable.shape),
-            "attrs": self.attrs,
-            "coords": {
-                str(name): variable.to_dict(data=False)
-                for name, variable in self._coords.items()
-            },
-        }
-        schema_metadata = {
-            b"xarray:arrow_schema_version": b"v1",
-            b"xarray": json.dumps(xarray_metadata, cls=_NumpyEncoder).encode(),
-        }
-
-        schema = pa.schema(fields, metadata=schema_metadata)
-        return schema.__arrow_c_schema__()
+    def __arrow_c_schema__(self) -> Any:
+        return _get_schema_from_dataarray(self).__arrow_c_schema__()
 
     def __arrow_c_stream__(self, requested_schema: Any = None) -> Any:
         """Export the DataArray through the Arrow PyCapsule Interface.
@@ -566,29 +518,7 @@ class DataArray(
 
         columns: dict[Hashable, pa.Array] = {}
         for name, coord in self._coords.items():
-            # Broadcast each coordinate up to the full data shape so that 1D
-            # dimension coordinates and N-D (e.g. curvilinear) coordinates
-            # flatten consistently with the data values.
-
-            # Order axes based on Variable dims
-            dim_order = tuple(
-                coord.dims.index(dim) for dim in dims if dim in coord.dims
-            )
-
-            # Reorder coords values to variable dim order
-            ordered_coords = coord.values.transpose(dim_order)
-
-            # Expand coord dims
-            # coord dims (x, y) variable dims (x,y,z) -> (x, y, 1)
-            # NOTE: Insert a length-1 axis for each data dim missing for coordinates
-            # (slice(None) keeps an existing axis, np.newaxis adds one)
-            indexer = tuple(
-                slice(None) if dim in coord.dims else np.newaxis for dim in dims
-            )
-            expanded_coords = ordered_coords[indexer]
-
-            # Broadcast to full flattened shape (x, y, 1) -> (x, y, z)
-            columns[name] = pa.array(np.broadcast_to(expanded_coords, shape).ravel())
+            columns[name] = pa.array(_broadcast_to_dims(coord, dims, shape))
 
         columns[values_column] = pa.array(np.ravel(values))
 
@@ -596,6 +526,58 @@ class DataArray(
 
         table = pa.table(columns, schema=schema)
         return table.__arrow_c_stream__(requested_schema)
+
+    def to_arrow(self) -> pa.Table:
+        """Convert this DataArray into a pyarrow.Table.
+
+        .. warning::
+            This functionality is considered **experimental**. It may be removed or
+            changed at any point without it being considered a breaking change.
+
+        Returns
+        -------
+        pyarrow.Table
+
+        See Also
+        --------
+        xarray.Dataset.to_arrow
+        pandas.DataFrame.from_arrow
+        polars.from_arrow
+
+        Notes
+        -----
+        A column is zero-copied when its variable has the same dims as the data, in
+        the same order. A copy is made when:
+
+        - the variable has fewer dims than the data (e.g. 1D or scalar
+          coordinates), or its dims are in a different order: it is broadcast
+          with NumPy
+        - the dtype is ``bool``, string or ``object``
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     [1.0, 2.0, 3.0],
+        ...     dims=["x"],
+        ...     coords={"x": [10, 20, 30]},
+        ...     name="temperature",
+        ... )
+        >>> da.to_arrow()
+        pyarrow.Table
+        x: int64
+        temperature: double
+        ----
+        x: [[10,20,30]]
+        temperature: [[1,2,3]]
+        """
+        try:
+            import pyarrow as pa
+        except ImportError:
+            raise ImportError(
+                "pyarrow is required to export via the Arrow PyCapsule Interface."
+            ) from None
+
+        return pa.table(self)
 
     @classmethod
     def _construct_direct(

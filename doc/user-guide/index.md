@@ -45,6 +45,7 @@ plotting
 :caption: Interoperability
 
 pandas
+arrow
 duckarrays
 ecosystem
 ```
