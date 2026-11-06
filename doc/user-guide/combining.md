@@ -24,6 +24,7 @@ np.random.seed(123456)
 - For combining datasets with different variables, see [merge](#merge).
 - For combining datasets or data arrays with different indexes or missing values, see [combine](#combine).
 - For combining datasets or data arrays along multiple dimensions see [combining.multi](#combining-multi).
+- For combining metadata, see [combining attributes](#combining-attributes).
 
 (concatenate)=
 
@@ -191,6 +192,63 @@ there are conflicting values in variables to be merged, whereas
 In a future version of xarray the default options for `xr.merge` will change
 such that the behavior matches `combine_first`.
 ```
+
+(combining-attributes)=
+
+## Combining attributes
+
+The `combine_attrs` argument to {py:func}`~xarray.concat`,
+{py:func}`~xarray.merge`, {py:func}`~xarray.combine_by_coords`,
+{py:func}`~xarray.combine_nested`, and {py:func}`~xarray.open_mfdataset`
+controls how attributes are combined. This is separate from `join`, which
+controls index alignment, and `compat`, which controls conflicting variable
+values. In particular, `compat="identical"` also checks attributes, even when
+`combine_attrs="drop"`. The available attribute policies are `"drop"`, `"identical"`,
+`"no_conflicts"`, `"drop_conflicts"`, and `"override"`; see each function's
+reference documentation for its default and the meaning of these policies.
+
+For a custom policy, pass a callable that takes an iterable of attribute
+dictionaries and accepts a `context` keyword argument. It must return the
+dictionary of attributes for the result. In this version of xarray, `context` is `None`.
+The callable is used for dataset attributes and separately for the attributes
+of variables, including coordinates. It may receive empty attribute dictionaries.
+
+For example, this policy combines a `sources` attribute containing lists of
+strings, removes duplicates, and discards other attributes:
+
+```{code-cell}
+from collections.abc import Iterable, Mapping
+
+
+def collect_sources(
+    attrs_list: Iterable[Mapping[str, list[str]]], context: object
+) -> dict[str, list[str]]:
+    sources = sorted(
+        {source for attrs in attrs_list for source in attrs.get("sources", [])}
+    )
+    return {"sources": sources} if sources else {}
+
+
+first = xr.Dataset(
+    {"temperature": ("time", [10.0])},
+    coords={"time": [0]},
+    attrs={"sources": ["sensor-a"]},
+)
+second = xr.Dataset(
+    {"temperature": ("time", [12.0])},
+    coords={"time": [1]},
+    attrs={"sources": ["sensor-b"]},
+)
+combined = xr.combine_by_coords([first, second], combine_attrs=collect_sources)
+combined.attrs
+```
+
+Do not rely on the number or order of calls. Combining can happen in stages:
+the callable may receive previously combined attributes, including an iterable
+containing a single attribute dictionary, rather than only the original inputs.
+The example above produces a sorted union, so combining an intermediate result
+again does not lose or duplicate source names. Avoid modifying the input
+dictionaries or relying on side effects such as counting calls.
 
 (update)=
 
