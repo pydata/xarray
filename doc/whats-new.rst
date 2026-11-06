@@ -211,6 +211,9 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- The HTML representation of a :py:class:`Dataset` no longer fails when a data
+  variable has non-string dimension names, e.g. tuples (:issue:`10613`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
 - Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
   ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
   ``TypeError`` or ``ValueError``, and passing ``col_wrap`` without ``col`` or
