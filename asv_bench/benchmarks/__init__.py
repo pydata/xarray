@@ -29,6 +29,13 @@ def requires_sparse():
         raise NotImplementedError() from err
 
 
+def requires_pyarrow():
+    try:
+        import pyarrow  # noqa: F401
+    except ImportError as err:
+        raise NotImplementedError() from err
+
+
 def randn(shape, frac_nan=None, chunks=None, seed=0):
     rng = np.random.default_rng(seed)
     if chunks is None:

@@ -213,6 +213,8 @@ sphinx-remove-toctrees = "*"
 sphinxext-opengraph = "*"
 sphinxext-rediraffe = "*"
 cfgrib = "*"
+duckdb = "*"
+polars = "*"
 # use the official version once https://github.com/jupyterlite/jupyterlite-sphinx/pull/346 has been resolved
 jupyterlite-sphinx = ">=0.23.0"
 jupyterlite-xeus = ">=4.4.1"

@@ -15,6 +15,7 @@ xarray\.core\.dataarray\.T_XarrayOther$
 
 # External library types (dask, delayed, etc.)
 xarray\.core\.dataarray\.iris_Cube$
+xarray\.core\.(dataarray|dataset)\.pa$
 
 # =============================================================================
 # Plot accessors and methods
