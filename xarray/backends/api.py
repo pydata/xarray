@@ -101,7 +101,8 @@ def _get_mtime(filename_or_obj):
     except TypeError:
         path = None
 
-    if path and not is_remote_uri(path):
+    # bytes are the contents of a file, not a path
+    if isinstance(path, str) and not is_remote_uri(path):
         with contextlib.suppress(OSError):
             mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
 

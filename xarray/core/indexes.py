@@ -545,6 +545,9 @@ def safe_cast_to_index(array: Any) -> pd.Index:
                 kwargs["dtype"] = "float64"
 
         values = to_numpy(array)
+        if values.dtype.names is not None:
+            # pandas deprecates creating an index from a structured array
+            values = values.astype(object)
         try:
             index = pd.Index(values, **kwargs)
         except UnicodeEncodeError:
@@ -2282,6 +2285,31 @@ def isel_indexes(
         return _apply_indexes(indexes, indexers, "isel")
     else:
         return _apply_indexes_fast(indexes, indexers, "isel")
+
+
+def drop_scalar_index_coords(
+    indexes: dict[Hashable, Index],
+    index_variables: dict[Hashable, Variable],
+    coordinates: Mapping[Hashable, Variable],
+    indexers: Mapping[Hashable, Any],
+) -> None:
+    """Drop scalar coordinates rebuilt by indexes, rejecting partial drops."""
+    drop_names = {
+        name
+        for name, var in index_variables.items()
+        if name in coordinates
+        and coordinates[name].ndim > 0
+        and set(coordinates[name].dims) & set(indexers)
+        and var.ndim == 0
+    }
+    if drop_names:
+        assert_no_index_corrupted(
+            Indexes({k: indexes[k] for k in index_variables}, index_variables),
+            drop_names,
+        )
+        for name in drop_names:
+            del indexes[name]
+            del index_variables[name]
 
 
 def roll_indexes(

@@ -211,10 +211,33 @@ Deprecations
 
 Bug Fixes
 ~~~~~~~~~
+- Plotting methods and :py:class:`~xarray.plot.FacetGrid` now validate
+  ``col_wrap``: a value that is not a positive integer or ``"auto"`` raises a
+  ``TypeError`` or ``ValueError``, and passing ``col_wrap`` without ``col`` or
+  ``row`` raises a ``ValueError`` instead of being silently ignored
+  (:issue:`5614`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- :py:func:`apply_ufunc` no longer fails on :py:mod:`sparse` arrays when it
+  needs to move core dimensions to the end. The internal ``transpose`` duck
+  array helper now uses the Array API ``permute_dims`` (:issue:`9933`).
+  By `Oke Iyanuoluwa <https://github.com/Iyanuoluwa007>`_.
+- Errors raised by :py:func:`apply_ufunc` on :py:class:`Dataset` inputs now
+  include a note naming the data variable being processed (:issue:`2078`).
+  By `Abderrahmane El Aoudi <https://github.com/A2ELAOUDI>`_.
+- :py:func:`open_dataset` can detect local Zarr directories on Windows without
+  raising ``PermissionError`` while checking file-based backends. Permission
+  errors for ordinary files still propagate (:issue:`11799`, :pull:`11802`).
+  By `Gabriel Demetrios Lafis <https://github.com/galafis>`_.
 - Fix CuPy indexers with pandas-backed coordinates, basic and label-based
   assignment to CuPy arrays, and scalar truth conversion
   (:issue:`11739`, :pull:`11797`).
   By `Huashuo Lei <https://github.com/wpyaoxueros>`_.
+- :py:meth:`DataArray.str.zfill` now keeps a leading ``+`` or ``-`` sign in front
+  of the zeros, like :py:meth:`str.zfill`, :py:func:`numpy.strings.zfill` and
+  :py:meth:`pandas.Series.str.zfill`. Previously the zeros were put before the
+  sign, e.g. ``"-12"`` became ``"0-12"`` instead of ``"-012"`` for ``width=4``
+  (:pull:`11817`).
+  By `Alexander Kropiunig <https://github.com/Kropiunig>`_.
 - Fix :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp` with
   ``method="linear"`` or ``"nearest"`` raising a ``ValueError`` for empty new
   coordinates (:pull:`11681`).
@@ -222,6 +245,9 @@ Bug Fixes
   unused variable labels left in the stacked index after selecting features
   (:pull:`11808`).
   By `Aryan R. Ganjoo <https://github.com/AryanRG>`_.
+- :py:meth:`DataArray.str.extract` with ``dim`` now supports NumPy ``StringDType`` arrays,
+  and no longer fails if the first value does not match (:pull:`11793`).
+  By `jdotc1 <https://github.com/jdotc1>`_.
 - :py:meth:`Dataset.query` now resolves coordinates in datasets with no data
   variables (:issue:`6449`).
   By `Liang, Jingyi <https://github.com/LJimmy007>`_.
@@ -399,6 +425,11 @@ Bug Fixes
   This was due to a bug in the reduction method generation introduced in :pull:`11556`
   (:pull:`11686`).
   By `Andrew Scherer <https://github.com/andrew-s28>`_.
+- :py:meth:`Dataset.isel`, :py:meth:`Dataset.sel`, :py:meth:`DataArray.isel` and
+  :py:meth:`DataArray.sel` now honor ``drop=True`` when a custom index preserves
+  selected coordinates as scalars. They now raise when only some of an index's
+  coordinates would be dropped, instead of silently keeping them (:pull:`11617`).
+  By `Matthias Schabel <https://github.com/matthiasschabel>`_.
 - Fix the ``preferred_chunks`` encoding of sharded Zarr variables read with
   :py:func:`open_zarr`: it now holds the shard (outer/storage chunk) sizes
   instead of the inner chunk sizes, so the default dask chunks align with the
@@ -447,6 +478,10 @@ Bug Fixes
   arrays, which previously raised ``TypeError: Vectorized indexing is not
   supported`` (:issue:`9694`, :pull:`11828`).
   By `Chirag Jangir <https://github.com/chiragjangiir>`_.
+- :py:func:`open_dataset` no longer raises ``TypeError: cannot use a string
+  pattern on a bytes-like object`` when opening ``bytes`` with ``chunks``
+  (:pull:`11826`).
+  By `David Hoese <https://github.com/djhoese>`_.
 
 
 Documentation
@@ -584,6 +619,9 @@ Internal Changes
 - Add an asv benchmark for opening a zarr :py:class:`DataTree` from a store with
   object storage latency (:pull:`11810`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Convert structured arrays to object arrays of tuples before creating a
+  :py:class:`pandas.Index` from them, which pandas deprecated (:issue:`11749`).
+  By `glaziermag <https://github.com/glaziermag>`_.
 
 
 .. _whats-new.2026.09.0:
