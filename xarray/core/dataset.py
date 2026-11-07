@@ -230,6 +230,141 @@ def _sparse_coo_to_index(
     return mindex.get_level_values(0) if len(dims) == 1 else mindex
 
 
+def _needs_scalar_get_loc(labels: Any) -> bool:
+    """Return whether any label must be resolved with ``Index.get_loc``.
+
+    That is a ``str`` (partial datetime / period / CFTime) or a
+    ``datetime.time`` (time of day). A tuple is one label, so its elements
+    are not inspected. Numeric and datetime arrays are rejected from their
+    dtype and are not scanned.
+    """
+    if isinstance(labels, np.ndarray):
+        kind = labels.dtype.kind
+        if kind == "U":
+            return labels.size > 0
+        if kind != "O":
+            return False
+    try:
+        iterator = iter(labels)
+    except TypeError:
+        return isinstance(labels, datetime.time)
+    return any(isinstance(label, (str, datetime.time)) for label in iterator)
+
+
+def _mark_get_loc(index: pd.Index, label: Any, to_drop: np.ndarray) -> bool:
+    """Mark positions from ``index.get_loc``. Return False if ``label`` is absent."""
+    try:
+        to_drop[index.get_loc(label)] = True
+    except KeyError:
+        return False
+    else:
+        return True
+
+
+def _missing_exact_offsets(
+    index: pd.Index, labels: list[Any], to_drop: np.ndarray
+) -> list[int]:
+    """Mark exact matches and return offsets into ``labels`` that missed.
+
+    ``get_indexer_for`` returns every occurrence, including duplicates.
+    ``get_indexer`` is not used: on a non-unique index it raises
+    ``InvalidIndexError``. When duplicate hits make the indexer longer than
+    ``labels``, the ``-1`` slots no longer line up with the labels, so the
+    missing set comes from ``get_indexer_non_unique``.
+    """
+    if not labels:
+        return []
+    try:
+        indexer = index.get_indexer_for(labels)
+    except (KeyError, TypeError, ValueError, pd.errors.InvalidIndexError):
+        missing: list[int] = []
+        for offset, label in enumerate(labels):
+            if not _mark_get_loc(index, label, to_drop):
+                missing.append(offset)
+        return missing
+
+    if len(indexer) != len(labels):
+        hits = indexer[indexer >= 0]
+        if len(hits):
+            to_drop[hits] = True
+        _, missing_idx = index.get_indexer_non_unique(labels)
+        return [int(offset) for offset in missing_idx]
+
+    found = indexer >= 0
+    if found.any():
+        to_drop[indexer[found]] = True
+    return [int(offset) for offset in np.flatnonzero(~found)]
+
+
+def _drop_partial_string_labels(
+    index: pd.Index, labels: Any, errors: ErrorOptions
+) -> pd.Index:
+    """Drop exact labels in bulk and partial-string labels via ``get_loc``."""
+    if not isinstance(labels, list):
+        labels = list(labels)
+
+    to_drop = np.zeros(len(index), dtype=bool)
+    missing_at: dict[int, Any] = {}
+    exact: list[Any] = []
+    exact_at: list[int] = []
+
+    for position, label in enumerate(labels):
+        if isinstance(label, (str, datetime.time)):
+            if not _mark_get_loc(index, label, to_drop):
+                missing_at[position] = label
+            continue
+        exact.append(label)
+        exact_at.append(position)
+
+    for offset in _missing_exact_offsets(index, exact, to_drop):
+        missing_at[exact_at[offset]] = exact[offset]
+
+    if missing_at and errors == "raise":
+        ordered = [missing_at[pos] for pos in sorted(missing_at)]
+        raise KeyError(f"{ordered} not found in axis")
+
+    if not to_drop.any():
+        return index
+    return index[~to_drop]
+
+
+def _drop_index_labels(
+    index: pd.Index, labels: Any, errors: ErrorOptions = "raise"
+) -> pd.Index:
+    """Drop ``labels`` from ``index``, resolving labels like ``.sel`` does.
+
+    Exact labels go through ``Index.drop`` (vectorized ``get_indexer_for``),
+    which also deletes every copy of a duplicated label. Strings on a
+    ``DatetimeIndex``, ``PeriodIndex``, or ``CFTimeIndex`` are resolved with
+    ``get_loc``, the same scalar lookup ``.sel`` uses, so partial strings such
+    as ``"2022-03-11"`` or ``"2000-02"`` drop the whole matched range.
+
+    ``get_indexer`` and ``get_indexer_nd`` are not used. ``get_indexer`` raises
+    ``InvalidIndexError`` on a non-unique index, and it only returns exact
+    matches. On a ``DatetimeIndex`` it casts ``"2022-03-11"`` to midnight, so
+    a day that contains that midnight would lose only that one stamp.
+    """
+    # A tuple is one label (a MultiIndex key). Iterating it would treat each
+    # element as its own label and could drop a whole level.
+    if isinstance(labels, (str, tuple)):
+        labels = [labels]
+
+    if isinstance(index, (pd.DatetimeIndex, pd.PeriodIndex, CFTimeIndex)) and (
+        _needs_scalar_get_loc(labels)
+    ):
+        return _drop_partial_string_labels(index, labels, errors)
+
+    try:
+        return index.drop(labels, errors=errors)
+    except IndexError:
+        if index.is_unique:
+            raise
+        # pandas' Index.drop indexes the label list with a mask built from
+        # get_indexer_for. On a non-unique index that indexer is longer than
+        # the labels, so errors="raise" raises IndexError instead of KeyError.
+        return _drop_partial_string_labels(index, labels, errors)
+
+
 class Dataset(
     DataWithCoords,
     DatasetAggregations,
@@ -6396,7 +6531,7 @@ class Dataset(
                 raise ValueError(
                     f"dimension {dim!r} does not have coordinate labels"
                 ) from err
-            new_index = index.drop(labels_for_dim, errors=errors)
+            new_index = _drop_index_labels(index, labels_for_dim, errors)
             ds = ds.loc[{dim: new_index}]
         return ds
 

@@ -3097,6 +3097,20 @@ class TestDataArray:
         for key in dim_levels:
             assert key not in actual.xindexes
 
+    def test_drop_sel_partial_datetime_string(self) -> None:
+        # GH7699
+        times = np.array(
+            [
+                "2022-03-03T13:50:49.548072000",
+                "2022-03-11T13:50:50.551314000",
+                "2022-03-12T13:44:35.547024000",
+            ],
+            dtype="datetime64[ns]",
+        )
+        arr = DataArray(np.arange(3), dims="time", coords={"time": times})
+        actual = arr.drop_sel(time="2022-03-11")
+        assert_identical(arr.isel(time=[0, 2]), actual)
+
     def test_drop_index_labels(self) -> None:
         arr = DataArray(np.random.randn(2, 3), coords={"y": [0, 1, 2]}, dims=["x", "y"])
         actual = arr.drop_sel(y=[0, 1])
